@@ -142,11 +142,19 @@ A task action of **System → Send Intent**:
 
 Leave *Cat*, *Mime Type*, *Data* and *Class* empty.
 
-**Tasker's *Send Intent* offers two extra fields** — which is exactly the
-smallest call: a target and a prompt. That is not a coincidence; the correlation
-id is optional precisely so this call fits. If your build of Tasker offers more
-fields, the callback keys go in them; if it does not, its *Java Function* action
-builds the intent itself and is not limited to two.
+**Tasker's *Send Intent* offers three extra fields** in the build this was
+checked against — room for the smallest call with one field to spare, or for the
+smallest call plus a correlation id.
+
+**A callback needs four**: a target, a prompt, the id, and the package to answer
+to. That is one more than the action has. Two ways round it, and the second is
+usually the easier one:
+
+- Build the intent yourself in Tasker's *Java Function* action, which has no
+  field limit.
+- Or let Tasker only **receive**. An *Intent Received* event does not care how
+  the request was sent, so the request can come from a shell over `adb` — which
+  has no field limit either — while Tasker handles the answer.
 
 To receive the callback, use an **Intent Received** event with *Action* set to
 whatever you passed as `return_action` (or `app.knotwork.android.action.RUN_RESULT`

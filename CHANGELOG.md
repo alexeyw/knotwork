@@ -49,11 +49,10 @@ details.
   **The smallest call is two keys** — which pipeline, and what to say to it. The
   correlation id a caller can send is required only when that caller also asks
   to be answered, because its only job is to match the answer to the request
-  that caused it. This matters more than it sounds: an automation app's built-in
-  send-an-intent action has a small, fixed number of extra fields — Tasker's has
-  two — so a third mandatory key would have put the simplest useful call beyond
-  the reach of the app this contract exists to complement, in exchange for a
-  value that would have been thrown away.
+  that caused it. An automation app's built-in send-an-intent action gives you a
+  small, fixed number of extra fields — three, in the version of Tasker this was
+  checked against — so a key that is mandatory but then discarded is one of those
+  fields spent on nothing.
 
 - **Another app on your device can now ask Knotwork to run a pipeline.** The
   external-automation entry point defined in the entry above is live: a
