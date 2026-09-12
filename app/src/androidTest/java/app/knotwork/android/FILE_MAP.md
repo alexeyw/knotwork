@@ -50,7 +50,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ImageViewerInstrumentedTest.kt` - Instrumented UI tests for the full-screen `ImageViewer` opened when an attachment thumbnail is tapped: header metadata, the close / share actions, and the missing-file fallback.
     - `discover/` - Compose tests for the model-discovery surface.
       - `DiscoverFlowInstrumentedTest.kt` - Instrumented UI tests for the model-discovery flow: the list surface (network error / empty degradations) and the detail surface up to and including the licence-confirmation dialog — the gate the task requires ("Discover flow up to licence confirmation").
-    - `help/` - **No description** — replace this line by hand.
+    - `help/` - On-device checks that the bundled documentation survives packaging, and that a link between two bundled documents lands on its anchor.
       - `HelpReaderNavigationTest.kt` - Walks the path the task specifies, on a real device, against the assets the APK actually carries: open the FAQ, follow one of its internal links, and land on the named anchor of the troubleshooting guide.
     - `models/` - Compose tests for the local-models surface.
       - `PerformanceCardInstrumentedTest.kt` - Instrumented UI tests for the model **Performance card**, iterating its state matrix (empty / busy / running / result / populated) and verifying the Run-benchmark action dispatches.

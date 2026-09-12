@@ -472,7 +472,7 @@ matters.
     - `DiscoverDetailContentSnapshotTest.kt` - Roborazzi snapshot baseline for the model-discovery detail surface (`DiscoverDetailContent`): loading, loaded (mixed file states), gated (token field), the license-confirmation dialog and the error state, in both themes.
   - `files/` - the workspace Files screen.
     - `FilesContentSnapshotTest.kt` - Preview fixtures for the Files screen snapshot matrix.
-  - `help/` - **No description** — replace this line by hand.
+  - `help/` - Fixtures and Roborazzi baselines for the Help list and the document reader, both themes and font scale 200 %.
     - `HelpPreview.kt` - Fixtures for the Help snapshots.
     - `HelpSnapshotTest.kt` - Roborazzi baselines for the Help list and the document reader.
   - `memory/` - long-term memory — the stats header, grouped list, detail sheet and compaction dialog, plus which states may offer which affordances.
