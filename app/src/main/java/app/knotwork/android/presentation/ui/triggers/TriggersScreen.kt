@@ -652,6 +652,7 @@ private fun triggersStrings(): TriggersStrings = TriggersStrings(
     healthLastRunFailed = stringResource(R.string.triggers_health_last_run_failed),
     exportShareCd = stringResource(R.string.triggers_export_share_cd),
     exportSaveCd = stringResource(R.string.triggers_export_save_cd),
+    documentationCd = stringResource(R.string.triggers_documentation_cd),
 )
 
 @Composable
