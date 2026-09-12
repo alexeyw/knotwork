@@ -78,7 +78,7 @@ class DocumentationLinkRegistryTest {
         // sections swaps what each points at without breaking either.
         val violations = DocumentationLinkRegistry.violationsOf(
             entries = listOf(entry(anchor = "background--triggers")),
-            documents = mapOf(GUIDE to "# Guide\n\n### Background & triggers\n\na\n\n#### Background & triggers\n\nb\n"),
+            documents = mapOf(GUIDE to TWICE_WRITTEN_HEADING),
         )
         assertSingleViolationMentioning(violations, "2 headings carry that text")
     }
@@ -87,7 +87,7 @@ class DocumentationLinkRegistryTest {
     fun `given an ordinal anchor when checked then it is refused`() {
         val violations = DocumentationLinkRegistry.violationsOf(
             entries = listOf(entry(anchor = "background--triggers-1")),
-            documents = mapOf(GUIDE to "# Guide\n\n### Background & triggers\n\na\n\n#### Background & triggers\n\nb\n"),
+            documents = mapOf(GUIDE to TWICE_WRITTEN_HEADING),
         )
         assertSingleViolationMentioning(violations, "an ordinal anchor")
     }
@@ -104,6 +104,31 @@ class DocumentationLinkRegistryTest {
     }
 
     @Test
+    fun `given an id that is not a clean slug when checked then it is refused`() {
+        // The id becomes a Kotlin constant name. An unexpected character does
+        // not yield a bad link — it yields a generated file that will not
+        // compile, and a syntax error in generated code is a far worse report
+        // than this one.
+        val violations = DocumentationLinkRegistry.violationsOf(
+            entries = listOf(DocumentationLinkRegistry.Entry(id = "user.guide", path = GUIDE, anchor = null)),
+            documents = mapOf(GUIDE to "# Guide\n"),
+        )
+        assertSingleViolationMentioning(violations, "not a valid id")
+    }
+
+    @Test
+    fun `given a path holding a comment opener when checked then it is refused`() {
+        // `/` followed by `*` inside the generated KDoc opens a nested block
+        // comment, and Kotlin's comments nest — the generated file would not
+        // compile, from a path that merely looks odd.
+        val violations = DocumentationLinkRegistry.violationsOf(
+            entries = listOf(DocumentationLinkRegistry.Entry(id = "guide", path = "docs/*wild.md", anchor = null)),
+            documents = mapOf("docs/*wild.md" to "# Guide\n"),
+        )
+        assertSingleViolationMentioning(violations, "not a plain document path")
+    }
+
+    @Test
     fun `given a duplicated id when checked then it is reported`() {
         val violations = DocumentationLinkRegistry.violationsOf(
             entries = listOf(entry(anchor = null), entry(anchor = null)),
@@ -114,14 +139,20 @@ class DocumentationLinkRegistryTest {
 
     @Test
     fun `given the registry when rendered then it declares one constant and one entry per document`() {
-        val source = DocumentationLinkRegistry.render("app.knotwork.android.domain.constants")
+        val source = DocumentationLinkRegistry.render(PACKAGE)
 
-        assertTrue("Generated file must declare its package", source.startsWith("package app.knotwork.android.domain.constants\n"))
+        assertTrue("Generated file must declare its package", source.startsWith("package $PACKAGE\n"))
         assertTrue("Generated file must warn against hand edits", "DO NOT EDIT BY HAND" in source)
         DocumentationLinkRegistry.ENTRIES.forEach { entry ->
             val constant = "ID_" + entry.id.uppercase().replace('-', '_')
-            assertTrue("Generated file must declare $constant", "const val $constant: String = \"${entry.id}\"" in source)
-            assertTrue("Generated file must list ${entry.id}", "Entry(id = $constant, path = \"${entry.path}\"" in source)
+            assertTrue(
+                "Generated file must declare $constant",
+                "const val $constant: String = \"${entry.id}\"" in source,
+            )
+            assertTrue(
+                "Generated file must list ${entry.id}",
+                "Entry(id = $constant, path = \"${entry.path}\"" in source,
+            )
         }
     }
 
@@ -165,5 +196,9 @@ class DocumentationLinkRegistryTest {
 
         /** Package the render tests generate into. */
         const val PACKAGE = "app.knotwork.android.domain.constants"
+
+        /** A guide whose "Background & triggers" heading is written twice. */
+        const val TWICE_WRITTEN_HEADING =
+            "# Guide\n\n### Background & triggers\n\na\n\n#### Background & triggers\n\nb\n"
     }
 }

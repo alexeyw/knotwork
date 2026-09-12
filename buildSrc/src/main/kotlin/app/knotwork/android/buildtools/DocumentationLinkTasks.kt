@@ -13,6 +13,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.VerificationException
 import java.io.File
 
@@ -98,10 +99,34 @@ abstract class AbstractDocumentationLinkTask : DefaultTask() {
  * leave the verification task to report it afterwards, on a file already
  * committed.
  */
+@UntrackedTask(because = "it rewrites a committed source file, which must not become a declared build output")
 abstract class GenerateDocumentationLinksTask : AbstractDocumentationLinkTask() {
 
-    /** The generated Kotlin file. */
-    @get:OutputFile
+    /**
+     * The generated Kotlin file.
+     *
+     * `@Internal`, and the task untracked — not an oversight, and the reason is
+     * specific to *where* this file lives. Declaring it as an `@OutputFile`
+     * would make it a build output sitting inside `app/src/main`, which every
+     * task that reads the main source set also reads: compilation, detekt,
+     * ktlint, lint, the file-map and FQN guards. Gradle's implicit-dependency
+     * validation is an **error**, so each of them would fail the moment this
+     * task appeared in the same invocation — and
+     * `./gradlew :app:generateDocumentationLinks check` is exactly what the
+     * contribution workflow prescribes after editing the registry. (Observed:
+     * `checkNoInternalFqn` failed on precisely that.)
+     *
+     * The repository's usual answer — `mustRunAfter` on each consumer — was
+     * rejected here because that list is the whole Kotlin toolchain, and a
+     * consumer added later would silently re-open the hole. Declaring nothing
+     * removes the edge for every consumer, present and future.
+     *
+     * What is given up is up-to-date checking on a manual command that takes
+     * milliseconds and is not part of `check`. The gate that *is* in `check`,
+     * [VerifyDocumentationLinksTask], keeps its typed inputs and its stamp
+     * output, so it is still skipped when nothing has changed.
+     */
+    @get:Internal
     abstract val outputSource: RegularFileProperty
 
     /** Resolves every entry, then writes the app-side copy. */

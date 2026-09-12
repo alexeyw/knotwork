@@ -124,10 +124,26 @@ object DocumentationLinkRegistry {
             if (declarations.size > 1) violations += "`$id` is declared ${declarations.size} times."
         }
         for (entry in entries) {
+            // Shape before existence. An id becomes a Kotlin constant name and a
+            // path is quoted into the generated file's KDoc, so an unexpected
+            // character does not produce a bad link — it produces a file that
+            // does not compile, and a Kotlin syntax error in generated code is a
+            // far worse message than this one. (A `/` followed by `*` inside the
+            // KDoc would open a nested block comment, and Kotlin's nest.)
+            if (!ID_SHAPE.matches(entry.id)) {
+                violations += "`${entry.id}` is not a valid id: expected lower-case words joined by hyphens, " +
+                    "since the id becomes the generated constant `${constantNameOf(entry.id)}`."
+                continue
+            }
+            if (!PATH_SHAPE.matches(entry.path)) {
+                violations += "`${entry.id}` points at `${entry.path}`, which is not a plain document path."
+                continue
+            }
             val located = entry.path.startsWith(DOCS_PREFIX) && entry.path.endsWith(MARKDOWN_SUFFIX)
             if (!located) {
-                violations += "`${entry.id}` points at `${entry.path}`, which is not a `$DOCS_PREFIX*$MARKDOWN_SUFFIX` " +
-                    "document. Every target must be one, so the gate's inputs stay declarable."
+                violations += "`${entry.id}` points at `${entry.path}`, which is not a " +
+                    "`$DOCS_PREFIX*$MARKDOWN_SUFFIX` document. Every target must be one, so the gate's " +
+                    "inputs stay declarable."
                 continue
             }
             val markdown = documents[entry.path]
@@ -244,4 +260,10 @@ object DocumentationLinkRegistry {
 
     /** Trailing `-<digits>`, the shape GitHub gives a repeated heading. */
     private val ORDINAL_SUFFIX = Regex("""-\d+$""")
+
+    /** Lower-case words joined by hyphens — what maps cleanly onto a constant name. */
+    private val ID_SHAPE = Regex("""[a-z][a-z0-9]*(-[a-z0-9]+)*""")
+
+    /** Slash-separated lower-case path segments ending in the Markdown suffix. */
+    private val PATH_SHAPE = Regex("""[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*""")
 }

@@ -204,7 +204,7 @@ object SettingsHelpCatalog {
  *   this map.
  * @property labelRes Label shown on the link inside the hint panel.
  */
-private data class HelpDocLink(@StringRes val labelRes: Int, val documentId: String)
+internal data class HelpDocLink(@StringRes val labelRes: Int, val documentId: String)
 
 /**
  * Rows whose explanation cannot fit in a hint, and the document that holds the
@@ -217,7 +217,7 @@ private data class HelpDocLink(@StringRes val labelRes: Int, val documentId: Str
  * Extending the parsed type to carry one link on one row would risk dropping
  * rows from a published document to save a map.
  */
-private val HELP_DOC_LINKS: Map<String, HelpDocLink> = mapOf(
+internal val HELP_DOC_LINKS: Map<String, HelpDocLink> = mapOf(
     "EXTERNAL_AUTOMATION_ENABLED" to HelpDocLink(
         labelRes = R.string.settings_help_link_external_automation,
         documentId = DocumentationLinks.ID_EXTERNAL_AUTOMATION,

@@ -137,12 +137,33 @@ class SettingsHelpCatalogTest {
     fun `a documentation link names a document the registry still knows`() {
         // The link ids are generated constants, so a document that was renamed
         // or lost its heading fails the build before it reaches here. What this
-        // guards is the other direction: a hand-written map entry surviving the
-        // removal of the row it explains.
+        // guards is the other direction: a hand-written link surviving the
+        // removal of the row it explains, which would then never render.
+        //
+        // Iterated over HELP_DOC_LINKS, not over HELP: walking the rows would
+        // visit only links that still have a row, and an orphan is precisely
+        // the entry that has none.
+        HELP_DOC_LINKS.forEach { (anchor, link) ->
+            assertTrue(
+                "$anchor carries a documentation link but is no longer a settings row",
+                SettingsHelpCatalog.HELP.containsKey(anchor),
+            )
+            assertTrue(
+                "$anchor links to '${link.documentId}', which the registry does not declare",
+                DocumentationLinks.byId(link.documentId) != null,
+            )
+            assertTrue("$anchor offers a link with no label", context.getString(link.labelRes).isNotBlank())
+        }
+    }
+
+    @Test
+    fun `a row carrying a documentation link renders it`() {
+        // Closes the gap between the map and what the panel shows: a row listed
+        // in HELP_DOC_LINKS whose hint resolves to null would render no link at
+        // all, and the map alone cannot tell.
         val controller = SettingsHelpCatalog.controller(context)
-        SettingsHelpCatalog.HELP.keys.forEach { anchor ->
-            val link = controller.hintFor(anchor)?.link ?: return@forEach
-            assertTrue("$anchor offers a link with no label", link.label.isNotBlank())
+        HELP_DOC_LINKS.keys.forEach { anchor ->
+            assertTrue("$anchor must render the link it declares", controller.hintFor(anchor)?.link != null)
         }
     }
 
