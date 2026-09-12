@@ -297,10 +297,10 @@ class ChatHomeStateMappingTest {
 
         val confirmation = row.content as ChatContent.Confirmation
         assertEquals("append_file", confirmation.model.toolName)
-        // Not merely "different from the tool name": the slot is empty, which
-        // is what makes the card drop the line instead of printing the id twice.
+        // Asserted as empty rather than as "different from the tool name": it is
+        // emptiness that makes the card drop the line instead of printing the id
+        // twice, and a summary merely different from the id would not do that.
         assertEquals("", confirmation.model.summary)
-        assertNotEquals(confirmation.model.toolName, confirmation.model.summary)
     }
 
     @Test

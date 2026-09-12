@@ -1,6 +1,7 @@
 package app.knotwork.design.components.chat
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -60,6 +61,12 @@ class HitlConfirmationCardTest {
         assertEquals(
             1,
             composeTestRule.onAllNodesWithText(TOOL_NAME).fetchSemanticsNodes().size,
+        )
+        // The line is absent, not merely empty: an empty Text would still put a
+        // blank row between the tool id and the arguments block.
+        assertEquals(
+            0,
+            composeTestRule.onAllNodes(hasText("")).fetchSemanticsNodes().size,
         )
     }
 
