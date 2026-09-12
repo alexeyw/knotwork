@@ -53,4 +53,22 @@ object RepositoryLinks {
      * @return The `blob` URL on [DEFAULT_BRANCH].
      */
     fun legalDocumentUrl(path: String): String = blobUrl(ref = DEFAULT_BRANCH, path = path)
+
+    /**
+     * Reports whether a repository path is a legal document.
+     *
+     * Needed because a link inside a bundled document can address one: the FAQ
+     * points at `../PRIVACY.md` twice, and resolving that against the installed
+     * version's tag would quietly show the user the edition that was current
+     * when they installed rather than the one that binds them. Keeping the rule
+     * here, beside [legalDocumentUrl], is what stops it from being re-decided —
+     * differently — at each place a link is turned into a URL.
+     *
+     * @param path Repository-relative path of the target.
+     * @return `true` when the document's current edition is the binding one.
+     */
+    fun isLegalDocument(path: String): Boolean = path in LEGAL_DOCUMENTS
+
+    /** Repository files whose current edition is the one that binds. */
+    private val LEGAL_DOCUMENTS = setOf("PRIVACY.md", "LICENSE", "LICENSE.md")
 }

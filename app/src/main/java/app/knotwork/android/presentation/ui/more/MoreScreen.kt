@@ -33,6 +33,7 @@ fun MoreScreen(
     onNavigateToSkills: () -> Unit,
     onNavigateToTriggers: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToHelp: () -> Unit,
     onNavigateToLibrary: () -> Unit,
     onNavigateToFiles: () -> Unit,
     onNavigateToChatArchive: () -> Unit,
@@ -55,6 +56,8 @@ fun MoreScreen(
         titleMetrics = stringResource(R.string.more_row_monitoring),
         titleSettings = stringResource(R.string.more_row_settings),
         titleAbout = stringResource(R.string.more_row_about),
+        titleHelp = stringResource(R.string.more_row_help),
+        helpSubtitle = stringResource(R.string.more_row_help_sub),
         titleLibrary = stringResource(R.string.more_row_library),
         titleFiles = stringResource(R.string.more_row_files),
         titleArchive = stringResource(R.string.more_row_chat_archive),
@@ -76,6 +79,7 @@ fun MoreScreen(
         onMetrics = onNavigateToMonitoring,
         onSettings = onNavigateToSettings,
         onAbout = onNavigateToAbout,
+        onHelp = onNavigateToHelp,
         onLibrary = onNavigateToLibrary,
         onFiles = onNavigateToFiles,
         onArchive = onNavigateToChatArchive,
@@ -108,6 +112,8 @@ internal fun MoreUiState.toViewState(
     titleMetrics: String,
     titleSettings: String,
     titleAbout: String,
+    titleHelp: String,
+    helpSubtitle: String,
     titleLibrary: String,
     titleFiles: String,
     titleArchive: String,
@@ -121,6 +127,7 @@ internal fun MoreUiState.toViewState(
     onMetrics: () -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onHelp: () -> Unit,
     onLibrary: () -> Unit,
     onFiles: () -> Unit,
     onArchive: () -> Unit,
@@ -227,6 +234,16 @@ internal fun MoreUiState.toViewState(
                     subtitle = settingsSubtitle,
                     icon = AppIcons.Cog,
                     onClick = onSettings,
+                ),
+                // Documentation is not "about the app", but it is *of* it, and
+                // `App` is the section an Android user already reaches for.
+                // About keeps the last position because it is the terminus.
+                MoreRow(
+                    id = "help",
+                    title = titleHelp,
+                    subtitle = helpSubtitle,
+                    icon = AppIcons.Book,
+                    onClick = onHelp,
                 ),
                 MoreRow(
                     id = "metrics",

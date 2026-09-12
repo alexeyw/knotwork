@@ -1,10 +1,10 @@
 package app.knotwork.android.data.repositories
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import app.knotwork.android.domain.models.BundledDocument
 import app.knotwork.android.domain.models.DocumentationTarget
 import app.knotwork.android.domain.repositories.BundledDocumentationRepository
-import androidx.annotation.VisibleForTesting
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -34,9 +34,8 @@ import javax.inject.Singleton
  * @property context Application context used to open the asset stream.
  */
 @Singleton
-class AssetBundledDocumentationRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-) : BundledDocumentationRepository {
+class AssetBundledDocumentationRepository @Inject constructor(@ApplicationContext private val context: Context) :
+    BundledDocumentationRepository {
 
     /** Dispatcher every asset read runs on. Swapped in unit tests. */
     @VisibleForTesting
@@ -85,8 +84,7 @@ class AssetBundledDocumentationRepository @Inject constructor(
      * @return The file's full text.
      * @throws IOException when the asset is missing or unreadable.
      */
-    private fun readAsset(path: String): String =
-        context.assets.open(path).bufferedReader().use { it.readText() }
+    private fun readAsset(path: String): String = context.assets.open(path).bufferedReader().use { it.readText() }
 
     /**
      * Parses the generated index.

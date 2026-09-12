@@ -25,6 +25,8 @@ import app.knotwork.android.presentation.ui.chat.home.ChatHomeViewModel
 import app.knotwork.android.presentation.ui.discover.DiscoverDetailScreen
 import app.knotwork.android.presentation.ui.discover.DiscoverScreen
 import app.knotwork.android.presentation.ui.files.FilesScreen
+import app.knotwork.android.presentation.ui.help.HelpReaderScreen
+import app.knotwork.android.presentation.ui.help.HelpScreen
 import app.knotwork.android.presentation.ui.memory.MemoryScreen
 import app.knotwork.android.presentation.ui.models.ModelsScreen
 import app.knotwork.android.presentation.ui.monitoring.MonitoringScreen
@@ -293,6 +295,7 @@ fun AppNavGraph(
                 onNavigateToSkills = { navController.navigate(NavRoutes.SKILLS) },
                 onNavigateToTriggers = { navController.navigate(NavRoutes.TRIGGERS) },
                 onNavigateToAbout = { navController.navigate(NavRoutes.ABOUT) },
+                onNavigateToHelp = { navController.navigate(NavRoutes.HELP) },
                 onNavigateToLibrary = { navController.navigate(NavRoutes.PIPELINE_PRESETS) },
                 onNavigateToFiles = { navController.navigate(NavRoutes.FILES) },
                 onNavigateToChatArchive = { navController.navigate(NavRoutes.CHAT_ARCHIVE) },
@@ -473,7 +476,37 @@ fun AppNavGraph(
             )
         }
         composable(NavRoutes.ABOUT) {
-            AboutScreen(onBack = { navController.popBackStack() })
+            AboutScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToHelp = { navController.navigate(NavRoutes.HELP) },
+            )
+        }
+
+        composable(NavRoutes.HELP) {
+            HelpScreen(
+                onOpenDocument = { id -> navController.navigate(NavRoutes.helpDocumentRoute(id)) },
+            )
+        }
+
+        composable(
+            route = NavRoutes.HELP_DOCUMENT,
+            arguments = listOf(
+                navArgument(NavRoutes.HELP_DOCUMENT_ID_ARG) { type = NavType.StringType },
+                navArgument(NavRoutes.HELP_DOCUMENT_ANCHOR_ARG) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+        ) {
+            HelpReaderScreen(
+                // A link from one document to another pushes rather than
+                // replaces, so back returns to the document the reader left —
+                // which is what a reader following a cross-reference expects.
+                onOpenDocument = { id, anchor ->
+                    navController.navigate(NavRoutes.helpDocumentRoute(id, anchor))
+                },
+                onBack = { navController.popBackStack() },
+            )
         }
 
         // ─── Modal bottom-sheet placeholders (Tasks 6 / 7) ─────────────────

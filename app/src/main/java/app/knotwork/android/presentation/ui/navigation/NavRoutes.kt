@@ -111,6 +111,34 @@ object NavRoutes {
     /** More tab — landing screen with secondary navigation. */
     const val MORE: String = "more"
 
+    /** Help: the list of documents the app can open. */
+    const val HELP: String = "help"
+
+    /**
+     * The reader, on one bundled document.
+     *
+     * The anchor is a query parameter rather than a path segment because it is
+     * genuinely optional: most entries open a document at its top, and a path
+     * segment would force every caller to supply a placeholder for "no anchor".
+     */
+    const val HELP_DOCUMENT: String = "help/{documentId}?anchor={anchor}"
+
+    /** Argument name carrying the document's registry id. */
+    const val HELP_DOCUMENT_ID_ARG: String = "documentId"
+
+    /** Argument name carrying the heading anchor, empty when there is none. */
+    const val HELP_DOCUMENT_ANCHOR_ARG: String = "anchor"
+
+    /**
+     * Builds the route to one document in the reader.
+     *
+     * @param id The document's registry id.
+     * @param anchor Heading anchor to arrive at, or `null` for the top.
+     * @return The encoded route.
+     */
+    fun helpDocumentRoute(id: String, anchor: String? = null): String =
+        "help/$id?anchor=${android.net.Uri.encode(anchor.orEmpty())}"
+
     // ─── Secondary destinations under "More" ───────────────────────────────
 
     /** Local model management (under More). */
