@@ -164,16 +164,33 @@ object MarkdownLinks {
     /**
      * Finds the lines that open a Mermaid fenced block.
      *
-     * Read from the raw lines rather than the masked ones, because masking is
-     * exactly what removes fenced blocks — the construct being looked for.
+     * Fence state is tracked here rather than reused from [maskedLines],
+     * because masking is what *removes* fenced blocks — the construct being
+     * looked for. Tracking it means a `mermaid` fence quoted **inside** another
+     * fenced block is not reported: documentation about diagrams shows the
+     * syntax, and a gate that fails a valid document teaches everyone to
+     * distrust it.
      *
      * @param markdown The document's full text.
-     * @return 1-indexed lines carrying a Mermaid fence opener.
+     * @return 1-indexed lines opening a Mermaid block at the top level.
      */
-    fun mermaidBlockLines(markdown: String): List<Int> =
-        markdown.split("\n").mapIndexedNotNull { index, line ->
-            (index + 1).takeIf { MERMAID_FENCE.containsMatchIn(line) }
+    fun mermaidBlockLines(markdown: String): List<Int> {
+        val lines = mutableListOf<Int>()
+        var fence: String? = null
+        markdown.split("\n").forEachIndexed { index, line ->
+            val opener = FENCE.find(line)?.groupValues?.get(1)
+            when {
+                fence == null && opener != null -> {
+                    fence = opener
+                    if (MERMAID_FENCE.containsMatchIn(line)) lines += index + 1
+                }
+
+                fence != null && opener != null &&
+                    opener.first() == fence.first() && opener.length >= fence.length -> fence = null
+            }
         }
+        return lines
+    }
 
     /**
      * Finds the lines carrying an image.

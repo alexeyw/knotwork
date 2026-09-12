@@ -117,6 +117,24 @@ class BundledDocsTest {
     }
 
     @Test
+    fun `given a mermaid fence quoted inside another block when checked then it is not reported`() {
+        // Documentation about diagrams shows the syntax. Reporting a quoted
+        // fence would fail a document that renders perfectly, and a gate that
+        // fails valid documents teaches everyone to distrust it.
+        val markdown = "# T\n\n````\n```mermaid\nflowchart TD\n  A --> B\n```\n````\n"
+        assertEquals(emptyList<Int>(), MarkdownLinks.mermaidBlockLines(markdown))
+        assertEquals(emptyList<String>(), BundledDocs.violationsOf(documentsWith(TROUBLESHOOTING to markdown)))
+    }
+
+    @Test
+    fun `given a mermaid block after a closed code block when checked then it is still found`() {
+        // The other half of the same rule: tracking fence state must not lose
+        // the diagram that follows an ordinary code block.
+        val markdown = "# T\n\n```\nplain\n```\n\n```mermaid\nflowchart TD\n  A --> B\n```\n"
+        assertEquals(listOf(7), MarkdownLinks.mermaidBlockLines(markdown))
+    }
+
+    @Test
     fun `given a fenced example of html when checked then it is not mistaken for html`() {
         // Documentation quotes tags constantly. A gate that failed on a quoted
         // tag would teach everyone to distrust it.
