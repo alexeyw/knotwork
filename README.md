@@ -139,6 +139,13 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   reference table in the user guide is generated from the strings the app itself
   shows. A setting whose behaviour is not wired up yet carries no explanation at
   all rather than a plausible one — the reference table records which, and why.
+- **The documentation is reachable from inside the app.** About lists the user
+  guide, FAQ, cookbook, troubleshooting page and automation contract; Tools,
+  Triggers, the pipeline editor and the external-automation settings link
+  straight to the section that explains them. A release build opens each one at
+  the tag of the version you installed, so you read about the app you actually
+  have — and a build gate resolves every link against the real document, so a
+  renamed heading fails the build rather than the reader.
 
 The full feature tour lives in the [user guide](docs/user-guide.md).
 

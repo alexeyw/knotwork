@@ -8,11 +8,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import app.knotwork.android.BuildConfig
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.DocumentationLinks
+import app.knotwork.android.domain.constants.RepositoryLinks
+import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.screens.about.AboutCallbacks
 import app.knotwork.design.screens.about.AboutContent
 import app.knotwork.design.screens.about.AboutStrings
 import app.knotwork.design.screens.about.AboutViewState
 import app.knotwork.design.screens.about.AcknowledgmentEntry
+import app.knotwork.design.screens.about.DocumentationEntry
 
 /**
  * App-side About surface. Renders the Knotwork [AboutContent] with brand
@@ -32,6 +36,7 @@ fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         licenseName = stringResource(R.string.license_name),
         acknowledgments = AboutAcknowledgments.ENTRIES,
         privacyBody = stringResource(R.string.about_privacy_policy_body),
+        documentation = documentationEntries(),
     )
     val strings = AboutStrings(
         title = stringResource(R.string.about_title),
@@ -42,6 +47,8 @@ fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         sectionPrivacy = stringResource(R.string.about_section_privacy_policy),
         licenseCta = stringResource(R.string.about_open_license_cta),
         privacyCta = stringResource(R.string.about_open_privacy_cta),
+        sectionDocumentation = stringResource(R.string.about_section_documentation),
+        documentationBody = stringResource(R.string.about_documentation_body),
     )
     AboutContent(
         state = state,
@@ -59,9 +66,49 @@ fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, AboutLinks.PRIVACY_URL.toUri()))
                 }
             },
+            onOpenDocument = { id -> openDocumentation(context, id) },
         ),
     )
 }
+
+/**
+ * The documents the About screen offers, in reading order.
+ *
+ * The ids come from the generated registry, so a document that is renamed or
+ * loses its heading fails the build rather than this list; the titles and
+ * summaries are localised here, because the registry is a build artefact and
+ * carries no user-facing text.
+ *
+ * @return One entry per document, titled and summarised for this locale.
+ */
+@Composable
+private fun documentationEntries(): List<DocumentationEntry> = listOf(
+    DocumentationEntry(
+        id = DocumentationLinks.ID_USER_GUIDE,
+        title = stringResource(R.string.about_doc_user_guide_title),
+        summary = stringResource(R.string.about_doc_user_guide_summary),
+    ),
+    DocumentationEntry(
+        id = DocumentationLinks.ID_FAQ,
+        title = stringResource(R.string.about_doc_faq_title),
+        summary = stringResource(R.string.about_doc_faq_summary),
+    ),
+    DocumentationEntry(
+        id = DocumentationLinks.ID_COOKBOOK,
+        title = stringResource(R.string.about_doc_cookbook_title),
+        summary = stringResource(R.string.about_doc_cookbook_summary),
+    ),
+    DocumentationEntry(
+        id = DocumentationLinks.ID_TROUBLESHOOTING,
+        title = stringResource(R.string.about_doc_troubleshooting_title),
+        summary = stringResource(R.string.about_doc_troubleshooting_summary),
+    ),
+    DocumentationEntry(
+        id = DocumentationLinks.ID_EXTERNAL_AUTOMATION,
+        title = stringResource(R.string.about_doc_external_automation_title),
+        summary = stringResource(R.string.about_doc_external_automation_summary),
+    ),
+)
 
 /**
  * Outbound web links opened from the About screen.
@@ -87,8 +134,15 @@ internal object AboutLinks {
      * no longer points at a README heading anchor: an anchor silently survives
      * the heading being renamed, landing the user at the top of an unrelated
      * page, and a store review will not accept a fragment link into a README.
+     *
+     * It stays pinned to the default branch while the documentation links of
+     * `DocumentationLinks` are pinned to the installed version's tag, and the
+     * difference is deliberate. What binds a user is the *current* privacy
+     * policy, not the edition that happened to be current when they installed;
+     * and this same URL is filed with the app stores, where a link that moved
+     * with every release would be a link that breaks.
      */
-    const val PRIVACY_URL = "https://github.com/alexeyw/knotwork/blob/main/PRIVACY.md"
+    val PRIVACY_URL: String = RepositoryLinks.legalDocumentUrl("PRIVACY.md")
 }
 
 /**

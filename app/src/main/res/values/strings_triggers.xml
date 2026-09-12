@@ -191,6 +191,9 @@
     <string name="triggers_journal_day_today">Today</string>
     <string name="triggers_journal_day_yesterday">Yesterday</string>
 
+    <!-- Top-bar link into the guide's triggers section. -->
+    <string name="triggers_documentation_cd">Read about triggers</string>
+
     <!-- Evaluation-journal export. On the list, not on a trigger's detail: the
          document is the whole journal, every trigger at once. -->
     <string name="triggers_export_share_cd">Share the evaluation journal</string>

@@ -53,6 +53,7 @@
     <string name="pipeline_editor_rename_cancel">Cancel</string>
 
     <!-- Search / Find node bar. -->
+    <string name="pipeline_editor_overflow_cookbook">Pipeline cookbook</string>
     <string name="pipeline_editor_overflow_find">Find node…</string>
     <string name="pipeline_editor_search_placeholder">Search nodes…</string>
     <string name="pipeline_editor_search_close">Close search</string>

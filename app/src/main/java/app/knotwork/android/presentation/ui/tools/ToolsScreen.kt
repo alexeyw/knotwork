@@ -5,12 +5,15 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpTool
 import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.screens.tools.BuiltInToolRow
 import app.knotwork.design.screens.tools.McpConnectionState
 import app.knotwork.design.screens.tools.McpServerRow
@@ -92,6 +95,7 @@ fun ToolsScreen(
         mcpServers = mcpServers,
     )
 
+    val context = LocalContext.current
     val callbacks = ToolsCallbacks(
         onToolToggle = { id, enabled -> viewModel.toggleLocalTool(toolName = id, isEnabled = enabled) },
         onToolClick = onOpenToolDetail,
@@ -104,6 +108,7 @@ fun ToolsScreen(
         onAddServerOpen = onAddMcpServer,
         onOpenAllowedDomains = onOpenAllowedDomains,
         onErrorRetry = { /* unreachable: discovery errors surface per-server, not as a top-level state. */ },
+        onOpenDocumentation = { openDocumentation(context, DocumentationLinks.ID_MCP_SETUP) },
     )
 
     ToolsContent(

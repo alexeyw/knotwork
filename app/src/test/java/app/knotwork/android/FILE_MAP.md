@@ -146,9 +146,11 @@ Only Kotlin files appear inside the generated blocks.
 - `domain/` - Tests for the domain layer.
   - `constants/` - Tests for the domain-level constants.
     - `DefaultPromptsTest.kt` - Smoke + contract coverage for `DefaultPrompts`.
+    - `DocumentationLinksTest.kt` - Drift guard for the generated `DocumentationLinks` registry as the app reads it.
     - `OnboardingModelCatalogTest.kt` - Unit tests for `OnboardingModelCatalog`.
     - `OnboardingScenarioCatalogTest.kt` - Pins the onboarding scenario wiring: the set of scenarios, their preset / model / surface mapping, gallery order, and the `OnboardingScenarioCatalog.byId` lookup.
     - `PipelineExecutionDefaultsTest.kt` - Pins the engine-side timing/log constants exposed by `PipelineExecutionDefaults`.
+    - `RepositoryLinksTest.kt` - Unit tests for `RepositoryLinks`.
     - `SettingsDefaultsTest.kt` - Pins the numeric values exposed by `SettingsDefaults` so a silent edit to a default value is caught at test time rather than at runtime by an end user.
     - `TimeAndIdConstantsTest.kt` - Pins the time-unit and notification-id constants exposed by `TimeAndIdConstants`.
   - `engine/` - Tests for the graph execution engine and its supporting abstractions.

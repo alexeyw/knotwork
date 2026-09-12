@@ -13,10 +13,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.knotwork.android.domain.constants.DocumentationLinks
+import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
@@ -69,7 +72,8 @@ fun OnboardingScreen(onCompleted: () -> Unit, viewModel: OnboardingViewModel = h
     val activity = LocalActivity.current
     var exitConfirmVisible by rememberSaveable { mutableStateOf(value = false) }
 
-    val callbacks = remember(viewModel) {
+    val context = LocalContext.current
+    val callbacks = remember(viewModel, context) {
         OnboardingCallbacks(
             onNext = viewModel::next,
             onSkip = {
@@ -90,6 +94,7 @@ fun OnboardingScreen(onCompleted: () -> Unit, viewModel: OnboardingViewModel = h
             onRetryWarmUp = viewModel::retryWarmUp,
             onStartDownload = viewModel::startDownload,
             onCustomDownloadUrlChanged = viewModel::onCustomDownloadUrlChanged,
+            onOpenDocumentation = { openDocumentation(context, DocumentationLinks.ID_FAQ) },
         )
     }
 

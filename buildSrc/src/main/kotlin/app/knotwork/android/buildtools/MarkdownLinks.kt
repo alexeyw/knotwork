@@ -99,14 +99,54 @@ object MarkdownLinks {
         val used = mutableMapOf<String, Int>()
         for (line in maskedLines(markdown, maskCodeSpans = false)) {
             HTML_ANCHOR.findAll(line).forEach { anchors += it.groupValues[1] }
-            val heading = HEADING.matchEntire(line) ?: continue
-            val base = slug(heading.groupValues[2])
-            if (base.isEmpty()) continue
+            val base = headingSlugOf(line) ?: continue
             val seen = used.getOrDefault(base, 0)
             used[base] = seen + 1
             anchors += if (seen == 0) base else "$base-$seen"
         }
         return anchors
+    }
+
+    /**
+     * Counts how many headings produce each base slug.
+     *
+     * [anchorsOf] answers "can this anchor be linked to", which a duplicated
+     * heading answers `true` to twice over: two headings spelled alike yield
+     * `slug` and `slug-1`, and both are valid targets forever. That is exactly
+     * the anchor nobody should depend on — reordering the sections keeps both
+     * anchors alive while silently swapping what they point at. A caller that
+     * has to refuse such an anchor needs the count, not the membership, so it
+     * is read here rather than inferred from the anchor set (where `step-1`
+     * from a heading "Step 1" is indistinguishable from an ordinal suffix).
+     *
+     * @param markdown The document's full text.
+     * @return Base slug to the number of headings that produce it, in document
+     *   order. Explicit HTML anchors are not counted: they are written by hand
+     *   and carry no ordinal suffix.
+     */
+    fun headingSlugCounts(markdown: String): Map<String, Int> {
+        val counts = linkedMapOf<String, Int>()
+        for (line in maskedLines(markdown, maskCodeSpans = false)) {
+            val base = headingSlugOf(line) ?: continue
+            counts[base] = counts.getOrDefault(base, 0) + 1
+        }
+        return counts
+    }
+
+    /**
+     * Reads one line as a heading and returns its base slug.
+     *
+     * The single owner of "this line is a heading, and this is the anchor it
+     * contributes": [anchorsOf] and [headingSlugCounts] answer different
+     * questions and must never answer them from two different readings.
+     *
+     * @param line One masked source line.
+     * @return The heading's base slug, or `null` when the line is not a heading
+     *   or slugifies to nothing.
+     */
+    private fun headingSlugOf(line: String): String? {
+        val heading = HEADING.matchEntire(line) ?: return null
+        return slug(heading.groupValues[2]).takeIf { it.isNotEmpty() }
     }
 
     /**
