@@ -32,6 +32,7 @@ fun helpStrings(): HelpStrings = HelpStrings(
     offlineBarCopy = stringResource(R.string.help_offline_copy),
     opensInBrowser = stringResource(R.string.help_opens_in_browser),
     backDescription = stringResource(R.string.help_back),
+    dismissDescription = stringResource(R.string.help_dismiss),
 )
 
 /**

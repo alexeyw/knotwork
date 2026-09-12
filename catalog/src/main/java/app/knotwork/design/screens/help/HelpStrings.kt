@@ -19,6 +19,8 @@ import androidx.compose.runtime.Immutable
  *   row that leaves the app.
  * @property backDescription Content description of the reader's back
  *   affordance.
+ * @property dismissDescription Content description of the in-body refusal's
+ *   dismissal.
  */
 @Immutable
 data class HelpStrings(
@@ -33,4 +35,5 @@ data class HelpStrings(
     val offlineBarCopy: String,
     val opensInBrowser: String,
     val backDescription: String,
+    val dismissDescription: String,
 )

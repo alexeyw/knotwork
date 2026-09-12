@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.components.buttons.KnotworkButtonSize
+import app.knotwork.design.components.buttons.KnotworkIconButton
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.icons.AppIcons
@@ -283,6 +284,15 @@ fun HelpOfflineBar(strings: HelpStrings, callbacks: HelpReaderCallbacks, modifie
                 .clip(KnotworkTheme.shapes.sm)
                 .clickable(onClick = callbacks.onCopyLink)
                 .padding(KnotworkTheme.spacing.sp1),
+        )
+        // The bar persists until dismissed — it is not a snackbar, because the
+        // reader who hit it is reading rather than watching. That makes an
+        // explicit dismissal necessary: without one the only way to clear it
+        // would be to copy a link you may not want.
+        KnotworkIconButton(
+            icon = AppIcons.X,
+            contentDescription = strings.dismissDescription,
+            onClick = callbacks.onDismissOfflineBar,
         )
     }
 }

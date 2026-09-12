@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.help
 import androidx.test.platform.app.InstrumentationRegistry
 import app.knotwork.android.data.repositories.AssetBundledDocumentationRepository
 import app.knotwork.android.domain.models.DocumentationTarget
+import app.knotwork.android.domain.usecases.ResolveDocumentationLinkUseCase
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -33,7 +34,9 @@ class HelpReaderNavigationTest {
     private val repository =
         AssetBundledDocumentationRepository(InstrumentationRegistry.getInstrumentation().targetContext)
 
-    private val resolve = ResolveDocumentationLinkUseCaseHolder.instance
+    // Constructed directly rather than injected: it has no dependencies, and a
+    // Hilt test rule here would buy nothing but a longer setup.
+    private val resolve = ResolveDocumentationLinkUseCase()
 
     @Test
     fun faq_link_to_troubleshooting_lands_on_the_named_anchor() = runBlocking {
@@ -73,15 +76,5 @@ class HelpReaderNavigationTest {
                 assertTrue("${document.assetPath} is empty in the installed APK", content.isNotBlank())
             }
         }
-    }
-
-    /**
-     * Holds the one use case this test needs.
-     *
-     * Constructed directly rather than injected: it has no dependencies, and a
-     * Hilt test rule here would buy nothing but a longer setup.
-     */
-    private object ResolveDocumentationLinkUseCaseHolder {
-        val instance = app.knotwork.android.domain.usecases.ResolveDocumentationLinkUseCase()
     }
 }

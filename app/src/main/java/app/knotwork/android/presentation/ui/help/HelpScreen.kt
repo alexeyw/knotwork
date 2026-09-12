@@ -61,11 +61,19 @@ fun HelpScreen(
         strings = helpStrings(),
         callbacks = HelpListCallbacks(
             onOpen = { id ->
-                viewModel.onDocumentClick(
-                    id = id,
-                    onOpenReader = onOpenDocument,
-                    onOpenBrowser = { openDocumentationInBrowser(context, it) },
-                )
+                // Tapping the row whose refusal is open closes it. Without
+                // this the panel has no dismissal at all: its two actions both
+                // navigate away, so a reader who wants neither is stuck with
+                // it on screen.
+                if (id == uiState.refusedDocumentId) {
+                    viewModel.dismissRefusal()
+                } else {
+                    viewModel.onDocumentClick(
+                        id = id,
+                        onOpenReader = onOpenDocument,
+                        onOpenBrowser = { openDocumentationInBrowser(context, it) },
+                    )
+                }
             },
             onDismissRefusal = viewModel::dismissRefusal,
             onCopyLink = {

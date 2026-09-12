@@ -264,6 +264,7 @@
         <item quantity="other">%1$d documents \u00b7 %2$d on this device</item>
     </plurals>
     <string name="help_back">Back</string>
+    <string name="help_dismiss">Dismiss</string>
 
     <!--
       The mono slot on a row: delivery first, then size. Delivery is what the

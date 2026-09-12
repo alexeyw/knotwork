@@ -2,13 +2,15 @@ package app.knotwork.android.presentation.ui.help
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +24,7 @@ import app.knotwork.android.presentation.ui.common.openDocumentationUrl
 import app.knotwork.android.presentation.ui.common.repositoryDocumentUrl
 import app.knotwork.design.components.knotworkMarkdownColor
 import app.knotwork.design.components.knotworkMarkdownTypography
+import app.knotwork.design.screens.help.HelpAnchorMark
 import app.knotwork.design.screens.help.HelpReaderCallbacks
 import app.knotwork.design.screens.help.HelpReaderContent
 import app.knotwork.design.screens.help.HelpReaderViewState
@@ -75,12 +78,25 @@ fun HelpReaderScreen(
     val markdownState = rememberMarkdownState(content = uiState.markdown)
     val parseState by markdownState.state.collectAsStateWithLifecycle()
     val reducedMotion = KnotworkTheme.a11y.reducedMotion()
+    val strings = helpStrings()
+
+    // Index of the block the anchor landed on, so the arrival can be marked.
+    // Held here rather than in the view model because it is a property of the
+    // *parsed* document, which only this composition has.
+    var arrivedIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Guards the mark against the scroll that creates it: `animateScrollToItem`
+    // sets `isScrollInProgress`, so without this the programmatic arrival would
+    // dismiss the very mark it was supposed to leave.
+    var scrollingProgrammatically by remember { mutableStateOf(false) }
 
     // The first scroll gesture dismisses the arrival mark. Read from the list's
     // own interaction rather than from a scroll callback so a fling counts once.
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }
-            .collect { scrolling -> if (scrolling) viewModel.onScrolled() }
+            .collect { scrolling ->
+                if (scrolling && !scrollingProgrammatically) viewModel.onScrolled()
+            }
     }
 
     // Arrive at the anchor once the document has actually been parsed: before
@@ -90,7 +106,16 @@ fun HelpReaderScreen(
         val offset = uiState.anchorOffset ?: return@LaunchedEffect
         val index = success.node.children.indexOfFirst { it.startOffset >= offset }
         if (index >= 0) {
-            if (reducedMotion) listState.scrollToItem(index) else listState.animateScrollToItem(index)
+            scrollingProgrammatically = true
+            try {
+                if (reducedMotion) listState.scrollToItem(index) else listState.animateScrollToItem(index)
+            } finally {
+                // In `finally` so a cancelled scroll — the reader leaving
+                // before it lands — cannot strand the flag and make every
+                // later gesture silent.
+                scrollingProgrammatically = false
+            }
+            arrivedIndex = index
         }
         viewModel.onAnchorConsumed()
     }
@@ -122,7 +147,7 @@ fun HelpReaderScreen(
             anchorMarked = uiState.anchorMarked,
             offlineBarVisible = uiState.offlineUrl != null,
         ),
-        strings = helpStrings(),
+        strings = strings,
         callbacks = HelpReaderCallbacks(
             onBack = onBack,
             onOpenInBrowser = { openDocumentationInBrowser(context, viewModel.documentId) },
@@ -151,15 +176,21 @@ fun HelpReaderScreen(
                             vertical = KnotworkTheme.spacing.sp3,
                         ),
                     ) {
-                        items(
+                        itemsIndexed(
                             items = success.node.children,
                             // The offset is stable across recomposition and
                             // unique within a document, which is what the
                             // library's own lazy renderer keys by too.
-                            key = { node -> node.startOffset },
-                            contentType = { node -> node.type },
-                        ) { node ->
-                            MarkdownElement(node, components, success.content)
+                            key = { _, node -> node.startOffset },
+                            contentType = { _, node -> node.type },
+                        ) { index, node ->
+                            if (index == arrivedIndex && uiState.anchorMarked) {
+                                HelpAnchorMark(note = strings.anchorNote) {
+                                    MarkdownElement(node, components, success.content)
+                                }
+                            } else {
+                                MarkdownElement(node, components, success.content)
+                            }
                         }
                     }
                 },

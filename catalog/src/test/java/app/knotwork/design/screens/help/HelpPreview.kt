@@ -115,6 +115,7 @@ object HelpPreview {
         offlineBarCopy = "Copy link",
         opensInBrowser = "Opens in browser",
         backDescription = "Back",
+        dismissDescription = "Dismiss",
     )
 
     /**

@@ -1,7 +1,6 @@
 package app.knotwork.android.presentation.ui.help
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.repositories.NetworkStateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,7 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -86,9 +84,4 @@ class HelpViewModel @Inject constructor(private val networkState: NetworkStateRe
      */
     fun alternativeDocumentId(): String? =
         DocumentationLinks.DOCUMENTS.firstOrNull { it.delivery == DocumentationLinks.Delivery.BUNDLED }?.id
-
-    /** Clears the refusal after the user acts on it. */
-    fun onRefusalHandled() {
-        viewModelScope.launch { dismissRefusal() }
-    }
 }

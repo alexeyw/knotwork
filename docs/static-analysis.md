@@ -984,6 +984,13 @@ failure.
 write while any entry fails to resolve, so a broken registry cannot reach the
 app and be reported afterwards against a file already committed.
 
+Note the consequence of the generated entries carrying per-document counts (the
+Help list shows them): **editing any document under `docs/` can make the
+committed registry stale**, and the gate will say so. Regenerating is the same
+one command, and it is cheap; the alternative was a hand-maintained number
+beside a document that grows, which is the defect this repository keeps
+removing.
+
 ### Why this one is typed and cacheable while `verifyDocLinks` is not
 
 `verifyDocLinks` is deliberately untracked: a documentation link may address any
