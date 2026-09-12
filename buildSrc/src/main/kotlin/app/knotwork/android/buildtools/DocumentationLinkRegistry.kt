@@ -264,6 +264,12 @@ object DocumentationLinkRegistry {
     /** Lower-case words joined by hyphens — what maps cleanly onto a constant name. */
     private val ID_SHAPE = Regex("""[a-z][a-z0-9]*(-[a-z0-9]+)*""")
 
-    /** Slash-separated lower-case path segments ending in the Markdown suffix. */
+    /**
+     * Slash-separated segments of letters, digits, `.`, `_` and `-`.
+     *
+     * Deliberately narrower than "a legal filename": it excludes the `*` that
+     * would turn the generated KDoc into a nested comment, and spaces, which no
+     * document in this repository uses.
+     */
     private val PATH_SHAPE = Regex("""[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*""")
 }
