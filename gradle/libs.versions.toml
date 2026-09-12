@@ -29,7 +29,7 @@ koog = "1.1.1"
 # their stable release.
 koog-preview = "1.1.1-beta"
 appfunctions = "1.0.0-alpha09"
-markdown-renderer = "0.44.0"
+markdown-renderer = "0.45.0"
 work = "2.11.2"
 hiltWork = "1.4.0"
 gson = "2.14.0"

@@ -84,37 +84,15 @@ internal object AboutPreview {
         ),
         privacyBody = "All sensitive data is processed locally via LiteRT. " +
             "Cloud providers are opt-in. Crash reporting is opt-in and never includes prompts or memory content.",
-        documentation = listOf(
-            DocumentationEntry(
-                id = "user-guide",
-                title = "User guide",
-                summary = "Every screen, setting and node, in order.",
-            ),
-            DocumentationEntry(id = "faq", title = "FAQ", summary = "Short answers, and where to read more."),
-            DocumentationEntry(
-                id = "cookbook",
-                title = "Pipeline cookbook",
-                summary = "What each node does, with recipes to copy.",
-            ),
-            DocumentationEntry(
-                id = "troubleshooting",
-                title = "Troubleshooting",
-                summary = "When something does not work.",
-            ),
-            DocumentationEntry(
-                id = "external-automation",
-                title = "External automation",
-                summary = "Running a pipeline from Tasker, adb or another app.",
-            ),
-        ),
+        documentationSummary = "5 documents · 2 on this device",
     )
 
     /**
      * The About screen before the documentation section existed.
      *
      * Kept as its own fixture because the section is rendered only when the
-     * host supplies entries, and a snapshot of the populated state alone would
-     * not show that the empty case still lays out.
+     * host supplies a summary, and a snapshot of the populated state alone
+     * would not show that the empty case still lays out.
      */
-    fun withoutDocumentation(): AboutViewState = default().copy(documentation = emptyList())
+    fun withoutDocumentation(): AboutViewState = default().copy(documentationSummary = "")
 }

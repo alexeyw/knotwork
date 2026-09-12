@@ -139,7 +139,7 @@ class DocumentationLinkRegistryTest {
 
     @Test
     fun `given the registry when rendered then it declares one constant and one entry per document`() {
-        val source = DocumentationLinkRegistry.render(PACKAGE)
+        val source = DocumentationLinkRegistry.render(PACKAGE, renderDocuments())
 
         assertTrue("Generated file must declare its package", source.startsWith("package $PACKAGE\n"))
         assertTrue("Generated file must warn against hand edits", "DO NOT EDIT BY HAND" in source)
@@ -151,7 +151,11 @@ class DocumentationLinkRegistryTest {
             )
             assertTrue(
                 "Generated file must list ${entry.id}",
-                "Entry(id = $constant, path = \"${entry.path}\"" in source,
+                "id = $constant,\n            path = \"${entry.path}\"," in source,
+            )
+            assertTrue(
+                "Generated file must carry ${entry.id}'s delivery",
+                "delivery = Delivery.${entry.delivery.name}," in source,
             )
         }
     }
@@ -161,13 +165,47 @@ class DocumentationLinkRegistryTest {
         // The verification task compares a fresh render against the committed
         // file, so a render that varied between runs would fail `check` at
         // random rather than on a real change.
-        assertEquals(DocumentationLinkRegistry.render(PACKAGE), DocumentationLinkRegistry.render(PACKAGE))
+        assertEquals(
+            DocumentationLinkRegistry.render(PACKAGE, renderDocuments()),
+            DocumentationLinkRegistry.render(PACKAGE, renderDocuments()),
+        )
     }
 
     @Test
     fun `given the registry when read then every id is unique`() {
         val ids = DocumentationLinkRegistry.ENTRIES.map { it.id }
         assertEquals("Entry ids must be unique", ids.distinct(), ids)
+    }
+
+    @Test
+    fun `given one document delivered two ways when checked then it is refused`() {
+        // Delivery belongs to the document. `mcp-setup` and `user-guide` name
+        // the same file, and if one said BUNDLED the reader would open a copy
+        // the sync task was never told to produce.
+        val violations = DocumentationLinkRegistry.violationsOf(
+            entries = listOf(
+                DocumentationLinkRegistry.Entry(id = "guide", path = GUIDE, anchor = null),
+                DocumentationLinkRegistry.Entry(
+                    id = "guide-section",
+                    path = GUIDE,
+                    anchor = null,
+                    delivery = DocumentationLinkRegistry.Delivery.BUNDLED,
+                ),
+            ),
+            documents = mapOf(GUIDE to "# Guide\n"),
+        )
+        assertSingleViolationMentioning(violations, "Delivery is a property of the document")
+    }
+
+    @Test
+    fun `given the registry when read then every bundled entry names a whole document`() {
+        // A section entry cannot be bundled on its own: the reader opens whole
+        // documents, and an anchor-only bundled entry would name a copy that
+        // the sync task never produces.
+        val bundledSections = DocumentationLinkRegistry.ENTRIES.filter {
+            it.delivery == DocumentationLinkRegistry.Delivery.BUNDLED && it.anchor != null
+        }
+        assertEquals(emptyList<DocumentationLinkRegistry.Entry>(), bundledSections)
     }
 
     /**
@@ -178,6 +216,17 @@ class DocumentationLinkRegistryTest {
      */
     private fun entry(anchor: String?): DocumentationLinkRegistry.Entry =
         DocumentationLinkRegistry.Entry(id = "guide", path = GUIDE, anchor = anchor)
+
+    /**
+     * Supplies a body for every document the registry names.
+     *
+     * [DocumentationLinkRegistry.render] reads each entry's document for the
+     * per-document statistics it writes, so a render test has to hand it one.
+     *
+     * @return Repository-relative path to a minimal body.
+     */
+    private fun renderDocuments(): Map<String, String> =
+        DocumentationLinkRegistry.ENTRIES.associate { it.path to "# ${it.id}\n\n## A section\n\ntext\n" }
 
     /**
      * Asserts exactly one violation was reported, and that it says why.

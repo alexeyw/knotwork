@@ -171,17 +171,12 @@
         learn the documentation exists.
     -->
     <string name="about_section_documentation">Documentation</string>
-    <string name="about_documentation_body">Opens in your browser, at the version you have installed.</string>
-    <string name="about_doc_user_guide_title">User guide</string>
-    <string name="about_doc_user_guide_summary">Every screen, setting and node, in order.</string>
-    <string name="about_doc_faq_title">FAQ</string>
-    <string name="about_doc_faq_summary">Short answers, and where to read more.</string>
-    <string name="about_doc_cookbook_title">Pipeline cookbook</string>
-    <string name="about_doc_cookbook_summary">What each node does, with recipes to copy.</string>
-    <string name="about_doc_troubleshooting_title">Troubleshooting</string>
-    <string name="about_doc_troubleshooting_summary">When something does not work.</string>
-    <string name="about_doc_external_automation_title">External automation</string>
-    <string name="about_doc_external_automation_summary">Running a pipeline from Tasker, adb or another app.</string>
+    <!--
+      The About card no longer lists the documents: one screen owns that list,
+      so a document changing side changes one screen instead of two. The card
+      is now the same row as the one in More.
+    -->
+    <string name="about_documentation_body">Troubleshooting, FAQ and the guides.</string>
 
     <!-- Provider picker / detail -->
     <string name="settings_provider_picker_title">Add provider</string>
@@ -252,4 +247,63 @@
     <string name="settings_usage_reset_body">This permanently clears every on-device usage count. It does not change the recording setting.</string>
     <string name="settings_usage_reset_confirm">Reset</string>
     <string name="settings_usage_reset_cancel">Cancel</string>
+
+    <!-- Help: the documentation the app can open, bundled or on the web. -->
+    <string name="help_title">Help</string>
+    <string name="more_row_help">Help</string>
+    <string name="more_row_help_sub">Troubleshooting \u00b7 FAQ \u00b7 guides</string>
+    <!--
+      %1$d documents in all, %2$d of them readable with no network. Both counts
+      come from the generated registry, so a document changing side changes the
+      subtitle without anybody editing it. A plural rather than a string: the
+      total is a counted noun, and a locale that inflects it has nowhere else to
+      say so.
+    -->
+    <plurals name="help_subtitle">
+        <item quantity="one">%1$d document \u00b7 %2$d on this device</item>
+        <item quantity="other">%1$d documents \u00b7 %2$d on this device</item>
+    </plurals>
+    <string name="help_back">Back</string>
+    <string name="help_dismiss">Dismiss</string>
+
+    <!--
+      The mono slot on a row: delivery first, then size. Delivery is what the
+      reader needs before tapping; size is what they need to decide whether to.
+    -->
+    <string name="help_state_on_device">on this device \u00b7 %1$s</string>
+    <string name="help_state_in_browser">opens in browser \u00b7 %1$s</string>
+    <string name="help_measure_problems">%1$s problems</string>
+    <string name="help_measure_sections">%1$s sections</string>
+    <string name="help_measure_lines">%1$s lines</string>
+    <string name="help_opens_in_browser">Opens in browser</string>
+
+    <string name="help_doc_troubleshooting_title">Troubleshooting</string>
+    <string name="help_doc_troubleshooting_desc">Fixes for the failures that have names: the model will not load, a background run dies, your data cannot be unlocked at startup.</string>
+    <string name="help_doc_faq_title">FAQ</string>
+    <string name="help_doc_faq_desc">Short answers, each one pointing at the screen where you actually do the thing.</string>
+    <string name="help_doc_user_guide_title">User guide</string>
+    <string name="help_doc_user_guide_desc">The long form: every screen, with diagrams and screenshots, and a search box that works.</string>
+    <string name="help_doc_cookbook_title">Cookbook</string>
+    <string name="help_doc_cookbook_desc">Worked pipelines to copy, and the generated reference for every node type.</string>
+    <string name="help_doc_external_automation_title">External automation</string>
+    <string name="help_doc_external_automation_desc">Driving the agent from Tasker, adb or another app on the device.</string>
+
+    <!--
+      A refusal names what is missing in one clause, then offers a verb that is
+      reachable WITHOUT the thing that is missing. The user cannot check their
+      connection; they can read the two documents we shipped.
+    -->
+    <string name="help_offline_title">No network.</string>
+    <string name="help_offline_body">%1$s is on the web and needs one. Troubleshooting and FAQ are on this device and open without it.</string>
+    <string name="help_offline_copy">Copy link</string>
+    <string name="help_offline_alternative">Read Troubleshooting</string>
+    <string name="help_offline_bar">That link is on the web. No network right now.</string>
+
+    <string name="help_reader_action">Open in browser</string>
+    <string name="help_reader_loading">reading from this device</string>
+    <string name="help_reader_anchor">arrived here</string>
+    <string name="help_reader_error_title">This copy did not open.</string>
+    <string name="help_reader_error_body">The file shipped with the app is unreadable. Reinstalling replaces it. The same document is on the web, unchanged.</string>
+    <string name="help_reader_error_primary">Open in browser</string>
+    <string name="help_reader_error_secondary">Try again</string>
 </resources>

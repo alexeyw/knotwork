@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.icons.AppIcons
@@ -152,9 +153,23 @@ fun KnotworkHelpEntry(settingName: String, expanded: Boolean, onToggle: () -> Un
  *   what keeps the panel under half the screen at 200 % font scale.
  * @param modifier Layout modifier applied to the animated container.
  * @param link Optional in-app destination; never a URL or a documentation page.
+ * @param title Optional lead-in, set apart from [text] in weight. A settings
+ *   hint answers a question the user asked by tapping a glyph, so it needs
+ *   none; a refusal announces itself unprompted and has to name what is wrong
+ *   before explaining it.
+ * @param actions Optional verbs offered under the body, left to right. Separate
+ *   from [link] because a refusal offers a way out rather than a destination —
+ *   copying an address is not navigation — and because it may offer two.
  */
 @Composable
-fun KnotworkHintPanel(visible: Boolean, text: String, modifier: Modifier = Modifier, link: KnotworkHintLink? = null) {
+fun KnotworkHintPanel(
+    visible: Boolean,
+    text: String,
+    modifier: Modifier = Modifier,
+    link: KnotworkHintLink? = null,
+    title: String? = null,
+    actions: List<KnotworkHintLink> = emptyList(),
+) {
     val reducedMotion = KnotworkTheme.a11y.reducedMotion()
     val duration = KnotworkTheme.motion.dur2
     AnimatedVisibility(
@@ -173,13 +188,26 @@ fun KnotworkHintPanel(visible: Boolean, text: String, modifier: Modifier = Modif
         },
         modifier = modifier,
     ) {
-        HintPanelSurface(text = text, link = link)
+        HintPanelSurface(text = text, link = link, title = title, actions = actions)
     }
 }
 
-/** Static body of [KnotworkHintPanel]; split out so previews and snapshots can render it directly. */
+/**
+ * Static body of [KnotworkHintPanel]; split out so previews and snapshots can
+ * render it directly.
+ *
+ * @param text The explanation.
+ * @param link Optional in-app destination.
+ * @param title Optional lead-in above [text].
+ * @param actions Optional verbs offered under the body.
+ */
 @Composable
-private fun HintPanelSurface(text: String, link: KnotworkHintLink?) {
+private fun HintPanelSurface(
+    text: String,
+    link: KnotworkHintLink?,
+    title: String? = null,
+    actions: List<KnotworkHintLink> = emptyList(),
+) {
     val accent = MaterialTheme.colorScheme.primary
     Row(
         modifier = Modifier
@@ -209,11 +237,36 @@ private fun HintPanelSurface(text: String, link: KnotworkHintLink?) {
                 bottom = KnotworkTheme.spacing.sp2,
             ),
         ) {
+            if (title != null) {
+                Text(
+                    text = title,
+                    style = KnotworkTextStyles.BodyBase.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Text(
                 text = text,
                 style = KnotworkTextStyles.BodyBase,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+            if (actions.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+                    modifier = Modifier.padding(top = KnotworkTheme.spacing.sp1),
+                ) {
+                    actions.forEach { action ->
+                        Text(
+                            text = action.label,
+                            style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
+                            color = accent,
+                            modifier = Modifier
+                                .clip(KnotworkTheme.shapes.sm)
+                                .clickable(onClick = action.onClick)
+                                .padding(vertical = KnotworkTheme.spacing.sp1),
+                        )
+                    }
+                }
+            }
             if (link != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

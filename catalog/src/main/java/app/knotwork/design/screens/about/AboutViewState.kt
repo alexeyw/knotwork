@@ -9,19 +9,6 @@ package app.knotwork.design.screens.about
 data class AcknowledgmentEntry(val name: String, val license: String)
 
 /**
- * One document the About screen offers to open.
- *
- * @property id Stable registry id handed back to the caller on click. The
- *   catalog never resolves it to a URL: which revision of the documentation a
- *   build is entitled to show is a property of the build, which the design
- *   system cannot see.
- * @property title Display name of the document.
- * @property summary One line on what the document answers, so the list is a
- *   router rather than five identical buttons.
- */
-data class DocumentationEntry(val id: String, val title: String, val summary: String)
-
-/**
  * Top-level immutable input to `AboutContent`.
  *
  * @property appName brand text rendered under the logo.
@@ -32,7 +19,9 @@ data class DocumentationEntry(val id: String, val title: String, val summary: St
  * @property licenseName license display name (e.g. `"Apache 2.0"`).
  * @property acknowledgments list of library credits.
  * @property privacyBody paragraph summarising the privacy stance.
- * @property documentation documents the user can open, in reading order. Empty
+ * @property documentationSummary How many documents there are and how many
+ *   read offline — the same line the Help row shows, so the two agree by
+ *   construction. Empty
  *   renders no section at all.
  */
 data class AboutViewState(
@@ -44,7 +33,7 @@ data class AboutViewState(
     val licenseName: String,
     val acknowledgments: List<AcknowledgmentEntry>,
     val privacyBody: String,
-    val documentation: List<DocumentationEntry> = emptyList(),
+    val documentationSummary: String = "",
 )
 
 /** One-shot callbacks consumed by `AboutContent`. */
@@ -52,7 +41,7 @@ class AboutCallbacks(
     val onBack: () -> Unit = {},
     val onOpenLicense: () -> Unit = {},
     val onOpenPrivacyPolicy: () -> Unit = {},
-    val onOpenDocument: (String) -> Unit = {},
+    val onOpenDocumentation: () -> Unit = {},
 )
 
 /** Convenience factory returning a no-op callback bundle. */
@@ -70,5 +59,6 @@ data class AboutStrings(
     val licenseCta: String = "Open license text",
     val privacyCta: String = "Read privacy policy",
     val sectionDocumentation: String = "DOCUMENTATION",
-    val documentationBody: String = "Opens in your browser, at the version you have installed.",
+    val documentationBody: String = "Troubleshooting, FAQ and the guides.",
+    val documentationCta: String = "Help",
 )

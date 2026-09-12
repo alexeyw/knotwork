@@ -127,6 +127,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ToolsVariableProvider.kt` - Resolves `$TOOLS` to the active tools list (`name — description`, one per line).
     - `UserVariableProvider.kt` - Resolves `$USER` to the identity card's display name (currently "Anonymous").
   - `repositories/` - Repository implementations.
+    - `AssetBundledDocumentationRepository.kt` - Reads the documentation the build copied into `assets/docs`.
     - `AssetBundledSkillSource.kt` - Asset-backed `BundledSkillSource`: lists the JSON files under `assets/presets/skills`, parses each via `SkillJsonSerializer` on the IO dispatcher, skipping malformed files.
     - `BestEffortStore.kt` - Shared `absorbingStoreFailure` helper implementing the best-effort persistence contract (absorb storage failures, re-throw `CancellationException` first) reused by the run-record and run-trace repositories.
     - `BundledSkillSource.kt` - Interface reading the bundled skills under `assets/presets/skills` (split from its impl so the repository seed path is unit-testable with a fake).
@@ -292,6 +293,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AgentTask.kt` - Agent task model.
     - `AgentTool.kt` - Agent tool model.
     - `AppError.kt` - App error model.
+    - `BundledDocument.kt` - One document that ships inside the APK, as the reader needs it.
     - `ChatHistorySummary.kt` - Domain model of a session's cached compressed-history summary (`sessionId`, `summary`, incremental `coveredMessageCount` cursor, `updatedAt`).
     - `ChatMessage.kt` - Chat message model.
     - `ChatSession.kt` - Chat session model.
@@ -414,6 +416,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ContentReportComposer.kt` - Pure renderer: subject line plus a Markdown body (note, category, block-quoted model output capped at `MAX_QUOTED_CHARS` with the omission stated, build metadata). Framework-free so "what exactly is in a report" is unit-testable.
   - `repositories/` - Repository interfaces.
     - `ApiKeyRepository.kt` - API key repository interface.
+    - `BundledDocumentationRepository.kt` - Access to the documentation that ships inside the APK.
     - `ChatRepository.kt` - Chat repository interface.
     - `ClarificationRepository.kt` - Bridges the agent (suspending until the user answers) and the UI (publishing the pending question, forwarding the reply).
     - `CrashReportingRepository.kt` - Domain gateway for anonymous crash reporting (opt-in). All methods are no-op until `SettingsRepository.crashReportingEnabled` becomes `true`.
@@ -558,6 +561,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ResetLockedDatabaseUseCase.kt` - Wraps `DatabaseResetService` for the splash recovery screen's typed-confirm "erase all data" action.
     - `ResetSamplingDefaultsUseCase.kt` - Resets temperature / top-K / top-P / max context / max steps to the documented defaults.
     - `ResetToRecommendedDefaultsUseCase.kt` - Restores every tunable preference to its `SettingsDefaults` value (backs Settings → Privacy → "Reset all settings"); never touches user data/config.
+    - `ResolveDocumentationLinkUseCase.kt` - Decides what tapping a link inside a bundled document should do.
     - `ResolveEntryInferenceUseCase.kt` - Classifies the inference entry of the pipeline a chat session would run (`EntryInferenceKind` = `LOCAL` / `CLOUD` / `NONE`) by resolving the bound-or-default graph: `CLOUD` when the `INPUT` successor is a cloud node, `LOCAL` when a vision sink (`LITE_RT` node with `originalTask`) is reachable from `INPUT`, else `NONE`. Mirrors the engine's delivery predicate so the multimodal send-time pre-flight blocks cloud-first / non-vision-model / no-sink pipelines instead of silently dropping the image.
     - `ResolveRunCeilingsUseCase.kt` - Resolves which configured ceilings apply to a run, keyed on `RunOrigin.isInteractive` so the interactive/background split is declared once rather than restated here. Follows the `RunRateCeiling` precedent: the resolved value carries the limits, never the counter.
     - `ResolveSurfacePipelineUseCase.kt` - Reads the pipeline bound to an `EntrySurface` (or `null` = inert) from `SettingsRepository`; exhaustive-`when` read dispatch.
@@ -683,6 +687,12 @@ Only Kotlin files appear inside the generated blocks.
       - `FilesScreen.kt` - Slim mapper. Subscribes to `FilesViewModel`, projects `FilesUiState` to the catalog `FilesContent`; owns the pure `toViewState` projection (quota tone + usage text, dir/basename split, byte/relative-time labels) and the Android plumbing: the SAF `OpenDocument` (import) / `CreateDocument` (save-as) launchers and the `FileProvider`-backed share sheet that stages a per-share copy into `cacheDir/shared/`.
       - `FilesUiState.kt` - Files UI state: raw `WorkspaceFile` list + `WorkspaceUsage`, load/refresh flags, selection set, open `FilePreviewState`, pending-delete list and `CollisionState`; plus the `FilesEvent` one-shots (LaunchImport / LaunchSaveAs / ShareFiles / ShowMessage) and the `FilesMessage` snackbar kinds.
       - `FilesViewModel.kt` - Hilt ViewModel injecting the five workspace use cases. Owns listing/refresh, selection (long-press, toggle, select-all), preview open/close, single + bulk delete with confirm, import with collision detection (re-openable stream factory so the user's choice is honoured without re-picking), and save-as / share export (suspending `completeSaveAs` / `exportTo` so the destination stream stays open for the whole write).
+    - `help/` - Help: the list of documents the app can open, and the reader that opens a bundled one offline.
+      - `HelpReaderScreen.kt` - Reads one bundled document.
+      - `HelpReaderViewModel.kt` - Drives the reader for one bundled document.
+      - `HelpScreen.kt` - The Help screen: every document the app can open.
+      - `HelpStrings.kt` - Resolves the Help surfaces' copy for this locale.
+      - `HelpViewModel.kt` - Drives the Help list.
     - `MainActivity.kt` - Main activity. Owns the platform splash, edge-to-edge insets, and the root Compose tree that wires `AppShellScaffold` + `AppNavGraph`.
     - `memory/` - Memory screen components.
       - `MemoryScreen.kt` - Slim mapper. Subscribes to `MemoryViewModel`, projects `MemoryUiState` to the catalog `MemoryContent` (stats header + provenance breakdown, category chips, sort/date dropdowns, time-grouped sections, semantic-search rows with scores, detail sheet, Compact/Add dialogs). Owns the pure `toViewState` projection (grouping / breakdown / relative-time + detail labels) and the SAF launcher for full export.

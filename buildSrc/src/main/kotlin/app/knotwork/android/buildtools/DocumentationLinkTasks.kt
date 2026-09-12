@@ -72,11 +72,12 @@ abstract class AbstractDocumentationLinkTask : DefaultTask() {
     /**
      * Resolves the registry against the documents and fails on what is broken.
      *
+     * @param documents Every document the task read.
      * @throws VerificationException when any entry names a document or heading
      *   that does not resolve.
      */
-    protected fun requireLinksResolve() {
-        val violations = DocumentationLinkRegistry.violationsOf(readDocuments())
+    protected fun requireLinksResolve(documents: Map<String, String>) {
+        val violations = DocumentationLinkRegistry.violationsOf(documents)
         if (violations.isEmpty()) return
         throw VerificationException(
             "The app links out to documentation that does not resolve (${violations.size}):\n" +
@@ -87,8 +88,15 @@ abstract class AbstractDocumentationLinkTask : DefaultTask() {
         )
     }
 
-    /** The Kotlin source the registry currently renders to. */
-    protected fun rendered(): String = DocumentationLinkRegistry.render(generatedPackage.get())
+    /**
+     * The Kotlin source the registry currently renders to.
+     *
+     * @param documents Every document the task read; the generated entries
+     *   carry per-document statistics taken from them.
+     * @return The complete file text.
+     */
+    protected fun rendered(documents: Map<String, String>): String =
+        DocumentationLinkRegistry.render(generatedPackage.get(), documents)
 }
 
 /**
@@ -132,9 +140,10 @@ abstract class GenerateDocumentationLinksTask : AbstractDocumentationLinkTask() 
     /** Resolves every entry, then writes the app-side copy. */
     @TaskAction
     fun generate() {
-        requireLinksResolve()
+        val documents = readDocuments()
+        requireLinksResolve(documents)
         val file = outputSource.get().asFile
-        val source = rendered()
+        val source = rendered(documents)
         if (!file.isFile || file.readText() != source) {
             file.parentFile.mkdirs()
             file.writeText(source)
@@ -179,9 +188,10 @@ abstract class VerifyDocumentationLinksTask : AbstractDocumentationLinkTask() {
         // one command later. Reporting the real reason first collapses that to
         // one step; a merely stale file still falls through to the drift
         // message below.
-        requireLinksResolve()
+        val documents = readDocuments()
+        requireLinksResolve(documents)
         val file: File? = committedSource.files.firstOrNull()
-        if (file == null || !file.isFile || file.readText() != rendered()) {
+        if (file == null || !file.isFile || file.readText() != rendered(documents)) {
             throw VerificationException(
                 "The committed documentation-link registry has drifted from the build-side list.\n" +
                     "Run `./gradlew :app:generateDocumentationLinks` and commit the result.",

@@ -2637,14 +2637,14 @@ Everything else is a screen pushed on top of one of them.
 ## More tab
 
 The **More** tab is the landing page for every secondary surface. Its
-twelve rows sit in four named sections:
+thirteen rows sit in four named sections:
 
 | Section | Rows |
 |---|---|
 | **Automation** | Triggers · Library · Tasks |
 | **Your content** | Memory · Files · Archive |
 | **Building blocks** | Prompts · Skills · Models |
-| **App** | Settings · Live metrics · About |
+| **App** | Settings · Help · Live metrics · About |
 
 Automation comes first because it holds the reasons to open More at all,
 and App comes last because that is where Settings is looked for. The
@@ -2888,15 +2888,60 @@ that ship inside the app, and a short privacy summary. Tap
 ## Finding the documentation from inside the app
 
 Every document in `docs/` opens from the app itself, so you never have
-to go looking for a URL.
+to go looking for a URL — and the two you are most likely to want when
+something is wrong open with **no network at all**.
 
-**About → Documentation** is the full list: this guide, the
-[FAQ](faq.md), the [pipeline cookbook](cookbook.md),
-[troubleshooting](troubleshooting.md) and the
-[external-automation contract](external-automation.md). Each button
-opens the document in your browser.
+### The Help screen
 
-Four screens also link straight to the part that explains them:
+**More → Help** lists every document, in the order you are likely to
+need one while something is broken: [troubleshooting](troubleshooting.md),
+the [FAQ](faq.md), this guide, the [pipeline cookbook](cookbook.md) and
+the [external-automation contract](external-automation.md).
+
+Each row says what is inside it and, in small type, **where it is read
+from and how big it is** — `on this device · 11 problems`, or
+`opens in browser · 2 934 lines`. A row that leaves the app also carries
+a small outward arrow after its name, so you know before you tap
+whether you are staying put.
+
+**About** points at the same screen rather than listing the documents a
+second time.
+
+### Reading a document inside the app
+
+Troubleshooting and the FAQ ship inside the app. Opening one gives you a
+reader, not a browser:
+
+- **Links between sections work.** Tapping an entry in a document's own
+  contents list scrolls to that section and briefly marks where you
+  landed, so arriving mid-document does not look like a broken load.
+- **Links between the two documents work**, anchor and all. Back returns
+  to the document you left, at the place you left it.
+- **Headings are navigable by a screen reader**, so TalkBack's heading
+  rotor moves through a document the way it would on the web.
+- **A link to a document that is still on the web** hands off to your
+  browser. With no network it refuses in place instead, and offers you
+  the address to copy — the reader keeps your scroll position either
+  way.
+
+The **Open in browser** action in the top bar is always available, for
+when you want the web version of what you are reading.
+
+### The documents that stay on the web
+
+This guide, the cookbook and the automation contract open in a browser.
+That is deliberate rather than unfinished: this guide is nearly three
+thousand lines with diagrams and screenshots and is genuinely better
+with a browser's search, and the cookbook's generated tables use
+formatting the in-app reader cannot show — it would drop parts of them
+silently, which is worse than sending you to the web.
+
+Tapping one of those rows with no network refuses under the row and
+tells you which documents *are* on your device.
+
+### Links that go straight to the point
+
+Four screens link to the part that explains them:
 
 | Where | What it opens |
 |---|---|
@@ -2910,12 +2955,11 @@ The last step of onboarding carries the same pointer to the FAQ.
 **The links match the build you are running.** A release build opens the
 documentation at the tag of the version you installed, so what you read
 describes the app on your phone rather than whatever has landed since.
-Debug builds link at `main`. One consequence worth knowing: the
+Debug builds link at `main`. Two consequences worth knowing: the
 privacy policy is deliberately **not** pinned this way — it always opens
-the current edition, because that is the one that binds.
-
-Everything here needs a browser and an internet connection; the
-documents are not bundled into the app.
+the current edition, because that is the one that binds — and the
+documents bundled into the app are the ones that shipped with your
+version, which is the same promise stated a different way.
 
 ---
 

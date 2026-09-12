@@ -19,6 +19,7 @@ import app.knotwork.android.data.local.crypto.AndroidKeystoreAeadCipher
 import app.knotwork.android.data.mcp.KoogMcpClientFactory
 import app.knotwork.android.data.mcp.McpClientFactory
 import app.knotwork.android.data.network.AndroidModelDownloadManager
+import app.knotwork.android.data.repositories.AssetBundledDocumentationRepository
 import app.knotwork.android.data.repositories.AssetBundledSkillSource
 import app.knotwork.android.data.repositories.BundledSkillSource
 import app.knotwork.android.data.repositories.ChatRepositoryImpl
@@ -53,6 +54,7 @@ import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.engine.TextEmbeddingEngine
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.BundledDocumentationRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.ClarificationRepository
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
@@ -135,6 +137,15 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindLocalModelRepository(repository: LocalModelRepositoryImpl): LocalModelRepository
+
+    /**
+     * Binds the asset-backed implementation to the [BundledDocumentationRepository] interface.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindBundledDocumentationRepository(
+        repository: AssetBundledDocumentationRepository,
+    ): BundledDocumentationRepository
 
     /**
      * Binds the [SettingsManager] implementation to the [SettingsRepository] interface.
