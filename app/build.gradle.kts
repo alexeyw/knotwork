@@ -13,6 +13,8 @@ import app.knotwork.android.buildtools.ReleaseVersionChecker
 import app.knotwork.android.buildtools.ReportExternalDocLinksTask
 import app.knotwork.android.buildtools.SettingsHelpDocsGenerator
 import app.knotwork.android.buildtools.StoreListingLengthChecker
+import app.knotwork.android.buildtools.SyncBundledDocsTask
+import app.knotwork.android.buildtools.VerifyBundledDocsTask
 import app.knotwork.android.buildtools.VerifyDialogInventoryTask
 import app.knotwork.android.buildtools.VerifyDocLinksTask
 import app.knotwork.android.buildtools.VerifyDocsHygieneTask
@@ -1499,6 +1501,46 @@ val verifyDocumentationLinks by tasks.registering(VerifyDocumentationLinksTask::
 
 verifyDocumentationLinks { mustRunAfter(generateDocumentationLinks) }
 tasks.named("check") { dependsOn(verifyDocumentationLinks) }
+
+// Bundled documentation — the documents a user reads *inside* the app.
+//
+// `faq.md` and `troubleshooting.md` are needed exactly when the browser is
+// least available: one is the router, the other is "it broke", and one of its
+// sections is about the app failing at startup. So they ship in the APK, and
+// the copy is produced by the build rather than by hand — a hand-copied
+// document is a third edition of the text that nothing keeps honest.
+//
+// The input set is the `docs` tree PLUS the repository's root Markdown,
+// because a bundled document links to `../SECURITY.md` and `../PRIVACY.md`.
+// Declaring only `docs` would resolve those against files the task never
+// declared, and stay green after one was deleted.
+val bundledDocsSources: FileCollection = files(
+    fileTree("$rootDir/docs") { include("**/*.md") },
+    fileTree(rootDir.toString()) { include("*.md") },
+)
+
+val bundledDocsAssetDirectory = layout.projectDirectory.dir("src/main/assets/docs")
+
+val syncBundledDocs by tasks.registering(SyncBundledDocsTask::class) {
+    group = "build"
+    description = "Copies the bundled documents into the app's assets and regenerates their reader index."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(bundledDocsSources)
+    assetDirectory.set(bundledDocsAssetDirectory)
+}
+
+val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
+    group = "verification"
+    description = "Fails the build if a bundled document drifted from docs/, or stopped rendering in the app."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(bundledDocsSources)
+    assetDirectory.set(bundledDocsAssetDirectory)
+    committedAssets.from(fileTree(bundledDocsAssetDirectory) { include("**/*") })
+    stampFile.set(layout.buildDirectory.file("reports/bundled-docs/verified.txt"))
+}
+
+verifyBundledDocs { mustRunAfter(syncBundledDocs) }
+tasks.named("check") { dependsOn(verifyBundledDocs) }
 
 // Public documentation hygiene guard — moved.
 //

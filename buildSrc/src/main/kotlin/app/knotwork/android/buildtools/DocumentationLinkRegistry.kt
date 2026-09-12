@@ -44,6 +44,25 @@ object DocumentationLinkRegistry {
     const val ID_TRIGGERS: String = "triggers"
 
     /**
+     * Where a document is read from, and therefore which surface opens it.
+     *
+     * This is a property of the **document**, not of the entry: two entries
+     * naming two sections of one file are delivered together or not at all,
+     * which is why [violationsOf] refuses a registry that spells them
+     * differently. It is also the whole of the "one place of residence" rule —
+     * a link never has to know whether it is about to open the reader or the
+     * browser, because the registry already decided.
+     */
+    enum class Delivery {
+
+        /** Copied into the APK's assets and read offline by the in-app reader. */
+        BUNDLED,
+
+        /** Left on the web and opened in the browser, pinned to this build's ref. */
+        REMOTE,
+    }
+
+    /**
      * One document (or one section of one) the app can open.
      *
      * @property id Stable key the UI names the entry by. Survives a file rename;
@@ -53,22 +72,37 @@ object DocumentationLinkRegistry {
      *   coincidence.
      * @property anchor Heading anchor within the document, without the leading
      *   `#`, or `null` to open the document at the top.
+     * @property delivery Whether the document ships inside the APK or stays on
+     *   the web. Defaults to [Delivery.REMOTE]: a document is on the web until
+     *   someone has checked it survives the in-app renderer, and the bundled
+     *   pre-checks are what that checking is.
      */
-    data class Entry(val id: String, val path: String, val anchor: String?)
+    data class Entry(
+        val id: String,
+        val path: String,
+        val anchor: String?,
+        val delivery: Delivery = Delivery.REMOTE,
+    )
 
     /**
-     * Every documented entry point, in the order the About screen lists them.
+     * Every documented entry point, in the order the Help screen lists them.
      *
-     * The five whole documents come first because that is the reading order a
-     * user arriving from the store needs (what the app is, then what to press,
-     * then recipes, then what to do when it breaks); the two section entries
-     * are contextual and reached from the screen they describe.
+     * The five whole documents come first, ordered by **how likely a reader is
+     * to need one while something is broken** — not alphabetically and not by
+     * [Delivery]. Troubleshooting leads because it is the only document whose
+     * reader is in a hurry, and the two bundled documents are exactly the two
+     * that such a reader can still open with the radio off. Sorting by delivery
+     * instead would group the list by where the bytes live, which is the one
+     * property nobody opens this screen to compare.
+     *
+     * The two section entries come last: they are contextual, reached from the
+     * screen they describe rather than from the list.
      */
     val ENTRIES: List<Entry> = listOf(
+        Entry(id = ID_TROUBLESHOOTING, path = "docs/troubleshooting.md", anchor = null, delivery = Delivery.BUNDLED),
+        Entry(id = ID_FAQ, path = "docs/faq.md", anchor = null, delivery = Delivery.BUNDLED),
         Entry(id = ID_USER_GUIDE, path = "docs/user-guide.md", anchor = null),
-        Entry(id = ID_FAQ, path = "docs/faq.md", anchor = null),
         Entry(id = ID_COOKBOOK, path = "docs/cookbook.md", anchor = null),
-        Entry(id = ID_TROUBLESHOOTING, path = "docs/troubleshooting.md", anchor = null),
         Entry(id = ID_EXTERNAL_AUTOMATION, path = "docs/external-automation.md", anchor = null),
         Entry(id = ID_MCP_SETUP, path = "docs/user-guide.md", anchor = "adding-an-mcp-server"),
         Entry(id = ID_TRIGGERS, path = "docs/user-guide.md", anchor = "triggers"),
@@ -122,6 +156,18 @@ object DocumentationLinkRegistry {
         val violations = mutableListOf<String>()
         for ((id, declarations) in entries.groupBy { it.id }) {
             if (declarations.size > 1) violations += "`$id` is declared ${declarations.size} times."
+        }
+        // Delivery belongs to the document, so every entry naming one file has
+        // to agree. Disagreement is not a cosmetic defect: `mcp-setup` and
+        // `user-guide` name the same file, and if one said BUNDLED the reader
+        // would open a copy that the sync task was never told to produce.
+        for ((path, declarations) in entries.groupBy { it.path }) {
+            val deliveries = declarations.map { it.delivery }.distinct()
+            if (deliveries.size > 1) {
+                violations += "`$path` is declared both ${deliveries.joinToString(" and ") { it.name }} " +
+                    "by ${declarations.joinToString(", ") { "`${it.id}`" }}. Delivery is a property of the " +
+                    "document, so every entry naming one file must spell it the same way."
+            }
         }
         for (entry in entries) {
             // Shape before existence. An id becomes a Kotlin constant name and a
@@ -191,9 +237,13 @@ object DocumentationLinkRegistry {
      * Renders the Kotlin source of the app-side copy.
      *
      * @param packageName Package the generated object is declared in.
+     * @param documents Repository-relative path to full text, used for the
+     *   per-document statistics the Help list shows. Every entry's document is
+     *   required to be present — [violationsOf] has already established that,
+     *   and a caller that skipped it would silently render zeroes.
      * @return The complete file text, ending in a newline.
      */
-    fun render(packageName: String): String = buildString {
+    fun render(packageName: String, documents: Map<String, String>): String = buildString {
         appendLine("package $packageName")
         appendLine()
         appendLine("/**")
@@ -218,21 +268,54 @@ object DocumentationLinkRegistry {
         appendLine("     * @property path Repository-relative path under `docs/`.")
         appendLine("     * @property anchor Heading anchor without the leading `#`, or `null` for")
         appendLine("     *   the top of the document.")
+        appendLine("     * @property delivery Whether the document is read from the APK's assets")
+        appendLine("     *   or from the web.")
+        appendLine("     * @property lineCount Lines in the source document.")
+        appendLine("     * @property sectionCount Second-level headings, excluding the document's")
+        appendLine("     *   own front and back matter (its contents list and its see-also).")
         appendLine("     */")
-        appendLine("    data class Entry(val id: String, val path: String, val anchor: String?)")
+        appendLine("    data class Entry(")
+        appendLine("        val id: String,")
+        appendLine("        val path: String,")
+        appendLine("        val anchor: String?,")
+        appendLine("        val delivery: Delivery,")
+        appendLine("        val lineCount: Int,")
+        appendLine("        val sectionCount: Int,")
+        appendLine("    )")
+        appendLine()
+        appendLine("    /** Where a document is read from, and therefore which surface opens it. */")
+        appendLine("    enum class Delivery {")
+        appendLine()
+        appendLine("        /** Shipped in the APK's assets and readable with no network. */")
+        appendLine("        BUNDLED,")
+        appendLine()
+        appendLine("        /** Left on the web, opened in the browser at this build's ref. */")
+        appendLine("        REMOTE,")
+        appendLine("    }")
         appendLine()
         for (entry in ENTRIES) {
             appendLine("    /** Id of `${entry.path}${entry.anchor?.let { "#$it" } ?: ""}`. */")
             appendLine("    const val ${constantNameOf(entry.id)}: String = \"${entry.id}\"")
             appendLine()
         }
-        appendLine("    /** Every entry, in the order the About screen lists them. */")
+        appendLine("    /** Every entry, in the order the Help screen lists them. */")
         appendLine("    val ENTRIES: List<Entry> = listOf(")
         for (entry in ENTRIES) {
             val anchor = entry.anchor?.let { "\"$it\"" } ?: "null"
-            appendLine("        Entry(id = ${constantNameOf(entry.id)}, path = \"${entry.path}\", anchor = $anchor),")
+            val markdown = documents.getValue(entry.path)
+            appendLine("        Entry(")
+            appendLine("            id = ${constantNameOf(entry.id)},")
+            appendLine("            path = \"${entry.path}\",")
+            appendLine("            anchor = $anchor,")
+            appendLine("            delivery = Delivery.${entry.delivery.name},")
+            appendLine("            lineCount = ${MarkdownLinks.lineCountOf(markdown)},")
+            appendLine("            sectionCount = ${MarkdownLinks.sectionCountOf(markdown)},")
+            appendLine("        ),")
         }
         appendLine("    )")
+        appendLine()
+        appendLine("    /** Every whole document, in the order the Help screen lists them. */")
+        appendLine("    val DOCUMENTS: List<Entry> = ENTRIES.filter { it.anchor == null }")
         appendLine()
         appendLine("    /**")
         appendLine("     * Looks an entry up by its stable id.")
@@ -241,6 +324,15 @@ object DocumentationLinkRegistry {
         appendLine("     * @return The entry, or `null` for an unknown id.")
         appendLine("     */")
         appendLine("    fun byId(id: String): Entry? = ENTRIES.firstOrNull { it.id == id }")
+        appendLine()
+        appendLine("    /**")
+        appendLine("     * Looks a bundled document up by the repository path a link resolved to.")
+        appendLine("     *")
+        appendLine("     * @param path Repository-relative path, as the registry spells it.")
+        appendLine("     * @return The entry, or `null` when nothing bundled lives at that path.")
+        appendLine("     */")
+        appendLine("    fun bundledByPath(path: String): Entry? =")
+        appendLine("        DOCUMENTS.firstOrNull { it.path == path && it.delivery == Delivery.BUNDLED }")
         appendLine("}")
     }
 
