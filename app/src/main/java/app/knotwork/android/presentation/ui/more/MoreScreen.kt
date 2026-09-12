@@ -224,42 +224,20 @@ internal fun MoreUiState.toViewState(
                 ),
             ),
         ),
-        MoreSection(
-            id = "app",
+        appSection(
             title = titleSectionApp,
-            rows = listOf(
-                MoreRow(
-                    id = "settings",
-                    title = titleSettings,
-                    subtitle = settingsSubtitle,
-                    icon = AppIcons.Cog,
-                    onClick = onSettings,
-                ),
-                // Documentation is not "about the app", but it is *of* it, and
-                // `App` is the section an Android user already reaches for.
-                // About keeps the last position because it is the terminus.
-                MoreRow(
-                    id = "help",
-                    title = titleHelp,
-                    subtitle = helpSubtitle,
-                    icon = AppIcons.Book,
-                    onClick = onHelp,
-                ),
-                MoreRow(
-                    id = "metrics",
-                    title = titleMetrics,
-                    subtitle = metricsSubtitle,
-                    icon = AppIcons.Bolt,
-                    onClick = onMetrics,
-                ),
-                MoreRow(
-                    id = "about",
-                    title = titleAbout,
-                    subtitle = aboutSubtitle,
-                    icon = AppIcons.Spark,
-                    onClick = onAbout,
-                ),
-            ),
+            titleSettings = titleSettings,
+            settingsSubtitle = settingsSubtitle,
+            titleHelp = titleHelp,
+            helpSubtitle = helpSubtitle,
+            titleMetrics = titleMetrics,
+            metricsSubtitle = metricsSubtitle,
+            titleAbout = titleAbout,
+            aboutSubtitle = aboutSubtitle,
+            onSettings = onSettings,
+            onHelp = onHelp,
+            onMetrics = onMetrics,
+            onAbout = onAbout,
         ),
     ),
     networkStatus = networkStatusText.takeIf { it.isNotEmpty() },
@@ -268,3 +246,78 @@ internal fun MoreUiState.toViewState(
 
 /** Stable test tag for the More screen root — used by instrumented tests. */
 const val MORE_ROOT_TEST_TAG: String = "more_root"
+
+/**
+ * The `App` section of the More tab.
+ *
+ * Extracted from [toViewState] because that builder grew past the length the
+ * static-analysis gate allows when Help joined the section — and a section is
+ * the natural seam: each one is a list of rows that share a heading.
+ *
+ * @param title The section heading.
+ * @param titleSettings Settings row label.
+ * @param settingsSubtitle Settings row mono subtitle.
+ * @param titleHelp Help row label.
+ * @param helpSubtitle Help row mono subtitle.
+ * @param titleMetrics Live-metrics row label.
+ * @param metricsSubtitle Live-metrics row mono subtitle.
+ * @param titleAbout About row label.
+ * @param aboutSubtitle About row mono subtitle.
+ * @param onSettings Settings row click.
+ * @param onHelp Help row click.
+ * @param onMetrics Live-metrics row click.
+ * @param onAbout About row click.
+ * @return The section.
+ */
+@Suppress("LongParameterList") // One parameter per row label, subtitle and action.
+private fun appSection(
+    title: String,
+    titleSettings: String,
+    settingsSubtitle: String,
+    titleHelp: String,
+    helpSubtitle: String,
+    titleMetrics: String,
+    metricsSubtitle: String,
+    titleAbout: String,
+    aboutSubtitle: String,
+    onSettings: () -> Unit,
+    onHelp: () -> Unit,
+    onMetrics: () -> Unit,
+    onAbout: () -> Unit,
+): MoreSection = MoreSection(
+    id = "app",
+    title = title,
+    rows = listOf(
+        MoreRow(
+            id = "settings",
+            title = titleSettings,
+            subtitle = settingsSubtitle,
+            icon = AppIcons.Cog,
+            onClick = onSettings,
+        ),
+        // Documentation is not "about the app", but it is *of* it, and `App` is
+        // the section an Android user already reaches for. About keeps the last
+        // position because it is the terminus: version, licences, reset.
+        MoreRow(
+            id = "help",
+            title = titleHelp,
+            subtitle = helpSubtitle,
+            icon = AppIcons.Book,
+            onClick = onHelp,
+        ),
+        MoreRow(
+            id = "metrics",
+            title = titleMetrics,
+            subtitle = metricsSubtitle,
+            icon = AppIcons.Bolt,
+            onClick = onMetrics,
+        ),
+        MoreRow(
+            id = "about",
+            title = titleAbout,
+            subtitle = aboutSubtitle,
+            icon = AppIcons.Spark,
+            onClick = onAbout,
+        ),
+    ),
+)

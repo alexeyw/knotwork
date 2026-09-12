@@ -280,6 +280,12 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `FilesContent.kt` - Files surface: quota header, file list, multi-select bar, detail bottom sheet, and the empty / error states. Deliberately reuses the `MemoryContent` vocabulary rather than introducing new components; all I/O and SAF launching stay in the host.
     - `FilesDialogs.kt` - the screen's two confirmations, split out to keep the composable count per file manageable: the destructive delete (single or bulk) and the import name-collision chooser (keep both / replace / cancel).
     - `FilesViewState.kt` - `FilesVisualState` body state plus the separate overlay/selection fields (preview sheet, dialogs), file kind / quota tone enums, and the row / quota / preview / dialog models, so opening a preview never changes the body branch.
+  - `help/` - Help list and document-reader chrome: rows marked by delivery, the offline refusals, and the arrival mark.
+    - `HelpListContent.kt` - The Help list: every document the app can open, marked by where it is read from.
+    - `HelpListViewState.kt` - State of the Help list.
+    - `HelpReaderContent.kt` - The reader's chrome, with the document itself supplied by the caller.
+    - `HelpReaderViewState.kt` - State of the document reader.
+    - `HelpStrings.kt` - Every string the Help surfaces draw, supplied by the app's resources.
   - `memory/` - Long-term-memory pages.
     - `MemoryContent.kt` - Memory Manager surface (stats header, category chips, semantic search, provenance breakdown, entry cards).
     - `MemoryType.kt` - per-element typography overrides transcribed from the Memory Manager design spec.
@@ -466,6 +472,9 @@ matters.
     - `DiscoverDetailContentSnapshotTest.kt` - Roborazzi snapshot baseline for the model-discovery detail surface (`DiscoverDetailContent`): loading, loaded (mixed file states), gated (token field), the license-confirmation dialog and the error state, in both themes.
   - `files/` - the workspace Files screen.
     - `FilesContentSnapshotTest.kt` - Preview fixtures for the Files screen snapshot matrix.
+  - `help/` - **No description** — replace this line by hand.
+    - `HelpPreview.kt` - Fixtures for the Help snapshots.
+    - `HelpSnapshotTest.kt` - Roborazzi baselines for the Help list and the document reader.
   - `memory/` - long-term memory — the stats header, grouped list, detail sheet and compaction dialog, plus which states may offer which affordances.
     - `MemoryAccessibilityTest.kt` - Memory-screen a11y audit.
     - `MemoryAffordanceTest.kt` - Pins which Memory states are allowed to offer which affordances.

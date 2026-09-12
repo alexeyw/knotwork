@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import app.knotwork.android.BuildConfig
@@ -34,8 +35,9 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToHelp: () -> Unit, modifier: Modi
         licenseName = stringResource(R.string.license_name),
         acknowledgments = AboutAcknowledgments.ENTRIES,
         privacyBody = stringResource(R.string.about_privacy_policy_body),
-        documentationSummary = stringResource(
-            R.string.help_subtitle,
+        documentationSummary = pluralStringResource(
+            R.plurals.help_subtitle,
+            DocumentationLinks.DOCUMENTS.size,
             DocumentationLinks.DOCUMENTS.size,
             DocumentationLinks.DOCUMENTS.count { it.delivery == DocumentationLinks.Delivery.BUNDLED },
         ),

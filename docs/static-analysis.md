@@ -51,6 +51,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyFileMap`                          | Fails if a generated `FILE_MAP.md` drifts from the Kotlin sources, or an undocumented-file count grows past its ratchet (see below). |
 | `:app:verifyDocLinks`                         | Fails if a relative link or an `#anchor` anywhere in the documentation leads nowhere (see below). External `http` links are reported, not gated. |
 | `:app:verifyMermaidDiagrams`                  | Fails if an embedded Mermaid diagram is structurally broken (see below). |
+| `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
 | `:app:verifyVersionSources`                   | Fails if the README version badge or `CHANGELOG.md` disagrees with the declared `versionName` (see below). |
 | `:app:testFullDebugUnitTest` (`CookbookRuntimeReachTest`, `CookbookRecipeValidationTest`) | Fails if the cookbook's run-time verdicts disagree with `NodeConfigCodec`, or a published recipe no longer imports (see below). |
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
@@ -890,6 +891,68 @@ have missed. The pure logic is unit-tested in `buildSrc` (`MarkdownLinksTest`,
 `DocLinkCheckerTest`, `ExternalLinkReportTest`).
 
 ---
+
+## Bundled documentation guard (`verifyBundledDocs`)
+
+`:app:verifyBundledDocs` is wired into `check`. It guards the documents that
+ship **inside** the APK — today `docs/faq.md` and `docs/troubleshooting.md`,
+which the registry marks `BUNDLED`.
+
+`./gradlew :app:syncBundledDocs` writes the copies into
+`app/src/main/assets/docs/` together with a generated `index.json`, and the
+verification task fails on drift. Both are committed, like every other generated
+artefact here.
+
+### Why a document has to earn being bundled
+
+The in-app renderer is not GitHub. It drops what it does not implement
+**silently** — no placeholder, no error — so a document that looks right in a
+browser can reach a reader with paragraphs missing and nothing on screen to
+suggest anything is absent. The gate turns that into rules:
+
+1. **No Mermaid blocks.** There is no diagram support, so a diagram arrives as a
+   fenced block of its own source.
+2. **No images.** Nothing resolves a relative image path inside the APK.
+3. **No HTML.** Unsupported upstream by design; an HTML node falls through the
+   renderer and is dropped. This is the rule that keeps `docs/cookbook.md` on
+   the web — its generated node-reference tables carry 14 `<br>` tags, each one
+   welding a caption onto a code sample when dropped.
+4. **Every relative link resolves** — to a heading in the same document, to
+   another bundled document, or to a repository file that exists. Offline there
+   is no address bar to recover with.
+5. **Every anchor a link targets is unique**, for the reason spelled out under
+   `verifyDocumentationLinks`: a heading written twice yields two anchors that
+   both keep working.
+
+The input set is the Markdown under `docs/` **plus the repository's root
+Markdown**, because a bundled document links to `../SECURITY.md` and
+`../PRIVACY.md`. Declaring only the `docs` tree would resolve those against
+files the task never declared, and stay green after one was deleted.
+
+### Why `verifyDocLinks` skips the copies
+
+`app/src/main/assets/docs/` is excluded from `verifyDocLinks`. That gate
+resolves a relative link against the file's own directory, and the copies are
+deliberately a *subset* — `user-guide.md` is not beside them and never will be.
+Checking them there as well would not be stricter, it would be wrong. Their
+links are checked here instead, against the real repository.
+
+### What the index is for, and why the app resolves nothing
+
+The renderer has no heading anchors and no path resolution, and both answers are
+needed at run time. Implementing them in `app` would mean a second GitHub slug
+algorithm and a second path resolver — with the build's copy being the one a
+gate verifies and the app's being the one a user gets. So `syncBundledDocs`
+ships the answers instead: `index.json` maps each anchor to the **character
+offset** of its heading, and each raw link target to what the reader should do
+with it. The app performs a lookup, never a resolution, and a lookup that misses
+is a defect in the build rather than a case for the app to guess at.
+
+One trap worth recording: the offsets are counted over the **original** lines
+while headings are recognised in the **masked** ones. Masking blanks a fenced
+block's lines, which preserves their count — that is what makes the two readings
+line up — but not their lengths, so an offset taken from masked text would drift
+by the width of every code block above it.
 
 ## In-app documentation link guard (`verifyDocumentationLinks`)
 

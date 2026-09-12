@@ -39,6 +39,27 @@ details.
   instance of exactly that. Registry anchors must therefore name a heading that
   is unique.
 
+- **Two of those documents now open inside the app, with no network at all.**
+  The FAQ and the troubleshooting guide are needed exactly when the browser is
+  least available — one is a router, the other is "it broke", and one of its
+  sections is about the app failing at startup. Both now ship in the app and
+  open in a reader: headings are navigable by a screen reader, a link to another
+  section scrolls there and marks where you landed, and a link to a document
+  that is still on the web hands off to the browser. With no network, that
+  hand-off refuses in place and offers you the address to copy, rather than
+  handing the browser an error page.
+
+  A new **Help** screen lists every document — in the order you are likely to
+  need one while something is broken — and marks each row with where it is read
+  from and how big it is. It is one tap from More, and the About screen now
+  points at it instead of listing the documents a second time.
+
+  The copies in the app are produced by the build and checked by it: a bundled
+  document may not contain anything the in-app renderer cannot show, and every
+  link inside one must resolve. That rule is what keeps the cookbook on the web
+  — its generated tables use HTML line breaks, which the renderer drops without
+  a trace.
+
 ### Changed
 
 - **The browser pipeline editor now works with no network.** It was described
@@ -65,6 +86,15 @@ details.
   without the content of your runs. Where an exported file goes after the share
   sheet is the receiving app's business, and the policy says so rather than
   implying a guarantee that is not ours to give.
+
+### Fixed
+
+- **Markdown with two dollar signs on one line no longer loses the text between
+  them.** `Pay bills $100 and $50` rendered as `Pay bills 50`: the renderer
+  treated the span as mathematics and dropped it silently. This affected agent
+  replies, and this project writes prompt variables as `$DATE` and `$TOOLS`, so
+  a message naming two of them lost the words in between.
+
 
 ## [0.9.0] - 2026-09-01
 

@@ -255,9 +255,14 @@
     <!--
       %1$d documents in all, %2$d of them readable with no network. Both counts
       come from the generated registry, so a document changing side changes the
-      subtitle without anybody editing it.
+      subtitle without anybody editing it. A plural rather than a string: the
+      total is a counted noun, and a locale that inflects it has nowhere else to
+      say so.
     -->
-    <string name="help_subtitle">%1$d documents \u00b7 %2$d on this device</string>
+    <plurals name="help_subtitle">
+        <item quantity="one">%1$d document \u00b7 %2$d on this device</item>
+        <item quantity="other">%1$d documents \u00b7 %2$d on this device</item>
+    </plurals>
     <string name="help_back">Back</string>
 
     <!--
@@ -292,7 +297,6 @@
     <string name="help_offline_copy">Copy link</string>
     <string name="help_offline_alternative">Read Troubleshooting</string>
     <string name="help_offline_bar">That link is on the web. No network right now.</string>
-    <string name="help_link_copied">Link copied</string>
 
     <string name="help_reader_action">Open in browser</string>
     <string name="help_reader_loading">reading from this device</string>

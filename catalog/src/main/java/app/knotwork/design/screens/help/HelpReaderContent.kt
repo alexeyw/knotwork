@@ -1,9 +1,11 @@
 package app.knotwork.design.screens.help
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.components.buttons.KnotworkButtonSize
@@ -51,7 +54,12 @@ fun HelpReaderContent(
     modifier: Modifier = Modifier,
     body: @Composable () -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxSize().testTag(HELP_READER_TEST_TAG)) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .testTag(HELP_READER_TEST_TAG),
+    ) {
         HelpReaderBar(state = state, strings = strings, callbacks = callbacks)
         Box(modifier = Modifier.weight(1f)) {
             when (state.visualState) {
@@ -214,7 +222,14 @@ private fun HelpReaderError(strings: HelpStrings, callbacks: HelpReaderCallbacks
             style = KnotworkTextStyles.BodyBase,
             color = KnotworkTheme.extended.onSurface2,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2)) {
+        // A FlowRow, not a Row: at 200 % font scale the two labels do not fit
+        // one line, and a Row gives the whole overflow to the second button —
+        // "Try again" rendered as "T...". The same fix the run-limits rows use
+        // for the same reason.
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+            verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+        ) {
             KnotworkPrimaryButton(
                 text = strings.errorPrimary,
                 onClick = callbacks.onOpenInBrowser,
@@ -228,6 +243,94 @@ private fun HelpReaderError(strings: HelpStrings, callbacks: HelpReaderCallbacks
         }
     }
 }
+
+/**
+ * The in-body refusal: a bar pinned to the bottom of the reader.
+ *
+ * Bottom-anchored because the one thing a reader eleven screens into the
+ * troubleshooting guide cannot afford to lose is their scroll position, and
+ * this takes none of it. Not a snackbar either — it persists until dismissed,
+ * because the person who hit it is reading, not watching.
+ *
+ * @param strings The screen's copy.
+ * @param callbacks What its actions raise.
+ * @param modifier Layout modifier applied to the bar.
+ */
+@Composable
+fun HelpOfflineBar(strings: HelpStrings, callbacks: HelpReaderCallbacks, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(KnotworkTheme.spacing.sp3)
+            .clip(KnotworkTheme.shapes.sm)
+            .background(KnotworkTheme.extended.surface3)
+            .padding(KnotworkTheme.spacing.sp3)
+            .testTag(HELP_OFFLINE_BAR_TEST_TAG),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+    ) {
+        Text(
+            text = strings.offlineBarText,
+            style = KnotworkTextStyles.BodySm,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = strings.offlineBarCopy,
+            style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .clip(KnotworkTheme.shapes.sm)
+                .clickable(onClick = callbacks.onCopyLink)
+                .padding(KnotworkTheme.spacing.sp1),
+        )
+    }
+}
+
+/**
+ * The mark left on the heading an anchor landed on.
+ *
+ * It persists until the first scroll rather than pulsing, because a pulse is
+ * over before the eye arrives and, under reduced motion, is no signal at all —
+ * which would leave the one reader who most needs orientation with none.
+ *
+ * @param note The mark's one word.
+ * @param modifier Layout modifier applied to the mark.
+ * @param content The heading being marked.
+ */
+@Composable
+fun HelpAnchorMark(note: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Column(modifier = modifier.testTag(HELP_ANCHOR_MARK_TEST_TAG)) {
+        Text(
+            text = note,
+            style = KnotworkTextStyles.MonoSm,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = KnotworkTheme.spacing.sp2),
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .size(width = AnchorEdge, height = AnchorEdgeHeight)
+                    .background(MaterialTheme.colorScheme.primary)
+                    // Decoration: the note above it carries the meaning.
+                    .clearAndSetSemantics { },
+            )
+            Box(modifier = Modifier.padding(start = KnotworkTheme.spacing.sp2)) { content() }
+        }
+    }
+}
+
+/** Width of the accent edge beside an arrived-at heading. */
+private val AnchorEdge = 2.dp
+
+/** Height of that edge — a heading's line, not the block's. */
+private val AnchorEdgeHeight = 28.dp
+
+/** Test tag of the in-body offline bar. */
+const val HELP_OFFLINE_BAR_TEST_TAG: String = "help_offline_bar"
+
+/** Test tag of the arrival mark. */
+const val HELP_ANCHOR_MARK_TEST_TAG: String = "help_anchor_mark"
 
 /** Height of the skeleton's title line. */
 private val TitleBar = 26.dp

@@ -2031,6 +2031,15 @@ val documentationFiles: FileCollection = files(
     fileTree("$rootDir/app") {
         include("**/*.md")
         exclude("build/**")
+        // The bundled documentation under `src/main/assets/docs` is a generated
+        // COPY of `docs/`, and this gate would read it wrongly: it resolves a
+        // relative link against the file's own directory, where `user-guide.md`
+        // and `../SECURITY.md` do not exist — the copies are deliberately a
+        // subset. Their links are checked by `verifyBundledDocs` instead, which
+        // resolves them against the real repository and additionally decides
+        // which of them stay inside the app. Checking them here as well would
+        // not be stricter, it would be wrong.
+        exclude("src/main/assets/docs/**")
     },
     fileTree("$rootDir/catalog") {
         include("**/*.md")

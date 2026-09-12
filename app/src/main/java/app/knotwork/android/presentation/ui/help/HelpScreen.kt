@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,8 +41,9 @@ fun HelpScreen(
     HelpListContent(
         state = HelpListViewState(
             title = stringResource(R.string.help_title),
-            subtitle = stringResource(
-                R.string.help_subtitle,
+            subtitle = pluralStringResource(
+                R.plurals.help_subtitle,
+                uiState.documents.size,
                 uiState.documents.size,
                 uiState.documents.count { it.delivery == DocumentationLinks.Delivery.BUNDLED },
             ),
