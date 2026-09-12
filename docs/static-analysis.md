@@ -891,6 +891,92 @@ have missed. The pure logic is unit-tested in `buildSrc` (`MarkdownLinksTest`,
 
 ---
 
+## In-app documentation link guard (`verifyDocumentationLinks`)
+
+`:app:verifyDocumentationLinks` is wired into `check`. It guards the registry of
+documents the **app** links out to — the About screen's Documentation card, the
+onboarding Ready step, the Tools and Triggers top bars, the editor's overflow,
+and the external-automation settings hint.
+
+It fails on two things: the committed registry drifting from the build-side
+list, and any entry naming a document or heading that no longer resolves.
+
+### Why the list lives in `buildSrc` and the app's copy is generated
+
+Three readers need the same list: the app (which builds the URLs), this gate
+(which resolves them), and the bundled-documentation sync. `buildSrc` cannot see
+`app` code, so only one of the three can hold the list natively. The build holds
+it (`DocumentationLinkRegistry`) and generates the app's copy
+(`domain/constants/DocumentationLinks.kt`), which is committed like any other
+generated artefact in this repository.
+
+That is the only arrangement in which the list **and** the GitHub slug algorithm
+(`MarkdownLinks.slug`) each have exactly one owner. The alternative — parsing the
+Kotlin object back out of `app` with regular expressions — was rejected on the
+precedent of `BrowserEditorConstantsGenerator`, which skips a record of
+unexpected shape *silently*: a typo there produces a missing gate rather than a
+failure.
+
+`./gradlew :app:generateDocumentationLinks` rewrites the copy. It refuses to
+write while any entry fails to resolve, so a broken registry cannot reach the
+app and be reported afterwards against a file already committed.
+
+### Why this one is typed and cacheable while `verifyDocLinks` is not
+
+`verifyDocLinks` is deliberately untracked: a documentation link may address any
+path in the repository, so its inputs cannot be declared, and a cached pass
+could hide a target deleted since the last run.
+
+This gate constrains every target to a Markdown file under `docs/` — a rule it
+enforces rather than assumes. That makes the declared input set *complete*:
+deleting a target changes the task's fingerprint. So the task carries typed
+inputs and a stamp output, and `check` skips it while nothing it reads has
+changed, which is what keeps a no-op build from growing by another always-run
+task.
+
+### The rule that "the anchor exists" cannot express
+
+A heading written twice yields two anchors, `slug` and `slug-1`, and **both
+keep resolving forever**. Reordering those two sections therefore moves what
+each anchor points at without breaking either — a link that is green and wrong.
+`docs/user-guide.md` carries a live instance: "Background & triggers" appears
+twice.
+
+So the rule is uniqueness, not existence: a registry anchor must be produced by
+exactly one heading, and an ordinal `-N` anchor is refused outright. The count
+comes from `MarkdownLinks.headingSlugCounts`, not from inspecting the anchor's
+shape — `step-1` from a heading "Step 1" is a legitimate anchor and
+indistinguishable from an ordinal suffix by spelling alone.
+
+### Release builds link at the tag, legal documents do not
+
+`BuildConfig.DOCS_REF` is `v<versionName>` for a release build and `main`
+otherwise, decided by build **type** in `app/build.gradle.kts` (the rule itself
+is `DocumentationRef`, unit-tested in `buildSrc` where both branches are
+ordinary arguments — an app-side test only ever observes the debug variant).
+Reading `versionName` for its suffix instead would make an unrelated string
+decide where the links point.
+
+`PRIVACY.md` is exempt and stays on `main`: what binds a user is the current
+edition, and that URL is also the one filed with the app stores. The exemption
+is asserted in `AboutLinksTest` so it cannot be tidied into the version-pinned
+rule.
+
+The tag is cut *after* the build, so no repository gate can confirm the link
+resolves on GitHub. `docs/release.md` carries that as a post-publication
+checklist item.
+
+### Observed failing
+
+Watched red before being trusted, in four shapes: a renamed heading
+(`triggers` → no heading produces it), an anchor whose heading text appears
+twice (reported with the count), an ordinal `-1` anchor, and a committed copy
+left stale after the build-side list changed. The pure logic is unit-tested in
+`buildSrc` (`DocumentationLinkRegistryTest`, `DocumentationRefTest`,
+`MarkdownLinksTest`), each rule against a document written to break it.
+
+---
+
 ## Mermaid diagram guard (`verifyMermaidDiagrams`)
 
 `:app:verifyMermaidDiagrams` fails the build when an embedded Mermaid diagram

@@ -3,6 +3,8 @@ package app.knotwork.android.presentation.ui.settings
 import android.content.Context
 import androidx.annotation.StringRes
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.DocumentationLinks
+import app.knotwork.design.screens.settings.KnotworkHintLink
 import app.knotwork.design.screens.settings.SettingsHint
 import app.knotwork.design.screens.settings.SettingsHintController
 
@@ -159,17 +161,68 @@ object SettingsHelpCatalog {
      * Builds the hint controller a settings sub-screen provides to its rows.
      *
      * @param context Resource resolution for the localized help text.
+     * @param onOpenDocument Invoked with a registry document id when a hint's
+     *   link is tapped. Defaults to a no-op so a test can build a controller
+     *   without a browser.
      * @return A controller that resolves any registry anchor and owns which
      *   single hint is open on the screen.
      */
-    fun controller(context: Context): SettingsHintController = SettingsHintController { anchorKey ->
-        when (val help = HELP[anchorKey]) {
-            is SettingHelp.Text -> SettingsHint(text = context.getString(help.res))
-            is SettingHelp.NotShipped -> SettingsHint(text = context.getString(help.res))
-            else -> null
+    fun controller(context: Context, onOpenDocument: (String) -> Unit = {}): SettingsHintController =
+        SettingsHintController { anchorKey ->
+            val text = when (val help = HELP[anchorKey]) {
+                is SettingHelp.Text -> context.getString(help.res)
+                is SettingHelp.NotShipped -> context.getString(help.res)
+                else -> null
+            }
+            text?.let {
+                SettingsHint(text = it, link = anchorKey?.let { key -> linkFor(context, key, onOpenDocument) })
+            }
         }
+
+    /**
+     * Resolves a row's documentation link, when it has one.
+     *
+     * @param context Resource resolution for the link label.
+     * @param anchorKey The row's registry anchor.
+     * @param onOpenDocument Invoked with the registry id when the link is tapped.
+     * @return The link, or `null` for a row whose hint says everything.
+     */
+    private fun linkFor(context: Context, anchorKey: String, onOpenDocument: (String) -> Unit): KnotworkHintLink? {
+        val link = HELP_DOC_LINKS[anchorKey] ?: return null
+        return KnotworkHintLink(
+            label = context.getString(link.labelRes),
+            onClick = { onOpenDocument(link.documentId) },
+        )
     }
 }
+
+/**
+ * A settings row's pointer into the documentation.
+ *
+ * @property documentId Id from the generated `DocumentationLinks` registry, so
+ *   a document that is renamed or loses its heading fails the build rather than
+ *   this map.
+ * @property labelRes Label shown on the link inside the hint panel.
+ */
+private data class HelpDocLink(@StringRes val labelRes: Int, val documentId: String)
+
+/**
+ * Rows whose explanation cannot fit in a hint, and the document that holds the
+ * rest.
+ *
+ * Kept as a map beside [SettingsHelpCatalog.HELP] rather than as another field
+ * on `SettingHelp`, and deliberately: the shape of `HELP` is parsed by
+ * `SettingsHelpDocsGenerator` with regular expressions to build the guide's
+ * settings table, and a record it does not recognise is skipped **silently**.
+ * Extending the parsed type to carry one link on one row would risk dropping
+ * rows from a published document to save a map.
+ */
+private val HELP_DOC_LINKS: Map<String, HelpDocLink> = mapOf(
+    "EXTERNAL_AUTOMATION_ENABLED" to HelpDocLink(
+        labelRes = R.string.settings_help_link_external_automation,
+        documentId = DocumentationLinks.ID_EXTERNAL_AUTOMATION,
+    ),
+)
 
 private fun text(@StringRes res: Int): SettingHelp = SettingHelp.Text(res)
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.Trigger
 import app.knotwork.android.domain.models.TriggerCondition
 import app.knotwork.android.domain.models.TriggerEvaluationSource
@@ -41,6 +42,7 @@ import app.knotwork.android.domain.usecases.TriggerJournalGrouper
 import app.knotwork.android.domain.usecases.TriggerJournalView
 import app.knotwork.android.presentation.ui.common.JournalExportActionHandlers
 import app.knotwork.android.presentation.ui.common.asString
+import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.android.presentation.ui.common.rememberJournalExportHandlers
 import app.knotwork.design.screens.triggers.TriggerConditionType
 import app.knotwork.design.screens.triggers.TriggerDeleteDialogContent
@@ -208,6 +210,7 @@ private fun TriggersList(
     nowMillis: Long,
     journalExport: JournalExportActionHandlers,
 ) {
+    val context = LocalContext.current
     val resolvedError = uiState.loadError?.asString()
     val fallbackError = stringResource(R.string.triggers_error_body)
     TriggersContent(
@@ -236,6 +239,7 @@ private fun TriggersList(
             onRetry = viewModel::retry,
             onShareJournal = journalExport.onShare,
             onSaveJournal = journalExport.onSave,
+            onOpenDocumentation = { openDocumentation(context, DocumentationLinks.ID_TRIGGERS) },
         ),
     )
 }

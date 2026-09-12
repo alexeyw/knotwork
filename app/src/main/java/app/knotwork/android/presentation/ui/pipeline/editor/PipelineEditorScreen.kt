@@ -33,12 +33,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineTargetAvailability
 import app.knotwork.android.domain.models.Skill
+import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.android.presentation.ui.components.PromptPreviewBottomSheet
 import app.knotwork.android.presentation.ui.orchestrator.OrchestratorViewModel
@@ -554,6 +556,20 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                             imageVector = if (editor.gridVisible) AppIcons.GridOff else AppIcons.Grid,
                             contentDescription = null,
                         )
+                    },
+                )
+                // The cookbook is what answers "what does this node actually
+                // do" — the question external testers asked of this screen.
+                // A menu item rather than a toolbar icon: the toolbar carries
+                // the editing actions, and this one is read once.
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.pipeline_editor_overflow_cookbook)) },
+                    onClick = {
+                        overflowOpen = false
+                        openDocumentation(context, DocumentationLinks.ID_COOKBOOK)
+                    },
+                    leadingIcon = {
+                        Icon(AppIcons.Book, contentDescription = null)
                     },
                 )
                 DropdownMenuItem(

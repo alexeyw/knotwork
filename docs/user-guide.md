@@ -2877,11 +2877,45 @@ to flag that the agent has paused background work.
 ## About
 
 **More → About** shows the app's brand mark, version / build /
-commit, the open-source license name (Apache 2.0), a hand-curated
-acknowledgments list of the libraries that ship inside the app, and
-a short privacy summary. Tap `Open license text` to load the
-license verbatim in your browser, or `Read privacy policy` for the
-detailed privacy stance.
+commit, a **Documentation** card, the open-source license name
+(Apache 2.0), a hand-curated acknowledgments list of the libraries
+that ship inside the app, and a short privacy summary. Tap
+`Open license text` to load the license verbatim in your browser, or
+`Read privacy policy` for the detailed privacy stance.
+
+---
+
+## Finding the documentation from inside the app
+
+Every document in `docs/` opens from the app itself, so you never have
+to go looking for a URL.
+
+**About → Documentation** is the full list: this guide, the
+[FAQ](faq.md), the [pipeline cookbook](cookbook.md),
+[troubleshooting](troubleshooting.md) and the
+[external-automation contract](external-automation.md). Each button
+opens the document in your browser.
+
+Four screens also link straight to the part that explains them:
+
+| Where | What it opens |
+|---|---|
+| **Tools** — the book icon in the top bar | Adding an MCP server |
+| **Triggers** — the book icon in the top bar | The triggers section of this guide |
+| **Pipeline editor** — overflow menu → *Pipeline cookbook* | What every node does |
+| **Settings → Background → External automation**, the hint's *Read the contract* | The external-automation contract |
+
+The last step of onboarding carries the same pointer to the FAQ.
+
+**The links match the build you are running.** A release build opens the
+documentation at the tag of the version you installed, so what you read
+describes the app on your phone rather than whatever has landed since.
+Debug builds link at `main`. One consequence worth knowing: the
+privacy policy is deliberately **not** pinned this way — it always opens
+the current edition, because that is the one that binds.
+
+Everything here needs a browser and an internet connection; the
+documents are not bundled into the app.
 
 ---
 

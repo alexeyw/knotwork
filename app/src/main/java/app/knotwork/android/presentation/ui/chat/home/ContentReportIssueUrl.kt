@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.domain.constants.RepositoryLinks
 import java.net.URLEncoder
 
 /**
@@ -47,8 +48,14 @@ internal fun contentReportIssueUrl(subject: String, body: String): String {
  */
 private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
 
-/** `issues/new` endpoint of the public repository. */
-private const val ISSUE_TRACKER_NEW_URL = "https://github.com/alexeyw/knotwork/issues/new"
+/**
+ * `issues/new` endpoint of the public repository.
+ *
+ * Resolved through [RepositoryLinks] rather than spelled out again: the host
+ * used to be written three times, and three copies survive a repository rename
+ * by staying wrong in three places.
+ */
+private val ISSUE_TRACKER_NEW_URL = RepositoryLinks.ISSUES_NEW_URL
 
 /**
  * Upper bound on the generated URL. Browsers differ on where they give up;

@@ -2,8 +2,10 @@ import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator
 import app.knotwork.android.buildtools.CookbookDocsGenerator
 import app.knotwork.android.buildtools.DetektAnalysisModeGuard
 import app.knotwork.android.buildtools.DexInstantiabilityChecker
+import app.knotwork.android.buildtools.DocumentationRef
 import app.knotwork.android.buildtools.ExternalAutomationDocsGenerator
 import app.knotwork.android.buildtools.FileMapSpec
+import app.knotwork.android.buildtools.GenerateDocumentationLinksTask
 import app.knotwork.android.buildtools.GenerateFileMapTask
 import app.knotwork.android.buildtools.LintBaselineGuard
 import app.knotwork.android.buildtools.R8MappingChecker
@@ -14,6 +16,7 @@ import app.knotwork.android.buildtools.StoreListingLengthChecker
 import app.knotwork.android.buildtools.VerifyDialogInventoryTask
 import app.knotwork.android.buildtools.VerifyDocLinksTask
 import app.knotwork.android.buildtools.VerifyDocsHygieneTask
+import app.knotwork.android.buildtools.VerifyDocumentationLinksTask
 import app.knotwork.android.buildtools.VerifyFileMapTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
@@ -248,8 +251,33 @@ android {
             // root file is swapped for the real one at release-build time.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+
+            // Where this build's in-app documentation links resolve. A debug
+            // build has no tag of its own, so it reads `main`. Decided by build
+            // TYPE, never by inspecting `versionName` for the suffix above: the
+            // suffix exists to tell two installs apart, and letting it also
+            // decide where links point would move them the next time a build
+            // type sets one for an unrelated reason.
+            buildConfigField(
+                "String",
+                "DOCS_REF",
+                "\"${DocumentationRef.of(release = false, versionName = defaultConfig.versionName.orEmpty())}\"",
+            )
         }
         release {
+            // Where this build's in-app documentation links resolve: the
+            // annotated tag of the version being shipped. A store user reading
+            // `main` would be reading about a build they do not have — the same
+            // class of drift as a guide pointing at a file that does not exist
+            // for them. The tag is cut at release time, so this link is live
+            // only after the tag is pushed; `docs/release.md` carries the
+            // post-publication check, which no repository gate can perform.
+            buildConfigField(
+                "String",
+                "DOCS_REF",
+                "\"${DocumentationRef.of(release = true, versionName = defaultConfig.versionName.orEmpty())}\"",
+            )
+
             // R8 in full mode + resource shrinking.
             // Keep rules for reflection-heavy code paths (Koog, Ktor,
             // kotlinx.serialization, MediaPipe / LiteRT JNI, SQLCipher,
@@ -1425,6 +1453,52 @@ val verifyFileMap by tasks.registering(VerifyFileMapTask::class) {
 
 verifyFileMap { mustRunAfter(generateFileMap) }
 tasks.named("check") { dependsOn(verifyFileMap) }
+
+// Documentation-link registry — the list of documents the app links out to.
+//
+// The list itself lives in `buildSrc` (`DocumentationLinkRegistry`), not here
+// and not in `app`, because three readers need it: the app, this gate, and the
+// bundled-documentation sync. `buildSrc` cannot see `app` code, so the build
+// owns the list and GENERATES the app's copy — the only arrangement where the
+// list and the GitHub slug algorithm each have exactly one owner. Parsing the
+// Kotlin object back out of `app` was the alternative, and the one precedent
+// for that skips records of unexpected shape silently.
+//
+// `generateDocumentationLinks` rewrites the committed copy;
+// `verifyDocumentationLinks` (wired into `check`) fails on drift AND on any
+// entry whose heading no longer resolves. Unlike `verifyDocLinks` this one is
+// typed and cacheable, because the registry confines every target to `docs/`,
+// which makes the declared input set complete.
+val documentationLinkSources: FileCollection = files(
+    fileTree("$rootDir/docs") { include("**/*.md") },
+)
+
+val documentationLinksPackage = "app.knotwork.android.domain.constants"
+
+val documentationLinksFile =
+    file("$rootDir/app/src/main/java/app/knotwork/android/domain/constants/DocumentationLinks.kt")
+
+val generateDocumentationLinks by tasks.registering(GenerateDocumentationLinksTask::class) {
+    group = "build"
+    description = "Regenerates the app-side documentation-link registry from the build-side list."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(documentationLinkSources)
+    generatedPackage.set(documentationLinksPackage)
+    outputSource.set(documentationLinksFile)
+}
+
+val verifyDocumentationLinks by tasks.registering(VerifyDocumentationLinksTask::class) {
+    group = "verification"
+    description = "Fails the build if the documentation-link registry drifted, or an entry's heading moved."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(documentationLinkSources)
+    generatedPackage.set(documentationLinksPackage)
+    committedSource.from(documentationLinksFile)
+    stampFile.set(layout.buildDirectory.file("reports/documentation-links/verified.txt"))
+}
+
+verifyDocumentationLinks { mustRunAfter(generateDocumentationLinks) }
+tasks.named("check") { dependsOn(verifyDocumentationLinks) }
 
 // Public documentation hygiene guard — moved.
 //

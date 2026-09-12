@@ -13,6 +13,32 @@ details.
 
 ## [Unreleased]
 
+### Added
+
+- **The app now says where its documentation is.** The Play listing has no room
+  for a URL — the description sits five characters under the 4000-character
+  limit — so for anyone who installed from a store, the app was the only surface
+  that could tell them a user guide, an FAQ, a cookbook, a troubleshooting page
+  and an automation contract exist, and no screen did. About now carries a
+  **Documentation** card listing all five, and four screens link straight to the
+  part that explains them: Tools and Triggers from a book icon in the top bar,
+  the pipeline editor from its overflow menu, and external automation from the
+  settings hint — which fills a link slot that had been rendered but never
+  filled since it was written. The last step of onboarding points at the FAQ.
+
+  **The links follow the build.** A release build opens the documentation at the
+  tag of the version installed, so a reader is not sent to a description of a
+  build they do not have; debug builds link at `main`. The privacy policy is
+  deliberately exempt and always opens the current edition, since that is the
+  one that binds — and it is the same URL filed with the app stores.
+
+  A build gate resolves every link against the real Markdown, and it enforces
+  one rule that "the link is not broken" cannot express: a heading written twice
+  produces two anchors that both keep working, so reordering those sections
+  moves where a link lands without breaking it. The guide contains a live
+  instance of exactly that. Registry anchors must therefore name a heading that
+  is unique.
+
 ### Changed
 
 - **The browser pipeline editor now works with no network.** It was described

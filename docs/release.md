@@ -614,7 +614,22 @@ same way merging a pull request is. Before pressing publish:
 2. Download the APK and install it on the reference device — the automated gate
    is JVM-only and never runs the artefact (see
    [`testing.md`](testing.md) § *What the automated gate does NOT cover*).
-3. Publish.
+3. **Open every in-app documentation link from that installed build.** About →
+   Documentation (five documents), the Tools and Triggers top-bar book icons,
+   the editor overflow's *Pipeline cookbook*, and the *Read the contract* link
+   in the external-automation settings hint.
+
+   This is a checklist item and not a `check` task on purpose. A release build
+   links at `v<versionName>`, and that tag does not exist until the release is
+   cut — so no gate running inside the repository can confirm the URL resolves
+   on GitHub. `verifyDocumentationLinks` proves the *document and heading*
+   exist in the commit being released (see
+   [`static-analysis.md`](static-analysis.md) § *In-app documentation link
+   guard*); only this step proves the tag does.
+
+   A link that 404s here means the tag was not pushed, not that the registry is
+   wrong.
+4. Publish.
 
 **Dry-running the workflow.** *Actions* → *Release* → *Run workflow* takes a tag
 as input and performs every step except creating the release, so the pipeline

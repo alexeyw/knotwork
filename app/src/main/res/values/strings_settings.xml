@@ -165,6 +165,24 @@
     <string name="about_open_license_cta">Open license text</string>
     <string name="about_open_privacy_cta">Read privacy policy</string>
 
+    <!--
+        Documentation entry points. The store listing has no room for a URL, so
+        this card is the only place a user who installed from the store can
+        learn the documentation exists.
+    -->
+    <string name="about_section_documentation">Documentation</string>
+    <string name="about_documentation_body">Opens in your browser, at the version you have installed.</string>
+    <string name="about_doc_user_guide_title">User guide</string>
+    <string name="about_doc_user_guide_summary">Every screen, setting and node, in order.</string>
+    <string name="about_doc_faq_title">FAQ</string>
+    <string name="about_doc_faq_summary">Short answers, and where to read more.</string>
+    <string name="about_doc_cookbook_title">Pipeline cookbook</string>
+    <string name="about_doc_cookbook_summary">What each node does, with recipes to copy.</string>
+    <string name="about_doc_troubleshooting_title">Troubleshooting</string>
+    <string name="about_doc_troubleshooting_summary">When something does not work.</string>
+    <string name="about_doc_external_automation_title">External automation</string>
+    <string name="about_doc_external_automation_summary">Running a pipeline from Tasker, adb or another app.</string>
+
     <!-- Provider picker / detail -->
     <string name="settings_provider_picker_title">Add provider</string>
     <string name="settings_provider_detail_title">%1$s provider</string>

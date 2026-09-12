@@ -322,6 +322,7 @@
     </plurals>
     <!-- The permanent, icon-only door to adding a server; the loud one-time CTA
          lives inside the empty MCP group and disappears once a server exists. -->
+    <string name="knotwork_tools_docs_cd">Read about MCP servers</string>
     <string name="knotwork_tools_add_mcp_cd">Add an MCP server</string>
     <string name="knotwork_tools_empty_mcp_title">No servers yet</string>
     <string name="knotwork_tools_empty_mcp_body">An MCP server adds tools the agent can call — web search, files, shell.</string>
@@ -744,6 +745,8 @@
     <!-- Step 4 headline fallback when no scenario was picked. -->
     <string name="knotwork_onboarding_ready_generic_headline">You\'re ready.</string>
     <!-- Step 4 body copy. -->
+    <string name="knotwork_onboarding_ready_docs_label">Stuck later?</string>
+    <string name="knotwork_onboarding_ready_docs_cta">Read the FAQ</string>
     <string name="knotwork_onboarding_ready_scenario_body">Here\'s what we set up for you — edit any of it later from Pipelines.</string>
     <!--
         Step 4 footer line under the pipeline preview:

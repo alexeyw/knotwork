@@ -203,6 +203,15 @@ private fun ToolsTopBar(state: ToolsViewState, callbacks: ToolsCallbacks) {
         // Still no overflow menu: per-server actions live on each row, so it
         // would have nothing to host.
         actions = {
+            // The documentation action sits beside Add, not inside a menu:
+            // the tester who could not finish this screen never opened one.
+            IconButton(onClick = callbacks.onOpenDocumentation) {
+                Icon(
+                    imageVector = AppIcons.Book,
+                    contentDescription = stringResource(R.string.knotwork_tools_docs_cd),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             IconButton(onClick = callbacks.onAddServerOpen) {
                 Icon(
                     imageVector = AppIcons.Add,

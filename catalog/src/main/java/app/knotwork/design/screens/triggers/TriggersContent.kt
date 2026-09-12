@@ -170,6 +170,13 @@ private fun TriggersTopBar(state: TriggersViewState, strings: TriggersStrings, c
             // read separately, so a screen that failed to list its triggers can
             // still hand over the journal — which is exactly the file worth
             // sending when that happens.
+            IconButton(onClick = callbacks.onOpenDocumentation) {
+                Icon(
+                    imageVector = AppIcons.Book,
+                    contentDescription = strings.documentationCd,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             JournalExportActions(
                 shareContentDescription = strings.exportShareCd,
                 saveContentDescription = strings.exportSaveCd,
@@ -532,6 +539,7 @@ data class TriggersStrings(
     // evaluation at all" can be answered from.
     val exportShareCd: String = "Share the evaluation journal",
     val exportSaveCd: String = "Save the evaluation journal",
+    val documentationCd: String = "Read about triggers",
 )
 
 /** Resolves the localised health-badge label for a row's health state. */
