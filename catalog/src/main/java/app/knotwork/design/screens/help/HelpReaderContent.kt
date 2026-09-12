@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,6 +97,10 @@ private fun HelpReaderBar(state: HelpReaderViewState, strings: HelpStrings, call
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // See the note on the list's bar: the shell scaffold zeroes its
+                // content insets, and this bar is hand-laid-out rather than an
+                // M3 `TopAppBar`, so the status-bar inset is ours to apply.
+                .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = KnotworkTheme.spacing.sp2, vertical = KnotworkTheme.spacing.sp2),
             verticalAlignment = Alignment.CenterVertically,
         ) {

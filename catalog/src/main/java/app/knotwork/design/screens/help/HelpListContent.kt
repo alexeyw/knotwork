@@ -5,10 +5,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
@@ -95,6 +98,12 @@ private fun HelpListBar(state: HelpListViewState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // The shell scaffold zeroes its own content insets, so every
+                // screen owns its status-bar inset. The sibling screens get it
+                // for free from M3's `TopAppBar`; this bar is hand-laid-out for
+                // its two-line title, so it has to apply the same padding
+                // explicitly — without it the title draws under the clock.
+                .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(
                     start = KnotworkTheme.spacing.sp4,
                     end = KnotworkTheme.spacing.sp4,
