@@ -22,7 +22,7 @@ import javax.inject.Inject
 import javax.inject.Provider
 
 /**
- * Base Application class for the Android AI Agent project.
+ * Base Application class for the Knotwork project.
  *
  * This class is annotated with @HiltAndroidApp to trigger Hilt's code generation,
  * including a base class for the application that serves as the application-level

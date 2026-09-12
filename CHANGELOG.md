@@ -95,6 +95,17 @@ details.
   replies, and this project writes prompt variables as `$DATE` and `$TOOLS`, so
   a message naming two of them lost the words in between.
 
+- **The first screen now calls the app by its own name.** The onboarding top bar
+  still carried the project's pre-rename title, so a new install greeted people
+  with one name while the store listing, the launcher icon and every other
+  screen used another.
+
+- **A confirmation card no longer prints the tool name twice.** When the agent
+  asks to run a tool, the card showed the tool id in mono and then the same
+  string again as its description — there was no separate explanation to show,
+  and repeating the id read as a rendering fault. The card now omits that line
+  when there is nothing to say in it.
+
 
 ## [0.9.0] - 2026-09-01
 

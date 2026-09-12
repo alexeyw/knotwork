@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.models.RunCeilingAxis
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunTerminationReason
+import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ComposerState
 import app.knotwork.design.components.chips.Risk
@@ -281,6 +282,41 @@ class ChatHomeStateMappingTest {
         val view = screenState(ChatHomeUiState.HitlConfirm(Risk.Destructive), pendingTypedConfirm = "ye")
             .toViewState()
         assertEquals("ye", view.pendingTypedConfirm)
+    }
+
+    @Test
+    fun `a live pending confirmation leaves the card's summary blank`() {
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "append_file",
+                arguments = """{"path":"inbox/captures.md"}""",
+                risk = ToolRisk.SENSITIVE,
+            ),
+        )
+
+        val confirmation = row.content as ChatContent.Confirmation
+        assertEquals("append_file", confirmation.model.toolName)
+        // Not merely "different from the tool name": the slot is empty, which
+        // is what makes the card drop the line instead of printing the id twice.
+        assertEquals("", confirmation.model.summary)
+        assertNotEquals(confirmation.model.toolName, confirmation.model.summary)
+    }
+
+    @Test
+    fun `a live pending confirmation carries the decoded arguments and the real risk`() {
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "fs.delete_file",
+                arguments = """{"path":"old-notes.md"}""",
+                risk = ToolRisk.DESTRUCTIVE,
+            ),
+        )
+
+        val confirmation = row.content as ChatContent.Confirmation
+        assertEquals(Risk.Destructive, confirmation.model.risk)
+        assertEquals(setOf("path"), confirmation.model.arguments.keys)
     }
 
     @Test
