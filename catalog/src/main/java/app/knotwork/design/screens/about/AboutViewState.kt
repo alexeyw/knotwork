@@ -9,17 +9,6 @@ package app.knotwork.design.screens.about
 data class AcknowledgmentEntry(val name: String, val license: String)
 
 /**
- * One document the About screen offers to open.
- *
- * @property id Stable registry id handed back to the caller on click. The
- *   catalog never resolves it to a URL: which revision of the documentation a
- *   build is entitled to show is a property of the build, which the design
- *   system cannot see.
- * @property title Display name of the document.
- * @property summary One line on what the document answers, so the list is a
- *   router rather than five identical buttons.
- */
-/**
  * Top-level immutable input to `AboutContent`.
  *
  * @property appName brand text rendered under the logo.

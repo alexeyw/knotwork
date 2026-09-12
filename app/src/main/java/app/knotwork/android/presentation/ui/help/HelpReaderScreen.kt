@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.help
 
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -11,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -85,18 +85,20 @@ fun HelpReaderScreen(
     // *parsed* document, which only this composition has.
     var arrivedIndex by remember { mutableStateOf<Int?>(null) }
 
-    // Guards the mark against the scroll that creates it: `animateScrollToItem`
-    // sets `isScrollInProgress`, so without this the programmatic arrival would
-    // dismiss the very mark it was supposed to leave.
-    var scrollingProgrammatically by remember { mutableStateOf(false) }
-
-    // The first scroll gesture dismisses the arrival mark. Read from the list's
-    // own interaction rather than from a scroll callback so a fling counts once.
+    // The first scroll GESTURE dismisses the arrival mark.
+    //
+    // Read from the drag interaction rather than from `isScrollInProgress`,
+    // and the difference is not stylistic: `animateScrollToItem` sets
+    // `isScrollInProgress` too, so an arrival would dismiss the very mark it
+    // had just placed. Guarding that with a flag around the programmatic
+    // scroll leaves a race — the collector can observe the stale `true` after
+    // the flag is cleared. A drag interaction is only ever raised by the user,
+    // so there is nothing to guard, and a fling still counts once because the
+    // gesture that started it did.
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }
-            .collect { scrolling ->
-                if (scrolling && !scrollingProgrammatically) viewModel.onScrolled()
-            }
+        listState.interactionSource.interactions.collect { interaction ->
+            if (interaction is DragInteraction.Start) viewModel.onScrolled()
+        }
     }
 
     // Arrive at the anchor once the document has actually been parsed: before
@@ -106,15 +108,7 @@ fun HelpReaderScreen(
         val offset = uiState.anchorOffset ?: return@LaunchedEffect
         val index = success.node.children.indexOfFirst { it.startOffset >= offset }
         if (index >= 0) {
-            scrollingProgrammatically = true
-            try {
-                if (reducedMotion) listState.scrollToItem(index) else listState.animateScrollToItem(index)
-            } finally {
-                // In `finally` so a cancelled scroll — the reader leaving
-                // before it lands — cannot strand the flag and make every
-                // later gesture silent.
-                scrollingProgrammatically = false
-            }
+            if (reducedMotion) listState.scrollToItem(index) else listState.animateScrollToItem(index)
             arrivedIndex = index
         }
         viewModel.onAnchorConsumed()

@@ -18,6 +18,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import timber.log.Timber
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,9 +42,22 @@ class AssetBundledDocumentationRepository @Inject constructor(@ApplicationContex
     @VisibleForTesting
     internal var dispatcher: CoroutineDispatcher = Dispatchers.IO
 
+    /**
+     * The parsed index, held after the first successful read.
+     *
+     * The assets cannot change while the process lives — they are packaged into
+     * the APK — so re-parsing is pure waste, and it was happening twice per
+     * document opened: once for the list of documents and once inside
+     * [content]. Only a success is cached: a failure is a damaged installation
+     * the user may be about to fix by reinstalling, and caching it would make
+     * the reader's *Try again* a lie.
+     */
+    private val cachedDocuments = AtomicReference<List<BundledDocument>?>(null)
+
     override suspend fun documents(): Result<List<BundledDocument>> = withContext(dispatcher) {
+        cachedDocuments.get()?.let { return@withContext Result.success(it) }
         try {
-            Result.success(parseIndex(readAsset(INDEX_ASSET_PATH)))
+            Result.success(parseIndex(readAsset(INDEX_ASSET_PATH)).also(cachedDocuments::set))
         } catch (e: IOException) {
             Timber.e(e, "Bundled documentation index could not be read")
             Result.failure(e)
