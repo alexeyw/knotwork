@@ -390,13 +390,12 @@ private fun PipelineLibraryListRow(
     overflowOpen: Boolean,
     callbacks: PipelineLibraryCallbacks,
 ) {
-    val rowBg = MaterialTheme.colorScheme.surface
     Row(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
         modifier = Modifier
             .fillMaxWidth()
-            .background(color = rowBg)
+            .background(color = MaterialTheme.colorScheme.surface)
             .clickable { callbacks.onPipelineClick(row.id) }
             .padding(
                 horizontal = KnotworkTheme.spacing.sp4,

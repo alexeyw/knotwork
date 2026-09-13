@@ -10,9 +10,9 @@ import javax.inject.Inject
  * Any pipeline can be deleted, including the one the editor currently holds and
  * the last one in the library. An earlier rule refused the pipeline "loaded into
  * the editor", but that pipeline was not something the user chose: after a
- * restart it was simply the most recently modified one, the library never showed
- * the editor while it applied, and the refusal arrived only after the user had
- * confirmed an irreversible delete. Keeping the editor consistent with a deletion
+ * restart it was simply the most recently modified one, the library is never on
+ * screen while that pipeline is being edited, and the refusal arrived only after
+ * the user had confirmed an irreversible delete. Keeping the editor consistent with a deletion
  * is the caller's job — see `OrchestratorViewModel.deletePipeline`.
  *
  * @property pipelineRepository Persistence sink for the cascading delete.
