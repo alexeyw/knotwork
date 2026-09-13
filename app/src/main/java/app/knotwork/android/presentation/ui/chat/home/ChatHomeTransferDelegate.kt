@@ -82,9 +82,13 @@ class ChatHomeTransferDelegate(
      *
      * Used by the long-press context menu (`onMessageContextAction`) to
      * resolve Copy / Rerun targets.
+     *
+     * Resolved against the rows the thread shows, including a just-sent message
+     * that has not been stored yet: that bubble can stay pending for minutes behind
+     * another run, and a long-press on it must not silently do nothing.
      */
     fun textForRow(rowId: String): String? {
-        val row = state.value.messages.firstOrNull { it.id == rowId } ?: return null
+        val row = state.value.visibleMessages.firstOrNull { it.id == rowId } ?: return null
         return when (val content = row.content) {
             is ChatContent.Text -> content.text
             is ChatContent.Markdown -> content.source

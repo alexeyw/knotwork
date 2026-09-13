@@ -129,6 +129,9 @@ class ChatHomeConsoleStreamingTest {
             sessionsFlow.value = sessionsFlow.value.filterNot { it.id == saved.id } + saved
             Unit
         }
+        // A new chat is renamed from its first message with a targeted rename.
+        coEvery { chatRepository.renameSession(any(), any()) } returns Unit
+        coEvery { chatRepository.getSessionById(any()) } returns null
         coEvery { chatRepository.saveMessage(any()) } returns Unit
         every { pipelineRepository.getAllPipelines() } returns pipelinesFlow
         every { settingsRepository.currentChatSessionId } returns savedSessionIdFlow

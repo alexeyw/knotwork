@@ -550,11 +550,20 @@ constructor(
         // reattach lookup is cancelled with it. Mirrors legacy
         // `ChatViewModel.sendMessage`.
         resetConsoleCachesForNewRun()
+        // A retry re-runs a turn whose row is already stored; only a fresh send has
+        // a message on its way to storage that needs standing in for.
+        val sendingTurn = if (persistUserMessage) {
+            sendingUserTurnFor(sessionId, content = displayContent ?: prompt, attachment = readyAttachment)
+        } else {
+            null
+        }
         // Single atomic transition: flip to Generating, reset the streaming
         // token counter (the pill displays "generating · 0 tok" →
         // "generating · N tok" rather than carrying over the previous
         // response's final count), drop pending HITL / clarification
         // snapshots, and clear the console projections of the previous run.
+        // The user's message goes into the same emission, so no frame ever shows
+        // the generating indicator without the question it is answering.
         _state.update { current ->
             current.withPendingCleared().withConsoleProjectionsCleared().copy(
                 visual = ChatHomeUiState.Generating(),
@@ -562,6 +571,7 @@ constructor(
                 // A notice belongs to the run that raised it. The new run has
                 // its own budget and will raise its own if it needs to.
                 runNotice = null,
+                sendingUserTurn = sendingTurn,
             )
         }
 
@@ -588,7 +598,10 @@ constructor(
             )
                 .catch { error ->
                     _state.update {
-                        it.copy(visual = ChatHomeUiState.Error(error.message ?: UNKNOWN_ERROR_FALLBACK))
+                        it.copy(
+                            visual = ChatHomeUiState.Error(error.message ?: UNKNOWN_ERROR_FALLBACK),
+                            sendingUserTurn = null,
+                        )
                     }
                 }
                 .collect { orchestratorState ->
@@ -599,6 +612,43 @@ constructor(
                     handleOrchestratorState(orchestratorState)
                 }
         }
+    }
+
+    /**
+     * Builds the pending bubble for a message that has just been sent.
+     *
+     * Projected through the same [chatMessageToRow] as a stored row, so the bubble
+     * is the one the stored row will replace — same text, same image — differing
+     * only in its status glyph.
+     *
+     * @param sessionId chat session the message belongs to.
+     * @param content what the stored row will carry: the display content, or the
+     *   prompt when the two are the same.
+     * @param attachment the image sent with the message, if any.
+     * @return the bubble together with the send time it is matched on.
+     */
+    private fun sendingUserTurnFor(
+        sessionId: String,
+        content: String,
+        attachment: MessageAttachment?,
+    ): SendingUserTurn {
+        val sentAt = System.currentTimeMillis()
+        val row = chatMessageToRow(
+            message = ChatMessage(
+                sessionId = sessionId,
+                role = Role.USER,
+                content = content,
+                timestamp = sentAt,
+                attachment = attachment,
+            ),
+            activeModelName = _state.value.model.name,
+            attachmentModel = attachment?.let { attachmentStore.absolutePathFor(it.path) },
+            onImageTap = attachment?.let { { attachments.openImageViewer(it) } },
+        )
+        return SendingUserTurn(
+            row = row.copy(metadata = row.metadata.copy(status = ChatMessageStatus.Pending)),
+            sentAtMillis = sentAt,
+        )
     }
 
     /**
@@ -775,7 +825,9 @@ constructor(
             // The advisory belongs to the run. Stopping the run ends it — a
             // strip still saying "nearing the step limit" above a composer
             // with nothing running is worse than no strip at all.
-            val cleared = current.withPendingCleared().copy(runNotice = null)
+            // A queued turn cancelled here is still written to the thread by the
+            // queue, so the stored row replaces the bubble a moment later.
+            val cleared = current.withPendingCleared().copy(runNotice = null, sendingUserTurn = null)
             if (current.visual is ChatHomeUiState.Generating) {
                 cleared.copy(visual = cleared.restingVisual())
             } else {
@@ -827,6 +879,7 @@ constructor(
                     // it would advertise a limit on a thread with nothing
                     // running in it.
                     runNotice = null,
+                    sendingUserTurn = null,
                 ),
             )
         }
@@ -962,6 +1015,12 @@ constructor(
             chatRepository.getDisplayMessagesForSession(sessionId).collect { incoming ->
                 _state.update { current ->
                     current.copy(
+                        // The stored row has arrived: it takes the bubble's place in
+                        // the same emission, so the message is never shown twice or
+                        // not at all.
+                        sendingUserTurn = current.sendingUserTurn?.takeUnless { turn ->
+                            incoming.any { it.role == Role.USER && it.timestamp >= turn.sentAtMillis }
+                        },
                         messages = incoming.map { message ->
                             val attachment = message.attachment
                             chatMessageToRow(
@@ -1061,6 +1120,9 @@ constructor(
             is AgentOrchestratorState.Error -> {
                 _state.update {
                     it.withPendingCleared().copy(
+                        // A run that failed before the queue stored the message never
+                        // will; a stored one is already in the thread.
+                        sendingUserTurn = null,
                         tokens = it.tokens.copy(streaming = 0),
                         // The typed cause travels into the visual state so the
                         // surface can render a sentence for it. `state.message`
