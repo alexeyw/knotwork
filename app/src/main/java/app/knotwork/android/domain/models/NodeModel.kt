@@ -7,8 +7,10 @@ import app.knotwork.android.domain.constants.DefaultPrompts
  *
  * @property id The unique identifier of the node.
  * @property type The [NodeType] describing the capability of this node.
- * @property x The X coordinate of the node on the canvas.
- * @property y The Y coordinate of the node on the canvas.
+ * @property x X of the node card's top-left corner on the canvas, in **dp** — the unit the
+ * editor lays the card out in, so a position means the same spacing on every screen and in
+ * every file format that carries it (exports, bundles, bundled presets, the browser editor).
+ * @property y Y of the node card's top-left corner on the canvas, in **dp** (see [x]).
  * @property label An optional label or name for the node.
  * @property toolName An optional name of the assigned tool if the node type is [NodeType.TOOL].
  * @property targetPipelineId Id of the pipeline this node executes when its type is

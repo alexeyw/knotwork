@@ -11,7 +11,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeModel
@@ -19,6 +18,7 @@ import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeConfigCod
 import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeTypeMapper
 import app.knotwork.android.presentation.ui.pipeline.editor.core.BezierEdge
 import app.knotwork.android.presentation.ui.pipeline.editor.core.CanvasTransform
+import app.knotwork.android.presentation.ui.pipeline.editor.core.NodeCardFootprint
 import app.knotwork.design.components.pipelineeditor.EvaluationConfig
 import app.knotwork.design.components.pipelineeditor.IntentRouterConfig
 import app.knotwork.design.components.pipelineeditor.NodePorts
@@ -28,17 +28,11 @@ import app.knotwork.design.theme.KnotworkTheme
 /**
  * Canvas-space coordinates of one port anchor (inbound or one of N outbound ports).
  *
- * Anchors are computed from the node's top-left corner plus the canonical NodeCard
- * geometry (`168 dp` wide, ports protruding `6 dp` past the edge). The caller passes
- * the dp ⇆ px [Density] so the math stays unit-agnostic.
+ * Anchors are computed from the node's top-left corner plus the canonical card geometry
+ * in [NodeCardFootprint]. Canvas units are dp, the unit the card is laid out in, so the
+ * geometry needs no density conversion.
  */
 internal data class PortAnchor(val xCanvas: Float, val yCanvas: Float)
-
-private const val NODE_WIDTH_DP = 168f
-private const val NODE_BASE_HEIGHT_DP = 64f
-
-/** Max card height (`NodeCardMaxHeight = 96.dp`): used for whole-card release hit-testing. */
-private const val NODE_MAX_HEIGHT_DP = 96f
 
 /**
  * Per-port horizontal spacing in dp. Picked to match the catalog NodeCard's outbound
@@ -52,7 +46,7 @@ private const val NODE_MAX_HEIGHT_DP = 96f
 internal const val PORT_SPACING_DP = 40f
 
 /** Inner card width available for the outbound port row (NodeCard width − 2 × sp3 padding). */
-private const val NODE_INNER_WIDTH_DP = NODE_WIDTH_DP - 24f
+private const val NODE_INNER_WIDTH_DP = NodeCardFootprint.WIDTH - 24f
 
 /**
  * Returns the canvas-space horizontal offset (relative to the node's centre) of outbound
@@ -67,10 +61,8 @@ internal fun outboundPortOffsetDp(index: Int, count: Int): Float {
 }
 
 /** Inbound port anchor — single dot centred on the top edge. */
-internal fun inboundPortAnchor(node: NodeModel, density: Density): PortAnchor {
-    val widthPx = with(density) { NODE_WIDTH_DP.dp.toPx() }
-    return PortAnchor(xCanvas = node.x + widthPx / 2f, yCanvas = node.y)
-}
+internal fun inboundPortAnchor(node: NodeModel): PortAnchor =
+    PortAnchor(xCanvas = node.x + NodeCardFootprint.WIDTH / 2f, yCanvas = node.y)
 
 /**
  * Outbound port anchor for the port with [portLabel] on [node] (using [ports] to enumerate).
@@ -81,17 +73,14 @@ internal fun inboundPortAnchor(node: NodeModel, density: Density): PortAnchor {
  * way an imported connection with a stale label still renders next to a real port instead
  * of disappearing.
  */
-internal fun outboundPortAnchor(node: NodeModel, ports: NodePorts, portLabel: String?, density: Density): PortAnchor {
-    val widthPx = with(density) { NODE_WIDTH_DP.dp.toPx() }
-    val heightPx = with(density) { NODE_BASE_HEIGHT_DP.dp.toPx() }
-    val centreX = node.x + widthPx / 2f
-    val outY = node.y + heightPx
+internal fun outboundPortAnchor(node: NodeModel, ports: NodePorts, portLabel: String?): PortAnchor {
+    val centreX = node.x + NodeCardFootprint.WIDTH / 2f
+    val outY = node.y + NodeCardFootprint.BASE_HEIGHT
     val outbound = ports.outbound
     if (outbound.isEmpty()) return PortAnchor(centreX, outY)
     val matched = outbound.indexOfFirst { matchesPort(it, portLabel) }
     val index = if (matched >= 0) matched else 0
-    val offsetPx = with(density) { outboundPortOffsetDp(index, outbound.size).dp.toPx() }
-    return PortAnchor(xCanvas = centreX + offsetPx, yCanvas = outY)
+    return PortAnchor(xCanvas = centreX + outboundPortOffsetDp(index, outbound.size), yCanvas = outY)
 }
 
 /**
@@ -102,11 +91,12 @@ internal fun outboundPortAnchor(node: NodeModel, ports: NodePorts, portLabel: St
  */
 internal data class NodeBounds(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
-internal fun nodeCanvasBounds(node: NodeModel, density: Density): NodeBounds {
-    val widthPx = with(density) { NODE_WIDTH_DP.dp.toPx() }
-    val heightPx = with(density) { NODE_MAX_HEIGHT_DP.dp.toPx() }
-    return NodeBounds(left = node.x, top = node.y, right = node.x + widthPx, bottom = node.y + heightPx)
-}
+internal fun nodeCanvasBounds(node: NodeModel): NodeBounds = NodeBounds(
+    left = node.x,
+    top = node.y,
+    right = node.x + NodeCardFootprint.WIDTH,
+    bottom = node.y + NodeCardFootprint.MAX_HEIGHT,
+)
 
 /**
  * Canvas-space anchor of every outbound port on [node], paired with its label (`""` for the
@@ -114,16 +104,13 @@ internal fun nodeCanvasBounds(node: NodeModel, density: Density): NodeBounds {
  * the canvas gesture handler can decide whether a press landed on a port (→ start a
  * connection) instead of panning.
  */
-internal fun outboundPortAnchors(node: NodeModel, density: Density): List<Pair<String, PortAnchor>> {
+internal fun outboundPortAnchors(node: NodeModel): List<Pair<String, PortAnchor>> {
     val outbound = portsFor(node).outbound
     if (outbound.isEmpty()) return emptyList()
-    val widthPx = with(density) { NODE_WIDTH_DP.dp.toPx() }
-    val heightPx = with(density) { NODE_BASE_HEIGHT_DP.dp.toPx() }
-    val centreX = node.x + widthPx / 2f
-    val outY = node.y + heightPx
+    val centreX = node.x + NodeCardFootprint.WIDTH / 2f
+    val outY = node.y + NodeCardFootprint.BASE_HEIGHT
     return outbound.mapIndexed { index, port ->
-        val offsetPx = with(density) { outboundPortOffsetDp(index, outbound.size).dp.toPx() }
-        port.label to PortAnchor(xCanvas = centreX + offsetPx, yCanvas = outY)
+        port.label to PortAnchor(xCanvas = centreX + outboundPortOffsetDp(index, outbound.size), yCanvas = outY)
     }
 }
 
@@ -196,8 +183,8 @@ internal fun EditorEdges(
             val target = nodesById[c.targetNodeId] ?: return@forEach
             // Per-port anchors: edges originate at the dot matching the connection label
             // (e.g. Item / Done on QUEUE, True / False on IF) rather than the node centre.
-            val srcAnchor = outboundPortAnchor(source, portsFor(source), c.label, density)
-            val tgtAnchor = inboundPortAnchor(target, density)
+            val srcAnchor = outboundPortAnchor(source, portsFor(source), c.label)
+            val tgtAnchor = inboundPortAnchor(target)
             val sx = transform.canvasToScreenX(srcAnchor.xCanvas)
             val sy = transform.canvasToScreenY(srcAnchor.yCanvas)
             val tx = transform.canvasToScreenX(tgtAnchor.xCanvas)
@@ -240,9 +227,9 @@ internal data class ConnectionDraftDrawData(val sourceScreen: Offset, val pointe
  * Returns the id of the connection nearest to a canvas-space tap, or `null` when no
  * edge is within the screen-space [toleranceDp] of the point.
  *
- * Used by the canvas tap handler to implement "tap an edge → select it" — the tolerance
- * is converted to canvas-space by dividing by the current transform scale, so the user
- * always gets the same visual hit area regardless of zoom.
+ * Used by the canvas tap handler to implement "tap an edge → select it". The tolerance is
+ * a screen dp, and a canvas unit is a dp at zoom 1, so dividing by the transform's scale
+ * converts it to canvas units — the user gets the same visual hit area at any zoom.
  */
 internal fun hitTestEdge(
     pointerCanvasX: Float,
@@ -250,18 +237,16 @@ internal fun hitTestEdge(
     connections: List<ConnectionModel>,
     nodesById: Map<String, NodeModel>,
     transform: CanvasTransform,
-    density: Density,
     toleranceDp: Float = EDGE_HIT_TOLERANCE_DP,
 ): String? {
-    val toleranceScreenPx = with(density) { toleranceDp.dp.toPx() }
-    val toleranceCanvas = toleranceScreenPx / transform.scale
+    val toleranceCanvas = toleranceDp / transform.scale
     var bestId: String? = null
     var bestDist = Float.MAX_VALUE
     connections.forEach { c ->
         val src = nodesById[c.sourceNodeId] ?: return@forEach
         val tgt = nodesById[c.targetNodeId] ?: return@forEach
-        val srcAnchor = outboundPortAnchor(src, portsFor(src), c.label, density)
-        val tgtAnchor = inboundPortAnchor(tgt, density)
+        val srcAnchor = outboundPortAnchor(src, portsFor(src), c.label)
+        val tgtAnchor = inboundPortAnchor(tgt)
         val (cp0, cp1) = BezierEdge.controlPoints(
             srcAnchor.xCanvas,
             srcAnchor.yCanvas,

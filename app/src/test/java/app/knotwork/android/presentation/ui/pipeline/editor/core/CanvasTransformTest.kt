@@ -180,6 +180,98 @@ class CanvasTransformTest {
         assertEquals(CanvasTransform.MIN_SCALE, zoomed.scale, 0f)
     }
 
+    // ===== Display density (canvas units are dp) =====
+
+    @Test
+    fun `given a dense display when canvasToScreen then a canvas dp covers density pixels`() {
+        val t = CanvasTransform(scale = 1f, offsetX = 10f, offsetY = 20f, density = 3f)
+        assertEquals(310f, t.canvasToScreenX(100f), 1e-4f)
+        assertEquals(170f, t.canvasToScreenY(50f), 1e-4f)
+    }
+
+    @Test
+    fun `given zoom and density when pixelsPerUnit then multiplies both`() {
+        assertEquals(4.5f, CanvasTransform(scale = 1.5f, density = 3f).pixelsPerUnit, 1e-4f)
+    }
+
+    @Test
+    fun `given a dense display when round-trip then point is preserved`() {
+        val t = CanvasTransform(scale = 0.8f, offsetX = -40f, offsetY = 15f, density = 2.625f)
+        assertEquals(123.5f, t.screenToCanvasX(t.canvasToScreenX(123.5f)), 1e-3f)
+        assertEquals(-77f, t.screenToCanvasY(t.canvasToScreenY(-77f)), 1e-3f)
+    }
+
+    @Test
+    fun `given two cards 240 dp apart when drawn at densities 1 and 3 then the screen gap scales with density`() {
+        // The regression: presets space cards 240 canvas units apart while a card is 168 dp.
+        // With canvas units treated as pixels, a 3x screen drew them 240 px apart — less than
+        // one 504 px card. As dp they are 720 px apart, clear of the card.
+        val cardWidthPx = NodeCardFootprint.WIDTH * 3f
+        val dense = CanvasTransform(density = 3f)
+        val gapPx = dense.canvasToScreenX(240f) - dense.canvasToScreenX(0f)
+        assertEquals(720f, gapPx, 1e-3f)
+        assertEquals(true, gapPx > cardWidthPx)
+    }
+
+    @Test
+    fun `given a dense display when zoomedBy then anchor canvas point stays under the fingers`() {
+        val t = CanvasTransform(scale = 1f, offsetX = 30f, offsetY = -12f, density = 3f)
+        val anchorCanvasX = t.screenToCanvasX(500f)
+        val anchorCanvasY = t.screenToCanvasY(700f)
+        val zoomed = t.zoomedBy(factor = 1.5f, anchorX = 500f, anchorY = 700f)
+        assertEquals(500f, zoomed.canvasToScreenX(anchorCanvasX), 1e-2f)
+        assertEquals(700f, zoomed.canvasToScreenY(anchorCanvasY), 1e-2f)
+        assertEquals(3f, zoomed.density, 0f)
+    }
+
+    @Test
+    fun `given a dense display when centeredOn then anchor projects to viewport centre`() {
+        val t = CanvasTransform(
+            scale = 1f,
+            density = 3f,
+        ).centeredOn(x = 100f, y = 50f, viewportW = 1200f, viewportH = 900f)
+        assertEquals(600f, t.canvasToScreenX(100f), 1e-3f)
+        assertEquals(450f, t.canvasToScreenY(50f), 1e-3f)
+    }
+
+    @Test
+    fun `given a dense display when fitToBounds then scale excludes the density`() {
+        // 400×300 dp bbox in a 1200×900 px viewport at density 3: pixels per unit = 3,
+        // so the zoom the user sees is exactly 1.0 — not 3.0 clamped to MAX_SCALE.
+        val bbox = Bounds(minX = 0f, minY = 0f, maxX = 400f, maxY = 300f)
+        val fit = CanvasTransform(density = 3f).fitToBounds(bbox, viewportW = 1200f, viewportH = 900f, paddingPx = 0f)
+        assertEquals(1f, fit.scale, 1e-3f)
+        assertEquals(600f, fit.canvasToScreenX(200f), 1e-2f)
+    }
+
+    @Test
+    fun `given a small graph when fitToBounds with maxScale 1 then it is not blown up`() {
+        val bbox = Bounds(minX = 0f, minY = 0f, maxX = 168f, maxY = 96f)
+        val uncapped = CanvasTransform().fitToBounds(bbox, viewportW = 1000f, viewportH = 1000f, paddingPx = 0f)
+        val capped = CanvasTransform().fitToBounds(
+            bbox,
+            viewportW = 1000f,
+            viewportH = 1000f,
+            paddingPx = 0f,
+            maxScale = 1f,
+        )
+        assertEquals(CanvasTransform.MAX_SCALE, uncapped.scale, 0f)
+        assertEquals(1f, capped.scale, 0f)
+    }
+
+    @Test
+    fun `given maxScale below MIN_SCALE when fitToBounds then MIN_SCALE still wins`() {
+        val bbox = Bounds(minX = 0f, minY = 0f, maxX = 100f, maxY = 100f)
+        val fit = CanvasTransform().fitToBounds(
+            bbox,
+            viewportW = 1000f,
+            viewportH = 1000f,
+            paddingPx = 0f,
+            maxScale = 0.1f,
+        )
+        assertEquals(CanvasTransform.MIN_SCALE, fit.scale, 0f)
+    }
+
     // ===== Bounds =====
 
     @Test

@@ -32,6 +32,7 @@ import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeTypeMappe
 import app.knotwork.android.presentation.ui.pipeline.editor.core.Bounds
 import app.knotwork.android.presentation.ui.pipeline.editor.core.CanvasTransform
 import app.knotwork.android.presentation.ui.pipeline.editor.core.MiniMapGeometry
+import app.knotwork.android.presentation.ui.pipeline.editor.core.NodeCardFootprint
 import app.knotwork.design.components.pipelineeditor.headerTint
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -141,8 +142,8 @@ private fun MiniMapBody(
     val bbox = remember(graph.nodes) {
         Bounds.ofNodes(
             positions = graph.nodes.map { it.x to it.y },
-            nodeWidth = MINI_NODE_CANVAS_WIDTH,
-            nodeHeight = MINI_NODE_CANVAS_HEIGHT,
+            nodeWidth = NodeCardFootprint.WIDTH,
+            nodeHeight = NodeCardFootprint.MAX_HEIGHT,
         )
     }
     val accent = KnotworkTheme.extended.signalWarn
@@ -179,8 +180,8 @@ private fun MiniMapBody(
             nodeHues.forEach { (node, hue) ->
                 val left = geometry.canvasToMiniX(node.x)
                 val top = geometry.canvasToMiniY(node.y)
-                val w = MINI_NODE_CANVAS_WIDTH * geometry.scale
-                val h = MINI_NODE_CANVAS_HEIGHT * geometry.scale
+                val w = NodeCardFootprint.WIDTH * geometry.scale
+                val h = NodeCardFootprint.MAX_HEIGHT * geometry.scale
                 drawRect(
                     color = hue,
                     topLeft = Offset(left, top),
@@ -224,9 +225,3 @@ private const val HUNDREDTHS_TWO_DIGIT_THRESHOLD = 10
 
 private val MiniMapWidth = 270.dp
 private val MiniMapHeight = 290.dp
-
-/** Canvas-space width of a node — must match [EditorCanvas.NODE_CARD_WIDTH_PX]. */
-private const val MINI_NODE_CANVAS_WIDTH = 168f
-
-/** Canvas-space height of a node (uses the max-height bound for a roomy mini-map fit). */
-private const val MINI_NODE_CANVAS_HEIGHT = 96f

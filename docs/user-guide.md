@@ -1180,8 +1180,10 @@ notification tells you the selection moved.
 
 ### Visual editor
 
-Loading a pipeline opens the **Pipeline editor**. The editor surface
-is an infinite pan / zoom canvas with the following gestures:
+Loading a pipeline opens the **Pipeline editor**, framed so the whole graph
+is on screen — zoomed out as far as that takes, but never past 100 %, so a
+small pipeline opens at its natural size. The editor surface is an infinite
+pan / zoom canvas with the following gestures:
 
 - **One-finger drag on empty canvas** — pan the viewport.
 - **Two-finger pinch** — zoom (`0.4×–2.0×`).

@@ -27,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +57,7 @@ import app.knotwork.android.presentation.ui.pipeline.editor.core.AutoLayout
 import app.knotwork.android.presentation.ui.pipeline.editor.core.Bounds
 import app.knotwork.android.presentation.ui.pipeline.editor.core.CanvasTransform
 import app.knotwork.android.presentation.ui.pipeline.editor.core.EditorState
+import app.knotwork.android.presentation.ui.pipeline.editor.core.NodeCardFootprint
 import app.knotwork.android.presentation.ui.pipeline.editor.core.ValidationAutoFix
 import app.knotwork.android.presentation.ui.pipeline.editor.core.rememberEditorState
 import app.knotwork.android.presentation.ui.pipeline.editor.sheet.NodeConfigSheetHost
@@ -249,21 +249,11 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 }
             }
         }
-        // Auto-layout gaps are authored in dp and converted to canvas-px here, where the
-        // screen [Density] is known. `CanvasTransform` maps 1 canvas-unit to 1 screen-px,
-        // but a `NodeCard` is sized in dp, so it occupies `cardSizeDp × density` canvas-px
-        // on screen — passing a fixed-px gap (as the bare `SIBLING_GAP_X`/`LAYER_GAP_Y`
-        // defaults do) lets the cards overlap on any high-density display.
-        val density = LocalDensity.current
-        val autoLayoutSiblingGapPx = with(density) { AUTO_LAYOUT_SIBLING_GAP.toPx() }
-        val autoLayoutLayerGapPx = with(density) { AUTO_LAYOUT_LAYER_GAP.toPx() }
+        // Canvas units are dp — the unit the cards are laid out in — so the layout's
+        // default gaps are already the on-screen spacing at every display density.
         val onAutoLayoutClick: () -> Unit = autoLayoutClick@{
             editor.undoRedo.push(pipeline)
-            val result = AutoLayout.compute(
-                graph = pipeline,
-                siblingGapPx = autoLayoutSiblingGapPx,
-                layerGapPx = autoLayoutLayerGapPx,
-            )
+            val result = AutoLayout.compute(graph = pipeline)
             if (result.positions.isEmpty()) return@autoLayoutClick
             // `AutoLayout.compute` emits coordinates anchored at the canvas
             // origin (`(0, 0)` for the seed layer); without an offset the
@@ -275,13 +265,13 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
             // tightens around their viewport.
             val originalBbox = Bounds.ofNodes(
                 positions = pipeline.nodes.map { it.x to it.y },
-                nodeWidth = NODE_CARD_WIDTH_PX,
-                nodeHeight = NODE_CARD_HEIGHT_PX,
+                nodeWidth = NodeCardFootprint.WIDTH,
+                nodeHeight = NodeCardFootprint.MAX_HEIGHT,
             )
             val computedBbox = Bounds.ofNodes(
                 positions = result.positions.values.toList(),
-                nodeWidth = NODE_CARD_WIDTH_PX,
-                nodeHeight = NODE_CARD_HEIGHT_PX,
+                nodeWidth = NodeCardFootprint.WIDTH,
+                nodeHeight = NodeCardFootprint.MAX_HEIGHT,
             )
             val dx = if (originalBbox != null && computedBbox != null) {
                 (originalBbox.minX + originalBbox.maxX) / 2f -
@@ -590,7 +580,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                             scope.launch { snackbarHostState.showSnackbar(pasteEmptyMessage) }
                         } else {
                             editor.undoRedo.push(pipeline)
-                            val offsetCanvas = CanvasTransform.GRID_PX * 2f
+                            val offsetCanvas = CanvasTransform.GRID_STEP * 2f
                             // `viewModel.addNode` + `updateNodeFromEditor` propagate through
                             // the orchestrator's StateFlow; we never need to thread a local
                             // graph snapshot through the loop because nothing in this block
@@ -904,6 +894,9 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                     editor.undoRedo.reset()
                     editor.clearTransient()
                     viewModel.applyPresetToCurrentPipeline(presetId)
+                    // The template lands in the same pipeline id, which the canvas has
+                    // already framed while it was empty — ask for a frame once it arrives.
+                    editor.requestFit()
                     showPresetPicker = false
                 },
                 onDismiss = { showPresetPicker = false },
@@ -1018,27 +1011,6 @@ private data class PendingPromptLibrary(val nodeType: NodeType, val currentPromp
  * active node's type, both forwarded to `SavePromptAsPresetUseCase` on submit.
  */
 private data class PendingSavePromptPreset(val nodeType: NodeType, val systemPrompt: String)
-
-/**
- * Canvas-space NodeCard width / height. Mirrors the catalog `NodeCardWidth = 168
- * dp` and `NodeCardMaxHeight = 96 dp`. Used by the auto-layout post-translate so
- * the bbox math matches what the canvas actually paints.
- */
-private const val NODE_CARD_WIDTH_PX: Float = 168f
-private const val NODE_CARD_HEIGHT_PX: Float = 96f
-
-/**
- * Auto-layout horizontal centre-to-centre step, in **dp** (converted to canvas-px through
- * the screen [androidx.compose.ui.unit.Density] at the call site). The 168 dp card width
- * plus a 72 dp gutter, so siblings keep clear air between them at any display density.
- */
-private val AUTO_LAYOUT_SIBLING_GAP = 240.dp
-
-/**
- * Auto-layout vertical centre-to-centre step, in **dp**. The card runs up to ~126 dp tall
- * once inbound / outbound port labels inset it, so 216 dp leaves ~90 dp between layers.
- */
-private val AUTO_LAYOUT_LAYER_GAP = 216.dp
 
 /**
  * Maps a domain [PipelineTargetAvailability] (the validator's classification)

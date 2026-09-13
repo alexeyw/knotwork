@@ -116,6 +116,29 @@ details.
   comments, test comments, the generated file maps and the browser editor. They
   now say what the code does instead of which piece of planning produced it.
 
+- **Pipelines no longer open in the editor with their cards piled on top of
+  each other.** Node positions were drawn as screen pixels while the cards are
+  sized in dp, so on a dense phone every card took about three times the room
+  its position allowed, and every bundled preset opened as an overlapping stack
+  until you pressed Auto layout. Positions are now dp — the unit the bundled
+  presets, the browser editor and the cookbook recipes were already written in
+  — so a pipeline lays out the same on every screen, and a file exported from
+  the phone opens with the same spacing in the browser editor. The mini-map,
+  Fit to view and the dot grid were measured the same wrong way and are fixed
+  with it.
+
+  Opening a pipeline now frames the whole graph, never zooming past 100 %; at
+  its real size a three-step preset is wider than a phone screen.
+
+  One visible side effect: a pipeline whose cards **you arranged on the phone**
+  before this update opens more spread out — by the screen's density, about
+  three times on a flagship phone. Nothing overlaps, and **Auto layout** or a
+  drag tidies it; the pipeline itself is unchanged. Pipelines created from a
+  preset and never rearranged open exactly as intended. The comprehensive
+  showcase preset overlapped even at density 1; its cards were moved apart,
+  and a build check now keeps every bundled preset and recipe free of
+  overlapping cards.
+
 - **A confirmation card no longer prints the tool name twice.** When the agent
   asks to run a tool, the card showed the tool id in mono and then the same
   string again as its description — there was no separate explanation to show,

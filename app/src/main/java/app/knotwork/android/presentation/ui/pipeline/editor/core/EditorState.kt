@@ -7,8 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.platform.LocalDensity
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
+import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.design.components.pipelineeditor.NodeConfig
 
 /**
@@ -24,12 +26,31 @@ import app.knotwork.design.components.pipelineeditor.NodeConfig
  * Use [rememberEditorState] from a `@Composable` to get one bound to the current
  * composition. Pure logic lives on this class so unit tests can construct it
  * directly without entering a composition.
+ *
+ * @param undoCapacity maximum number of snapshots the undo stack keeps.
+ * @param density screen pixels per dp of the display the canvas is drawn on, seeding
+ *   [transform]. `rememberEditorState()` passes the composition's density; the default of
+ *   `1f` suits pure-logic tests, and the canvas corrects it if it is wrong.
  */
 @Stable
-class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY) {
+class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: Float = 1f) {
 
-    /** Pan + zoom of the canvas viewport. */
-    var transform: CanvasTransform by mutableStateOf(CanvasTransform())
+    /** Pan + zoom of the canvas viewport, plus the display density it projects through. */
+    var transform: CanvasTransform by mutableStateOf(CanvasTransform(density = density))
+
+    /**
+     * `true` while a fit-to-view is owed to content that has not arrived yet — set by
+     * [requestFit], cleared by [frameIfNeeded] once there is a graph to frame. State-backed
+     * so the canvas's framing effect re-runs when a request is made.
+     */
+    var fitRequested: Boolean by mutableStateOf(false)
+        private set
+
+    /**
+     * Id of the pipeline whose opening frame has already been decided. A plain field, not
+     * state: it only prevents a second automatic framing and nothing renders from it.
+     */
+    private var framedPipelineId: String? = null
 
     /** Currently selected node ids (single- or multi-select). */
     var selection: Set<String> by mutableStateOf(emptySet())
@@ -153,6 +174,56 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY) {
         selectedEdgeId = edgeId
         if (edgeId != null) selection = emptySet()
     }
+
+    /**
+     * Asks the canvas to frame the graph again as soon as it has nodes. Used when content
+     * replaces the current pipeline in place without changing its id — applying a template
+     * to an empty pipeline — which the once-per-pipeline framing would otherwise miss.
+     *
+     * Two limits, both accepted because the only caller is the empty state's template
+     * picker: a request made while the pipeline still has nodes is answered against those
+     * nodes, not against the ones about to replace them; and a request whose template then
+     * fails to load stays pending, so the first node the user adds by hand is framed once.
+     */
+    fun requestFit() {
+        fitRequested = true
+    }
+
+    /**
+     * Frames [transform] on the whole of [graph] when a frame is owed: the first time this
+     * pipeline id is shown with a measured viewport, or after [requestFit].
+     *
+     * The fit never zooms past 100 %, so a small graph opens at its natural size rather
+     * than blown up to fill the screen. A pipeline first shown **empty** has its opening
+     * frame spent without moving anything, so the view does not jump when the user then
+     * adds the first node; a pending [requestFit] instead stays pending until nodes arrive.
+     *
+     * @param graph the pipeline currently on the canvas.
+     * @param viewportW measured viewport width in pixels; `0` means not measured yet.
+     * @param viewportH measured viewport height in pixels.
+     * @param paddingPx screen-space padding to leave around the framed graph.
+     * @return `true` when [transform] was changed.
+     */
+    fun frameIfNeeded(graph: PipelineGraph, viewportW: Float, viewportH: Float, paddingPx: Float): Boolean {
+        if (viewportW <= 0f || viewportH <= 0f) return false
+        val firstView = framedPipelineId != graph.id
+        if (!firstView && !fitRequested) return false
+        framedPipelineId = graph.id
+        val bbox = Bounds.ofNodes(
+            positions = graph.nodes.map { it.x to it.y },
+            nodeWidth = NodeCardFootprint.WIDTH,
+            nodeHeight = NodeCardFootprint.MAX_HEIGHT,
+        ) ?: return false
+        fitRequested = false
+        transform = transform.fitToBounds(
+            bbox = bbox,
+            viewportW = viewportW,
+            viewportH = viewportH,
+            paddingPx = paddingPx,
+            maxScale = 1f,
+        )
+        return true
+    }
 }
 
 /**
@@ -180,10 +251,14 @@ data class ConnectionDraft(
 
 /**
  * Composable factory that builds (and remembers) an [EditorState] keyed to the current
- * composition.
+ * composition, with its transform seeded from the composition's display density so the
+ * very first frame already projects canvas dp correctly.
  */
 @Composable
-fun rememberEditorState(): EditorState = remember { EditorState() }
+fun rememberEditorState(): EditorState {
+    val density = LocalDensity.current.density
+    return remember { EditorState(density = density) }
+}
 
 /**
  * Mutable non-state container for a [LayoutCoordinates] reference. Writes don't notify

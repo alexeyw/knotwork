@@ -17,16 +17,15 @@ import kotlin.math.floor
  * [transform] so the dots pan + zoom together with the rest of the canvas
  * (`canvas: 1200 × 1600 · 24 dp grid · 1.00×` as the info pill phrases it).
  *
- * The grid spacing matches [CanvasTransform.GRID_PX] — the same value used by
+ * The grid spacing matches [CanvasTransform.GRID_STEP] — the same value used by
  * `snapToGrid` — so a snapped node always rests on a visible intersection.
  *
- * Drawn as canvas pixels rather than dp because the dots scale with [transform]
- * (zooming in makes them bigger; the dot count per visible square stays
- * constant in canvas-space terms).
+ * The spacing is in canvas units (dp), so it scales with [transform] — zoom and display
+ * density together — and a card always spans the same number of grid steps. The dot
+ * radius, by contrast, is a fixed screen dp: zooming spreads the dots, not fattens them.
  *
- * Performance: a 1× scale viewport of 1080 × 1920 px at 24 px grid renders
- * ~3600 dots per frame — small enough for a `Canvas` draw pass without
- * staggering or recycling.
+ * Performance: a 1× scale viewport of 412 × 915 dp at a 24 dp grid renders ~650 dots
+ * per frame — small enough for a `Canvas` draw pass without staggering or recycling.
  *
  * @param transform pan / zoom transform from the editor state.
  * @param modifier optional layout modifier (typically `.fillMaxSize()`).
@@ -38,10 +37,10 @@ internal fun DotGridBackground(transform: CanvasTransform, modifier: Modifier = 
     val dotRadiusPx = with(density) { DOT_RADIUS_DP.dp.toPx() }
     Canvas(modifier = modifier.fillMaxSize()) {
         if (size.width <= 0f || size.height <= 0f) return@Canvas
-        val gridScreen = CanvasTransform.GRID_PX * transform.scale
+        val gridScreen = CanvasTransform.GRID_STEP * transform.pixelsPerUnit
         if (gridScreen < MIN_VISIBLE_GRID_PX) return@Canvas
         // Find first grid line on or after the left/top edge of the viewport.
-        val grid = CanvasTransform.GRID_PX
+        val grid = CanvasTransform.GRID_STEP
         val firstCanvasX = floor(transform.screenToCanvasX(0f) / grid) * grid
         val firstCanvasY = floor(transform.screenToCanvasY(0f) / grid) * grid
         val lastCanvasX = ceil(transform.screenToCanvasX(size.width) / grid) * grid
@@ -58,9 +57,9 @@ internal fun DotGridBackground(transform: CanvasTransform, modifier: Modifier = 
                         y = transform.canvasToScreenY(canvasY),
                     ),
                 )
-                canvasY += CanvasTransform.GRID_PX
+                canvasY += CanvasTransform.GRID_STEP
             }
-            canvasX += CanvasTransform.GRID_PX
+            canvasX += CanvasTransform.GRID_STEP
         }
     }
 }

@@ -104,7 +104,7 @@ object ValidationAutoFix {
             type = NodeType.OUTPUT,
             label = "Output",
             x = 0f,
-            y = lowestY + AUTO_FIX_VERTICAL_SPACING_PX,
+            y = lowestY + AUTO_FIX_VERTICAL_SPACING,
         )
         return graph.copy(nodes = graph.nodes + node)
     }
@@ -194,8 +194,8 @@ private const val SHORT_ID_LEN = 8
  */
 data class AutoFixOutcome(val graph: PipelineGraph, val appliedRecipes: List<String>, val unchanged: Boolean)
 
-/** Vertical spacing (canvas px) between the lowest existing node and a freshly-added OUTPUT. */
-private const val AUTO_FIX_VERTICAL_SPACING_PX = 160f
+/** Vertical spacing (canvas units, dp) between the lowest existing node and a freshly-added OUTPUT. */
+private const val AUTO_FIX_VERTICAL_SPACING = 160f
 
 /**
  * Returns the node id the editor should focus when the user taps `Go ↗` on the

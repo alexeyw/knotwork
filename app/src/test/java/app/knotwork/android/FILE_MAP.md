@@ -449,8 +449,10 @@ Only Kotlin files appear inside the generated blocks.
           - `AutoLayoutTest.kt` - Unit tests for the editor auto-layout.
           - `BezierEdgeTest.kt` - Unit tests for the Bézier edge geometry.
           - `CanvasTransformTest.kt` - Pure-Kotlin tests for `CanvasTransform`.
+          - `EditorStateFramingTest.kt` - Tests for `EditorState.frameIfNeeded` and `EditorState.requestFit` — how a pipeline is framed when it opens.
           - `EditorUndoRedoTest.kt` - Unit tests for the editor undo/redo stack.
           - `MiniMapGeometryTest.kt` - Pure-Kotlin tests for `MiniMapGeometry`.
+          - `ShippedPipelineLayoutTest.kt` - Guards the layout of every pipeline the project ships as a file: the bundled presets under `src/main/assets/presets/pipelines/` and the cookbook recipes under `docs/recipes/`.
           - `ValidationAutoFixTest.kt` - Pure-Kotlin tests for `ValidationAutoFix` recipes.
     - `prompts/` - Tests for the prompt library.
       - `PromptLibraryViewModelTest.kt` - Unit tests for `PromptLibraryViewModel`.
