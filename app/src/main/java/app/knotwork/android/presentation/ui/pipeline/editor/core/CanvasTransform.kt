@@ -8,35 +8,57 @@ import kotlin.math.round
  * Affine transform between two coordinate spaces: an infinite "canvas" plane where node
  * positions are stored, and the on-screen viewport.
  *
- * The transform is uniform-scale + translation only — there is no rotation or shear in
- * the editor — so it is encoded as `(scale, offsetX, offsetY)` rather than a full 3×3
- * matrix. All math is pure Kotlin so it can be unit-tested off the device.
+ * **Canvas units are dp.** A node card is laid out in dp, so its position must be in dp
+ * too, or the two disagree by the display density: positions stored as screen pixels
+ * spaced cards for a density-1 screen and stacked them on top of each other on a dense
+ * one (about 3× on a flagship phone). It is also the unit every other producer of
+ * pipeline files already used without saying so — the bundled presets, the browser
+ * editor (CSS pixels) and hand-written recipes — so a file authored anywhere lays out
+ * the same on every device.
  *
- * `screen = canvas * scale + offset` ⇔ `canvas = (screen - offset) / scale`
+ * The transform is uniform-scale + translation only — there is no rotation or shear in
+ * the editor — so it is encoded as `(scale, offsetX, offsetY)` plus the display
+ * [density], rather than a full 3×3 matrix. All math is pure Kotlin so it can be
+ * unit-tested off the device.
+ *
+ * `screen = canvas * scale * density + offset` ⇔ `canvas = (screen - offset) / (scale * density)`
  *
  * Scale clamped to `[0.4f, 2.0f]`.
  *
- * @property scale uniform scale factor; `1.0f` means 1 canvas-px == 1 screen-px.
+ * @property scale the user's zoom; `1.0f` draws a card at its natural dp size. This is
+ *   the value the editor shows as a percentage, and the one [MIN_SCALE] / [MAX_SCALE]
+ *   clamp — density is not part of it.
  * @property offsetX horizontal screen-space translation applied after scaling.
  * @property offsetY vertical screen-space translation applied after scaling.
+ * @property density screen pixels per dp on the display the canvas is drawn on. The
+ *   editor sets it from the composition's `LocalDensity`; the default of `1f` makes
+ *   canvas units and pixels coincide, which is what the pure geometry tests assume.
  */
-data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val offsetY: Float = 0f) {
+data class CanvasTransform(
+    val scale: Float = 1f,
+    val offsetX: Float = 0f,
+    val offsetY: Float = 0f,
+    val density: Float = 1f,
+) {
+
+    /** Screen pixels one canvas unit covers at the current zoom: [scale] × [density]. */
+    val pixelsPerUnit: Float get() = scale * density
 
     /**
      * Maps a canvas-space point onto screen pixels.
      */
-    fun canvasToScreenX(x: Float): Float = x * scale + offsetX
+    fun canvasToScreenX(x: Float): Float = x * pixelsPerUnit + offsetX
 
     /** @see canvasToScreenX */
-    fun canvasToScreenY(y: Float): Float = y * scale + offsetY
+    fun canvasToScreenY(y: Float): Float = y * pixelsPerUnit + offsetY
 
     /**
      * Maps a screen-pixel point back to canvas space.
      */
-    fun screenToCanvasX(x: Float): Float = (x - offsetX) / scale
+    fun screenToCanvasX(x: Float): Float = (x - offsetX) / pixelsPerUnit
 
     /** @see screenToCanvasX */
-    fun screenToCanvasY(y: Float): Float = (y - offsetY) / scale
+    fun screenToCanvasY(y: Float): Float = (y - offsetY) / pixelsPerUnit
 
     /**
      * Returns a copy with [scale] adjusted by [factor] around the screen-space anchor
@@ -55,8 +77,8 @@ data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val o
         val canvasY = screenToCanvasY(anchorY)
         return copy(
             scale = nextScale,
-            offsetX = anchorX - canvasX * nextScale,
-            offsetY = anchorY - canvasY * nextScale,
+            offsetX = anchorX - canvasX * nextScale * density,
+            offsetY = anchorY - canvasY * nextScale * density,
         )
     }
 
@@ -77,8 +99,8 @@ data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val o
      * @param viewportH viewport height in pixels.
      */
     fun centeredOn(x: Float, y: Float, viewportW: Float, viewportH: Float): CanvasTransform = copy(
-        offsetX = viewportW / 2f - x * scale,
-        offsetY = viewportH / 2f - y * scale,
+        offsetX = viewportW / 2f - x * pixelsPerUnit,
+        offsetY = viewportH / 2f - y * pixelsPerUnit,
     )
 
     /**
@@ -97,8 +119,17 @@ data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val o
      * @param viewportH viewport height in pixels.
      * @param paddingPx screen-space padding to leave around the bbox; pass `0f`
      *   for an edge-to-edge fit.
+     * @param maxScale upper bound for the resulting scale, below [MAX_SCALE]. Framing a
+     *   pipeline as it opens passes `1f`, so a small graph is shown at its natural size
+     *   instead of being blown up to fill the screen.
      */
-    fun fitToBounds(bbox: Bounds, viewportW: Float, viewportH: Float, paddingPx: Float): CanvasTransform {
+    fun fitToBounds(
+        bbox: Bounds,
+        viewportW: Float,
+        viewportH: Float,
+        paddingPx: Float,
+        maxScale: Float = MAX_SCALE,
+    ): CanvasTransform {
         if (viewportW <= 0f || viewportH <= 0f) return this
         val cx = (bbox.minX + bbox.maxX) / 2f
         val cy = (bbox.minY + bbox.maxY) / 2f
@@ -110,8 +141,10 @@ data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val o
         }
         val availW = max(1f, viewportW - 2f * paddingPx)
         val availH = max(1f, viewportH - 2f * paddingPx)
-        val rawScale = min(availW / bboxW, availH / bboxH)
-        val targetScale = rawScale.coerceIn(MIN_SCALE, MAX_SCALE)
+        // The bbox is in canvas units and the viewport in pixels, so the ratio is pixels per
+        // unit; dividing out the density leaves the zoom the user sees.
+        val rawScale = min(availW / bboxW, availH / bboxH) / density
+        val targetScale = rawScale.coerceIn(MIN_SCALE, maxScale.coerceIn(MIN_SCALE, MAX_SCALE))
         return copy(scale = targetScale).centeredOn(cx, cy, viewportW, viewportH)
     }
 
@@ -142,14 +175,14 @@ data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val o
          */
         const val ZOOM_STEP: Float = 1.25f
 
-        /** Canvas-space grid spacing for snap-to-grid. */
-        const val GRID_PX: Float = 24f
+        /** Grid spacing for snap-to-grid, in canvas units (dp). */
+        const val GRID_STEP: Float = 24f
 
         /**
-         * Snaps [value] to the nearest [GRID_PX] step. Pure helper used both at drag-release
+         * Snaps [value] to the nearest [GRID_STEP] step. Pure helper used both at drag-release
          * commit time and by the auto-layout module so every node position is grid-aligned.
          */
-        fun snapToGrid(value: Float): Float = round(value / GRID_PX) * GRID_PX
+        fun snapToGrid(value: Float): Float = round(value / GRID_STEP) * GRID_STEP
     }
 }
 
@@ -162,10 +195,10 @@ data class CanvasTransform(val scale: Float = 1f, val offsetX: Float = 0f, val o
  */
 data class Bounds(val minX: Float, val minY: Float, val maxX: Float, val maxY: Float) {
 
-    /** Width of the bbox in canvas-space pixels. Non-negative. */
+    /** Width of the bbox in canvas units. Non-negative. */
     val width: Float get() = max(0f, maxX - minX)
 
-    /** Height of the bbox in canvas-space pixels. Non-negative. */
+    /** Height of the bbox in canvas units. Non-negative. */
     val height: Float get() = max(0f, maxY - minY)
 
     /** `true` when this bbox has zero area (a single point or an empty selection). */

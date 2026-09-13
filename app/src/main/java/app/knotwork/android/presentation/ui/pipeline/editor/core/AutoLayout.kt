@@ -16,7 +16,7 @@ import kotlin.math.max
  *     incoming neighbours on the layer above (single-pass median heuristic; sufficient
  *     for the small graphs the editor handles).
  *  3. **Coordinates** — nodes get evenly-spaced X positions (centred at zero) on their
- *     layer and a fixed-stride Y per layer; both X and Y are snapped to [CanvasTransform.GRID_PX]
+ *     layer and a fixed-stride Y per layer; both X and Y are snapped to [CanvasTransform.GRID_STEP]
  *     so the result lines up with the drag-and-drop snap grid.
  *
  * The function also returns the per-node depth so callers can apply the spec's 80 ms
@@ -27,28 +27,24 @@ import kotlin.math.max
 object AutoLayout {
 
     /**
-     * Default vertical step between layers, in canvas-space px **at density 1.0**.
-     *
-     * Callers that render dp-sized node cards must pass a density-scaled gap to [compute]
-     * instead (1 canvas-unit maps to 1 screen-px per [CanvasTransform], but a `NodeCard`
-     * is sized in dp and therefore occupies `cardHeightDp × density` canvas-px on screen —
-     * a fixed-px gap would let the cards overlap on any high-density display). This constant
-     * is the fallback used by JVM tests, which have no [androidx.compose.ui.unit.Density].
+     * Default vertical centre-to-centre step between layers, in canvas units (dp). A card
+     * runs up to ~126 dp tall once its inbound and outbound port labels are counted, so
+     * 216 dp leaves ~90 dp of clear air between layers. Canvas units are the unit the cards
+     * are laid out in, so this is the on-screen spacing at every display density.
      */
-    const val LAYER_GAP_Y: Float = 144f
+    const val LAYER_GAP_Y: Float = 216f
 
     /**
-     * Default horizontal step between siblings on the same layer, in canvas-space px **at
-     * density 1.0**. See [LAYER_GAP_Y] for why on-device callers pass a density-scaled gap
-     * to [compute] rather than relying on this baseline.
+     * Default horizontal centre-to-centre step between siblings on the same layer, in canvas
+     * units (dp): the 168 dp card width plus a 72 dp gutter.
      */
-    const val SIBLING_GAP_X: Float = 216f
+    const val SIBLING_GAP_X: Float = 240f
 
     /**
      * Result of one layout pass.
      *
      * @property positions canvas-space `(x, y)` per node id; values are snapped to
-     * [CanvasTransform.GRID_PX].
+     * [CanvasTransform.GRID_STEP].
      * @property depths zero-based layer index per node id. Used by the editor to schedule
      * a per-depth 80 ms stagger when animating the layout transition.
      */
@@ -57,24 +53,21 @@ object AutoLayout {
     /**
      * Computes positions for every node in [graph].
      *
-     * @param siblingGapPx horizontal centre-to-centre step between siblings on a layer, in
-     * canvas-space px. On-device callers pass a density-scaled value (card width + margin,
-     * in dp, converted through the current [androidx.compose.ui.unit.Density]) so the spacing
-     * tracks the real on-screen footprint of the dp-sized node cards; defaults to the
-     * density-1 baseline [SIBLING_GAP_X] for tests.
-     * @param layerGapPx vertical centre-to-centre step between layers, in canvas-space px.
-     * Same density contract as [siblingGapPx]; defaults to [LAYER_GAP_Y].
+     * @param siblingGap horizontal centre-to-centre step between siblings on a layer, in
+     * canvas units (dp); defaults to [SIBLING_GAP_X].
+     * @param layerGap vertical centre-to-centre step between layers, in canvas units (dp);
+     * defaults to [LAYER_GAP_Y].
      * @return a [Result] populated for every node id in [graph]. The map is empty when
      * [graph] has no nodes.
      */
-    fun compute(graph: PipelineGraph, siblingGapPx: Float = SIBLING_GAP_X, layerGapPx: Float = LAYER_GAP_Y): Result {
+    fun compute(graph: PipelineGraph, siblingGap: Float = SIBLING_GAP_X, layerGap: Float = LAYER_GAP_Y): Result {
         if (graph.nodes.isEmpty()) return Result(emptyMap(), emptyMap())
         val depths = computeDepths(graph)
         val byLayer = depths.entries
             .groupBy({ it.value }, { it.key })
             .toSortedMap()
         val byLayerOrdered = orderWithinLayers(byLayer, graph)
-        val positions = assignCoordinates(byLayerOrdered, siblingGapPx, layerGapPx)
+        val positions = assignCoordinates(byLayerOrdered, siblingGap, layerGap)
         return Result(positions = positions, depths = depths)
     }
 
@@ -152,18 +145,18 @@ object AutoLayout {
 
     private fun assignCoordinates(
         byLayer: Map<Int, List<String>>,
-        siblingGapPx: Float,
-        layerGapPx: Float,
+        siblingGap: Float,
+        layerGap: Float,
     ): Map<String, Pair<Float, Float>> {
         if (byLayer.isEmpty()) return emptyMap()
         val widest = byLayer.values.maxOfOrNull { it.size } ?: 0
         val positions = mutableMapOf<String, Pair<Float, Float>>()
         byLayer.forEach { (depth, layerNodes) ->
             val layerWidth = max(1, layerNodes.size)
-            val startX = -siblingGapPx * (layerWidth - 1) / 2f
+            val startX = -siblingGap * (layerWidth - 1) / 2f
             layerNodes.forEachIndexed { index, id ->
-                val rawX = startX + index * siblingGapPx
-                val rawY = depth * layerGapPx
+                val rawX = startX + index * siblingGap
+                val rawY = depth * layerGap
                 positions[id] = CanvasTransform.snapToGrid(rawX) to CanvasTransform.snapToGrid(rawY)
             }
         }
