@@ -86,16 +86,3 @@ abstract class VerifyForbiddenVocabularyTask : DefaultTask() {
         stamp.writeText("${files.size} files scanned, no forbidden vocabulary\n")
     }
 }
-
-/**
- * Returns the declared prefixes that no scanned path falls under.
- *
- * @param paths Repository-relative paths of the files that were found.
- * @param prefixes Prefixes that must each be covered; an empty string stands for
- *   the repository root, i.e. a path holding no slash.
- * @return The uncovered prefixes, in declaration order; empty when all are covered.
- */
-internal fun uncoveredPrefixes(paths: Collection<String>, prefixes: List<String>): List<String> =
-    prefixes.filter { prefix ->
-        paths.none { path -> if (prefix.isEmpty()) !path.contains('/') else path.startsWith(prefix) }
-    }

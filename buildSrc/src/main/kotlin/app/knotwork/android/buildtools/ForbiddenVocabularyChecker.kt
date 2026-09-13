@@ -38,6 +38,10 @@ package app.knotwork.android.buildtools
  * those are not planning vocabulary. Every real planning phase in this project
  * has two digits, so requiring two digits separates the two cleanly; a
  * historical single-digit reference would slip through, and today none exists.
+ * The opposite trade is knowingly accepted for the task-fraction rule: a literal
+ * progress label shaped like it (a word "task", digits, a slash, digits) in a
+ * preview fixture would be flagged. Production strings build such labels from
+ * placeholders, which do not match.
  *
  * Every pattern is assembled from fragments so that this file's own source —
  * which the task scans like any other public source — does not match itself.

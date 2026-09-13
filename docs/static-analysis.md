@@ -1278,6 +1278,13 @@ vocabulary. Every real planning phase has two digits, so requiring two digits
 separates the two cleanly; a historical single-digit reference would slip
 through, and none exists.
 
+**Caught although legitimate, knowingly:** a literal progress label written as
+the word "task" followed by digits and a slash — say, in a preview fixture for a
+decomposition queue. Nothing in the tree has that shape; the production strings
+build such a label from placeholders, which the rule does not match. If a
+fixture needs one, write "step" or use the placeholder form rather than
+weakening the rule.
+
 The task is typed and cacheable, so a no-op `check` skips it. It reads files
 that five generators rewrite (the file maps, the browser editor, the settings
 reference, the automation reference and the cookbook), and declares

@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for [ForbiddenVocabularyChecker] and [uncoveredPrefixes].
+ * Unit tests for [ForbiddenVocabularyChecker].
  *
  * The forbidden literals appear verbatim here on purpose: the Gradle task scans
  * `buildSrc/src/main` but not these tests, so the fixtures cannot make the guard
@@ -134,19 +134,5 @@ class ForbiddenVocabularyCheckerTest {
         val violation = ForbiddenVocabularyChecker.scan(mapOf("docs/x.md" to "\nPhase 40\n")).single()
 
         assertEquals("docs/x.md:2: internal planning number `Phase 40`", violation.format())
-    }
-
-    @Test
-    fun `given every prefix covered when checked then nothing uncovered`() {
-        val paths = listOf("README.md", "app/build.gradle.kts", "docs/faq.md")
-
-        assertTrue(uncoveredPrefixes(paths, listOf("", "app/", "docs/")).isEmpty())
-    }
-
-    @Test
-    fun `given a root with no file when checked then that prefix reported`() {
-        val paths = listOf("app/build.gradle.kts", "docs/faq.md")
-
-        assertEquals(listOf("", "fastlane/"), uncoveredPrefixes(paths, listOf("", "app/", "fastlane/")))
     }
 }
