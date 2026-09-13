@@ -100,6 +100,22 @@ details.
   with one name while the store listing, the launcher icon and every other
   screen used another.
 
+- **The pre-rename name is gone from everywhere else, and the build now refuses
+  it.** Nothing had been looking for it, which is how the onboarding title
+  survived three months and a store release. A build gate that scans every
+  public text file found the name in eight more files: the descriptions in the
+  GitHub issue-template chooser, the app theme's resource and composable names,
+  and the wake lock the inference service holds. That last one is visible
+  outside the app — Android vitals and `dumpsys power` list wake locks by tag —
+  and is now `Knotwork:InferenceLock`; battery statistics recorded under the old
+  tag will not carry over to the new one.
+
+  The same gate refuses internal planning numbers in public text. A one-off
+  clean-up had removed them once, but its search matched only one spelling, and
+  forty-two had since accumulated in the spellings it missed — in source
+  comments, test comments, the generated file maps and the browser editor. They
+  now say what the code does instead of which piece of planning produced it.
+
 - **A confirmation card no longer prints the tool name twice.** When the agent
   asks to run a tool, the card showed the tool id in mono and then the same
   string again as its description — there was no separate explanation to show,

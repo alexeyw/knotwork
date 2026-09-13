@@ -11,14 +11,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Verifies the Phase-15 [AppDatabase.MIGRATION_17_18] script.
+ * Verifies the [AppDatabase.MIGRATION_17_18] script.
  *
  * The migration must:
  * 1. Be registered for versions 17 → 18.
  * 2. Add a single `context_config` column to `pipeline_nodes`.
  * 3. Populate that column with a JSON default that — when read back through
  *    [Converters.toNodeContextConfig] — yields [NodeContextConfig.ALL_ENABLED].
- *    This is the contract that keeps pre-Phase-15 pipelines functionally
+ *    This is the contract that keeps pipelines saved before it functionally
  *    identical after the upgrade.
  */
 class AppDatabaseMigrationTest {

@@ -140,7 +140,7 @@ class McpServerRepositoryImplTest {
         // Reconnecting per refresh opened a fresh MCP session each time and left
         // the abandoned ones live on the server, while the in-place transport
         // swap could break a tool call running concurrently on the same client
-        // (phase-40 directed MCP test, finding F3). A refresh re-lists tools; it
+        // (found by a directed on-device MCP test). A refresh re-lists tools; it
         // does not re-establish the connection.
         coVerify(exactly = 1) { client.connect(any()) }
         coVerify(exactly = 3) { client.getTools() }
@@ -203,7 +203,7 @@ class McpServerRepositoryImplTest {
         job.cancelAndJoin()
 
         // A row pinned on "Connecting…" reads as "still trying" forever, and
-        // only a manual Refresh cleared it (phase-40 finding F8).
+        // only a manual Refresh cleared it.
         assertTrue(
             "cancelled fetch must not leave the row pinned on Connecting",
             repo.observeConnectionStatus(url).first() != McpConnectionStatus.Connecting,

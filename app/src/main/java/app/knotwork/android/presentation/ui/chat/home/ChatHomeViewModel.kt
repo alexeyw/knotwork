@@ -1098,8 +1098,8 @@ constructor(
      *
      * The backend is read from the engine, not from settings: a load that fell
      * back runs on CPU while the saved preference still reads GPU, and that
-     * divergence is precisely what the status line has to expose (phase-40
-     * finding F6). Re-reading it per token is a volatile field read, and an
+     * divergence is precisely what the status line has to expose.
+     * Re-reading it per token is a volatile field read, and an
      * unchanged value produces an equal state that `StateFlow` drops.
      */
     private fun updateStreamingTokens(tokens: Int) {

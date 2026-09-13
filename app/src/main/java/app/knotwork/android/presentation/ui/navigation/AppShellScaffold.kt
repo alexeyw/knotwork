@@ -87,7 +87,7 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  * stack**, never from the current route alone — see [TabOwnership] for why the
  * old `route → tab` table was removed and what changed with it.
  *
- * The host activity's `AndroidAIAgentTheme` is the single source of
+ * The host activity's `KnotworkAppTheme` is the single source of
  * truth for the current scheme, and system-theme changes already cause a
  * natural Compose recomposition.
  *

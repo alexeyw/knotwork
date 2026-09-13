@@ -148,8 +148,8 @@ class TaskQueueManagerImpl @Inject constructor(
 
         /**
          * Longest silence tolerated from a running task before the worker
-         * declares it stalled and moves on — the safety valve for phase-40
-         * finding F13.
+         * declares it stalled and moves on — the safety valve against
+         * a run that goes silent without ever finishing.
          *
          * The worker is a **single serial loop**, so one task that never
          * finishes stops every chat in the app: new messages are accepted,
@@ -168,7 +168,7 @@ class TaskQueueManagerImpl @Inject constructor(
          * Scope, stated plainly: the valve guards the engine phase of a task.
          * The short prologue before it — resolving the pipeline, writing the
          * user message — is not covered, so a hang in those repository calls
-         * would still stop the queue. Nothing in the phase-40 run pointed at
+         * would still stop the queue. Nothing in the on-device testing pointed at
          * that path, and widening the guard there would mean failing a task on
          * a database stall it could not explain.
          */

@@ -103,7 +103,7 @@ class AgentForegroundService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 101
-        private const val WAKE_LOCK_TAG = "AndroidAIAgent:InferenceLock"
+        private const val WAKE_LOCK_TAG = "Knotwork:InferenceLock"
         private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 
         /**

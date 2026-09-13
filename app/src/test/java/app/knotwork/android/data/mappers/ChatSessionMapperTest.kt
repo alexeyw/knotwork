@@ -11,7 +11,7 @@ import org.junit.Test
 /**
  * Unit tests for the [ChatSessionEntity] ↔ [ChatSession] mapper.
  *
- * Round-trips both directions to guarantee the Phase-17.2 `pipelineId`
+ * Round-trips both directions to guarantee the `pipelineId`
  * column is preserved end-to-end (DB ⇄ domain), including the `null`
  * sentinel that means "use the default pipeline".
  */

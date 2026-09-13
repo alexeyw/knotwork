@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.AndroidAIAgent" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Knotwork" parent="android:Theme.Material.Light.NoActionBar" />
 
     <!--
         Platform splash theme (Android 12+ splash screen API).
@@ -14,6 +14,6 @@
     <style name="Theme.App.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/knotwork_accent_500</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="postSplashScreenTheme">@style/Theme.AndroidAIAgent</item>
+        <item name="postSplashScreenTheme">@style/Theme.Knotwork</item>
     </style>
 </resources>

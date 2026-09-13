@@ -118,8 +118,8 @@ import javax.inject.Provider
 
 /**
  * End-to-end JVM integration test of the **automation-trigger → background run →
- * notification → result-in-chat** arc — the privacy-sensitive surface phase 36
- * adds on top of the persisted background-run infrastructure.
+ * notification → result-in-chat** arc — the privacy-sensitive surface automation
+ * triggers add on top of the persisted background-run infrastructure.
  *
  * Both tests start from a charging trigger and drive a **real**
  * [FireTriggerUseCase] (loading the trigger from a real Room-backed

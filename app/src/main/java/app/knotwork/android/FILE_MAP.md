@@ -758,7 +758,7 @@ Only Kotlin files appear inside the generated blocks.
           - `QuickAddRadialMenu.kt` - 12-tile radial menu (one per node type) anchored at the long-press point; dispatches `onPick(type)`.
           - `ZoomRail.kt` - Always-visible right-edge `+` / `−` / `⤡` (fit-to-view) tile stack.
         - `config/` - Per-`NodeType` configuration sheets and the codec that moves their fields onto `NodeModel`.
-          - `NodeConfigCodec.kt` - JSON ↔ catalog `NodeConfig` codec + legacy-field derivation for pre-Phase-21 rows + `defaultFor(type, title)` factory.
+          - `NodeConfigCodec.kt` - JSON ↔ catalog `NodeConfig` codec + legacy-field derivation for rows saved without config JSON + `defaultFor(type, title)` factory.
           - `NodeTypeMapper.kt` - Bridges between domain `NodeType` / `CloudProvider` and the catalog enums (`pipelineeditor.NodeType` / `CloudProvider`).
         - `core/` - Editor mechanics with no Compose surface of their own — auto-layout, edge geometry, undo/redo.
           - `AutoLayout.kt` - Sugiyama-style hierarchical layout (longest-path layering + median crossing reduction + grid-snapped coordinates); pure Kotlin.

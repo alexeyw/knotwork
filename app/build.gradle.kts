@@ -20,6 +20,7 @@ import app.knotwork.android.buildtools.VerifyDocLinksTask
 import app.knotwork.android.buildtools.VerifyDocsHygieneTask
 import app.knotwork.android.buildtools.VerifyDocumentationLinksTask
 import app.knotwork.android.buildtools.VerifyFileMapTask
+import app.knotwork.android.buildtools.VerifyForbiddenVocabularyTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
@@ -939,6 +940,71 @@ val verifyNoOrphanedKdoc by tasks.registering(VerifyNoOrphanedKdocTask::class) {
     stampFile.set(layout.buildDirectory.file("reports/kdoc/no-orphans.txt"))
 }
 tasks.named("check") { dependsOn(verifyNoOrphanedKdoc) }
+
+// Forbidden-vocabulary gate.
+//
+// The product was renamed, and the old name kept greeting every user from the
+// onboarding title for three months — through a pre-launch clean-up and a Play
+// release — because nothing looked for it. It was found by inspecting a frame
+// of a published demo video. The same inspection found it in the GitHub
+// issue-template chooser and in a wake-lock tag Android vitals shows in the Play
+// Console. Internal planning numbering had the same shape: removed once by a
+// search that matched one spelling, then quietly re-accumulated in every
+// spelling that search did not match.
+//
+// Scope is every public TEXT file, by glob — source, resources, bundled assets,
+// build logic, documentation, store metadata, CI configuration — so a new file is
+// guarded without anyone remembering to list it. Two exclusions, both deliberate:
+// `CHANGELOG.md`, whose past entries name old identifiers as they were at the
+// time, and `buildSrc/src/test`, whose fixtures must spell the forbidden forms.
+// The bundled documentation under `assets/docs` is a generated copy of `docs/`,
+// which is scanned at its source instead of twice.
+val publicTextExtensions = listOf(
+    "kt", "kts", "java", "xml", "json", "md", "txt", "html", "js", "mjs",
+    "yml", "yaml", "toml", "properties", "pro", "sh",
+)
+
+fun publicTextTree(directory: String, vararg excludes: String): ConfigurableFileTree = fileTree(directory) {
+    publicTextExtensions.forEach { include("**/*.$it") }
+    exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", "**/.cxx/**", *excludes)
+}
+
+val verifyForbiddenVocabulary by tasks.registering(VerifyForbiddenVocabularyTask::class) {
+    group = "verification"
+    description = "Fails the build if public text carries the retired product name or internal planning numbering."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    sources.from(
+        fileTree(rootDir) {
+            include("*.md", "*.kts", "*.html", "*.properties", "NOTICE")
+            exclude("CHANGELOG.md", "CLAUDE.md", "CLAUDE.local.md", "local.properties")
+        },
+        publicTextTree("$rootDir/app", "src/main/assets/docs/**"),
+        publicTextTree("$rootDir/catalog"),
+        publicTextTree("$rootDir/buildSrc", "src/test/**"),
+        publicTextTree("$rootDir/tools-probe"),
+        publicTextTree("$rootDir/docs"),
+        publicTextTree("$rootDir/.github"),
+        publicTextTree("$rootDir/fastlane"),
+        publicTextTree("$rootDir/config"),
+        publicTextTree("$rootDir/gradle"),
+    )
+    requiredPrefixes.set(
+        listOf(
+            "",
+            "app/",
+            "catalog/",
+            "buildSrc/",
+            "tools-probe/",
+            "docs/",
+            ".github/",
+            "fastlane/",
+            "config/",
+            "gradle/",
+        ),
+    )
+    stampFile.set(layout.buildDirectory.file("reports/vocabulary/verified.txt"))
+}
+tasks.named("check") { dependsOn(verifyForbiddenVocabulary) }
 
 // Dialog inventory gate.
 //
@@ -2129,6 +2195,20 @@ tasks.named("check") { dependsOn(verifyDocsHygiene) }
 // neither task should drag the other into a build that did not ask for it.
 listOf(verifyDocLinks, reportExternalDocLinks, verifyMermaidDiagrams).forEach { task ->
     task { mustRunAfter(generateFileMap) }
+}
+
+// The vocabulary gate reads every public text file, so it reads the output of
+// every generator that rewrites a committed file: the file maps, the browser
+// editor, and the three generated reference documents. The same implicit-
+// dependency failure applies to each, and the same ordering-only answer.
+verifyForbiddenVocabulary {
+    mustRunAfter(
+        generateFileMap,
+        generateBrowserEditorConstants,
+        generateSettingsHelpDocs,
+        generateExternalAutomationDocs,
+        generateCookbookDocs,
+    )
 }
 
 // The version number, in every place a human wrote it down. `versionName` below

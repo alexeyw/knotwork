@@ -87,8 +87,8 @@ class LiteRTLlmEngine @Inject constructor(
      * asked to release may already be gone and a **different** one loaded in its
      * place. Without this counter the deferred unload happily tore down the new
      * engine, and the run that had just loaded it failed with "Engine is not
-     * initialized" milliseconds later. Observed on device during the phase-40
-     * directed test (finding F4): a trigger-started background run loaded the
+     * initialized" milliseconds later. Observed on device during a directed
+     * on-device test: a trigger-started background run loaded the
      * engine at `03:09:08.461` and a unload queued 13 seconds earlier freed it at
      * `03:09:08.596`.
      *
@@ -273,7 +273,7 @@ class LiteRTLlmEngine @Inject constructor(
         // choice alone; the backend is overwritten for good only once a second
         // consecutive start finds the same evidence. One unexplained kill
         // silently and permanently costing the device its GPU is the failure
-        // this guards against (phase-40 finding F6).
+        // this guards against.
         val previousAttempt = settingsRepository.lastInitBackendAttempt.first()
         val crashedLastTime = configured != LocalBackend.CPU && previousAttempt == configured.key
         val resolved = if (crashedLastTime) {
