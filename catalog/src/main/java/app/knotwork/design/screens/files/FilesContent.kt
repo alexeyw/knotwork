@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -170,6 +172,11 @@ private fun FilesSelectionBar(count: Int, callbacks: FilesCallbacks) {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.primaryContainer)
+            // Hand-laid-out, so it owns its status-bar inset: the shell and this
+            // screen's Scaffold both zero theirs, and only M3's TopAppBar — which the
+            // normal bar is — adds one by itself. After the background, so the tint
+            // fills the band behind the status bar the way a TopAppBar container does.
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = KnotworkTheme.spacing.sp2, vertical = KnotworkTheme.spacing.sp2),
     ) {
         IconButton(onClick = callbacks.onExitSelection) {

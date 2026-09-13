@@ -1064,12 +1064,15 @@ You do not need to design a pipeline yourself — the app ships with a
 sensible default — but the orchestrator lets you tweak how the agent
 thinks, what tools it can use, and what the final answer looks like.
 
-### Library and active pipeline
+### Pipeline library
 
 Open the **Pipelines** screen to see every pipeline saved on the
-device. The active pipeline is highlighted; sending a message uses
-whichever pipeline is bound to the current chat (or the default
-pipeline if the chat has no explicit binding).
+device. Sending a message uses whichever pipeline is bound to the
+current chat, or the pipeline marked **DEFAULT** if the chat has no
+explicit binding; **SHARE** and **TILE** mark the pipelines bound to the
+share sheet and the Quick Settings tile. No row is marked as the one
+open in the editor — which pipeline the editor last showed is not a
+setting, and it changes nothing about what runs.
 
 On the very first launch the app seeds a **showcase** graph into your
 library, materialised from the bundled `showcase_full_agent` preset. It
@@ -1090,16 +1093,16 @@ entirely on-device. Everything is an ordinary pipeline: edit, duplicate,
 rename or delete any of them like any other (see
 [Composing pipelines](#composing-pipelines-the-pipeline-node)).
 
-Tap the `⋮` button on a row, or long-press the row, to see the
-per-pipeline menu:
+Tap the `⋮` button on a row to see the per-pipeline menu:
 
-- **Load** — open this pipeline in the visual editor.
+- **Load in editor** — open this pipeline in the visual editor.
 - **Rename** — open a dialog titled **Rename pipeline** with a
   **Name** field.
 - **Duplicate** — create a copy with `(copy)` appended to the name.
-- **Delete** — remove the pipeline after a confirmation dialog. The
-  currently active pipeline cannot be deleted; switch to another one
-  first.
+- **Delete** — remove the pipeline after a confirmation dialog. Any
+  pipeline can be deleted, including the last one and the one the editor
+  last showed; the editor then opens the next pipeline in the library, or
+  an empty one when none is left.
 - **Set as default** — make this pipeline the fallback for any chat
   that has no explicit binding.
 - **Save as preset** — package the pipeline as a reusable template

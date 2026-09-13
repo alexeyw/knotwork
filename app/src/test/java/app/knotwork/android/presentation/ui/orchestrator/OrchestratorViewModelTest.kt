@@ -950,30 +950,90 @@ class OrchestratorViewModelTest {
     }
 
     @Test
-    fun `deletePipeline forwards active id and surfaces blocked-when-active error`() = runTest {
-        val active = PipelineGraph(id = "active", name = "Active")
-        coEvery { loadPipelineUseCase.getPipelineById("active") } returns active
-        viewModel.loadPipeline("active")
-        testDispatcher.scheduler.advanceUntilIdle()
-        coEvery {
-            deletePipelineUseCase("active", "active")
-        } returns Result.failure(IllegalStateException("Active pipeline cannot be deleted"))
+    fun `given the pipeline the editor holds when deleted then the editor moves to the next saved pipeline`() =
+        runTest {
+            val open = PipelineGraph(id = "open", name = "Open", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
+            val other =
+                PipelineGraph(id = "other", name = "Other", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
+            val library = MutableStateFlow(listOf(open, other))
+            every { loadPipelineUseCase.observeAllPipelines() } returns library
+            // A fresh screen adopts the most recent pipeline — the one that used to be
+            // labelled "Active" and could not be deleted.
+            val vm = buildViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals("open", vm.uiState.value.currentPipeline.id)
+            coEvery { deletePipelineUseCase("open") } returns Result.success(Unit)
 
-        viewModel.deletePipeline("active")
+            vm.deletePipeline("open")
+            testDispatcher.scheduler.advanceUntilIdle()
+            library.value = listOf(other)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Before: refused after the user had confirmed, with the exception text as the
+            // message. Now it is deleted, and the editor no longer holds a graph that a
+            // Save would write back under the deleted id.
+            val state = vm.uiState.value
+            assertEquals(null, state.errorMessage)
+            assertEquals("other", state.currentPipeline.id)
+            assertEquals(false, state.hasUnsavedChanges)
+        }
+
+    @Test
+    fun `given the last pipeline when deleted then the editor falls back to an empty scratch pipeline`() = runTest {
+        val only = PipelineGraph(id = "only", name = "Only", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
+        val library = MutableStateFlow(listOf(only))
+        every { loadPipelineUseCase.observeAllPipelines() } returns library
+        val vm = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals("only", vm.uiState.value.currentPipeline.id)
+        coEvery { deletePipelineUseCase("only") } returns Result.success(Unit)
+
+        vm.deletePipeline("only")
+        testDispatcher.scheduler.advanceUntilIdle()
+        library.value = emptyList()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(null, state.errorMessage)
+        assertTrue(state.currentPipeline.id != "only")
+        assertTrue(state.currentPipeline.nodes.isEmpty())
+        assertEquals(false, state.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `given another pipeline when deleted then the editor keeps what it holds`() = runTest {
+        val open = PipelineGraph(id = "open", name = "Open", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
+        coEvery { loadPipelineUseCase.getPipelineById("open") } returns open
+        viewModel.loadPipeline("open")
+        testDispatcher.scheduler.advanceUntilIdle()
+        coEvery { deletePipelineUseCase("p2") } returns Result.success(Unit)
+
+        viewModel.deletePipeline("p2")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("open", viewModel.uiState.value.currentPipeline.id)
+    }
+
+    @Test
+    fun `given the delete fails when deleting the open pipeline then the editor keeps it`() = runTest {
+        val open = PipelineGraph(id = "open", name = "Open", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
+        coEvery { loadPipelineUseCase.getPipelineById("open") } returns open
+        viewModel.loadPipeline("open")
+        testDispatcher.scheduler.advanceUntilIdle()
+        coEvery { deletePipelineUseCase("open") } returns Result.failure(RuntimeException("disk full"))
+
+        viewModel.deletePipeline("open")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(
-            UiText.Dynamic("Active pipeline cannot be deleted"),
-            state.errorMessage,
-        )
+        assertEquals("open", state.currentPipeline.id)
+        assertEquals(UiText.Dynamic("disk full"), state.errorMessage)
         assertEquals(null, state.feedbackMessage)
-        coVerify { deletePipelineUseCase("active", "active") }
     }
 
     @Test
     fun `deletePipeline emits feedback on successful deletion`() = runTest {
-        coEvery { deletePipelineUseCase("p2", any()) } returns Result.success(Unit)
+        coEvery { deletePipelineUseCase("p2") } returns Result.success(Unit)
 
         viewModel.deletePipeline("p2")
         testDispatcher.scheduler.advanceUntilIdle()
@@ -1036,7 +1096,7 @@ class OrchestratorViewModelTest {
 
     @Test
     fun `clearFeedback resets feedbackMessage to null`() = runTest {
-        coEvery { deletePipelineUseCase("p2", any()) } returns Result.success(Unit)
+        coEvery { deletePipelineUseCase("p2") } returns Result.success(Unit)
         viewModel.deletePipeline("p2")
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(
@@ -1049,21 +1109,6 @@ class OrchestratorViewModelTest {
         viewModel.clearFeedback()
 
         assertEquals(null, viewModel.uiState.value.feedbackMessage)
-    }
-
-    @Test
-    fun `activePipelineId returns currentPipeline id when pipeline has nodes`() = runTest {
-        viewModel.addNode(NodeType.INPUT, 0f, 0f)
-
-        val state = viewModel.uiState.value
-        assertEquals(state.currentPipeline.id, state.activePipelineId)
-    }
-
-    @Test
-    fun `activePipelineId returns null for empty unsaved pipeline not in saved list`() = runTest {
-        // Default state — empty currentPipeline, empty savedPipelines list.
-        val state = viewModel.uiState.value
-        assertEquals(null, state.activePipelineId)
     }
 
     @Test

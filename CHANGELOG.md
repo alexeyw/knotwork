@@ -139,6 +139,21 @@ details.
   and a build check now keeps every bundled preset and recipe free of
   overlapping cards.
 
+- **Any pipeline can be deleted, including the last one.** The library marked
+  one pipeline as "Active" — not a setting you chose, just the one the editor
+  last held, which after a restart was simply the most recently changed — and
+  refused to delete it. The refusal came only after you had confirmed the
+  delete, as untranslated error text, and a library with a single pipeline could
+  not be emptied at all. The marker and the rule are gone: deleting the
+  pipeline the editor holds moves the editor to the next one, or to an empty
+  pipeline when none is left.
+
+- **The Files selection bar no longer draws under the status bar.** Selecting a
+  file swapped the top bar for a hand-built one that did not leave room for the
+  status bar. A source check now requires every bar at the top of a screen to
+  apply that inset, or to name the parent that does — the same defect had
+  already reached the Help screen, and a screenshot test cannot see it.
+
 - **Your message appears the moment you send it.** The chat stored the message
   only when the run queue got to it, and showed it only once that write came
   back from the database — so for a moment a new chat showed nothing but the

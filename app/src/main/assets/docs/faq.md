@@ -147,7 +147,7 @@ Because the point of the app is that you can see and change what happens between
 your message and the answer — which model, which tools, what gets confirmed. A
 ready-made pipeline is active from the first launch, so you can ignore all of it
 until you want to change something. See
-[Pipelines](user-guide.md#library-and-active-pipeline).
+[Pipelines](user-guide.md#pipeline-library).
 
 ### I'm installed. Now what do I actually press?
 
@@ -159,7 +159,7 @@ Five steps, start to finish:
    everything below is optional. (Chose *Start from scratch* instead? Open
    **Models**, download a preset and tap **Make Active** first —
    [how](user-guide.md#2-download-a-model).)
-3. **Pipelines → open the active one** to see the graph that produced that
+3. **Pipelines → open the one marked DEFAULT** to see the graph that produced that
    answer ([how](user-guide.md#visual-editor)).
 4. **Tools** to switch a tool on, or add an MCP server
    ([how](user-guide.md#adding-an-mcp-server)).
@@ -171,7 +171,7 @@ Five steps, start to finish:
 Under **Pipelines**, in the library. The settings category holds the limits and
 guardrails that apply to runs, not the pipelines themselves; it used to be named
 in a way that promised otherwise. See
-[Library and active pipeline](user-guide.md#library-and-active-pipeline).
+[Pipeline library](user-guide.md#pipeline-library).
 
 ### What does this node actually do?
 

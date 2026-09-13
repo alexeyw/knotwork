@@ -74,10 +74,10 @@ private val DefaultBadgeHeight = 22.dp
  *    leading drawer (hamburger) icon, trailing search + overflow icons.
  *  - `LIBRARY` section header (all-caps, muted) introducing the list.
  *  - One row per pipeline: 48 dp leading mark + monospace title + `DEFAULT`
- *    pill when applicable + "N nodes · {flavour}" subtitle + secondary
- *    status line ("Active default" / "N chats" / "unbound"). The
- *    currently-active pipeline (id = `loaded` in the editor) renders with
- *    a warm full-row tint.
+ *    pill when applicable + "N nodes · {flavour}" subtitle + an optional
+ *    secondary line ("unbound" for an empty graph). No row is marked as the
+ *    one open in the editor: that is screen state, not a property of the
+ *    pipeline.
  *  - Footer block: `FROM BROWSER EDITOR` header + `Import JSON` link +
  *    explanatory body.
  *  - Per-row overflow opens an anchored [DropdownMenu] with
@@ -390,7 +390,7 @@ private fun PipelineLibraryListRow(
     overflowOpen: Boolean,
     callbacks: PipelineLibraryCallbacks,
 ) {
-    val rowBg = if (row.isActive) KnotworkTheme.extended.surface3 else MaterialTheme.colorScheme.surface
+    val rowBg = MaterialTheme.colorScheme.surface
     Row(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),

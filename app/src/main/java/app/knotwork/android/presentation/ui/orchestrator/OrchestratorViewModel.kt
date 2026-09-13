@@ -1282,22 +1282,28 @@ constructor(
     /**
      * Deletes the pipeline identified by [pipelineId] from the library.
      *
-     * Forwards the active pipeline id (taken from [OrchestratorUiState.currentPipeline])
-     * to [DeletePipelineUseCase] so attempts to delete the pipeline being edited are
-     * blocked at the use-case layer. The error message wired into the UI is
-     * deliberately UI-friendly ("Active pipeline cannot be deleted") so the
-     * Snackbar reads the same regardless of how the deletion was triggered.
+     * Any pipeline may be deleted, including the one the editor holds. When it is
+     * that one, the editor moves in the same state update to the next pipeline in
+     * the library — or to an empty scratch pipeline when none is left — with the
+     * saved baseline moved alongside, so the switch does not read as unsaved work.
+     * Leaving the deleted graph in memory would not be harmless: the editor would
+     * go on showing it, and Save would write it straight back under its old id
+     * after its default and surface bindings had already been cleared.
+     *
+     * The switch is made explicitly rather than left to the library observer,
+     * which keeps any non-empty current graph and may emit while the binding
+     * clean-up below is still suspended.
      *
      * @param pipelineId Unique identifier of the pipeline to delete.
      */
     fun deletePipeline(pipelineId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val activeId = _uiState.value.currentPipeline.id
-            val result = deletePipelineUseCase(pipelineId, activeId)
+            val result = deletePipelineUseCase(pipelineId)
             // If the deleted pipeline was the user-marked default, clear the
-            // setting so chat surfaces don't dangle on a non-existent id and
-            // immediately fall back to the new "first in library" default.
+            // setting so chat surfaces don't dangle on a non-existent id. A chat
+            // with no binding then has no default to run — it says so rather than
+            // silently picking another pipeline.
             if (result.isSuccess && _uiState.value.defaultPipelineId == pipelineId) {
                 settingsRepository.setDefaultPipelineId(null)
             }
@@ -1314,14 +1320,25 @@ constructor(
                 }
             }
             _uiState.update { state ->
+                val editorHeldIt = result.isSuccess && state.currentPipeline.id == pipelineId
+                val next = if (editorHeldIt) state.savedPipelines.firstOrNull { it.id != pipelineId } else null
                 state.copy(
                     isLoading = false,
-                    errorMessage = result.exceptionOrNull()?.message?.let { UiText.Dynamic(it) },
+                    errorMessage = result.exceptionOrNull()?.let(::throwableAsUiText),
                     feedbackMessage = if (result.isSuccess) {
                         UiText(R.string.orchestrator_feedback_pipeline_deleted)
                     } else {
                         state.feedbackMessage
                     },
+                    currentPipeline = when {
+                        !editorHeldIt -> state.currentPipeline
+                        next != null -> next
+                        else -> PipelineGraph(
+                            id = UUID.randomUUID().toString(),
+                            name = OrchestratorUiState.DEFAULT_PIPELINE_NAME,
+                        )
+                    },
+                    persistedPipeline = if (editorHeldIt) next else state.persistedPipeline,
                 )
             }
         }

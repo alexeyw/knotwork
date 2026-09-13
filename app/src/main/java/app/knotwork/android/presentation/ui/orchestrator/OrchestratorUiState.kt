@@ -119,19 +119,6 @@ data class OrchestratorUiState(
      */
     val validationErrors: List<PipelineValidationError> get() = currentPipeline.validate()
 
-    /**
-     * The id of the pipeline currently loaded into the editor — i.e. the "active"
-     * pipeline for highlight and delete-block purposes in the library screen.
-     *
-     * Returns `null` when [currentPipeline] is the unsaved scratch graph (no nodes
-     * and not present in [savedPipelines]); under that condition there is nothing
-     * to highlight in the library and no delete to block.
-     */
-    val activePipelineId: String?
-        get() = currentPipeline.id.takeIf { id ->
-            savedPipelines.any { it.id == id } || currentPipeline.nodes.isNotEmpty()
-        }
-
     companion object {
         /**
          * Display name applied to a freshly-instantiated scratch pipeline
