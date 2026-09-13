@@ -179,6 +179,11 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: 
      * Asks the canvas to frame the graph again as soon as it has nodes. Used when content
      * replaces the current pipeline in place without changing its id — applying a template
      * to an empty pipeline — which the once-per-pipeline framing would otherwise miss.
+     *
+     * Two limits, both accepted because the only caller is the empty state's template
+     * picker: a request made while the pipeline still has nodes is answered against those
+     * nodes, not against the ones about to replace them; and a request whose template then
+     * fails to load stays pending, so the first node the user adds by hand is framed once.
      */
     fun requestFit() {
         fitRequested = true
