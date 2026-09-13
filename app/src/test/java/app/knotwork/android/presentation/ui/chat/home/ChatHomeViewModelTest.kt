@@ -1258,6 +1258,23 @@ class ChatHomeViewModelTest {
         }
 
     @Test
+    fun `given a pending bubble when long-pressed then its text resolves for copy and rerun`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            coEvery { agentOrchestratorUseCase(sessionId, "queued behind a trigger run", null) } returns
+                flow { awaitCancellation() }
+            viewModel.onComposerValueChange("queued behind a trigger run")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            val pendingRowId = viewModel.state.value.sendingUserTurn!!.row.id
+
+            assertEquals("queued behind a trigger run", viewModel.transfer.textForRow(pendingRowId))
+        }
+
+    @Test
     fun `given a retry when the failed turn re-runs then no second bubble is shown`() = runTest(testDispatcher) {
         every { llmInferenceEngine.isInitialized } returns true
         viewModel = createViewModel()
