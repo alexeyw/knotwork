@@ -155,18 +155,30 @@ class ChatHomeThreadsDelegate(
      * [AUTO_RENAME_CHAR_LIMIT] characters). Invoked by the
      * send path so the drawer entry reflects the user's framing.
      *
+     * The session is looked up **after** the new-chat save has landed, not from the
+     * in-memory list at send time. A first message typed straight into a new chat
+     * could otherwise reach here before the list observed the new row, and the
+     * rename was silently skipped — the chat kept its "New Chat" title for good.
+     * The name is written with a targeted rename rather than a whole-row save, so a
+     * concurrent write to the same row (the favourite flag, the timestamp the first
+     * message bumps) is not overwritten with the stale copy.
+     *
      * @param sessionId The session being renamed.
      * @param prompt The user's first message text.
      */
     fun autoRenameIfDefault(sessionId: String, prompt: String) {
         if (prompt.isBlank()) return
-        val session = sessions.firstOrNull { it.id == sessionId } ?: return
-        if (session.name != DEFAULT_NEW_CHAT_NAME) return
         // Collapse whitespace (including newlines) so a multi-line first message
         // still yields a clean, informative single-line title.
         val truncated = prompt.toSingleLineTitle(AUTO_RENAME_CHAR_LIMIT, AUTO_RENAME_SUFFIX)
+        val saveInFlight = pendingNewSessionSave
         scope.launch {
-            chatRepository.saveSession(session.copy(name = truncated))
+            saveInFlight?.join()
+            val currentName = sessions.firstOrNull { it.id == sessionId }?.name
+                ?: chatRepository.getSessionById(sessionId)?.name
+                ?: return@launch
+            if (currentName != DEFAULT_NEW_CHAT_NAME) return@launch
+            chatRepository.renameSession(sessionId, truncated)
         }
     }
 

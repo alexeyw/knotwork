@@ -66,6 +66,10 @@ import app.knotwork.design.screens.chat.ChatHomeThreadRow
  *   a terminal state or the user sends again.
  * @property imageViewer target of the full-screen image viewer, or `null`
  *   when the viewer is closed.
+ * @property sendingUserTurn the message the user has just sent, shown as a
+ *   pending bubble until its stored row reaches [messages], or `null` when
+ *   nothing is in that window. Kept apart from [messages] because the display
+ *   flow overwrites that list on every emission.
  */
 data class ChatHomeScreenState(
     val visual: ChatHomeUiState = ChatHomeUiState.Loading,
@@ -83,7 +87,26 @@ data class ChatHomeScreenState(
     val sourceChooserVisible: Boolean = false,
     val runNotice: RunNoticeCause? = null,
     val imageViewer: ImageViewerTarget? = null,
+    val sendingUserTurn: SendingUserTurn? = null,
 )
+
+/**
+ * A user message that has been sent but whose stored row has not reached the
+ * display flow yet.
+ *
+ * The stored row is written by the task queue, not by the screen: after a hop to
+ * the IO dispatcher, behind any run already executing in the serial queue, and
+ * then back through a Room re-query. Until then the thread would show only the
+ * generating indicator — in a new chat, with no sign of what was asked. The
+ * bubble stands in for the row over exactly that window.
+ *
+ * @property row the bubble, marked [app.knotwork.design.components.chat.ChatMessageStatus.Pending].
+ * @property sentAtMillis wall-clock time of the send. The queue stamps the stored
+ *   row when it writes it, which is never earlier, so the first user row at or
+ *   after this time is the one this bubble stands for. Matching by time rather
+ *   than by text keeps two identical messages sent in a row apart.
+ */
+data class SendingUserTurn(val row: ChatHomeMessageRow, val sentAtMillis: Long)
 
 /**
  * Pending composer attachment while the user composes a message.

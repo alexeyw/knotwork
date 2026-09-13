@@ -94,7 +94,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Idle,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages,
+            messages = visibleMessages,
             composerValue = composerValue,
             pipelineName = resolvedPipelineName,
             tokensUsed = tokens.used,
@@ -108,7 +108,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Generating,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages,
+            messages = visibleMessages,
             composerValue = composerValue,
             composerState = ComposerState.Generating,
             pipelineName = resolvedPipelineName,
@@ -132,7 +132,8 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.HitlConfirm,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages + (pending.tool?.let { liveHitlRow(modelName, it) } ?: hitlRow(modelName, visual.risk)),
+            messages =
+            visibleMessages + (pending.tool?.let { liveHitlRow(modelName, it) } ?: hitlRow(modelName, visual.risk)),
             composerValue = composerValue,
             pendingTypedConfirm = composer.typedConfirm,
             pipelineName = resolvedPipelineName,
@@ -147,7 +148,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Clarification,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages + (
+            messages = visibleMessages + (
                 pending.clarification?.let { liveClarificationRow(modelName, it) }
                     ?: clarificationRow(modelName)
                 ),
@@ -164,7 +165,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Interrupted,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages + (
+            messages = visibleMessages + (
                 pending.interrupted?.let { liveInterruptedRow(modelName, it) }
                     ?: interruptedRow(modelName)
                 ),
@@ -185,7 +186,7 @@ fun ChatHomeScreenState.toViewState(
             // That fallback exists so the state picker can show a card with no
             // pending snapshot behind it; a pause card without one would offer
             // Continue and Stop buttons wired to a run that does not exist.
-            messages = messages + listOfNotNull(
+            messages = visibleMessages + listOfNotNull(
                 pending.ceiling?.let { ceilingPauseRow(modelName, it, resolveText) },
             ),
             composerValue = composerValue,
@@ -206,7 +207,7 @@ fun ChatHomeScreenState.toViewState(
                 visualState = ChatHomeVisualState.Error,
                 threadTitle = threadTitle,
                 modelName = modelName,
-                messages = messages,
+                messages = visibleMessages,
                 composerValue = composerValue,
                 // Only an untyped failure puts the composer into its error
                 // state. A typed stop explains itself in its own tone above the
@@ -229,7 +230,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.DrawerOpen,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages,
+            messages = visibleMessages,
             composerValue = composerValue,
             // Live VM-projected threads. Falls back to fixtures only when
             // the debug picker forces DrawerOpen on an empty session list

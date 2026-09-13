@@ -139,6 +139,20 @@ details.
   and a build check now keeps every bundled preset and recipe free of
   overlapping cards.
 
+- **Your message appears the moment you send it.** The chat stored the message
+  only when the run queue got to it, and showed it only once that write came
+  back from the database — so for a moment a new chat showed nothing but the
+  generating indicator, as if the app were answering a question nobody asked.
+  Behind another run still in the queue (a trigger, a share, an automation),
+  that moment could last minutes. The message now shows immediately, marked as
+  pending, and turns into the stored one when it lands.
+
+  Two related title fixes: a first message typed straight into a new chat could
+  leave it named **New Chat** for good, because the rename looked the chat up
+  before the app had seen it; and storing a chat's first message rewrote the
+  whole chat record from an earlier read, which could undo a rename or a
+  favourite made in between. Only the timestamp is written now.
+
 - **A confirmation card no longer prints the tool name twice.** When the agent
   asks to run a tool, the card showed the tool id in mono and then the same
   string again as its description — there was no separate explanation to show,
