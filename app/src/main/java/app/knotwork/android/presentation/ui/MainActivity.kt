@@ -30,7 +30,7 @@ import app.knotwork.android.domain.usecases.SyncTriggersUseCase
 import app.knotwork.android.presentation.shortcuts.AppShortcutPublisher
 import app.knotwork.android.presentation.state.ChatEntryRequestRelay
 import app.knotwork.android.presentation.state.TransientMessageRelay
-import app.knotwork.android.presentation.theme.AndroidAIAgentTheme
+import app.knotwork.android.presentation.theme.KnotworkAppTheme
 import app.knotwork.android.presentation.ui.navigation.AppNavGraph
 import app.knotwork.android.presentation.ui.navigation.AppShellScaffold
 import app.knotwork.android.presentation.ui.navigation.NavRoutes
@@ -189,7 +189,7 @@ class MainActivity : ComponentActivity() {
         val pendingDeepLink = intent?.takeIf { it.data?.scheme == NavRoutes.DEEP_LINK_SCHEME }
 
         setContent {
-            AndroidAIAgentTheme {
+            KnotworkAppTheme {
                 val navController = rememberNavController()
 
                 // Route deep links that arrive on the already-running single-task

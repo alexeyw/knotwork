@@ -300,7 +300,7 @@ private fun ConsoleActions(onSearch: (() -> Unit)?, onCopyAll: () -> Unit, onCle
         )
         // No ✕ here. The strip above this row IS the console's header when the
         // sheet is open, and its chevron already closes it — two controls a
-        // finger apart doing one thing is the duplication task 2/11 removed
+        // finger apart doing one thing is the duplication already removed
         // elsewhere ("one door, one verb"), reintroduced by proximity.
     }
 }

@@ -92,7 +92,7 @@ class ParkedRunResumer @Inject constructor(
                 // run still *unfinished* — and this branch then deleted the only
                 // record that made it answerable while leaving it non-terminal,
                 // stranding it in RUNNING behind a permanent "generating…"
-                // (phase-40 finding F7). Whatever made it unresumable, a run
+                // on the reference device. Whatever made it unresumable, a run
                 // nobody can act on any more has to reach a terminal state:
                 // settle it instead of abandoning it.
                 val stillOpen = pipelineRunRepository.getRun(pending.runId)

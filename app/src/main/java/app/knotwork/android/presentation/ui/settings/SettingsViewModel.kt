@@ -52,7 +52,7 @@ import javax.inject.Inject
  * Memory, Pipelines, Tools, Background, Privacy, About — each sharing this
  * ViewModel's [viewModelScope] and the single [SettingsUiState] reducer
  * ([_uiState]). The delegates own their category's observers, mutators and
- * validation (the Phase-34 `ChatHome*Delegate` pattern); this class keeps the
+ * validation (the `ChatHome*Delegate` pattern); this class keeps the
  * cross-cutting concerns that span categories: the typed-confirm destructive
  * gate (Clear memory → Memory, Reset settings → About) and the one-shot
  * snackbar surface. Public mutator methods are kept as thin forwarders so the

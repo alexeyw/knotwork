@@ -990,7 +990,7 @@ class TaskQueueManagerImplTest {
 
     // endregion
 
-    // region No-progress safety valve (phase-40 finding F13)
+    // region No-progress safety valve
 
     /**
      * The worker is a single serial loop, so a run that never emits again does

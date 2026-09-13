@@ -53,7 +53,7 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      * `httpClient` in place, so a concurrent `executeTool` could look up a tool
      * in a registry that was momentarily absent and report
      * `Tool <name> not found` — telling the agent a tool does not exist when it
-     * does. Found by the phase-40 directed MCP test (finding F3).
+     * does. Found by a directed on-device MCP test.
      *
      * @property httpClient Ktor client owning the socket pool; closed on teardown.
      * @property transport MCP transport, retained so the session can be
@@ -220,8 +220,8 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      * The session is terminated on the server first (HTTP `DELETE` carrying the
      * session id) because that request needs the still-open [HttpClient]. MCP
      * servers keep a Streamable-HTTP session alive until it is explicitly
-     * terminated or times out, so merely closing the socket strands it: the
-     * phase-40 directed test left four orphaned sessions on one server in a
+     * terminated or times out, so merely closing the socket strands it: a
+     * directed on-device test left four orphaned sessions on one server in a
      * single run.
      *
      * Termination is best-effort — an unreachable or already-forgetful server
@@ -285,13 +285,13 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      * A missing connection and a missing tool are reported as **different**
      * failures on purpose. Reporting a torn-down client as "tool not found"
      * tells the agent the tool does not exist, and the agent then plans around
-     * a capability it actually has (phase-40 finding F3).
+     * a capability it actually has.
      *
      * The round-trip carries an explicit [toolCallTimeoutMs] deadline. Without
      * one the limit was whatever the transitively resolved Ktor engine happened
      * to default to — measured at exactly 10 s on the reference device, a value
      * nobody chose, documented nowhere and free to change on any Ktor/Koog bump
-     * (phase-40 finding F12). The deadline is applied here with
+     * (found by a directed on-device test). The deadline is applied here with
      * [withTimeoutOrNull] rather than through Ktor's `HttpTimeout` plugin
      * **on purpose**: that plugin does not apply to MCP's SSE-framed response
      * path, so installing it removed the engine's own socket timeout without
@@ -340,8 +340,8 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      * Every parameter used to be advertised as `{"type":"string"}` regardless of
      * what the server declared. The model then dutifully produced `"300"` for a
      * numeric field and the server rejected the call on schema validation, which
-     * made **any MCP tool with a non-string parameter unusable** — found by the
-     * phase-40 directed test against `trigger-long-running-operation` (F11).
+     * made **any MCP tool with a non-string parameter unusable** — found by a
+     * directed on-device test against `trigger-long-running-operation`.
      * The description was dropped too, leaving the model to guess an argument's
      * meaning from its name alone.
      */

@@ -40,6 +40,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest`                      | JVM unit tests for the debug variant.                                   |
 | `:app:koverVerifyFullDebug`                       | Test-coverage threshold enforcement.                                    |
 | `:app:verifyStoreListingLengths`                  | Play store-listing fields against Google's character limits. Rejection otherwise lands in the Play Console, after a signed release (see below). |
+| `:app:verifyForbiddenVocabulary`              | Fails if any public text file carries the product's pre-rename name or internal planning numbering (see below). |
 | `:app:verifyNoOrphanedKdoc` + `:catalog:verifyNoOrphanedKdoc` | Fails if a KDoc block documents no declaration — and so silently leaves the one below it undocumented (see below). |
 | `:app:verifyDialogInventory`                  | Fails if a dialog or sheet is composed in `:app` without a recorded reason, putting it out of reach of the design-system baselines (see below). |
 | `:app:checkNoInternalFqn`                     | Custom rule: forbid `app.knotwork.android.*` FQN references in code body.   |
@@ -1210,6 +1211,89 @@ limit passes and one character **over** fails — the boundary is where an
 off-by-one in a length rule actually lives — plus the trailing newline, counting
 outside the basic plane, a changelog matched by its directory, every field over
 at once, and a non-listing file ignored. The committed listing passes.
+
+---
+
+## Forbidden-vocabulary guard (`verifyForbiddenVocabulary`)
+
+`:app:verifyForbiddenVocabulary` fails the build when a public text file
+carries either of two families of words that must never reach an outside
+reader or a user of the app.
+
+1. **The product's pre-rename name**, in every form it was written in: the
+   three-word prose name (any capitalisation, including one wrapped across a
+   KDoc line), the run-together identifier used for theme and tag names, the
+   title-case descriptor the project once used, and the old root package.
+2. **Internal planning numbering**: a phase number of two or more digits
+   (written with a space, a hyphen or nothing before the digits), a task
+   fraction, and a phase branch path. That vocabulary belongs to private
+   planning documents; a public reader can look none of it up.
+
+The gate does not spell the forbidden forms out here, because this document is
+inside its own scope — the scanner assembles its patterns from fragments for the
+same reason.
+
+### Why a gate
+
+The product was renamed, and the old name went on greeting every user from the
+onboarding title for three months — through a pre-launch clean-up, a store
+listing that promised the new name, and a Google Play release. No gate looked
+for it; it was found by inspecting a frame of a published demo video. The first
+run of this gate then found the same name in the GitHub issue-template chooser,
+in the app theme's resource and composable names, and in a wake-lock tag —
+which Android vitals lists by name in the Play Console.
+
+Planning numbering had the same history in a different shape. It was removed
+once by a search that matched a single spelling, and a later search with the
+same pattern reported zero — while the hyphenated, lower-case and run-together
+spellings it could not see went on accumulating in KDoc and test comments.
+
+### Scope
+
+Every public **text** file, selected by glob rather than by a list, so a newly
+added file is guarded without anyone remembering to add it: source, resources
+and bundled assets of `:app` and `:catalog`, build logic, the probe app,
+documentation, store metadata, CI configuration, and the repository root. Each
+root must contribute at least one file, so a directory that moves or a glob that
+stops matching fails the build instead of quietly shrinking what is guarded. The
+file set is a declared input, never a Git query, so a file the branch under
+review is adding is scanned too.
+
+Deliberate exclusions:
+
+- **`CHANGELOG.md`** — a historical journal whose past entries name the old
+  identifiers as they were at the time. Rewriting history to satisfy a gate
+  would be the wrong repair.
+- **`buildSrc/src/test`** — the scanner's fixtures must spell the forbidden forms.
+- **`app/src/main/assets/docs`** — a generated copy of `docs/`, which is scanned
+  at its source rather than twice.
+
+**Not forbidden, on purpose:** the lower-case hyphenated project codename that
+names the Gradle root project and the Firebase project. Neither is visible to a
+user, and a Firebase project id cannot be renamed.
+
+**Not caught, on purpose:** a single-digit phase. Integration tests label the
+steps of a multi-stage scenario "Phase 1" to "Phase 4", which is not planning
+vocabulary. Every real planning phase has two digits, so requiring two digits
+separates the two cleanly; a historical single-digit reference would slip
+through, and none exists.
+
+The task is typed and cacheable, so a no-op `check` skips it. It reads files
+that five generators rewrite (the file maps, the browser editor, the settings
+reference, the automation reference and the cookbook), and declares
+`mustRunAfter` on each of them — the ordering the combined
+`generate… check` invocation needs.
+
+### Observed failing
+
+The first run over the tree reported **52** hits: **10** of the pre-rename name
+across eight files, and **42** planning numbers across 27 files — two generated
+file maps, KDoc in the engine, the MCP client and the task queue, test comments,
+a string-resource comment, one test name, and two comments in the browser
+editor. All were rewritten to say what the code does or what was observed,
+without the number. The gate was then observed failing again with the
+onboarding title string reverted to its pre-rename value. The pure logic is
+unit-tested in `buildSrc` (`ForbiddenVocabularyCheckerTest`).
 
 ---
 

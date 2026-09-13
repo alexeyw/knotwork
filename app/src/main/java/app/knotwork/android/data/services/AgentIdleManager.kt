@@ -59,7 +59,7 @@ class AgentIdleManager(
             // native-session mutex, so it never frees handles mid-generation.
             // Note the mutex alone does not make a *deferred* unload safe — it
             // makes it wait, and what it waits for may be a newer engine than
-            // the one the unload was requested for (phase-40 finding F4). This
+            // the one the unload was requested for. This
             // call is safe because the timer is cancelled the moment the
             // orchestrator leaves an idle state, so it only ever fires when
             // nothing is running.

@@ -74,7 +74,7 @@ class LocalPipelineRepositoryImplTest {
         assertEquals("n2", connection.targetNodeId)
 
         // Legacy entities created without an explicit context config must come
-        // back as ALL_ENABLED so pre-Phase-15 pipelines keep behaving the same.
+        // back as ALL_ENABLED so pipelines saved before per-node context config existed behave the same.
         assertEquals(NodeContextConfig.ALL_ENABLED, node.contextConfig)
     }
 

@@ -5873,7 +5873,7 @@
     /**
      * Build the full data payload for a freshly-created node. All fields are
      * present (even type-irrelevant ones) so the JSON shape is stable when
-     * exported in PHASE 16 — 4/5.
+     * exported.
      */
     function defaultNodeData(typeId) {
         const t = NODE_TYPE_BY_ID[typeId];
@@ -6386,7 +6386,7 @@
      *
      *  All edits are persisted into the drawflow node's `data` field via
      *  editor.updateNodeDataFromId — `editor.export()` will round-trip them
-     *  to JSON in PHASE 16 — 4/5.
+     *  to JSON.
      * -------------------------------------------------------------------- */
     const dialog = document.getElementById('node-config');
     const dialogIcon = dialog.querySelector('[data-role="icon"]');

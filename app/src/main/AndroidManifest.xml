@@ -82,7 +82,7 @@
         android:supportsRtl="true"
         android:largeHeap="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:theme="@style/Theme.AndroidAIAgent">
+        android:theme="@style/Theme.Knotwork">
 
         <!-- Firebase Crashlytics / Analytics opt-in meta-data lives in the
              `full`-flavour manifest overlay (`src/full/AndroidManifest.xml`);

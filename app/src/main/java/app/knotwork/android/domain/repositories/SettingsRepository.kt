@@ -483,7 +483,7 @@ interface SettingsRepository {
      * the process can die inside that window — swiped from recents, reclaimed by
      * the low-memory killer, frozen by the OEM. Treating the first such death as
      * proof that the GPU is broken silently and permanently downgraded the user
-     * to CPU; observed during the phase-40 directed test, where an unrelated
+     * to CPU; observed during a directed on-device test, where an unrelated
      * `lmkd` kill cost the device its GPU backend. Corroboration across two
      * consecutive starts is what separates "this backend really cannot
      * initialise" from "something else killed us".

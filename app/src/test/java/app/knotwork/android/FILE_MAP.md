@@ -39,7 +39,7 @@ Only Kotlin files appear inside the generated blocks.
   - `local/` - Tests for Room, DataStore, the encrypted stores and the filesystem-backed stores.
     - `AgentWorkspaceImplTest.kt` - Verifies the `AgentWorkspaceImpl` foundation: the path-traversal containment boundary (the single canonicalisation gate), the per-file and total-size quotas at their exact boundaries, the text/binary read distinction, and the overwrite semantics — each surfaced as a typed `WorkspaceError`.
     - `ApiKeyManagerTest.kt` - Tests for ApiKeyManager.
-    - `AppDatabaseMigrationTest.kt` - Verifies the Phase-15 `AppDatabase.MIGRATION_17_18` script.
+    - `AppDatabaseMigrationTest.kt` - Verifies the `AppDatabase.MIGRATION_17_18` script.
     - `AttachmentStoreImplTest.kt` - Verifies `AttachmentStoreImpl`: aspect-preserving downscale to the longest-side cap (never a square crop), JPEG re-encode, ingest of invalid bytes, the content-URI ingest path, and the delete / list surface used by retention.
     - `AudioCaptureStoreImplTest.kt` - Unit tests for `AudioCaptureStoreImpl`, the ephemeral voice-input clip store.
     - `ConvertersTest.kt` - Unit tests for `Converters`, focusing on the `NodeContextConfig` JSON round trip and its legacy-row fallback contract.
@@ -63,7 +63,7 @@ Only Kotlin files appear inside the generated blocks.
     - `HuggingFaceModelMapperTest.kt` - Unit tests for `HuggingFaceModelMapper` — the pure DTO → domain projection covering tag/license/gated parsing, `.litertlm` filtering, resolve-URL construction and installed-flag stamping.
     - `LocalModelMapperTest.kt` - Unit tests for `LocalModelEntity` and `LocalModel` mapping extensions.
   - `mcp/` - Tests for the MCP client and the single connection pool.
-    - `KoogMcpClientSessionTest.kt` - Session-lifecycle regression tests for `KoogMcpClient`, covering finding F3 of the phase-40 directed MCP test: on the device a tool call failed with `-32000 No valid session ID provided`, and the wire capture showed sessions being opened and abandoned faster than anything was using them.
+    - `KoogMcpClientSessionTest.kt` - Session-lifecycle regression tests for `KoogMcpClient`, covering a defect found by a directed on-device MCP test: on the device a tool call failed with `-32000 No valid session ID provided`, and the wire capture showed sessions being opened and abandoned faster than anything was using them.
     - `KoogMcpClientTest.kt` - Tests for KoogMcpClient.
     - `McpConnectionPoolTest.kt` - Unit tests for `McpConnectionPool` — the single owner of live MCP connections.
   - `network/` - Tests for the OkHttp guards, the download path and the Hugging Face client.
@@ -367,7 +367,7 @@ Only Kotlin files appear inside the generated blocks.
   - `ExternalAutomationBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **external request → background run → callback** arc: the entry point another app on the device broadcasts to.
   - `JournalExportReader.kt` - **The** reader of the exported journal documents — the offline consumer the export formats exist for, written once and pointed at every producer.
   - `JournalExportRoundTripTest.kt` - The round-trip guarantee of the journal exports: **one document, one parse.**
-  - `TriggerBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **automation-trigger → background run → notification → result-in-chat** arc — the privacy-sensitive surface phase 36 adds on top of the persisted background-run infrastructure.
+  - `TriggerBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **automation-trigger → background run → notification → result-in-chat** arc — the privacy-sensitive surface automation triggers add on top of the persisted background-run infrastructure.
 - `presentation/` - Tests for the presentation layer.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
@@ -380,7 +380,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RunOutcomeAnnouncerImplTest.kt` - Coverage for `RunOutcomeAnnouncerImpl` — the line a stopped run leaves in the chat it ran in.
   - `ui/` - Tests for the screens and their ViewModels.
     - `about/` - Tests for the About surface.
-      - `AboutAcknowledgmentsTest.kt` - Drift guard for the hand-maintained `AboutAcknowledgments` list surfaced on the About screen (`PHASE 26 — Task 7`).
+      - `AboutAcknowledgmentsTest.kt` - Drift guard for the hand-maintained `AboutAcknowledgments` list surfaced on the About screen.
       - `AboutLinksTest.kt` - Drift guard for the outbound links of the About screen (`AboutLinks`).
     - `automation/` - Tests for the external-automation settings surface.
       - `ExternalAutomationJournalViewModelTest.kt` - Verifies that the external-automation journal screen reports the contract's posture and its request log faithfully.
