@@ -66,8 +66,8 @@ enum class PipelineLibraryFilter {
  * (pipeline names, node ids, etc.).
  * @property subtitle pre-formatted "N nodes · {flavour}" line — e.g.
  * "8 nodes · INPUT→PLANNER→TOOLS→OUTPUT".
- * @property secondaryLine extra status line beneath [subtitle]: "Active
- * default" / "N chats" / "unbound" — null hides the line entirely.
+ * @property secondaryLine extra status line beneath [subtitle] (for example
+ * "unbound" for an empty graph) — null hides the line entirely.
  * @property secondaryLineKind drives the colour of [secondaryLine]
  * (`Default` = muted, `Unbound` = `signalError`).
  * @property status status pill rendered next to the leading icon (only used
@@ -75,8 +75,6 @@ enum class PipelineLibraryFilter {
  * of the badge + secondaryLine).
  * @property leadingTint hue used for the 40 dp leading mark.
  * @property leadingIcon vector rendered inside the leading mark.
- * @property isActive `true` when this is the pipeline currently loaded in
- * the editor. Renders the full-row warm-cream tint.
  * @property isDefault `true` when this pipeline is the user's default;
  * renders a brown `DEFAULT` pill next to the title.
  * @property isShareTarget `true` when this pipeline is bound to the OS Share
@@ -98,7 +96,6 @@ data class PipelineLibraryRow(
     val leadingIcon: ImageVector,
     val secondaryLine: String? = null,
     val secondaryLineKind: PipelineSecondaryLineKind = PipelineSecondaryLineKind.Default,
-    val isActive: Boolean = false,
     val isDefault: Boolean = false,
     val isShareTarget: Boolean = false,
     val isQuickTile: Boolean = false,
@@ -111,7 +108,7 @@ data class PipelineLibraryRow(
  * only — the underlying text is owned by the host.
  */
 enum class PipelineSecondaryLineKind {
-    /** Default muted secondary text ("Active default", "N chats"). */
+    /** Default muted secondary text. */
     Default,
 
     /** Renders the line in `signalError` (used for "unbound" pipelines). */

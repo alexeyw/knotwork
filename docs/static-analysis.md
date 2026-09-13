@@ -59,6 +59,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyLintBaselineOverrides`            | Custom rule: fail if a lint baseline suppresses a check demoted to informational severity (see below). |
 | `:app:verifyDetektAnalysisMode`               | Custom rule: fail if `detekt.yml` activates a rule that only runs under type resolution (see below). |
 | `:app:testFullDebugUnitTest` (Konsist suite)      | Architecture guard: Clean-Architecture layer boundaries (see below).        |
+| `:app:testFullDebugUnitTest` (`TopBarInsetGuardTest`) | Fails if a bar at the top of a screen neither applies the status-bar inset nor names the parent that does (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
 safely-correctable subset before invoking `check`.
@@ -563,6 +564,45 @@ there (`./gradlew -p buildSrc test`). Every gate was observed failing before
 being trusted: a removed `FIELD_REACH` entry, a node type dropped from the meta,
 an edited verdict, and a broken recipe each fail with the cause named — the last
 one twice, before and after the caching hole above was closed.
+
+---
+
+## Top-bar inset guard (`TopBarInsetGuardTest`)
+
+The app draws edge to edge, and both the shell scaffold and every screen's own
+`Scaffold` zero their window insets, so each screen owns its status-bar inset.
+Material's `TopAppBar` applies it by itself; a bar laid out by hand does not.
+Twice a hand-built bar drew its title under the clock — the Help screen's two
+bars, then the Files selection bar — and **no rendering test can see it**:
+Robolectric renders with no system insets, so the snapshot of the broken bar is
+identical to the snapshot of the fixed one.
+
+`TopBarInsetGuardTest` reads the production sources of `:app` and `:catalog` and
+enforces three rules:
+
+1. **`Scaffold` slots.** Every composable of the project called inside a
+   `topBar = { … }` slot either shows inset evidence — a Material top app bar, or
+   a `windowInsetsPadding` / `statusBarsPadding` / `safeDrawingPadding` /
+   `systemBarsPadding` call — or is a container that only lays out a `content`
+   slot. Checking *every* callee matters: the Files slot switched between a
+   `TopAppBar` and a hand-built row, and only the first carried the inset.
+2. **Bars outside a slot.** A bar placed at the top of a column by hand is
+   invisible to rule 1, so each is listed with the owner of its inset — the bar
+   itself, or the parent file that applies it. A renamed or deleted entry fails
+   the test instead of checking nothing.
+3. **Census.** Any composable named like a top bar (`…TopBar`, `…AppBar`,
+   `…Toolbar`, `…SelectionBar`) must be covered by rule 1 or listed under rule 2.
+
+**What it cannot catch:** a hand-built top bar outside a `Scaffold` slot whose
+name does not look like a bar, and an inset applied to the wrong element — the
+rules read evidence, not geometry.
+
+### Observed failing
+
+With the Files selection bar's inset removed, rule 1 reports exactly
+`FilesSelectionBar`; with the Help list bar's inset removed, rule 2 reports
+`HelpListBar`. Its first run also found the image viewer's top bar covered by
+no rule — it insets itself, and is now listed.
 
 ---
 
