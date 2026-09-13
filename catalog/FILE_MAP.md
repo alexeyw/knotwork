@@ -410,6 +410,7 @@ matters.
     - `ChatBubbleShapesTest.kt` - Verifies the asymmetric corner radii on `ChatBubbleShapes`.
     - `ChatCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the long-press scale + composer morph behave deterministically.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
+    - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
     - `HitlConfirmationStateTest.kt` - Pure-JVM tests for `HitlConfirmationState` — the gating logic behind `HitlConfirmationCard`'s Allow CTA, Always-Allow visibility, and destructive typed-confirm row.
     - `ImageAttachmentCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ImageAttachmentCatalogContent` in both themes plus a reduced-motion variant.
     - `InterruptedRunCardTest.kt` - Behavioural coverage for `InterruptedRunCard` — the status card the chat stream pins when the session's most recent pipeline run died with its process.

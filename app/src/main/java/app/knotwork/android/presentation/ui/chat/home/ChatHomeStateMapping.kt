@@ -455,8 +455,13 @@ internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
 /**
  * Trailing HITL confirmation row driven by the live [HitlPending]
  * snapshot the orchestrator captured. Renders the real tool name, risk
- * tier, and JSON-decoded argument map; the user-visible "summary" line
- * falls back to the tool name when the agent did not attach one.
+ * tier, and JSON-decoded argument map.
+ *
+ * The card's summary line is left **blank**: a pending confirmation carries
+ * no agent-written explanation, and there is no second field to fall back
+ * to. Passing the tool name there printed it twice — mono id above, the same
+ * string as prose below — which reads as a rendering fault rather than as a
+ * missing explanation. The card omits the line when the summary is blank.
  */
 internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessageRow {
     val argumentsMap = parseHitlArguments(pending.arguments)
@@ -469,7 +474,7 @@ internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessa
             model = HitlConfirmationModel(
                 risk = pending.risk.toCatalogRisk(),
                 toolName = pending.toolName,
-                summary = pending.toolName,
+                summary = "",
                 arguments = argumentsMap,
                 timestamp = timestamp,
             ),

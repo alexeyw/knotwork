@@ -637,7 +637,7 @@
     <!-- ============ Onboarding pager ============ -->
 
     <!-- Brand title rendered in the onboarding top app bar next to the logo glyph. -->
-    <string name="knotwork_onboarding_brand_title">Android AI Agent</string>
+    <string name="knotwork_onboarding_brand_title">Knotwork</string>
     <!-- Skip button — visible on every step except the final one. -->
     <string name="knotwork_onboarding_skip">Skip</string>
     <!-- Primary CTA on steps 1-3. -->

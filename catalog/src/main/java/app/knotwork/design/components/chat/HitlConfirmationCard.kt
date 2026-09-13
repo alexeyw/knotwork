@@ -62,8 +62,10 @@ private const val JSON_COLLAPSED_MAX_LINES = 2
 /**
  * Human-in-the-loop confirmation card surfaced inside the assistant bubble
  * when the agent wants to execute a tool. Renders the risk tier, tool name,
- * one-line summary, a collapsible JSON arguments block, and an action row
- * gated on the risk level.
+ * an optional one-line summary, a collapsible JSON arguments block, and an
+ * action row gated on the risk level. A blank
+ * [HitlConfirmationModel.summary] drops the summary line instead of echoing
+ * the tool name into it.
  *
  * State helpers are factored to [HitlConfirmationState]
  * so the gating logic is unit-testable without Compose.
@@ -134,13 +136,18 @@ fun HitlConfirmationCard(
                 style = KnotworkTextStyles.MonoBase,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(
-                text = model.summary,
-                style = KnotworkTextStyles.BodyBase,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = SUMMARY_MAX_LINES,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // A blank summary means the caller has no explanation to show. The
+            // line is dropped rather than filled with the tool id, which would
+            // print the same string twice and read as a rendering fault.
+            if (model.summary.isNotBlank()) {
+                Text(
+                    text = model.summary,
+                    style = KnotworkTextStyles.BodyBase,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = SUMMARY_MAX_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             JsonArgsBlock(arguments = model.arguments)
             if (HitlConfirmationState.showTypedConfirmRow(model.risk)) {
                 TypedConfirmRow(value = pendingTypedConfirm, onChange = onTypedConfirmChange)
