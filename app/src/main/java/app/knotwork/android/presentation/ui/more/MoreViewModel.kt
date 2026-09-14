@@ -12,6 +12,7 @@ import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.models.WorkspaceListing
 import app.knotwork.android.domain.models.WorkspaceResult
+import app.knotwork.android.domain.models.isBusy
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
@@ -99,9 +100,11 @@ class MoreViewModel @Inject constructor(
         val workspace = values[7] as WorkspaceResult<WorkspaceListing>
         val archivedChats = values[8] as List<ChatSession>
         val active = models.firstOrNull { it.isActive }
+        // Every in-flight status, as the task monitor lists it — not just the two
+        // streaming ones, which made a run spent loading, in a tool or on a stage count as
+        // nothing. A queued run is counted separately below.
         val runningCount = activeSessions.values.count {
-            it is AgentOrchestratorState.Thinking ||
-                it is AgentOrchestratorState.Answering
+            it.isBusy && it !is AgentOrchestratorState.Queued
         }
         // Only a run actually waiting behind another one. `Idle` is the resting state
         // of every chat the queue has seen, which read as "queued" before the queue
