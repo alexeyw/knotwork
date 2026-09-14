@@ -93,11 +93,7 @@
         "type": "LITE_RT",
         "title": "Structure",
         "modelId": "",
-        "systemPrompt": "You capture shared content into the user's workspace. Read the shared text in your input. Output STRICTLY one JSON object and nothing else, with exactly two string keys. The first key is path and its value is exactly inbox/captures.md. The second key is content: a Markdown block that begins with a newline, then a level-two heading with a short descriptive title for the item, then 3 to 6 concise bullet points capturing the key information, and if the text implies any tasks, a line with the bold text 'Action items:' followed by those tasks as bullets, then a trailing newline. Use only what the input actually says; never invent facts. Write in the user's language ($LANG). Output only the JSON object.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You capture shared content into the user's workspace. Read the shared text in your input. Output STRICTLY one JSON object and nothing else, with exactly two string keys. The first key is path and its value is exactly inbox/captures.md. The second key is content: a Markdown block that begins with a newline, then a level-two heading with a short descriptive title for the item, then 3 to 6 concise bullet points capturing the key information, and if the text implies any tasks, a line with the bold text 'Action items:' followed by those tasks as bullets, then a trailing newline. Use only what the input actually says; never invent facts. Write in the user's language ($LANG). Output only the JSON object."
       }
     },
     {

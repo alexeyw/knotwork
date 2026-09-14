@@ -146,11 +146,7 @@
         "type": "LITE_RT",
         "title": "Do the subtask",
         "modelId": "",
-        "systemPrompt": "You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 1024,
-        "stopTokens": []
+        "systemPrompt": "You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.\n\nReply in the user's language ($LANG)."
       }
     },
     {

@@ -90,11 +90,7 @@
         "type": "LITE_RT",
         "title": "Translate",
         "modelId": "",
-        "systemPrompt": "You translate the user's input text. TARGET: translate into Chilean Spanish (Spanish as actually spoken in Chile). REGISTER: use the everyday, casual register — natural, colloquial Chilean speech. To translate formally instead, replace the previous sentence with: use the official, formal register. To translate into a different language, change the TARGET line. Preserve the meaning, tone and politeness level of the original; keep names, numbers and line breaks. Do not add notes, alternatives or explanations. Output only the translated text.\n\nIf the input carries no translatable text — it is empty, or only punctuation, digits or symbols — return it unchanged and add nothing.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You translate the user's input text. TARGET: translate into Chilean Spanish (Spanish as actually spoken in Chile). REGISTER: use the everyday, casual register — natural, colloquial Chilean speech. To translate formally instead, replace the previous sentence with: use the official, formal register. To translate into a different language, change the TARGET line. Preserve the meaning, tone and politeness level of the original; keep names, numbers and line breaks. Do not add notes, alternatives or explanations. Output only the translated text.\n\nIf the input carries no translatable text — it is empty, or only punctuation, digits or symbols — return it unchanged and add nothing."
       }
     },
     {

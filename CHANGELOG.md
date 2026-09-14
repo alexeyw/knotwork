@@ -139,6 +139,22 @@ details.
   and a build check now keeps every bundled preset and recipe free of
   overlapping cards.
 
+- **The browser pipeline editor no longer ships outdated presets.** It carries
+  its own copy of every bundled pipeline preset and prompt template, and that
+  copy was kept in step by hand. It had not been: six presets and four prompt
+  templates still held wording the app had since replaced — in the presets'
+  case, instructions changed because they made on-device tool calls fail. Both
+  copies are now generated from the app's own files, and the build fails when
+  either falls behind.
+
+  The editor's node forms also stop offering sampling, token-limit and timeout
+  settings on the on-device and cloud nodes. No run ever read them — sampling
+  comes from the app's Settings, a cloud call from its provider settings — and
+  the app had already removed the same controls; the browser kept them, with
+  range checks that could refuse to save over a value that changed nothing.
+  Files that carry those fields still import and export unchanged, and the
+  bundled presets and cookbook recipes no longer include them.
+
 - **Any pipeline can be deleted, including the last one.** The library marked
   one pipeline as "Active" — not a setting you chose, just the one the editor
   last held, which after a restart was simply the most recently changed — and

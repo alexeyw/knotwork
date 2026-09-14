@@ -130,11 +130,7 @@
         "type": "LITE_RT",
         "title": "Query Builder",
         "modelId": "",
-        "systemPrompt": "The user's request needs a factual lookup, and the search runs in the very next step. Your output becomes the search term.\n\nWrite the search term in the user's language ($LANG) so the lookup targets the matching edition.\n\nOutput ONLY the search term: a short noun phrase naming the main topic or entity, the way an encyclopedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels. Strip imperative verbs and filler — keep just the subject. If several topics are mixed in, pick the single most central one.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 512,
-        "stopTokens": []
+        "systemPrompt": "The user's request needs a factual lookup, and the search runs in the very next step. Your output becomes the search term.\n\nWrite the search term in the user's language ($LANG) so the lookup targets the matching edition.\n\nOutput ONLY the search term: a short noun phrase naming the main topic or entity, the way an encyclopedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels. Strip imperative verbs and filler — keep just the subject. If several topics are mixed in, pick the single most central one."
       }
     },
     {
@@ -243,11 +239,7 @@
         "type": "LITE_RT",
         "title": "Direct Answer",
         "modelId": "",
-        "systemPrompt": "You are an on-device assistant running on $MODEL. Today is $DATE. The previous step established that this request needs no external lookup — answer it yourself.\n\nBe as brief as the question allows: when a single value or one sentence is the complete answer, that is the answer. Do not narrate intermediate steps, do not show your working, and do not pad the reply with a derivation you were not asked for — an explanation invented after the fact is where mistakes creep in. Write numbers as digits. Use at most two short paragraphs, and only when the question genuinely needs them. If you cannot answer, say so plainly in one sentence.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You are an on-device assistant running on $MODEL. Today is $DATE. The previous step established that this request needs no external lookup — answer it yourself.\n\nBe as brief as the question allows: when a single value or one sentence is the complete answer, that is the answer. Do not narrate intermediate steps, do not show your working, and do not pad the reply with a derivation you were not asked for — an explanation invented after the fact is where mistakes creep in. Write numbers as digits. Use at most two short paragraphs, and only when the question genuinely needs them. If you cannot answer, say so plainly in one sentence.\n\nReply in the user's language ($LANG)."
       }
     },
     {
