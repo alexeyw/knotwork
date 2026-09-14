@@ -272,50 +272,58 @@ If R8 starts stripping something at runtime, drop a new section into
 `proguard-rules.pro` rather than scattering rules across the file, and
 include a one-line comment on the symptom that triggered the keep.
 
-## 5. APK size breakdown — v0.4.0
+## 5. APK size breakdown
 
-> The numbers below are a **point-in-time snapshot measured on v0.4.0** and
-> have not been re-measured since; treat them as indicative of the size
-> profile rather than the current byte counts.
+> A **point-in-time snapshot**, measured on 14 September 2026 from a local
+> `./gradlew :app:assembleFullRelease` of the development line after 0.9.0. Byte
+> counts move with every dependency bump; the published release assets are the
+> numbers to trust for a given version.
 
-`app-release.apk` measures **59.6 MiB on disk** (62,465,437 bytes;
-~59.9 MiB uncompressed inside the APK container). The 30 MB target from
-the original phase plan is **not achievable** with the current dependency
-set: native libraries + the bundled universal-sentence-encoder embedding
-model already account for ~40 MB before a single line of agent code is
-included.
+`app-full-release.apk` measures **60.7 MiB on disk** (63,613,649 bytes). The
+published full APKs, for comparison:
+
+| Release | Full APK (bytes) | What changed |
+|---------|------------------|--------------|
+| 0.7.3   | 62,184,669 | — |
+| 0.8.0   | 77,902,632 | **+15.7 MB, unnoticed at the time.** MediaPipe `tasks-text` 1.0.0 began shipping `libmediapipe_tasks_textgenai_jni.so` (14.4 MB), the native half of its new `TextSummarizer` / `TextProofreader`. |
+| 0.9.0   | 77,930,200 | — |
+| next    | 63,613,649 (local) | That library is excluded from packaging (below). |
+
+The 30 MB target from the original plan is **not achievable** with the current
+dependency set: the native libraries and the bundled embedding model account for
+~41 MB before a single line of agent code.
 
 Top contributors (uncompressed bytes inside the APK, arm64-v8a only):
 
-| Entry                                          | Size   | Notes                                     |
-|------------------------------------------------|--------|-------------------------------------------|
-| `lib/arm64-v8a/liblitertlm_jni.so`             | 14.2 MB | LiteRT-LM tokenizer + runtime JNI.        |
-| `classes.dex`                                  | 11.1 MB | App + Koog agents (post-R8).              |
-| `lib/arm64-v8a/libmediapipe_tasks_jni.so`      | 10.0 MB | MediaPipe Tasks (text embedding host).    |
-| `classes2.dex`                                 |  7.9 MB | App + Koog agents (overflow DEX).         |
-| `assets/universal_sentence_encoder.tflite`     |  5.8 MB | Bundled embedding model (long-term memory). |
-| `lib/arm64-v8a/libLiteRt.so`                   |  4.8 MB | LiteRT base runtime.                      |
-| `lib/arm64-v8a/libLiteRtClGlAccelerator.so`    |  2.6 MB | LiteRT GPU delegate.                      |
-| `lib/arm64-v8a/libsqlcipher.so`                |  2.0 MB | SQLCipher engine.                         |
-| Everything else combined                       |  ~1.4 MB | DataStore native, baseline profiles, fonts, resources, AndroidManifest. |
+| Entry                                          | Size    | Notes                                     |
+|------------------------------------------------|---------|-------------------------------------------|
+| `lib/arm64-v8a/liblitertlm_jni.so`             | 21.5 MB | LiteRT-LM runtime and tokenizer JNI (the separate `libLiteRt.so` and GPU accelerator of earlier versions are folded into it). |
+| `classes.dex`                                  | 12.3 MB | App + Koog agents (post-R8).              |
+| `lib/arm64-v8a/libmediapipe_tasks_jni.so`      | 11.0 MB | MediaPipe Tasks (text embedding host).    |
+| `classes2.dex`                                 |  8.1 MB | App + Koog agents (overflow DEX).         |
+| `assets/universal_sentence_encoder.tflite`     |  6.1 MB | Bundled embedding model (long-term memory). |
+| `lib/arm64-v8a/libsqlcipher.so`                |  2.1 MB | SQLCipher engine.                         |
+| `resources.arsc`                               |  1.0 MB | Compiled resources.                       |
+| `classes3.dex`                                 |  0.9 MB | Overflow DEX.                             |
+| Everything else combined                       | ~1.0 MB | Presets, bundled documentation, DataStore native, baseline profiles, manifest. |
 
 What we already did to keep this in check:
 
 - **arm64-v8a only.** Other ABIs would more than double the artefact.
 - **R8 full mode + resource shrinking.** Saves ~2 MB on DEX vs. unminified.
 - **Strip Jansi non-Android natives.** `org/fusesource/jansi/internal/native/{Windows,Mac,Linux,FreeBSD}/**` and `META-INF/native-image/jansi/**` are dropped via the `android.packaging.resources` exclude list — Jansi ships through Koog's logger and only its ANSI-escape rendering runs on JVM hosts.
+- **Drop MediaPipe's text-generation library.** `**/libmediapipe_tasks_textgenai_jni.so` is excluded via `android.packaging.jniLibs`. Only `TextSummarizer` and `TextProofreader` load it — the app uses `TextEmbedder`, which loads `libmediapipe_tasks_jni.so` — and text generation belongs to LiteRT-LM. An exclude is a file-name pattern that stops matching silently if the library is renamed, so the release workflow asserts it on the artefact (§9): the library absent, and the LiteRT-LM and MediaPipe Tasks libraries present.
 
 Future wins (left out of scope for now):
 
 - **Move the universal-sentence-encoder model to a first-run download.** Wins ~6 MB; complicates first-run UX. Tracked separately.
-- **Per-ABI dynamic feature module for LiteRT GPU.** Only devices that actually use the GPU delegate would download `libLiteRtClGlAccelerator.so`. Wins ~2.6 MB; requires App Bundle delivery (already in place) plus split-install plumbing.
 - **Promote Koog clients to optional dynamic features.** Cloud LLM clients are bundled today; ~1 MB per provider could move out for users who only use the local model.
 
 ## 6. App Bundle build (Play Store upload)
 
 ```bash
 ./gradlew :app:bundleFullRelease
-# Output: app/build/outputs/bundle/fullRelease/app-full-release.aab  (~37 MiB)
+# Output: app/build/outputs/bundle/fullRelease/app-full-release.aab
 ```
 
 The AAB is the format Play Store wants; per-device APKs delivered through
@@ -593,8 +601,9 @@ The tag push starts the workflow. It reuses the `check` gate, verifies the tag
 against `versionName`, materialises the keystore and the real
 `google-services.json`, builds `fullRelease` (APK + AAB) and — in a separate
 Gradle invocation, so the Google plugins stay out of it (§8) — `fossRelease`
-(APK), re-verifies the signer of all three artefacts against
-`RELEASE_CERT_SHA256`, and attaches them plus a `SHA256SUMS.txt` to a **draft**
+(APK), checks that both APKs ship the LiteRT-LM and MediaPipe Tasks libraries and
+not MediaPipe's excluded text-generation one (§5), re-verifies the signer of all
+three artefacts against `RELEASE_CERT_SHA256`, and attaches them plus a `SHA256SUMS.txt` to a **draft**
 GitHub Release. The R8 mapping files are uploaded as a workflow artefact (90-day
 retention) rather than as a public asset — they belong with the maintainer, for
 deobfuscating crash reports.
@@ -643,8 +652,7 @@ pre-1.0 is still the version users are meant to install.
 ## 10. Store listing metadata
 
 The listing texts, screenshots and per-version release notes live in the
-repository, under the layout both Google Play (`fastlane supply`) and F-Droid
-read:
+repository, in the `fastlane supply` layout F-Droid reads:
 
 ```
 fastlane/metadata/android/
@@ -660,8 +668,11 @@ fastlane/metadata/android/
 └── ru-RU/                          # texts only; falls back to en-US graphics
 ```
 
-One directory rather than two keeps the two stores from drifting apart, and
-`StoreMetadataTest` (in the `:app` unit-test suite, wired into `check`) enforces
+**Nothing uploads this directory to Google Play.** No workflow runs `supply`; the
+Play listing is filled in by hand in Play Console, from these files. Keeping the
+Play texts here anyway gives them the same length gate and the same review as
+the code, and one place to copy from — but a merged edit reaches Play only when
+someone pastes it there. `StoreMetadataTest` (in the `:app` unit-test suite, wired into `check`) enforces
 the limits, the presence of a changelog for the **current** `versionCode`, and
 the screenshot rules below. A version bump without a matching
 `changelogs/<versionCode>.txt` fails the build rather than shipping a release

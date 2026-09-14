@@ -411,6 +411,18 @@ android {
             excludes += "org/fusesource/jansi/internal/native/FreeBSD/**"
             excludes += "META-INF/native-image/jansi/**"
         }
+        jniLibs {
+            // MediaPipe `tasks-text` 1.0.0 added `TextSummarizer` and `TextProofreader`,
+            // on-device text generators, and ships their native half in this library —
+            // 14.4 MB of the arm64 APK, most of the ~15 MiB it grew between 0.7.3 and
+            // 0.8.0 without anyone noticing. The app uses only `TextEmbedder`, whose bytecode loads
+            // `mediapipe_tasks_jni` and never this one (checked in the AAR: only the two
+            // generator classes name it). Text generation belongs to LiteRT-LM, the one
+            // on-device LLM engine; a second one would run outside the pipeline graph,
+            // its HITL gate and its ceilings. The release workflow asserts the library
+            // stays out and `mediapipe_tasks_jni` stays in.
+            excludes += "**/libmediapipe_tasks_textgenai_jni.so"
+        }
     }
 
     lint {
@@ -1765,6 +1777,18 @@ tasks.withType<Test>().configureEach {
         .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(rootProject.file("docs/recipes"))
         .withPropertyName("cookbookRecipes")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // And twice more, both measured: `AboutLinksTest` reads the privacy policy and
+    // `BrowserEditorContextConfigGuardTest` reads the browser editor, both from the
+    // repository root. Editing either left this task UP-TO-DATE. What tests read from
+    // `src/main` needs no line here — an edit recompiles, or (assets) repackages the
+    // resources the Robolectric tests load, and the task re-runs; both were checked the
+    // same way.
+    inputs.file(rootProject.file("PRIVACY.md"))
+        .withPropertyName("privacyPolicy")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("pipeline-editor.html"))
+        .withPropertyName("browserEditorHtml")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
