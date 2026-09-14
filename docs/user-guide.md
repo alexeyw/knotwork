@@ -2906,12 +2906,12 @@ to flag that the agent has paused background work.
 
 ## About
 
-**More → About** shows the app's brand mark, version / build /
-commit, a **Documentation** card that opens [Help](#the-help-screen),
-the open-source license name (Apache 2.0), a hand-curated acknowledgments list of the libraries
-that ship inside the app, and a short privacy summary. Tap
-`Open license text` to load the license verbatim in your browser, or
-`Read privacy policy` for the detailed privacy stance.
+**More → About** shows the app's brand mark, version / build / commit, a
+**Documentation** card that opens [Help](#the-help-screen), the open-source
+license name (Apache 2.0), a hand-curated acknowledgments list of the libraries
+that ship inside the app, and a short privacy summary. Tap `Open license text`
+to load the license verbatim in your browser, or `Read privacy policy` for the
+detailed privacy stance.
 
 ---
 

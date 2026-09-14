@@ -26,7 +26,8 @@ details.
   them: Tools and Triggers from a book icon in the top bar, straight to their
   section of the user guide; the pipeline editor from its overflow menu; and
   external automation from the settings hint — which fills a link slot that had
-  been rendered but never filled since it was written. The last step of onboarding points at the FAQ.
+  been rendered but never filled since it was written. The last step of
+  onboarding points at the FAQ.
 
   **The links follow the build.** A release build opens the documentation at the
   tag of the version installed, so a reader is not sent to a description of a

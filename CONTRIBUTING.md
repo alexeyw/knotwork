@@ -121,9 +121,8 @@ running `check` alone is a narrower gate than the one that decides the merge.
   `CHANGELOG.md`, `SECURITY.md` and `docs/roadmap.md` (`verifyVersionSources`),
   the in-app documentation links and the copies of documents bundled into the
   app (`verifyDocumentationLinks`, `verifyBundledDocs`). External `http` links
-  are reported weekly by a separate workflow and never gate a merge. The full roster of
-  gates lives in
-  [`docs/static-analysis.md`](docs/static-analysis.md).
+  are reported weekly by a separate workflow and never gate a merge. The full
+  roster of gates lives in [`docs/static-analysis.md`](docs/static-analysis.md).
 
 Run `./gradlew check :buildSrc:test` **locally before pushing**. Pushing
 without running it just trades local feedback for slower CI feedback.
