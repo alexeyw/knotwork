@@ -181,8 +181,10 @@ detekt (including the type-resolution gate, `detektFullDebug` +
 flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the `:catalog`
 screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
 differs from its committed baseline beyond anti-aliasing fails the build; capture
-with `KnotworkRoborazziOptions`), and
-`koverVerifyFullDebug`. Lint must pass with no new warnings.
+with `KnotworkRoborazziOptions`, which `SnapshotComparisonOptionsGuardTest`
+requires of every capture), the documentation, version and store-listing gates,
+and `koverVerifyFullDebug`. Lint must pass with no new warnings. The full list,
+with what each gate guards, is in [`static-analysis.md`](static-analysis.md).
 
 `check` does not compile the instrumented source set, so CI compiles it in
 a separate step of the same job:
@@ -421,6 +423,18 @@ The areas below are **not** exercised by CI, and why:
   stock image grants a third-party caller the appop-protected
   `EXECUTE_APP_FUNCTIONS`, so the full caller → callee round-trip is
   verifiable only on a device build where the gate applies.
+- **System window insets.** Robolectric reports no status bar and no
+  navigation bar, so a screen that draws under the status bar renders exactly
+  like one that does not, and its screenshot baseline stays identical. That is
+  why the top-bar inset rule is a source check (`TopBarInsetGuardTest`, see
+  [`static-analysis.md`](static-analysis.md)) and not a screenshot, and why an
+  inset still needs a look on a device.
+- **Bundled documents surviving packaging.** The unit suite reads the bundled
+  FAQ and troubleshooting copies from the build directory. That they reach the
+  APK's assets is answered by the instrumented `HelpReaderNavigationTest`, which
+  opens the FAQ from the installed assets and follows a link to a troubleshooting
+  anchor; that the reader works with **no network** is part of the manual pass
+  below.
 - **Opening the SQLCipher-encrypted database.** Robolectric cannot load
   the SQLCipher native library, so JVM tests never open the real
   encrypted database. That the passphrase provisioning, keystore-backed
@@ -433,16 +447,17 @@ The areas below are **not** exercised by CI, and why:
 
 ### Compensating control: manual smoke on the reference device
 
-These gaps are covered by a **manual smoke test on the reference
-device — Samsung Galaxy S25 Ultra (Android 16)** — performed before every
-integration merge into `main`, plus a manual TalkBack walkthrough of the
-ratified happy paths. The emulator suite narrowed what that pass has to
-carry — Room migrations, DAO round-trips and the Compose flows are now
-answered automatically — but it did not replace it: the remaining items
-above are the ones only real hardware can decide. The pre-release quality gate in
-[`release.md`](release.md) § *Quality gate before release* builds on the
-same rule: automated checks first, manual on-device verification as the
-final word.
+These gaps are covered by a **manual smoke test on the reference device —
+Samsung Galaxy S25 Ultra (Android 16)** — performed before every integration
+merge into `main`, plus a manual TalkBack walkthrough of the ratified happy
+paths. A release also opens every in-app documentation link from the installed
+build, and the Help screen in airplane mode ([`release.md`](release.md) §
+*Cutting a release*). The emulator suite narrowed what that pass has to carry —
+Room migrations, DAO round-trips and the Compose flows are now answered
+automatically — but it did not replace it: the remaining items above are the
+ones only real hardware can decide. The pre-release quality gate in
+[`release.md`](release.md) § *Quality gate before release* builds on the same
+rule: automated checks first, manual on-device verification as the final word.
 
 This compromise is reasonable for a small-team project without a device
 farm, but it is a compromise. If a change touches any of the areas listed

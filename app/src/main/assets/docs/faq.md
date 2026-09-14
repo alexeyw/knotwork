@@ -364,14 +364,15 @@ you a figure it would have to guess. The token limit is the closest control.
 
 ### How do I stop a run that is already going?
 
-You mostly cannot, and it is worth knowing exactly what the **stop** button in
-the composer does: it detaches the screen from the run. The run keeps executing,
-and its answer still lands in the conversation. What actually ends a run is
-**Stop the run** on a limit pause, the repetition detector, or — for a chain of
-scheduled tasks — **More → Active tasks → Stop all scheduled tasks**, which also
-cancels one that is executing. The limit pause is the one reliable moment a run
-offers to stop: it waits for an answer rather than pressing on. A per-run cancel
-is not built yet; see [Known limitations](#known-limitations).
+Tap **stop** in the chat's composer. It ends the run, not just the screen's view
+of it: the work stops, and the conversation gets a line saying the run was
+stopped before it could answer. A message still waiting behind another run is
+cancelled the same way. Switching to another chat does **not** stop anything —
+the run keeps going, which is why you can come back to it.
+
+Two more controls end a run: **Stop the run** on a limit pause, and — for a
+chain of tasks the agent scheduled for itself — **More → Active tasks → Stop all
+scheduled tasks**, which also cancels one that is executing.
 
 ### My run stopped by itself. Which limit was it?
 

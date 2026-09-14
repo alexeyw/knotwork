@@ -43,8 +43,8 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyForbiddenVocabulary`              | Fails if any public text file carries the product's pre-rename name or internal planning numbering (see below). |
 | `:app:verifyNoOrphanedKdoc` + `:catalog:verifyNoOrphanedKdoc` | Fails if a KDoc block documents no declaration — and so silently leaves the one below it undocumented (see below). |
 | `:app:verifyDialogInventory`                  | Fails if a dialog or sheet is composed in `:app` without a recorded reason, putting it out of reach of the design-system baselines (see below). |
-| `:app:checkNoInternalFqn`                     | Custom rule: forbid `app.knotwork.android.*` FQN references in code body.   |
-| `:app:verifyBrowserEditorConstants`           | Fails if `pipeline-editor.html` `AUTO-GEN` blocks drift from the domain sources and the bundled presets / prompt templates, or if its node forms offer a control for a field no run reads. |
+| `:app:checkNoInternalFqn`                     | Custom rule: forbid `app.knotwork.android.*` FQN references in code body (see below). |
+| `:app:verifyBrowserEditorConstants`           | Fails if `pipeline-editor.html` `AUTO-GEN` blocks drift from the domain sources and the bundled presets / prompt templates, or if its node forms offer a control for a field no run reads (see below). |
 | `:app:verifyDocsHygiene`                      | Custom rule: guard the public docs against LLM tool-call artifacts and internal-document references (see below). |
 | `:app:verifyExternalAutomationDocs`           | Fails if the `docs/external-automation.md` `AUTO-GEN` tables drift from the contract sources (see below). |
 | `:app:verifySettingsHelpDocs`                 | Fails if the settings reference table in `docs/user-guide.md` drifts from the shipped help strings (see below). |
@@ -53,7 +53,8 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyDocLinks`                         | Fails if a relative link or an `#anchor` anywhere in the documentation leads nowhere (see below). External `http` links are reported, not gated. |
 | `:app:verifyMermaidDiagrams`                  | Fails if an embedded Mermaid diagram is structurally broken (see below). |
 | `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
-| `:app:verifyVersionSources`                   | Fails if the README version badge or `CHANGELOG.md` disagrees with the declared `versionName` (see below). |
+| `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
+| `:app:verifyVersionSources`                   | Fails if any hand-written copy of the version — README badge and prose, the CHANGELOG heading and links, `SECURITY.md`, the roadmap's release line — disagrees with the declared `versionName` (see below). |
 | `:app:testFullDebugUnitTest` (`CookbookRuntimeReachTest`, `CookbookRecipeValidationTest`) | Fails if the cookbook's run-time verdicts disagree with `NodeConfigCodec`, or a published recipe no longer imports (see below). |
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
 | `:app:verifyLintBaselineOverrides`            | Custom rule: fail if a lint baseline suppresses a check demoted to informational severity (see below). |
@@ -61,6 +62,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest` (Konsist suite)      | Architecture guard: Clean-Architecture layer boundaries (see below).        |
 | `:app:testFullDebugUnitTest` (`TopBarInsetGuardTest`) | Fails if a bar at the top of a screen neither applies the status-bar inset nor names the parent that does (see below). |
 | `:app:testFullDebugUnitTest` (`BundledDocumentationRoutingGuardTest`) | Fails if a call that can open a document bundled into the app passes no in-app reader, and so sends it to the browser (see below). |
+| `:app:testFullDebugUnitTest` (`ShippedPipelineLayoutTest`) | Fails if two node cards overlap in a bundled pipeline preset or a cookbook recipe (see below). |
 | `:catalog:verifyRoborazziDebug`               | Fails if a design-system screenshot differs from its committed baseline (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
@@ -617,7 +619,7 @@ every gate stayed green; the baselines were only as current as the last time
 someone ran `verifyRoborazziDebug` by hand. `check` now depends on it, so the unit
 tests run in verify mode and any pixel difference fails the build.
 
-Two things make it a gate rather than a ritual:
+Three things make it a gate rather than a ritual:
 
 - **The baselines are declared as test inputs.** They sit on no classpath, so
   without that declaration replacing a baseline left `testDebugUnitTest`
@@ -1081,7 +1083,8 @@ by the width of every code block above it.
 ## In-app documentation link guard (`verifyDocumentationLinks`)
 
 `:app:verifyDocumentationLinks` is wired into `check`. It guards the registry of
-documents the **app** links out to — the About screen's Documentation card, the
+documents the **app** links out to — the Help screen's list (which the About
+screen's Documentation card opens) and the in-app reader's *Open in browser*, the
 onboarding Ready step, the Tools and Triggers top bars, the editor's overflow,
 and the external-automation settings hint.
 
@@ -1503,6 +1506,105 @@ hand inventory had already declared complete. The pure logic is unit-tested in
 
 ---
 
+## Internal-FQN guard (`checkNoInternalFqn`)
+
+A fully-qualified `app.knotwork.android.…` reference in a code body is a type
+the file never imports: it hides a dependency from the import list — the one
+place a reader and the Konsist layer rules look for it — and it survives
+a package move as a string nobody searches for. `:app:checkNoInternalFqn` fails
+when one appears in `:app`'s `main`, `test` or `androidTest` Kotlin sources.
+
+What it deliberately leaves alone:
+
+- `import` and `package` statements, which is where the name belongs;
+- lines that start with `//` or `*` (line comments and the body of a KDoc
+  block), where a fully-qualified name is prose;
+- **intent action strings.** Android namespaces an action by the application id
+  (`app.knotwork.android.action.RUN_PIPELINE`), so it reads exactly like an
+  internal name while being wire data that other apps send — nothing an import
+  could replace, and frozen once a caller uses it. The action prefix is scrubbed
+  from the line before matching rather than exempting the line, so a real
+  fully-qualified reference beside an action string is still caught.
+
+It is a line scan, not a parser: a name split across lines, or inside a
+multi-line string, goes unseen.
+
+---
+
+## Browser-editor constants guard (`verifyBrowserEditorConstants`)
+
+The browser pipeline editor (`pipeline-editor.html`) is a single file that runs
+with no build step, so it carries its own copy of part of the app: the node
+types, the prompt variables, the local tools, the default system prompts, and
+every bundled pipeline preset and prompt template. Each copy sits between
+`AUTO-GEN` markers and is produced by `:app:generateBrowserEditorConstants` from
+the app's own sources — `NodeType.kt`, `PromptTemplateModule.kt` and the
+providers it binds, `LocalToolsModule.kt`, `DefaultPrompts.kt`, and the JSON
+under `assets/presets/pipelines/` and `assets/presets/prompts/` in the order
+`BundledPresetCatalog` displays them. `:app:verifyBrowserEditorConstants` fails
+when a committed block differs from what the generator would write now, and names
+the drifted blocks. Only the blocks are generated; the editor's own logic around
+them is hand-written.
+
+**Why the presets and templates are generated too.** They were the largest
+copies, and they were kept by hand. When they were brought under the generator,
+six of fifteen presets still carried prompt wording the app had replaced because
+it made on-device tool calls fail, and four of twenty-one templates were out of
+date — a change the commit message said had been mirrored had reached only the
+generated prompt block.
+
+**The second half: no control for a field no run reads.** The same task runs
+`BrowserEditorInertControlGuard` over the editor's `renderFormFields`. A node
+field that decodes and round-trips but is never read at run time (see
+[decision 0005](decisions/0005-a-control-that-cannot-act-is-removed.md)) must not be
+offered as a control, because a control that saves a value the run ignores
+teaches its user that the app ignores them. Which fields count is not restated:
+the guard reads `CookbookDocsGenerator.FIELD_REACH`, the same verdicts the
+cookbook publishes and `CookbookRuntimeReachTest` checks against the codec. The
+fields stay in the editor's encode/decode, so files still round-trip. The guard
+refuses to pass when `renderFormFields` or a node type's `case` cannot be found,
+so a rename cannot make it check nothing.
+
+To fix a failure, run `./gradlew :app:generateBrowserEditorConstants` and commit
+the updated `pipeline-editor.html`; for the inert-control half, remove the
+control and its validation from the form.
+
+### Observed failing
+
+The inert-control guard's first run named **eight** controls — temperature,
+top-p, max new tokens and stop sequences on the on-device node; model,
+temperature, max tokens and timeout on the cloud node — against the seven the
+defect report had counted. The pure logic is unit-tested in `buildSrc`
+(`BrowserEditorConstantsGeneratorTest`, `BrowserEditorInertControlGuardTest`).
+
+---
+
+## Shipped pipeline layout guard (`ShippedPipelineLayoutTest`)
+
+Node positions are canvas units, which are dp, and a node card is a fixed dp
+footprint. Every file this project ships as a pipeline — the bundled presets
+under `app/src/main/assets/presets/pipelines/` and the cookbook recipes under
+`docs/recipes/` — is laid out by hand, and nothing else would notice two cards on
+top of each other: the graph still parses and validates. The test reads each file
+as plain JSON, walks every `nodes` array it finds (so the preset format, the
+export format and a multi-pipeline bundle are all covered without depending on
+their serializers), and fails on any pair of cards closer than one grid step.
+
+A companion test fails if either directory contributes no graphs, because a path
+that stops resolving would otherwise make the overlap check pass over nothing.
+Editing either re-runs the test instead of answering from a cached pass: the
+presets are packaged Android resources of the unit tests, and the recipes are a
+declared test input.
+
+### Observed failing
+
+On its first run it found the comprehensive showcase preset overlapping **even at
+density 1** — hidden until then because the editor drew positions as screen
+pixels, which stacked every preset's cards on a dense phone anyway. Eight of its
+nodes were moved, in the preset and in the browser editor's copy.
+
+---
+
 ## R8 keep-rule guard (`verify<Variant>KeepRules`)
 
 Some keep rules protect code whose failure mode **no test in this gate can
@@ -1591,8 +1693,8 @@ tasks.named("check") { dependsOn("koverVerifyFullDebug") }
 ## CI
 
 The required job is defined in `.github/workflows/check.yml`. The workflow runs
-`./gradlew check` on every `pull_request → main` and every `push` to `main`
-(plus a manual `workflow_dispatch` trigger), uploads each report set —
+`./gradlew check :buildSrc:test` on every `pull_request → main` and every `push`
+to `main` (plus a manual `workflow_dispatch` trigger), uploads each report set —
 detekt / ktlint / unit-test / Kover / Roborazzi diffs — as a downloadable
 artifact on failure, and is configured with `concurrency.cancel-in-progress` so
 a new push supersedes any older run on the same branch. The **lint** report is
@@ -1625,7 +1727,10 @@ called as the first job of `.github/workflows/release.yml`, so a release cannot
 be built against a definition of "green" that has drifted from the one pull
 requests are measured by. `release.yml` adds the checks that only make sense on
 a release build — the tag ↔ `versionName` agreement, `verify<Variant>KeepRules`
-on both flavours, and a signature check of every published artefact against the
+on both flavours, a check that the `foss` APK carries no Firebase configuration,
+a check that both APKs ship the native libraries the app loads (LiteRT-LM and
+MediaPipe Tasks) and not the MediaPipe text-generation library the build
+excludes, and a signature check of every published artefact against the
 expected certificate fingerprint. The release procedure itself is documented in
 [`release.md`](release.md) §9.
 

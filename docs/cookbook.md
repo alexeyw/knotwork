@@ -311,8 +311,9 @@ same parser the app's import uses, and the graphs they produce through the same
 validator the editor's validation bar runs. A recipe that stopped importing
 would fail the build rather than fail you.
 
-**To use one:** download the `.json` file, then in the app open **Pipelines →
-Visual Orchestrator → Import JSON** and pick it. A bundle (the composition
+**To use one:** download the `.json` file, then in the app open the **Pipelines**
+tab, tap **Import JSON** in the *From browser editor* footer at the bottom of the
+list, and pick it. A bundle (the composition
 recipe) is detected automatically and imports every pipeline it contains. Once
 imported, a pipeline runs when you bind it to a chat and send a message — see
 [Binding a pipeline to a chat](user-guide.md#binding-a-pipeline-to-a-chat).

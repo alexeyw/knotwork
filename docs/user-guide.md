@@ -33,6 +33,15 @@ before the next release ships.
 10. [Files](#files)
 11. [Memory](#memory)
 12. [Settings](#settings)
+13. [Getting around](#getting-around)
+14. [More tab](#more-tab)
+15. [Managing local models](#managing-local-models)
+16. [Prompt library](#prompt-library)
+17. [Skill library](#skill-library)
+18. [Active tasks](#active-tasks)
+19. [Live metrics](#live-metrics)
+20. [About](#about)
+21. [Finding the documentation from inside the app](#finding-the-documentation-from-inside-the-app)
 
 Two companion pages sit beside this one: [`faq.md`](faq.md) for whether a
 thing is supported and where it lives, and
@@ -61,8 +70,10 @@ The bottom of the screen always shows the four navigation tabs:
 - **Chat** — talk to the agent (the default tab the app opens on).
 - **Pipelines** — browse and edit the agent's reasoning pipelines.
 - **Tools** — manage AppFunctions and connected MCP servers.
-- **More** — secondary screens (Memory, Models, Prompt library,
-  Skill library, Active tasks, Live metrics, Settings, About).
+- **More** — every other screen: Triggers, the pipeline preset library
+  and Tasks; Memory, Files and archived chats; the prompt and skill
+  libraries and Models; Settings, Help, Live metrics and About. See
+  [More tab](#more-tab).
 
 The Back gesture returns you up the inner stack of the current tab; from
 Chat, the tab the app opens on, it closes the app. The full contract —
@@ -215,7 +226,7 @@ from the same screen:
 |------------------|-----------------------------------------------------------------|
 | Empty            | A brand-new thread with no messages — shows the active pipeline's starter prompts. |
 | Idle             | History present, no in-flight request. The default.             |
-| Generating       | The assistant is producing tokens.                              |
+| Generating       | Your message is on its way to an answer. The message appears at once, marked **Sending** until it is stored; the bubble under it reads **Loading model…** while the model loads, **Waiting…** while the run is queued behind another one (a trigger, a share, another chat), and streams the answer once the run starts. |
 | HITL Confirm     | A tool call awaits your approval (read-only / sensitive /       |
 |                  | destructive — each tier surfaces a different confirmation UI).  |
 | Clarification    | The assistant asks you for more details before continuing.      |
@@ -1200,11 +1211,11 @@ pan / zoom canvas with the following gestures:
   Fail, `Router` → one port per declared class) the dot you grabbed
   determines which branch the edge represents.
 - **Delete a connection** — two paths:
-  1. **Single-tap** the edge → it highlights in accent colour and the
-     toolbar 🗑 Delete becomes active. Press 🗑 to remove. Or
+  1. **Single-tap** the edge → it highlights in accent colour; then
+     choose **Delete selection** in the overflow menu. Or
   2. **Long-press** the edge → confirmation dialog "Remove
      connection?" opens; tap Remove.
-  Both paths are undoable from the toolbar Undo button.
+  Both paths are undoable with **Undo** in the overflow menu.
 - **Tap a node** — select it (single-select mode).
 - **Tap a selected node** — opens its **configuration sheet**
   (`NodeConfigSheet`) so you can edit the per-type properties.
@@ -1214,13 +1225,21 @@ pan / zoom canvas with the following gestures:
 - **Long-press the empty canvas** — opens a **radial quick-add menu**
   with one labelled tile per node type. Picking a tile spawns the node
   at the long-press point and immediately opens its configuration sheet.
-- **Toolbar** — inline-editable pipeline name on the left; Undo /
-  Redo / Delete (selection-aware: edge if one is selected, otherwise
-  selected nodes) / Auto-layout / overflow on the right.
+- **Toolbar** — back arrow, the inline-editable pipeline name with a
+  one-line status under it (`Editing · nodes N · edges N`, or the issue
+  count when saving is blocked), and an overflow menu on the right. Every
+  editing command lives in that menu: **Save pipeline**, **Undo**,
+  **Redo**, **Rename node…**, **Delete selection** (the selected edge if
+  there is one, otherwise the selected nodes), **Save as preset…**,
+  **Auto-layout**, **Mini-map**, **Show grid** / **Hide grid**,
+  **Pipeline cookbook**, **Find node…** and **Paste**.
   Auto-layout re-arranges nodes via a Sugiyama-style hierarchy
   (longest-path layering + median crossing reduction) so the graph
-  reads top-to-bottom. **Save pipeline** lives in the overflow menu and
-  is the action that writes your edits to disk.
+  reads top-to-bottom. **Save pipeline** is the action that writes your
+  edits to disk.
+- **Zoom rail** — on the right edge of the canvas: zoom in, zoom out, and
+  **Fit pipeline to view**, which frames the whole graph. The editor does
+  the same framing when it opens a pipeline, never zooming past 100 %.
 
   Beside the node count sits an **Unsaved** marker — a coloured dot and the
   word — shown from the moment the editor holds anything that is not in
@@ -1246,9 +1265,9 @@ it. The bar collapses to a single-line "Pipeline is valid" when there are
 no errors. Outstanding errors block saving, and the toolbar subtitle
 says so.
 
-The editor also has an **Import JSON** button that lets you load a
-pipeline exported from the standalone browser editor (see
-[Browser pipeline editor](#browser-pipeline-editor)).
+A pipeline exported from the standalone browser editor is loaded with
+**Import JSON**, in the footer of the pipeline library rather than in the
+editor (see [Importing into the app](#importing-into-the-app)).
 
 ### Node configuration sheets
 
@@ -2647,9 +2666,9 @@ thirteen rows sit in four named sections:
 
 | Section | Rows |
 |---|---|
-| **Automation** | Triggers · Library · Tasks |
-| **Your content** | Memory · Files · Archive |
-| **Building blocks** | Prompts · Skills · Models |
+| **Automation** | Triggers · Pipeline preset library · Tasks |
+| **Your content** | Memory · Files · Archived chats |
+| **Building blocks** | Prompt library · Skill library · Models |
 | **App** | Settings · Help · Live metrics · About |
 
 Automation comes first because it holds the reasons to open More at all,
@@ -2657,11 +2676,14 @@ and App comes last because that is where Settings is looked for. The
 sections are labels: nothing here is a separate screen, and no row goes
 anywhere different than it did before.
 
-Each row carries a live counter (memory chunks, active model name,
-prompt categories, app version). Only **Tasks** carries a numeric badge,
-which is what keeps a badge meaning "something is running right now" — a
-stored quantity like the archived-chat count lives in the row's subtitle
-instead. A footer pill summarises the privacy state — when the
+Most rows carry a live subtitle — memory chunks, the active model name,
+prompt categories and prompts, the presets you saved, the files in the
+workspace and their size, the app version and build. **Tasks** reads
+`N running · N queued`, where *queued* counts only chats waiting behind
+another run, and it is the only row with a numeric badge: the running
+count. That is what keeps a badge meaning "something is running right
+now" — a stored quantity like the archived-chat count lives in the row's
+subtitle instead. A footer pill summarises the privacy state — when the
 agent has not made any outbound LLM or MCP call for a minute, the
 pill reads `on-device · no network calls in last N m`; an in-flight
 cloud call flips the indicator to `online · cloud enabled`. The
@@ -2868,7 +2890,9 @@ When at least one such task is queued or running, the top bar offers
 **Stop all scheduled tasks**. It settles every task the agent scheduled
 for itself, including any running at that moment, and nothing else:
 automations and their triggers keep working, and nothing is deleted —
-a task can simply be scheduled again. It exists for the case below.
+a task can simply be scheduled again. It exists for
+[a task that keeps scheduling itself](#a-task-that-keeps-scheduling-itself),
+which cancelling the one queued row by hand cannot end.
 
 ## Live metrics
 
@@ -2882,20 +2906,21 @@ to flag that the agent has paused background work.
 
 ## About
 
-**More → About** shows the app's brand mark, version / build /
-commit, a **Documentation** card, the open-source license name
-(Apache 2.0), a hand-curated acknowledgments list of the libraries
-that ship inside the app, and a short privacy summary. Tap
-`Open license text` to load the license verbatim in your browser, or
-`Read privacy policy` for the detailed privacy stance.
+**More → About** shows the app's brand mark, version / build / commit, a
+**Documentation** card that opens [Help](#the-help-screen), the open-source
+license name (Apache 2.0), a hand-curated acknowledgments list of the libraries
+that ship inside the app, and a short privacy summary. Tap `Open license text`
+to load the license verbatim in your browser, or `Read privacy policy` for the
+detailed privacy stance.
 
 ---
 
 ## Finding the documentation from inside the app
 
-Every document in `docs/` opens from the app itself, so you never have
-to go looking for a URL — and the two you are most likely to want when
-something is wrong open with **no network at all**.
+The five documents written for people using the app open from the app
+itself, so you never have to go looking for a URL — and the two you are
+most likely to want when something is wrong open with **no network at
+all**.
 
 ### The Help screen
 
@@ -2906,7 +2931,7 @@ the [external-automation contract](external-automation.md).
 
 Each row says what is inside it and, in small type, **where it is read
 from and how big it is** — `on this device · 11 problems`, or
-`opens in browser · 2 934 lines`. A row that leaves the app also carries
+`opens in browser · 3,000 lines`. A row that leaves the app also carries
 a small outward arrow after its name, so you know before you tap
 whether you are staying put.
 
@@ -2936,9 +2961,9 @@ when you want the web version of what you are reading.
 ### The documents that stay on the web
 
 This guide, the cookbook and the automation contract open in a browser.
-That is deliberate rather than unfinished: this guide is nearly three
-thousand lines with diagrams and screenshots and is genuinely better
-with a browser's search, and the cookbook's generated tables use
+That is deliberate rather than unfinished: this guide runs to about
+three thousand lines and is genuinely better with a browser's search,
+and the cookbook's generated tables use
 formatting the in-app reader cannot show — it would drop parts of them
 silently, which is worse than sending you to the web.
 
@@ -2947,14 +2972,15 @@ tells you which documents *are* on your device.
 
 ### Links that go straight to the point
 
-Four screens link to the part that explains them:
+Four screens link to the document that explains them — two of them to
+the exact section:
 
 | Where | What it opens |
 |---|---|
-| **Tools** — the book icon in the top bar | Adding an MCP server |
-| **Triggers** — the book icon in the top bar | The triggers section of this guide |
-| **Pipeline editor** — overflow menu → *Pipeline cookbook* | What every node does |
-| **Settings → Background → External automation**, the hint's *Read the contract* | The external-automation contract |
+| **Tools** — the book icon in the top bar | This guide, at *Adding an MCP server* |
+| **Triggers** — the book icon in the top bar | This guide, at *Triggers* |
+| **Pipeline editor** — overflow menu → *Pipeline cookbook* | The cookbook, from the top |
+| **Settings → Background & triggers → External automation**, the hint's *Read the contract* | The external-automation contract, from the top |
 
 The last step of onboarding carries the same pointer to the FAQ, and
 opens it in the built-in reader — so it works before you have set up a

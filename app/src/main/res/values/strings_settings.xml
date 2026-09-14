@@ -282,7 +282,7 @@
     <string name="help_doc_faq_title">FAQ</string>
     <string name="help_doc_faq_desc">Short answers, each one pointing at the screen where you actually do the thing.</string>
     <string name="help_doc_user_guide_title">User guide</string>
-    <string name="help_doc_user_guide_desc">The long form: every screen, with diagrams and screenshots, and a search box that works.</string>
+    <string name="help_doc_user_guide_desc">The long form: every screen and every flow, with a search box that works.</string>
     <string name="help_doc_cookbook_title">Cookbook</string>
     <string name="help_doc_cookbook_desc">Worked pipelines to copy, and the generated reference for every node type.</string>
     <string name="help_doc_external_automation_title">External automation</string>

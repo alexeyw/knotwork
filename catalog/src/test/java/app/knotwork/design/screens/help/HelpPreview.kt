@@ -49,9 +49,8 @@ object HelpPreview {
             HelpDocument(
                 id = "user-guide",
                 label = "User guide",
-                description = "The long form: every screen, with diagrams and screenshots, and a search box " +
-                    "that works.",
-                state = "opens in browser · 2,934 lines",
+                description = "The long form: every screen and every flow, with a search box that works.",
+                state = "opens in browser · 2,986 lines",
                 delivery = HelpDelivery.IN_BROWSER,
             ),
             HelpDocument(
