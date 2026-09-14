@@ -162,7 +162,7 @@ object BrowserEditorConstantsGenerator {
     // ------------------------------------------------------------------ //
 
     /**
-     * Returns [html] with all four auto-generated blocks regenerated from the
+     * Returns [html] with every auto-generated block regenerated from the
      * supplied Android sources. Pure and idempotent: `render(render(x)) == render(x)`.
      *
      * @param html Current `pipeline-editor.html` content (must already contain
