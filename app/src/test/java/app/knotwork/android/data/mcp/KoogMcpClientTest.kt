@@ -94,7 +94,7 @@ class KoogMcpClientTest {
         // Advertising every parameter as a string made the model send "300" for a
         // numeric field, and the server rejected the call on schema validation —
         // which made any MCP tool with a non-string parameter unusable
-        // (phase-40 finding F11).
+        // (found by a directed on-device test).
         assertEquals("integer", props.getJSONObject("duration").getString("type"))
         assertEquals("number", props.getJSONObject("ratio").getString("type"))
         assertEquals("boolean", props.getJSONObject("verbose").getString("type"))

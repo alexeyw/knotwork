@@ -127,6 +127,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ToolsVariableProvider.kt` - Resolves `$TOOLS` to the active tools list (`name — description`, one per line).
     - `UserVariableProvider.kt` - Resolves `$USER` to the identity card's display name (currently "Anonymous").
   - `repositories/` - Repository implementations.
+    - `AssetBundledDocumentationRepository.kt` - Reads the documentation the build copied into `assets/docs`.
     - `AssetBundledSkillSource.kt` - Asset-backed `BundledSkillSource`: lists the JSON files under `assets/presets/skills`, parses each via `SkillJsonSerializer` on the IO dispatcher, skipping malformed files.
     - `BestEffortStore.kt` - Shared `absorbingStoreFailure` helper implementing the best-effort persistence contract (absorb storage failures, re-throw `CancellationException` first) reused by the run-record and run-trace repositories.
     - `BundledSkillSource.kt` - Interface reading the bundled skills under `assets/presets/skills` (split from its impl so the repository seed path is unit-testable with a fake).
@@ -218,6 +219,7 @@ Only Kotlin files appear inside the generated blocks.
   - `constants/` - Domain-level constants.
     - `BundledPresetCatalog.kt` - Declared presentation order of the bundled pipeline-preset catalogue (`DISPLAY_ORDER`: onboarding scenarios → showcases → build-your-own templates) plus `rankOf`. Applied by `LocalPipelinePresetRepositoryImpl.getBundledPresets`, which would otherwise emit presets in `AssetManager.list()` (alphabetical) order; `PipelinePresetCatalogValidationTest` requires every user-facing bundled preset to be ranked here.
     - `DefaultPrompts.kt` - Default system prompts.
+    - `DocumentationLinks.kt` - Every documentation entry point the app can open, generated from the build.
     - `ExternalAutomationContract.kt` - Single source of truth for the external-automation wire vocabulary (broadcast actions, request extra keys, callback keys). `docs/external-automation.md` is generated from it by `:app:generateExternalAutomationDocs`, and `:app:verifyExternalAutomationDocs` fails `check` on drift. Values are frozen once released — callers live in other apps.
     - `ModelDiscoveryConstants.kt` - Cross-layer constants for Hugging Face model discovery: Hub base URL, curated `litert-community` author, `.litertlm` extension, default page size, and the `resolve`/model-card URL builders.
     - `NotificationChannels.kt` - Canonical ids of every Android `NotificationChannel` (foreground service status, approval prompts, scheduled-task results).
@@ -226,6 +228,7 @@ Only Kotlin files appear inside the generated blocks.
     - `PerformanceConstants.kt` - Tunables for the model performance feature: `SAMPLE_WINDOW` (runs averaged into the Performance card) and `MEMORY_SAMPLE_INTERVAL_MS` (peak-native-heap sampling cadence). Code-level (no Settings UI).
     - `PipelineExecutionDefaults.kt` - Engine-level timing and log-size constants consumed by `GraphExecutionEngine` and the LLM-backed node executors (post-emit pause, LiteRT pre-warm delay, node-IO log char limit).
     - `PromptPresetConstants.kt` - Cross-module limits + `LLM_DRIVEN_NODE_TYPES` set shared by the prompt-preset domain: `MAX_NAME_LENGTH = 60`, `MAX_SYSTEM_PROMPT_LENGTH = 8000`, and the set of node types that can host a system-prompt preset.
+    - `RepositoryLinks.kt` - The public repository, and the URLs the app builds from it.
     - `SettingsDefaults.kt` - Default values for every user-tunable preference (sampling params, timeouts, pipeline-step bounds, Ollama context window). Single source of truth shared by `SettingsManager`, `SettingsViewModel`, and the visual orchestrator.
     - `TimeAndIdConstants.kt` - Cross-module numeric constants for time-unit conversion (`MS_PER_SECOND`, `MS_PER_MINUTE`) and the notification-id partition range shared by approval-publish/receive paths.
   - `engine/` - Engine interfaces and abstractions.
@@ -290,6 +293,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AgentTask.kt` - Agent task model.
     - `AgentTool.kt` - Agent tool model.
     - `AppError.kt` - App error model.
+    - `BundledDocument.kt` - One document that ships inside the APK, as the reader needs it.
     - `ChatHistorySummary.kt` - Domain model of a session's cached compressed-history summary (`sessionId`, `summary`, incremental `coveredMessageCount` cursor, `updatedAt`).
     - `ChatMessage.kt` - Chat message model.
     - `ChatSession.kt` - Chat session model.
@@ -412,6 +416,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ContentReportComposer.kt` - Pure renderer: subject line plus a Markdown body (note, category, block-quoted model output capped at `MAX_QUOTED_CHARS` with the omission stated, build metadata). Framework-free so "what exactly is in a report" is unit-testable.
   - `repositories/` - Repository interfaces.
     - `ApiKeyRepository.kt` - API key repository interface.
+    - `BundledDocumentationRepository.kt` - Access to the documentation that ships inside the APK.
     - `ChatRepository.kt` - Chat repository interface.
     - `ClarificationRepository.kt` - Bridges the agent (suspending until the user answers) and the UI (publishing the pending question, forwarding the reply).
     - `CrashReportingRepository.kt` - Domain gateway for anonymous crash reporting (opt-in). All methods are no-op until `SettingsRepository.crashReportingEnabled` becomes `true`.
@@ -506,7 +511,7 @@ Only Kotlin files appear inside the generated blocks.
     - `CompressChatHistoryUseCase.kt` - Background pass that bounds a long session's history: when over the token budget, summarises the tail older than the live window into one `ChatHistorySummary` via a single local-model call (`DefaultPrompts.HistoryCompression`), incrementally folding the prior summary plus only the newly-aged-out messages. Best-effort (blank reply / inference error / unavailable model / persistence failure all skip, never throw). Driven by `ChatHistoryCompressionCoordinator`.
     - `CreatePipelineUseCase.kt` - Creates and persists a new pipeline pre-seeded with `INPUT → OUTPUT` so it passes `PipelineGraph.validate` immediately; powers the library FAB.
     - `DailyTriggerTime.kt` - Pure device-local daily time math (`instantTodayMillis` / `millisUntilNext`, with coerced hour/minute bounds) shared by the evaluator (fired-today check) and the scheduler (initial delay) so both compute the same instant.
-    - `DeletePipelineUseCase.kt` - Deletes a pipeline by id; refuses to delete the pipeline currently loaded in the editor (caller passes the active id).
+    - `DeletePipelineUseCase.kt` - Deletes a pipeline by id — any pipeline, including the one the editor holds (the ViewModel moves the editor off it).
     - `DeletePromptTemplateUseCase.kt` - Deletes a prompt template by id via `PromptRepository`.
     - `DuplicatePipelineUseCase.kt` - Deep-copies an existing pipeline with fresh ids for the graph and every node/connection; suffixes the name with `(copy)`.
     - `EstimateCompactionUseCase.kt` - LLM-free preview of a prospective compaction pass: loads the same candidate set as `MemoryCompactionUseCase`, derives the clusterer's `k`, and returns a `CompactionEstimate` (≈ removed chunks / freed bytes / runtime) for the Memory screen's "Compact memory?" confirm dialog.
@@ -556,6 +561,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ResetLockedDatabaseUseCase.kt` - Wraps `DatabaseResetService` for the splash recovery screen's typed-confirm "erase all data" action.
     - `ResetSamplingDefaultsUseCase.kt` - Resets temperature / top-K / top-P / max context / max steps to the documented defaults.
     - `ResetToRecommendedDefaultsUseCase.kt` - Restores every tunable preference to its `SettingsDefaults` value (backs Settings → Privacy → "Reset all settings"); never touches user data/config.
+    - `ResolveDocumentationLinkUseCase.kt` - Decides what tapping a link inside a bundled document should do.
     - `ResolveEntryInferenceUseCase.kt` - Classifies the inference entry of the pipeline a chat session would run (`EntryInferenceKind` = `LOCAL` / `CLOUD` / `NONE`) by resolving the bound-or-default graph: `CLOUD` when the `INPUT` successor is a cloud node, `LOCAL` when a vision sink (`LITE_RT` node with `originalTask`) is reachable from `INPUT`, else `NONE`. Mirrors the engine's delivery predicate so the multimodal send-time pre-flight blocks cloud-first / non-vision-model / no-sink pipelines instead of silently dropping the image.
     - `ResolveRunCeilingsUseCase.kt` - Resolves which configured ceilings apply to a run, keyed on `RunOrigin.isInteractive` so the interactive/background split is declared once rather than restated here. Follows the `RunRateCeiling` precedent: the resolved value carries the limits, never the counter.
     - `ResolveSurfacePipelineUseCase.kt` - Reads the pipeline bound to an `EntrySurface` (or `null` = inert) from `SettingsRepository`; exhaustive-`when` read dispatch.
@@ -660,6 +666,7 @@ Only Kotlin files appear inside the generated blocks.
       - `JournalExport.kt` - Platform half of the journal export, shared by the trigger journal and the external-request journal: the MIME type and filename stems, the `generatedAt` / filename stamps (the **same** ones `TriggerJournalDumpReceiver` writes, so an adb dump and an in-app export are one document), the `FileProvider` share — staged as a file, never `EXTRA_TEXT`, because a 2 000-row journal would blow the Binder budget — and the SAF document write. Its staging directory is a sibling of the Files screen's `shared/`, which that screen wipes on every workspace share.
       - `JournalExportActionHandlers.kt` - `rememberJournalExportHandlers` — the Compose wiring both journal screens use: a `CreateDocument` picker opened with a concrete MIME type, the share sheet, and a snackbar for **every** outcome including the empty-journal save (reported with its count, since the file exists either way). Written once so the two screens cannot word the same operation differently, or drop it silently.
       - `JournalExportDelegate.kt` - The export half of a journal screen's ViewModel: renders the journal on demand and reports what happened.
+      - `OpenDocumentation.kt` - Opens a registry document in the browser; the single place `BuildConfig.DOCS_REF` is read, so the domain layer holds the path and never the URL.
       - `RunTerminationCopy.kt` - **The single place a typed run outcome becomes words.** Maps every `RunTerminationKind` to a tone, title, body, numbers line, one-clause banner and at most one action, and a `RunNoticeCause` to the advisory shown mid-run. Consumed identically by the chat tile, the strip above the composer, the background-run notification and the foreground service, so one event is worded once — six kinds used to render their own constant name to the user, and the ceiling message was assembled in the engine, persisted, and quoted verbatim in the docs. Retry is absent by construction: it re-runs the same turn into the same limit.
       - `UiText.kt` - Sealed `UiText` (`Resource` / `Dynamic` / `Joined` / `Empty`) used by `UiState`s to carry user-visible text without holding a `Context`.
       - `UiTextExt.kt` - `@Composable UiText.asString()` and `Context.resolve(UiText)` resolution helpers.
@@ -680,6 +687,12 @@ Only Kotlin files appear inside the generated blocks.
       - `FilesScreen.kt` - Slim mapper. Subscribes to `FilesViewModel`, projects `FilesUiState` to the catalog `FilesContent`; owns the pure `toViewState` projection (quota tone + usage text, dir/basename split, byte/relative-time labels) and the Android plumbing: the SAF `OpenDocument` (import) / `CreateDocument` (save-as) launchers and the `FileProvider`-backed share sheet that stages a per-share copy into `cacheDir/shared/`.
       - `FilesUiState.kt` - Files UI state: raw `WorkspaceFile` list + `WorkspaceUsage`, load/refresh flags, selection set, open `FilePreviewState`, pending-delete list and `CollisionState`; plus the `FilesEvent` one-shots (LaunchImport / LaunchSaveAs / ShareFiles / ShowMessage) and the `FilesMessage` snackbar kinds.
       - `FilesViewModel.kt` - Hilt ViewModel injecting the five workspace use cases. Owns listing/refresh, selection (long-press, toggle, select-all), preview open/close, single + bulk delete with confirm, import with collision detection (re-openable stream factory so the user's choice is honoured without re-picking), and save-as / share export (suspending `completeSaveAs` / `exportTo` so the destination stream stays open for the whole write).
+    - `help/` - Help: the list of documents the app can open, and the reader that opens a bundled one offline.
+      - `HelpReaderScreen.kt` - Reads one bundled document.
+      - `HelpReaderViewModel.kt` - Drives the reader for one bundled document.
+      - `HelpScreen.kt` - The Help screen: every document the app can open.
+      - `HelpStrings.kt` - Resolves the Help surfaces' copy for this locale.
+      - `HelpViewModel.kt` - Drives the Help list.
     - `MainActivity.kt` - Main activity. Owns the platform splash, edge-to-edge insets, and the root Compose tree that wires `AppShellScaffold` + `AppNavGraph`.
     - `memory/` - Memory screen components.
       - `MemoryScreen.kt` - Slim mapper. Subscribes to `MemoryViewModel`, projects `MemoryUiState` to the catalog `MemoryContent` (stats header + provenance breakdown, category chips, sort/date dropdowns, time-grouped sections, semantic-search rows with scores, detail sheet, Compact/Add dialogs). Owns the pure `toViewState` projection (grouping / breakdown / relative-time + detail labels) and the SAF launcher for full export.
@@ -745,15 +758,16 @@ Only Kotlin files appear inside the generated blocks.
           - `QuickAddRadialMenu.kt` - 12-tile radial menu (one per node type) anchored at the long-press point; dispatches `onPick(type)`.
           - `ZoomRail.kt` - Always-visible right-edge `+` / `−` / `⤡` (fit-to-view) tile stack.
         - `config/` - Per-`NodeType` configuration sheets and the codec that moves their fields onto `NodeModel`.
-          - `NodeConfigCodec.kt` - JSON ↔ catalog `NodeConfig` codec + legacy-field derivation for pre-Phase-21 rows + `defaultFor(type, title)` factory.
+          - `NodeConfigCodec.kt` - JSON ↔ catalog `NodeConfig` codec + legacy-field derivation for rows saved without config JSON + `defaultFor(type, title)` factory.
           - `NodeTypeMapper.kt` - Bridges between domain `NodeType` / `CloudProvider` and the catalog enums (`pipelineeditor.NodeType` / `CloudProvider`).
         - `core/` - Editor mechanics with no Compose surface of their own — auto-layout, edge geometry, undo/redo.
           - `AutoLayout.kt` - Sugiyama-style hierarchical layout (longest-path layering + median crossing reduction + grid-snapped coordinates); pure Kotlin.
           - `BezierEdge.kt` - Cubic-Bezier control-point math, point-evaluation, arc-length approximation, hit-test; pure Kotlin.
-          - `CanvasTransform.kt` - Pan / pinch-zoom math + `snapToGrid` + `fitToBounds(bbox, viewport, padding)` + `zoomedOneStep(direction, viewport)` + `Bounds` data class with `Bounds.ofNodes(...)`; pure Kotlin.
-          - `EditorState.kt` - `@Stable` screen-local state holder (`transform`, `selection`, `multiSelectMode`, `connectionInProgress`, `quickAddAnchor`, `activeRunningNodeId`, `isRunning`, `configuringNodeId`, `workingConfig`, `undoRedo`, `miniMapOpen`, `gridVisible`, `clipboard`, `searchOpen`, `searchQuery`). `rememberEditorState()` factory.
+          - `CanvasTransform.kt` - Canvas (dp) ↔ screen (px) projection through zoom and display density; pan / pinch-zoom math + `snapToGrid` + `fitToBounds(bbox, viewport, padding, maxScale)` + `zoomedOneStep(direction, viewport)` + `Bounds` data class with `Bounds.ofNodes(...)`; pure Kotlin.
+          - `EditorState.kt` - `@Stable` screen-local state holder (`transform`, `selection`, `multiSelectMode`, `connectionInProgress`, `quickAddAnchor`, `activeRunningNodeId`, `isRunning`, `configuringNodeId`, `workingConfig`, `undoRedo`, `miniMapOpen`, `gridVisible`, `clipboard`, `searchOpen`, `searchQuery`). `requestFit()` / `frameIfNeeded(...)` open-time framing. `rememberEditorState()` factory (seeds the display density).
           - `EditorUndoRedo.kt` - Bounded undo / redo snapshot stack (capacity = 50); pure Kotlin.
           - `MiniMapGeometry.kt` - Pure-Kotlin projection from canvas-space to mini-map pixels (`canvasToMiniX/Y` + inverse + `viewportRect`); used by the `MiniMap` overlay. Unit-tested.
+          - `NodeCardFootprint.kt` - Footprint of a node card on the editor canvas, in canvas units — which are dp.
           - `ValidationAutoFix.kt` - Best-effort auto-fix recipe registry for `PipelineValidationError`s (MissingInput / MissingOutput / MultipleInputs / MultipleOutputs / DisconnectedInput / DisconnectedOutput); returns an `AutoFixOutcome`. Drives the `Auto-fix` action on `ValidationBar`. Also owns `PipelineValidationError.focusableNodeId(graph)` for the per-row `Go ↗` button.
         - `PipelineEditorContent.kt` - Pure-layout content. Vertical stack of `EditorToolbar` (or `MultiSelectToolbar`) + `EditorCanvas` + `ValidationBar`.
         - `PipelineEditorScreen.kt` - Stateful entry composable: subscribes to `OrchestratorViewModel` + `runState`, owns the screen-local `EditorState`, computes the toolbar subtitle / primary-action variant, hosts the overflow `DropdownMenu` (Undo / Redo / Rename… / Delete / Auto-layout / Mini-map / grid toggle / Find node… / Paste), the catalog `NodeConfigSheet`, the rename dialog, and the run-banner clock.

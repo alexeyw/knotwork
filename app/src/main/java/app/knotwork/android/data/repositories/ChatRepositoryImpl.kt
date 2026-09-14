@@ -52,9 +52,12 @@ class ChatRepositoryImpl @Inject constructor(
         if (cachedSessionId == message.sessionId) {
             chatDao.updateSessionTimestamp(message.sessionId, message.timestamp)
         } else {
-            val existingSession = chatDao.getSessionById(message.sessionId)
-            if (existingSession != null) {
-                chatDao.updateSession(existingSession.copy(updatedAt = message.timestamp))
+            // Only the timestamp, never the whole row: a read-modify-write of the full
+            // session would put back whatever the read saw, undoing a rename or a
+            // favourite written between the two — which is exactly what the first
+            // message of a new chat races against (it is auto-renamed from that text).
+            if (chatDao.getSessionById(message.sessionId) != null) {
+                chatDao.updateSessionTimestamp(message.sessionId, message.timestamp)
             } else {
                 chatDao.insertSession(
                     ChatSessionEntity(

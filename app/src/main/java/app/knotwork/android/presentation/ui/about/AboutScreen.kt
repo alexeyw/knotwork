@@ -4,10 +4,13 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import app.knotwork.android.BuildConfig
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.DocumentationLinks
+import app.knotwork.android.domain.constants.RepositoryLinks
 import app.knotwork.design.screens.about.AboutCallbacks
 import app.knotwork.design.screens.about.AboutContent
 import app.knotwork.design.screens.about.AboutStrings
@@ -21,7 +24,7 @@ import app.knotwork.design.screens.about.AcknowledgmentEntry
  * a heavy dependency and is deferred to a follow-up).
  */
 @Composable
-fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
+fun AboutScreen(onBack: () -> Unit, onNavigateToHelp: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val state = AboutViewState(
         appName = stringResource(R.string.app_name),
@@ -32,6 +35,12 @@ fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         licenseName = stringResource(R.string.license_name),
         acknowledgments = AboutAcknowledgments.ENTRIES,
         privacyBody = stringResource(R.string.about_privacy_policy_body),
+        documentationSummary = pluralStringResource(
+            R.plurals.help_subtitle,
+            DocumentationLinks.DOCUMENTS.size,
+            DocumentationLinks.DOCUMENTS.size,
+            DocumentationLinks.DOCUMENTS.count { it.delivery == DocumentationLinks.Delivery.BUNDLED },
+        ),
     )
     val strings = AboutStrings(
         title = stringResource(R.string.about_title),
@@ -42,6 +51,9 @@ fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
         sectionPrivacy = stringResource(R.string.about_section_privacy_policy),
         licenseCta = stringResource(R.string.about_open_license_cta),
         privacyCta = stringResource(R.string.about_open_privacy_cta),
+        sectionDocumentation = stringResource(R.string.about_section_documentation),
+        documentationBody = stringResource(R.string.about_documentation_body),
+        documentationCta = stringResource(R.string.help_title),
     )
     AboutContent(
         state = state,
@@ -59,6 +71,7 @@ fun AboutScreen(modifier: Modifier = Modifier, onBack: () -> Unit) {
                     context.startActivity(Intent(Intent.ACTION_VIEW, AboutLinks.PRIVACY_URL.toUri()))
                 }
             },
+            onOpenDocumentation = onNavigateToHelp,
         ),
     )
 }
@@ -87,8 +100,15 @@ internal object AboutLinks {
      * no longer points at a README heading anchor: an anchor silently survives
      * the heading being renamed, landing the user at the top of an unrelated
      * page, and a store review will not accept a fragment link into a README.
+     *
+     * It stays pinned to the default branch while the documentation links of
+     * `DocumentationLinks` are pinned to the installed version's tag, and the
+     * difference is deliberate. What binds a user is the *current* privacy
+     * policy, not the edition that happened to be current when they installed;
+     * and this same URL is filed with the app stores, where a link that moved
+     * with every release would be a link that breaks.
      */
-    const val PRIVACY_URL = "https://github.com/alexeyw/knotwork/blob/main/PRIVACY.md"
+    val PRIVACY_URL: String = RepositoryLinks.legalDocumentUrl("PRIVACY.md")
 }
 
 /**

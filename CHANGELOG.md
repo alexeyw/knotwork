@@ -13,7 +13,73 @@ details.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-15
+
+### Added
+
+- **The app now says where its documentation is.** The Play listing has no room
+  for a URL — the description sits five characters under the 4000-character
+  limit — so for anyone who installed from a store, the app was the only surface
+  that could tell them a user guide, an FAQ, a cookbook, a troubleshooting page
+  and an automation contract exist, and no screen did. A **Help** screen now
+  lists all five (below), and four screens link to the document that explains
+  them: Tools and Triggers from a book icon in the top bar, straight to their
+  section of the user guide; the pipeline editor from its overflow menu; and
+  external automation from the settings hint — which fills a link slot that had
+  been rendered but never filled since it was written. The last step of
+  onboarding points at the FAQ.
+
+  **The links follow the build.** A release build opens the documentation at the
+  tag of the version installed, so a reader is not sent to a description of a
+  build they do not have; debug builds link at `main`. The privacy policy is
+  deliberately exempt and always opens the current edition, since that is the
+  one that binds — and it is the same URL filed with the app stores.
+
+  A build gate resolves every link against the real Markdown, and it enforces
+  one rule that "the link is not broken" cannot express: a heading written twice
+  produces two anchors that both keep working, so reordering those sections
+  moves where a link lands without breaking it. The guide contains a live
+  instance of exactly that. Registry anchors must therefore name a heading that
+  is unique.
+
+- **Two of those documents now open inside the app, with no network at all.**
+  The FAQ and the troubleshooting guide are needed exactly when the browser is
+  least available — one is a router, the other is "it broke", and one of its
+  sections is about the app failing at startup. Both now ship in the app and
+  open in a reader: headings are navigable by a screen reader, a link to another
+  section scrolls there and marks where you landed, and a link to a document
+  that is still on the web hands off to the browser. With no network, that
+  hand-off refuses in place and offers you the address to copy, rather than
+  handing the browser an error page.
+
+  A new **Help** screen lists every document — in the order you are likely to
+  need one while something is broken — and marks each row with where it is read
+  from and how big it is. It is one tap from More, and the About screen now
+  points at it instead of listing the documents a second time.
+
+  The copies in the app are produced by the build and checked by it: a bundled
+  document may not contain anything the in-app renderer cannot show, and every
+  link inside one must resolve. That rule is what keeps the cookbook on the web
+  — its generated tables use HTML line breaks, which the renderer drops without
+  a trace.
+
 ### Changed
+
+- **The full APK is 14 MB smaller.** It had grown by about
+  15 MB in 0.8.0 without anyone noticing: a MediaPipe update started shipping
+  the native library behind its new on-device summariser and proofreader. The
+  app uses MediaPipe only to embed text for long-term memory, and generates text
+  with LiteRT-LM, so that library never ran; it is no longer packaged, and the
+  release build now checks it stays out while the libraries the app does load
+  stay in.
+
+- **Screenshot baselines are now checked on every build.** The design-system
+  screenshots were rendered by every test run but compared with their committed
+  baselines only when someone remembered to, so a changed screen passed. The
+  comparison is now part of the gate. Several tests that read files outside the
+  code — the privacy policy, the browser editor, the node sources the cookbook is
+  generated from — could answer from a cached run after those files changed;
+  each is now a declared input.
 
 - **The browser pipeline editor now works with no network.** It was described
   as a standalone single-file editor, and that was true only in the sense that
@@ -39,6 +105,144 @@ details.
   without the content of your runs. Where an exported file goes after the share
   sheet is the receiving app's business, and the policy says so rather than
   implying a guarantee that is not ours to give.
+
+### Fixed
+
+- **The FAQ link on the last onboarding step opens in the app.** The FAQ ships
+  inside the app, but that one link sent it to the browser — on the step where
+  the network may not be set up yet. It now opens the built-in reader, and back
+  returns to onboarding where you left it. A test now fails if any link to a
+  bundled document skips the reader.
+
+- **Markdown with two dollar signs on one line no longer loses the text between
+  them.** `Pay bills $100 and $50` rendered as `Pay bills 50`: the renderer
+  treated the span as mathematics and dropped it silently. This affected agent
+  replies, and this project writes prompt variables as `$DATE` and `$TOOLS`, so
+  a message naming two of them lost the words in between.
+
+- **The first screen now calls the app by its own name.** The onboarding top bar
+  still carried the project's pre-rename title, so a new install greeted people
+  with one name while the store listing, the launcher icon and every other
+  screen used another.
+
+- **The pre-rename name is gone from everywhere else, and the build now refuses
+  it.** Nothing had been looking for it, which is how the onboarding title
+  survived three months and a store release. A build gate that scans every
+  public text file found the name in eight more files: the descriptions in the
+  GitHub issue-template chooser, the app theme's resource and composable names,
+  and the wake lock the inference service holds. That last one is visible
+  outside the app — Android vitals and `dumpsys power` list wake locks by tag —
+  and is now `Knotwork:InferenceLock`; battery statistics recorded under the old
+  tag will not carry over to the new one.
+
+  The same gate refuses internal planning numbers in public text. A one-off
+  clean-up had removed them once, but its search matched only one spelling, and
+  forty-two had since accumulated in the spellings it missed — in source
+  comments, test comments, the generated file maps and the browser editor. They
+  now say what the code does instead of which piece of planning produced it.
+
+- **Pipelines no longer open in the editor with their cards piled on top of
+  each other.** Node positions were drawn as screen pixels while the cards are
+  sized in dp, so on a dense phone every card took about three times the room
+  its position allowed, and every bundled preset opened as an overlapping stack
+  until you pressed Auto layout. Positions are now dp — the unit the bundled
+  presets, the browser editor and the cookbook recipes were already written in
+  — so a pipeline lays out the same on every screen, and a file exported from
+  the phone opens with the same spacing in the browser editor. The mini-map,
+  **Fit pipeline to view** and the dot grid were measured the same wrong way
+  and are fixed with it.
+
+  Opening a pipeline now frames the whole graph, never zooming past 100 %; at
+  its real size a three-step preset is wider than a phone screen.
+
+  One visible side effect: a pipeline whose cards **you arranged on the phone**
+  before this update opens more spread out — by the screen's density, about
+  three times on a flagship phone. Nothing overlaps, and **Auto layout** or a
+  drag tidies it; the pipeline itself is unchanged. Pipelines created from a
+  preset and never rearranged open exactly as intended. The comprehensive
+  showcase preset overlapped even at density 1; its cards were moved apart,
+  and a build check now keeps every bundled preset and recipe free of
+  overlapping cards.
+
+- **The task monitor and the More tab follow each chat's run as it happens.** They
+  used to show a chat as it was when its message was queued: a finished chat
+  kept reading as running until another message was sent anywhere, the stage
+  column never showed anything but loading, and the running count on More — and
+  the badge next to Tasks — stayed at zero. Both now update when a run moves to a
+  new stage, finishes, fails or is stopped.
+
+- **A message waiting behind another run says it is waiting.** The app runs one
+  pipeline at a time, so a message sent while a trigger, a share or another chat
+  is running waits for that run to finish — which can take minutes. The chat
+  said it was generating the whole time. It now reads **waiting behind another
+  run · queued**, the thread shows **Waiting…**, and it switches to generating
+  the moment the run actually starts; Stop still cancels it. The same bubble
+  also stops claiming to generate while the model is still loading. The task
+  monitor lists such a chat as queued rather than running, and the More tab
+  counts it as queued — where it used to count every idle chat instead.
+
+- **Jumping to a node from a validation error centres it.** The editor centred
+  on a one-pixel viewport, which parked the node against the top-left corner of
+  the screen instead.
+
+- **The browser pipeline editor no longer ships outdated presets.** It carries
+  its own copy of every bundled pipeline preset and prompt template, and that
+  copy was kept in step by hand. It had not been: six presets and four prompt
+  templates still held wording the app had since replaced — in the presets'
+  case, instructions changed because they made on-device tool calls fail. Both
+  copies are now generated from the app's own files, and the build fails when
+  either falls behind.
+
+  The editor's node forms also stop offering sampling, token-limit and timeout
+  settings on the on-device and cloud nodes. No run ever read them — sampling
+  comes from the app's Settings, a cloud call from its provider settings — and
+  the app had already removed the same controls; the browser kept them, with
+  range checks that could refuse to save over a value that changed nothing.
+  Files that carry those fields still import and export unchanged, and the
+  bundled presets and cookbook recipes no longer include them.
+
+- **Any pipeline can be deleted, including the last one.** The library marked
+  one pipeline as "Active" — not a setting you chose, just the one the editor
+  last held, which after a restart was simply the most recently changed — and
+  refused to delete it. The refusal came only after you had confirmed the
+  delete, as untranslated error text, and a library with a single pipeline could
+  not be emptied at all. The marker and the rule are gone: deleting the
+  pipeline the editor holds moves the editor to the next one, or to an empty
+  pipeline when none is left.
+
+- **The Files selection bar no longer draws under the status bar.** Selecting a
+  file swapped the top bar for a hand-built one that did not leave room for the
+  status bar. A source check now requires every bar at the top of a screen to
+  apply that inset, or to name the parent that does — the same defect had
+  already reached the Help screen, and a screenshot test cannot see it.
+
+- **Your message appears the moment you send it.** The chat stored the message
+  only when the run queue got to it, and showed it only once that write came
+  back from the database — so for a moment a new chat showed nothing but the
+  generating indicator, as if the app were answering a question nobody asked.
+  Behind another run still in the queue (a trigger, a share, an automation),
+  that moment could last minutes. The message now shows immediately, marked as
+  pending, and turns into the stored one when it lands.
+
+  Two related title fixes: a first message typed straight into a new chat could
+  leave it named **New Chat** for good, because the rename looked the chat up
+  before the app had seen it; and storing a chat's first message rewrote the
+  whole chat record from an earlier read, which could undo a rename or a
+  favourite made in between. Only the timestamp is written now.
+
+- **A confirmation card no longer prints the tool name twice.** When the agent
+  asks to run a tool, the card showed the tool id in mono and then the same
+  string again as its description — there was no separate explanation to show,
+  and repeating the id read as a rendering fault. The card now omits that line
+  when there is nothing to say in it.
+
+- **The FAQ no longer says that Stop leaves a run going.** Its answer to *How do I
+  stop a run that is already going?* predated Stop ending the run in 0.9.0 and
+  sent readers to limits and scheduled-task controls instead — in the copy that
+  now ships inside the app, too. The user guide's description of the pipeline
+  editor toolbar (every editing command is in the overflow menu, beside a zoom
+  rail with **Fit pipeline to view**), of the More tab and of the chat's waiting
+  states was brought in line with the app in the same pass.
 
 ## [0.9.0] - 2026-09-01
 
@@ -5550,7 +5754,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/alexeyw/knotwork/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/alexeyw/knotwork/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/alexeyw/knotwork/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/alexeyw/knotwork/compare/v0.7.2...v0.7.3

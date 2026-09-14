@@ -103,7 +103,7 @@ class AgentForegroundService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 101
-        private const val WAKE_LOCK_TAG = "AndroidAIAgent:InferenceLock"
+        private const val WAKE_LOCK_TAG = "Knotwork:InferenceLock"
         private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 
         /**
@@ -218,6 +218,7 @@ class AgentForegroundService : Service() {
     private fun getStatusTextForState(state: AgentOrchestratorState): String = when (state) {
         is AgentOrchestratorState.Idle -> "Agent is waiting"
         is AgentOrchestratorState.Loading -> "Loading context..."
+        is AgentOrchestratorState.Queued -> "Queued behind another run"
         is AgentOrchestratorState.Thinking -> "Agent is thinking..."
         is AgentOrchestratorState.ExecutingTool -> "Using tool: ${state.toolName}..."
         is AgentOrchestratorState.WaitingForApproval -> "Awaiting user confirmation..."
@@ -305,6 +306,9 @@ class AgentForegroundService : Service() {
         is AgentOrchestratorState.AwaitingClarification,
         is AgentOrchestratorState.WaitingForCeilingRaise,
         is AgentOrchestratorState.SuspendedInBackground,
+        // Never the global state (it describes the run that holds the worker), and a
+        // waiting task does no work of its own.
+        is AgentOrchestratorState.Queued,
         -> false
     }
 

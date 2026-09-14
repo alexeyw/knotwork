@@ -230,6 +230,12 @@ class OnboardingCallbacks(
      * [onStartDownload] fires for the `CustomUrl` row.
      */
     val onCustomDownloadUrlChanged: (String) -> Unit = {},
+    /**
+     * Invoked from the Ready step's documentation line. The host opens the FAQ
+     * in a browser — the one moment onboarding can name the documentation to a
+     * user who installed from a store listing that has no room for a URL.
+     */
+    val onOpenDocumentation: () -> Unit = {},
 )
 
 /** Convenience factory returning a callbacks bundle that ignores every event. */

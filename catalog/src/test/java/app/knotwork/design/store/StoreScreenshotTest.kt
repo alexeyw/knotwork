@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
 import app.knotwork.design.components.chips.Risk
@@ -101,6 +102,9 @@ class StoreScreenshotTest {
                 }
             }
         }
-        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/snapshots/$name.png")
+        composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
+            filePath = "src/test/snapshots/$name.png",
+        )
     }
 }

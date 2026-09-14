@@ -72,11 +72,7 @@
         "type": "LITE_RT",
         "title": "Answer with memory",
         "modelId": "",
-        "systemPrompt": "You are $USER's assistant. Today is $DATE. Use the remembered entries you were given to answer, and say plainly when you do not have the information.\n\nDo not restate or summarise the remembered entries — reply with the answer only. Reply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 1024,
-        "stopTokens": []
+        "systemPrompt": "You are $USER's assistant. Today is $DATE. Use the remembered entries you were given to answer, and say plainly when you do not have the information.\n\nDo not restate or summarise the remembered entries — reply with the answer only. Reply in the user's language ($LANG)."
       }
     },
     {

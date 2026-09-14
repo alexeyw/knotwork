@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
 import app.knotwork.design.theme.KnotworkTheme
@@ -32,6 +33,11 @@ class AboutContentSnapshotTest {
         AboutContent(state = AboutPreview.default())
     }
 
+    @Test
+    fun about_no_documentation_light() = snapshot(name = "no_documentation", dark = false) {
+        AboutContent(state = AboutPreview.withoutDocumentation())
+    }
+
     private fun snapshot(name: String, dark: Boolean, content: @Composable () -> Unit) {
         composeTestRule.setContent {
             KnotworkTheme(darkTheme = dark) {
@@ -42,6 +48,7 @@ class AboutContentSnapshotTest {
         }
         val themeTag = if (dark) "dark" else "light"
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/about_${name}_$themeTag.png",
         )
     }
@@ -79,5 +86,15 @@ internal object AboutPreview {
         ),
         privacyBody = "All sensitive data is processed locally via LiteRT. " +
             "Cloud providers are opt-in. Crash reporting is opt-in and never includes prompts or memory content.",
+        documentationSummary = "5 documents · 2 on this device",
     )
+
+    /**
+     * The About screen before the documentation section existed.
+     *
+     * Kept as its own fixture because the section is rendered only when the
+     * host supplies a summary, and a snapshot of the populated state alone
+     * would not show that the empty case still lays out.
+     */
+    fun withoutDocumentation(): AboutViewState = default().copy(documentationSummary = "")
 }

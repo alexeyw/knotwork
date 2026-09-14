@@ -47,7 +47,7 @@ import app.knotwork.android.data.local.models.UsageCounterEntity
 import app.knotwork.android.data.local.models.UsagePipelineDayEntity
 
 /**
- * Main Room Database for the Android AI Agent.
+ * Main Room Database for Knotwork.
  *
  * Future entities (e.g., PromptTemplates) will be registered here.
  *

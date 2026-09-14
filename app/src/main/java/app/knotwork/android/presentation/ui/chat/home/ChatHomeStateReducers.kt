@@ -1,5 +1,7 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.design.screens.chat.ChatHomeMessageRow
+
 /**
  * Shared pure transformers over [ChatHomeScreenState] used by both the
  * [ChatHomeViewModel] core (send / lifecycle) and several of its delegates
@@ -28,6 +30,31 @@ internal fun ChatHomeScreenState.restingVisual(): ChatHomeUiState = when {
     pending.interrupted != null -> ChatHomeUiState.Interrupted
     messages.isEmpty() -> ChatHomeUiState.Empty
     else -> ChatHomeUiState.Idle
+}
+
+/**
+ * The rows the thread shows: the stored [ChatHomeScreenState.messages] followed by
+ * the just-sent message while it is still on its way to storage.
+ */
+internal val ChatHomeScreenState.visibleMessages: List<ChatHomeMessageRow>
+    get() = sendingUserTurn?.let { messages + it.row } ?: messages
+
+/**
+ * Pure transformer: sets whether the in-flight run is still waiting behind another run.
+ *
+ * `AgentOrchestratorState.Queued` turns it on and any other state — the worker's
+ * `Loading` at pick-up first — turns it off. Only a `Generating` surface carries the
+ * flag; a HITL card or an error is returned unchanged.
+ *
+ * @param waiting `true` while the run is queued.
+ */
+internal fun ChatHomeScreenState.withWaitingInQueue(waiting: Boolean): ChatHomeScreenState {
+    val current = visual
+    return if (current is ChatHomeUiState.Generating && current.waitingInQueue != waiting) {
+        copy(visual = current.copy(waitingInQueue = waiting))
+    } else {
+        this
+    }
 }
 
 /**

@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
  * tools / block network from the local model) and the five tool / workspace
  * ceilings. Observes their persisted flows into the shared [state] and routes
  * edits back through [settingsRepository]. Shares the ViewModel's [scope] and single
- * [SettingsUiState] reducer (the Phase-34 `ChatHome*Delegate` pattern).
+ * [SettingsUiState] reducer (the `ChatHome*Delegate` pattern).
  *
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.

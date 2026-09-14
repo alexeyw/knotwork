@@ -707,7 +707,7 @@ private fun ChatHomeMessageList(
             )
         }
         if (state.visualState == ChatHomeVisualState.Generating) {
-            item { GeneratingLoaderBubble() }
+            item { GeneratingLoaderBubble(label = state.loaderLabel) }
         }
         // A stopped run gets exactly one tile. Which one depends on whether we
         // chose to stop it: a fault we did not choose keeps the destructive
@@ -734,7 +734,7 @@ private fun ChatHomeMessageList(
  * `Generatin` / `g…`.
  */
 @Composable
-private fun GeneratingLoaderBubble() {
+private fun GeneratingLoaderBubble(label: String?) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         Box(
             modifier = Modifier
@@ -749,7 +749,7 @@ private fun GeneratingLoaderBubble() {
             ) {
                 KnotworkLoader()
                 Text(
-                    text = stringResource(R.string.knotwork_chat_home_generating_label),
+                    text = label ?: stringResource(R.string.knotwork_chat_home_generating_label),
                     style = KnotworkTextStyles.BodySm,
                     color = KnotworkTheme.extended.onSurfaceMuted,
                     maxLines = 1,

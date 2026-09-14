@@ -24,8 +24,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Session-lifecycle regression tests for [KoogMcpClient], covering finding F3
- * of the phase-40 directed MCP test: on the device a tool call failed with
+ * Session-lifecycle regression tests for [KoogMcpClient], covering a defect
+ * found by a directed on-device MCP test: on the device a tool call failed with
  * `-32000 No valid session ID provided`, and the wire capture showed sessions
  * being opened and abandoned faster than anything was using them.
  *
@@ -44,8 +44,8 @@ class KoogMcpClientSessionTest {
 
     /**
      * JSON-RPC method the stub server refuses to answer, modelling the server
-     * that accepts a request and then goes quiet — the shape of phase-40
-     * findings F12/F13. `null` (the default) makes the stub answer everything.
+     * that accepts a request and then goes quiet — the shape of the
+     * silent-server failures a directed on-device test found. `null` (the default) makes the stub answer everything.
      */
     private var stallMethod: String? = null
 

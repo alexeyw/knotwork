@@ -53,6 +53,7 @@
     <string name="pipeline_editor_rename_cancel">Cancel</string>
 
     <!-- Search / Find node bar. -->
+    <string name="pipeline_editor_overflow_cookbook">Pipeline cookbook</string>
     <string name="pipeline_editor_overflow_find">Find node…</string>
     <string name="pipeline_editor_search_placeholder">Search nodes…</string>
     <string name="pipeline_editor_search_close">Close search</string>
@@ -63,7 +64,7 @@
     </plurals>
 
     <!-- Empty state. The
-         pre-Phase-22 single-line "Long-press anywhere…" hint is superseded by
+         earlier single-line "Long-press anywhere…" hint is superseded by
          the title + helper copy here. -->
     <string name="pipeline_editor_empty_title">Empty pipeline</string>
     <string name="pipeline_editor_empty_helper">Tap + to drop your first node, or long-press anywhere on the canvas for the radial picker.</string>

@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeTypeMapper
@@ -69,10 +70,10 @@ private const val DRAG_PICKUP_DURATION_MS = 100
  * `NodeConfigSheet` pre-loaded from `NodeConfigCodec.decode(node)`.
  * @param onLongPress invoked on long-press (multi-select entry).
  * @param onDrag invoked while the user is dragging the node; receives **canvas-space**
- * deltas (the per-event `dragAmount` from `detectDragGestures`, which Compose delivers in
- * the pointerInput modifier's local layout space — that already accounts for the
- * `graphicsLayer` scale wrapping this composable, so the deltas line up with canvas
- * coordinates without a second division by `transform.scale`).
+ * deltas. Compose delivers `dragAmount` in the pointerInput modifier's local layout space,
+ * which already undoes the `graphicsLayer` zoom wrapping this composable — so the deltas
+ * are layout pixels, and dividing by the display density turns them into canvas units
+ * (dp). No second division by `transform.scale` is needed.
  * @param onDragEnd invoked once the pickup-release animation has settled; caller commits
  * the final canvas-space position to the ViewModel.
  * @param onConnectionStart invoked when the user starts dragging from an outbound port,
@@ -136,6 +137,7 @@ internal fun EditorNode(
         }
     }
 
+    val density = LocalDensity.current.density
     val screenX = transform.canvasToScreenX(node.x)
     val screenY = transform.canvasToScreenY(node.y)
     Box(
@@ -157,7 +159,7 @@ internal fun EditorNode(
                 onClick = { if (selected) onOpenConfig() else onSelect() },
                 onLongClick = onLongPress,
             )
-            .pointerInput(node.id) {
+            .pointerInput(node.id, density) {
                 detectDragGestures(
                     onDragStart = { isDragging = true },
                     onDragEnd = {
@@ -169,7 +171,7 @@ internal fun EditorNode(
                         onDragEnd()
                     },
                     onDrag = { _, drag ->
-                        onDrag(drag.x, drag.y)
+                        onDrag(drag.x / density, drag.y / density)
                     },
                 )
             },

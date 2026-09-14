@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.about
 
+import app.knotwork.android.domain.constants.RepositoryLinks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -49,6 +50,28 @@ class AboutLinksTest {
             "Privacy link targets '$path', which does not exist in the repository",
             File(repositoryRoot(), path).isFile,
         )
+    }
+
+    @Test
+    fun `given the privacy link when read then it stays pinned to the default branch`() {
+        // The documentation links of `DocumentationLinks` are pinned to the tag
+        // of the installed version; this one deliberately is not. What binds a
+        // user is the current privacy policy, not the edition current when they
+        // installed — and this URL is filed with the app stores, where a link
+        // that moved every release would be a link that breaks. Asserted so the
+        // exemption cannot be "tidied up" into the version-pinned rule.
+        assertTrue(
+            "Privacy link must resolve on the default branch, was ${AboutLinks.PRIVACY_URL}",
+            AboutLinks.PRIVACY_URL.startsWith("$REPOSITORY_URL/blob/main/"),
+        )
+    }
+
+    @Test
+    fun `given the repository constant when read then the About links are built from it`() {
+        // Closes the defect this constant was extracted for: the host used to be
+        // written out three times, and three copies survive a repository rename
+        // by staying wrong in three places.
+        assertEquals(REPOSITORY_URL, RepositoryLinks.REPOSITORY_URL)
     }
 
     @Test

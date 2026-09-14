@@ -37,8 +37,14 @@ sealed interface ChatHomeUiState {
      *   `false` is the normal case where the assistant is producing tokens.
      *   Modelled as a flag rather than a separate state so every "busy" guard
      *   (`is Generating`) covers both phases without a second sealed arm.
+     * @property waitingInQueue `true` while the run is accepted but waiting behind
+     *   another run in the serial queue (a trigger, a share, another chat). Nothing is
+     *   being generated yet and the wait lasts as long as the run ahead, so the surface
+     *   says it is waiting instead of claiming to generate. Same flag shape as
+     *   [preparingModel], for the same reason; Stop still cancels the queued run.
      */
-    data class Generating(val preparingModel: Boolean = false) : ChatHomeUiState
+    data class Generating(val preparingModel: Boolean = false, val waitingInQueue: Boolean = false) :
+        ChatHomeUiState
 
     /**
      * A tool call awaits user approval. The bubble at the tail of the

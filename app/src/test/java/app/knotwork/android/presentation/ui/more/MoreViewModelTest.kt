@@ -178,6 +178,8 @@ class MoreViewModelTest {
             "s1" to AgentOrchestratorState.Thinking(partialText = ""),
             "s2" to AgentOrchestratorState.Answering(partialText = ""),
             "s3" to AgentOrchestratorState.Idle,
+            "s4" to AgentOrchestratorState.Queued,
+            "s5" to AgentOrchestratorState.Queued,
         )
 
         val viewModel = buildViewModel()
@@ -191,9 +193,35 @@ class MoreViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("Gemma · active", state.modelsSubtitle)
-        // Two running (Thinking + Answering), one queued (Idle).
-        assertEquals("2 running · 1 queued", state.tasksSubtitle)
+        // Two running (Thinking + Answering), two queued; the resting Idle chat is neither.
+        assertEquals("2 running · 2 queued", state.tasksSubtitle)
         assertEquals(2, state.tasksBadge)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `given runs loading, in a tool and on a stage when subscribed then all of them count as running`() = runTest {
+        sessionsFlow.value = mapOf(
+            "loading" to AgentOrchestratorState.Loading,
+            "tool" to AgentOrchestratorState.ExecutingTool(toolName = "search", arguments = "{}"),
+            "stage" to AgentOrchestratorState.PipelineStage(AgentOrchestratorState.PipelineStepInfo(1, 2, "Router")),
+            "queued" to AgentOrchestratorState.Queued,
+            "done" to AgentOrchestratorState.Completed("ok"),
+            "failed" to AgentOrchestratorState.Error("boom"),
+        )
+
+        val viewModel = buildViewModel()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+        testScheduler.runCurrent()
+
+        // Before: only Thinking / Answering counted, so a run in any other status read as none
+        // and the tab's badge stayed hidden.
+        val state = viewModel.uiState.value
+        assertEquals("3 running · 1 queued", state.tasksSubtitle)
+        assertEquals(3, state.tasksBadge)
 
         job.cancel()
     }

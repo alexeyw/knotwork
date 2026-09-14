@@ -44,7 +44,11 @@ class OnboardingScreenDownloadGateTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 
@@ -72,7 +76,11 @@ class OnboardingScreenDownloadGateTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 
@@ -95,7 +103,11 @@ class OnboardingScreenDownloadGateTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 
@@ -120,7 +132,11 @@ class OnboardingScreenDownloadGateTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 

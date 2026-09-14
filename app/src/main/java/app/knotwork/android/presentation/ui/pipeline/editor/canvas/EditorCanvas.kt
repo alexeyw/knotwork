@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import app.knotwork.android.presentation.ui.pipeline.editor.core.Bounds
 import app.knotwork.android.presentation.ui.pipeline.editor.core.CanvasTransform
 import app.knotwork.android.presentation.ui.pipeline.editor.core.ConnectionDraft
 import app.knotwork.android.presentation.ui.pipeline.editor.core.EditorState
+import app.knotwork.android.presentation.ui.pipeline.editor.core.NodeCardFootprint
 import app.knotwork.design.components.pipelineeditor.NodeError
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -55,10 +57,15 @@ import app.knotwork.design.theme.KnotworkTheme
  *  - Renders one [EditorNode] per `PipelineGraph.nodes`.
  *  - Renders the [QuickAddRadialMenu] on top when an anchor is set.
  *
- * Node positions are persisted in canvas-space px; the [EditorState] transform projects
- * them to screen space at render time. Drag-to-move accumulates a screen-space delta
- * into a per-node session state, and commits the un-projected canvas delta to the
- * ViewModel via [onMoveNode] once the gesture settles.
+ * Node positions are persisted in canvas units, which are dp (see [CanvasTransform]); the
+ * [EditorState] transform projects them to screen pixels at render time, using the
+ * display density this composable keeps it in step with. Drag-to-move accumulates a
+ * canvas-space delta into a per-node session state and commits it to the ViewModel via
+ * [onMoveNode] once the gesture settles.
+ *
+ * The first time a pipeline is shown here — and again after [EditorState.requestFit] —
+ * the viewport is framed on the whole graph at no more than 100 %, so a pipeline opens
+ * legible instead of at the canvas origin with part of it off screen.
  *
  * @param graph the current pipeline graph (from the ViewModel).
  * @param editor screen-local state (transform, selection, drafts).
@@ -93,6 +100,28 @@ internal fun EditorCanvas(
     val density = LocalDensity.current
     var viewportSize by remember { mutableStateOf(IntPair(0, 0)) }
 
+    // Canvas units are dp, so the transform must know the display density. The screen's
+    // `rememberEditorState()` seeds it; this keeps it right if the density changes under a
+    // live state, or when a state was built without one (tests construct `EditorState()`).
+    SideEffect {
+        if (editor.transform.density != density.density) {
+            editor.transform = editor.transform.copy(density = density.density)
+        }
+    }
+
+    // Frame the graph when a pipeline is first shown, and when a fit was requested for
+    // content that arrives later (a template applied to an empty pipeline). Keyed on
+    // emptiness rather than on the node list, so editing nodes never re-frames.
+    val fitPaddingPx = with(density) { ZOOM_RAIL_FIT_PADDING_DP.dp.toPx() }
+    LaunchedEffect(graph.id, viewportSize, graph.nodes.isEmpty(), editor.fitRequested) {
+        editor.frameIfNeeded(
+            graph = graph,
+            viewportW = viewportSize.first.toFloat(),
+            viewportH = viewportSize.second.toFloat(),
+            paddingPx = fitPaddingPx,
+        )
+    }
+
     // Per-node session deltas keep drag fluid without thrashing the VM each frame.
     val dragDeltas = remember { mutableStateOf<Map<String, Pair<Float, Float>>>(emptyMap()) }
     val nodesById = remember(graph) { graph.nodes.associateBy { it.id } }
@@ -121,7 +150,11 @@ internal fun EditorCanvas(
             .clipToBounds() // Prevent node graphics from spilling outside the canvas surface
             // into the EditorToolbar / bottom bars when nodes sit near the viewport edge.
             .background(KnotworkTheme.extended.surface1)
-            .onSizeChanged { size -> viewportSize = IntPair(size.width, size.height) }
+            .onSizeChanged { size ->
+                viewportSize = IntPair(size.width, size.height)
+                editor.viewportWidthPx = size.width.toFloat()
+                editor.viewportHeightPx = size.height.toFloat()
+            }
             // Capture canvas LayoutCoordinates into a non-state ref so EditorNode's
             // port-drag handlers can convert pointer positions via
             // `LayoutCoordinates.localPositionOf` without triggering a recomposition each
@@ -145,7 +178,6 @@ internal fun EditorCanvas(
                             connections = currentGraph.connections,
                             nodesById = currentNodesById,
                             transform = editor.transform,
-                            density = density,
                         )
                         if (edgeId != null) {
                             editor.selectEdge(edgeId)
@@ -171,7 +203,6 @@ internal fun EditorCanvas(
                             connections = currentGraph.connections,
                             nodesById = currentNodesById,
                             transform = editor.transform,
-                            density = density,
                         )
                         if (edgeId != null) {
                             onLongPressEdge(edgeId)
@@ -202,7 +233,6 @@ internal fun EditorCanvas(
                             downCanvasY,
                             currentNodesById.values,
                             editor.transform,
-                            density,
                         ) != null
                     ) {
                         return@awaitEachGesture
@@ -247,7 +277,7 @@ internal fun EditorCanvas(
 
         val draftDraw = editor.connectionInProgress?.let { draft ->
             val source = nodesByIdLive[draft.sourceNodeId] ?: return@let null
-            val anchor = outboundPortAnchor(source, portsFor(source), draft.sourcePortLabel, density)
+            val anchor = outboundPortAnchor(source, portsFor(source), draft.sourcePortLabel)
             // The draft is stored in canvas-space (see ConnectionDraft KDoc); project both
             // anchor and live pointer through `transform` here so the draw layer stays in
             // screen-space and doesn't need to know about CanvasTransform.
@@ -297,12 +327,10 @@ internal fun EditorCanvas(
                     editor.toggleSelection(node.id)
                 },
                 onDrag = { dxCanvas, dyCanvas ->
-                    // EditorNode emits canvas-space deltas (its pointerInput is wrapped by a
-                    // `graphicsLayer` whose scale already includes `transform.scale`, so the
-                    // dragAmount Compose delivers is in the node's un-scaled layout space —
-                    // i.e. canvas pixels). Dividing by `transform.scale` again here would
-                    // double-scale the delta and make the node lag behind the finger when
-                    // zoomed in. Accumulate the canvas-space delta directly.
+                    // EditorNode already emits canvas-space deltas: the zoom is undone by the
+                    // `graphicsLayer` its pointerInput sits under, and the density by EditorNode
+                    // itself. Dividing again here would make the node lag behind the finger.
+                    // Accumulate the canvas-space delta directly.
                     val prev = dragDeltas.value[node.id] ?: (0f to 0f)
                     dragDeltas.value = dragDeltas.value +
                         (node.id to (prev.first + dxCanvas to prev.second + dyCanvas))
@@ -347,7 +375,6 @@ internal fun EditorCanvas(
                             pointerCanvasX = draft.pointerCanvasX,
                             pointerCanvasY = draft.pointerCanvasY,
                             nodes = nodesByIdLive.values,
-                            density = density,
                             excludeNodeId = draft.sourceNodeId,
                         )
                         if (target != null) {
@@ -517,14 +544,14 @@ internal fun EditorCanvas(
             onFit = {
                 val bbox = Bounds.ofNodes(
                     positions = graph.nodes.map { it.x to it.y },
-                    nodeWidth = NODE_CARD_WIDTH_PX,
-                    nodeHeight = NODE_CARD_HEIGHT_FOR_FIT_PX,
+                    nodeWidth = NodeCardFootprint.WIDTH,
+                    nodeHeight = NodeCardFootprint.MAX_HEIGHT,
                 ) ?: return@ZoomRail
                 editor.transform = editor.transform.fitToBounds(
                     bbox = bbox,
                     viewportW = viewportSize.first.toFloat(),
                     viewportH = viewportSize.second.toFloat(),
-                    paddingPx = with(density) { ZOOM_RAIL_FIT_PADDING_DP.dp.toPx() },
+                    paddingPx = fitPaddingPx,
                 )
             },
             canZoomIn = editor.transform.scale < CanvasTransform.MAX_SCALE,
@@ -562,15 +589,16 @@ internal fun hitTestInputNode(
     pointerCanvasX: Float,
     pointerCanvasY: Float,
     nodes: Collection<NodeModel>,
-    density: androidx.compose.ui.unit.Density,
     excludeNodeId: String? = null,
 ): NodeModel? {
-    val padCanvas = with(density) { INBOUND_HIT_DP.dp.toPx() }
+    // A canvas unit is a dp, so the padding needs no conversion — and, like the card it
+    // pads, it scales with zoom.
+    val padCanvas = INBOUND_HIT_DP
     var best: NodeModel? = null
     var bestDist = Float.MAX_VALUE
     nodes.forEach { node ->
         if (node.id == excludeNodeId) return@forEach
-        val b = nodeCanvasBounds(node, density)
+        val b = nodeCanvasBounds(node)
         val inside = pointerCanvasX in (b.left - padCanvas)..(b.right + padCanvas) &&
             pointerCanvasY in (b.top - padCanvas)..(b.bottom + padCanvas)
         if (inside) {
@@ -590,21 +618,20 @@ internal fun hitTestInputNode(
  * Returns the outbound port (node id + label) nearest a **canvas-space** press, or `null`
  * when the press is not within [OUTBOUND_HIT_DP] of any port. Lets the canvas decide whether
  * a gesture is a connection drag (→ leave it to the node's port handler, do not pan) or a
- * pan. The tolerance is a screen-space dp divided by the canvas scale so the grab area stays
- * visually constant across zoom.
+ * pan. The tolerance is a screen-space dp divided by the canvas scale — a canvas unit is a
+ * dp at zoom 1 — so the grab area stays visually constant across zoom.
  */
 internal fun hitTestOutboundPort(
     pointerCanvasX: Float,
     pointerCanvasY: Float,
     nodes: Collection<NodeModel>,
     transform: CanvasTransform,
-    density: androidx.compose.ui.unit.Density,
 ): OutboundHit? {
-    val toleranceCanvas = with(density) { OUTBOUND_HIT_DP.dp.toPx() } / transform.scale
+    val toleranceCanvas = OUTBOUND_HIT_DP / transform.scale
     var best: OutboundHit? = null
     var bestDist = Float.MAX_VALUE
     nodes.forEach { node ->
-        outboundPortAnchors(node, density).forEach { (label, anchor) ->
+        outboundPortAnchors(node).forEach { (label, anchor) ->
             val dist = kotlin.math.hypot(anchor.xCanvas - pointerCanvasX, anchor.yCanvas - pointerCanvasY)
             if (dist < toleranceCanvas && dist < bestDist) {
                 best = OutboundHit(node.id, label)
@@ -626,21 +653,6 @@ private const val INBOUND_HIT_DP = 32f
  * grabs, while keeping the no-pan zone just below a node tight.
  */
 private const val OUTBOUND_HIT_DP = 20f
-
-/**
- * Canvas-space pixel width of a [app.knotwork.design.components.pipelineeditor.NodeCard].
- * Mirrors `NodeCardWidth = 168.dp` in the catalog. Treated as 168 canvas px because
- * `NodeModel.x / y` is the card's top-left at canvas scale 1.0.
- */
-private const val NODE_CARD_WIDTH_PX = 168f
-
-/**
- * Canvas-space pixel height used for [Bounds.ofNodes] when computing fit-to-view.
- * Card height varies between `NodeCardMinHeight = 64.dp` and `NodeCardMaxHeight = 96.dp`
- * depending on whether a runtime error line is rendered. We use the conservative max
- * so fit-to-view leaves a comfortable margin around every card.
- */
-private const val NODE_CARD_HEIGHT_FOR_FIT_PX = 96f
 
 /** Screen-space padding (dp) around the framed bbox when the user taps Fit-to-view. */
 private const val ZOOM_RAIL_FIT_PADDING_DP = 32f

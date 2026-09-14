@@ -90,11 +90,7 @@
         "type": "LITE_RT",
         "title": "Local LLM",
         "modelId": "",
-        "systemPrompt": "You are a concise on-device assistant running on $MODEL. Today is $DATE. Answer the user's question directly in one or two short paragraphs. Do not invent facts; if you do not know, say so plainly.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You are a concise on-device assistant running on $MODEL. Today is $DATE. Answer the user's question directly in one or two short paragraphs. Do not invent facts; if you do not know, say so plainly.\n\nReply in the user's language ($LANG)."
       }
     },
     {

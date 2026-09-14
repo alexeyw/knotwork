@@ -33,6 +33,40 @@ import java.util.Date
 import java.util.Locale
 
 /**
+ * Status line of a `Generating` surface. While the model loads before an auto-send
+ * (`preparingModel`), or while the run waits behind another one (`waitingInQueue`),
+ * it says so rather than telling the user the assistant is producing tokens.
+ * Otherwise it carries the running token count, so the pill reads
+ * "generating · 42 tok" — visible progress on long generations.
+ *
+ * @param visual the generating visual.
+ * @param fixtures resolved status strings.
+ * @return the line for the console entry strip.
+ */
+private fun ChatHomeScreenState.generatingStatusLine(
+    visual: ChatHomeUiState.Generating,
+    fixtures: ChatHomeFixtures,
+): String = when {
+    visual.preparingModel -> fixtures.statusPreparingModel
+    visual.waitingInQueue -> fixtures.statusWaitingInQueue
+    else -> formatGeneratingStatus(fixtures.statusGenerating, tokens.streaming, tokens.backend)
+}
+
+/**
+ * Label of the loader bubble at the end of the thread: the same claim as
+ * [generatingStatusLine], or `null` for the design system's default "Generating…".
+ *
+ * @param visual the generating visual.
+ * @param fixtures resolved loader labels.
+ * @return the label, or `null` while tokens are actually being generated.
+ */
+private fun generatingLoaderLabel(visual: ChatHomeUiState.Generating, fixtures: ChatHomeFixtures): String? = when {
+    visual.preparingModel -> fixtures.loaderPreparingModel
+    visual.waitingInQueue -> fixtures.loaderWaitingInQueue
+    else -> null
+}
+
+/**
  * Pure-Kotlin projection of the aggregated [ChatHomeScreenState] onto the
  * catalog [ChatHomeViewState] consumed by `ChatHomeContent`. Lives in `:app`
  * because the catalog cannot reach `app.knotwork.android.*` (Clean
@@ -94,7 +128,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Idle,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages,
+            messages = visibleMessages,
             composerValue = composerValue,
             pipelineName = resolvedPipelineName,
             tokensUsed = tokens.used,
@@ -108,23 +142,15 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Generating,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages,
+            messages = visibleMessages,
             composerValue = composerValue,
             composerState = ComposerState.Generating,
             pipelineName = resolvedPipelineName,
             tokensUsed = tokens.used,
             tokensMax = tokens.max,
             favorite = thread.favorite,
-            // While the model loads before an auto-send (`preparingModel`), read
-            // the honest "loading model" line rather than telling the user the
-            // assistant is producing tokens. Otherwise append the running token
-            // count so the pill reads "generating · 42 tok" — visible progress
-            // on long generations.
-            agentStatusLine = if (visual.preparingModel) {
-                fixtures.statusPreparingModel
-            } else {
-                formatGeneratingStatus(fixtures.statusGenerating, tokens.streaming, tokens.backend)
-            },
+            agentStatusLine = generatingStatusLine(visual, fixtures),
+            loaderLabel = generatingLoaderLabel(visual, fixtures),
             console = console,
         )
 
@@ -132,7 +158,8 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.HitlConfirm,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages + (pending.tool?.let { liveHitlRow(modelName, it) } ?: hitlRow(modelName, visual.risk)),
+            messages =
+            visibleMessages + (pending.tool?.let { liveHitlRow(modelName, it) } ?: hitlRow(modelName, visual.risk)),
             composerValue = composerValue,
             pendingTypedConfirm = composer.typedConfirm,
             pipelineName = resolvedPipelineName,
@@ -147,7 +174,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Clarification,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages + (
+            messages = visibleMessages + (
                 pending.clarification?.let { liveClarificationRow(modelName, it) }
                     ?: clarificationRow(modelName)
                 ),
@@ -164,7 +191,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.Interrupted,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages + (
+            messages = visibleMessages + (
                 pending.interrupted?.let { liveInterruptedRow(modelName, it) }
                     ?: interruptedRow(modelName)
                 ),
@@ -185,7 +212,7 @@ fun ChatHomeScreenState.toViewState(
             // That fallback exists so the state picker can show a card with no
             // pending snapshot behind it; a pause card without one would offer
             // Continue and Stop buttons wired to a run that does not exist.
-            messages = messages + listOfNotNull(
+            messages = visibleMessages + listOfNotNull(
                 pending.ceiling?.let { ceilingPauseRow(modelName, it, resolveText) },
             ),
             composerValue = composerValue,
@@ -206,7 +233,7 @@ fun ChatHomeScreenState.toViewState(
                 visualState = ChatHomeVisualState.Error,
                 threadTitle = threadTitle,
                 modelName = modelName,
-                messages = messages,
+                messages = visibleMessages,
                 composerValue = composerValue,
                 // Only an untyped failure puts the composer into its error
                 // state. A typed stop explains itself in its own tone above the
@@ -229,7 +256,7 @@ fun ChatHomeScreenState.toViewState(
             visualState = ChatHomeVisualState.DrawerOpen,
             threadTitle = threadTitle,
             modelName = modelName,
-            messages = messages,
+            messages = visibleMessages,
             composerValue = composerValue,
             // Live VM-projected threads. Falls back to fixtures only when
             // the debug picker forces DrawerOpen on an empty session list
@@ -455,8 +482,13 @@ internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
 /**
  * Trailing HITL confirmation row driven by the live [HitlPending]
  * snapshot the orchestrator captured. Renders the real tool name, risk
- * tier, and JSON-decoded argument map; the user-visible "summary" line
- * falls back to the tool name when the agent did not attach one.
+ * tier, and JSON-decoded argument map.
+ *
+ * The card's summary line is left **blank**: a pending confirmation carries
+ * no agent-written explanation, and there is no second field to fall back
+ * to. Passing the tool name there printed it twice — mono id above, the same
+ * string as prose below — which reads as a rendering fault rather than as a
+ * missing explanation. The card omits the line when the summary is blank.
  */
 internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessageRow {
     val argumentsMap = parseHitlArguments(pending.arguments)
@@ -469,7 +501,7 @@ internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessa
             model = HitlConfirmationModel(
                 risk = pending.risk.toCatalogRisk(),
                 toolName = pending.toolName,
-                summary = pending.toolName,
+                summary = "",
                 arguments = argumentsMap,
                 timestamp = timestamp,
             ),

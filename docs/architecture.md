@@ -59,9 +59,9 @@ Each layer maps onto concrete packages:
 
 | Layer          | Packages                                                                                          |
 |----------------|---------------------------------------------------------------------------------------------------|
-| `presentation` | `presentation/ui/{about,automation,chat,files,memory,models,monitoring,more,onboarding,orchestrator,pipeline/editor,prompts,settings,splash,taskmonitor,tools}`, `presentation/ui/navigation`, `presentation/{components,state,theme,notifications,receivers}` |
-| `domain`       | `domain/{usecases,engine,models,repositories,prompt,constants,services,pipelineio,promptio,memoryio,report}` |
-| `data`         | `data/{engine,local,repositories,prompt,mcp,services,tools,network,mappers,logging}`              |
+| `presentation` | `presentation/ui/{about,automation,chat,common,components,discover,files,help,memory,models,monitoring,more,navigation,onboarding,orchestrator,pipeline,prompts,settings,skills,splash,taskmonitor,tools,triggers}`, `presentation/{common,notifications,receivers,run,share,shortcuts,state,theme,tile}` |
+| `domain`       | `domain/{constants,engine,memoryio,models,pipelineio,prompt,promptio,promptpack,report,repositories,services,settings,skillio,text,triggerio,usecases}` |
+| `data`         | `data/{audio,engine,local,logging,mappers,mcp,network,prompt,repositories,services,testing,tools}` |
 
 Cross-layer wiring is handled by **Hilt**. Modules in `di/` provide
 external dependencies (Room, Retrofit, LiteRT, prompt-variable providers,
@@ -86,7 +86,7 @@ The presentation layer is hosted by a single `NavHost` declared in
 - **Secondary destinations** live as additional `composable(...)` entries
   reachable from inside a tab. The pipelines tab is a nested `navigation { }`
   graph so the library and editor share a single `OrchestratorViewModel`
-  scoped to the graph entry. The More tab is the umbrella for the twelve
+  scoped to the graph entry. The More tab is the umbrella for the thirteen
   secondary surfaces, grouped into four named sections (Automation, Your
   content, Building blocks, App); the sections are labels rendered by
   `MoreContent`, not destinations.
@@ -169,6 +169,7 @@ sequenceDiagram
     participant UI as ChatHomeScreen<br/>(Compose)
     participant VM as ChatHomeViewModel
     participant UC as AgentOrchestratorUseCase
+    participant Queue as TaskQueueManager<br/>(serial worker)
     participant Engine as GraphExecutionEngine
     participant Ctx as NodeContextBuilder
     participant Exec as NodeExecutor
@@ -177,9 +178,12 @@ sequenceDiagram
 
     User->>UI: types message
     UI->>VM: sendMessage(text)
-    VM->>Repo: save user ChatMessage (isFinal = true)
+    VM-->>UI: pending user row (SendingUserTurn)
     VM->>UC: invoke(text, sessionId)
-    UC->>Engine: execute(pipelineGraph, executionContext)
+    UC->>Queue: enqueueTask(task)
+    Queue-->>VM: AgentOrchestratorState.Queued (another run is active)
+    Queue->>Repo: save user ChatMessage (persistUserMessage)
+    Queue->>Engine: execute(pipelineGraph, executionContext)
     loop For each node in topological order
         Engine->>Ctx: build(input, NodeContextConfig)
         Ctx-->>Engine: assembled prompt
@@ -187,11 +191,10 @@ sequenceDiagram
         Exec->>LLM: generate(prompt) / call tool
         LLM-->>Exec: Flow<String> tokens / ToolResult
         Exec-->>Engine: NodeOutput.State (console events)
-        Engine-->>VM: AgentOrchestratorState (consoleLines)
+        Engine-->>VM: AgentOrchestratorState via the session's flow (consoleLines)
     end
+    Exec->>Repo: OUTPUT node saves agent ChatMessage (isFinal = true)
     Exec-->>Engine: NodeOutput.Result (final text)
-    Engine-->>UC: result
-    UC->>Repo: save agent ChatMessage (isFinal = true)
     Repo-->>VM: Flow<List<ChatMessage>> emission
     VM-->>UI: ChatHomeUiState (StateFlow)
     UI-->>User: rendered reply
@@ -203,11 +206,17 @@ Step-by-step notes:
    only observes `ChatHomeUiState` (a `StateFlow`) and forwards user input
    to `ChatHomeViewModel`. There are no direct repository or use-case calls
    from any `@Composable`.
-2. `ChatHomeViewModel.sendMessage(...)` persists the user message first
-   (so it survives crashes), then launches the agent on
-   `viewModelScope`.
-3. `AgentOrchestratorUseCase` resolves the pipeline bound to the active
-   chat session (or the default one if the binding is `null`) and asks
+2. `ChatHomeViewModel.sendMessage(...)` shows the message at once as a
+   pending row (`SendingUserTurn`, matched to the stored row by its send
+   time) and hands the prompt to `AgentOrchestratorUseCase`, which enqueues
+   it on `TaskQueueManager`. The queue runs one pipeline at a time: while
+   another run (a trigger, a share, another chat) holds the worker, the
+   session's state is `AgentOrchestratorState.Queued`, which the chat shows as
+   waiting rather than generating.
+3. When the worker picks the task up, it writes the user message into the
+   chat (`persistUserMessage` — also on the cancellation path, so a message
+   stopped while still queued is not lost), resolves the pipeline bound to
+   the session (or the default one if the binding is `null`) and asks
    `GraphExecutionEngine` to run the graph.
 4. `GraphExecutionEngine` walks the graph in topological order. For
    every node, it consults `NodeContextBuilder` to assemble the input
@@ -232,8 +241,9 @@ Step-by-step notes:
    `ChatRepository.getDisplayMessagesForSession(...)`, but they remain
    available for debugging and export paths.
 8. The final agent reply (`isFinal = true`) is saved through the
-   repository; the resulting `Flow` emission updates the `messages` flow
-   exposed by `ChatHomeViewModel` and the UI re-composes.
+   repository by the `OUTPUT` node's executor; the resulting `Flow`
+   emission updates the `messages` flow exposed by `ChatHomeViewModel`
+   and the UI re-composes.
 9. On the terminal `Completed` state, `ChatHomeViewModel` notifies the
    app-scoped `MemoryAutoExtractionCoordinator` (domain service). After a
    30-second per-session debounce — and only when

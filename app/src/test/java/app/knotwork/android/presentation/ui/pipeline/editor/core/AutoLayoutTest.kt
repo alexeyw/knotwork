@@ -69,7 +69,7 @@ class AutoLayoutTest {
     }
 
     @Test
-    fun `given any graph when compute then all positions snap to GRID_PX`() {
+    fun `given any graph when compute then all positions snap to GRID_STEP`() {
         val a = node(NodeType.INPUT, "a")
         val b = node(NodeType.LITE_RT, "b")
         val c = node(NodeType.OUTPUT, "c")
@@ -84,8 +84,8 @@ class AutoLayoutTest {
         )
         val result = AutoLayout.compute(graph)
         result.positions.values.forEach { (x, y) ->
-            assertEquals(0f, x % CanvasTransform.GRID_PX, 1e-3f)
-            assertEquals(0f, y % CanvasTransform.GRID_PX, 1e-3f)
+            assertEquals(0f, x % CanvasTransform.GRID_STEP, 1e-3f)
+            assertEquals(0f, y % CanvasTransform.GRID_STEP, 1e-3f)
         }
     }
 
@@ -171,7 +171,7 @@ class AutoLayoutTest {
             ),
         )
         val narrow = AutoLayout.compute(graph)
-        val wide = AutoLayout.compute(graph, siblingGapPx = 600f, layerGapPx = AutoLayout.LAYER_GAP_Y)
+        val wide = AutoLayout.compute(graph, siblingGap = 600f, layerGap = AutoLayout.LAYER_GAP_Y)
         val narrowSpan = abs(narrow.positions.getValue("l").first - narrow.positions.getValue("r").first)
         val wideSpan = abs(wide.positions.getValue("l").first - wide.positions.getValue("r").first)
         assertTrue(wideSpan > narrowSpan)
@@ -188,7 +188,7 @@ class AutoLayoutTest {
             connections = listOf(ConnectionModel(id = "ab", sourceNodeId = "a", targetNodeId = "b")),
         )
         val narrow = AutoLayout.compute(graph)
-        val wide = AutoLayout.compute(graph, siblingGapPx = AutoLayout.SIBLING_GAP_X, layerGapPx = 600f)
+        val wide = AutoLayout.compute(graph, siblingGap = AutoLayout.SIBLING_GAP_X, layerGap = 600f)
         val narrowDy = abs(narrow.positions.getValue("a").second - narrow.positions.getValue("b").second)
         val wideDy = abs(wide.positions.getValue("a").second - wide.positions.getValue("b").second)
         assertTrue(wideDy > narrowDy)

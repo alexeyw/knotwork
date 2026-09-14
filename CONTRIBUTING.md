@@ -99,8 +99,11 @@ and the full release playbook (signing, AAB build, APK size breakdown) lives in
 `.github/workflows/release.yml` from a `v*` tag rather than by hand — see
 [`docs/release.md`](docs/release.md) §9.
 
-`./gradlew check` aggregates the same checks CI runs on every pull
-request:
+`./gradlew check :buildSrc:test` is the same gate CI runs on every pull
+request. `buildSrc` is a separate build, so its tests — the generators and
+scanners behind the documentation gates — cannot be reached from `check`, and
+running `check` alone is a narrower gate than the one that decides the merge.
+`check` aggregates:
 
 - **detekt** — Kotlin static analysis (configured in
   [`config/detekt/detekt.yml`](config/detekt/detekt.yml)).
@@ -109,19 +112,22 @@ request:
 - **Unit tests** (`testFullDebugUnitTest` + `testFossDebugUnitTest`) — including
   the **Konsist** architecture guard (Clean-Architecture layer boundaries; see
   [`docs/static-analysis.md`](docs/static-analysis.md)).
+- **Screenshot tests** — the design-system renders compared with their
+  committed baselines (`:catalog:verifyRoborazziDebug`).
 - **Kover** coverage verification (`koverVerifyFullDebug`).
 - **Documentation gates** — dead internal links and `#anchors`
-  (`verifyDocLinks`), Mermaid diagram structure (`verifyMermaidDiagrams`), and
-  the version number agreeing with itself across `README.md` and
-  `CHANGELOG.md` (`verifyVersionSources`). External `http` links are reported
-  weekly by a separate workflow and never gate a merge. The full roster of
-  gates lives in
-  [`docs/static-analysis.md`](docs/static-analysis.md).
+  (`verifyDocLinks`), Mermaid diagram structure (`verifyMermaidDiagrams`), the
+  version number agreeing with every hand-written copy of it in `README.md`,
+  `CHANGELOG.md`, `SECURITY.md` and `docs/roadmap.md` (`verifyVersionSources`),
+  the in-app documentation links and the copies of documents bundled into the
+  app (`verifyDocumentationLinks`, `verifyBundledDocs`). External `http` links
+  are reported weekly by a separate workflow and never gate a merge. The full
+  roster of gates lives in [`docs/static-analysis.md`](docs/static-analysis.md).
 
-Run `./gradlew check` **locally before pushing**. Pushing without running
-it just trades local feedback for slower CI feedback.
+Run `./gradlew check :buildSrc:test` **locally before pushing**. Pushing
+without running it just trades local feedback for slower CI feedback.
 
-CI adds two things `check` does not do. It compiles the instrumented
+Beyond those two tasks, CI adds two things. It compiles the instrumented
 source set — as a separate Gradle invocation, since bundling it into
 `check` makes unrelated Robolectric tests fail:
 
@@ -187,13 +193,19 @@ Guidelines:
 Before requesting review, please confirm:
 
 - [ ] Tests added or updated for the change.
-- [ ] `./gradlew check` passes locally.
+- [ ] `./gradlew check :buildSrc:test` passes locally.
 - [ ] If the change touches `app/src/androidTest/`, the instrumented
       sources compile
       (`./gradlew :app:compileFullDebugAndroidTestKotlin`) and the suite
       was run on a device or emulator.
 - [ ] Public documentation is updated where the change affects user-
       facing behaviour, the public API surface, or the build / dev setup.
+- [ ] If the change edits a document the app links to (`docs/user-guide.md`,
+      `faq.md`, `troubleshooting.md`, `cookbook.md`,
+      `external-automation.md`), `./gradlew :app:generateDocumentationLinks`
+      was run — the Help screen shows each document's size, so a changed line
+      count is drift — and, when `docs/faq.md` or `docs/troubleshooting.md`
+      changed, `./gradlew :app:syncBundledDocs`, with both results committed.
 - [ ] `./gradlew :app:generateFileMap` was run and its result committed
       when Kotlin files or directories were added, moved, or removed. The
       task also owns the `catalog/` and test maps; the root `FILE_MAP.md`

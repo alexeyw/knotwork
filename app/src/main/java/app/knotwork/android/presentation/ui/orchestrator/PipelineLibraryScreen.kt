@@ -216,7 +216,6 @@ fun PipelineLibraryScreen(
 
     val rows by remember(
         uiState.savedPipelines,
-        uiState.activePipelineId,
         uiState.defaultPipelineId,
         uiState.shareTargetPipelineId,
         uiState.quickSettingsTilePipelineId,
@@ -224,7 +223,6 @@ fun PipelineLibraryScreen(
         derivedStateOf {
             uiState.savedPipelines.map { pipeline ->
                 pipeline.toLibraryRow(
-                    isActive = pipeline.id == uiState.activePipelineId,
                     isDefault = pipeline.id == uiState.defaultPipelineId,
                     isShareTarget = pipeline.id == uiState.shareTargetPipelineId,
                     isQuickTile = pipeline.id == uiState.quickSettingsTilePipelineId,
@@ -620,12 +618,16 @@ private fun PipelineNameDialog(
 /**
  * Projects a domain [PipelineGraph] onto a catalog [PipelineLibraryRow].
  * Builds the "N nodes · {flavour}" subtitle from the first few node types
- * and derives the secondary status line ("Active default" / "Idle" /
- * "unbound"), plus the entry-surface binding flags that drive the
- * "DEFAULT" / "SHARE" / "TILE" pills.
+ * and derives the secondary line (shown only for an empty, "unbound" graph),
+ * plus the entry-surface binding flags that drive the "DEFAULT" / "SHARE" /
+ * "TILE" pills.
+ *
+ * There is deliberately no "active" marker. The pipeline the editor happens to
+ * hold is screen state, not a property of the pipeline: after a restart it is just
+ * the most recently modified one, and a row labelled "Active" read as a setting the
+ * user had chosen — while quietly making that row impossible to delete.
  */
 private fun PipelineGraph.toLibraryRow(
-    isActive: Boolean,
     isDefault: Boolean,
     isShareTarget: Boolean,
     isQuickTile: Boolean,
@@ -636,13 +638,8 @@ private fun PipelineGraph.toLibraryRow(
     // true execution order "INPUT→LITE_RT→OUTPUT".
     val flavour = GraphFlowPreview.render(this)
     val subtitle = "$nodeCountText · $flavour"
-    val secondaryLine = when {
-        isActive && isDefault -> "Active default"
-        isActive -> "Active"
-        nodes.isEmpty() -> "unbound"
-        else -> null
-    }
-    val secondaryKind = if (nodes.isEmpty() && !isActive) {
+    val secondaryLine = if (nodes.isEmpty()) "unbound" else null
+    val secondaryKind = if (nodes.isEmpty()) {
         PipelineSecondaryLineKind.Unbound
     } else {
         PipelineSecondaryLineKind.Default
@@ -653,10 +650,9 @@ private fun PipelineGraph.toLibraryRow(
         subtitle = subtitle,
         secondaryLine = secondaryLine,
         secondaryLineKind = secondaryKind,
-        status = if (isActive) Status.Running else Status.Idle,
+        status = Status.Idle,
         leadingTint = Color(color = LEADING_TINT_PACKED),
         leadingIcon = AppIcons.Branch,
-        isActive = isActive,
         isDefault = isDefault,
         isShareTarget = isShareTarget,
         isQuickTile = isQuickTile,

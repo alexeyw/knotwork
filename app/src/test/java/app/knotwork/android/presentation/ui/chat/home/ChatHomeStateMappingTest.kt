@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.models.RunCeilingAxis
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunTerminationReason
+import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ComposerState
 import app.knotwork.design.components.chips.Risk
@@ -235,6 +236,30 @@ class ChatHomeStateMappingTest {
     }
 
     @Test
+    fun `Generating with preparingModel labels the loader bubble as loading the model`() {
+        val fixtures = ChatHomeFixtures.forTesting()
+        val view = screenState(ChatHomeUiState.Generating(preparingModel = true)).toViewState(fixtures)
+
+        assertEquals(fixtures.loaderPreparingModel, view.loaderLabel)
+    }
+
+    @Test
+    fun `Generating while waiting in the queue says it is waiting in both the strip and the bubble`() {
+        val fixtures = ChatHomeFixtures.forTesting()
+        val view = screenState(ChatHomeUiState.Generating(waitingInQueue = true)).toViewState(fixtures)
+
+        assertEquals(ChatHomeVisualState.Generating, view.visualState)
+        assertTrue("Stop must stay available for a queued run", view.composerState is ComposerState.Generating)
+        assertEquals(fixtures.statusWaitingInQueue, view.agentStatusLine)
+        assertEquals(fixtures.loaderWaitingInQueue, view.loaderLabel)
+    }
+
+    @Test
+    fun `Generating proper keeps the default loader label`() {
+        assertNull(screenState(ChatHomeUiState.Generating()).toViewState().loaderLabel)
+    }
+
+    @Test
     fun `Idle maps to ChatHomeVisualState_Idle and threads supplied messages`() {
         val supplied = baselineMessages(model)
         val view = screenState(ChatHomeUiState.Idle, messages = supplied).toViewState()
@@ -281,6 +306,41 @@ class ChatHomeStateMappingTest {
         val view = screenState(ChatHomeUiState.HitlConfirm(Risk.Destructive), pendingTypedConfirm = "ye")
             .toViewState()
         assertEquals("ye", view.pendingTypedConfirm)
+    }
+
+    @Test
+    fun `a live pending confirmation leaves the card's summary blank`() {
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "append_file",
+                arguments = """{"path":"inbox/captures.md"}""",
+                risk = ToolRisk.SENSITIVE,
+            ),
+        )
+
+        val confirmation = row.content as ChatContent.Confirmation
+        assertEquals("append_file", confirmation.model.toolName)
+        // Asserted as empty rather than as "different from the tool name": it is
+        // emptiness that makes the card drop the line instead of printing the id
+        // twice, and a summary merely different from the id would not do that.
+        assertEquals("", confirmation.model.summary)
+    }
+
+    @Test
+    fun `a live pending confirmation carries the decoded arguments and the real risk`() {
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "fs.delete_file",
+                arguments = """{"path":"old-notes.md"}""",
+                risk = ToolRisk.DESTRUCTIVE,
+            ),
+        )
+
+        val confirmation = row.content as ChatContent.Confirmation
+        assertEquals(Risk.Destructive, confirmation.model.risk)
+        assertEquals(setOf("path"), confirmation.model.arguments.keys)
     }
 
     @Test

@@ -280,6 +280,12 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `FilesContent.kt` - Files surface: quota header, file list, multi-select bar, detail bottom sheet, and the empty / error states. Deliberately reuses the `MemoryContent` vocabulary rather than introducing new components; all I/O and SAF launching stay in the host.
     - `FilesDialogs.kt` - the screen's two confirmations, split out to keep the composable count per file manageable: the destructive delete (single or bulk) and the import name-collision chooser (keep both / replace / cancel).
     - `FilesViewState.kt` - `FilesVisualState` body state plus the separate overlay/selection fields (preview sheet, dialogs), file kind / quota tone enums, and the row / quota / preview / dialog models, so opening a preview never changes the body branch.
+  - `help/` - Help list and document-reader chrome: rows marked by delivery, the offline refusals, and the arrival mark.
+    - `HelpListContent.kt` - The Help list: every document the app can open, marked by where it is read from.
+    - `HelpListViewState.kt` - State of the Help list.
+    - `HelpReaderContent.kt` - The reader's chrome, with the document itself supplied by the caller.
+    - `HelpReaderViewState.kt` - State of the document reader.
+    - `HelpStrings.kt` - Every string the Help surfaces draw, supplied by the app's resources.
   - `memory/` - Long-term-memory pages.
     - `MemoryContent.kt` - Memory Manager surface (stats header, category chips, semantic search, provenance breakdown, entry cards).
     - `MemoryType.kt` - per-element typography overrides transcribed from the Memory Manager design spec.
@@ -404,6 +410,7 @@ matters.
     - `ChatBubbleShapesTest.kt` - Verifies the asymmetric corner radii on `ChatBubbleShapes`.
     - `ChatCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the long-press scale + composer morph behave deterministically.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
+    - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
     - `HitlConfirmationStateTest.kt` - Pure-JVM tests for `HitlConfirmationState` — the gating logic behind `HitlConfirmationCard`'s Allow CTA, Always-Allow visibility, and destructive typed-confirm row.
     - `ImageAttachmentCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ImageAttachmentCatalogContent` in both themes plus a reduced-motion variant.
     - `InterruptedRunCardTest.kt` - Behavioural coverage for `InterruptedRunCard` — the status card the chat stream pins when the session's most recent pipeline run died with its process.
@@ -448,6 +455,7 @@ matters.
 - `icons/` - the `AppIcons` registry: a cheap correctness gate over every entry, plus the catalog page baseline.
   - `AppIconsTest.kt` - Cheap correctness gate for every `AppIcons` entry.
   - `IconCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `IconCatalogPage` in both Knotwork themes.
+- `KnotworkRoborazziOptions.kt` - Comparison options every catalog screenshot is captured with, so a baseline recorded on one platform verifies on the other.
 - `screens/` - one directory per screen, mirroring `screens/` in the main tree. The usual trio: a `*ContentSnapshotTest` baseline across the screen's documented state matrix, an `*AccessibilityTest` semantics audit, and behavioural tests for the parts a still image cannot carry.
   - `about/` - the About screen.
     - `AboutContentSnapshotTest.kt` - Roborazzi baseline for `AboutContent` in both themes.
@@ -466,6 +474,9 @@ matters.
     - `DiscoverDetailContentSnapshotTest.kt` - Roborazzi snapshot baseline for the model-discovery detail surface (`DiscoverDetailContent`): loading, loaded (mixed file states), gated (token field), the license-confirmation dialog and the error state, in both themes.
   - `files/` - the workspace Files screen.
     - `FilesContentSnapshotTest.kt` - Preview fixtures for the Files screen snapshot matrix.
+  - `help/` - Fixtures and Roborazzi baselines for the Help list and the document reader, both themes and font scale 200 %.
+    - `HelpPreview.kt` - Fixtures for the Help snapshots.
+    - `HelpSnapshotTest.kt` - Roborazzi baselines for the Help list and the document reader.
   - `memory/` - long-term memory — the stats header, grouped list, detail sheet and compaction dialog, plus which states may offer which affordances.
     - `MemoryAccessibilityTest.kt` - Memory-screen a11y audit.
     - `MemoryAffordanceTest.kt` - Pins which Memory states are allowed to offer which affordances.
@@ -516,6 +527,7 @@ matters.
     - `ToolsGroupsSnapshotTest.kt` - Roborazzi baseline for the collapsible tool groups.
   - `triggers/` - the trigger list, editor and delete dialog.
     - `TriggersContentSnapshotTest.kt` - Roborazzi snapshot baselines for the Triggers surfaces — the list (`TriggersContent`), the full-screen editor (`TriggerEditorContent`) and the delete dialog (`TriggerDeleteDialogContent`) across their documented states in both themes.
+- `SnapshotComparisonOptionsGuardTest.kt` - Fails a screenshot captured without `KnotworkRoborazziOptions`.
 - `store/` - baselines rendered for the app-store listing rather than for review — a different resolution from the README heroes, for a reason the test itself records.
   - `StoreScreenshotTest.kt` - Roborazzi baselines for the **app-store listing**, rendered at `w360dp-h720dp-xxhdpi` = 1080 × 2160 rather than the README heroes' 1080 × 2400: Play rejects a screenshot whose longer side is more than twice the shorter, and the hero resolution is. Copied by hand into `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
 - `theme/` - that `KnotworkTheme` actually wires the tokens into `MaterialTheme` and into its own accessors.

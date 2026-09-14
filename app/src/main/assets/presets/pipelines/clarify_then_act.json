@@ -127,11 +127,7 @@
         "type": "LITE_RT",
         "title": "Local LLM",
         "modelId": "",
-        "systemPrompt": "You are an on-device assistant running on $MODEL. Today is $DATE. The user's clarified request appears below; answer it directly in one or two short paragraphs.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You are an on-device assistant running on $MODEL. Today is $DATE. The user's clarified request appears below; answer it directly in one or two short paragraphs.\n\nReply in the user's language ($LANG)."
       }
     },
     {

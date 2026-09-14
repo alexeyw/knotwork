@@ -2792,7 +2792,7 @@ class GraphExecutionEngineTest {
      * while its child sat in WAITING_APPROVAL, and `ResumePipelineRunUseCase`
      * — which requires a resumable *root* — then rejected every answer to the
      * parked notification, stranding the run behind a permanent "generating…"
-     * (phase-40 finding F7, reproduced on device).
+     * (reproduced on device).
      *
      * The state sequence is injected through the SKILL executor rather than by
      * standing up a real sub-pipeline: the defect lives in the engine's
@@ -2983,7 +2983,7 @@ class GraphExecutionEngineTest {
      * the world — so its trace record must be durable the moment it lands, not
      * whenever the write buffer next drains.
      *
-     * Found on the reference device (phase-40, cell 7b): the process killed
+     * Found on the reference device: the process killed
      * 112 ms after a tool returned lost the buffered record, and the resumed
      * run invoked the same tool a second time — visible as a second
      * `tools/call` on the wire. Killed 1.2 s after (past the buffer's 500 ms

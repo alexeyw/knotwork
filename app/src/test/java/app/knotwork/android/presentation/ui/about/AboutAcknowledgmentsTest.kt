@@ -7,7 +7,7 @@ import org.junit.Test
 
 /**
  * Drift guard for the hand-maintained [AboutAcknowledgments] list surfaced on the
- * About screen (`PHASE 26 — Task 7`).
+ * About screen.
  *
  * The list is the user-facing companion of the repository `NOTICE` file. These
  * assertions keep it from silently rotting as dependencies change: they fail the

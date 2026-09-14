@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +44,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.util.PriorityQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -102,6 +104,15 @@ class TaskQueueManagerImpl @Inject constructor(
      */
     private val activeRun = AtomicReference<ActiveRun?>(null)
 
+    /**
+     * `true` from the moment the worker takes a task until it finds the queue empty.
+     *
+     * Written under [queueMutex] together with the poll, so [enqueueTask] — which reads
+     * it under the same lock — never sees the gap [activeRun] has between polling a task
+     * and recording it, or between finishing one task and taking the next.
+     */
+    private val workerBusy = AtomicBoolean(false)
+
     private val queueMutex = Mutex()
     private val taskQueue = PriorityQueue<AgentTask> { t1, t2 ->
         val p1 = t1.priority.ordinal
@@ -112,6 +123,12 @@ class TaskQueueManagerImpl @Inject constructor(
     // Channel to signal new tasks
     private val taskSignal = Channel<Unit>(Channel.CONFLATED)
 
+    /**
+     * Latest status of every session the queue has run, read by the task monitor and the
+     * More tab. Written by [emitSessionState] on every status a session goes through —
+     * queued, picked up, each stage, settled — rather than rebuilt at enqueue, which left
+     * a finished chat reading as running until the next task arrived anywhere.
+     */
     private val _activeSessionsState = MutableStateFlow<Map<String, AgentOrchestratorState>>(emptyMap())
     override val activeSessionsState: StateFlow<Map<String, AgentOrchestratorState>> =
         _activeSessionsState.asStateFlow()
@@ -148,8 +165,8 @@ class TaskQueueManagerImpl @Inject constructor(
 
         /**
          * Longest silence tolerated from a running task before the worker
-         * declares it stalled and moves on — the safety valve for phase-40
-         * finding F13.
+         * declares it stalled and moves on — the safety valve against
+         * a run that goes silent without ever finishing.
          *
          * The worker is a **single serial loop**, so one task that never
          * finishes stops every chat in the app: new messages are accepted,
@@ -168,7 +185,7 @@ class TaskQueueManagerImpl @Inject constructor(
          * Scope, stated plainly: the valve guards the engine phase of a task.
          * The short prologue before it — resolving the pipeline, writing the
          * user message — is not covered, so a hang in those repository calls
-         * would still stop the queue. Nothing in the phase-40 run pointed at
+         * would still stop the queue. Nothing in the on-device testing pointed at
          * that path, and widening the guard there would mean failing a task on
          * a database stall it could not explain.
          */
@@ -254,19 +271,26 @@ class TaskQueueManagerImpl @Inject constructor(
         }
     }
 
-    private fun updateActiveSessionsState() {
-        // Per-session flow is a SharedFlow now; the latest value lives in
-        // the replay cache (size 1) rather than under `.value`.
-        // `sessionStates` is a plain LinkedHashMap mutated under its own monitor
-        // by getOrCreateStateFlow / evictOldestTerminalSession on the worker
-        // thread; iterate it under the same monitor so this read (driven from the
-        // enqueue path) cannot hit a ConcurrentModificationException.
-        val currentState = synchronized(sessionStates) {
-            sessionStates.mapValues { entry ->
-                entry.value.replayCache.lastOrNull() ?: AgentOrchestratorState.Idle
-            }
+    /**
+     * Emits [state] on this session flow and records it in [activeSessionsState].
+     *
+     * Every session emission goes through here, so the snapshot cannot fall behind the
+     * flow it summarises. Only statuses reach it ([asSessionStatus]): streamed text is
+     * dropped and telemetry is skipped, so a generation updates the snapshot once, not
+     * once per token.
+     *
+     * @param sessionId the session this flow belongs to.
+     * @param state the state to emit.
+     */
+    private suspend fun MutableSharedFlow<AgentOrchestratorState>.emitSessionState(
+        sessionId: String,
+        state: AgentOrchestratorState,
+    ) {
+        emit(state)
+        val status = state.asSessionStatus() ?: return
+        _activeSessionsState.update { current ->
+            if (current[sessionId] == status) current else current + (sessionId to status)
         }
-        _activeSessionsState.value = currentState
     }
 
     init {
@@ -278,7 +302,7 @@ class TaskQueueManagerImpl @Inject constructor(
             for (signal in taskSignal) {
                 while (true) {
                     val task = queueMutex.withLock {
-                        taskQueue.poll()
+                        taskQueue.poll().also { workerBusy.set(it != null) }
                     } ?: break // Exit inner loop when queue is empty
 
                     // Each task runs in its own child job so [cancelRun] can end
@@ -338,7 +362,7 @@ class TaskQueueManagerImpl @Inject constructor(
                 // session itself from `executeRun`'s `finally`, and a second
                 // Idle racing that would settle the surface before the run has
                 // finished unwinding.
-                getOrCreateStateFlow(sessionId).emit(AgentOrchestratorState.Idle)
+                getOrCreateStateFlow(sessionId).emitSessionState(sessionId, AgentOrchestratorState.Idle)
             }
         }
     }
@@ -389,7 +413,7 @@ class TaskQueueManagerImpl @Inject constructor(
         }
         val stateFlow = getOrCreateStateFlow(task.sessionId)
         val loadingState = AgentOrchestratorState.Loading
-        stateFlow.emit(loadingState)
+        stateFlow.emitSessionState(task.sessionId, loadingState)
         _globalState.value = loadingState
 
         // Ensure the persistent QUEUED record exists before any lifecycle
@@ -426,7 +450,7 @@ class TaskQueueManagerImpl @Inject constructor(
             val message = "No active pipeline found. Please create one in the Visual Orchestrator."
             pipelineRunRepository.finishRun(task.id, PipelineRunStatus.FAILED, message)
             val errState = AgentOrchestratorState.Error(message)
-            stateFlow.emit(errState)
+            stateFlow.emitSessionState(task.sessionId, errState)
             _globalState.value = errState
             return
         }
@@ -441,7 +465,7 @@ class TaskQueueManagerImpl @Inject constructor(
             val message = "No default pipeline configured. Set one in Settings or bind a pipeline to this chat."
             pipelineRunRepository.finishRun(task.id, PipelineRunStatus.FAILED, message)
             val errState = AgentOrchestratorState.Error(message)
-            stateFlow.emit(errState)
+            stateFlow.emitSessionState(task.sessionId, errState)
             _globalState.value = errState
             return
         }
@@ -476,7 +500,7 @@ class TaskQueueManagerImpl @Inject constructor(
     private suspend fun processResumeTask(task: AgentTask) {
         val stateFlow = getOrCreateStateFlow(task.sessionId)
         val loadingState = AgentOrchestratorState.Loading
-        stateFlow.emit(loadingState)
+        stateFlow.emitSessionState(task.sessionId, loadingState)
         _globalState.value = loadingState
 
         val run = pipelineRunRepository.getRun(task.id)
@@ -495,7 +519,7 @@ class TaskQueueManagerImpl @Inject constructor(
             // the app refused wearing the destructive tile and a Retry, when
             // what the user needs is "run it again" against the current graph.
             val errState = AgentOrchestratorState.Error(message, RunTerminationReason.GraphChanged)
-            stateFlow.emit(errState)
+            stateFlow.emitSessionState(task.sessionId, errState)
             _globalState.value = errState
             return
         }
@@ -600,7 +624,7 @@ class TaskQueueManagerImpl @Inject constructor(
                     }
                     // `emit` (vs. `tryEmit`) back-pressures the engine if the
                     // buffer ever fills, so we never silently drop an event.
-                    stateFlow.emit(state)
+                    stateFlow.emitSessionState(task.sessionId, state)
                     _globalState.value = state
                 }
         } catch (e: CancellationException) {
@@ -621,7 +645,7 @@ class TaskQueueManagerImpl @Inject constructor(
             // Dropping it here left a watchdog kill wearing the destructive
             // error tile and a Retry button that would stall all over again.
             val errState = AgentOrchestratorState.Error(message, reason)
-            stateFlow.emit(errState)
+            stateFlow.emitSessionState(task.sessionId, errState)
             _globalState.value = errState
         } finally {
             // Runs on the cancellation path too, where the coroutine's job
@@ -635,7 +659,7 @@ class TaskQueueManagerImpl @Inject constructor(
                     // record stays WAITING_* for the background response
                     // path. Only the in-memory session state is reset so the
                     // UI stops showing a live run.
-                    stateFlow.emit(AgentOrchestratorState.Idle)
+                    stateFlow.emitSessionState(task.sessionId, AgentOrchestratorState.Idle)
                 } else if (last !is AgentOrchestratorState.Completed &&
                     last !is AgentOrchestratorState.Error
                 ) {
@@ -646,7 +670,7 @@ class TaskQueueManagerImpl @Inject constructor(
                     // so it maps to CANCELLED, and the repository's terminal
                     // guard keeps any already-settled record untouched.
                     pipelineRunRepository.finishRun(task.id, PipelineRunStatus.CANCELLED)
-                    stateFlow.emit(AgentOrchestratorState.Idle)
+                    stateFlow.emitSessionState(task.sessionId, AgentOrchestratorState.Idle)
                 }
                 _globalState.value = AgentOrchestratorState.Idle
             }
@@ -700,8 +724,13 @@ class TaskQueueManagerImpl @Inject constructor(
                     last is AgentOrchestratorState.Completed ||
                     last is AgentOrchestratorState.Error
                 ) {
-                    stateFlow.emit(AgentOrchestratorState.Loading)
-                    updateActiveSessionsState()
+                    // Behind another run the task can wait for as long as that run takes.
+                    // Say so, rather than let the session read as already loading; the
+                    // worker emits Loading on this flow when it picks the task up.
+                    stateFlow.emitSessionState(
+                        task.sessionId,
+                        if (workerBusy.get()) AgentOrchestratorState.Queued else AgentOrchestratorState.Loading,
+                    )
                 }
                 taskQueue.offer(task)
             }
@@ -748,6 +777,46 @@ class TaskQueueManagerImpl @Inject constructor(
                 state is AgentOrchestratorState.Completed ||
                 state is AgentOrchestratorState.Error
         }
-        entry?.let { sessionStates.remove(it.key) }
+        entry?.let {
+            sessionStates.remove(it.key)
+            // An evicted session is forgotten by the queue, so the lists stop showing it too.
+            _activeSessionsState.update { current -> current - it.key }
+        }
     }
+}
+
+/**
+ * The status [TaskQueueManagerImpl.activeSessionsState] records for this emission, or
+ * `null` when the emission is not a status and must leave the recorded one in place.
+ *
+ * Streamed text is cleared, so consecutive tokens map to one equal value and the
+ * snapshot does not change per token. Console, trace, node-I/O, notice and observation
+ * events describe the run rather than its status. Exhaustive on purpose: a new state
+ * has to decide which it is.
+ *
+ * @return the status to record, or `null` to keep the previous one.
+ */
+internal fun AgentOrchestratorState.asSessionStatus(): AgentOrchestratorState? = when (this) {
+    is AgentOrchestratorState.Thinking -> AgentOrchestratorState.Thinking(partialText = "")
+    is AgentOrchestratorState.Answering -> AgentOrchestratorState.Answering(partialText = "")
+
+    is AgentOrchestratorState.ConsoleLog,
+    is AgentOrchestratorState.PipelineTrace,
+    is AgentOrchestratorState.NodeIO,
+    is AgentOrchestratorState.RunNotice,
+    is AgentOrchestratorState.ObservationResult,
+    -> null
+
+    AgentOrchestratorState.Idle,
+    AgentOrchestratorState.Loading,
+    AgentOrchestratorState.Queued,
+    is AgentOrchestratorState.ExecutingTool,
+    is AgentOrchestratorState.WaitingForApproval,
+    is AgentOrchestratorState.AwaitingClarification,
+    is AgentOrchestratorState.WaitingForCeilingRaise,
+    is AgentOrchestratorState.SuspendedInBackground,
+    is AgentOrchestratorState.Completed,
+    is AgentOrchestratorState.Error,
+    is AgentOrchestratorState.PipelineStage,
+    -> this
 }

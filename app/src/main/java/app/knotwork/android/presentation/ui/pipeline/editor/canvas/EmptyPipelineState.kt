@@ -154,7 +154,7 @@ private fun InfoPill(scale: Float) {
                 R.string.pipeline_editor_empty_info_pill,
                 CANVAS_REFERENCE_WIDTH,
                 CANVAS_REFERENCE_HEIGHT,
-                CanvasTransform.GRID_PX.roundToInt(),
+                CanvasTransform.GRID_STEP.roundToInt(),
                 formatScalePercent(scale),
             ),
             style = KnotworkTextStyles.LabelSm,

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.screens.chat.ChatHomeContent
 import app.knotwork.design.screens.chat.ChatHomePreview
 import app.knotwork.design.screens.memory.MemoryContent
@@ -135,6 +136,7 @@ class A11yMatrixSnapshotTest {
         }
         val scaleTag = "fs${(fontScale * SCALE_FILENAME_FACTOR).toInt()}"
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/a11y_${name}_$scaleTag.png",
         )
     }

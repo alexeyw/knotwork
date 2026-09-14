@@ -55,6 +55,34 @@ object MarkdownLinks {
     /** An ATX heading, with its optional closing run of `#` characters. */
     private val HEADING = Regex("""^ {0,3}(#{1,6})\s+(.*?)\s*#*$""")
 
+    /** A second-level ATX heading — the level [sectionCountOf] counts. */
+    private val SECTION_HEADING = Regex("""^ {0,3}##\s+(.*?)\s*#*$""")
+
+    /** A fence opening a Mermaid block, in either fence character. */
+    private val MERMAID_FENCE = Regex("""^ {0,3}(?:`{3,}|~{3,})\s*mermaid\b""", RegexOption.IGNORE_CASE)
+
+    /** An image: the link form with a leading `!`, which [inlineDestinations] deliberately keeps. */
+    private val IMAGE = Regex("""!\[[^\]]*]\(""")
+
+    /**
+     * An HTML tag, strictly enough to exclude a Markdown autolink.
+     *
+     * [HTML_TAG] is deliberately not reused: it matches anything between angle
+     * brackets, which includes `<https://example.com>` — a link, not a tag, and
+     * one the renderer handles perfectly well. Requiring a tag name followed by
+     * whitespace, `/` or `>` separates them, because a scheme is always followed
+     * by `:`.
+     */
+    private val HTML_ELEMENT = Regex("""</?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?/?>""")
+
+    /**
+     * Slugs of the headings a document uses to navigate itself.
+     *
+     * Matched on the slug rather than the raw text so casing and punctuation
+     * ("See also" / "See Also:") cannot smuggle one back into the count.
+     */
+    private val NAVIGATION_SECTIONS = setOf("contents", "see-also")
+
     /** Inline image or link syntax inside a heading, reduced to its text by [slug]. */
     private val INLINE_LINK_IN_HEADING = Regex("""!?\[([^\]]*)]\([^)]*\)""")
 
@@ -99,14 +127,181 @@ object MarkdownLinks {
         val used = mutableMapOf<String, Int>()
         for (line in maskedLines(markdown, maskCodeSpans = false)) {
             HTML_ANCHOR.findAll(line).forEach { anchors += it.groupValues[1] }
-            val heading = HEADING.matchEntire(line) ?: continue
-            val base = slug(heading.groupValues[2])
-            if (base.isEmpty()) continue
+            val base = headingSlugOf(line) ?: continue
             val seen = used.getOrDefault(base, 0)
             used[base] = seen + 1
             anchors += if (seen == 0) base else "$base-$seen"
         }
         return anchors
+    }
+
+    /**
+     * Counts how many headings produce each base slug.
+     *
+     * [anchorsOf] answers "can this anchor be linked to", which a duplicated
+     * heading answers `true` to twice over: two headings spelled alike yield
+     * `slug` and `slug-1`, and both are valid targets forever. That is exactly
+     * the anchor nobody should depend on — reordering the sections keeps both
+     * anchors alive while silently swapping what they point at. A caller that
+     * has to refuse such an anchor needs the count, not the membership, so it
+     * is read here rather than inferred from the anchor set (where `step-1`
+     * from a heading "Step 1" is indistinguishable from an ordinal suffix).
+     *
+     * @param markdown The document's full text.
+     * @return Base slug to the number of headings that produce it, in document
+     *   order. Explicit HTML anchors are not counted: they are written by hand
+     *   and carry no ordinal suffix.
+     */
+    fun headingSlugCounts(markdown: String): Map<String, Int> {
+        val counts = linkedMapOf<String, Int>()
+        for (line in maskedLines(markdown, maskCodeSpans = false)) {
+            val base = headingSlugOf(line) ?: continue
+            counts[base] = counts.getOrDefault(base, 0) + 1
+        }
+        return counts
+    }
+
+    /**
+     * Finds the lines that open a Mermaid fenced block.
+     *
+     * Fence state is tracked here rather than reused from [maskedLines],
+     * because masking is what *removes* fenced blocks — the construct being
+     * looked for. Tracking it means a `mermaid` fence quoted **inside** another
+     * fenced block is not reported: documentation about diagrams shows the
+     * syntax, and a gate that fails a valid document teaches everyone to
+     * distrust it.
+     *
+     * @param markdown The document's full text.
+     * @return 1-indexed lines opening a Mermaid block at the top level.
+     */
+    fun mermaidBlockLines(markdown: String): List<Int> {
+        val lines = mutableListOf<Int>()
+        var fence: String? = null
+        markdown.split("\n").forEachIndexed { index, line ->
+            val opener = FENCE.find(line)?.groupValues?.get(1)
+            when {
+                fence == null && opener != null -> {
+                    fence = opener
+                    if (MERMAID_FENCE.containsMatchIn(line)) lines += index + 1
+                }
+
+                fence != null && opener != null &&
+                    opener.first() == fence.first() && opener.length >= fence.length -> fence = null
+            }
+        }
+        return lines
+    }
+
+    /**
+     * Finds the lines carrying an image.
+     *
+     * @param markdown The document's full text.
+     * @return 1-indexed lines on which an image is written.
+     */
+    fun imageLines(markdown: String): List<Int> =
+        maskedLines(markdown, maskCodeSpans = true).mapIndexedNotNull { index, line ->
+            (index + 1).takeIf { IMAGE.containsMatchIn(line) }
+        }
+
+    /**
+     * Finds the HTML tags a document contains.
+     *
+     * Code blocks and code spans are masked first: documentation about HTML
+     * quotes tags constantly, and a quoted tag renders as the text it is.
+     *
+     * @param markdown The document's full text.
+     * @return 1-indexed line and the tag's text, one entry per tag.
+     */
+    fun htmlTagLines(markdown: String): List<Pair<Int, String>> =
+        maskedLines(markdown, maskCodeSpans = true).flatMapIndexed { index, line ->
+            HTML_ELEMENT.findAll(line).map { (index + 1) to it.value }.toList()
+        }
+
+    /**
+     * Maps every anchor to the character offset of the line that produces it.
+     *
+     * This is what lets the in-app reader scroll to an anchor without a second
+     * implementation of [slug]. The reader parses the document with its own
+     * Markdown library and knows each rendered block's offset into the source;
+     * it does not know which heading a GitHub anchor refers to, and teaching it
+     * would be the second owner of the slug algorithm this object exists to
+     * prevent. Shipping the answer instead keeps one owner.
+     *
+     * Offsets are counted over the **original** text while headings are
+     * recognised in the **masked** text. Masking replaces a fenced block's
+     * lines with empty ones — it preserves the line *count*, which is what makes
+     * the two readings line up, but not their lengths, so an offset taken from
+     * the masked text would drift by the width of every fence above it.
+     *
+     * @param markdown The document's full text.
+     * @return Anchor without the leading `#`, to the offset of its line's first
+     *   character. Ordinal duplicates (`slug-1`) are included, since a link may
+     *   legitimately name one.
+     */
+    fun anchorOffsets(markdown: String): Map<String, Int> {
+        val offsets = linkedMapOf<String, Int>()
+        val used = mutableMapOf<String, Int>()
+        val original = markdown.split("\n")
+        val masked = maskedLines(markdown, maskCodeSpans = false)
+        var offset = 0
+        for (index in masked.indices) {
+            val line = masked[index]
+            HTML_ANCHOR.findAll(line).forEach { offsets.putIfAbsent(it.groupValues[1], offset) }
+            headingSlugOf(line)?.let { base ->
+                val seen = used.getOrDefault(base, 0)
+                used[base] = seen + 1
+                offsets.putIfAbsent(if (seen == 0) base else "$base-$seen", offset)
+            }
+            // +1 for the newline that `split` consumed. The last line has none,
+            // but nothing is measured after it.
+            offset += original[index].length + 1
+        }
+        return offsets
+    }
+
+    /**
+     * Counts the lines of a document.
+     *
+     * @param markdown The document's full text.
+     * @return Line count, counting a trailing newline as ending its line rather
+     *   than opening an empty one — the number `wc -l` reports.
+     */
+    fun lineCountOf(markdown: String): Int = markdown.trimEnd('\n').count { it == '\n' } + 1
+
+    /**
+     * Counts a document's second-level sections, as a reader would.
+     *
+     * `##` rather than every heading, because that is the level the two bundled
+     * documents structure themselves at — one `##` per question in the FAQ, one
+     * per failure in the troubleshooting guide — and the number is shown to a
+     * user choosing between documents, not to a tool.
+     *
+     * [NAVIGATION_SECTIONS] are excluded: a document's own contents list and its
+     * see-also are navigation *about* the sections, and counting them would tell
+     * the reader there are two more answers inside than there are.
+     *
+     * @param markdown The document's full text.
+     * @return The number of `##` headings that carry content.
+     */
+    fun sectionCountOf(markdown: String): Int =
+        maskedLines(markdown, maskCodeSpans = false)
+            .mapNotNull { line -> SECTION_HEADING.matchEntire(line)?.groupValues?.get(1) }
+            .count { slug(it) !in NAVIGATION_SECTIONS }
+
+    /**
+     * Reads one line as a heading and returns its base slug.
+     *
+     * The single owner of "this line is a heading, and this is the anchor it
+     * contributes": [anchorsOf] and [headingSlugCounts] answer different
+     * questions and must never answer them from two different readings.
+     *
+     * @param line One masked source line.
+     * @return The heading's base slug, or `null` when the line is not a heading
+     *   or slugifies to nothing.
+     */
+    private fun headingSlugOf(line: String): String? {
+        val heading = HEADING.matchEntire(line) ?: return null
+        return slug(heading.groupValues[2]).takeIf { it.isNotEmpty() }
     }
 
     /**

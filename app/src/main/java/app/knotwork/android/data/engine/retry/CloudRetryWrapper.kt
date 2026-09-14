@@ -19,8 +19,8 @@ import kotlin.time.Duration.Companion.seconds
  * (HTTP 429 / 5xx / connection or read timeouts) are retried with exponential
  * backoff and jitter, while authentication errors and
  * [kotlinx.coroutines.CancellationException] are never retried — both contracts
- * come straight from Koog's [RetryingLLMClient] (the Phase 28 cancellation
- * contract is preserved because the decorator wraps a suspend client).
+ * come straight from Koog's [RetryingLLMClient] (the project's
+ * cancellation contract is preserved because the decorator wraps a suspend client).
  *
  * Retries are made observable by interposing a [RetryObservingLLMClient]
  * between the policy and the real client: it counts re-invocations and reports

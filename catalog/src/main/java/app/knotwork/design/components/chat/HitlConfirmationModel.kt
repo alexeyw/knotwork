@@ -19,7 +19,10 @@ import app.knotwork.design.components.chips.Risk
  * @property risk risk tier (drives card border + button row).
  * @property toolName fully-qualified tool id (e.g. `"fs.write_file"`).
  * @property summary single-line plaintext description of what the tool
- * is about to do (the LLM-generated explanation).
+ * is about to do (the LLM-generated explanation). **Blank means the caller
+ * has no explanation to show**, and the card then omits the line entirely
+ * rather than repeating [toolName] in its place — a card printing the same
+ * tool id twice reads as a rendering fault.
  * @property arguments key → JSON-fragment pairs rendered inside the JSON
  * args mono block (insertion order preserved by the caller).
  * @property timestamp pre-formatted timestamp shown next to the risk pill.

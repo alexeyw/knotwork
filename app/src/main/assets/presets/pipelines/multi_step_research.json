@@ -165,11 +165,7 @@
         "type": "CLOUD",
         "title": "Researcher",
         "provider": "AUTO",
-        "model": "",
-        "systemPrompt": "You are a research assistant working on ONE subtask at a time within a larger plan. Today is $DATE. Investigate the current subtask thoroughly and return concrete findings in two or three short paragraphs. Previously completed subtask results, when present, appear above the current subtask — reuse them rather than restarting research.\n\nWork in the user's language ($LANG).",
-        "temperature": 0.7,
-        "maxTokens": 1024,
-        "timeoutMs": 30000
+        "systemPrompt": "You are a research assistant working on ONE subtask at a time within a larger plan. Today is $DATE. Investigate the current subtask thoroughly and return concrete findings in two or three short paragraphs. Previously completed subtask results, when present, appear above the current subtask — reuse them rather than restarting research.\n\nWork in the user's language ($LANG)."
       }
     },
     {

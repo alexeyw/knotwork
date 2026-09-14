@@ -58,6 +58,7 @@ import app.knotwork.android.domain.usecases.TranscriptionOutcome
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import app.knotwork.design.components.chat.ChatContent
+import app.knotwork.design.components.chat.ChatMessageStatus
 import app.knotwork.design.components.chat.ChatRole
 import app.knotwork.design.components.chat.ComposerVoiceNotice
 import app.knotwork.design.components.chips.Risk
@@ -74,6 +75,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -223,7 +225,12 @@ class ChatHomeViewModelTest {
         every { llmInferenceEngine.isInitialized } returns true
         every { localModelRepository.getAllModels() } returns localModelsFlow
         coEvery { loadModelUseCase(any()) } returns Result.Success(Unit)
-        coEvery { chatRepository.renameSession(any(), any()) } returns Unit
+        coEvery { chatRepository.renameSession(any(), any()) } answers {
+            val id = firstArg<String>()
+            val name = secondArg<String>()
+            sessionsFlow.value = sessionsFlow.value.map { if (it.id == id) it.copy(name = name) else it }
+            Unit
+        }
         coEvery { chatRepository.setSessionFavorite(any(), any()) } returns Unit
         coEvery { chatRepository.deleteSession(any()) } returns Unit
         coEvery { chatRepository.importChat(any()) } returns "imported-session-id"
@@ -1165,6 +1172,209 @@ class ChatHomeViewModelTest {
                 emissions.none { it.visual is ChatHomeUiState.Generating && it.pending.tool != null },
             )
             assertNull(viewModel.state.value.pending.tool)
+        }
+
+    // region The user's message is on screen before the run is (pending bubble)
+
+    @Test
+    fun `given a first message in a new chat when sent then no frame shows generating without the message`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            // The queue has not written the row yet: the display flow stays empty.
+            coEvery { agentOrchestratorUseCase(sessionId, "are we still meeting tomorrow?", null) } returns
+                flow { awaitCancellation() }
+            val emissions = mutableListOf<ChatHomeScreenState>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.state.collect { emissions.add(it) }
+            }
+
+            viewModel.onComposerValueChange("are we still meeting tomorrow?")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            // Before the fix the send emitted Generating over an empty thread and the
+            // user's own bubble arrived only after the queue's write came back from Room.
+            val generating = emissions.filter { it.visual is ChatHomeUiState.Generating }
+            assertTrue("expected the send to reach Generating", generating.isNotEmpty())
+            assertTrue(
+                "a Generating frame showed no user message",
+                generating.all { state -> state.toViewState().messages.any { it.role == ChatRole.User } },
+            )
+            val bubble = viewModel.state.value.toViewState().messages.single { it.role == ChatRole.User }
+            assertEquals(ChatContent.Text("are we still meeting tomorrow?"), bubble.content)
+            assertEquals(ChatMessageStatus.Pending, bubble.metadata.status)
+        }
+
+    @Test
+    fun `given the stored row arrives when observed then it replaces the bubble instead of doubling it`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            coEvery { agentOrchestratorUseCase(sessionId, "hi", null) } returns flow { awaitCancellation() }
+            viewModel.onComposerValueChange("hi")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+            assertNotNull(viewModel.state.value.sendingUserTurn)
+
+            // The queue stamps the row when it writes it — after the send.
+            messagesFlow.value = listOf(
+                ChatMessage(
+                    id = 7L,
+                    sessionId = sessionId,
+                    role = Role.USER,
+                    content = "hi",
+                    timestamp = System.currentTimeMillis() + 1_000L,
+                ),
+            )
+            advanceUntilIdle()
+
+            assertNull(viewModel.state.value.sendingUserTurn)
+            val userRows = viewModel.state.value.toViewState().messages.filter { it.role == ChatRole.User }
+            assertEquals(1, userRows.size)
+            assertEquals(ChatMessageStatus.Sent, userRows.single().metadata.status)
+        }
+
+    @Test
+    fun `given an earlier identical message is already stored when the thread updates then the bubble stays`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            coEvery { agentOrchestratorUseCase(sessionId, "hi", null) } returns flow { awaitCancellation() }
+            viewModel.onComposerValueChange("hi")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            // Same text, stored before this send: it is the previous turn, not this one.
+            messagesFlow.value = listOf(
+                ChatMessage(id = 1L, sessionId = sessionId, role = Role.USER, content = "hi", timestamp = 1L),
+            )
+            advanceUntilIdle()
+
+            assertNotNull(viewModel.state.value.sendingUserTurn)
+            assertEquals(2, viewModel.state.value.toViewState().messages.count { it.role == ChatRole.User })
+        }
+
+    @Test
+    fun `given a pending bubble when long-pressed then its text resolves for copy and rerun`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            coEvery { agentOrchestratorUseCase(sessionId, "queued behind a trigger run", null) } returns
+                flow { awaitCancellation() }
+            viewModel.onComposerValueChange("queued behind a trigger run")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            val pendingRowId = viewModel.state.value.sendingUserTurn!!.row.id
+
+            assertEquals("queued behind a trigger run", viewModel.transfer.textForRow(pendingRowId))
+        }
+
+    @Test
+    fun `given a retry when the failed turn re-runs then no second bubble is shown`() = runTest(testDispatcher) {
+        every { llmInferenceEngine.isInitialized } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.thread.currentSessionId
+        every { chatRepository.getMessagesForSession(sessionId) } returns flowOf(
+            listOf(ChatMessage(sessionId = sessionId, role = Role.USER, content = "the failed turn", timestamp = 1L)),
+        )
+        coEvery {
+            agentOrchestratorUseCase(sessionId, "the failed turn", any(), any(), any(), persistUserMessage = false)
+        } returns flow { awaitCancellation() }
+        viewModel.forceState(ChatHomeUiState.Error("boom"))
+
+        viewModel.retryAfterError()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.visual is ChatHomeUiState.Generating)
+        assertNull("the retried row is already stored", viewModel.state.value.sendingUserTurn)
+    }
+
+    @Test
+    fun `given a bubble when the run fails or is stopped then the bubble is dropped`() = runTest(testDispatcher) {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.thread.currentSessionId
+        coEvery { agentOrchestratorUseCase(sessionId, "fails", null) } returns flow {
+            // A leading terminal emission is dropped as the previous run's replay, so
+            // the run shows it is live before it fails — as a real one does.
+            emit(AgentOrchestratorState.Loading)
+            emit(AgentOrchestratorState.Error("no pipeline"))
+        }
+        viewModel.onComposerValueChange("fails")
+        viewModel.sendMessage()
+        advanceUntilIdle()
+        assertNull(
+            "a run that failed before storing the message must not leave it pending",
+            viewModel.state.value.sendingUserTurn,
+        )
+
+        coEvery { agentOrchestratorUseCase(sessionId, "stopped", null) } returns flow { awaitCancellation() }
+        viewModel.onComposerValueChange("stopped")
+        viewModel.sendMessage()
+        advanceUntilIdle()
+        assertNotNull(viewModel.state.value.sendingUserTurn)
+        viewModel.stopGeneration()
+        advanceUntilIdle()
+        assertNull(viewModel.state.value.sendingUserTurn)
+    }
+
+    @Test
+    fun `given a new chat the session list has not observed yet when the first message is sent then it is renamed`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            // The stored row exists, but the observed list does not carry it yet —
+            // the window a message typed straight into a new chat lands in.
+            val stored = sessionsFlow.value.first { it.id == sessionId }
+            sessionsFlow.value = sessionsFlow.value.filterNot { it.id == sessionId }
+            advanceUntilIdle()
+            coEvery { chatRepository.getSessionById(sessionId) } returns stored
+            coEvery { agentOrchestratorUseCase(sessionId, "plan the trip", null) } returns
+                flowOf(AgentOrchestratorState.Completed("ok"))
+
+            viewModel.onComposerValueChange("plan the trip")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { chatRepository.renameSession(sessionId, "plan the trip") }
+            // A targeted rename, never a whole-row save built from a stale copy.
+            coVerify(exactly = 0) {
+                chatRepository.saveSession(match { it.id == sessionId && it.name == "plan the trip" })
+            }
+        }
+
+    // endregion
+
+    @Test
+    fun `given the run is queued when streamed then the surface says waiting until the worker picks it up`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            val states = MutableSharedFlow<AgentOrchestratorState>(replay = 1)
+            coEvery { agentOrchestratorUseCase(sessionId, "queued", null) } returns states
+
+            viewModel.onComposerValueChange("queued")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+            states.emit(AgentOrchestratorState.Queued)
+            advanceUntilIdle()
+
+            val waiting = viewModel.state.value.visual
+            assertEquals(ChatHomeUiState.Generating(waitingInQueue = true), waiting)
+
+            // Picked up: the worker's Loading ends the wait.
+            states.emit(AgentOrchestratorState.Loading)
+            advanceUntilIdle()
+            assertEquals(ChatHomeUiState.Generating(waitingInQueue = false), viewModel.state.value.visual)
         }
 
     @Test

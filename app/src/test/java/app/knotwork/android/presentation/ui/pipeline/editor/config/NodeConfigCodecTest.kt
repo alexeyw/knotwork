@@ -254,7 +254,7 @@ class NodeConfigCodecTest {
     }
 
     @Test
-    fun `given pre-Phase21 node when decode then derived from legacy fields`() {
+    fun `given node without config JSON when decode then derived from legacy fields`() {
         val src = NodeModel(
             id = "n",
             type = NodeType.LITE_RT,

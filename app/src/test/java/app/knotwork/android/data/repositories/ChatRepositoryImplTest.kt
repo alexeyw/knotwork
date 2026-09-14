@@ -159,16 +159,19 @@ class ChatRepositoryImplTest {
     }
 
     @Test
-    fun `given existing sessionId when saveMessage called then session timestamp is updated`() = runTest {
+    fun `given existing sessionId when saveMessage called then only the session timestamp is written`() = runTest {
         val sessionId = "existing-session"
-        val existingSession = ChatSessionEntity(id = sessionId, name = "Chat existi", updatedAt = 500L)
+        // The copy read here is stale: the chat has since been renamed from this very
+        // message. Writing the whole row back from it would restore "New Chat".
+        val staleRead = ChatSessionEntity(id = sessionId, name = "New Chat", updatedAt = 500L)
         val message = ChatMessage(id = 1L, sessionId = sessionId, role = Role.USER, content = "Hi", timestamp = 1500L)
 
-        coEvery { chatDao.getSessionById(sessionId) } returns existingSession
+        coEvery { chatDao.getSessionById(sessionId) } returns staleRead
 
         repository.saveMessage(message)
 
-        coVerify(exactly = 1) { chatDao.updateSession(existingSession.copy(updatedAt = message.timestamp)) }
+        coVerify(exactly = 1) { chatDao.updateSessionTimestamp(sessionId, message.timestamp) }
+        coVerify(exactly = 0) { chatDao.updateSession(any()) }
     }
 
     @Test

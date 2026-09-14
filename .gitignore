@@ -33,6 +33,10 @@ secrets.properties
 
 # Heap dumps and profiling captures may embed in-memory secrets / user data.
 *.hprof
+# JVM crash reports a test worker leaves in the module directory when it aborts:
+# they carry local paths and environment variables, and are never source.
+hs_err_pid*.log
+replay_pid*.log
 
 # Roborazzi / Kover leftover artifacts from local screenshot diffing.
 *-actual.png

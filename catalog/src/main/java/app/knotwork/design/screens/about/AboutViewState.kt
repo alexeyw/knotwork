@@ -19,6 +19,10 @@ data class AcknowledgmentEntry(val name: String, val license: String)
  * @property licenseName license display name (e.g. `"Apache 2.0"`).
  * @property acknowledgments list of library credits.
  * @property privacyBody paragraph summarising the privacy stance.
+ * @property documentationSummary How many documents there are and how many
+ *   read offline — the same line the Help row shows, so the two agree by
+ *   construction. Empty
+ *   renders no section at all.
  */
 data class AboutViewState(
     val appName: String,
@@ -29,6 +33,7 @@ data class AboutViewState(
     val licenseName: String,
     val acknowledgments: List<AcknowledgmentEntry>,
     val privacyBody: String,
+    val documentationSummary: String = "",
 )
 
 /** One-shot callbacks consumed by `AboutContent`. */
@@ -36,6 +41,7 @@ class AboutCallbacks(
     val onBack: () -> Unit = {},
     val onOpenLicense: () -> Unit = {},
     val onOpenPrivacyPolicy: () -> Unit = {},
+    val onOpenDocumentation: () -> Unit = {},
 )
 
 /** Convenience factory returning a no-op callback bundle. */
@@ -52,4 +58,7 @@ data class AboutStrings(
     val sectionPrivacy: String = "PRIVACY",
     val licenseCta: String = "Open license text",
     val privacyCta: String = "Read privacy policy",
+    val sectionDocumentation: String = "DOCUMENTATION",
+    val documentationBody: String = "Troubleshooting, FAQ and the guides.",
+    val documentationCta: String = "Help",
 )

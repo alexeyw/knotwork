@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
 import app.knotwork.design.theme.KnotworkTheme
@@ -192,6 +193,7 @@ class ToolsContentSnapshotTest {
         }
         val themeTag = if (dark) "dark" else "light"
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/tools_${name}_$themeTag.png",
         )
     }

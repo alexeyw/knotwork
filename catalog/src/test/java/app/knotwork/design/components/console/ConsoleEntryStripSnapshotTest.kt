@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
 import app.knotwork.design.screens.chat.ChatHomeContent
@@ -71,6 +72,22 @@ class ConsoleEntryStripSnapshotTest {
     }
 
     @Test
+    fun chat_console_strip_waiting_in_queue() = snapshot(name = "waiting_in_queue", dark = false) {
+        ChatHomeContent(state = ChatHomePreview.consoleStrip(ChatHomePreview.StripStatus.WAITING_IN_QUEUE))
+    }
+
+    /**
+     * The strip keeps the END of an overflowing line, so this status puts the word that
+     * matters last: at 200 % only "…queued" survives, and that still says it. The first
+     * wording ("waiting for another run to finish") read "…finish" here.
+     */
+    @Test
+    fun chat_console_strip_waiting_in_queue_fontscale200() =
+        snapshot(name = "waiting_in_queue_fontscale200", dark = false, fontScale = 2f) {
+            ChatHomeContent(state = ChatHomePreview.consoleStrip(ChatHomePreview.StripStatus.WAITING_IN_QUEUE))
+        }
+
+    @Test
     fun chat_console_strip_hitl() = snapshot(name = "hitl", dark = false) {
         ChatHomeContent(state = ChatHomePreview.consoleStrip(ChatHomePreview.StripStatus.HITL))
     }
@@ -123,6 +140,7 @@ class ConsoleEntryStripSnapshotTest {
         }
         val themeTag = if (dark) "dark" else "light"
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/chat_console_strip_${name}_$themeTag.png",
         )
     }

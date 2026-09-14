@@ -76,11 +76,7 @@
             "type": "LITE_RT",
             "title": "Answer",
             "modelId": "",
-            "systemPrompt": "Answer the user's question in one short paragraph. Today is $DATE.\n\nReply in the user's language ($LANG).",
-            "temperature": 0.7,
-            "topP": 0.9,
-            "maxNewTokens": 1024,
-            "stopTokens": []
+            "systemPrompt": "Answer the user's question in one short paragraph. Today is $DATE.\n\nReply in the user's language ($LANG)."
           }
         },
         {
@@ -256,11 +252,7 @@
             "type": "LITE_RT",
             "title": "Tidy",
             "modelId": "",
-            "systemPrompt": "Rewrite the text you are given as clean prose: fix grammar and punctuation, keep every fact, change nothing else. Reply with the rewritten text only.\n\nKeep the text in its original language.",
-            "temperature": 0.7,
-            "topP": 0.9,
-            "maxNewTokens": 1024,
-            "stopTokens": []
+            "systemPrompt": "Rewrite the text you are given as clean prose: fix grammar and punctuation, keep every fact, change nothing else. Reply with the rewritten text only.\n\nKeep the text in its original language."
           }
         },
         {

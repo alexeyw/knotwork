@@ -22,6 +22,10 @@ import app.knotwork.design.screens.chat.ChatHomeThreadRow
  * @property statusGenerating pill text while the assistant is streaming.
  * @property statusPreparingModel pill text while the active model is loading
  * before an auto-triggered send (`Generating(preparingModel = true)`).
+ * @property statusWaitingInQueue pill text while the run waits behind another run
+ * (`Generating(waitingInQueue = true)`).
+ * @property loaderPreparingModel label of the loader bubble while the model loads.
+ * @property loaderWaitingInQueue label of the loader bubble while the run is queued.
  * @property statusHitl pill text while a HITL approval is pending.
  * @property statusClarification pill text while the assistant is waiting on
  * a clarification reply.
@@ -36,6 +40,9 @@ data class ChatHomeFixtures(
     val statusIdle: String,
     val statusGenerating: String,
     val statusPreparingModel: String,
+    val statusWaitingInQueue: String,
+    val loaderPreparingModel: String,
+    val loaderWaitingInQueue: String,
     val statusHitl: String,
     val statusClarification: String,
     val statusError: String,
@@ -52,6 +59,9 @@ data class ChatHomeFixtures(
             statusIdle = "idle",
             statusGenerating = "generating",
             statusPreparingModel = "preparing_model",
+            statusWaitingInQueue = "waiting_in_queue",
+            loaderPreparingModel = "loader_preparing_model",
+            loaderWaitingInQueue = "loader_waiting_in_queue",
             statusHitl = "hitl",
             statusClarification = "clarification",
             statusError = "error",
@@ -77,6 +87,9 @@ fun rememberChatHomeFixtures(): ChatHomeFixtures = ChatHomeFixtures(
     statusIdle = stringResource(R.string.chat_home_status_idle),
     statusGenerating = stringResource(R.string.chat_home_status_generating),
     statusPreparingModel = stringResource(R.string.chat_home_status_preparing_model),
+    statusWaitingInQueue = stringResource(R.string.chat_home_status_waiting_in_queue),
+    loaderPreparingModel = stringResource(R.string.chat_home_loader_preparing_model),
+    loaderWaitingInQueue = stringResource(R.string.chat_home_loader_waiting_in_queue),
     statusHitl = stringResource(R.string.chat_home_status_hitl),
     statusClarification = stringResource(R.string.chat_home_status_clarification),
     statusError = stringResource(R.string.chat_home_status_error),

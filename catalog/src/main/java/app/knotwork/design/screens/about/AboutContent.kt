@@ -66,6 +66,16 @@ fun AboutContent(
         ) {
             item(key = "hero") { Hero(state = state) }
             item(key = "version") { VersionCard(state = state, strings = strings) }
+            // Above the licence and the credits on purpose. For a user who
+            // arrived from a store listing with no room for a URL, this card is
+            // the only place the documentation is named at all — putting it
+            // below twenty acknowledgment rows would hide it behind a scroll
+            // nobody performs.
+            if (state.documentationSummary.isNotEmpty()) {
+                item(key = "documentation") {
+                    DocumentationCard(state = state, strings = strings, onOpen = callbacks.onOpenDocumentation)
+                }
+            }
             item(key = "license") {
                 LicenseCard(state = state, strings = strings, onOpen = callbacks.onOpenLicense)
             }
@@ -188,6 +198,41 @@ private fun PrivacyCard(state: AboutViewState, strings: AboutStrings, onOpen: ()
             text = strings.privacyCta,
             onClick = onOpen,
             size = app.knotwork.design.components.buttons.KnotworkButtonSize.Sm,
+        )
+    }
+}
+
+/**
+ * The list of documents the app can open.
+ *
+ * Built from the same section-label plus secondary-button pattern the licence
+ * and privacy cards already use, because for a user arriving from the store
+ * this screen is the only surface that can tell them the documentation exists
+ * at all — the store listing has no room for a URL. Each row carries a summary
+ * so the card routes rather than presenting five interchangeable buttons.
+ */
+@Composable
+private fun DocumentationCard(state: AboutViewState, strings: AboutStrings, onOpen: () -> Unit) {
+    AboutCard {
+        SectionLabel(text = strings.sectionDocumentation)
+        Text(
+            text = strings.documentationBody,
+            style = KnotworkTextStyles.BodyBase,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        // One row, not a list of five. The Help screen owns the list, so a
+        // document that changes side changes one screen instead of two — and a
+        // card that enumerated the documents was a second list of the same
+        // thing, drifting from the first the day either was edited.
+        KnotworkSecondaryButton(
+            text = strings.documentationCta,
+            onClick = onOpen,
+            size = app.knotwork.design.components.buttons.KnotworkButtonSize.Sm,
+        )
+        Text(
+            text = state.documentationSummary,
+            style = KnotworkTextStyles.Caption,
+            color = KnotworkTheme.extended.onSurfaceMuted,
         )
     }
 }

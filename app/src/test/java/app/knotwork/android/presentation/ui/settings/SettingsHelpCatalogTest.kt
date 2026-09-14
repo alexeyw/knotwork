@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.settings
 
 import android.content.Context
+import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.settings.SettingsRegistry
 import app.knotwork.android.domain.settings.anchorKey
 import app.knotwork.design.screens.settings.SettingsRowAnchors
@@ -114,6 +115,56 @@ class SettingsHelpCatalogTest {
         assertEquals(context.getString(explanations().first().second), controller.hintFor(explained)?.text)
         assertEquals(null, controller.hintFor(unexplained))
         assertEquals(null, controller.hintFor(null))
+    }
+
+    @Test
+    fun `the external automation hint offers the contract document`() {
+        // The hint panel has carried a link slot since it was written and no
+        // hint filled it. This row is the one whose explanation genuinely does
+        // not fit: the safety model, the statuses and the refusal reasons are a
+        // document, not a sentence.
+        var opened: String? = null
+        val controller = SettingsHelpCatalog.controller(context) { id -> opened = id }
+
+        val link = controller.hintFor("EXTERNAL_AUTOMATION_ENABLED")?.link
+        assertTrue("EXTERNAL_AUTOMATION_ENABLED must offer a documentation link", link != null)
+        link?.onClick?.invoke()
+
+        assertEquals(DocumentationLinks.ID_EXTERNAL_AUTOMATION, opened)
+    }
+
+    @Test
+    fun `a documentation link names a document the registry still knows`() {
+        // The link ids are generated constants, so a document that was renamed
+        // or lost its heading fails the build before it reaches here. What this
+        // guards is the other direction: a hand-written link surviving the
+        // removal of the row it explains, which would then never render.
+        //
+        // Iterated over HELP_DOC_LINKS, not over HELP: walking the rows would
+        // visit only links that still have a row, and an orphan is precisely
+        // the entry that has none.
+        HELP_DOC_LINKS.forEach { (anchor, link) ->
+            assertTrue(
+                "$anchor carries a documentation link but is no longer a settings row",
+                SettingsHelpCatalog.HELP.containsKey(anchor),
+            )
+            assertTrue(
+                "$anchor links to '${link.documentId}', which the registry does not declare",
+                DocumentationLinks.byId(link.documentId) != null,
+            )
+            assertTrue("$anchor offers a link with no label", context.getString(link.labelRes).isNotBlank())
+        }
+    }
+
+    @Test
+    fun `a row carrying a documentation link renders it`() {
+        // Closes the gap between the map and what the panel shows: a row listed
+        // in HELP_DOC_LINKS whose hint resolves to null would render no link at
+        // all, and the map alone cannot tell.
+        val controller = SettingsHelpCatalog.controller(context)
+        HELP_DOC_LINKS.keys.forEach { anchor ->
+            assertTrue("$anchor must render the link it declares", controller.hintFor(anchor)?.link != null)
+        }
     }
 
     @Test

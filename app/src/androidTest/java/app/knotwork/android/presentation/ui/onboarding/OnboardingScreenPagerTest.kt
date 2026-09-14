@@ -33,7 +33,11 @@ class OnboardingScreenPagerTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 
@@ -49,7 +53,11 @@ class OnboardingScreenPagerTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 
@@ -69,6 +77,8 @@ class OnboardingScreenPagerTest {
         composeTestRule.setContent {
             MaterialTheme {
                 OnboardingScreen(
+                    onOpenDocument = {},
+
                     onCompleted = { completed += 1 },
                     viewModel = vm,
                 )
@@ -100,6 +110,8 @@ class OnboardingScreenPagerTest {
         composeTestRule.setContent {
             MaterialTheme {
                 OnboardingScreen(
+                    onOpenDocument = {},
+
                     onCompleted = { completed += 1 },
                     viewModel = vm,
                 )
@@ -131,7 +143,11 @@ class OnboardingScreenPagerTest {
 
         composeTestRule.setContent {
             MaterialTheme {
-                OnboardingScreen(onCompleted = {}, viewModel = vm)
+                OnboardingScreen(
+                    onOpenDocument = {},
+                    onCompleted = {},
+                    viewModel = vm,
+                )
             }
         }
 

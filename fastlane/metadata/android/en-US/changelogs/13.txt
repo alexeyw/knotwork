@@ -1,0 +1,7 @@
+A new Help screen, one tap from More, lists the documentation. The FAQ and the troubleshooting guide now ship inside the app and open with no network.
+
+Your message appears the moment you send it, and a message waiting behind another run says it is waiting rather than generating.
+
+Pipelines open in the editor without overlapping cards, and any pipeline can now be deleted.
+
+The app takes 14 MB less space on the device.

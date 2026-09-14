@@ -212,6 +212,13 @@ class ToolsCallbacks(
     val onAddServerOpen: () -> Unit = {},
     val onOpenAllowedDomains: () -> Unit = {},
     val onErrorRetry: () -> Unit = {},
+    /**
+     * Invoked by the top bar's documentation action. The host opens the guide's
+     * "Adding an MCP server" section — this screen is where external testers
+     * repeatedly stalled, and the answer lives in a document the store listing
+     * cannot link to.
+     */
+    val onOpenDocumentation: () -> Unit = {},
 )
 
 /** Convenience factory returning a callbacks bundle that ignores every event. */

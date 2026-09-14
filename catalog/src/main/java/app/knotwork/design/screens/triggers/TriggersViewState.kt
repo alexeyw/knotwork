@@ -179,6 +179,12 @@ class TriggersCallbacks(
     val onRetry: () -> Unit = {},
     val onShareJournal: () -> Unit = {},
     val onSaveJournal: () -> Unit = {},
+    /**
+     * Invoked by the top bar's documentation action. The host opens the guide's
+     * "Triggers" section — the screen where external testers most often asked
+     * why nothing had fired yet.
+     */
+    val onOpenDocumentation: () -> Unit = {},
 )
 
 /** Convenience factory returning a no-op callback bundle. */

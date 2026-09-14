@@ -1,9 +1,12 @@
 import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator
+import app.knotwork.android.buildtools.BrowserEditorInertControlGuard
 import app.knotwork.android.buildtools.CookbookDocsGenerator
 import app.knotwork.android.buildtools.DetektAnalysisModeGuard
 import app.knotwork.android.buildtools.DexInstantiabilityChecker
+import app.knotwork.android.buildtools.DocumentationRef
 import app.knotwork.android.buildtools.ExternalAutomationDocsGenerator
 import app.knotwork.android.buildtools.FileMapSpec
+import app.knotwork.android.buildtools.GenerateDocumentationLinksTask
 import app.knotwork.android.buildtools.GenerateFileMapTask
 import app.knotwork.android.buildtools.LintBaselineGuard
 import app.knotwork.android.buildtools.R8MappingChecker
@@ -11,10 +14,14 @@ import app.knotwork.android.buildtools.ReleaseVersionChecker
 import app.knotwork.android.buildtools.ReportExternalDocLinksTask
 import app.knotwork.android.buildtools.SettingsHelpDocsGenerator
 import app.knotwork.android.buildtools.StoreListingLengthChecker
+import app.knotwork.android.buildtools.SyncBundledDocsTask
+import app.knotwork.android.buildtools.VerifyBundledDocsTask
 import app.knotwork.android.buildtools.VerifyDialogInventoryTask
 import app.knotwork.android.buildtools.VerifyDocLinksTask
 import app.knotwork.android.buildtools.VerifyDocsHygieneTask
+import app.knotwork.android.buildtools.VerifyDocumentationLinksTask
 import app.knotwork.android.buildtools.VerifyFileMapTask
+import app.knotwork.android.buildtools.VerifyForbiddenVocabularyTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
@@ -180,8 +187,8 @@ android {
         applicationId = "app.knotwork.android"
         minSdk = 34
         targetSdk = 37
-        versionCode = 12
-        versionName = "0.9.0"
+        versionCode = 13
+        versionName = "0.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -248,8 +255,33 @@ android {
             // root file is swapped for the real one at release-build time.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+
+            // Where this build's in-app documentation links resolve. A debug
+            // build has no tag of its own, so it reads `main`. Decided by build
+            // TYPE, never by inspecting `versionName` for the suffix above: the
+            // suffix exists to tell two installs apart, and letting it also
+            // decide where links point would move them the next time a build
+            // type sets one for an unrelated reason.
+            buildConfigField(
+                "String",
+                "DOCS_REF",
+                "\"${DocumentationRef.of(release = false, versionName = defaultConfig.versionName.orEmpty())}\"",
+            )
         }
         release {
+            // Where this build's in-app documentation links resolve: the
+            // annotated tag of the version being shipped. A store user reading
+            // `main` would be reading about a build they do not have — the same
+            // class of drift as a guide pointing at a file that does not exist
+            // for them. The tag is cut at release time, so this link is live
+            // only after the tag is pushed; `docs/release.md` carries the
+            // post-publication check, which no repository gate can perform.
+            buildConfigField(
+                "String",
+                "DOCS_REF",
+                "\"${DocumentationRef.of(release = true, versionName = defaultConfig.versionName.orEmpty())}\"",
+            )
+
             // R8 in full mode + resource shrinking.
             // Keep rules for reflection-heavy code paths (Koog, Ktor,
             // kotlinx.serialization, MediaPipe / LiteRT JNI, SQLCipher,
@@ -378,6 +410,18 @@ android {
             excludes += "org/fusesource/jansi/internal/native/Linux/**"
             excludes += "org/fusesource/jansi/internal/native/FreeBSD/**"
             excludes += "META-INF/native-image/jansi/**"
+        }
+        jniLibs {
+            // MediaPipe `tasks-text` 1.0.0 added `TextSummarizer` and `TextProofreader`,
+            // on-device text generators, and ships their native half in this library —
+            // 14.4 MB of the arm64 APK, most of the ~15 MiB it grew between 0.7.3 and
+            // 0.8.0 without anyone noticing. The app uses only `TextEmbedder`, whose
+            // bytecode loads `mediapipe_tasks_jni` and never this one (checked in the
+            // AAR: only the two generator classes name it). Text generation belongs to LiteRT-LM, the one
+            // on-device LLM engine; a second one would run outside the pipeline graph,
+            // its HITL gate and its ceilings. The release workflow asserts the library
+            // stays out and `mediapipe_tasks_jni` stays in.
+            excludes += "**/libmediapipe_tasks_textgenai_jni.so"
         }
     }
 
@@ -910,6 +954,71 @@ val verifyNoOrphanedKdoc by tasks.registering(VerifyNoOrphanedKdocTask::class) {
 }
 tasks.named("check") { dependsOn(verifyNoOrphanedKdoc) }
 
+// Forbidden-vocabulary gate.
+//
+// The product was renamed, and the old name kept greeting every user from the
+// onboarding title for three months — through a pre-launch clean-up and a Play
+// release — because nothing looked for it. It was found by inspecting a frame
+// of a published demo video. The same inspection found it in the GitHub
+// issue-template chooser and in a wake-lock tag Android vitals shows in the Play
+// Console. Internal planning numbering had the same shape: removed once by a
+// search that matched one spelling, then quietly re-accumulated in every
+// spelling that search did not match.
+//
+// Scope is every public TEXT file, by glob — source, resources, bundled assets,
+// build logic, documentation, store metadata, CI configuration — so a new file is
+// guarded without anyone remembering to list it. Two exclusions, both deliberate:
+// `CHANGELOG.md`, whose past entries name old identifiers as they were at the
+// time, and `buildSrc/src/test`, whose fixtures must spell the forbidden forms.
+// The bundled documentation under `assets/docs` is a generated copy of `docs/`,
+// which is scanned at its source instead of twice.
+val publicTextExtensions = listOf(
+    "kt", "kts", "java", "xml", "json", "md", "txt", "html", "js", "mjs",
+    "yml", "yaml", "toml", "properties", "pro", "sh",
+)
+
+fun publicTextTree(directory: String, vararg excludes: String): ConfigurableFileTree = fileTree(directory) {
+    publicTextExtensions.forEach { include("**/*.$it") }
+    exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", "**/.cxx/**", *excludes)
+}
+
+val verifyForbiddenVocabulary by tasks.registering(VerifyForbiddenVocabularyTask::class) {
+    group = "verification"
+    description = "Fails the build if public text carries the retired product name or internal planning numbering."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    sources.from(
+        fileTree(rootDir) {
+            include("*.md", "*.kts", "*.html", "*.properties", "NOTICE")
+            exclude("CHANGELOG.md", "CLAUDE.md", "CLAUDE.local.md", "local.properties")
+        },
+        publicTextTree("$rootDir/app", "src/main/assets/docs/**"),
+        publicTextTree("$rootDir/catalog"),
+        publicTextTree("$rootDir/buildSrc", "src/test/**"),
+        publicTextTree("$rootDir/tools-probe"),
+        publicTextTree("$rootDir/docs"),
+        publicTextTree("$rootDir/.github"),
+        publicTextTree("$rootDir/fastlane"),
+        publicTextTree("$rootDir/config"),
+        publicTextTree("$rootDir/gradle"),
+    )
+    requiredPrefixes.set(
+        listOf(
+            "",
+            "app/",
+            "catalog/",
+            "buildSrc/",
+            "tools-probe/",
+            "docs/",
+            ".github/",
+            "fastlane/",
+            "config/",
+            "gradle/",
+        ),
+    )
+    stampFile.set(layout.buildDirectory.file("reports/vocabulary/verified.txt"))
+}
+tasks.named("check") { dependsOn(verifyForbiddenVocabulary) }
+
 // Dialog inventory gate.
 //
 // A dialog composed in `:app` cannot be photographed: Roborazzi runs in
@@ -972,7 +1081,8 @@ tasks.named("check") { dependsOn(verifyDialogInventory) }
 // Browser pipeline-editor constant sync automation.
 //
 // `pipeline-editor.html` mirrors a slice of the Android domain (node types,
-// prompt variables, available tools, default prompts). Those mirrors used to be
+// prompt variables, available tools, default prompts, and the bundled presets and
+// prompt templates). Those mirrors used to be
 // kept in sync by review alone and drifted. `generateBrowserEditorConstants`
 // regenerates the `AUTO-GEN` blocks straight from the domain sources;
 // `verifyBrowserEditorConstants` (wired into `check`) fails the build if the
@@ -992,12 +1102,28 @@ val browserEditorClassSourceFiles: Set<File> = buildSet {
     addAll(fileTree("$projectDir/src/main/java/app/knotwork/android/data/prompt") { include("**/*.kt") }.files)
     addAll(fileTree("$projectDir/src/main/java/app/knotwork/android/data/tools/local") { include("**/*.kt") }.files)
 }
+// The bundled presets and prompt templates the editor carries, plus the catalogue
+// that orders the presets.
+val browserEditorPresetFiles: Set<File> =
+    fileTree("$projectDir/src/main/assets/presets/pipelines") { include("*.json") }.files
+val browserEditorTemplateFiles: Set<File> =
+    fileTree("$projectDir/src/main/assets/presets/prompts") { include("*.json") }.files
+val browserEditorPresetCatalogFile =
+    file("$projectDir/src/main/java/app/knotwork/android/domain/constants/BundledPresetCatalog.kt")
 // Every file whose content feeds the generated blocks; drives up-to-date checks.
-val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + setOf(
-    browserEditorNodeTypeFile,
-    browserEditorDefaultPromptsFile,
-    browserEditorPromptModuleFile,
-    browserEditorToolsModuleFile,
+val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + browserEditorPresetFiles +
+    browserEditorTemplateFiles + setOf(
+        browserEditorNodeTypeFile,
+        browserEditorDefaultPromptsFile,
+        browserEditorPromptModuleFile,
+        browserEditorToolsModuleFile,
+        browserEditorPresetCatalogFile,
+    )
+
+fun browserEditorPresetSources() = BrowserEditorConstantsGenerator.BundledPresetSources(
+    pipelinePresets = browserEditorPresetFiles.associate { it.name to it.readText() },
+    presetCatalog = browserEditorPresetCatalogFile.readText(),
+    promptTemplates = browserEditorTemplateFiles.associate { it.name to it.readText() },
 )
 
 val generateBrowserEditorConstants by tasks.registering {
@@ -1016,6 +1142,7 @@ val generateBrowserEditorConstants by tasks.registering {
             promptTemplateModuleSource = browserEditorPromptModuleFile.readText(),
             localToolsModuleSource = browserEditorToolsModuleFile.readText(),
             classSources = browserEditorClassSourceFiles.associate { it.nameWithoutExtension to it.readText() },
+            presets = browserEditorPresetSources(),
         )
         if (rendered != current) {
             browserEditorHtmlFile.writeText(rendered)
@@ -1120,12 +1247,27 @@ val verifyBrowserEditorConstants by tasks.registering {
             promptTemplateModuleSource = browserEditorPromptModuleFile.readText(),
             localToolsModuleSource = browserEditorToolsModuleFile.readText(),
             classSources = browserEditorClassSourceFiles.associate { it.nameWithoutExtension to it.readText() },
+            presets = browserEditorPresetSources(),
         )
         if (drifted.isNotEmpty()) {
             throw GradleException(
                 "pipeline-editor.html is out of sync with the Android domain sources.\n" +
                     "Drifted AUTO-GEN block(s): ${drifted.joinToString(", ")}.\n" +
                     "Run `./gradlew :app:generateBrowserEditorConstants` and commit the updated pipeline-editor.html.",
+            )
+        }
+        // Outside the generated blocks: the node forms must not offer a control for a
+        // field no run reads (docs/decisions/0005) — the same round-trip-only verdicts
+        // the cookbook publishes.
+        val inert = BrowserEditorInertControlGuard.inertControls(
+            html = browserEditorHtmlFile.readText(),
+            reach = CookbookDocsGenerator.FIELD_REACH,
+        )
+        if (inert.isNotEmpty()) {
+            throw GradleException(
+                "pipeline-editor.html offers controls for fields no run reads: ${inert.joinToString(", ")}.\n" +
+                    "Remove them from renderFormFields (and their validation); keep the fields in the " +
+                    "envelope encode/decode so files still round-trip. See docs/decisions/0005.",
             )
         }
     }
@@ -1426,6 +1568,92 @@ val verifyFileMap by tasks.registering(VerifyFileMapTask::class) {
 verifyFileMap { mustRunAfter(generateFileMap) }
 tasks.named("check") { dependsOn(verifyFileMap) }
 
+// Documentation-link registry — the list of documents the app links out to.
+//
+// The list itself lives in `buildSrc` (`DocumentationLinkRegistry`), not here
+// and not in `app`, because three readers need it: the app, this gate, and the
+// bundled-documentation sync. `buildSrc` cannot see `app` code, so the build
+// owns the list and GENERATES the app's copy — the only arrangement where the
+// list and the GitHub slug algorithm each have exactly one owner. Parsing the
+// Kotlin object back out of `app` was the alternative, and the one precedent
+// for that skips records of unexpected shape silently.
+//
+// `generateDocumentationLinks` rewrites the committed copy;
+// `verifyDocumentationLinks` (wired into `check`) fails on drift AND on any
+// entry whose heading no longer resolves. Unlike `verifyDocLinks` this one is
+// typed and cacheable, because the registry confines every target to `docs/`,
+// which makes the declared input set complete.
+val documentationLinkSources: FileCollection = files(
+    fileTree("$rootDir/docs") { include("**/*.md") },
+)
+
+val documentationLinksPackage = "app.knotwork.android.domain.constants"
+
+val documentationLinksFile =
+    file("$rootDir/app/src/main/java/app/knotwork/android/domain/constants/DocumentationLinks.kt")
+
+val generateDocumentationLinks by tasks.registering(GenerateDocumentationLinksTask::class) {
+    group = "build"
+    description = "Regenerates the app-side documentation-link registry from the build-side list."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(documentationLinkSources)
+    generatedPackage.set(documentationLinksPackage)
+    outputSource.set(documentationLinksFile)
+}
+
+val verifyDocumentationLinks by tasks.registering(VerifyDocumentationLinksTask::class) {
+    group = "verification"
+    description = "Fails the build if the documentation-link registry drifted, or an entry's heading moved."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(documentationLinkSources)
+    generatedPackage.set(documentationLinksPackage)
+    committedSource.from(documentationLinksFile)
+    stampFile.set(layout.buildDirectory.file("reports/documentation-links/verified.txt"))
+}
+
+verifyDocumentationLinks { mustRunAfter(generateDocumentationLinks) }
+tasks.named("check") { dependsOn(verifyDocumentationLinks) }
+
+// Bundled documentation — the documents a user reads *inside* the app.
+//
+// `faq.md` and `troubleshooting.md` are needed exactly when the browser is
+// least available: one is the router, the other is "it broke", and one of its
+// sections is about the app failing at startup. So they ship in the APK, and
+// the copy is produced by the build rather than by hand — a hand-copied
+// document is a third edition of the text that nothing keeps honest.
+//
+// The input set is the `docs` tree PLUS the repository's root Markdown,
+// because a bundled document links to `../SECURITY.md` and `../PRIVACY.md`.
+// Declaring only `docs` would resolve those against files the task never
+// declared, and stay green after one was deleted.
+val bundledDocsSources: FileCollection = files(
+    fileTree("$rootDir/docs") { include("**/*.md") },
+    fileTree(rootDir.toString()) { include("*.md") },
+)
+
+val bundledDocsAssetDirectory = layout.projectDirectory.dir("src/main/assets/docs")
+
+val syncBundledDocs by tasks.registering(SyncBundledDocsTask::class) {
+    group = "build"
+    description = "Copies the bundled documents into the app's assets and regenerates their reader index."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(bundledDocsSources)
+    assetDirectory.set(bundledDocsAssetDirectory)
+}
+
+val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
+    group = "verification"
+    description = "Fails the build if a bundled document drifted from docs/, or stopped rendering in the app."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    documents.from(bundledDocsSources)
+    assetDirectory.set(bundledDocsAssetDirectory)
+    committedAssets.from(fileTree(bundledDocsAssetDirectory) { include("**/*") })
+    stampFile.set(layout.buildDirectory.file("reports/bundled-docs/verified.txt"))
+}
+
+verifyBundledDocs { mustRunAfter(syncBundledDocs) }
+tasks.named("check") { dependsOn(verifyBundledDocs) }
+
 // Public documentation hygiene guard — moved.
 //
 // It used to be registered here with a file set of its own: the repository
@@ -1549,6 +1777,18 @@ tasks.withType<Test>().configureEach {
         .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(rootProject.file("docs/recipes"))
         .withPropertyName("cookbookRecipes")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // And twice more, both measured: `AboutLinksTest` reads the privacy policy and
+    // `BrowserEditorContextConfigGuardTest` reads the browser editor, both from the
+    // repository root. Editing either left this task UP-TO-DATE. What tests read from
+    // `src/main` needs no line here — an edit recompiles, or (assets) repackages the
+    // resources the Robolectric tests load, and the task re-runs; both were checked the
+    // same way.
+    inputs.file(rootProject.file("PRIVACY.md"))
+        .withPropertyName("privacyPolicy")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("pipeline-editor.html"))
+        .withPropertyName("browserEditorHtml")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
@@ -1915,6 +2155,15 @@ val documentationFiles: FileCollection = files(
     fileTree("$rootDir/app") {
         include("**/*.md")
         exclude("build/**")
+        // The bundled documentation under `src/main/assets/docs` is a generated
+        // COPY of `docs/`, and this gate would read it wrongly: it resolves a
+        // relative link against the file's own directory, where `user-guide.md`
+        // and `../SECURITY.md` do not exist — the copies are deliberately a
+        // subset. Their links are checked by `verifyBundledDocs` instead, which
+        // resolves them against the real repository and additionally decides
+        // which of them stay inside the app. Checking them here as well would
+        // not be stricter, it would be wrong.
+        exclude("src/main/assets/docs/**")
     },
     fileTree("$rootDir/catalog") {
         include("**/*.md")
@@ -2004,6 +2253,20 @@ tasks.named("check") { dependsOn(verifyDocsHygiene) }
 // neither task should drag the other into a build that did not ask for it.
 listOf(verifyDocLinks, reportExternalDocLinks, verifyMermaidDiagrams).forEach { task ->
     task { mustRunAfter(generateFileMap) }
+}
+
+// The vocabulary gate reads every public text file, so it reads the output of
+// every generator that rewrites a committed file: the file maps, the browser
+// editor, and the three generated reference documents. The same implicit-
+// dependency failure applies to each, and the same ordering-only answer.
+verifyForbiddenVocabulary {
+    mustRunAfter(
+        generateFileMap,
+        generateBrowserEditorConstants,
+        generateSettingsHelpDocs,
+        generateExternalAutomationDocs,
+        generateCookbookDocs,
+    )
 }
 
 // The version number, in every place a human wrote it down. `versionName` below

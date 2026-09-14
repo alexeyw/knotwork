@@ -38,7 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
+import app.knotwork.design.components.buttons.KnotworkButtonSize
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
+import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -130,7 +132,7 @@ fun OnboardingContent(
                     OnboardingStep.Welcome -> WelcomeStep(state = state)
                     OnboardingStep.ChooseScenario -> ChooseScenarioStep(state = state, callbacks = callbacks)
                     OnboardingStep.Download -> DownloadStep(state = state, callbacks = callbacks)
-                    OnboardingStep.Ready -> ReadyStep(state = state)
+                    OnboardingStep.Ready -> ReadyStep(state = state, callbacks = callbacks)
                 }
             }
             OnboardingFooter(state = state, callbacks = callbacks)
@@ -796,7 +798,7 @@ private fun readyCtaLabel(state: OnboardingViewState): String = when {
 // ----------------------- Step 4 · Ready -----------------------------------
 
 @Composable
-private fun ReadyStep(state: OnboardingViewState) {
+private fun ReadyStep(state: OnboardingViewState, callbacks: OnboardingCallbacks) {
     val scenario = state.selectedScenario
     Column(
         verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
@@ -829,6 +831,37 @@ private fun ReadyStep(state: OnboardingViewState) {
                 value = stringResource(R.string.knotwork_onboarding_ready_safety_value),
             )
         }
+        DocumentationRow(onOpen = callbacks.onOpenDocumentation)
+    }
+}
+
+/**
+ * The one line of onboarding that says the documentation exists.
+ *
+ * A row added to the existing step rather than a step of its own: onboarding is
+ * measured on how fast it reaches first value, and a page about reading
+ * material would be a page nobody finishes.
+ */
+@Composable
+private fun DocumentationRow(onOpen: () -> Unit) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(KnotworkTheme.shapes.md)
+            .background(color = KnotworkTheme.extended.surface1)
+            .padding(KnotworkTheme.spacing.sp4),
+    ) {
+        Text(
+            text = stringResource(R.string.knotwork_onboarding_ready_docs_label),
+            style = KnotworkTextStyles.Caption,
+            color = KnotworkTheme.extended.onSurfaceMuted,
+        )
+        KnotworkSecondaryButton(
+            text = stringResource(R.string.knotwork_onboarding_ready_docs_cta),
+            onClick = onOpen,
+            size = KnotworkButtonSize.Sm,
+        )
     }
 }
 

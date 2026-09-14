@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
 import app.knotwork.design.components.chips.Risk
@@ -72,6 +73,16 @@ class ChatHomeContentSnapshotTest {
     @Test
     fun chat_home_generating_dark() = snapshot(name = "generating", dark = true) {
         ChatHomeContent(state = ChatHomePreview.generating())
+    }
+
+    @Test
+    fun chat_home_waiting_in_queue_light() = snapshot(name = "waiting_in_queue", dark = false) {
+        ChatHomeContent(state = ChatHomePreview.waitingInQueue())
+    }
+
+    @Test
+    fun chat_home_waiting_in_queue_dark() = snapshot(name = "waiting_in_queue", dark = true) {
+        ChatHomeContent(state = ChatHomePreview.waitingInQueue())
     }
 
     @Test
@@ -268,6 +279,7 @@ class ChatHomeContentSnapshotTest {
         }
         val themeTag = if (dark) "dark" else "light"
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/chat_home_${name}_$themeTag.png",
         )
     }

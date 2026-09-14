@@ -1624,7 +1624,7 @@ constructor(
             // reaches it when a sub-pipeline forwards the pause upwards, which
             // is what puts the whole stack into WAITING_CEILING rather than
             // leaving the root RUNNING behind a child that is waiting — the
-            // shape of phase-40 finding F7, which made every answer to a nested
+            // shape of a defect found on device, which made every answer to a nested
             // park bounce off the resume guard.
             pipelineRunRepository.updateStatus(runId, PipelineRunStatus.WAITING_CEILING)
             runTraceRepository.flush()
@@ -1638,7 +1638,7 @@ constructor(
         // while the gate was still open. For a nested pipeline that left the root
         // RUNNING and the child WAITING_APPROVAL, so `ResumePipelineRunUseCase`
         // — which requires a resumable *root* — rejected every attempt to answer
-        // the parked notification (phase-40 finding F7).
+        // the parked notification.
         //
         // A notice is only ever raised just after a node is charged, so today it
         // cannot coincide with an open gate. It is classified here anyway: the

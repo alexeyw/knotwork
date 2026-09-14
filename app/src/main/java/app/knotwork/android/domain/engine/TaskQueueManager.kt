@@ -17,7 +17,15 @@ interface TaskQueueManager {
     val globalState: StateFlow<AgentOrchestratorState>
 
     /**
-     * A flow emitting the map of active session IDs to their current states.
+     * The latest **status** of every session the queue has run, keyed by session id — what
+     * the task lists show, not the stream a chat renders.
+     *
+     * It changes when a session is queued, picked up, reaches a new stage or tool, and
+     * settles (completed, failed, stopped), and drops a session the queue has evicted.
+     * Streamed text is not carried (`Thinking` / `Answering` hold an empty string, so a
+     * generation changes the map once, not per token), and telemetry — console lines,
+     * traces, node I/O, notices, observations — never replaces a status. A chat that needs
+     * the text or the telemetry observes its own session through [observeTaskState].
      */
     val activeSessionsState: StateFlow<Map<String, AgentOrchestratorState>>
 

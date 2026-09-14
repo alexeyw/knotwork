@@ -41,8 +41,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -885,6 +887,62 @@ class TaskQueueManagerImplTest {
         }
 
     @Test
+    fun `given the worker is busy when another session enqueues then it reads Queued until picked up`() =
+        testScope.runTest {
+            // The session ahead holds the worker indefinitely, as a long trigger run would.
+            every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+                emit(AgentOrchestratorState.Loading)
+                awaitCancellation()
+            }
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "session_ahead", prompt = "p"))
+            runCurrent()
+
+            val waiting = mutableListOf<AgentOrchestratorState>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                taskQueueManager.observeTaskState("session_waiting").collect { waiting += it }
+            }
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "session_waiting", prompt = "p"))
+            runCurrent()
+
+            // Before: the waiting session read Loading as if its own run were starting.
+            assertEquals(AgentOrchestratorState.Queued, waiting.last())
+            assertEquals(AgentOrchestratorState.Queued, taskQueueManager.activeSessionsState.value["session_waiting"])
+            assertTrue(
+                "the global state must keep describing the run that holds the worker",
+                taskQueueManager.globalState.value !is AgentOrchestratorState.Queued,
+            )
+
+            // The run ahead ends; the worker picks the waiting task up and says so.
+            taskQueueManager.cancelRun("session_ahead")
+            runCurrent()
+
+            assertEquals(AgentOrchestratorState.Loading, waiting.last())
+            // The task monitor reads this snapshot: once running, the chat is no longer queued.
+            assertEquals(AgentOrchestratorState.Loading, taskQueueManager.activeSessionsState.value["session_waiting"])
+            taskQueueManager.cancelRun("session_waiting")
+            runCurrent()
+        }
+
+    @Test
+    fun `given an idle worker when a task is enqueued then it reads Loading, never Queued`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(AgentOrchestratorState.Loading)
+            awaitCancellation()
+        }
+        val seen = mutableListOf<AgentOrchestratorState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            taskQueueManager.observeTaskState("session_alone").collect { seen += it }
+        }
+
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "session_alone", prompt = "p"))
+        runCurrent()
+
+        assertTrue("an idle worker has nothing to wait behind: $seen", AgentOrchestratorState.Queued !in seen)
+        taskQueueManager.cancelRun("session_alone")
+        runCurrent()
+    }
+
+    @Test
     fun `given another session's run when cancelled then the running one is untouched`() = testScope.runTest {
         // Per-session rather than a scope teardown precisely so this holds: a
         // Stop in one chat must not end a background run in another.
@@ -990,7 +1048,7 @@ class TaskQueueManagerImplTest {
 
     // endregion
 
-    // region No-progress safety valve (phase-40 finding F13)
+    // region No-progress safety valve
 
     /**
      * The worker is a single serial loop, so a run that never emits again does
@@ -1111,6 +1169,135 @@ class TaskQueueManagerImplTest {
                 RunTerminationReason.RunStalled,
             )
         }
+    }
+
+    // endregion
+
+    // region Active-sessions snapshot
+    //
+    // The task monitor and the More tab read `activeSessionsState`. It used to be rebuilt
+    // only at enqueue, so every status after that — a stage, a settle, a Stop — never
+    // reached them: a finished chat read as running until a task arrived anywhere.
+
+    private fun snapshotOf(sessionId: String): AgentOrchestratorState? =
+        taskQueueManager.activeSessionsState.value[sessionId]
+
+    @Test
+    fun `given a run completes then the snapshot reads Completed`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns
+            flowOf(AgentOrchestratorState.Completed("ok"))
+
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_done", prompt = "p"))
+        advanceUntilIdle()
+
+        // Before: Loading, the value captured at enqueue, for as long as nothing else was enqueued.
+        assertEquals(AgentOrchestratorState.Completed("ok"), snapshotOf("s_done"))
+    }
+
+    @Test
+    fun `given the engine fails then the snapshot reads Error`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(AgentOrchestratorState.Loading)
+            throw IllegalStateException("engine blew up")
+        }
+
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_failed", prompt = "p"))
+        advanceUntilIdle()
+
+        assertEquals(AgentOrchestratorState.Error("engine blew up"), snapshotOf("s_failed"))
+    }
+
+    @Test
+    fun `given a running task is stopped then the snapshot reads Idle`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(AgentOrchestratorState.Loading)
+            awaitCancellation()
+        }
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_stopped", prompt = "p"))
+        runCurrent()
+        assertEquals(AgentOrchestratorState.Loading, snapshotOf("s_stopped"))
+
+        taskQueueManager.cancelRun("s_stopped")
+        runCurrent()
+
+        assertEquals(AgentOrchestratorState.Idle, snapshotOf("s_stopped"))
+    }
+
+    @Test
+    fun `given a queued task is stopped then the snapshot reads Idle`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(AgentOrchestratorState.Loading)
+            awaitCancellation()
+        }
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_ahead", prompt = "p"))
+        runCurrent()
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_waiting", prompt = "p"))
+        runCurrent()
+        assertEquals(AgentOrchestratorState.Queued, snapshotOf("s_waiting"))
+
+        taskQueueManager.cancelRun("s_waiting")
+        runCurrent()
+
+        assertEquals(AgentOrchestratorState.Idle, snapshotOf("s_waiting"))
+        assertEquals(AgentOrchestratorState.Loading, snapshotOf("s_ahead"))
+        taskQueueManager.cancelRun("s_ahead")
+        runCurrent()
+    }
+
+    @Test
+    fun `given a run reaches a stage then telemetry after it does not replace the stage`() = testScope.runTest {
+        val stage = AgentOrchestratorState.PipelineStage(AgentOrchestratorState.PipelineStepInfo(1, 3, "Router"))
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(stage)
+            emit(AgentOrchestratorState.ConsoleLog(events = emptyList()))
+            awaitCancellation()
+        }
+
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_stage", prompt = "p"))
+        runCurrent()
+
+        // The task monitor names the stage from this value; a console line is not a status.
+        assertEquals(stage, snapshotOf("s_stage"))
+        taskQueueManager.cancelRun("s_stage")
+        runCurrent()
+    }
+
+    @Test
+    fun `given a generation streams tokens then the snapshot changes once, not per token`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(AgentOrchestratorState.Thinking("a"))
+            emit(AgentOrchestratorState.Thinking("ab"))
+            emit(AgentOrchestratorState.Thinking("abc"))
+            awaitCancellation()
+        }
+        val thinkingSnapshots = mutableListOf<AgentOrchestratorState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            taskQueueManager.activeSessionsState.collect { snapshot ->
+                snapshot["s_stream"]?.takeIf { it is AgentOrchestratorState.Thinking }?.let { thinkingSnapshots += it }
+            }
+        }
+
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_stream", prompt = "p"))
+        runCurrent()
+
+        // Every consumer recomposes on a new snapshot; a long answer must not cost one per token.
+        assertEquals(listOf(AgentOrchestratorState.Thinking("")), thinkingSnapshots)
+        taskQueueManager.cancelRun("s_stream")
+        runCurrent()
+    }
+
+    @Test
+    fun `given a settled session is evicted then the snapshot forgets it`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns
+            flowOf(AgentOrchestratorState.Completed("ok"))
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s_oldest", prompt = "p"))
+        advanceUntilIdle()
+        assertNotNull(snapshotOf("s_oldest"))
+
+        repeat(TaskQueueManagerImpl.MAX_SESSION_STATES) { i -> taskQueueManager.observeTaskState("s_new_$i") }
+
+        assertTrue("the queue evicted it", !taskQueueManager.sessionStates.containsKey("s_oldest"))
+        assertTrue("the lists must not keep a session the queue forgot", snapshotOf("s_oldest") == null)
     }
 
     // endregion

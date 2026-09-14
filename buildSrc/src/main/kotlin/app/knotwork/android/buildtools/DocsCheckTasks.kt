@@ -28,6 +28,19 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 
 /**
+ * Returns the declared prefixes that no scanned path falls under.
+ *
+ * @param paths Repository-relative paths of the files that were found.
+ * @param prefixes Prefixes that must each be covered; an empty string stands for
+ *   the repository root, i.e. a path holding no slash.
+ * @return The uncovered prefixes, in declaration order; empty when all are covered.
+ */
+internal fun uncoveredPrefixes(paths: Collection<String>, prefixes: List<String>): List<String> =
+    prefixes.filter { prefix ->
+        paths.none { path -> if (prefix.isEmpty()) !path.contains('/') else path.startsWith(prefix) }
+    }
+
+/**
  * Shared plumbing of the documentation checks that read the Markdown set.
  *
  * The file set arrives as a declared Gradle input, never from a Git query. A
@@ -79,17 +92,12 @@ abstract class AbstractDocsScanTask : DefaultTask() {
             .filter { it.isFile }
             .associate { it.relativeTo(root).invariantSeparatorsPath to it.readText() }
             .toSortedMap()
-        for (prefix in requiredPrefixes.get()) {
-            val covered = contents.keys.any { path ->
-                if (prefix.isEmpty()) !path.contains('/') else path.startsWith(prefix)
-            }
-            if (!covered) {
-                throw GradleException(
-                    "No Markdown document was found under `${prefix.ifEmpty { "<repository root>" }}`. " +
-                        "The scan has stopped covering a documentation root it is meant to guard — " +
-                        "a directory moved, or a glob in `app/build.gradle.kts` stopped matching.",
-                )
-            }
+        uncoveredPrefixes(contents.keys, requiredPrefixes.get()).firstOrNull()?.let { prefix ->
+            throw GradleException(
+                "No Markdown document was found under `${prefix.ifEmpty { "<repository root>" }}`. " +
+                    "The scan has stopped covering a documentation root it is meant to guard — " +
+                    "a directory moved, or a glob in `app/build.gradle.kts` stopped matching.",
+            )
         }
         return contents
     }

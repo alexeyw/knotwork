@@ -13,6 +13,7 @@ Only Kotlin files appear inside the generated blocks.
 <!-- AUTO-GEN:FILE_MAP -->
 - `architecture/` - Structural guards run as tests: Konsist layer and domain-purity rules, Firebase isolation, the usage-telemetry no-network rule, the tab-root entry guard and the instrumented-test exclusion roster.
   - `ArchitectureScope.kt` - Shared Konsist scope for the architecture guard suite.
+  - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
   - `DomainPurityKonsistTest.kt` - Konsist guard enforcing the strictest project rule for the `domain` layer: it is pure Kotlin with **zero** Android/framework imports, so it can be compiled and unit-tested off-device.
   - `FirebaseIsolationKonsistTest.kt` - Konsist guard keeping the Firebase SDK out of the shared `main` source set.
@@ -22,6 +23,7 @@ Only Kotlin files appear inside the generated blocks.
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
   - `RepositoryPlacementKonsistTest.kt` - Konsist guard enforcing the repository placement convention from the api-conventions rule: the abstraction (`<Noun>Repository` interface) is owned by the `domain` layer, and its implementation (`<Noun>RepositoryImpl`) lives in the `data` layer.
   - `TabRootEntryGuardTest.kt` - Structural guard over the one navigation invariant the closed test bought us:
+  - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**
   - `UsageTelemetryNoNetworkKonsistTest.kt` - Konsist guard enforcing the core privacy promise of the local usage-telemetry feature: **nothing on the telemetry path may make a network call.**
 - `data/` - Tests for the data layer.
   - `audio/` - Tests for voice-input capture and the WAV header builder.
@@ -39,7 +41,7 @@ Only Kotlin files appear inside the generated blocks.
   - `local/` - Tests for Room, DataStore, the encrypted stores and the filesystem-backed stores.
     - `AgentWorkspaceImplTest.kt` - Verifies the `AgentWorkspaceImpl` foundation: the path-traversal containment boundary (the single canonicalisation gate), the per-file and total-size quotas at their exact boundaries, the text/binary read distinction, and the overwrite semantics — each surfaced as a typed `WorkspaceError`.
     - `ApiKeyManagerTest.kt` - Tests for ApiKeyManager.
-    - `AppDatabaseMigrationTest.kt` - Verifies the Phase-15 `AppDatabase.MIGRATION_17_18` script.
+    - `AppDatabaseMigrationTest.kt` - Verifies the `AppDatabase.MIGRATION_17_18` script.
     - `AttachmentStoreImplTest.kt` - Verifies `AttachmentStoreImpl`: aspect-preserving downscale to the longest-side cap (never a square crop), JPEG re-encode, ingest of invalid bytes, the content-URI ingest path, and the delete / list surface used by retention.
     - `AudioCaptureStoreImplTest.kt` - Unit tests for `AudioCaptureStoreImpl`, the ephemeral voice-input clip store.
     - `ConvertersTest.kt` - Unit tests for `Converters`, focusing on the `NodeContextConfig` JSON round trip and its legacy-row fallback contract.
@@ -63,7 +65,7 @@ Only Kotlin files appear inside the generated blocks.
     - `HuggingFaceModelMapperTest.kt` - Unit tests for `HuggingFaceModelMapper` — the pure DTO → domain projection covering tag/license/gated parsing, `.litertlm` filtering, resolve-URL construction and installed-flag stamping.
     - `LocalModelMapperTest.kt` - Unit tests for `LocalModelEntity` and `LocalModel` mapping extensions.
   - `mcp/` - Tests for the MCP client and the single connection pool.
-    - `KoogMcpClientSessionTest.kt` - Session-lifecycle regression tests for `KoogMcpClient`, covering finding F3 of the phase-40 directed MCP test: on the device a tool call failed with `-32000 No valid session ID provided`, and the wire capture showed sessions being opened and abandoned faster than anything was using them.
+    - `KoogMcpClientSessionTest.kt` - Session-lifecycle regression tests for `KoogMcpClient`, covering a defect found by a directed on-device MCP test: on the device a tool call failed with `-32000 No valid session ID provided`, and the wire capture showed sessions being opened and abandoned faster than anything was using them.
     - `KoogMcpClientTest.kt` - Tests for KoogMcpClient.
     - `McpConnectionPoolTest.kt` - Unit tests for `McpConnectionPool` — the single owner of live MCP connections.
   - `network/` - Tests for the OkHttp guards, the download path and the Hugging Face client.
@@ -76,6 +78,7 @@ Only Kotlin files appear inside the generated blocks.
     - `TimeVariableProviderTest.kt` - Unit tests for `TimeVariableProvider`.
     - `ToolsVariableProviderTest.kt` - Unit tests for `ToolsVariableProvider`.
   - `repositories/` - Tests for the repository implementations.
+    - `AssetBundledDocumentationRepositoryTest.kt` - Verifies `AssetBundledDocumentationRepository` against the **real** generated assets rather than a fixture.
     - `ChatArchivePersistenceTest.kt` - Drives the chat-archive stack — `ArchiveChatUseCase` / `UnarchiveChatUseCase` → `ChatRepositoryImpl` → `ChatDao` — against a **real in-memory Room database**, so the SQL itself is under test and not just the call routing the mocked repository tests cover.
     - `ChatRepositoryImplTest.kt` - Unit tests for `ChatRepositoryImpl`. Session deletion must go through the single transactional DAO method — messages, run records (no FK cascade) and the session row die together or not at all.
     - `ClarificationRepositoryImplTest.kt` - Unit tests for `ClarificationRepositoryImpl`.
@@ -146,9 +149,11 @@ Only Kotlin files appear inside the generated blocks.
 - `domain/` - Tests for the domain layer.
   - `constants/` - Tests for the domain-level constants.
     - `DefaultPromptsTest.kt` - Smoke + contract coverage for `DefaultPrompts`.
+    - `DocumentationLinksTest.kt` - Drift guard for the generated `DocumentationLinks` registry as the app reads it.
     - `OnboardingModelCatalogTest.kt` - Unit tests for `OnboardingModelCatalog`.
     - `OnboardingScenarioCatalogTest.kt` - Pins the onboarding scenario wiring: the set of scenarios, their preset / model / surface mapping, gallery order, and the `OnboardingScenarioCatalog.byId` lookup.
     - `PipelineExecutionDefaultsTest.kt` - Pins the engine-side timing/log constants exposed by `PipelineExecutionDefaults`.
+    - `RepositoryLinksTest.kt` - Unit tests for `RepositoryLinks`.
     - `SettingsDefaultsTest.kt` - Pins the numeric values exposed by `SettingsDefaults` so a silent edit to a default value is caught at test time rather than at runtime by an end user.
     - `TimeAndIdConstantsTest.kt` - Pins the time-unit and notification-id constants exposed by `TimeAndIdConstants`.
   - `engine/` - Tests for the graph execution engine and its supporting abstractions.
@@ -321,6 +326,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RenamePipelineUseCaseTest.kt` - Unit tests for `RenamePipelineUseCase`.
     - `ResetSamplingDefaultsUseCaseTest.kt` - Unit tests for `ResetSamplingDefaultsUseCase`.
     - `ResetToRecommendedDefaultsUseCaseTest.kt` - Unit tests for `ResetToRecommendedDefaultsUseCase`.
+    - `ResolveDocumentationLinkUseCaseTest.kt` - Unit tests for `ResolveDocumentationLinkUseCase`.
     - `ResolveEntryInferenceUseCaseTest.kt` - Unit tests for `ResolveEntryInferenceUseCase`, over two-node `INPUT` → entry graphs, one per entry node type.
     - `ResolveRunCeilingsUseCaseTest.kt` - Unit tests for `ResolveRunCeilingsUseCase` — which configured numbers apply to a run, decided from its origin.
     - `ResolveSurfacePipelineUseCaseTest.kt` - Unit tests for `ResolveSurfacePipelineUseCase`, confirming each surface reads its own binding flow and passes through `null` (the inert default).
@@ -363,7 +369,7 @@ Only Kotlin files appear inside the generated blocks.
   - `ExternalAutomationBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **external request → background run → callback** arc: the entry point another app on the device broadcasts to.
   - `JournalExportReader.kt` - **The** reader of the exported journal documents — the offline consumer the export formats exist for, written once and pointed at every producer.
   - `JournalExportRoundTripTest.kt` - The round-trip guarantee of the journal exports: **one document, one parse.**
-  - `TriggerBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **automation-trigger → background run → notification → result-in-chat** arc — the privacy-sensitive surface phase 36 adds on top of the persisted background-run infrastructure.
+  - `TriggerBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **automation-trigger → background run → notification → result-in-chat** arc — the privacy-sensitive surface automation triggers add on top of the persisted background-run infrastructure.
 - `presentation/` - Tests for the presentation layer.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
@@ -376,7 +382,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RunOutcomeAnnouncerImplTest.kt` - Coverage for `RunOutcomeAnnouncerImpl` — the line a stopped run leaves in the chat it ran in.
   - `ui/` - Tests for the screens and their ViewModels.
     - `about/` - Tests for the About surface.
-      - `AboutAcknowledgmentsTest.kt` - Drift guard for the hand-maintained `AboutAcknowledgments` list surfaced on the About screen (`PHASE 26 — Task 7`).
+      - `AboutAcknowledgmentsTest.kt` - Drift guard for the hand-maintained `AboutAcknowledgments` list surfaced on the About screen.
       - `AboutLinksTest.kt` - Drift guard for the outbound links of the About screen (`AboutLinks`).
     - `automation/` - Tests for the external-automation settings surface.
       - `ExternalAutomationJournalViewModelTest.kt` - Verifies that the external-automation journal screen reports the contract's posture and its request log faithfully.
@@ -445,8 +451,10 @@ Only Kotlin files appear inside the generated blocks.
           - `AutoLayoutTest.kt` - Unit tests for the editor auto-layout.
           - `BezierEdgeTest.kt` - Unit tests for the Bézier edge geometry.
           - `CanvasTransformTest.kt` - Pure-Kotlin tests for `CanvasTransform`.
+          - `EditorStateFramingTest.kt` - Tests for `EditorState.frameIfNeeded` and `EditorState.requestFit` — how a pipeline is framed when it opens.
           - `EditorUndoRedoTest.kt` - Unit tests for the editor undo/redo stack.
           - `MiniMapGeometryTest.kt` - Pure-Kotlin tests for `MiniMapGeometry`.
+          - `ShippedPipelineLayoutTest.kt` - Guards the layout of every pipeline the project ships as a file: the bundled presets under `src/main/assets/presets/pipelines/` and the cookbook recipes under `docs/recipes/`.
           - `ValidationAutoFixTest.kt` - Pure-Kotlin tests for `ValidationAutoFix` recipes.
     - `prompts/` - Tests for the prompt library.
       - `PromptLibraryViewModelTest.kt` - Unit tests for `PromptLibraryViewModel`.

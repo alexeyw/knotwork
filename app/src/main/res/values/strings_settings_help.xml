@@ -49,6 +49,8 @@
     <string name="settings_help_share_target_pipeline_id">Which pipeline runs when you share text or a link into the app from somewhere else.</string>
     <string name="settings_help_share_reuse_session">On, every share lands in one Shared chat. Off, each share opens its own, so the chat list grows with each one.</string>
     <string name="settings_help_quick_settings_tile_pipeline_id">Which pipeline the Quick Settings tile runs when you tap it from the notification shade.</string>
+    <!-- Link label inside the hint panel, opening the full contract document. -->
+    <string name="settings_help_link_external_automation">Read the contract</string>
     <string name="settings_help_external_automation_enabled">Other apps on this device can start a run — Tasker, MacroDroid, adb. Off, those requests are refused.</string>
     <string name="settings_help_external_automation_pipeline_id">The only pipeline an outside app may start. Nothing else can be named in the request, whatever it asks for.</string>
     <string name="settings_help_resume_max_age_hours">How stale a parked run may be and still resume. Past it the run is dropped, because its gathered context no longer holds.</string>

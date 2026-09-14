@@ -28,6 +28,7 @@ import app.knotwork.android.domain.models.MemoryImportStrategy
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.presentation.tile.requestAddDutyTile
+import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.components.dialogs.SingleChoiceDialog
 import app.knotwork.design.components.dialogs.SingleChoiceDialogUi
 import app.knotwork.design.components.dialogs.SingleChoiceOptionUi
@@ -401,7 +402,9 @@ private fun SettingsSurface(viewModel: SettingsViewModel, content: @Composable (
     // Remembered per screen, not saved: a hint is a sentence you read once, so
     // returning to a category finds every explanation closed again. (Collapsible
     // row *groups* do persist — a group is a workspace, a hint is not.)
-    val hints = remember(context) { SettingsHelpCatalog.controller(context) }
+    val hints = remember(context) {
+        SettingsHelpCatalog.controller(context) { id -> openDocumentation(context, id) }
+    }
     LaunchedEffect(uiState.snackbarMessage) {
         val message = uiState.snackbarMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(message)

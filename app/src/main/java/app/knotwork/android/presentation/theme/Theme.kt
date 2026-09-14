@@ -21,6 +21,6 @@ import app.knotwork.design.theme.KnotworkTheme
  * @param content composable tree wrapped by the theme.
  */
 @Composable
-fun AndroidAIAgentTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun KnotworkAppTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     KnotworkTheme(darkTheme = darkTheme, content = content)
 }

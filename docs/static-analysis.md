@@ -40,10 +40,11 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest`                      | JVM unit tests for the debug variant.                                   |
 | `:app:koverVerifyFullDebug`                       | Test-coverage threshold enforcement.                                    |
 | `:app:verifyStoreListingLengths`                  | Play store-listing fields against Google's character limits. Rejection otherwise lands in the Play Console, after a signed release (see below). |
+| `:app:verifyForbiddenVocabulary`              | Fails if any public text file carries the product's pre-rename name or internal planning numbering (see below). |
 | `:app:verifyNoOrphanedKdoc` + `:catalog:verifyNoOrphanedKdoc` | Fails if a KDoc block documents no declaration — and so silently leaves the one below it undocumented (see below). |
 | `:app:verifyDialogInventory`                  | Fails if a dialog or sheet is composed in `:app` without a recorded reason, putting it out of reach of the design-system baselines (see below). |
-| `:app:checkNoInternalFqn`                     | Custom rule: forbid `app.knotwork.android.*` FQN references in code body.   |
-| `:app:verifyBrowserEditorConstants`           | Fails if `pipeline-editor.html` `AUTO-GEN` blocks drift from the domain sources. |
+| `:app:checkNoInternalFqn`                     | Custom rule: forbid `app.knotwork.android.*` FQN references in code body (see below). |
+| `:app:verifyBrowserEditorConstants`           | Fails if `pipeline-editor.html` `AUTO-GEN` blocks drift from the domain sources and the bundled presets / prompt templates, or if its node forms offer a control for a field no run reads (see below). |
 | `:app:verifyDocsHygiene`                      | Custom rule: guard the public docs against LLM tool-call artifacts and internal-document references (see below). |
 | `:app:verifyExternalAutomationDocs`           | Fails if the `docs/external-automation.md` `AUTO-GEN` tables drift from the contract sources (see below). |
 | `:app:verifySettingsHelpDocs`                 | Fails if the settings reference table in `docs/user-guide.md` drifts from the shipped help strings (see below). |
@@ -51,12 +52,18 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyFileMap`                          | Fails if a generated `FILE_MAP.md` drifts from the Kotlin sources, or an undocumented-file count grows past its ratchet (see below). |
 | `:app:verifyDocLinks`                         | Fails if a relative link or an `#anchor` anywhere in the documentation leads nowhere (see below). External `http` links are reported, not gated. |
 | `:app:verifyMermaidDiagrams`                  | Fails if an embedded Mermaid diagram is structurally broken (see below). |
-| `:app:verifyVersionSources`                   | Fails if the README version badge or `CHANGELOG.md` disagrees with the declared `versionName` (see below). |
+| `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
+| `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
+| `:app:verifyVersionSources`                   | Fails if any hand-written copy of the version — README badge and prose, the CHANGELOG heading and links, `SECURITY.md`, the roadmap's release line — disagrees with the declared `versionName` (see below). |
 | `:app:testFullDebugUnitTest` (`CookbookRuntimeReachTest`, `CookbookRecipeValidationTest`) | Fails if the cookbook's run-time verdicts disagree with `NodeConfigCodec`, or a published recipe no longer imports (see below). |
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
 | `:app:verifyLintBaselineOverrides`            | Custom rule: fail if a lint baseline suppresses a check demoted to informational severity (see below). |
 | `:app:verifyDetektAnalysisMode`               | Custom rule: fail if `detekt.yml` activates a rule that only runs under type resolution (see below). |
 | `:app:testFullDebugUnitTest` (Konsist suite)      | Architecture guard: Clean-Architecture layer boundaries (see below).        |
+| `:app:testFullDebugUnitTest` (`TopBarInsetGuardTest`) | Fails if a bar at the top of a screen neither applies the status-bar inset nor names the parent that does (see below). |
+| `:app:testFullDebugUnitTest` (`BundledDocumentationRoutingGuardTest`) | Fails if a call that can open a document bundled into the app passes no in-app reader, and so sends it to the browser (see below). |
+| `:app:testFullDebugUnitTest` (`ShippedPipelineLayoutTest`) | Fails if two node cards overlap in a bundled pipeline preset or a cookbook recipe (see below). |
+| `:catalog:verifyRoborazziDebug`               | Fails if a design-system screenshot differs from its committed baseline (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
 safely-correctable subset before invoking `check`.
@@ -564,6 +571,126 @@ one twice, before and after the caching hole above was closed.
 
 ---
 
+## Top-bar inset guard (`TopBarInsetGuardTest`)
+
+The app draws edge to edge, and both the shell scaffold and every screen's own
+`Scaffold` zero their window insets, so each screen owns its status-bar inset.
+Material's `TopAppBar` applies it by itself; a bar laid out by hand does not.
+Twice a hand-built bar drew its title under the clock — the Help screen's two
+bars, then the Files selection bar — and **no rendering test can see it**:
+Robolectric renders with no system insets, so the snapshot of the broken bar is
+identical to the snapshot of the fixed one.
+
+`TopBarInsetGuardTest` reads the production sources of `:app` and `:catalog` and
+enforces three rules:
+
+1. **`Scaffold` slots.** Every composable of the project called inside a
+   `topBar = { … }` slot either shows inset evidence — a Material top app bar, or
+   a `windowInsetsPadding` / `statusBarsPadding` / `safeDrawingPadding` /
+   `systemBarsPadding` call — or is a container that only lays out a `content`
+   slot. Checking *every* callee matters: the Files slot switched between a
+   `TopAppBar` and a hand-built row, and only the first carried the inset.
+2. **Bars outside a slot.** A bar placed at the top of a column by hand is
+   invisible to rule 1, so each is listed with the owner of its inset — the bar
+   itself, or the parent file that applies it. A renamed or deleted entry fails
+   the test instead of checking nothing.
+3. **Census.** Any composable named like a top bar (`…TopBar`, `…AppBar`,
+   `…Toolbar`, `…SelectionBar`) must be covered by rule 1 or listed under rule 2.
+
+**What it cannot catch:** a hand-built top bar outside a `Scaffold` slot whose
+name does not look like a bar, and an inset applied to the wrong element — the
+rules read evidence, not geometry.
+
+### Observed failing
+
+With the Files selection bar's inset removed, rule 1 reports exactly
+`FilesSelectionBar`; with the Help list bar's inset removed, rule 2 reports
+`HelpListBar`. Its first run also found the image viewer's top bar covered by
+no rule — it insets itself, and is now listed.
+
+---
+
+## Screenshot baseline guard (`verifyRoborazziDebug`)
+
+The `:catalog` unit tests render every design-system screen and component with
+Roborazzi, and `check` always ran them — but it never *compared* a render with its
+committed baseline under `catalog/src/test/snapshots/`. A screen could change and
+every gate stayed green; the baselines were only as current as the last time
+someone ran `verifyRoborazziDebug` by hand. `check` now depends on it, so the unit
+tests run in verify mode and any pixel difference fails the build.
+
+Three things make it a gate rather than a ritual:
+
+- **The baselines are declared as test inputs.** They sit on no classpath, so
+  without that declaration replacing a baseline left `testDebugUnitTest`
+  `UP-TO-DATE` and the verification green — measured before the wiring.
+- **It was measured on both platforms before it was made blocking.** On the
+  development machine (macOS): 707 tests, 503 baselines, no difference, about a
+  minute. On CI (Linux): 706 matched byte for byte; the settings hub's loading
+  state — tiles drawn at half alpha — differed in 975 of 1,094,400 pixels, by at
+  most 2/255 per channel, anti-aliasing no one can see.
+- **Every capture uses one colour tolerance for that reason.**
+  `KnotworkRoborazziOptions` (`catalog/src/test/…/KnotworkRoborazziOptions.kt`) raises
+  Roborazzi's per-pixel colour distance from 0.007 to **0.02** — twice the measured
+  noise (0.0096), two orders of magnitude below a visible change (a light baseline
+  swapped for its dark twin: ~800,000 pixels up to 1.63 apart). No pixel shift and
+  no share of differing pixels is allowed. Roborazzi takes the option per call, so
+  `SnapshotComparisonOptionsGuardTest` fails a `captureRoboImage` that omits it.
+  Re-recording the baselines on Linux was rejected: it would move the same noise to
+  every local run on macOS.
+
+To accept an intended change, re-record the affected snapshots with
+`./gradlew :catalog:recordRoborazziDebug --tests '<test>'`, look at the new PNGs,
+and commit them with the change that caused them. On a CI failure the diffs are
+uploaded as the `roborazzi-report` artefact.
+
+**What it cannot see:** anything Robolectric does not render — system insets
+above all (see the top-bar inset guard) — and screens outside `:catalog`.
+
+### Observed failing
+
+With `foundations_light.png` replaced by the dark baseline, the run reports
+exactly `FoundationsCatalogPageSnapshotTest > foundations_light` and fails; with
+the file restored it passes. Before the baselines were declared as inputs, the
+same replacement passed from the up-to-date check. With CI's Linux render of the
+settings hub put in place of its baseline, the run passes at 0.02 and fails at
+Roborazzi's default 0.007 — the tolerance absorbs exactly the observed noise. A
+capture call with its options removed fails the guard.
+
+---
+
+## Bundled-document routing guard (`BundledDocumentationRoutingGuardTest`)
+
+`openDocumentation` routes by the registry's `delivery`: a document bundled into
+the app opens in the in-app reader, one on the web in the browser — **but only
+when the caller passes a reader.** Without one, a bundled document falls back to
+the browser. That fallback is legitimate for a caller with nowhere to navigate,
+and it is how the onboarding Ready step sent its FAQ link — a bundled document,
+on the step where the network may not be set up yet — to the browser while every
+screen around it looked correct.
+
+The guard reads every `openDocumentation(…)` call in `:app`'s production sources
+and fails when a call without a reader can reach a bundled document:
+
+- a call naming a `DocumentationLinks.ID_…` constant is resolved against the
+  registry itself, so moving a document into the APK makes its readerless callers
+  fail here rather than on a device;
+- a call whose id is a variable must name, in the test's `DYNAMIC_ID_SOURCES`, the
+  file every such id comes from (today the settings help catalogue), whose
+  constants are resolved the same way; a variable-id caller missing from that list,
+  or a listed one that no longer exists, fails too.
+
+**What it cannot see:** a reader argument that is passed but navigates nowhere
+useful — it checks that a reader is handed over, not where it goes.
+
+### Observed failing
+
+With the onboarding call's reader argument removed, the first test reports
+`OnboardingScreen.kt` opening `[faq]` without a reader. With the settings help
+catalogue pointed at the troubleshooting document, it reports `SettingsScreens.kt`.
+
+---
+
 ## Settings help-text guards (`SettingsHelpCatalogTest`, `verifySettingsHelpDocs`)
 
 Two guards, one rule: **a setting's meaning is written once**, in
@@ -891,6 +1018,162 @@ have missed. The pure logic is unit-tested in `buildSrc` (`MarkdownLinksTest`,
 
 ---
 
+## Bundled documentation guard (`verifyBundledDocs`)
+
+`:app:verifyBundledDocs` is wired into `check`. It guards the documents that
+ship **inside** the APK — today `docs/faq.md` and `docs/troubleshooting.md`,
+which the registry marks `BUNDLED`.
+
+`./gradlew :app:syncBundledDocs` writes the copies into
+`app/src/main/assets/docs/` together with a generated `index.json`, and the
+verification task fails on drift. Both are committed, like every other generated
+artefact here.
+
+### Why a document has to earn being bundled
+
+The in-app renderer is not GitHub. It drops what it does not implement
+**silently** — no placeholder, no error — so a document that looks right in a
+browser can reach a reader with paragraphs missing and nothing on screen to
+suggest anything is absent. The gate turns that into rules:
+
+1. **No Mermaid blocks.** There is no diagram support, so a diagram arrives as a
+   fenced block of its own source.
+2. **No images.** Nothing resolves a relative image path inside the APK.
+3. **No HTML.** Unsupported upstream by design; an HTML node falls through the
+   renderer and is dropped. This is the rule that keeps `docs/cookbook.md` on
+   the web — its generated node-reference tables carry 14 `<br>` tags, each one
+   welding a caption onto a code sample when dropped.
+4. **Every relative link resolves** — to a heading in the same document, to
+   another bundled document, or to a repository file that exists. Offline there
+   is no address bar to recover with.
+5. **Every anchor a link targets is unique**, for the reason spelled out under
+   `verifyDocumentationLinks`: a heading written twice yields two anchors that
+   both keep working.
+
+The input set is the Markdown under `docs/` **plus the repository's root
+Markdown**, because a bundled document links to `../SECURITY.md` and
+`../PRIVACY.md`. Declaring only the `docs` tree would resolve those against
+files the task never declared, and stay green after one was deleted.
+
+### Why `verifyDocLinks` skips the copies
+
+`app/src/main/assets/docs/` is excluded from `verifyDocLinks`. That gate
+resolves a relative link against the file's own directory, and the copies are
+deliberately a *subset* — `user-guide.md` is not beside them and never will be.
+Checking them there as well would not be stricter, it would be wrong. Their
+links are checked here instead, against the real repository.
+
+### What the index is for, and why the app resolves nothing
+
+The renderer has no heading anchors and no path resolution, and both answers are
+needed at run time. Implementing them in `app` would mean a second GitHub slug
+algorithm and a second path resolver — with the build's copy being the one a
+gate verifies and the app's being the one a user gets. So `syncBundledDocs`
+ships the answers instead: `index.json` maps each anchor to the **character
+offset** of its heading, and each raw link target to what the reader should do
+with it. The app performs a lookup, never a resolution, and a lookup that misses
+is a defect in the build rather than a case for the app to guess at.
+
+One trap worth recording: the offsets are counted over the **original** lines
+while headings are recognised in the **masked** ones. Masking blanks a fenced
+block's lines, which preserves their count — that is what makes the two readings
+line up — but not their lengths, so an offset taken from masked text would drift
+by the width of every code block above it.
+
+## In-app documentation link guard (`verifyDocumentationLinks`)
+
+`:app:verifyDocumentationLinks` is wired into `check`. It guards the registry of
+documents the **app** links out to — the Help screen's list (which the About
+screen's Documentation card opens) and the in-app reader's *Open in browser*, the
+onboarding Ready step, the Tools and Triggers top bars, the editor's overflow,
+and the external-automation settings hint.
+
+It fails on two things: the committed registry drifting from the build-side
+list, and any entry naming a document or heading that no longer resolves.
+
+### Why the list lives in `buildSrc` and the app's copy is generated
+
+Three readers need the same list: the app (which builds the URLs), this gate
+(which resolves them), and the bundled-documentation sync. `buildSrc` cannot see
+`app` code, so only one of the three can hold the list natively. The build holds
+it (`DocumentationLinkRegistry`) and generates the app's copy
+(`domain/constants/DocumentationLinks.kt`), which is committed like any other
+generated artefact in this repository.
+
+That is the only arrangement in which the list **and** the GitHub slug algorithm
+(`MarkdownLinks.slug`) each have exactly one owner. The alternative — parsing the
+Kotlin object back out of `app` with regular expressions — was rejected on the
+precedent of `BrowserEditorConstantsGenerator`, which skips a record of
+unexpected shape *silently*: a typo there produces a missing gate rather than a
+failure.
+
+`./gradlew :app:generateDocumentationLinks` rewrites the copy. It refuses to
+write while any entry fails to resolve, so a broken registry cannot reach the
+app and be reported afterwards against a file already committed.
+
+Note the consequence of the generated entries carrying per-document counts (the
+Help list shows them): **editing any document under `docs/` can make the
+committed registry stale**, and the gate will say so. Regenerating is the same
+one command, and it is cheap; the alternative was a hand-maintained number
+beside a document that grows, which is the defect this repository keeps
+removing.
+
+### Why this one is typed and cacheable while `verifyDocLinks` is not
+
+`verifyDocLinks` is deliberately untracked: a documentation link may address any
+path in the repository, so its inputs cannot be declared, and a cached pass
+could hide a target deleted since the last run.
+
+This gate constrains every target to a Markdown file under `docs/` — a rule it
+enforces rather than assumes. That makes the declared input set *complete*:
+deleting a target changes the task's fingerprint. So the task carries typed
+inputs and a stamp output, and `check` skips it while nothing it reads has
+changed, which is what keeps a no-op build from growing by another always-run
+task.
+
+### The rule that "the anchor exists" cannot express
+
+A heading written twice yields two anchors, `slug` and `slug-1`, and **both
+keep resolving forever**. Reordering those two sections therefore moves what
+each anchor points at without breaking either — a link that is green and wrong.
+`docs/user-guide.md` carries a live instance: "Background & triggers" appears
+twice.
+
+So the rule is uniqueness, not existence: a registry anchor must be produced by
+exactly one heading, and an ordinal `-N` anchor is refused outright. The count
+comes from `MarkdownLinks.headingSlugCounts`, not from inspecting the anchor's
+shape — `step-1` from a heading "Step 1" is a legitimate anchor and
+indistinguishable from an ordinal suffix by spelling alone.
+
+### Release builds link at the tag, legal documents do not
+
+`BuildConfig.DOCS_REF` is `v<versionName>` for a release build and `main`
+otherwise, decided by build **type** in `app/build.gradle.kts` (the rule itself
+is `DocumentationRef`, unit-tested in `buildSrc` where both branches are
+ordinary arguments — an app-side test only ever observes the debug variant).
+Reading `versionName` for its suffix instead would make an unrelated string
+decide where the links point.
+
+`PRIVACY.md` is exempt and stays on `main`: what binds a user is the current
+edition, and that URL is also the one filed with the app stores. The exemption
+is asserted in `AboutLinksTest` so it cannot be tidied into the version-pinned
+rule.
+
+The tag is cut *after* the build, so no repository gate can confirm the link
+resolves on GitHub. `docs/release.md` carries that as a post-publication
+checklist item.
+
+### Observed failing
+
+Watched red before being trusted, in four shapes: a renamed heading
+(`triggers` → no heading produces it), an anchor whose heading text appears
+twice (reported with the count), an ordinal `-1` anchor, and a committed copy
+left stale after the build-side list changed. The pure logic is unit-tested in
+`buildSrc` (`DocumentationLinkRegistryTest`, `DocumentationRefTest`,
+`MarkdownLinksTest`), each rule against a document written to break it.
+
+---
+
 ## Mermaid diagram guard (`verifyMermaidDiagrams`)
 
 `:app:verifyMermaidDiagrams` fails the build when an embedded Mermaid diagram
@@ -1057,6 +1340,96 @@ at once, and a non-listing file ignored. The committed listing passes.
 
 ---
 
+## Forbidden-vocabulary guard (`verifyForbiddenVocabulary`)
+
+`:app:verifyForbiddenVocabulary` fails the build when a public text file
+carries either of two families of words that must never reach an outside
+reader or a user of the app.
+
+1. **The product's pre-rename name**, in every form it was written in: the
+   three-word prose name (any capitalisation, including one wrapped across a
+   KDoc line), the run-together identifier used for theme and tag names, the
+   title-case descriptor the project once used, and the old root package.
+2. **Internal planning numbering**: a phase number of two or more digits
+   (written with a space, a hyphen or nothing before the digits), a task
+   fraction, and a phase branch path. That vocabulary belongs to private
+   planning documents; a public reader can look none of it up.
+
+The gate does not spell the forbidden forms out here, because this document is
+inside its own scope — the scanner assembles its patterns from fragments for the
+same reason.
+
+### Why a gate
+
+The product was renamed, and the old name went on greeting every user from the
+onboarding title for three months — through a pre-launch clean-up, a store
+listing that promised the new name, and a Google Play release. No gate looked
+for it; it was found by inspecting a frame of a published demo video. The first
+run of this gate then found the same name in the GitHub issue-template chooser,
+in the app theme's resource and composable names, and in a wake-lock tag —
+which Android vitals lists by name in the Play Console.
+
+Planning numbering had the same history in a different shape. It was removed
+once by a search that matched a single spelling, and a later search with the
+same pattern reported zero — while the hyphenated, lower-case and run-together
+spellings it could not see went on accumulating in KDoc and test comments.
+
+### Scope
+
+Every public **text** file, selected by glob rather than by a list, so a newly
+added file is guarded without anyone remembering to add it: source, resources
+and bundled assets of `:app` and `:catalog`, build logic, the probe app,
+documentation, store metadata, CI configuration, and the repository root. Each
+root must contribute at least one file, so a directory that moves or a glob that
+stops matching fails the build instead of quietly shrinking what is guarded. The
+file set is a declared input, never a Git query, so a file the branch under
+review is adding is scanned too.
+
+Deliberate exclusions:
+
+- **`CHANGELOG.md`** — a historical journal whose past entries name the old
+  identifiers as they were at the time. Rewriting history to satisfy a gate
+  would be the wrong repair.
+- **`buildSrc/src/test`** — the scanner's fixtures must spell the forbidden forms.
+- **`app/src/main/assets/docs`** — a generated copy of `docs/`, which is scanned
+  at its source rather than twice.
+
+**Not forbidden, on purpose:** the lower-case hyphenated project codename that
+names the Gradle root project and the Firebase project. Neither is visible to a
+user, and a Firebase project id cannot be renamed.
+
+**Not caught, on purpose:** a single-digit phase. Integration tests label the
+steps of a multi-stage scenario "Phase 1" to "Phase 4", which is not planning
+vocabulary. Every real planning phase has two digits, so requiring two digits
+separates the two cleanly; a historical single-digit reference would slip
+through, and none exists.
+
+**Caught although legitimate, knowingly:** a literal progress label written as
+the word "task" followed by digits and a slash — say, in a preview fixture for a
+decomposition queue. Nothing in the tree has that shape; the production strings
+build such a label from placeholders, which the rule does not match. If a
+fixture needs one, write "step" or use the placeholder form rather than
+weakening the rule.
+
+The task is typed and cacheable, so a no-op `check` skips it. It reads files
+that five generators rewrite (the file maps, the browser editor, the settings
+reference, the automation reference and the cookbook), and declares
+`mustRunAfter` on each of them — the ordering the combined
+`generate… check` invocation needs.
+
+### Observed failing
+
+The first run over the tree reported **52** hits: **10** of the pre-rename name
+across eight files, and **42** planning numbers across 27 files — two generated
+file maps, KDoc in the engine, the MCP client and the task queue, test comments,
+a string-resource comment, one test name, and two comments in the browser
+editor. All were rewritten to say what the code does or what was observed,
+without the number. The gate was then observed failing again with the
+onboarding title string reverted to its pre-rename value. The pure logic is
+unit-tested in `buildSrc` (`ForbiddenVocabularyCheckerTest`).
+
+---
+
 ## Orphaned-KDoc guard (`verifyNoOrphanedKdoc`)
 
 Kotlin attaches a KDoc block to the declaration that follows it, and only to
@@ -1130,6 +1503,105 @@ selected category chip visually indistinguishable from the unselected ones until
 somebody ran the app by hand. On its own first run the gate named two sheets a
 hand inventory had already declared complete. The pure logic is unit-tested in
 `buildSrc` (`DialogInventoryCheckerTest`).
+
+---
+
+## Internal-FQN guard (`checkNoInternalFqn`)
+
+A fully-qualified `app.knotwork.android.…` reference in a code body is a type
+the file never imports: it hides a dependency from the import list — the one
+place a reader and the Konsist layer rules look for it — and it survives
+a package move as a string nobody searches for. `:app:checkNoInternalFqn` fails
+when one appears in `:app`'s `main`, `test` or `androidTest` Kotlin sources.
+
+What it deliberately leaves alone:
+
+- `import` and `package` statements, which is where the name belongs;
+- lines that start with `//` or `*` (line comments and the body of a KDoc
+  block), where a fully-qualified name is prose;
+- **intent action strings.** Android namespaces an action by the application id
+  (`app.knotwork.android.action.RUN_PIPELINE`), so it reads exactly like an
+  internal name while being wire data that other apps send — nothing an import
+  could replace, and frozen once a caller uses it. The action prefix is scrubbed
+  from the line before matching rather than exempting the line, so a real
+  fully-qualified reference beside an action string is still caught.
+
+It is a line scan, not a parser: a name split across lines, or inside a
+multi-line string, goes unseen.
+
+---
+
+## Browser-editor constants guard (`verifyBrowserEditorConstants`)
+
+The browser pipeline editor (`pipeline-editor.html`) is a single file that runs
+with no build step, so it carries its own copy of part of the app: the node
+types, the prompt variables, the local tools, the default system prompts, and
+every bundled pipeline preset and prompt template. Each copy sits between
+`AUTO-GEN` markers and is produced by `:app:generateBrowserEditorConstants` from
+the app's own sources — `NodeType.kt`, `PromptTemplateModule.kt` and the
+providers it binds, `LocalToolsModule.kt`, `DefaultPrompts.kt`, and the JSON
+under `assets/presets/pipelines/` and `assets/presets/prompts/` in the order
+`BundledPresetCatalog` displays them. `:app:verifyBrowserEditorConstants` fails
+when a committed block differs from what the generator would write now, and names
+the drifted blocks. Only the blocks are generated; the editor's own logic around
+them is hand-written.
+
+**Why the presets and templates are generated too.** They were the largest
+copies, and they were kept by hand. When they were brought under the generator,
+six of fifteen presets still carried prompt wording the app had replaced because
+it made on-device tool calls fail, and four of twenty-one templates were out of
+date — a change the commit message said had been mirrored had reached only the
+generated prompt block.
+
+**The second half: no control for a field no run reads.** The same task runs
+`BrowserEditorInertControlGuard` over the editor's `renderFormFields`. A node
+field that decodes and round-trips but is never read at run time (see
+[decision 0005](decisions/0005-a-control-that-cannot-act-is-removed.md)) must not be
+offered as a control, because a control that saves a value the run ignores
+teaches its user that the app ignores them. Which fields count is not restated:
+the guard reads `CookbookDocsGenerator.FIELD_REACH`, the same verdicts the
+cookbook publishes and `CookbookRuntimeReachTest` checks against the codec. The
+fields stay in the editor's encode/decode, so files still round-trip. The guard
+refuses to pass when `renderFormFields` or a node type's `case` cannot be found,
+so a rename cannot make it check nothing.
+
+To fix a failure, run `./gradlew :app:generateBrowserEditorConstants` and commit
+the updated `pipeline-editor.html`; for the inert-control half, remove the
+control and its validation from the form.
+
+### Observed failing
+
+The inert-control guard's first run named **eight** controls — temperature,
+top-p, max new tokens and stop sequences on the on-device node; model,
+temperature, max tokens and timeout on the cloud node — against the seven the
+defect report had counted. The pure logic is unit-tested in `buildSrc`
+(`BrowserEditorConstantsGeneratorTest`, `BrowserEditorInertControlGuardTest`).
+
+---
+
+## Shipped pipeline layout guard (`ShippedPipelineLayoutTest`)
+
+Node positions are canvas units, which are dp, and a node card is a fixed dp
+footprint. Every file this project ships as a pipeline — the bundled presets
+under `app/src/main/assets/presets/pipelines/` and the cookbook recipes under
+`docs/recipes/` — is laid out by hand, and nothing else would notice two cards on
+top of each other: the graph still parses and validates. The test reads each file
+as plain JSON, walks every `nodes` array it finds (so the preset format, the
+export format and a multi-pipeline bundle are all covered without depending on
+their serializers), and fails on any pair of cards closer than one grid step.
+
+A companion test fails if either directory contributes no graphs, because a path
+that stops resolving would otherwise make the overlap check pass over nothing.
+Editing either re-runs the test instead of answering from a cached pass: the
+presets are packaged Android resources of the unit tests, and the recipes are a
+declared test input.
+
+### Observed failing
+
+On its first run it found the comprehensive showcase preset overlapping **even at
+density 1** — hidden until then because the editor drew positions as screen
+pixels, which stacked every preset's cards on a dense phone anyway. Eight of its
+nodes were moved, in the preset and in the browser editor's copy.
 
 ---
 
@@ -1221,8 +1693,8 @@ tasks.named("check") { dependsOn("koverVerifyFullDebug") }
 ## CI
 
 The required job is defined in `.github/workflows/check.yml`. The workflow runs
-`./gradlew check` on every `pull_request → main` and every `push` to `main`
-(plus a manual `workflow_dispatch` trigger), uploads each report set —
+`./gradlew check :buildSrc:test` on every `pull_request → main` and every `push`
+to `main` (plus a manual `workflow_dispatch` trigger), uploads each report set —
 detekt / ktlint / unit-test / Kover / Roborazzi diffs — as a downloadable
 artifact on failure, and is configured with `concurrency.cancel-in-progress` so
 a new push supersedes any older run on the same branch. The **lint** report is
@@ -1255,7 +1727,10 @@ called as the first job of `.github/workflows/release.yml`, so a release cannot
 be built against a definition of "green" that has drifted from the one pull
 requests are measured by. `release.yml` adds the checks that only make sense on
 a release build — the tag ↔ `versionName` agreement, `verify<Variant>KeepRules`
-on both flavours, and a signature check of every published artefact against the
+on both flavours, a check that the `foss` APK carries no Firebase configuration,
+a check that both APKs ship the native libraries the app loads (LiteRT-LM and
+MediaPipe Tasks) and not the MediaPipe text-generation library the build
+excludes, and a signature check of every published artefact against the
 expected certificate fingerprint. The release procedure itself is documented in
 [`release.md`](release.md) §9.
 

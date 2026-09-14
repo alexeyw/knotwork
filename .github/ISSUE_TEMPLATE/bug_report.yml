@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect or unexpected behaviour in the On-Device AI Agent.
+description: Report a defect or unexpected behaviour in Knotwork.
 title: "[Bug] "
 labels: ["bug"]
 body:

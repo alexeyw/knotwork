@@ -159,4 +159,37 @@ class MarkdownLinksTest {
     fun `given a heading holding a link when slugified then only its text counts`() {
         assertEquals("see-the-guide", MarkdownLinks.slug("See [the guide](docs/user-guide.md)"))
     }
+
+    @Test
+    fun `given repeated headings when slugs are counted then the base is counted once per heading`() {
+        val markdown = "## Notes\n\n## Notes\n\n## Notes\n"
+
+        assertEquals(mapOf("notes" to 3), MarkdownLinks.headingSlugCounts(markdown))
+    }
+
+    @Test
+    fun `given distinct headings when slugs are counted then each is counted once`() {
+        val markdown = "# Guide\n\n## Triggers\n\n### Background & triggers\n"
+
+        assertEquals(
+            mapOf("guide" to 1, "triggers" to 1, "background--triggers" to 1),
+            MarkdownLinks.headingSlugCounts(markdown),
+        )
+    }
+
+    @Test
+    fun `given an explicit HTML anchor when slugs are counted then it is not counted`() {
+        // Hand-written anchors never carry an ordinal suffix, so they cannot
+        // produce the drift the count exists to detect.
+        val markdown = "<a id=\"hand-written\"></a>\n\n## Real heading\n"
+
+        assertEquals(mapOf("real-heading" to 1), MarkdownLinks.headingSlugCounts(markdown))
+    }
+
+    @Test
+    fun `given a heading inside a fence when slugs are counted then it is ignored`() {
+        val markdown = "```\n## Not a heading\n```\n\n## A heading\n"
+
+        assertEquals(mapOf("a-heading" to 1), MarkdownLinks.headingSlugCounts(markdown))
+    }
 }
