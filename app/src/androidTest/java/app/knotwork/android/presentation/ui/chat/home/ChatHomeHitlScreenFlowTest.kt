@@ -146,13 +146,12 @@ class ChatHomeHitlScreenFlowTest {
         // The live HITL row surfaces the actual tool name passed via
         // `pendingTool` — verifying that proves the VM → card wiring works
         // end-to-end and the screen isn't silently using the fixture row.
-        // `liveHitlRow` (ChatHomeStateMapping.kt) intentionally falls back to
-        // `summary = pending.toolName` when the agent did not attach a
-        // human-readable summary, so the toolName legitimately appears in
-        // both the card title and the summary line — the assertCountEquals
-        // pins that fallback contract.
+        // Exactly once: a pending call carries no description of its own, so
+        // `liveHitlRow` (ChatHomeStateMapping.kt) leaves `summary` empty and the
+        // card omits that line. It used to repeat the tool name there, which
+        // printed the id twice and read as a rendering fault.
         composeTestRule
             .onAllNodesWithText("calendar.create_event")
-            .assertCountEquals(2)
+            .assertCountEquals(1)
     }
 }

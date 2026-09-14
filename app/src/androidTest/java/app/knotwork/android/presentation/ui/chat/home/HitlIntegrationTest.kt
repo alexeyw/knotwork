@@ -100,9 +100,9 @@ class HitlIntegrationTest {
     private fun viewStateWithHitl(risk: Risk, toolName: String, pendingTypedConfirm: String = ""): ChatHomeViewState {
         // The card surfaces both `toolName` (header) and `summary` (body).
         // Use a deliberately distinct summary so `onNodeWithText(toolName)`
-        // resolves to exactly one node (the header). Production code paths
-        // can fall back to `summary = toolName`; that fallback is covered by
-        // ChatHomeHitlScreenFlowTest.hitlState_rendersPendingToolName.
+        // resolves to exactly one node (the header). The production row carries
+        // an empty summary instead, and that the tool name then appears once is
+        // covered by ChatHomeHitlScreenFlowTest.hitlState_rendersPendingToolName.
         val row = ChatHomeMessageRow(
             id = "a-hitl",
             role = ChatRole.Assistant,
