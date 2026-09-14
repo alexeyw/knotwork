@@ -62,7 +62,7 @@ details.
 
 ### Changed
 
-- **The app is 14 MB smaller to download.** The full APK had grown by about
+- **The full APK is 14 MB smaller.** It had grown by about
   15 MB in 0.8.0 without anyone noticing: a MediaPipe update started shipping
   the native library behind its new on-device summariser and proofreader. The
   app uses MediaPipe only to embed text for long-term memory, and generates text

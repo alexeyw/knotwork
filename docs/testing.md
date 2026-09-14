@@ -125,7 +125,8 @@ change the test exists to catch.
   cookbook generator test reads).
 - **Prove it once:** run the test twice (the second run is `UP-TO-DATE`), change
   the file, run again — the task must execute. Without the declaration it does
-  not; that is how every entry in those blocks was found.
+  not: the privacy policy, the browser editor, the cookbook generator's sources
+  and the screenshot baselines were each found that way.
 
 ## Instrumented / Compose UI tests
 
