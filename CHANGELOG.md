@@ -146,7 +146,8 @@ details.
   run · queued**, the thread shows **Waiting…**, and it switches to generating
   the moment the run actually starts; Stop still cancels it. The same bubble
   also stops claiming to generate while the model is still loading. The task
-  monitor lists such a chat as queued rather than running.
+  monitor lists such a chat as queued rather than running, and the More tab
+  counts it as queued — where it used to count every idle chat instead.
 
 - **Jumping to a node from a validation error centres it.** The editor centred
   on a one-pixel viewport, which parked the node against the top-left corner of

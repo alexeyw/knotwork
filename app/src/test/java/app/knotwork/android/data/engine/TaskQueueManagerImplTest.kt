@@ -906,6 +906,7 @@ class TaskQueueManagerImplTest {
 
             // Before: the waiting session read Loading as if its own run were starting.
             assertEquals(AgentOrchestratorState.Queued, waiting.last())
+            assertEquals(AgentOrchestratorState.Queued, taskQueueManager.activeSessionsState.value["session_waiting"])
             assertTrue(
                 "the global state must keep describing the run that holds the worker",
                 taskQueueManager.globalState.value !is AgentOrchestratorState.Queued,
@@ -916,6 +917,8 @@ class TaskQueueManagerImplTest {
             runCurrent()
 
             assertEquals(AgentOrchestratorState.Loading, waiting.last())
+            // The task monitor reads this snapshot: once running, the chat is no longer queued.
+            assertEquals(AgentOrchestratorState.Loading, taskQueueManager.activeSessionsState.value["session_waiting"])
             taskQueueManager.cancelRun("session_waiting")
             runCurrent()
         }

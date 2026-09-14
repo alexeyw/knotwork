@@ -110,6 +110,27 @@ class TaskMonitorViewModelTest {
     }
 
     @Test
+    fun `given a chat queued behind another run when the default filter shows then it is listed as queued`() =
+        runTest(testDispatcher) {
+            every { taskQueueManager.activeSessionsState } returns kotlinx.coroutines.flow.MutableStateFlow(
+                mapOf("session1" to AgentOrchestratorState.Queued, "session2" to AgentOrchestratorState.Idle),
+            )
+            val queuedViewModel = TaskMonitorViewModel(
+                chatRepository,
+                workManager,
+                settingsRepository,
+                taskQueueManager,
+                cancelScheduledTasks,
+            )
+
+            val uiState = queuedViewModel.uiState.first { !it.isLoading }
+
+            assertEquals(TaskFilterType.ACTIVE, uiState.filter)
+            val sessions = uiState.tasks.filter { it.type == TaskType.SESSION }
+            assertEquals(listOf("session1" to TaskStatus.QUEUED), sessions.map { it.id to it.status })
+        }
+
+    @Test
     fun `filter COMPLETED returns only completed tasks`() = runTest(testDispatcher) {
         viewModel.onFilterChanged(TaskFilterType.COMPLETED)
         val uiState = viewModel.uiState.first { it.filter == TaskFilterType.COMPLETED }

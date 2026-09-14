@@ -401,6 +401,9 @@ class TaskQueueManagerImpl @Inject constructor(
         val loadingState = AgentOrchestratorState.Loading
         stateFlow.emit(loadingState)
         _globalState.value = loadingState
+        // The snapshot was last taken at enqueue, where a task behind another run read
+        // Queued; without this the task monitor keeps calling a running chat queued.
+        updateActiveSessionsState()
 
         // Ensure the persistent QUEUED record exists before any lifecycle
         // UPDATE targets it. `enqueueTask` writes the same record off the
@@ -488,6 +491,8 @@ class TaskQueueManagerImpl @Inject constructor(
         val loadingState = AgentOrchestratorState.Loading
         stateFlow.emit(loadingState)
         _globalState.value = loadingState
+        // Same as processTask: a resumed run can have waited behind another one.
+        updateActiveSessionsState()
 
         val run = pipelineRunRepository.getRun(task.id)
         val recordedHash = run?.graphContentHash

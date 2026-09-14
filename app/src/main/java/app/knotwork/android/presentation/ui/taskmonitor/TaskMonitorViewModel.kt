@@ -132,7 +132,13 @@ class TaskMonitorViewModel @Inject constructor(
 
         val filteredTasks = when (filter) {
             TaskFilterType.ALL -> allTasks
-            TaskFilterType.ACTIVE -> allTasks.filter { it.status == TaskStatus.RUNNING }
+            TaskFilterType.ACTIVE -> allTasks.filter {
+                it.status == TaskStatus.RUNNING ||
+                    // A chat waiting behind another run is still in flight — it used to
+                    // read as running, and must not drop out of the default view now
+                    // that it says it is queued.
+                    (it.type == TaskType.SESSION && it.status == TaskStatus.QUEUED)
+            }
             TaskFilterType.BACKGROUND -> allTasks.filter {
                 it.type == TaskType.BACKGROUND_WORK &&
                     it.status == TaskStatus.QUEUED

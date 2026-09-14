@@ -178,6 +178,8 @@ class MoreViewModelTest {
             "s1" to AgentOrchestratorState.Thinking(partialText = ""),
             "s2" to AgentOrchestratorState.Answering(partialText = ""),
             "s3" to AgentOrchestratorState.Idle,
+            "s4" to AgentOrchestratorState.Queued,
+            "s5" to AgentOrchestratorState.Queued,
         )
 
         val viewModel = buildViewModel()
@@ -191,8 +193,8 @@ class MoreViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("Gemma · active", state.modelsSubtitle)
-        // Two running (Thinking + Answering), one queued (Idle).
-        assertEquals("2 running · 1 queued", state.tasksSubtitle)
+        // Two running (Thinking + Answering), two queued; the resting Idle chat is neither.
+        assertEquals("2 running · 2 queued", state.tasksSubtitle)
         assertEquals(2, state.tasksBadge)
 
         job.cancel()

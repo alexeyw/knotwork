@@ -103,7 +103,10 @@ class MoreViewModel @Inject constructor(
             it is AgentOrchestratorState.Thinking ||
                 it is AgentOrchestratorState.Answering
         }
-        val queuedCount = activeSessions.values.count { it is AgentOrchestratorState.Idle }
+        // Only a run actually waiting behind another one. `Idle` is the resting state
+        // of every chat the queue has seen, which read as "queued" before the queue
+        // could say which session was waiting.
+        val queuedCount = activeSessions.values.count { it is AgentOrchestratorState.Queued }
         return MoreUiState(
             memorySubtitle = formatMemoryStats(memStats.chunkCount, memStats.totalBytes),
             modelsSubtitle = if (active != null) "${active.name} · active" else "no model installed",
