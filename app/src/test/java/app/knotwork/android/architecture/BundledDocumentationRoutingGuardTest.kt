@@ -77,6 +77,8 @@ class BundledDocumentationRoutingGuardTest {
         val text = file.readText()
         return CALL.findAll(text)
             .filterNot { text.substring(0, it.range.first).trimEnd().endsWith("fun") }
+            // A mention in KDoc or a comment is not a call.
+            .filterNot { match -> lineStart(text, match.range.first).let { it.startsWith("*") || it.startsWith("//") } }
             .map { match ->
                 val open = match.range.last
                 CallSite(
@@ -87,6 +89,10 @@ class BundledDocumentationRoutingGuardTest {
             }
             .toList()
     }
+
+    /** The text of the line holding [index], from its first non-blank character up to [index]. */
+    private fun lineStart(text: String, index: Int): String =
+        text.substring(text.lastIndexOf('\n', index - 1) + 1, index).trimStart()
 
     /**
      * Splits the argument list that opens at [open] on its top-level commas, so a lambda
