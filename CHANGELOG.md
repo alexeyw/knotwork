@@ -25,8 +25,8 @@ details.
   lists all five (below), and four screens link to the document that explains
   them: Tools and Triggers from a book icon in the top bar, straight to their
   section of the user guide; the pipeline editor from its overflow menu; and
-  external automation from the settings hint — which fills a link slot that had been rendered but never
-  filled since it was written. The last step of onboarding points at the FAQ.
+  external automation from the settings hint — which fills a link slot that had
+  been rendered but never filled since it was written. The last step of onboarding points at the FAQ.
 
   **The links follow the build.** A release build opens the documentation at the
   tag of the version installed, so a reader is not sent to a description of a
@@ -148,8 +148,8 @@ details.
   presets, the browser editor and the cookbook recipes were already written in
   — so a pipeline lays out the same on every screen, and a file exported from
   the phone opens with the same spacing in the browser editor. The mini-map,
-  **Fit pipeline to view** and the dot grid were measured the same wrong way and are fixed
-  with it.
+  **Fit pipeline to view** and the dot grid were measured the same wrong way
+  and are fixed with it.
 
   Opening a pipeline now frames the whole graph, never zooming past 100 %; at
   its real size a three-step preset is wider than a phone screen.

@@ -642,9 +642,9 @@ same way merging a pull request is. Before pressing publish:
      the user guide, the editor overflow's *Pipeline cookbook*, and the *Read
      the contract* link in the external-automation settings hint.
    - The same Help screen **in airplane mode**: both bundled documents still
-     read, links between them still scroll, and a web row refuses in place — offering
-     the address to copy and naming the documents that are on the device —
-     instead of opening an error page.
+     read, links between them still scroll, and a web row refuses in place —
+     offering the address to copy and naming the documents that are on the
+     device — instead of opening an error page.
 
    The onboarding FAQ link cannot be reached on an existing install — onboarding
    does not re-open. It opens the bundled copy rather than a URL, and

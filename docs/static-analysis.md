@@ -1510,14 +1510,15 @@ hand inventory had already declared complete. The pure logic is unit-tested in
 
 A fully-qualified `app.knotwork.android.…` reference in a code body is a type
 the file never imports: it hides a dependency from the import list — the one
-place a reader, ktlint and the Konsist layer rules look for it — and it survives
+place a reader and the Konsist layer rules look for it — and it survives
 a package move as a string nobody searches for. `:app:checkNoInternalFqn` fails
 when one appears in `:app`'s `main`, `test` or `androidTest` Kotlin sources.
 
 What it deliberately leaves alone:
 
 - `import` and `package` statements, which is where the name belongs;
-- comment lines (`//` and KDoc `*`), where a fully-qualified name is prose;
+- lines that start with `//` or `*` (line comments and the body of a KDoc
+  block), where a fully-qualified name is prose;
 - **intent action strings.** Android namespaces an action by the application id
   (`app.knotwork.android.action.RUN_PIPELINE`), so it reads exactly like an
   internal name while being wire data that other apps send — nothing an import
@@ -1692,8 +1693,8 @@ tasks.named("check") { dependsOn("koverVerifyFullDebug") }
 ## CI
 
 The required job is defined in `.github/workflows/check.yml`. The workflow runs
-`./gradlew check :buildSrc:test` on every `pull_request → main` and every `push` to `main`
-(plus a manual `workflow_dispatch` trigger), uploads each report set —
+`./gradlew check :buildSrc:test` on every `pull_request → main` and every `push`
+to `main` (plus a manual `workflow_dispatch` trigger), uploads each report set —
 detekt / ktlint / unit-test / Kover / Roborazzi diffs — as a downloadable
 artifact on failure, and is configured with `concurrency.cancel-in-progress` so
 a new push supersedes any older run on the same branch. The **lint** report is

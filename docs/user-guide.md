@@ -1211,8 +1211,8 @@ pan / zoom canvas with the following gestures:
   Fail, `Router` → one port per declared class) the dot you grabbed
   determines which branch the edge represents.
 - **Delete a connection** — two paths:
-  1. **Single-tap** the edge → it highlights in accent colour and the
-     toolbar 🗑 Delete becomes active. Press 🗑 to remove. Or
+  1. **Single-tap** the edge → it highlights in accent colour; then
+     choose **Delete selection** in the overflow menu. Or
   2. **Long-press** the edge → confirmation dialog "Remove
      connection?" opens; tap Remove.
   Both paths are undoable with **Undo** in the overflow menu.
@@ -2678,11 +2678,12 @@ anywhere different than it did before.
 
 Most rows carry a live subtitle — memory chunks, the active model name,
 prompt categories and prompts, the presets you saved, the files in the
-workspace and their size, the app version and build. **Tasks** reads `N running · N queued`, where *queued* counts
-only chats waiting behind another run, and it is the only row with a
-numeric badge: the running count. That is what keeps a badge meaning
-"something is running right now" — a stored quantity like the
-archived-chat count lives in the row's subtitle instead. A footer pill summarises the privacy state — when the
+workspace and their size, the app version and build. **Tasks** reads
+`N running · N queued`, where *queued* counts only chats waiting behind
+another run, and it is the only row with a numeric badge: the running
+count. That is what keeps a badge meaning "something is running right
+now" — a stored quantity like the archived-chat count lives in the row's
+subtitle instead. A footer pill summarises the privacy state — when the
 agent has not made any outbound LLM or MCP call for a minute, the
 pill reads `on-device · no network calls in last N m`; an in-flight
 cloud call flips the indicator to `online · cloud enabled`. The
@@ -2906,8 +2907,8 @@ to flag that the agent has paused background work.
 ## About
 
 **More → About** shows the app's brand mark, version / build /
-commit, a **Documentation** card that opens [Help](#the-help-screen), the open-source license name
-(Apache 2.0), a hand-curated acknowledgments list of the libraries
+commit, a **Documentation** card that opens [Help](#the-help-screen),
+the open-source license name (Apache 2.0), a hand-curated acknowledgments list of the libraries
 that ship inside the app, and a short privacy summary. Tap
 `Open license text` to load the license verbatim in your browser, or
 `Read privacy policy` for the detailed privacy stance.

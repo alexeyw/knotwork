@@ -452,8 +452,8 @@ device — Samsung Galaxy S25 Ultra (Android 16)** — performed before every
 integration merge into `main`, plus a manual TalkBack walkthrough of the
 ratified happy paths. A release also opens every in-app documentation link from
 the installed build, and the Help screen in airplane mode
-([`release.md`](release.md) § *Cutting a release*). The emulator suite narrowed what that pass has to
-carry — Room migrations, DAO round-trips and the Compose flows are now
+([`release.md`](release.md) § *Cutting a release*). The emulator suite narrowed
+what that pass has to carry — Room migrations, DAO round-trips and the Compose flows are now
 answered automatically — but it did not replace it: the remaining items
 above are the ones only real hardware can decide. The pre-release quality gate in
 [`release.md`](release.md) § *Quality gate before release* builds on the

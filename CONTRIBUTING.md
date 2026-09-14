@@ -120,13 +120,13 @@ running `check` alone is a narrower gate than the one that decides the merge.
   version number agreeing with every hand-written copy of it in `README.md`,
   `CHANGELOG.md`, `SECURITY.md` and `docs/roadmap.md` (`verifyVersionSources`),
   the in-app documentation links and the copies of documents bundled into the
-  app (`verifyDocumentationLinks`, `verifyBundledDocs`). External `http` links are reported
-  weekly by a separate workflow and never gate a merge. The full roster of
+  app (`verifyDocumentationLinks`, `verifyBundledDocs`). External `http` links
+  are reported weekly by a separate workflow and never gate a merge. The full roster of
   gates lives in
   [`docs/static-analysis.md`](docs/static-analysis.md).
 
-Run `./gradlew check :buildSrc:test` **locally before pushing**. Pushing without running
-it just trades local feedback for slower CI feedback.
+Run `./gradlew check :buildSrc:test` **locally before pushing**. Pushing
+without running it just trades local feedback for slower CI feedback.
 
 Beyond those two tasks, CI adds two things. It compiles the instrumented
 source set — as a separate Gradle invocation, since bundling it into
@@ -205,9 +205,8 @@ Before requesting review, please confirm:
       `faq.md`, `troubleshooting.md`, `cookbook.md`,
       `external-automation.md`), `./gradlew :app:generateDocumentationLinks`
       was run — the Help screen shows each document's size, so a changed line
-      count is drift — and,
-      when `docs/faq.md` or `docs/troubleshooting.md` changed —
-      `./gradlew :app:syncBundledDocs`, with both results committed.
+      count is drift — and, when `docs/faq.md` or `docs/troubleshooting.md`
+      changed, `./gradlew :app:syncBundledDocs`, with both results committed.
 - [ ] `./gradlew :app:generateFileMap` was run and its result committed
       when Kotlin files or directories were added, moved, or removed. The
       task also owns the `catalog/` and test maps; the root `FILE_MAP.md`

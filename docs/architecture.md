@@ -241,8 +241,9 @@ Step-by-step notes:
    `ChatRepository.getDisplayMessagesForSession(...)`, but they remain
    available for debugging and export paths.
 8. The final agent reply (`isFinal = true`) is saved through the
-   repository by the `OUTPUT` node's executor; the resulting `Flow` emission updates the `messages` flow
-   exposed by `ChatHomeViewModel` and the UI re-composes.
+   repository by the `OUTPUT` node's executor; the resulting `Flow`
+   emission updates the `messages` flow exposed by `ChatHomeViewModel`
+   and the UI re-composes.
 9. On the terminal `Completed` state, `ChatHomeViewModel` notifies the
    app-scoped `MemoryAutoExtractionCoordinator` (domain service). After a
    30-second per-session debounce — and only when

@@ -370,9 +370,9 @@ stopped before it could answer. A message still waiting behind another run is
 cancelled the same way. Switching to another chat does **not** stop anything —
 the run keeps going, which is why you can come back to it.
 
-Two other controls end runs you are not looking at: **Stop the run** on a limit
-pause, and — for a chain of tasks the agent scheduled for itself — **More → Active
-tasks → Stop all scheduled tasks**, which also cancels one that is executing.
+Two more controls end a run: **Stop the run** on a limit pause, and — for a
+chain of tasks the agent scheduled for itself — **More → Active tasks → Stop all
+scheduled tasks**, which also cancels one that is executing.
 
 ### My run stopped by itself. Which limit was it?
 
