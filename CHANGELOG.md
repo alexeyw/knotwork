@@ -139,6 +139,13 @@ details.
   and a build check now keeps every bundled preset and recipe free of
   overlapping cards.
 
+- **The task monitor and the More tab follow each chat's run as it happens.** They
+  used to show a chat as it was when its message was queued: a finished chat
+  kept reading as running until another message was sent anywhere, the stage
+  column never showed anything but loading, and the running count on More — and
+  the badge next to Tasks — stayed at zero. Both now update when a run moves to a
+  new stage, finishes, fails or is stopped.
+
 - **A message waiting behind another run says it is waiting.** The app runs one
   pipeline at a time, so a message sent while a trigger, a share or another chat
   is running waits for that run to finish — which can take minutes. The chat

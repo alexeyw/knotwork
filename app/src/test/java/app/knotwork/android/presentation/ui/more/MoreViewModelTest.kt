@@ -201,6 +201,32 @@ class MoreViewModelTest {
     }
 
     @Test
+    fun `given runs loading, in a tool and on a stage when subscribed then all of them count as running`() = runTest {
+        sessionsFlow.value = mapOf(
+            "loading" to AgentOrchestratorState.Loading,
+            "tool" to AgentOrchestratorState.ExecutingTool(toolName = "search", arguments = "{}"),
+            "stage" to AgentOrchestratorState.PipelineStage(AgentOrchestratorState.PipelineStepInfo(1, 2, "Router")),
+            "queued" to AgentOrchestratorState.Queued,
+            "done" to AgentOrchestratorState.Completed("ok"),
+            "failed" to AgentOrchestratorState.Error("boom"),
+        )
+
+        val viewModel = buildViewModel()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect {}
+        }
+        testScheduler.runCurrent()
+
+        // Before: only Thinking / Answering counted, so a run in any other status read as none
+        // and the tab's badge stayed hidden.
+        val state = viewModel.uiState.value
+        assertEquals("3 running · 1 queued", state.tasksSubtitle)
+        assertEquals(3, state.tasksBadge)
+
+        job.cancel()
+    }
+
+    @Test
     fun `given prompt and pipeline presets when subscribed then subtitles reflect catalogue`() = runTest {
         bundledPromptsFlow.value = listOf(
             promptPreset(id = "b1", nodeType = NodeType.LITE_RT),
