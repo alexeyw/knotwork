@@ -13,6 +13,7 @@ Only Kotlin files appear inside the generated blocks.
 <!-- AUTO-GEN:FILE_MAP -->
 - `architecture/` - Structural guards run as tests: Konsist layer and domain-purity rules, Firebase isolation, the usage-telemetry no-network rule, the tab-root entry guard and the instrumented-test exclusion roster.
   - `ArchitectureScope.kt` - Shared Konsist scope for the architecture guard suite.
+  - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
   - `DomainPurityKonsistTest.kt` - Konsist guard enforcing the strictest project rule for the `domain` layer: it is pure Kotlin with **zero** Android/framework imports, so it can be compiled and unit-tested off-device.
   - `FirebaseIsolationKonsistTest.kt` - Konsist guard keeping the Firebase SDK out of the shared `main` source set.

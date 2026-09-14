@@ -62,6 +62,22 @@ details.
 
 ### Changed
 
+- **The app is 14 MB smaller to download.** The full APK had grown by about
+  15 MB in 0.8.0 without anyone noticing: a MediaPipe update started shipping
+  the native library behind its new on-device summariser and proofreader. The
+  app uses MediaPipe only to embed text for long-term memory, and generates text
+  with LiteRT-LM, so that library never ran; it is no longer packaged, and the
+  release build now checks it stays out while the libraries the app does load
+  stay in.
+
+- **Screenshot baselines are now checked on every build.** The design-system
+  screenshots were rendered by every test run but compared with their committed
+  baselines only when someone remembered to, so a changed screen passed. The
+  comparison is now part of the gate. Several tests that read files outside the
+  code — the privacy policy, the browser editor, the node sources the cookbook is
+  generated from — could answer from a cached run after those files changed;
+  each is now a declared input.
+
 - **The browser pipeline editor now works with no network.** It was described
   as a standalone single-file editor, and that was true only in the sense that
   it was one file: opening it pulled its graph library from a public CDN, so
@@ -88,6 +104,12 @@ details.
   implying a guarantee that is not ours to give.
 
 ### Fixed
+
+- **The FAQ link on the last onboarding step opens in the app.** The FAQ ships
+  inside the app, but that one link sent it to the browser — on the step where
+  the network may not be set up yet. It now opens the built-in reader, and back
+  returns to onboarding where you left it. A test now fails if any link to a
+  bundled document skips the reader.
 
 - **Markdown with two dollar signs on one line no longer loses the text between
   them.** `Pay bills $100 and $50` rendered as `Pay bills 50`: the renderer

@@ -154,6 +154,9 @@ fun AppNavGraph(
                         launchSingleTop = true
                     }
                 },
+                // Pushed over onboarding, so back from the reader returns to the step
+                // the user left, with its state intact.
+                onOpenDocument = { id -> navController.navigate(NavRoutes.helpDocumentRoute(id)) },
             )
         }
 
