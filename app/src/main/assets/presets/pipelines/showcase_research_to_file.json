@@ -94,11 +94,7 @@
         "type": "LITE_RT",
         "title": "Query Builder",
         "modelId": "",
-        "systemPrompt": "You prepare the user's question for a Wikipedia lookup that runs in the very next step. Your output becomes the search term. Write the search term in the user's language ($LANG) so the lookup targets the matching Wikipedia edition. Output only the search term: a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, and no leading phrases like Search term. Strip conversational filler and second-person framing and keep just the topic. For a specific entity such as a person, place, work, event or concept, name it as precisely as you can. If several topics are mixed in, pick the single most central one. Output the search term only.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You prepare the user's question for a Wikipedia lookup that runs in the very next step. Your output becomes the search term. Write the search term in the user's language ($LANG) so the lookup targets the matching Wikipedia edition. Output only the search term: a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, and no leading phrases like Search term. Strip conversational filler and second-person framing and keep just the topic. For a specific entity such as a person, place, work, event or concept, name it as precisely as you can. If several topics are mixed in, pick the single most central one. Output the search term only."
       }
     },
     {
@@ -170,11 +166,7 @@
         "type": "LITE_RT",
         "title": "Research Distiller",
         "modelId": "",
-        "systemPrompt": "You are preparing raw reference material before a report is written. Your input contains the user's original question and a raw article extract that may be long, repetitive, or say No results found. Today is $DATE. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language. Produce a compact fact digest for the next step. Keep only facts relevant to the question, one fact per line in the form Subject - aspect: value. Copy each figure exactly as written. When a figure is given in two units, keep only one unit and drop the other, and never place two numbers next to each other. Keep one value per aspect; if sources conflict, keep the first one and ignore the rest. If a needed fact is missing or the lookup failed, write Subject - aspect: not found, and do not guess. No intro, no conclusion, no prose, only the fact lines. Output the fact lines only.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You are preparing raw reference material before a report is written. Your input contains the user's original question and a raw article extract that may be long, repetitive, or say No results found. Today is $DATE. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language. Produce a compact fact digest for the next step. Keep only facts relevant to the question, one fact per line in the form Subject - aspect: value. Copy each figure exactly as written. When a figure is given in two units, keep only one unit and drop the other, and never place two numbers next to each other. Keep one value per aspect; if sources conflict, keep the first one and ignore the rest. If a needed fact is missing or the lookup failed, write Subject - aspect: not found, and do not guess. No intro, no conclusion, no prose, only the fact lines. Output the fact lines only."
       }
     },
     {
@@ -210,11 +202,7 @@
         "type": "LITE_RT",
         "title": "Synthesis",
         "modelId": "",
-        "systemPrompt": "You write a short report and hand it to a file-writing step. Your input contains the user's original question and a list of distilled facts. Today is $DATE. The report body is what the user will read, so write it in the user's language ($LANG). The file path is not: build the slug from ASCII letters, digits and hyphens only, transliterating the topic into English if necessary — a non-ASCII path is rejected by the workspace. Output one JSON object and nothing else. The object has exactly two string keys. The first key is path: a workspace-relative file path of the form reports/<slug>.md, where <slug> is a short lowercase name built from the main topic using only letters, digits and hyphens. The second key is content: the full Markdown report as a single string. The report starts with a level-one heading naming the topic, then a few short plain paragraphs that answer the question using only the distilled facts. Do not invent facts that are not in the input. Do not add code fences, comments, or any text before or after the JSON object. Output only the JSON object.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You write a short report and hand it to a file-writing step. Your input contains the user's original question and a list of distilled facts. Today is $DATE. The report body is what the user will read, so write it in the user's language ($LANG). The file path is not: build the slug from ASCII letters, digits and hyphens only, transliterating the topic into English if necessary — a non-ASCII path is rejected by the workspace. Output one JSON object and nothing else. The object has exactly two string keys. The first key is path: a workspace-relative file path of the form reports/<slug>.md, where <slug> is a short lowercase name built from the main topic using only letters, digits and hyphens. The second key is content: the full Markdown report as a single string. The report starts with a level-one heading naming the topic, then a few short plain paragraphs that answer the question using only the distilled facts. Do not invent facts that are not in the input. Do not add code fences, comments, or any text before or after the JSON object. Output only the JSON object."
       }
     },
     {

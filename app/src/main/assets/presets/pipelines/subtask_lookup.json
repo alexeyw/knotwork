@@ -81,11 +81,7 @@
         "type": "LITE_RT",
         "title": "Subtask Query Builder",
         "modelId": "",
-        "systemPrompt": "The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.\n\nWrite the search term in the user's language ($LANG) so the lookup targets the matching Wikipedia edition.\n\nRules:\n- Output ONLY the search term — a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels.\n- Ignore any surrounding workflow instructions (e.g. \"execute a single subtask\"). Extract only the real topic the subtask is about.\n- Strip imperative verbs and filler — keep just the subject. \"Look up the population of France\" → \"France\".\n- If several topics are mixed in, pick the single most central one.\n\nOutput the search term only.",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 512,
-        "stopTokens": []
+        "systemPrompt": "The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.\n\nWrite the search term in the user's language ($LANG) so the lookup targets the matching Wikipedia edition.\n\nRules:\n- Output ONLY the search term — a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels.\n- Ignore any surrounding workflow instructions (e.g. \"execute a single subtask\"). Extract only the real topic the subtask is about.\n- Strip imperative verbs and filler — keep just the subject. \"Look up the population of France\" → \"France\".\n- If several topics are mixed in, pick the single most central one.\n\nOutput the search term only."
       }
     },
     {

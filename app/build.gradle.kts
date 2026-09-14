@@ -1,4 +1,5 @@
 import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator
+import app.knotwork.android.buildtools.BrowserEditorInertControlGuard
 import app.knotwork.android.buildtools.CookbookDocsGenerator
 import app.knotwork.android.buildtools.DetektAnalysisModeGuard
 import app.knotwork.android.buildtools.DexInstantiabilityChecker
@@ -1068,7 +1069,8 @@ tasks.named("check") { dependsOn(verifyDialogInventory) }
 // Browser pipeline-editor constant sync automation.
 //
 // `pipeline-editor.html` mirrors a slice of the Android domain (node types,
-// prompt variables, available tools, default prompts). Those mirrors used to be
+// prompt variables, available tools, default prompts, and the bundled presets and
+// prompt templates). Those mirrors used to be
 // kept in sync by review alone and drifted. `generateBrowserEditorConstants`
 // regenerates the `AUTO-GEN` blocks straight from the domain sources;
 // `verifyBrowserEditorConstants` (wired into `check`) fails the build if the
@@ -1088,12 +1090,28 @@ val browserEditorClassSourceFiles: Set<File> = buildSet {
     addAll(fileTree("$projectDir/src/main/java/app/knotwork/android/data/prompt") { include("**/*.kt") }.files)
     addAll(fileTree("$projectDir/src/main/java/app/knotwork/android/data/tools/local") { include("**/*.kt") }.files)
 }
+// The bundled presets and prompt templates the editor carries, plus the catalogue
+// that orders the presets.
+val browserEditorPresetFiles: Set<File> =
+    fileTree("$projectDir/src/main/assets/presets/pipelines") { include("*.json") }.files
+val browserEditorTemplateFiles: Set<File> =
+    fileTree("$projectDir/src/main/assets/presets/prompts") { include("*.json") }.files
+val browserEditorPresetCatalogFile =
+    file("$projectDir/src/main/java/app/knotwork/android/domain/constants/BundledPresetCatalog.kt")
 // Every file whose content feeds the generated blocks; drives up-to-date checks.
-val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + setOf(
-    browserEditorNodeTypeFile,
-    browserEditorDefaultPromptsFile,
-    browserEditorPromptModuleFile,
-    browserEditorToolsModuleFile,
+val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + browserEditorPresetFiles +
+    browserEditorTemplateFiles + setOf(
+        browserEditorNodeTypeFile,
+        browserEditorDefaultPromptsFile,
+        browserEditorPromptModuleFile,
+        browserEditorToolsModuleFile,
+        browserEditorPresetCatalogFile,
+    )
+
+fun browserEditorPresetSources() = BrowserEditorConstantsGenerator.BundledPresetSources(
+    pipelinePresets = browserEditorPresetFiles.associate { it.name to it.readText() },
+    presetCatalog = browserEditorPresetCatalogFile.readText(),
+    promptTemplates = browserEditorTemplateFiles.associate { it.name to it.readText() },
 )
 
 val generateBrowserEditorConstants by tasks.registering {
@@ -1112,6 +1130,7 @@ val generateBrowserEditorConstants by tasks.registering {
             promptTemplateModuleSource = browserEditorPromptModuleFile.readText(),
             localToolsModuleSource = browserEditorToolsModuleFile.readText(),
             classSources = browserEditorClassSourceFiles.associate { it.nameWithoutExtension to it.readText() },
+            presets = browserEditorPresetSources(),
         )
         if (rendered != current) {
             browserEditorHtmlFile.writeText(rendered)
@@ -1216,12 +1235,27 @@ val verifyBrowserEditorConstants by tasks.registering {
             promptTemplateModuleSource = browserEditorPromptModuleFile.readText(),
             localToolsModuleSource = browserEditorToolsModuleFile.readText(),
             classSources = browserEditorClassSourceFiles.associate { it.nameWithoutExtension to it.readText() },
+            presets = browserEditorPresetSources(),
         )
         if (drifted.isNotEmpty()) {
             throw GradleException(
                 "pipeline-editor.html is out of sync with the Android domain sources.\n" +
                     "Drifted AUTO-GEN block(s): ${drifted.joinToString(", ")}.\n" +
                     "Run `./gradlew :app:generateBrowserEditorConstants` and commit the updated pipeline-editor.html.",
+            )
+        }
+        // Outside the generated blocks: the node forms must not offer a control for a
+        // field no run reads (docs/decisions/0005) — the same round-trip-only verdicts
+        // the cookbook publishes.
+        val inert = BrowserEditorInertControlGuard.inertControls(
+            html = browserEditorHtmlFile.readText(),
+            reach = CookbookDocsGenerator.FIELD_REACH,
+        )
+        if (inert.isNotEmpty()) {
+            throw GradleException(
+                "pipeline-editor.html offers controls for fields no run reads: ${inert.joinToString(", ")}.\n" +
+                    "Remove them from renderFormFields (and their validation); keep the fields in the " +
+                    "envelope encode/decode so files still round-trip. See docs/decisions/0005.",
             )
         }
     }

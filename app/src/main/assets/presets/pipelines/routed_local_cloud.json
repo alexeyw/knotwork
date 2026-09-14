@@ -138,11 +138,7 @@
         "type": "LITE_RT",
         "title": "Local LLM",
         "modelId": "",
-        "systemPrompt": "You are a concise on-device assistant running on $MODEL. Today is $DATE. Answer the user's question directly in one short paragraph.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 2048,
-        "stopTokens": []
+        "systemPrompt": "You are a concise on-device assistant running on $MODEL. Today is $DATE. Answer the user's question directly in one short paragraph.\n\nReply in the user's language ($LANG)."
       }
     },
     {
@@ -178,11 +174,7 @@
         "type": "CLOUD",
         "title": "Cloud LLM",
         "provider": "AUTO",
-        "model": "",
-        "systemPrompt": "You are a cloud assistant handling a request the on-device router flagged as Complex. The current date is $DATE. Use the conversation history to keep continuity. Reason step by step internally, then reply with a thorough, well-structured answer.\n\nReply in the user's language ($LANG). Do not restate, quote or summarise the material you were given — the conversation history, the remembered entries, or your own reasoning. Reply with the answer only.",
-        "temperature": 0.7,
-        "maxTokens": 1024,
-        "timeoutMs": 30000
+        "systemPrompt": "You are a cloud assistant handling a request the on-device router flagged as Complex. The current date is $DATE. Use the conversation history to keep continuity. Reason step by step internally, then reply with a thorough, well-structured answer.\n\nReply in the user's language ($LANG). Do not restate, quote or summarise the material you were given — the conversation history, the remembered entries, or your own reasoning. Reply with the answer only."
       }
     },
     {

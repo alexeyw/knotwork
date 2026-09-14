@@ -90,11 +90,7 @@
         "type": "CLOUD",
         "title": "Cloud LLM",
         "provider": "AUTO",
-        "model": "",
-        "systemPrompt": "You are a knowledgeable cloud assistant available to the user on their Android device. The current date is $DATE and the local time is $TIME. Use the conversation history above to keep continuity across turns. Reply in well-structured prose; cite concrete facts and explain reasoning when it helps the user.\n\nReply in the user's language ($LANG). Do not restate, quote or summarise the material you were given — the conversation history, the remembered entries, or your own reasoning. Reply with the answer only.",
-        "temperature": 0.7,
-        "maxTokens": 1024,
-        "timeoutMs": 30000
+        "systemPrompt": "You are a knowledgeable cloud assistant available to the user on their Android device. The current date is $DATE and the local time is $TIME. Use the conversation history above to keep continuity across turns. Reply in well-structured prose; cite concrete facts and explain reasoning when it helps the user.\n\nReply in the user's language ($LANG). Do not restate, quote or summarise the material you were given — the conversation history, the remembered entries, or your own reasoning. Reply with the answer only."
       }
     },
     {

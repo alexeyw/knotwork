@@ -125,11 +125,7 @@
         "type": "LITE_RT",
         "title": "Answer",
         "modelId": "",
-        "systemPrompt": "You are a concise assistant running on $MODEL. Today is $DATE. Answer the user's question directly in one short paragraph.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 1024,
-        "stopTokens": []
+        "systemPrompt": "You are a concise assistant running on $MODEL. Today is $DATE. Answer the user's question directly in one short paragraph.\n\nReply in the user's language ($LANG)."
       }
     },
     {
@@ -201,11 +197,7 @@
         "type": "LITE_RT",
         "title": "Answer from the result",
         "modelId": "",
-        "systemPrompt": "You are given the result of a lookup. Answer the user's question using only that result, in one short paragraph. If the result does not contain the answer, say so.\n\nReply in the user's language ($LANG).",
-        "temperature": 0.7,
-        "topP": 0.9,
-        "maxNewTokens": 1024,
-        "stopTokens": []
+        "systemPrompt": "You are given the result of a lookup. Answer the user's question using only that result, in one short paragraph. If the result does not contain the answer, say so.\n\nReply in the user's language ($LANG)."
       }
     },
     {
