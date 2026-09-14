@@ -54,6 +54,12 @@ jobs:
       # Android SDK even though the check itself only reads Markdown.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
+        with:
+          # Only platform-tools. The action's default also asks for the legacy
+          # `tools` package (SDK Tools 26), which nothing in this build uses and
+          # which sdkmanager intermittently fails to resolve ("Failed to find
+          # package 'tools'") — it broke the release job twice in a row.
+          packages: 'platform-tools'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
