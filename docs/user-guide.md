@@ -2956,7 +2956,9 @@ Four screens link to the part that explains them:
 | **Pipeline editor** — overflow menu → *Pipeline cookbook* | What every node does |
 | **Settings → Background → External automation**, the hint's *Read the contract* | The external-automation contract |
 
-The last step of onboarding carries the same pointer to the FAQ.
+The last step of onboarding carries the same pointer to the FAQ, and
+opens it in the built-in reader — so it works before you have set up a
+network or a model, and back returns you to that step.
 
 **The links match the build you are running.** A release build opens the
 documentation at the tag of the version you installed, so what you read

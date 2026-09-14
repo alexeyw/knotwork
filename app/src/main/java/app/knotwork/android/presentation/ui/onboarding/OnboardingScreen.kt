@@ -63,17 +63,24 @@ import kotlinx.coroutines.flow.Flow
  * @param onCompleted Pop onboarding off the back-stack and navigate to the
  * Chat tab. Invoked exactly once when the user taps `Open {scenario}` on step 4,
  * `Skip` on steps 1-3, or `Start from scratch` on the gallery step.
+ * @param onOpenDocument Navigates to the in-app reader for a bundled document. The
+ * FAQ link on the Ready step ships in the app, and this is the step where the network
+ * may not be set up yet — without a reader the link opened the browser instead.
  * @param viewModel Hilt-injected ViewModel; defaults to [hiltViewModel] so
  * tests can supply a fake.
  */
 @Composable
-fun OnboardingScreen(onCompleted: () -> Unit, viewModel: OnboardingViewModel = hiltViewModel()) {
+fun OnboardingScreen(
+    onCompleted: () -> Unit,
+    onOpenDocument: (String) -> Unit,
+    viewModel: OnboardingViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
     var exitConfirmVisible by rememberSaveable { mutableStateOf(value = false) }
 
     val context = LocalContext.current
-    val callbacks = remember(viewModel, context) {
+    val callbacks = remember(viewModel, context, onOpenDocument) {
         OnboardingCallbacks(
             onNext = viewModel::next,
             onSkip = {
@@ -94,7 +101,7 @@ fun OnboardingScreen(onCompleted: () -> Unit, viewModel: OnboardingViewModel = h
             onRetryWarmUp = viewModel::retryWarmUp,
             onStartDownload = viewModel::startDownload,
             onCustomDownloadUrlChanged = viewModel::onCustomDownloadUrlChanged,
-            onOpenDocumentation = { openDocumentation(context, DocumentationLinks.ID_FAQ) },
+            onOpenDocumentation = { openDocumentation(context, DocumentationLinks.ID_FAQ, onOpenDocument) },
         )
     }
 

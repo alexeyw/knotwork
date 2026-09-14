@@ -257,6 +257,34 @@ jobs:
           fi
           echo "The foss APK carries no Firebase configuration."
 
+      - name: Verify the native libraries each APK ships
+        # `packaging.jniLibs.excludes` in app/build.gradle.kts drops MediaPipe's
+        # text-generation library (14.4 MB, unused: the app embeds text with
+        # MediaPipe and generates it with LiteRT-LM). An exclude is a pattern, and a
+        # pattern stops matching silently when a dependency renames the file — the
+        # growth it once caused went unnoticed for a release. So the property is
+        # asserted on the artefact, together with the libraries that must stay: an
+        # exclude widened by mistake would ship an app whose memory or inference
+        # dies at the first native call, and nothing before a device would say so.
+        run: |
+          set -euo pipefail
+          for apk in app/build/outputs/apk/full/release/app-full-release.apk \
+                     app/build/outputs/apk/foss/release/app-foss-release.apk; do
+            # Captured whole before filtering, for the SIGPIPE reason given above.
+            entries="$(unzip -Z1 "$apk")"
+            for required in lib/arm64-v8a/liblitertlm_jni.so lib/arm64-v8a/libmediapipe_tasks_jni.so; do
+              if ! grep -qxF "$required" <<< "$entries"; then
+                echo "::error::$apk is missing $required — the packaging excludes removed a library the app loads."
+                exit 1
+              fi
+            done
+            if grep -F "libmediapipe_tasks_textgenai_jni.so" <<< "$entries"; then
+              echo "::error::$apk ships MediaPipe's text-generation library again — check the jniLibs exclude against the current file name."
+              exit 1
+            fi
+          done
+          echo "Both APKs ship the inference and embedding libraries and not the unused text-generation one."
+
       - name: Verify the signature of every artefact
         env:
           EXPECTED_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}

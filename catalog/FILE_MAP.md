@@ -455,6 +455,7 @@ matters.
 - `icons/` - the `AppIcons` registry: a cheap correctness gate over every entry, plus the catalog page baseline.
   - `AppIconsTest.kt` - Cheap correctness gate for every `AppIcons` entry.
   - `IconCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `IconCatalogPage` in both Knotwork themes.
+- `KnotworkRoborazziOptions.kt` - Comparison options every catalog screenshot is captured with, so a baseline recorded on one platform verifies on the other.
 - `screens/` - one directory per screen, mirroring `screens/` in the main tree. The usual trio: a `*ContentSnapshotTest` baseline across the screen's documented state matrix, an `*AccessibilityTest` semantics audit, and behavioural tests for the parts a still image cannot carry.
   - `about/` - the About screen.
     - `AboutContentSnapshotTest.kt` - Roborazzi baseline for `AboutContent` in both themes.
@@ -526,6 +527,7 @@ matters.
     - `ToolsGroupsSnapshotTest.kt` - Roborazzi baseline for the collapsible tool groups.
   - `triggers/` - the trigger list, editor and delete dialog.
     - `TriggersContentSnapshotTest.kt` - Roborazzi snapshot baselines for the Triggers surfaces — the list (`TriggersContent`), the full-screen editor (`TriggerEditorContent`) and the delete dialog (`TriggerDeleteDialogContent`) across their documented states in both themes.
+- `SnapshotComparisonOptionsGuardTest.kt` - Fails a screenshot captured without `KnotworkRoborazziOptions`.
 - `store/` - baselines rendered for the app-store listing rather than for review — a different resolution from the README heroes, for a reason the test itself records.
   - `StoreScreenshotTest.kt` - Roborazzi baselines for the **app-store listing**, rendered at `w360dp-h720dp-xxhdpi` = 1080 × 2160 rather than the README heroes' 1080 × 2400: Play rejects a screenshot whose longer side is more than twice the shorter, and the hero resolution is. Copied by hand into `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
 - `theme/` - that `KnotworkTheme` actually wires the tokens into `MaterialTheme` and into its own accessors.

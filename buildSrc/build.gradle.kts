@@ -37,4 +37,15 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnit()
+    // `CookbookDocsGeneratorTest` runs the generator over the real node sources of
+    // `:app` and `:catalog`. They are on no classpath of this build, so without these
+    // inputs an edit to any of them left `:buildSrc:test` UP-TO-DATE (measured).
+    inputs.files(
+        "../app/src/main/java/app/knotwork/android/domain/constants/DefaultPrompts.kt",
+        "../app/src/main/java/app/knotwork/android/domain/models/NodeContextConfig.kt",
+        "../app/src/main/java/app/knotwork/android/domain/models/NodeType.kt",
+        "../catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeConfig.kt",
+        "../catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt",
+        "../catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeType.kt",
+    ).withPropertyName("cookbookGeneratorSources").withPathSensitivity(PathSensitivity.RELATIVE)
 }

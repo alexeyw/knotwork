@@ -60,6 +60,8 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyDetektAnalysisMode`               | Custom rule: fail if `detekt.yml` activates a rule that only runs under type resolution (see below). |
 | `:app:testFullDebugUnitTest` (Konsist suite)      | Architecture guard: Clean-Architecture layer boundaries (see below).        |
 | `:app:testFullDebugUnitTest` (`TopBarInsetGuardTest`) | Fails if a bar at the top of a screen neither applies the status-bar inset nor names the parent that does (see below). |
+| `:app:testFullDebugUnitTest` (`BundledDocumentationRoutingGuardTest`) | Fails if a call that can open a document bundled into the app passes no in-app reader, and so sends it to the browser (see below). |
+| `:catalog:verifyRoborazziDebug`               | Fails if a design-system screenshot differs from its committed baseline (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
 safely-correctable subset before invoking `check`.
@@ -603,6 +605,87 @@ With the Files selection bar's inset removed, rule 1 reports exactly
 `FilesSelectionBar`; with the Help list bar's inset removed, rule 2 reports
 `HelpListBar`. Its first run also found the image viewer's top bar covered by
 no rule — it insets itself, and is now listed.
+
+---
+
+## Screenshot baseline guard (`verifyRoborazziDebug`)
+
+The `:catalog` unit tests render every design-system screen and component with
+Roborazzi, and `check` always ran them — but it never *compared* a render with its
+committed baseline under `catalog/src/test/snapshots/`. A screen could change and
+every gate stayed green; the baselines were only as current as the last time
+someone ran `verifyRoborazziDebug` by hand. `check` now depends on it, so the unit
+tests run in verify mode and any pixel difference fails the build.
+
+Two things make it a gate rather than a ritual:
+
+- **The baselines are declared as test inputs.** They sit on no classpath, so
+  without that declaration replacing a baseline left `testDebugUnitTest`
+  `UP-TO-DATE` and the verification green — measured before the wiring.
+- **It was measured on both platforms before it was made blocking.** On the
+  development machine (macOS): 707 tests, 503 baselines, no difference, about a
+  minute. On CI (Linux): 706 matched byte for byte; the settings hub's loading
+  state — tiles drawn at half alpha — differed in 975 of 1,094,400 pixels, by at
+  most 2/255 per channel, anti-aliasing no one can see.
+- **Every capture uses one colour tolerance for that reason.**
+  `KnotworkRoborazziOptions` (`catalog/src/test/…/KnotworkRoborazziOptions.kt`) raises
+  Roborazzi's per-pixel colour distance from 0.007 to **0.02** — twice the measured
+  noise (0.0096), two orders of magnitude below a visible change (a light baseline
+  swapped for its dark twin: ~800,000 pixels up to 1.63 apart). No pixel shift and
+  no share of differing pixels is allowed. Roborazzi takes the option per call, so
+  `SnapshotComparisonOptionsGuardTest` fails a `captureRoboImage` that omits it.
+  Re-recording the baselines on Linux was rejected: it would move the same noise to
+  every local run on macOS.
+
+To accept an intended change, re-record the affected snapshots with
+`./gradlew :catalog:recordRoborazziDebug --tests '<test>'`, look at the new PNGs,
+and commit them with the change that caused them. On a CI failure the diffs are
+uploaded as the `roborazzi-report` artefact.
+
+**What it cannot see:** anything Robolectric does not render — system insets
+above all (see the top-bar inset guard) — and screens outside `:catalog`.
+
+### Observed failing
+
+With `foundations_light.png` replaced by the dark baseline, the run reports
+exactly `FoundationsCatalogPageSnapshotTest > foundations_light` and fails; with
+the file restored it passes. Before the baselines were declared as inputs, the
+same replacement passed from the up-to-date check. With CI's Linux render of the
+settings hub put in place of its baseline, the run passes at 0.02 and fails at
+Roborazzi's default 0.007 — the tolerance absorbs exactly the observed noise. A
+capture call with its options removed fails the guard.
+
+---
+
+## Bundled-document routing guard (`BundledDocumentationRoutingGuardTest`)
+
+`openDocumentation` routes by the registry's `delivery`: a document bundled into
+the app opens in the in-app reader, one on the web in the browser — **but only
+when the caller passes a reader.** Without one, a bundled document falls back to
+the browser. That fallback is legitimate for a caller with nowhere to navigate,
+and it is how the onboarding Ready step sent its FAQ link — a bundled document,
+on the step where the network may not be set up yet — to the browser while every
+screen around it looked correct.
+
+The guard reads every `openDocumentation(…)` call in `:app`'s production sources
+and fails when a call without a reader can reach a bundled document:
+
+- a call naming a `DocumentationLinks.ID_…` constant is resolved against the
+  registry itself, so moving a document into the APK makes its readerless callers
+  fail here rather than on a device;
+- a call whose id is a variable must name, in the test's `DYNAMIC_ID_SOURCES`, the
+  file every such id comes from (today the settings help catalogue), whose
+  constants are resolved the same way; a variable-id caller missing from that list,
+  or a listed one that no longer exists, fails too.
+
+**What it cannot see:** a reader argument that is passed but navigates nowhere
+useful — it checks that a reader is handed over, not where it goes.
+
+### Observed failing
+
+With the onboarding call's reader argument removed, the first test reports
+`OnboardingScreen.kt` opening `[faq]` without a reader. With the settings help
+catalogue pointed at the troubleshooting document, it reports `SettingsScreens.kt`.
 
 ---
 

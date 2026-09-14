@@ -106,6 +106,28 @@ fun `given valid input when execute then emits success state`() {
   values.
 - Mock **all** external dependencies (repositories, dispatchers, clocks).
 
+### Tests that read files from the repository
+
+A test that opens a file by path — a guard over published documents, the
+browser editor, the store listing, screenshot baselines — is answered from
+Gradle's up-to-date check unless that file is an input of the test task. Edit
+the file, and the test does not run again: `check` stays green on the very
+change the test exists to catch.
+
+- **Files under `src/main` need nothing.** Editing a source recompiles the
+  module and editing an asset repackages the resources the Robolectric tests
+  load; both re-run the task (measured).
+- **Everything else must be declared** on the test task, next to the reason, in
+  the module's build file — `tasks.withType<Test>().configureEach { inputs.file(…) }`
+  in `app/build.gradle.kts` (repository-root files, `docs/`, `fastlane/`, the
+  instrumented sources and workflow), `catalog/build.gradle.kts` (screenshot
+  baselines) and `buildSrc/build.gradle.kts` (the `:app` and `:catalog` sources the
+  cookbook generator test reads).
+- **Prove it once:** run the test twice (the second run is `UP-TO-DATE`), change
+  the file, run again — the task must execute. Without the declaration it does
+  not: the privacy policy, the browser editor, the cookbook generator's sources
+  and the screenshot baselines were each found that way.
+
 ## Instrumented / Compose UI tests
 
 > **Note:** instrumented tests run in CI on emulators — see
@@ -156,7 +178,10 @@ being generated from a rule nobody checked.
 `check` is the task CI runs on every pull request. It executes
 detekt (including the type-resolution gate, `detektFullDebug` +
 `detektFossDebug`), ktlint, Android lint, the unit-test suite for both
-flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`), and
+flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the `:catalog`
+screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
+differs from its committed baseline beyond anti-aliasing fails the build; capture
+with `KnotworkRoborazziOptions`), and
 `koverVerifyFullDebug`. Lint must pass with no new warnings.
 
 `check` does not compile the instrumented source set, so CI compiles it in
