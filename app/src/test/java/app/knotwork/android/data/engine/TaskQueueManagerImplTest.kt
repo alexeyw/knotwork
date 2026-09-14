@@ -41,8 +41,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -883,6 +885,59 @@ class TaskQueueManagerImplTest {
 
             coVerify { pipelineRunRepository.finishRun(next.id, PipelineRunStatus.COMPLETED) }
         }
+
+    @Test
+    fun `given the worker is busy when another session enqueues then it reads Queued until picked up`() =
+        testScope.runTest {
+            // The session ahead holds the worker indefinitely, as a long trigger run would.
+            every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+                emit(AgentOrchestratorState.Loading)
+                awaitCancellation()
+            }
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "session_ahead", prompt = "p"))
+            runCurrent()
+
+            val waiting = mutableListOf<AgentOrchestratorState>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                taskQueueManager.observeTaskState("session_waiting").collect { waiting += it }
+            }
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "session_waiting", prompt = "p"))
+            runCurrent()
+
+            // Before: the waiting session read Loading as if its own run were starting.
+            assertEquals(AgentOrchestratorState.Queued, waiting.last())
+            assertTrue(
+                "the global state must keep describing the run that holds the worker",
+                taskQueueManager.globalState.value !is AgentOrchestratorState.Queued,
+            )
+
+            // The run ahead ends; the worker picks the waiting task up and says so.
+            taskQueueManager.cancelRun("session_ahead")
+            runCurrent()
+
+            assertEquals(AgentOrchestratorState.Loading, waiting.last())
+            taskQueueManager.cancelRun("session_waiting")
+            runCurrent()
+        }
+
+    @Test
+    fun `given an idle worker when a task is enqueued then it reads Loading, never Queued`() = testScope.runTest {
+        every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+            emit(AgentOrchestratorState.Loading)
+            awaitCancellation()
+        }
+        val seen = mutableListOf<AgentOrchestratorState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            taskQueueManager.observeTaskState("session_alone").collect { seen += it }
+        }
+
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "session_alone", prompt = "p"))
+        runCurrent()
+
+        assertTrue("an idle worker has nothing to wait behind: $seen", AgentOrchestratorState.Queued !in seen)
+        taskQueueManager.cancelRun("session_alone")
+        runCurrent()
+    }
 
     @Test
     fun `given another session's run when cancelled then the running one is untouched`() = testScope.runTest {

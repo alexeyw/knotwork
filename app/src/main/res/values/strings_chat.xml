@@ -90,6 +90,11 @@
     <string name="chat_home_status_idle">[NODE]  idle · ready</string>
     <string name="chat_home_status_generating">[NODE]  generating</string>
     <string name="chat_home_status_preparing_model">[NODE]  loading model · please wait</string>
+    <string name="chat_home_status_waiting_in_queue">[NODE]  waiting behind another run · queued</string>
+    <!-- Label of the loader bubble at the end of the thread when nothing is being
+         generated yet. The generating case keeps the design-system default. -->
+    <string name="chat_home_loader_preparing_model">Loading model…</string>
+    <string name="chat_home_loader_waiting_in_queue">Waiting…</string>
     <string name="chat_home_status_hitl">[TOOL]  awaiting approval</string>
     <string name="chat_home_status_clarification">[NODE]  waiting on clarification</string>
     <string name="chat_home_status_error">[NODE]  error · see message</string>

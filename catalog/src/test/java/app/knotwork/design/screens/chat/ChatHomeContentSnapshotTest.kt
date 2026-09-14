@@ -75,6 +75,16 @@ class ChatHomeContentSnapshotTest {
     }
 
     @Test
+    fun chat_home_waiting_in_queue_light() = snapshot(name = "waiting_in_queue", dark = false) {
+        ChatHomeContent(state = ChatHomePreview.waitingInQueue())
+    }
+
+    @Test
+    fun chat_home_waiting_in_queue_dark() = snapshot(name = "waiting_in_queue", dark = true) {
+        ChatHomeContent(state = ChatHomePreview.waitingInQueue())
+    }
+
+    @Test
     fun chat_home_hitl_confirm_readonly_light() = snapshot(name = "hitl_confirm_readonly", dark = false) {
         ChatHomeContent(state = ChatHomePreview.hitlConfirm(risk = Risk.Readonly))
     }

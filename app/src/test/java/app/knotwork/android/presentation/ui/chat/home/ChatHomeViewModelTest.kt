@@ -75,6 +75,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -1351,6 +1352,30 @@ class ChatHomeViewModelTest {
         }
 
     // endregion
+
+    @Test
+    fun `given the run is queued when streamed then the surface says waiting until the worker picks it up`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            val states = MutableSharedFlow<AgentOrchestratorState>(replay = 1)
+            coEvery { agentOrchestratorUseCase(sessionId, "queued", null) } returns states
+
+            viewModel.onComposerValueChange("queued")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+            states.emit(AgentOrchestratorState.Queued)
+            advanceUntilIdle()
+
+            val waiting = viewModel.state.value.visual
+            assertEquals(ChatHomeUiState.Generating(waitingInQueue = true), waiting)
+
+            // Picked up: the worker's Loading ends the wait.
+            states.emit(AgentOrchestratorState.Loading)
+            advanceUntilIdle()
+            assertEquals(ChatHomeUiState.Generating(waitingInQueue = false), viewModel.state.value.visual)
+        }
 
     @Test
     fun `sendMessage flips to Error when orchestrator throws`() = runTest(testDispatcher) {

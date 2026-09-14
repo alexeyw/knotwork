@@ -236,6 +236,30 @@ class ChatHomeStateMappingTest {
     }
 
     @Test
+    fun `Generating with preparingModel labels the loader bubble as loading the model`() {
+        val fixtures = ChatHomeFixtures.forTesting()
+        val view = screenState(ChatHomeUiState.Generating(preparingModel = true)).toViewState(fixtures)
+
+        assertEquals(fixtures.loaderPreparingModel, view.loaderLabel)
+    }
+
+    @Test
+    fun `Generating while waiting in the queue says it is waiting in both the strip and the bubble`() {
+        val fixtures = ChatHomeFixtures.forTesting()
+        val view = screenState(ChatHomeUiState.Generating(waitingInQueue = true)).toViewState(fixtures)
+
+        assertEquals(ChatHomeVisualState.Generating, view.visualState)
+        assertTrue("Stop must stay available for a queued run", view.composerState is ComposerState.Generating)
+        assertEquals(fixtures.statusWaitingInQueue, view.agentStatusLine)
+        assertEquals(fixtures.loaderWaitingInQueue, view.loaderLabel)
+    }
+
+    @Test
+    fun `Generating proper keeps the default loader label`() {
+        assertNull(screenState(ChatHomeUiState.Generating()).toViewState().loaderLabel)
+    }
+
+    @Test
     fun `Idle maps to ChatHomeVisualState_Idle and threads supplied messages`() {
         val supplied = baselineMessages(model)
         val view = screenState(ChatHomeUiState.Idle, messages = supplied).toViewState()

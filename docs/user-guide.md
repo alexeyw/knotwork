@@ -483,6 +483,7 @@ the chevron on the right points at where tapping goes. Status lines:
 | `[NODE]  idle · ready`             | The agent is waiting for input.     |
 | `[NODE]  generating`               | A response is being produced.       |
 | `[NODE]  loading model · please wait` | The model is being loaded.       |
+| `[NODE]  waiting behind another run · queued` | Your message is queued behind another run (a trigger, a share, another chat); the queue runs one at a time. Stop cancels it. |
 | `[TOOL]  awaiting approval`        | The HITL card is on screen.         |
 | `[NODE]  waiting on clarification` | A clarification card is on screen.  |
 | `[NODE]  error · see message`      | The latest run failed (see banner). |

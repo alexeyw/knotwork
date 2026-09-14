@@ -71,6 +71,7 @@ class TaskMonitorViewModel @Inject constructor(
                 is AgentOrchestratorState.Idle -> TaskStatus.COMPLETED
                 is AgentOrchestratorState.Completed -> TaskStatus.COMPLETED
                 is AgentOrchestratorState.Error -> TaskStatus.FAILED
+                is AgentOrchestratorState.Queued -> TaskStatus.QUEUED
                 else -> TaskStatus.RUNNING
             }
 
