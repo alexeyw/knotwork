@@ -1437,7 +1437,7 @@ pills). The conventions a new atom must follow:
 ## 8. Synchronization table
 
 The same change can require updates in multiple places. The table
-below lists the four extension points and every file that must move
+below lists each extension point and every file that must move
 together. **`pipeline-editor.html` is the most frequent drift point —
 double-check it for every recipe in this guide.**
 
@@ -1445,7 +1445,7 @@ double-check it for every recipe in this guide.**
 |------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | A new `NodeType`             | `domain/models/NodeType.kt` · a new `NodeExecutor` implementation · `domain/engine/executors/NodeExecutorFactory.kt` · `domain/models/NodeContextConfig.kt` (`defaultForType`) · `domain/models/PipelineGraph.kt` (`validate`, if special invariants) · `buildtools/BrowserEditorConstantsGenerator.kt` (`NODE_TYPE_META`) + run `./gradlew :app:generateBrowserEditorConstants` · `buildtools/CookbookDocsGenerator.kt` (`NODE_DOC_META` + a `FIELD_REACH` entry per config field) + run `./gradlew :app:generateCookbookDocs` · **`pipeline-editor.html`** (`defaultContextConfig`, `NODE_TYPE_TOOLTIPS`, optional `DEFAULT_SYSTEM_PROMPTS`; for typed config also `defaultRichConfig` / `richToFlat` / `encodeRichEnvelope` / `decodeRichEnvelope` / `deriveRichFromFlat` / `renderFormFields` / `validateRichConfig`) · executor unit test · `GraphExecutionEngineTest` |
 | A node type that **references another entity by id** (`PIPELINE` / `SKILL`) | the flat `NodeModel` field (`targetPipelineId` / `skillId`) · `domain/pipelineio/PipelineJsonSerializer.kt` (emit + read the id in the flat `config` block) · `domain/models/PipelineGraph.kt` (`validate` → `MissingTargetPipeline` / `MissingSkill`) · `domain/services/PipelineCompositionValidator.kt` (transitive cycle / depth) · **`pipeline-editor.html`** (flat `config` key in `exportToJson`/`importFromJson`, reference form, self-ref + unresolved-id validation, node badge) · `PipelineJsonSerializerTest` round-trip |
-| A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · `NodeConfigForms.kt` + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec |
+| A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · `NodeConfigForms.kt` + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec · **`pipeline-editor.html`** envelope encode/decode so the field round-trips — and, if its verdict is `RoundTripOnly`, **no** control in `renderFormFields`: `verifyBrowserEditorConstants` fails on a form control for a field no run reads |
 | A new `Tool`                 | a new `LocalToolExecutor` implementation · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · declare `ToolRisk` correctly · executor unit test · optional Compose test if new UI                                                                            |
 | A new **workspace tool**     | a new `LocalToolExecutor` that goes through `AgentWorkspace` (never raw `File`) · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · risk tier in `ToolRepositoryImpl` built-in list · `docs/user-guide.md` (built-in-tools table) · executor unit test against a `@TempDir`-backed `AgentWorkspace` (happy path + `../` traversal + quota/not-found) |
 | A new callee-side AppFunction | a new `@AppFunction`-annotated wrapper under `data/tools/local/appfunctions/` (first param `AppFunctionContext`) · `App.appFunctionConfiguration` (`addEnclosingClassFactory(...)`) · wrapper unit test with a mocked `AppFunctionContext` · scenario in `AppFunctionsEndToEndTest` |
@@ -1470,18 +1470,27 @@ Before pushing any change from the recipes above, run the full quality
 gate locally:
 
 ```bash
-./gradlew check
+./gradlew check :buildSrc:test
 ```
 
-The aggregated `check` task runs:
+The aggregated `check` task runs, among others:
 
-- `detekt` — static analysis (style and complexity).
+- `detekt` and the type-resolution detekt tasks — static analysis.
 - `ktlintCheck` — Kotlin formatting.
-- `lintFullDebug` — Android Lint.
-- `testFullDebugUnitTest` — JVM unit tests.
+- `lintFullDebug` + `lintFossDebug` — Android Lint.
+- `testFullDebugUnitTest` + `testFossDebugUnitTest` — JVM unit tests, including
+  the architecture and source guards.
+- `:catalog:verifyRoborazziDebug` — design-system screenshots against their
+  baselines.
+- the generated-document gates this guide's recipes touch —
+  `verifyBrowserEditorConstants`, `verifyCookbookDocs`, `verifyFileMap`,
+  `verifyDocLinks` and the rest.
 - `koverVerifyFullDebug` — line-coverage verification.
 
-The same task gates every pull request in CI, so running it locally
+`:buildSrc:test` runs the tests of the generators behind those gates; `buildSrc`
+is a separate build, so `check` cannot reach it. The full list of gates is in
+[`static-analysis.md`](static-analysis.md). The same two tasks gate every pull
+request in CI, so running it locally
 just trades local feedback for slower CI feedback. The coverage
 baseline, per-package thresholds, and the rationale behind every
 exclusion are documented in

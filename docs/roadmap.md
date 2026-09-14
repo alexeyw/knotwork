@@ -15,7 +15,7 @@ release cadence settles.
 
 ## Where the project is today
 
-The current pre-release line (`0.9.x`) already covers the core loop
+The current pre-release line (`0.10.x`) already covers the core loop
 end-to-end:
 
 - On-device LLM inference through LiteRT-LM, with optional

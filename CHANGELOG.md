@@ -13,17 +13,19 @@ details.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-15
+
 ### Added
 
 - **The app now says where its documentation is.** The Play listing has no room
   for a URL — the description sits five characters under the 4000-character
   limit — so for anyone who installed from a store, the app was the only surface
   that could tell them a user guide, an FAQ, a cookbook, a troubleshooting page
-  and an automation contract exist, and no screen did. About now carries a
-  **Documentation** card listing all five, and four screens link straight to the
-  part that explains them: Tools and Triggers from a book icon in the top bar,
-  the pipeline editor from its overflow menu, and external automation from the
-  settings hint — which fills a link slot that had been rendered but never
+  and an automation contract exist, and no screen did. A **Help** screen now
+  lists all five (below), and four screens link to the document that explains
+  them: Tools and Triggers from a book icon in the top bar, straight to their
+  section of the user guide; the pipeline editor from its overflow menu; and
+  external automation from the settings hint — which fills a link slot that had been rendered but never
   filled since it was written. The last step of onboarding points at the FAQ.
 
   **The links follow the build.** A release build opens the documentation at the
@@ -146,7 +148,7 @@ details.
   presets, the browser editor and the cookbook recipes were already written in
   — so a pipeline lays out the same on every screen, and a file exported from
   the phone opens with the same spacing in the browser editor. The mini-map,
-  Fit to view and the dot grid were measured the same wrong way and are fixed
+  **Fit pipeline to view** and the dot grid were measured the same wrong way and are fixed
   with it.
 
   Opening a pipeline now frames the whole graph, never zooming past 100 %; at
@@ -233,6 +235,13 @@ details.
   and repeating the id read as a rendering fault. The card now omits that line
   when there is nothing to say in it.
 
+- **The FAQ no longer says that Stop leaves a run going.** Its answer to *How do I
+  stop a run that is already going?* predated Stop ending the run in 0.9.0 and
+  sent readers to limits and scheduled-task controls instead — in the copy that
+  now ships inside the app, too. The user guide's description of the pipeline
+  editor toolbar (every editing command is in the overflow menu, beside a zoom
+  rail with **Fit pipeline to view**), of the More tab and of the chat's waiting
+  states was brought in line with the app in the same pass.
 
 ## [0.9.0] - 2026-09-01
 
@@ -5744,7 +5753,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/alexeyw/knotwork/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/alexeyw/knotwork/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/alexeyw/knotwork/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/alexeyw/knotwork/compare/v0.7.2...v0.7.3

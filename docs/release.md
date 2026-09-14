@@ -275,7 +275,7 @@ include a one-line comment on the symptom that triggered the keep.
 ## 5. APK size breakdown
 
 > A **point-in-time snapshot**, measured on 14 September 2026 from a local
-> `./gradlew :app:assembleFullRelease` of the development line after 0.9.0. Byte
+> `./gradlew :app:assembleFullRelease` of the 0.10.0 development line. Byte
 > counts move with every dependency bump; the published release assets are the
 > numbers to trust for a given version.
 
@@ -287,7 +287,7 @@ published full APKs, for comparison:
 | 0.7.3   | 62,184,669 | — |
 | 0.8.0   | 77,902,632 | **+15.7 MB, unnoticed at the time.** MediaPipe `tasks-text` 1.0.0 began shipping `libmediapipe_tasks_textgenai_jni.so` (14.4 MB), the native half of its new `TextSummarizer` / `TextProofreader`. |
 | 0.9.0   | 77,930,200 | — |
-| next    | 63,613,649 (local) | That library is excluded from packaging (below). |
+| 0.10.0  | 63,613,649 (local build, before release) | That library is excluded from packaging (below). |
 
 The 30 MB target from the original plan is **not achievable** with the current
 dependency set: the native libraries and the bundled embedding model account for
@@ -345,20 +345,29 @@ bundletool get-size total --apks=app.apks
 ## 7. Quality gate before release
 
 ```bash
-./gradlew check :app:lintFullRelease :app:bundleFullRelease
+./gradlew check :buildSrc:test :app:lintFullRelease :app:bundleFullRelease
 ```
 
-- `check` aggregates `detekt`, `ktlintCheck`, lint, the unit-test suite for
-  **both** flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`), and
+- `check` aggregates `detekt` and the type-resolution detekt tasks,
+  `ktlintCheck`, lint, the unit-test suite for **both** flavours
+  (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the design-system
+  screenshot comparison (`:catalog:verifyRoborazziDebug`),
   `koverVerifyFullDebug` (coverage is measured on the representative `full`
-  variant; the flavours share every measured source).
+  variant; the flavours share every measured source), and the documentation,
+  version and store-listing gates. The full list, with what each one guards, is
+  in [`static-analysis.md`](static-analysis.md).
+- `:buildSrc:test` runs the tests of the build logic behind those gates. It is a
+  separate build, so `check` cannot reach it.
 - `lintFullRelease` re-runs lint on the release configuration (catches issues
   hidden by debug-only resources).
 - `bundleFullRelease` confirms R8 + resource shrinking still produce a valid AAB.
 
-The integration PR gates on the same three commands in CI, plus the
-manual smoke test on the reference device described in
-[`testing.md`](testing.md) § *What the automated gate does NOT cover*.
+CI gates every pull request into `main` on `check :buildSrc:test` only; the two
+release-configuration tasks run nowhere but here and in `release.yml`. The
+integration PR adds the instrumented emulator run
+([`testing.md`](testing.md) § *The instrumented gate*) and the manual smoke test
+on the reference device described in [`testing.md`](testing.md) § *What the
+automated gate does NOT cover*.
 
 `release.yml` (§9) runs `check` as its first job and gets the release-config
 lint through `lintVital<Variant>Release`, which AGP wires into every release
@@ -623,10 +632,23 @@ same way merging a pull request is. Before pressing publish:
 2. Download the APK and install it on the reference device — the automated gate
    is JVM-only and never runs the artefact (see
    [`testing.md`](testing.md) § *What the automated gate does NOT cover*).
-3. **Open every in-app documentation link from that installed build.** About →
-   Documentation (five documents), the Tools and Triggers top-bar book icons,
-   the editor overflow's *Pipeline cookbook*, and the *Read the contract* link
-   in the external-automation settings hint.
+3. **Open every in-app documentation link from that installed build.**
+   - **More → Help**: every row. The two bundled documents (troubleshooting,
+     FAQ) open in the in-app reader; the three others open in the browser, at
+     the tag. In each reader, *Open in browser* opens the same document at the
+     tag, and a link inside the document to a repository file does too — except
+     the privacy policy, which opens on `main`.
+   - The Tools and Triggers top-bar book icons, which land on their sections of
+     the user guide, the editor overflow's *Pipeline cookbook*, and the *Read
+     the contract* link in the external-automation settings hint.
+   - The same Help screen **in airplane mode**: both bundled documents still
+     read, links between them still scroll, and a web row refuses in place — offering
+     the address to copy and naming the documents that are on the device —
+     instead of opening an error page.
+
+   The onboarding FAQ link cannot be reached on an existing install — onboarding
+   does not re-open. It opens the bundled copy rather than a URL, and
+   `BundledDocumentationRoutingGuardTest` fails the build if it stops doing so.
 
    This is a checklist item and not a `check` task on purpose. A release build
    links at `v<versionName>`, and that tag does not exist until the release is
