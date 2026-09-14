@@ -154,14 +154,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         viewModel.focusNodeRequest.collect { nodeId ->
             val target = uiState.currentPipeline.nodes.find { it.id == nodeId } ?: return@collect
-            editor.selection = setOf(nodeId)
-            editor.multiSelectMode = false
-            editor.transform = editor.transform.centeredOn(
-                x = target.x,
-                y = target.y,
-                viewportW = 1f,
-                viewportH = 1f,
-            )
+            editor.focusOn(target)
         }
     }
 
