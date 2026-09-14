@@ -179,7 +179,8 @@ detekt (including the type-resolution gate, `detektFullDebug` +
 `detektFossDebug`), ktlint, Android lint, the unit-test suite for both
 flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the `:catalog`
 screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
-differs from its committed baseline fails the build), and
+differs from its committed baseline beyond anti-aliasing fails the build; capture
+with `KnotworkRoborazziOptions`), and
 `koverVerifyFullDebug`. Lint must pass with no new warnings.
 
 `check` does not compile the instrumented source set, so CI compiles it in

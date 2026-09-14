@@ -177,7 +177,9 @@ tasks.named("check") { dependsOn(verifyNoOrphanedKdoc) }
 // Screenshot baselines are a gate, not a gallery. `check` always rendered every
 // snapshot (the unit tests run), but compared none of them with its baseline, so a
 // changed screen passed unless someone remembered `verifyRoborazziDebug` by hand.
-// Measured before wiring it: 707 tests, 503 baselines, 0 differences, ~1 min.
+// Measured before wiring it: 707 tests, 503 baselines, 0 differences, ~1 min on
+// macOS; on CI's Linux one half-alpha screen differed by anti-aliasing alone, which
+// the shared colour tolerance in `KnotworkRoborazziOptions.kt` absorbs.
 //
 // The baselines are declared as test inputs because nothing else makes them one:
 // they live under `src/test/snapshots`, on no classpath. Measured the hard way —

@@ -3,6 +3,7 @@ package app.knotwork.design.components.lists
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -25,6 +26,7 @@ class KnotworkListsSnapshotTest {
             KnotworkTheme(darkTheme = false) { KnotworkListsCatalogContent() }
         }
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/lists_light.png",
         )
     }
@@ -35,6 +37,7 @@ class KnotworkListsSnapshotTest {
             KnotworkTheme(darkTheme = true) { KnotworkListsCatalogContent() }
         }
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/lists_dark.png",
         )
     }

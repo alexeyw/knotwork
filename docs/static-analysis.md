@@ -622,12 +622,20 @@ Two things make it a gate rather than a ritual:
 - **The baselines are declared as test inputs.** They sit on no classpath, so
   without that declaration replacing a baseline left `testDebugUnitTest`
   `UP-TO-DATE` and the verification green — measured before the wiring.
-- **It was measured before it was made blocking:** 707 tests, 503 baselines, no
-  difference on the development machine, about a minute. The baselines are
-  recorded on macOS while CI runs Linux, so the first CI run is the other half of
-  that measurement; if font rendering differs between the two, the verification
-  moves to a non-blocking report with the reason recorded, rather than baselines
-  being re-recorded to fit one platform.
+- **It was measured on both platforms before it was made blocking.** On the
+  development machine (macOS): 707 tests, 503 baselines, no difference, about a
+  minute. On CI (Linux): 706 matched byte for byte; the settings hub's loading
+  state — tiles drawn at half alpha — differed in 975 of 1,094,400 pixels, by at
+  most 2/255 per channel, anti-aliasing no one can see.
+- **Every capture uses one colour tolerance for that reason.**
+  `KnotworkRoborazziOptions` (`catalog/src/test/…/KnotworkRoborazziOptions.kt`) raises
+  Roborazzi's per-pixel colour distance from 0.007 to **0.02** — twice the measured
+  noise (0.0096), two orders of magnitude below a visible change (a light baseline
+  swapped for its dark twin: ~800,000 pixels up to 1.63 apart). No pixel shift and
+  no share of differing pixels is allowed. Roborazzi takes the option per call, so
+  `SnapshotComparisonOptionsGuardTest` fails a `captureRoboImage` that omits it.
+  Re-recording the baselines on Linux was rejected: it would move the same noise to
+  every local run on macOS.
 
 To accept an intended change, re-record the affected snapshots with
 `./gradlew :catalog:recordRoborazziDebug --tests '<test>'`, look at the new PNGs,
@@ -642,7 +650,10 @@ above all (see the top-bar inset guard) — and screens outside `:catalog`.
 With `foundations_light.png` replaced by the dark baseline, the run reports
 exactly `FoundationsCatalogPageSnapshotTest > foundations_light` and fails; with
 the file restored it passes. Before the baselines were declared as inputs, the
-same replacement passed from the up-to-date check.
+same replacement passed from the up-to-date check. With CI's Linux render of the
+settings hub put in place of its baseline, the run passes at 0.02 and fails at
+Roborazzi's default 0.007 — the tolerance absorbs exactly the observed noise. A
+capture call with its options removed fails the guard.
 
 ---
 

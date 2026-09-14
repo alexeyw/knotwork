@@ -3,6 +3,7 @@ package app.knotwork.design.components.console
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -30,6 +31,7 @@ class ConsoleCatalogPageSnapshotTest {
             KnotworkTheme(darkTheme = false) { ConsoleCatalogContent() }
         }
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/console_light.png",
         )
     }
@@ -40,6 +42,7 @@ class ConsoleCatalogPageSnapshotTest {
             KnotworkTheme(darkTheme = true) { ConsoleCatalogContent() }
         }
         composeTestRule.onRoot().captureRoboImage(
+            roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/console_dark.png",
         )
     }
