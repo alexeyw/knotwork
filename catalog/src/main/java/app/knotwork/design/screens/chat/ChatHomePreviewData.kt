@@ -216,6 +216,7 @@ internal object ChatHomePreview {
          */
         const val GENERATING_LONG: String = "[NODE]  generating (GPU) · 128 tok"
         const val PREPARING: String = "[NODE]  loading model · please wait"
+        const val WAITING_IN_QUEUE: String = "[NODE]  waiting behind another run · queued"
         const val HITL: String = "[TOOL]  awaiting approval"
         const val CLARIFICATION: String = "[NODE]  waiting on clarification"
         const val ERROR: String = "[NODE]  error · see message"
@@ -228,6 +229,15 @@ internal object ChatHomePreview {
         modelName = MODEL_NAME,
         messages = baselineMessages(),
         composerState = ComposerState.Generating,
+    )
+
+    /**
+     * Generating state while the run waits behind another run in the queue: the
+     * status line and the loader bubble both say it is waiting, not generating.
+     */
+    fun waitingInQueue(): ChatHomeViewState = generating().copy(
+        agentStatusLine = StripStatus.WAITING_IN_QUEUE,
+        loaderLabel = "Waiting…",
     )
 
     /**

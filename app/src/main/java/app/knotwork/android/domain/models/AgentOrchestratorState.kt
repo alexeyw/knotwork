@@ -17,6 +17,18 @@ sealed interface AgentOrchestratorState {
     data object Loading : AgentOrchestratorState
 
     /**
+     * The task is accepted but waiting behind another run: the queue executes one
+     * run at a time, and another session's run — a trigger, a share, a scheduled or
+     * automated run, another chat — holds the worker.
+     *
+     * Emitted on the session's own flow only, never as the global state, which keeps
+     * describing the run that is actually executing. It ends when the worker picks the
+     * task up and emits [Loading]. The wait has no bound of its own: it lasts as long as
+     * the run ahead, so a surface must not present it as generation.
+     */
+    data object Queued : AgentOrchestratorState
+
+    /**
      * The agent is generating a thought or answering the user.
      *
      * @property partialText The generated text so far.

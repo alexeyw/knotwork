@@ -112,6 +112,33 @@ class EditorStateFramingTest {
     }
 
     @Test
+    fun `given a measured viewport when focusing a node then the middle of its card lands at the centre`() {
+        val editor = EditorState(density = 3f)
+        editor.viewportWidthPx = 1236f
+        editor.viewportHeightPx = 2400f
+        val node = NodeModel(id = "far", type = NodeType.TOOL, x = 900f, y = 1200f)
+
+        editor.focusOn(node)
+
+        // Before: centred on a 1x1 "viewport", which pinned the card's corner to the top-left.
+        val t = editor.transform
+        assertEquals(618f, t.canvasToScreenX(900f + NodeCardFootprint.WIDTH / 2f), 0.01f)
+        assertEquals(1200f, t.canvasToScreenY(1200f + NodeCardFootprint.MAX_HEIGHT / 2f), 0.01f)
+        assertEquals(setOf("far"), editor.selection)
+    }
+
+    @Test
+    fun `given an unmeasured viewport when focusing a node then it is selected and the view stays put`() {
+        val editor = EditorState(density = 3f)
+        val before = editor.transform
+
+        editor.focusOn(NodeModel(id = "n", type = NodeType.TOOL, x = 900f, y = 1200f))
+
+        assertEquals(before, editor.transform)
+        assertEquals(setOf("n"), editor.selection)
+    }
+
+    @Test
     fun `given a different pipeline id when shown then it gets its own opening frame`() {
         val editor = EditorState(density = 3f)
         editor.frameIfNeeded(graph("placeholder"), viewportW = 1236f, viewportH = 2400f, paddingPx = 0f)

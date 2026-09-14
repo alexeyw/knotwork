@@ -47,6 +47,13 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: 
         private set
 
     /**
+     * Last measured size of the canvas viewport in pixels, `0` until measured. Plain
+     * fields: they only feed [focusOn], and nothing renders from them.
+     */
+    var viewportWidthPx: Float = 0f
+    var viewportHeightPx: Float = 0f
+
+    /**
      * Id of the pipeline whose opening frame has already been decided. A plain field, not
      * state: it only prevents a second automatic framing and nothing renders from it.
      */
@@ -173,6 +180,29 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: 
     fun selectEdge(edgeId: String?) {
         selectedEdgeId = edgeId
         if (edgeId != null) selection = emptySet()
+    }
+
+    /**
+     * Selects [node] and centres the viewport on the middle of its card, keeping the
+     * current zoom. Used when a validation error jumps to the node it is about.
+     *
+     * Before the viewport size was kept here, the caller centred on a 1×1 "viewport",
+     * which pinned the node's corner to the screen's top-left instead of centring it.
+     * Until the canvas has been measured the selection still happens and the view
+     * stays where it is.
+     *
+     * @param node the node to bring into view.
+     */
+    fun focusOn(node: NodeModel) {
+        selection = setOf(node.id)
+        multiSelectMode = false
+        if (viewportWidthPx <= 0f || viewportHeightPx <= 0f) return
+        transform = transform.centeredOn(
+            x = node.x + NodeCardFootprint.WIDTH / 2f,
+            y = node.y + NodeCardFootprint.MAX_HEIGHT / 2f,
+            viewportW = viewportWidthPx,
+            viewportH = viewportHeightPx,
+        )
     }
 
     /**

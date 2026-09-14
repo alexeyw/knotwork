@@ -40,6 +40,24 @@ internal val ChatHomeScreenState.visibleMessages: List<ChatHomeMessageRow>
     get() = sendingUserTurn?.let { messages + it.row } ?: messages
 
 /**
+ * Pure transformer: sets whether the in-flight run is still waiting behind another run.
+ *
+ * `AgentOrchestratorState.Queued` turns it on and any other state — the worker's
+ * `Loading` at pick-up first — turns it off. Only a `Generating` surface carries the
+ * flag; a HITL card or an error is returned unchanged.
+ *
+ * @param waiting `true` while the run is queued.
+ */
+internal fun ChatHomeScreenState.withWaitingInQueue(waiting: Boolean): ChatHomeScreenState {
+    val current = visual
+    return if (current is ChatHomeUiState.Generating && current.waitingInQueue != waiting) {
+        copy(visual = current.copy(waitingInQueue = waiting))
+    } else {
+        this
+    }
+}
+
+/**
  * Pure transformer: drops every pending HITL / clarification snapshot and
  * resets the typed-confirm input. Composed into the caller's `state.update`
  * block (never its own emission) so multi-field transitions remain a single

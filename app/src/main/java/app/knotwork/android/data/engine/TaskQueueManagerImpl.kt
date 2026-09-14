@@ -43,6 +43,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.util.PriorityQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -101,6 +102,15 @@ class TaskQueueManagerImpl @Inject constructor(
      * never waits behind a task being polled.
      */
     private val activeRun = AtomicReference<ActiveRun?>(null)
+
+    /**
+     * `true` from the moment the worker takes a task until it finds the queue empty.
+     *
+     * Written under [queueMutex] together with the poll, so [enqueueTask] — which reads
+     * it under the same lock — never sees the gap [activeRun] has between polling a task
+     * and recording it, or between finishing one task and taking the next.
+     */
+    private val workerBusy = AtomicBoolean(false)
 
     private val queueMutex = Mutex()
     private val taskQueue = PriorityQueue<AgentTask> { t1, t2 ->
@@ -278,7 +288,7 @@ class TaskQueueManagerImpl @Inject constructor(
             for (signal in taskSignal) {
                 while (true) {
                     val task = queueMutex.withLock {
-                        taskQueue.poll()
+                        taskQueue.poll().also { workerBusy.set(it != null) }
                     } ?: break // Exit inner loop when queue is empty
 
                     // Each task runs in its own child job so [cancelRun] can end
@@ -391,6 +401,9 @@ class TaskQueueManagerImpl @Inject constructor(
         val loadingState = AgentOrchestratorState.Loading
         stateFlow.emit(loadingState)
         _globalState.value = loadingState
+        // The snapshot was last taken at enqueue, where a task behind another run read
+        // Queued; without this the task monitor keeps calling a running chat queued.
+        updateActiveSessionsState()
 
         // Ensure the persistent QUEUED record exists before any lifecycle
         // UPDATE targets it. `enqueueTask` writes the same record off the
@@ -478,6 +491,8 @@ class TaskQueueManagerImpl @Inject constructor(
         val loadingState = AgentOrchestratorState.Loading
         stateFlow.emit(loadingState)
         _globalState.value = loadingState
+        // Same as processTask: a resumed run can have waited behind another one.
+        updateActiveSessionsState()
 
         val run = pipelineRunRepository.getRun(task.id)
         val recordedHash = run?.graphContentHash
@@ -700,7 +715,12 @@ class TaskQueueManagerImpl @Inject constructor(
                     last is AgentOrchestratorState.Completed ||
                     last is AgentOrchestratorState.Error
                 ) {
-                    stateFlow.emit(AgentOrchestratorState.Loading)
+                    // Behind another run the task can wait for as long as that run takes.
+                    // Say so, rather than let the session read as already loading; the
+                    // worker emits Loading on this flow when it picks the task up.
+                    stateFlow.emit(
+                        if (workerBusy.get()) AgentOrchestratorState.Queued else AgentOrchestratorState.Loading,
+                    )
                     updateActiveSessionsState()
                 }
                 taskQueue.offer(task)

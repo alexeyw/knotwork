@@ -150,7 +150,11 @@ internal fun EditorCanvas(
             .clipToBounds() // Prevent node graphics from spilling outside the canvas surface
             // into the EditorToolbar / bottom bars when nodes sit near the viewport edge.
             .background(KnotworkTheme.extended.surface1)
-            .onSizeChanged { size -> viewportSize = IntPair(size.width, size.height) }
+            .onSizeChanged { size ->
+                viewportSize = IntPair(size.width, size.height)
+                editor.viewportWidthPx = size.width.toFloat()
+                editor.viewportHeightPx = size.height.toFloat()
+            }
             // Capture canvas LayoutCoordinates into a non-state ref so EditorNode's
             // port-drag handlers can convert pointer positions via
             // `LayoutCoordinates.localPositionOf` without triggering a recomposition each

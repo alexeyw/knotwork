@@ -139,6 +139,20 @@ details.
   and a build check now keeps every bundled preset and recipe free of
   overlapping cards.
 
+- **A message waiting behind another run says it is waiting.** The app runs one
+  pipeline at a time, so a message sent while a trigger, a share or another chat
+  is running waits for that run to finish — which can take minutes. The chat
+  said it was generating the whole time. It now reads **waiting behind another
+  run · queued**, the thread shows **Waiting…**, and it switches to generating
+  the moment the run actually starts; Stop still cancels it. The same bubble
+  also stops claiming to generate while the model is still loading. The task
+  monitor lists such a chat as queued rather than running, and the More tab
+  counts it as queued — where it used to count every idle chat instead.
+
+- **Jumping to a node from a validation error centres it.** The editor centred
+  on a one-pixel viewport, which parked the node against the top-left corner of
+  the screen instead.
+
 - **The browser pipeline editor no longer ships outdated presets.** It carries
   its own copy of every bundled pipeline preset and prompt template, and that
   copy was kept in step by hand. It had not been: six presets and four prompt

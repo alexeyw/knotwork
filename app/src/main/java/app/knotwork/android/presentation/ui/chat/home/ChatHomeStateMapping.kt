@@ -33,6 +33,40 @@ import java.util.Date
 import java.util.Locale
 
 /**
+ * Status line of a `Generating` surface. While the model loads before an auto-send
+ * (`preparingModel`), or while the run waits behind another one (`waitingInQueue`),
+ * it says so rather than telling the user the assistant is producing tokens.
+ * Otherwise it carries the running token count, so the pill reads
+ * "generating · 42 tok" — visible progress on long generations.
+ *
+ * @param visual the generating visual.
+ * @param fixtures resolved status strings.
+ * @return the line for the console entry strip.
+ */
+private fun ChatHomeScreenState.generatingStatusLine(
+    visual: ChatHomeUiState.Generating,
+    fixtures: ChatHomeFixtures,
+): String = when {
+    visual.preparingModel -> fixtures.statusPreparingModel
+    visual.waitingInQueue -> fixtures.statusWaitingInQueue
+    else -> formatGeneratingStatus(fixtures.statusGenerating, tokens.streaming, tokens.backend)
+}
+
+/**
+ * Label of the loader bubble at the end of the thread: the same claim as
+ * [generatingStatusLine], or `null` for the design system's default "Generating…".
+ *
+ * @param visual the generating visual.
+ * @param fixtures resolved loader labels.
+ * @return the label, or `null` while tokens are actually being generated.
+ */
+private fun generatingLoaderLabel(visual: ChatHomeUiState.Generating, fixtures: ChatHomeFixtures): String? = when {
+    visual.preparingModel -> fixtures.loaderPreparingModel
+    visual.waitingInQueue -> fixtures.loaderWaitingInQueue
+    else -> null
+}
+
+/**
  * Pure-Kotlin projection of the aggregated [ChatHomeScreenState] onto the
  * catalog [ChatHomeViewState] consumed by `ChatHomeContent`. Lives in `:app`
  * because the catalog cannot reach `app.knotwork.android.*` (Clean
@@ -115,16 +149,8 @@ fun ChatHomeScreenState.toViewState(
             tokensUsed = tokens.used,
             tokensMax = tokens.max,
             favorite = thread.favorite,
-            // While the model loads before an auto-send (`preparingModel`), read
-            // the honest "loading model" line rather than telling the user the
-            // assistant is producing tokens. Otherwise append the running token
-            // count so the pill reads "generating · 42 tok" — visible progress
-            // on long generations.
-            agentStatusLine = if (visual.preparingModel) {
-                fixtures.statusPreparingModel
-            } else {
-                formatGeneratingStatus(fixtures.statusGenerating, tokens.streaming, tokens.backend)
-            },
+            agentStatusLine = generatingStatusLine(visual, fixtures),
+            loaderLabel = generatingLoaderLabel(visual, fixtures),
             console = console,
         )
 

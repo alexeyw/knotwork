@@ -247,6 +247,13 @@ data class ChatHomeViewState(
      */
     val agentStatusLine: String? = null,
     /**
+     * Label of the loader bubble shown at the end of the thread while
+     * [visualState] is `Generating`, or `null` for the default "Generating…".
+     * Set when nothing is being generated yet — the model is still loading, or
+     * the run waits behind another one — so the bubble does not claim otherwise.
+     */
+    val loaderLabel: String? = null,
+    /**
      * Image attached to the composer, rendered as a removable strip above the
      * input row. `null` when no image is attached.
      */

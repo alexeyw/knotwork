@@ -1076,6 +1076,8 @@ constructor(
 
     /** Branches on the orchestrator emission. Terminal states settle UI; intermediate states keep `Generating`. */
     private fun handleOrchestratorState(state: AgentOrchestratorState) {
+        // Every emission decides whether the run is still waiting behind another one.
+        _state.update { it.withWaitingInQueue(state is AgentOrchestratorState.Queued) }
         when (state) {
             is AgentOrchestratorState.WaitingForApproval -> hitl.handleWaitingForApproval(state)
             is AgentOrchestratorState.AwaitingClarification -> hitl.handleAwaitingClarification(state.request)
