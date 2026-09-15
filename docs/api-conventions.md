@@ -131,6 +131,15 @@ interface Tool {
 
 - All cloud providers implement the domain interface
   `CloudLlmClientFactory` (data-layer impl: `KoogClientFactory`).
+- **Every client that carries model traffic asks `ModelNetworkGate` before it is
+  built** — the chat clients in `KoogClientFactory` and the network embedding
+  providers alike. The gate applies the *Block network from local model*
+  restriction (hosted providers refused; Ollama only at `localhost` or a private
+  IPv4 literal, whatever the scheme — see [architecture.md](architecture.md) §4.4)
+  and, for Ollama, the cleartext rule. A model client that skips it breaks the
+  restriction silently: the Ollama chat client and both embedding providers once
+  did. Name the cause of a `null` client with
+  `CloudLlmClientFactory.unavailabilityOf`, never by re-reading settings.
 - API keys are stored in **the Keystore-backed encrypted store only**
   (`KeystoreBackedPrefsStore` — AES-GCM under a dedicated Android Keystore
   key; see [architecture.md](architecture.md) §5.2) — never in plain

@@ -139,6 +139,14 @@ object CleartextPolicy {
      * `http://192.168.1.42:11434/v1/chat` but not a different port on the same
      * machine — a different port is a different server.
      *
+     * An authority containing a backslash or whitespace is treated as having no
+     * host at all. Ktor — the parser that opens the Ollama and MCP connections —
+     * reads a backslash as a path separator, so for
+     * `https://evil.example\@192.168.1.42` it connects to `evil.example` while a
+     * split on `@` here would name the private address. Refusing the ambiguous
+     * form keeps the host this policy judges and the host the connection reaches
+     * the same one.
+     *
      * @param url the URL to reduce.
      * @return the canonical origin, or `null` when [url] has no parsable host.
      */
@@ -149,6 +157,7 @@ object CleartextPolicy {
         val scheme = trimmed.take(schemeEnd).lowercase()
         val afterScheme = trimmed.substring(schemeEnd + SCHEME_MARKER.length)
         val authority = afterScheme.substringBefore('/').substringBefore('?').substringBefore('#')
+        if (authority.any { it == '\\' || it.isWhitespace() }) return null
         // Strip userinfo (`user:pass@host`) before reading the host:port pair.
         val hostPort = authority.substringAfterLast('@')
         if (hostPort.isBlank()) return null

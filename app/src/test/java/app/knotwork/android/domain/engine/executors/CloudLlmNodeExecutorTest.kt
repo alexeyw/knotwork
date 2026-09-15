@@ -6,6 +6,7 @@ import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
+import app.knotwork.android.domain.engine.CloudClientUnavailability
 import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.CloudLlmModelResolver
 import app.knotwork.android.domain.engine.retry.CloudRetryListener
@@ -61,7 +62,6 @@ class CloudLlmNodeExecutorTest {
         networkActivityTracker = mockk(relaxed = true)
 
         every { settingsRepository.systemPromptPrefix } returns flowOf("")
-        every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(false)
         every { apiKeyRepository.getAnthropicKey() } returns flowOf("anthropic-key")
         every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
         every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
@@ -127,6 +127,8 @@ class CloudLlmNodeExecutorTest {
         // to GraphExecutionEngine, which then forwarded that sentence to the next node.
         val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "anthropic")
         coEvery { clientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns null
+        coEvery { clientFactory.unavailabilityOf(CloudProvider.ANTHROPIC) } returns
+            CloudClientUnavailability.MissingCredentials
 
         val outputs = executor.execute(node, "input", "s1", "Q").toList()
 
@@ -145,15 +147,61 @@ class CloudLlmNodeExecutorTest {
         // The factory returns null for both "blocked by policy" and "no credentials";
         // reporting the latter when the former is true sends the user to the wrong screen.
         val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "anthropic")
-        every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(true)
         coEvery { clientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns null
+        coEvery { clientFactory.unavailabilityOf(CloudProvider.ANTHROPIC) } returns
+            CloudClientUnavailability.BlockedByLocalOnlyMode
 
-        val outputs = executor.execute(node, "input", "s1", "Q").toList()
+        val error = executeForError(node)
 
-        val error = outputs.filterIsInstance<NodeOutput.Result>().single().result.error!!
         assertTrue("expected the restriction to be named, got: $error", error.contains("Block network"))
         assertFalse("must not blame a missing key", error.contains("no API key"))
     }
+
+    @Test
+    fun `given a public Ollama in local-only mode when execute then the error names the host and the restriction`() =
+        runTest {
+            val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "ollama")
+            coEvery { clientFactory.createClient(CloudProvider.OLLAMA, any()) } returns null
+            coEvery { clientFactory.unavailabilityOf(CloudProvider.OLLAMA) } returns
+                CloudClientUnavailability.EndpointNotLocal("ollama.example.com")
+
+            val error = executeForError(node)
+
+            assertTrue("expected the host, got: $error", error.contains("ollama.example.com"))
+            assertTrue("expected the restriction, got: $error", error.contains("Block network from local model"))
+            assertFalse("Ollama has no API key to blame", error.contains("API key"))
+        }
+
+    @Test
+    fun `given a refused cleartext address with local-only mode on when execute then the cleartext reason is shown`() =
+        runTest {
+            // The executor used to re-read the restriction flag and blame it for any null
+            // client while it was on — including an address the cleartext rule refused.
+            every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(true)
+            val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "ollama")
+            coEvery { clientFactory.createClient(CloudProvider.OLLAMA, any()) } returns null
+            coEvery { clientFactory.unavailabilityOf(CloudProvider.OLLAMA) } returns
+                CloudClientUnavailability.CleartextRefused("Re-save the address in Settings and confirm the prompt.")
+
+            val error = executeForError(node)
+
+            assertTrue("expected the cleartext remedy, got: $error", error.contains("confirm the prompt"))
+            assertFalse("must not blame the restriction", error.contains("Block network"))
+        }
+
+    @Test
+    fun `given the factory reports no cause when execute then the node still fails with a neutral reason`() = runTest {
+        val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "anthropic")
+        coEvery { clientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns null
+        coEvery { clientFactory.unavailabilityOf(CloudProvider.ANTHROPIC) } returns null
+
+        val error = executeForError(node)
+
+        assertTrue("expected a settings pointer, got: $error", error.contains("settings"))
+    }
+
+    private suspend fun executeForError(node: NodeModel): String = executor.execute(node, "input", "s1", "Q").toList()
+        .filterIsInstance<NodeOutput.Result>().single().result.error!!
 
     @Test
     fun `given no provider selected and no keys when execute then the node fails`() = runTest {

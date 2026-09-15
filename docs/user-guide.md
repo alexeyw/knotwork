@@ -2200,7 +2200,7 @@ repeated here.
 |---|---|
 | **Approve tool calls** | Which tool calls stop and wait for your approval. Never lets them all through, destructive ones too, unless you also block those. |
 | **Block destructive tools** | On, a destructive tool call is refused outright rather than offered for approval, and the run sees it as a failed call. |
-| **Block network from local model** | On, no cloud provider can be reached even with a key saved. Only a model on this device, or Ollama on your own network, answers. |
+| **Block network from local model** | On, no cloud model is reached, not even for memory search. Ollama answers only at localhost or a private IP address, never by name. |
 | **Manage tools / MCP servers** | *(no explanation — opens a screen that explains itself)* |
 | **Approval wait** | How long a run waits for you to approve a tool call before it parks and asks again later. It does not bound the call itself. |
 | **Largest file** | The largest single file the workspace accepts, for both writing one and reading one whole. |
@@ -2383,6 +2383,8 @@ Advanced:
 - **Memory summary default limit** (1–50) — how many recent chunks the
   `$MEMORY_SUMMARY` prompt variable injects.
 - **Embedding model** — on-device Universal Sentence Encoder, OpenAI or Ollama.
+  OpenAI is not used, and Ollama only at a local address, while **Block network
+  from local model** is on — memory falls back to the on-device model instead.
   Switching applies on the next embed/retrieval; a persistent
   *"re-embed recommended"* banner appears (with an inline **Re-embed** button)
   until a full re-embed or wipe re-aligns the store, or you switch back.
@@ -2509,9 +2511,25 @@ Basic:
 - **Block destructive tools** — when on, destructive tools are refused outright
   rather than going through the HITL prompt. Useful when the agent runs
   unattended.
-- **Block network from local model** — when on, every cloud provider returns
-  `null` to the inference pipeline and only the on-device LiteRT engine plus
-  LAN-local Ollama remain reachable.
+- **Block network from local model** — when on, no model request leaves this
+  device or your own network:
+  - **Cloud providers** (OpenAI, Anthropic, Google, DeepSeek) are refused even
+    with a key saved — for Cloud steps, `delegate_task` and memory alike.
+    If OpenAI is your **Embedding model**, memory switches to the on-device
+    model while the restriction is on. Memories embedded by OpenAI are recalled
+    poorly until you turn it off, and memories saved meanwhile are recalled
+    poorly after you do — run **Re-embed** once you have settled on one.
+  - **Ollama** answers only when its address is `localhost` or a private IP
+    address (`127.x.x.x`, `10.x.x.x`, `172.16.x.x`–`172.31.x.x`,
+    `192.168.x.x`), over `http` or `https`. A server on the internet is refused
+    even over `https`, and so is **any host name** — `ollama.lan`, `nas.local` —
+    because a name says nothing about where it resolves; type the IP address
+    instead. Tailscale (`100.x.x.x`) and IPv6 addresses are refused too. A Cloud
+    step that hits the restriction fails and names the refused address.
+  - **Tools are not affected.** An MCP server or an `http_request` domain you
+    added is still reachable — those have their own controls (tool approval,
+    the allowed-domains list), described under
+    [Tools and MCP](#tools-and-mcp).
 - **Manage tools / MCP servers** *(link)* — enable tools, set per-tool risk
   overrides, add MCP servers. It opens the same surface as the **Tools** tab but
   *inside* Settings: the bottom-nav highlight stays on the tab you came from and

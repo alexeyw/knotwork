@@ -106,8 +106,9 @@ device](../PRIVACY.md#4-what-never-leaves-your-device).
 
 ### So what *can* go out?
 
-Five paths, and every one of them is something you switched on: a **cloud node**
-using your own key, an **MCP server** you added, a **model download**, an
+Five paths, and every one of them is something you switched on: a **cloud
+model** using your own key — in a cloud node, through the `delegate_task` tool, or
+as the memory **Embedding model** — an **MCP server** you added, a **model download**, an
 **`http_request` tool call** to a host you put on the allowed list, and **crash
 reports** if you consented to them. Nothing else has a way out. See [PRIVACY §
 What can leave your

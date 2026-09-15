@@ -118,6 +118,20 @@ class CleartextPolicyTest {
     }
 
     @Test
+    fun `given a backslash before userinfo when classified then the private address is not trusted`() {
+        // Ktor reads `\` as a path separator and connects to `evil.example`; splitting on
+        // `@` alone would name — and, once approved, admit — the private address instead.
+        val url = "http://evil.example\\@192.168.1.42:11434"
+        assertNull(CleartextPolicy.hostOf(url))
+        assertEquals(CleartextPolicy.Verdict.PublicRefused, CleartextPolicy.classify(url, approved))
+    }
+
+    @Test
+    fun `given whitespace inside the authority when the host is derived then there is none`() {
+        assertNull(CleartextPolicy.hostOf("http://evil.example @192.168.1.42:11434"))
+    }
+
+    @Test
     fun `given mixed case scheme and host when the origin is derived then it is canonical`() {
         assertEquals("http://192.168.1.42:11434", CleartextPolicy.originOf("HTTP://192.168.1.42:11434/API"))
     }

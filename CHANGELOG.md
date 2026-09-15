@@ -13,6 +13,47 @@ details.
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Block network from local model" let model traffic leave your network.** The
+  setting promised that only a model on the device, or Ollama on your own
+  network, would answer. Three paths ignored it:
+  - **Ollama at any `https://` address still answered** — a server on a rented
+    machine included. With the restriction on, Ollama is now used only when its
+    address is `localhost` or a private IP address (`10.x`, `172.16–31.x`,
+    `192.168.x`), over `http` or `https`. **Host names are refused too**, even
+    `ollama.lan`, because a name says nothing about where it resolves: if yours
+    stops answering, type the server's IP address instead. A Cloud step that is
+    refused now fails naming the address.
+  - **OpenAI embeddings kept running.** With OpenAI chosen as the memory
+    embedding model, saving a memory and searching memory during a run sent that
+    text to OpenAI while the restriction was on. Memory now uses the on-device
+    model while it is on. The two models' results do not mix: memories embedded
+    by OpenAI are recalled poorly while it is on, memories saved meanwhile are
+    recalled poorly after you turn it off, and **Re-embed** realigns them.
+  - **Ollama embeddings used any address**, public ones included, and without the
+    check that unencrypted traffic goes only to an address you approved — a check
+    the Ollama chat client already made. Both now apply the same rules, so if
+    memory search got worse after updating and Ollama is your embedding model,
+    open the Ollama provider in Settings and tap **Approve unencrypted
+    connection**.
+
+  MCP servers and the `http_request` tool are not affected by this setting, and
+  the documentation now says so; they have their own controls. The privacy
+  policy now also describes memory embeddings and `delegate_task` as paths that
+  reach a cloud provider.
+- **A Cloud step blamed the wrong setting when it could not reach Ollama.** An
+  Ollama address refused for sending traffic unencrypted was reported as a
+  missing API key — or, with "Block network from local model" on, as that
+  restriction. The error now names the actual reason, and `delegate_task` does
+  the same instead of a generic "check the API key or configuration".
+- **Two ways to write an address could pass the local-network check while
+  connecting elsewhere.** An address such as `http://example.com\@192.168.1.5`
+  read as the private address to the app's check and as `example.com` to the
+  connection, and an address with a leading zero such as `010.0.0.1` could be
+  read as octal (`8.0.0.1`) when connecting. Both forms are now treated as
+  public addresses.
+
 ## [0.10.0] - 2026-09-14
 
 ### Added

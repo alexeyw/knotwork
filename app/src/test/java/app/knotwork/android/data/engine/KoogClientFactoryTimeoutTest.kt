@@ -47,7 +47,7 @@ class KoogClientFactoryTimeoutTest {
 
         factory = KoogClientFactory(
             apiKeyRepository = apiKeyRepository,
-            settingsRepository = settingsRepository,
+            modelNetworkGate = ModelNetworkGate(settingsRepository),
             retryWrapper = CloudRetryWrapper(settingsRepository),
         )
     }
