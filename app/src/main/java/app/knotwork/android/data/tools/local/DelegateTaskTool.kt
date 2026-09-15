@@ -86,8 +86,11 @@ class DelegateTaskTool @Inject constructor(
             }
 
             if (client == null) {
-                return@withContext "Error: Client for '${provider.id}' could not be initialized. " +
-                    "Please check if the API key or configuration is provided."
+                // Name the real cause — a missing key, the "Block network from local model"
+                // restriction, or a refused address — so the model can relay the right remedy.
+                val cause = koogClientFactory.unavailabilityOf(provider)?.message(provider)
+                    ?: "Check the provider's settings."
+                return@withContext "Error: Client for '${provider.id}' could not be initialized. $cause"
             }
 
             return@withContext try {

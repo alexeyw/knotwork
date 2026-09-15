@@ -33,7 +33,9 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogClientFactoryTimeoutTest.kt` - Guards the network deadlines applied to cloud clients.
     - `KoogStructuredInferenceClientFactoryTest.kt` - Unit tests for `KoogStructuredInferenceClientFactory` — the cloud-backed `app.knotwork.android.domain.engine.structured.StructuredInferenceClient` seam for the structured-output gate.
     - `LiteRTLlmEngineTest.kt` - Tests for LiteRTLlmEngine.
+    - `LocalOnlyPolicyParserAgreementTest.kt` - Checks `LocalOnlyPolicy` against the parser that actually opens the connection.
     - `MediaPipeTextEmbeddingEngineTest.kt` - Tests for MediaPipeTextEmbeddingEngine.
+    - `ModelNetworkGateTest.kt` - Unit tests for `ModelNetworkGate` — the single decision every model client asks before it is built.
     - `OpenClAccelerationProbeTest.kt` - Covers the two-step OpenCL detection and, above all, its failure discipline: the probe exists so a *missing* GPU never reaches the native engine, so any path that let an error escape would defeat its entire purpose.
     - `retry/` - Tests for the cloud retry wrapping.
       - `CloudRetryWrapperTest.kt` - Unit tests for `CloudRetryWrapper` and the `RetryObservingLLMClient` it interposes.
@@ -158,6 +160,7 @@ Only Kotlin files appear inside the generated blocks.
     - `TimeAndIdConstantsTest.kt` - Pins the time-unit and notification-id constants exposed by `TimeAndIdConstants`.
   - `engine/` - Tests for the graph execution engine and its supporting abstractions.
     - `ChatHistoryWindowPlannerTest.kt` - Unit tests for `ChatHistoryWindowPlanner` — the pure planner that decides how a session's chat history is split into a summarised prefix and a verbatim live window.
+    - `CloudClientUnavailabilityTest.kt` - Unit tests for `CloudClientUnavailability.message` — each cause must name the setting that resolves it and must not borrow another cause's remedy.
     - `CloudErrorSanitizerTest.kt` - Unit tests for `CloudErrorSanitizer`.
     - `DefaultPipelineFactoryTest.kt` - Unit tests for `DefaultPipelineFactory`.
     - `executors/` - Tests for the per-`NodeType` `NodeExecutor` strategies.
@@ -242,6 +245,7 @@ Only Kotlin files appear inside the generated blocks.
     - `EmbeddingProviderResolverTest.kt` - Unit tests for `EmbeddingProviderResolver`.
     - `HttpRequestPolicyTest.kt` - Unit tests for `HttpRequestPolicy` — the pure security policy behind the `http_request` tool.
     - `KMeansClustererTest.kt` - Unit tests for `KMeansClusterer`.
+    - `LocalOnlyPolicyTest.kt` - Unit tests for `LocalOnlyPolicy` — which model endpoints stay reachable while "Block network from local model" is on.
     - `MemoryAutoExtractionCoordinatorTest.kt` - Unit tests for `MemoryAutoExtractionCoordinator`.
     - `MemoryRerankerTest.kt` - Unit tests for `MemoryReranker`.
     - `MemorySearchStatsTrackerTest.kt` - Unit tests for `MemorySearchStatsTracker` — the session-scoped rolling window behind the Settings AVG SCORE stat cell.

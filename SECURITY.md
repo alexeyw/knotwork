@@ -481,8 +481,10 @@ The defences are layered so that no single one has to be perfect:
   stripped when a redirect crosses to a different host. A redirect cannot be
   used to slip past the allowlist.
 - **Transport floor.** Public hosts must use `https`; cleartext `http` is
-  permitted only for loopback / private-LAN addresses (the same exception the
-  network-security config makes for a local Ollama server).
+  permitted only for loopback / private-LAN addresses written as plain decimal
+  IPv4 literals (the same rule the app applies to a local Ollama or MCP server;
+  the platform network-security config permits cleartext app-wide, because it
+  cannot express "any private address").
 
 The residual risk is the honest one: a user who has **deliberately added a
 host to the allowlist** and then **approves** a `SENSITIVE`/`DESTRUCTIVE`

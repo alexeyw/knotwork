@@ -1,13 +1,16 @@
 package app.knotwork.android.data.services.embedding
 
 import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
+import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingException
 import app.knotwork.android.domain.services.EmbeddingProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
@@ -30,12 +33,16 @@ class CloudEmbeddingProviderTest {
     private val embedderFactory = mockk<KoogEmbedderFactory>()
     private val apiKeyRepository = mockk<ApiKeyRepository>()
     private val client = mockk<LLMEmbeddingProviderAPI>()
+    private val localOnlyMode = MutableStateFlow(false)
+    private val settingsRepository = mockk<SettingsRepository> {
+        every { blockNetworkFromLocalModel } returns localOnlyMode
+    }
 
     private lateinit var provider: CloudEmbeddingProvider
 
     @Before
     fun setup() {
-        provider = CloudEmbeddingProvider(embedderFactory, apiKeyRepository)
+        provider = CloudEmbeddingProvider(embedderFactory, apiKeyRepository, ModelNetworkGate(settingsRepository))
     }
 
     @Test
@@ -57,6 +64,30 @@ class CloudEmbeddingProviderTest {
 
         every { apiKeyRepository.getOpenAIKey() } returns flowOf("   ")
         assertFalse(provider.isAvailable())
+    }
+
+    @Test
+    fun `given local-only mode on and a saved key when isAvailable then false`() = runTest {
+        // The resolver reads `false` as "fall back to the on-device model", so memory keeps
+        // working and no memory text reaches OpenAI while the restriction is on.
+        localOnlyMode.value = true
+        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+
+        assertFalse(provider.isAvailable())
+    }
+
+    @Test
+    fun `given local-only mode on and a saved key when embed then refuses without building a client`() = runTest {
+        // `isAvailable` and `embed` are separate calls; the restriction can be switched on
+        // between them, so the send itself must refuse too.
+        localOnlyMode.value = true
+        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+
+        val thrown = runCatching { provider.embed("private memory text") }.exceptionOrNull()
+
+        assertTrue("expected EmbeddingException, got $thrown", thrown is EmbeddingException)
+        assertTrue(thrown!!.message!!.contains("Block network"))
+        coVerify(exactly = 0) { embedderFactory.openAiClient(any()) }
     }
 
     @Test

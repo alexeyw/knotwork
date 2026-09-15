@@ -1017,10 +1017,13 @@ interface SettingsRepository {
     suspend fun setBlockDestructiveTools(blocked: Boolean)
 
     /**
-     * Local-only mode flag. When `true`, `KoogClientFactory` returns `null`
-     * for every cloud provider (OpenAI / Anthropic / Google / DeepSeek);
-     * only the on-device LiteRT engine and LAN-local Ollama remain
-     * reachable. Defaults to `false`.
+     * Local-only mode flag ("Block network from local model"). When `true`, no
+     * model request leaves the device or the user's network: `ModelNetworkGate`
+     * refuses every hosted cloud provider (OpenAI / Anthropic / Google / DeepSeek)
+     * for chat, `delegate_task` and memory embeddings alike, and admits Ollama only
+     * when its host is `localhost` or a loopback / private IPv4 literal, whatever
+     * the scheme ([app.knotwork.android.domain.services.LocalOnlyPolicy]). Tools
+     * (MCP servers, `http_request`) are not affected. Defaults to `false`.
      */
     val blockNetworkFromLocalModel: Flow<Boolean>
 

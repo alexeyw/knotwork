@@ -206,6 +206,11 @@ screen's search), work down this list:
   existing chunks in the old vector space; run **Re-embed** so the whole
   store shares the active provider's space again. The Memory card shows
   a persistent *re-embed recommended* banner while this mismatch holds.
+- **Block network from local model is on.** While it is, memory cannot use
+  OpenAI as the **Embedding model**, nor Ollama at an address that is not
+  `localhost` or a private IP, and falls back to the on-device model — so
+  entries embedded by the other provider score ~0 until you turn the
+  restriction off.
 - **It was never extracted.** Auto-extract only keeps durable facts
   (preferences, events, relationships) and skips small talk and
   near-duplicates. If a fact didn't make the cut, add it by hand with

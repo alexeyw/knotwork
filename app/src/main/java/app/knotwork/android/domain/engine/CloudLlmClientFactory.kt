@@ -26,11 +26,21 @@ interface CloudLlmClientFactory {
      * @param retryListener Sink notified before each retry, so the caller can
      *   surface retry attempts in the console. Defaults to
      *   [CloudRetryListener.NONE] for callers that do not observe retries.
-     * @return The constructed client, or `null` when the user has not configured the
-     *         credentials/base URL required by [provider].
+     * @return The constructed client, or `null` exactly when [unavailabilityOf] reports a
+     *         cause — missing credentials / base URL, the "Block network from local model"
+     *         restriction, or an address the network rules refuse.
      */
     suspend fun createClient(
         provider: CloudProvider,
         retryListener: CloudRetryListener = CloudRetryListener.NONE,
     ): Any?
+
+    /**
+     * Explains why [createClient] would return `null` for [provider], using the same checks
+     * in the same order, so a caller can name the real cause instead of guessing it.
+     *
+     * @param provider The provider a client was (or would be) requested for.
+     * @return The cause, or `null` when a client can currently be constructed.
+     */
+    suspend fun unavailabilityOf(provider: CloudProvider): CloudClientUnavailability?
 }

@@ -167,18 +167,25 @@ object HttpRequestPolicy {
 
     /**
      * Whether [host] is a loopback or private-LAN address for which cleartext
-     * (`http://`) is tolerated — the same exception the app's
-     * `network_security_config.xml` carves out for a local Ollama server.
+     * (`http://`) is tolerated. The single definition of "the user's own
+     * network": [CleartextPolicy] uses it for Ollama and MCP addresses and
+     * [LocalOnlyPolicy] for the "Block network from local model" restriction.
      * Public hosts must use `https://`.
      *
+     * An octet with a leading zero (`010`) is refused: `inet_aton`-style
+     * resolvers read it as octal, so `010.0.0.1` can reach the public `8.0.0.1`
+     * while reading as `10.0.0.1` here.
+     *
      * @param host The request target host.
-     * @return `true` for `localhost` and RFC-1918 / loopback IPv4 literals.
+     * @return `true` for `localhost` and RFC-1918 / loopback IPv4 literals
+     *   written in plain decimal.
      */
     fun isLoopbackOrPrivateHost(host: String): Boolean {
         val h = host.trim().lowercase()
         if (h == "localhost") return true
         val octets = h.split('.')
         if (octets.size != IPV4_OCTET_COUNT || octets.any { it.toIntOrNull() == null }) return false
+        if (octets.any { it.length > 1 && it.startsWith('0') }) return false
         val (a, b) = octets[0].toInt() to octets[1].toInt()
         if (octets.any { it.toInt() !in OCTET_RANGE }) return false
         return when {
