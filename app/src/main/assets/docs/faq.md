@@ -297,9 +297,11 @@ human-in-the-loop](user-guide.md#risk-levels-and-human-in-the-loop).
 
 ### Can other apps on my phone expose tools to the agent?
 
-No. Android only lets the device maker's system apps and Google publish
-AppFunctions, so a third-party app cannot offer one however much it would like
-to. What you get is the built-in catalogue plus whatever you connect over MCP.
+Publishing them is not the problem — Android lets any app publish
+AppFunctions. Picking them up is: reading and running another app's
+AppFunctions needs a permission (`EXECUTE_APP_FUNCTIONS`) that Android 16 hands
+only to privileged system apps, and an app you install yourself is not one. So
+what you get is the built-in catalogue plus whatever you connect over MCP.
 See [Built-in tools](user-guide.md#built-in-tools).
 
 ---
@@ -440,8 +442,9 @@ would change it.
   addition. Revisited on the first external report of a real server's missing
   tool; `elicitation` would come first, being the only one that reuses the
   existing confirmation path.
-- **Third-party apps cannot expose tools.** A platform restriction, not a
-  decision, and nothing on the roadmap changes it.
+- **Tools from other apps are not picked up.** Publishing AppFunctions is open
+  to any app; calling one needs a permission Android reserves for privileged
+  system apps, and nothing on the roadmap changes that for an ordinary install.
 - **The node picker in the visual editor is hard to read** at the current number
   of node types, where labels overlap. Replacing it is accepted as needed, with
   no date attached; the browser editor is the workaround in the meantime.

@@ -376,6 +376,14 @@ is auto-merged from `appfunctions-service` and dispatches incoming
 requests through KSP-generated invokers — you do **not** subclass
 `AppFunctionService` or write a manual router.
 
+Publishing is open to any app; **being called is not**. Discovering and
+executing another app's AppFunctions requires `EXECUTE_APP_FUNCTIONS`,
+declared `internal|privileged` on Android 16 and granted to privileged
+system apps only — so in practice the caller that reaches your wrapper
+is a system assistant, not an arbitrary app from the store. Publish the
+wrapper anyway if the function belongs in that catalogue, but do not
+expect a peer app to invoke it.
+
 Only expose tools that are safe to run on behalf of an unknown caller —
 typically `READ_ONLY` operations. `schedule_task` and `delegate_task`
 are intentionally not exposed (scheduling background work or burning
@@ -456,7 +464,8 @@ of them at once without touching trigger or Quick-Settings work.
      that resolves the metadata via `observeAppFunctions` and invokes
      the function through `AppFunctionManager.executeAppFunction(...)`.
      The test currently skips on stock Android 16 because
-     `EXECUTE_APP_FUNCTIONS` is signature-level; keep the
+     `EXECUTE_APP_FUNCTIONS` is declared `internal|privileged`, which a
+     developer-installed caller cannot hold; keep the
      `Assume.assumeTrue` gate.
 
 The `:tools-probe` debug module is a deterministic peer for end-to-end

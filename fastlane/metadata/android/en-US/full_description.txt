@@ -27,7 +27,7 @@ This is a pre-release. The public surface, the settings layout and the on-device
 - The reliability numbers come from one device and one operator: a scheduled pipeline ran 7.14 days without the app being opened and completed 55 of 55 firings with no unexplained misses. That is a real measurement, and it is not external validation.
 - Background runs need the battery setting on Unrestricted. Without it Android reclaims the process in about ten seconds - the platform's rule, not a bug, but until you grant it background pipelines will not run.
 - Cloud failure behaviour differs by provider: detection of a stream that dies mid-answer is enabled only where it was measured.
-- Third-party apps cannot expose AppFunctions - only the device maker's system apps and Google can. The local tool catalogue is what ships, plus whatever you connect over MCP.
+- Other apps' AppFunctions are out of reach - Android keeps the permission to call one for system apps. The local catalogue is what ships, plus whatever you connect over MCP.
 - One maintainer, no company behind it.
 
 Open source under the Apache License 2.0; source, documentation and an FAQ are on the developer website.
