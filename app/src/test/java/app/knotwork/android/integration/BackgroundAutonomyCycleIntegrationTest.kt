@@ -71,9 +71,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -100,7 +102,8 @@ import javax.inject.Provider
  *    `AgentWorker` drives) and its run starts executing;
  * 2. the process is **killed** while the LLM node is mid-inference — modelled
  *    as a second set of process-scoped components ("process B") over the same
- *    database, while process A's coroutines simply never complete;
+ *    database; process A's coroutines never complete on their own, and A is
+ *    torn down (teardown awaited) only once the sweep below has settled the run;
  * 3. process B's startup **orphan sweep** detects the ownerless RUNNING
  *    record and settles it INTERRUPTED;
  * 4. the user **resumes** the run; the engine replays the persisted trace
@@ -220,19 +223,13 @@ class BackgroundAutonomyCycleIntegrationTest {
             val runId = AgentOrchestratorUseCase(processA.taskQueueManager)
                 .enqueueScheduled(SESSION_ID, USER_PROMPT)
 
-            awaitUntil("run is RUNNING") {
+            awaitUntil("run is RUNNING", dump = { processA.stateOf(runId) }) {
                 processA.runRepository.getRun(runId)?.status == PipelineRunStatus.RUNNING
             }
             // The buffered recorder's flush timer (virtual time) makes the
             // pre-kill trace durable; the run dies exactly where the TODO
             // scenario demands — mid-inference on the LLM node.
-            awaitUntil(
-                "run is mid-inference on the LITE_RT node",
-                dump = {
-                    "run=${processA.runRepository.getRun(runId)}\n" +
-                        "trace=${processA.traceRepository.getTraceForRun(runId)}"
-                },
-            ) {
+            awaitUntil("run is mid-inference on the LITE_RT node", dump = { processA.stateOf(runId) }) {
                 processA.runRepository.getRun(runId)?.currentNodeId == "llm_1" &&
                     processA.traceRepository.getTraceForRun(runId).isNotEmpty()
             }
@@ -249,14 +246,22 @@ class BackgroundAutonomyCycleIntegrationTest {
                 .forEach { processB.runRepository.finishRun(it.id, PipelineRunStatus.INTERRUPTED, "killed") }
 
             assertEquals(PipelineRunStatus.INTERRUPTED, processB.runRepository.getRun(runId)?.status)
-            // Only now tear process A down — a real dead process runs no
-            // `finally` blocks, and the guarded terminal write keeps its
-            // CANCELLED stamp from touching the already-INTERRUPTED record.
-            processA.taskQueueManager.scope.cancel()
+            // Only now tear process A down, and wait for the teardown to FINISH
+            // before process B touches the run. A real dead process runs no
+            // `finally` blocks; this stand-in does, and its cancellation path
+            // writes `finishRun(CANCELLED)` from a real IO thread. That write is
+            // harmless only while the record is still INTERRUPTED (the terminal
+            // guard drops it). A bare `cancel()` let it land after the resume had
+            // already moved the record back to QUEUED: the run became CANCELLED,
+            // and the park's guarded status write then changed nothing — the
+            // pending record existed but the run never read WAITING_APPROVAL, so
+            // the phase-3 wait timed out on CI. Joining pins the order.
+            processA.taskQueueManager.scope.coroutineContext.job.cancelAndJoin()
+            assertEquals(PipelineRunStatus.INTERRUPTED, processB.runRepository.getRun(runId)?.status)
 
             // ── Phase 3: resume — replay to the TOOL node, park on approval ──
             assertEquals(ResumeOutcome.Resumed, processB.resumeRun(runId))
-            awaitUntil("run parked WAITING_APPROVAL") {
+            awaitUntil("run parked WAITING_APPROVAL", dump = { processB.stateOf(runId) }) {
                 processB.runRepository.getRun(runId)?.status == PipelineRunStatus.WAITING_APPROVAL &&
                     processB.pendingRepository.getForRun(runId) != null
             }
@@ -281,7 +286,7 @@ class BackgroundAutonomyCycleIntegrationTest {
             )(SESSION_ID, isApproved = true, runId = runId)
             assertEquals(PendingSubmissionOutcome.Resumed, outcome)
 
-            awaitUntil("run COMPLETED") {
+            awaitUntil("run COMPLETED", dump = { processB.stateOf(runId) }) {
                 processB.runRepository.getRun(runId)?.status == PipelineRunStatus.COMPLETED
             }
             // The post-approval resume replayed the completed LLM step from
@@ -507,6 +512,20 @@ class BackgroundAutonomyCycleIntegrationTest {
     }
 
     /**
+     * Everything a timed-out wait needs to say where the run actually stopped:
+     * the run record, the durable park record and the node ids the trace holds.
+     * Without it a CI timeout names only the state that never arrived.
+     */
+    private suspend fun ProcessHarness.stateOf(runId: String): String {
+        val traceNodes = traceRepository.getTraceForRun(runId)
+            .filterIsInstance<RunTraceRecord.NodeIo>()
+            .map { it.nodeId }
+        return "run=${runRepository.getRun(runId)}\n" +
+            "pending=${pendingRepository.getForRun(runId)}\n" +
+            "traceNodes=$traceNodes"
+    }
+
+    /**
      * Drives the virtual-time scheduler until [predicate] observes the
      * expected database state, yielding to real worker threads between
      * passes — the repositories hop through real `Dispatchers.IO`, whose
@@ -514,7 +533,7 @@ class BackgroundAutonomyCycleIntegrationTest {
      */
     private suspend fun TestScope.awaitUntil(
         what: String,
-        dump: suspend () -> String = { "" },
+        dump: suspend () -> String,
         predicate: suspend () -> Boolean,
     ) {
         val deadline = System.currentTimeMillis() + AWAIT_TIMEOUT_MS
