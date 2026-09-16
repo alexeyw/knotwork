@@ -76,8 +76,8 @@ import app.knotwork.android.domain.models.Result as DomainResult
  * file is harmless in JVM-only check builds.
  *
  * Why it carries [DeviceOnlyInstrumentedTest]: an emulator can host the class but
- * cannot grant a third-party caller the appop-protected `EXECUTE_APP_FUNCTIONS`
- * permission, so every scenario would resolve to a skip. The annotation excludes the
+ * cannot grant a developer-installed caller `EXECUTE_APP_FUNCTIONS`, which Android 16
+ * declares `internal|privileged`, so every scenario would resolve to a skip. The annotation excludes the
  * class from the automated emulator runs by name instead of letting it burn the
  * discovery poll to reach that skip; it stays part of the manual reference-device
  * pass, where the permission gate can actually apply.
@@ -91,8 +91,9 @@ import app.knotwork.android.domain.models.Result as DomainResult
  */
 @RunWith(AndroidJUnit4::class)
 @DeviceOnlyInstrumentedTest(
-    reason = "EXECUTE_APP_FUNCTIONS is declared `appop|preinstalled|module` in the Android 16 framework " +
-        "manifest. Stock emulator images refuse the grant for a third-party caller — `pm grant` reports " +
+    reason = "EXECUTE_APP_FUNCTIONS is declared `internal|privileged` in the Android 16 framework " +
+        "manifest (AOSP android-16.0.0_r3), so it is granted to privileged system apps only. Stock " +
+        "emulator images refuse every grant route for a developer-installed caller — `pm grant` reports " +
         "the permission is not changeable and `appops set` does not recognise the op — so cross-package " +
         "discovery never returns the probe and all five scenarios degrade to Assume-skips while still " +
         "paying the discovery poll (measured: 78s of a 453s suite). A real verdict needs a privileged / " +
@@ -119,15 +120,15 @@ class AppFunctionsEndToEndTest {
         // logic, so the file is a no-op there rather than a hard failure.
         assumeTrue("Requires Android 16+ for AppFunctionManager", Build.VERSION.SDK_INT >= 36)
 
-        // `EXECUTE_APP_FUNCTIONS` is an appop-protected permission (protectionLevel
-        // `appop|preinstalled|module` in the Android 16 framework manifest): declaring it
-        // in the agent's manifest is not enough — the platform also needs an `allow`
-        // appop entry for the calling package before `AppFunctionManager.observeAppFunctions`
-        // will return cross-package metadata. Granting the appop here is what unblocks
-        // discovery of `:tools-probe/echo`; without it the search returns only the agent's
-        // own (currently zero) `@AppFunction`-annotated declarations and `setUp` times out
-        // with a "not discovered within Nms" failure that is easy to misread as an install
-        // problem.
+        // Declaring `EXECUTE_APP_FUNCTIONS` in the agent's manifest is not enough: Android 16
+        // declares it `internal|privileged` (AOSP android-16.0.0_r3), which no install-time or
+        // runtime grant can satisfy for a developer-installed app, and it has no appop
+        // counterpart to relax either. The shell attempts below are therefore best-effort across
+        // platform images rather than the mechanism that makes discovery work — a privileged or
+        // preinstalled agent build is. They are still issued because the *shape* of each refusal
+        // is what [platformDeniesExecuteAppFunctionsGrant] reads to tell "this image closes the
+        // door" apart from a real install/discovery regression, which otherwise surfaces as a
+        // "not discovered within Nms" timeout that is easy to misread as an install problem.
         grantExecuteAppFunctionsAppOp()
 
         // Verify the probe APK is actually present on the device. AGP's
@@ -157,13 +158,13 @@ class AppFunctionsEndToEndTest {
         // the indexer; poll briefly until the qualified name appears.
         //
         // If discovery still fails, distinguish two outcomes:
-        //   (a) The Android 16 emulator restricts `EXECUTE_APP_FUNCTIONS` to
-        //       system/preinstalled apps — `pm grant` returns "not a changeable
+        //   (a) The Android 16 emulator restricts `EXECUTE_APP_FUNCTIONS` to privileged
+        //       system apps — `pm grant` returns "not a changeable
         //       permission type" and `appops set` returns "Unknown operation". In that
         //       case the test is fundamentally un-runnable on this image regardless of
         //       how the test code is written, so we convert the failure to a JUnit
         //       skip via `Assume.assumeTrue(false, …)`. On a real device with a
-        //       preinstalled / signature-matched agent this path is not taken.
+        //       privileged / preinstalled agent this path is not taken.
         //   (b) Anything else — a true regression in install / discovery / queries — is
         //       still escalated to a hard failure with the full diagnostic report.
         val discovered = waitForProbeEchoDiscovery()
@@ -171,10 +172,10 @@ class AppFunctionsEndToEndTest {
             val report = buildDiscoveryFailureReport(context.applicationContext)
             if (platformDeniesExecuteAppFunctionsGrant()) {
                 assumeTrue(
-                    "Skipping: Android 16 emulator image keeps EXECUTE_APP_FUNCTIONS as a " +
-                        "signature/module-only permission — `pm grant` reports it is not a " +
+                    "Skipping: Android 16 emulator image keeps EXECUTE_APP_FUNCTIONS at " +
+                        "`internal|privileged` — `pm grant` reports it is not a " +
                         "changeable permission type and `appops set` does not recognise the " +
-                        "op. Cross-package AppFunctions discovery from a third-party agent " +
+                        "op. Cross-package AppFunctions discovery from a developer-installed agent " +
                         "is not exercisable on this image; run on a device with a privileged " +
                         "agent build to execute these scenarios.\n\n$report",
                     false,
@@ -523,9 +524,11 @@ class AppFunctionsEndToEndTest {
     }
 
     /**
-     * Enables the EXECUTE_APP_FUNCTIONS access for both the agent and the probe
-     * packages. The permission has protection level `appop|preinstalled|module` on
-     * Android 16, but the appop's wire identifier varies across platform images: the
+     * Attempts to enable EXECUTE_APP_FUNCTIONS access for both the agent and the probe
+     * packages. Android 16 declares the permission `internal|privileged`, so none of these
+     * routes can succeed for a developer-installed app on a stock image; they are issued
+     * anyway because platform images vary and because the shape of each refusal is the
+     * signal [platformDeniesExecuteAppFunctionsGrant] reads. The wire identifier the
      * shell tool accepts both the all-caps Java constant (`EXECUTE_APP_FUNCTIONS`) and
      * the canonical lowercase form (`android:execute_app_functions`), and `pm grant`
      * works on some images where the permission is exposed as a runtime-style grant.
@@ -554,7 +557,7 @@ class AppFunctionsEndToEndTest {
      * stdout+stderr response, so a discovery timeout's error message can show whether
      * `pm grant` reported "permission cannot be granted" or `appops set` reported
      * "Unknown operation" — that one detail discriminates between "we used the wrong op
-     * name" and "the platform reserves this permission for signature/preinstalled
+     * name" and "the platform reserves this permission for privileged system
      * apps."
      */
     private val lastGrantAttempts: MutableList<GrantAttempt> = mutableListOf()
@@ -568,8 +571,7 @@ class AppFunctionsEndToEndTest {
      * signatures:
      *
      *  - `pm grant` returns "not a changeable permission type" → the permission is
-     *    declared at signature/module/preinstalled protection level and runtime grant
-     *    is not allowed.
+     *    declared `internal|privileged` (Android 16) and no runtime grant is allowed.
      *  - `appops set` returns "Unknown operation string" → the permission has no
      *    appop counterpart in the platform's `AppOpsManager`, so it cannot be relaxed
      *    via the appop wire either.

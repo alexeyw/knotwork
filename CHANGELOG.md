@@ -53,6 +53,15 @@ details.
   connection, and an address with a leading zero such as `010.0.0.1` could be
   read as octal (`8.0.0.1`) when connecting. Both forms are now treated as
   public addresses.
+- **The documentation had the AppFunctions restriction backwards.** The FAQ and
+  the store listing said other apps cannot publish AppFunctions. Android does
+  let any app publish them — what an app installed from a store cannot do is
+  *call* someone else's, which needs the `EXECUTE_APP_FUNCTIONS` permission that
+  Android 16 grants to privileged system apps only. Nothing changes in the app:
+  the tools you see are the built-in ones plus whatever you connect over MCP.
+  The permission's protection level was quoted wrongly too, in the developer
+  documentation and in code comments — it is `internal|privileged`, neither
+  signature-level nor appop-protected.
 
 ## [0.10.0] - 2026-09-14
 

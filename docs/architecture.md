@@ -822,7 +822,13 @@ The agent talks to AppFunctions in two directions:
   `AppFunctionManager.executeAppFunction(...)`, and renders the response
   back into a flat JSON string for the agent's observation log. There is
   no longer any `intentionally not included` gating — discovered
-  AppFunctions are first-class tools.
+  AppFunctions are first-class tools. On a stock device this path
+  discovers nothing, and the reason is the **caller** side rather than
+  the publisher side: any app may publish AppFunctions, but discovering
+  and executing them requires `EXECUTE_APP_FUNCTIONS`, which Android 16
+  declares `internal|privileged` and grants to privileged system apps
+  only. An app installed from a store cannot hold it, so the catalogue
+  the user sees is built-ins plus MCP.
 - **Callee-side** — the agent exposes a curated set of read-only
   built-ins to *other* apps. Wrappers live in
   `data/tools/local/appfunctions/` and are annotated with

@@ -222,8 +222,9 @@ the AppFunctions extension path. Below API 36 the library selects the
 `com.android.extensions.appfunctions` sidecar instead of the platform
 service, and that branch genuinely cannot execute on an API 36 emulator —
 but the only test that would reach it, `AppFunctionsEndToEndTest`, is on
-the device-only exclusion list, because `EXECUTE_APP_FUNCTIONS` is
-signature-level and an emulator cannot grant it. The AppFunctions runtime
+the device-only exclusion list, because Android 16 declares
+`EXECUTE_APP_FUNCTIONS` at `internal|privileged` and an emulator cannot
+grant it to a developer-installed app. The AppFunctions runtime
 is covered by nothing automated at any API level; it belongs to the manual
 reference-device pass, alongside `targetSdk` 37.
 
@@ -355,7 +356,7 @@ deliberate edit that a reviewer reads.
 
 | Test | Why an emulator cannot reach a verdict |
 |---|---|
-| `AppFunctionsEndToEndTest` | `EXECUTE_APP_FUNCTIONS` is declared `appop\|preinstalled\|module` by the platform. No stock emulator image grants it to a third-party caller, so cross-package discovery never returns the probe and all five scenarios degrade to skips — while still paying the discovery poll (78 s of a 453 s suite). The round-trip is exercised in the manual pass on the reference device, where the permission gate can apply. |
+| `AppFunctionsEndToEndTest` | Android 16 declares `EXECUTE_APP_FUNCTIONS` at `internal\|privileged` — granted to privileged system apps only. No stock emulator image grants it to a developer-installed caller, so cross-package discovery never returns the probe and all five scenarios degrade to skips — while still paying the discovery poll (78 s of a 453 s suite). The round-trip is exercised in the manual pass on the reference device, where the permission gate can apply. |
 
 An excluded test is not dead code: it still has to compile under
 `./gradlew check`, and it is still run by hand on a device.

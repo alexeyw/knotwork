@@ -54,8 +54,9 @@ name: Instrumented
 # `com.android.extensions.appfunctions` sidecar instead of the platform service,
 # which is genuinely unreachable on an API 36 emulator — but the only test that
 # would reach it, `AppFunctionsEndToEndTest`, is on the device-only exclusion
-# list because `EXECUTE_APP_FUNCTIONS` is signature-level and an emulator cannot
-# grant it. That path remains covered by nothing automated, at any API level.
+# list because Android 16 declares `EXECUTE_APP_FUNCTIONS` at `internal|privileged`
+# and an emulator cannot grant it to a developer-installed app. That path remains
+# covered by nothing automated, at any API level.
 #
 # The cost is named rather than papered over: **the app targets API 37 and no
 # emulator run covers it.** That gap belongs to the manual reference-device

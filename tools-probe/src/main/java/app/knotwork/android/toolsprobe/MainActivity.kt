@@ -113,13 +113,13 @@ class MainActivity : ComponentActivity() {
             ?: run {
                 // Long-form diagnostic goes to logcat so the UI can stay short. On stock
                 // Android 16 this branch is the expected outcome — EXECUTE_APP_FUNCTIONS is
-                // signature-level, so a third-party probe cannot observe another package's
-                // AppFunctions even if they are correctly published (PR #126).
+                // declared `internal|privileged`, so a developer-installed probe cannot observe
+                // another package's AppFunctions even if they are correctly published (PR #126).
                 Log.w(
                     LOG_TAG,
                     "observeAppFunctions returned no entries for package=$AGENT_PACKAGE. " +
-                        "Expected on stock Android 16: EXECUTE_APP_FUNCTIONS is " +
-                        "signature/module-level, so cross-package discovery is blocked. " +
+                        "Expected on stock Android 16: EXECUTE_APP_FUNCTIONS is declared " +
+                        "`internal|privileged`, so cross-package discovery is blocked. " +
                         "Verify the agent APK still ships the inventory with: " +
                         "`unzip -p <agent-apk> assets/app_functions_v2.xml`. If the entry " +
                         "is missing, confirm SearchAppFunction.invoke is annotated with " +
