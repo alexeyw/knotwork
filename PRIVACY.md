@@ -1,6 +1,6 @@
 # Privacy Policy — Knotwork
 
-**Effective date:** 15 September 2026
+**Effective date:** 16 September 2026
 **Applies to:** the Knotwork Android application (package `app.knotwork.android`),
 both published distributions — `full` and `foss` — from version `0.7.1` onward.
 
