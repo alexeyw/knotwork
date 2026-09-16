@@ -986,9 +986,21 @@ Enforcement points, one per stack:
 
 | Stack | Gate |
 |---|---|
-| Koog/Ktor — Ollama | `KoogClientFactory.rawOllama()` |
+| Koog/Ktor — Ollama (chat and embeddings) | `ModelNetworkGate.ollamaRefusal()`, asked by `KoogClientFactory` and `OllamaEmbeddingProvider` |
 | Ktor — MCP | `McpConnectionPool` (the only place a connection is opened) |
 | Shared OkHttp | `CleartextGuardInterceptor`, on every request |
+
+The Koog row used to name `KoogClientFactory.rawOllama()` alone, and the Ollama
+embedding client — a second Koog client built from the same address — skipped the
+rule entirely. Both now ask one gate, which also applies the local-only restriction
+(§4.4).
+
+The host is read by `CleartextPolicy.hostOf`, a small parser of its own, while the
+connection is opened by Ktor's. Where they could disagree the policy refuses
+instead of guessing: an authority containing `\` or whitespace has no host (Ktor
+reads `https://evil.example\@192.168.1.42` as `evil.example`), and an IPv4 octet
+with a leading zero is not private (`inet_aton` reads `010` as octal).
+`LocalOnlyPolicyParserAgreementTest` checks adversarial URLs against Ktor itself.
 
 The interceptor runs per request rather than per connection, so it also catches
 a redirect trying to downgrade `https` to `http`. The residual exposure — a
@@ -1006,12 +1018,32 @@ and adding a new provider does not require touching the pipeline
 engine. API keys live in the Keystore-backed encrypted store (see §5.2)
 and are never serialized into DataStore or git.
 
+**Local-only restriction.** *Block network from local model* is enforced by
+`data/engine/ModelNetworkGate`, the one decision every client carrying model
+traffic asks before it is built: the chat clients in `KoogClientFactory` (Cloud
+nodes, structured output, `delegate_task`) and both network embedding providers
+(memory search and writes). While the restriction is on, hosted providers are
+refused and Ollama is admitted only when its host is `localhost` or a loopback /
+RFC-1918 IPv4 literal (`domain/services/LocalOnlyPolicy`) — **whatever the
+scheme**, because `CleartextPolicy` answers whether traffic may be unencrypted
+and waves every `https://` address through. Host names are refused: a name says
+nothing about where DNS will send the request. A refused embedding provider
+reports itself unavailable, so `EmbeddingProviderResolver` falls back to the
+on-device model. Tools — MCP servers, `http_request` — are outside the
+restriction; they have their own controls.
+
+The factory reports *why* a client is `null` through
+`CloudLlmClientFactory.unavailabilityOf` (a `CloudClientUnavailability`), decided
+by the same checks in the same order. Callers used to re-derive the cause, and
+blamed the restriction — or a missing API key — for an address the cleartext rule
+had refused.
+
 **Transient-failure retry.** Every cloud `LLMClient` built by
-`KoogClientFactory` — chat completions and the cloud / Ollama embedding
-clients alike — is wrapped with an exponential-backoff retry policy before
-use (`data/engine/retry/CloudRetryWrapper`, using Koog's standalone
-`RetryingLLMClient` decorator). Transient failures (HTTP 429 / 5xx / 529
-and connection-or-read timeouts) are retried; authentication errors are
+`KoogClientFactory` or `DefaultKoogEmbedderFactory` — chat completions and the
+cloud / Ollama embedding clients alike — is wrapped with an exponential-backoff
+retry policy before use (`data/engine/retry/CloudRetryWrapper`, using Koog's
+standalone `RetryingLLMClient` decorator). Transient failures (HTTP 429 / 5xx /
+529 and connection-or-read timeouts) are retried; authentication errors are
 not, and coroutine cancellation is always honoured (re-thrown, never
 swallowed). The attempt budget (`cloudRetryMaxAttempts`, 1–5, default 3;
 `1` returns the raw client unwrapped, disabling retries) and the base delay

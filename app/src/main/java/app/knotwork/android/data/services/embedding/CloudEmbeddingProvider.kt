@@ -1,6 +1,8 @@
 package app.knotwork.android.data.services.embedding
 
 import ai.koog.prompt.executor.clients.openai.OpenAIModels
+import app.knotwork.android.data.engine.ModelNetworkGate
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.services.EmbeddingException
 import app.knotwork.android.domain.services.EmbeddingProvider
@@ -24,13 +26,21 @@ import kotlin.coroutines.cancellation.CancellationException
  * on-device default *before* this provider is ever returned; if [embed] is
  * nonetheless called without a key it fails loudly with an [EmbeddingException].
  *
+ * While "Block network from local model" is on, [ModelNetworkGate] refuses it
+ * like every other cloud provider: [isAvailable] reports `false` (so memory keeps
+ * working on the on-device model) and [embed] refuses before building a client.
+ * The text embedded here is the user's memory and search queries — before this
+ * gate, the restriction stopped a Cloud node but not this.
+ *
  * @property embedderFactory Builds the underlying Koog embedding client.
  * @property apiKeyRepository Source of the OpenAI API key.
+ * @property modelNetworkGate Decides whether a cloud provider may be reached right now.
  */
 @Singleton
 class CloudEmbeddingProvider @Inject constructor(
     private val embedderFactory: KoogEmbedderFactory,
     private val apiKeyRepository: ApiKeyRepository,
+    private val modelNetworkGate: ModelNetworkGate,
 ) : EmbeddingProvider {
 
     override val id: String = EmbeddingProvider.ID_OPENAI_3_SMALL
@@ -39,8 +49,9 @@ class CloudEmbeddingProvider @Inject constructor(
 
     override val dimension: Int = DIMENSION
 
-    /** Available only when a non-blank OpenAI API key is configured. */
-    override suspend fun isAvailable(): Boolean = !apiKeyRepository.getOpenAIKey().firstOrNull().isNullOrBlank()
+    /** Available only when the network gate admits cloud providers and a non-blank OpenAI API key is configured. */
+    override suspend fun isAvailable(): Boolean =
+        modelNetworkGate.cloudRefusal() == null && !apiKeyRepository.getOpenAIKey().firstOrNull().isNullOrBlank()
 
     override suspend fun embed(text: String): FloatArray = embed(listOf(text)).first()
 
@@ -48,13 +59,18 @@ class CloudEmbeddingProvider @Inject constructor(
      * Embeds [texts] via OpenAI's batch embeddings endpoint in a single
      * request, mapping each returned `List<Double>` to a [FloatArray].
      *
-     * @throws EmbeddingException If no API key is configured, or the transport
-     *   / API call fails. [CancellationException] is rethrown unchanged so
+     * @throws EmbeddingException If the network gate refuses cloud providers, no
+     *   API key is configured, or the transport / API call fails. [CancellationException] is rethrown unchanged so
      *   coroutine cancellation is not swallowed.
      */
     override suspend fun embed(texts: List<String>): List<FloatArray> {
         if (texts.isEmpty()) return emptyList()
 
+        // Re-checked here, not only in `isAvailable`: the restriction can be switched on
+        // between the resolver's check and this send.
+        modelNetworkGate.cloudRefusal()?.let { refusal ->
+            throw EmbeddingException(refusal.message(CloudProvider.OPENAI))
+        }
         val key = apiKeyRepository.getOpenAIKey().firstOrNull()
         if (key.isNullOrBlank()) {
             throw EmbeddingException("OpenAI API key is not configured")

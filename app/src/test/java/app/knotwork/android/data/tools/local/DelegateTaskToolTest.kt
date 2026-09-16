@@ -5,6 +5,8 @@ import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
 import app.knotwork.android.data.engine.KoogClientFactory
+import app.knotwork.android.domain.engine.CloudClientUnavailability
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
@@ -119,10 +121,39 @@ class DelegateTaskToolTest {
     @Test
     fun `executeDelegation returns error when client cannot be initialized`() = runTest {
         coEvery { koogClientFactory.createAnthropicExecutor() } returns null
+        coEvery { koogClientFactory.unavailabilityOf(CloudProvider.ANTHROPIC) } returns
+            CloudClientUnavailability.MissingCredentials
         val result = delegateTaskTool.executeDelegation("Task", "anthropic")
         assertTrue(result.startsWith("Error: Client for"))
+        assertTrue(result.contains("no API key"))
         coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
     }
+
+    @Test
+    fun `given a non-local Ollama in local-only mode when executeDelegation then the error names the restriction`() =
+        runTest {
+            coEvery { koogClientFactory.createOllamaExecutor() } returns null
+            coEvery { koogClientFactory.unavailabilityOf(CloudProvider.OLLAMA) } returns
+                CloudClientUnavailability.EndpointNotLocal("ollama.example.com")
+
+            val result = delegateTaskTool.executeDelegation("Task", "ollama")
+
+            assertTrue(result.startsWith("Error: Client for 'ollama'"))
+            assertTrue(result.contains("Block network from local model"))
+            assertTrue(result.contains("ollama.example.com"))
+        }
+
+    @Test
+    fun `given the factory reports no cause when executeDelegation then the error still points at settings`() =
+        runTest {
+            coEvery { koogClientFactory.createAnthropicExecutor() } returns null
+            coEvery { koogClientFactory.unavailabilityOf(CloudProvider.ANTHROPIC) } returns null
+
+            val result = delegateTaskTool.executeDelegation("Task", "anthropic")
+
+            assertTrue(result.startsWith("Error: Client for 'anthropic'"))
+            assertTrue(result.contains("settings"))
+        }
 
     @Test
     fun `executeDelegation returns error when client throws exception`() {

@@ -30,6 +30,9 @@ interface KoogEmbedderFactory {
      * Builds an OpenAI embedding client authenticated with [apiKey], decorated
      * with the configured transient-failure retry policy.
      *
+     * Applies no network rule of its own: callers must have asked
+     * `ModelNetworkGate.cloudRefusal` first, as `CloudEmbeddingProvider` does.
+     *
      * `suspend` because the retry policy is read from settings at build time.
      *
      * @param apiKey A non-blank OpenAI API key (callers must check for blank
@@ -41,6 +44,11 @@ interface KoogEmbedderFactory {
     /**
      * Builds an Ollama embedding client targeting the local-network server at
      * [baseUrl], decorated with the configured transient-failure retry policy.
+     *
+     * Applies no network rule of its own: callers must have passed [baseUrl]
+     * through `ModelNetworkGate.ollamaRefusal` first, as `OllamaEmbeddingProvider`
+     * does — a client built from an unchecked address bypasses both the cleartext
+     * rule and the "Block network from local model" restriction.
      *
      * `suspend` because the retry policy is read from settings at build time.
      *

@@ -127,17 +127,14 @@ class CloudLlmNodeExecutor @Inject constructor(
         }
         val client = cloudLlmClientFactory.createClient(selectedProvider, retryListener) as? LLMClient
         if (client == null) {
-            // The factory collapses "blocked by policy" and "no credentials" into a
-            // single null, but the two need different remedies from the user, so the
-            // gate is re-read here to name the actual cause instead of always blaming
-            // a missing key.
-            emitFailure(
-                if (settingsRepository.blockNetworkFromLocalModel.first()) {
-                    cloudBlockedByLocalOnlyMode(selectedProvider.id)
-                } else {
-                    missingCredentials(selectedProvider.id)
-                },
-            )
+            // A null client has several causes with different remedies — no key, the
+            // "Block network from local model" restriction, an Ollama address that is not
+            // local while it is on, a refused cleartext address. The factory decided which
+            // one when it refused, so it is asked rather than guessed: guessing here once
+            // blamed the restriction (or a missing key) for an address the cleartext rule
+            // had refused.
+            val cause = cloudLlmClientFactory.unavailabilityOf(selectedProvider)
+            emitFailure(cause?.message(selectedProvider) ?: providerUnavailable(selectedProvider.id))
             return@channelFlow
         }
         // The resolver owns the per-provider configured-id ↔ default fallback,
@@ -354,15 +351,10 @@ class CloudLlmNodeExecutor @Inject constructor(
                 "or select a provider on this Cloud node."
 
         /**
-         * The node names a provider whose credentials are missing — distinct from the
-         * policy block below, which the user resolves in a different place entirely.
+         * The factory refused a client but no longer reports a cause — the settings changed
+         * between the two reads. Rare, and not worth a guess that could name the wrong setting.
          */
-        fun missingCredentials(providerId: String): String =
-            "Cloud provider '$providerId' has no API key configured. Add one in Settings to use this node."
-
-        /** The call never left the device because the local-only restriction is on. */
-        fun cloudBlockedByLocalOnlyMode(providerId: String): String =
-            "Cloud provider '$providerId' is blocked by the \"Block network from local model\" " +
-                "restriction. Turn it off in Settings to allow this Cloud node to run."
+        fun providerUnavailable(providerId: String): String =
+            "Cloud provider '$providerId' is not available right now. Check its settings and try again."
     }
 }

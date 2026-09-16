@@ -1,6 +1,6 @@
 # Privacy Policy — Knotwork
 
-**Effective date:** 1 September 2026
+**Effective date:** 16 September 2026
 **Applies to:** the Knotwork Android application (package `app.knotwork.android`),
 both published distributions — `full` and `foss` — from version `0.7.1` onward.
 
@@ -14,8 +14,8 @@ and there is no back end that could hold your data.
 
 The app processes your conversations **on your phone**, using a language model
 you download to the device. Data leaves the device only along a path **you
-configured yourself** — a cloud model node carrying your own API key, an MCP
-server you added, a model download, an outbound request from a tool you
+configured yourself** — a cloud model carrying your own API key (in a pipeline
+step, or as the embedding model for memory), an MCP server you added, a model download, an outbound request from a tool you
 explicitly allowed, or (in the `full` build only) crash reports you opted in to.
 Each of those is listed below with what it sends, where, and how to turn it off.
 
@@ -87,8 +87,26 @@ provider's own privacy policy and data-retention terms govern it — including
 whether they retain or train on it. Review the policy of whichever provider
 you choose.
 
-A pipeline without a cloud node never contacts a cloud provider. Cloud nodes
-are visible in the pipeline editor, so you can see whether one is present.
+Two other paths reach the same providers, both also opt-in:
+
+- **Memory embeddings.** If you choose OpenAI or Ollama as the *Embedding model*
+  in the memory settings, the text being embedded is sent to that service: a
+  memory as it is saved, and the query used to search memory during a run. This
+  happens whether or not the pipeline has a cloud node. The default embedding
+  model runs on the device.
+- **The `delegate_task` tool** hands a subtask to a provider you have a key for.
+  It counts as a sensitive tool call, so it waits for your approval unless you
+  set *Approve tool calls* to *Never*.
+
+Apart from those two, a pipeline without a cloud node never contacts a cloud
+provider. Cloud nodes are visible in the pipeline editor, so you can see whether
+one is present.
+
+**Block network from local model** (Settings → Tools & workspace) keeps every
+path in this section on your own network: no cloud provider is contacted — memory uses the
+on-device embedding model instead — and an Ollama endpoint is used only at
+`localhost` or a private IP address on your own network. It does not affect MCP
+servers (3.2), model downloads (3.3) or tool requests (3.4).
 
 ### 3.2 MCP servers (opt-in)
 
@@ -241,7 +259,8 @@ The app contacts a third party only along the paths in section 3. Depending on
 what you configure, those may be:
 
 - The cloud model provider whose key you entered (OpenAI, Anthropic, Google,
-  DeepSeek, or an Ollama endpoint you name).
+  DeepSeek, or an Ollama endpoint you name), for pipeline steps, memory
+  embeddings or `delegate_task`.
 - Hugging Face, or any host you paste a model URL for.
 - MCP servers you add.
 - A host you added to the allowed-domains list for the `http_request` tool.

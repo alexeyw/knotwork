@@ -121,6 +121,17 @@ class HttpRequestPolicyTest {
     }
 
     @Test
+    fun `given an octet with a leading zero when isLoopbackOrPrivateHost then false`() {
+        // `inet_aton`-style resolvers read `010` as octal 8, so `010.0.0.1` can mean the
+        // public `8.0.0.1` on the connection even though it reads as `10.0.0.1` here.
+        assertFalse(HttpRequestPolicy.isLoopbackOrPrivateHost("010.0.0.1"))
+        assertFalse(HttpRequestPolicy.isLoopbackOrPrivateHost("192.168.01.1"))
+        assertFalse(HttpRequestPolicy.isLoopbackOrPrivateHost("127.0.0.00"))
+        // A lone zero is an ordinary octet.
+        assertTrue(HttpRequestPolicy.isLoopbackOrPrivateHost("10.0.0.1"))
+    }
+
+    @Test
     fun `given a same-host redirect when headersForRedirect then headers are unchanged`() {
         val headers = listOf("Authorization" to "Bearer x", "Accept" to "application/json")
         assertEquals(headers, HttpRequestPolicy.headersForRedirect(headers, "example.com", "example.com"))

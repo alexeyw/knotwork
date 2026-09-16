@@ -13,15 +13,12 @@ import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.ollama.client.OllamaClient
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
+import app.knotwork.android.domain.engine.CloudClientUnavailability
 import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.retry.CloudRetryListener
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
-import app.knotwork.android.domain.services.CleartextPolicy
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,11 +30,19 @@ import javax.inject.Singleton
  * Implements the domain-level [CloudLlmClientFactory] interface so that
  * `CloudLlmNodeExecutor` can construct cloud clients without importing data-layer types,
  * while internal callers (e.g. `DelegateTaskTool`) retain the typed per-provider helpers.
+ *
+ * Every client is built only after [ModelNetworkGate] admits it, and [unavailabilityOf]
+ * reports the refusal the gate (or a missing credential) produced — the two share one
+ * decision per provider, so a `null` client and its stated cause cannot disagree.
+ *
+ * @property apiKeyRepository Source of the provider keys and the Ollama base URL.
+ * @property modelNetworkGate Decides whether model traffic may leave the device right now.
+ * @property retryWrapper Decorates each client with the transient-failure retry policy.
  */
 @Singleton
 class KoogClientFactory @Inject constructor(
     private val apiKeyRepository: ApiKeyRepository,
-    private val settingsRepository: SettingsRepository,
+    private val modelNetworkGate: ModelNetworkGate,
     private val retryWrapper: CloudRetryWrapper,
 ) : CloudLlmClientFactory {
 
@@ -87,14 +92,16 @@ class KoogClientFactory @Inject constructor(
      * [CloudProvider]; adding a new provider value forces an update here.
      *
      * When `SettingsRepository.blockNetworkFromLocalModel` is `true`, every
-     * cloud provider (OpenAI / Anthropic / Google / DeepSeek) returns `null`
-     * regardless of credential state — only the LAN-local Ollama client is
-     * still constructible. The semantics mirror the Settings →
-     * Restrictions → "Block network from local model" toggle.
+     * hosted cloud provider (OpenAI / Anthropic / Google / DeepSeek) returns `null`
+     * regardless of credential state, and the Ollama client is constructible only
+     * when its base URL names `localhost` or a loopback / private IPv4 address —
+     * whatever the scheme, so an `https://` server on the public internet is refused
+     * too. The semantics mirror the Settings → Tools & workspace → "Block network
+     * from local model" toggle; [unavailabilityOf] names the cause of a `null`.
      *
      * @param provider The typed [CloudProvider] to construct a client for.
-     * @return The LLMClient on success or `null` if credentials are missing
-     *   or local-only mode is on.
+     * @param retryListener Sink notified before each retry.
+     * @return The LLMClient on success, or `null` when [unavailabilityOf] reports a cause.
      */
     override suspend fun createClient(provider: CloudProvider, retryListener: CloudRetryListener): Any? =
         rawClient(provider)?.let { raw ->
@@ -102,12 +109,28 @@ class KoogClientFactory @Inject constructor(
         }
 
     /**
+     * Names the cause of a `null` from [createClient], checking in the order the `raw*`
+     * builders do: for a hosted provider the gate first, then the key; for Ollama the
+     * base URL first, then the gate (a missing address is the more useful thing to say).
+     *
+     * @param provider The provider a client was requested for.
+     * @return The cause, or `null` when a client can currently be constructed.
+     */
+    override suspend fun unavailabilityOf(provider: CloudProvider): CloudClientUnavailability? = when (provider) {
+        CloudProvider.OLLAMA -> {
+            val url = ollamaBaseUrl()
+            if (url == null) CloudClientUnavailability.MissingCredentials else modelNetworkGate.ollamaRefusal(url)
+        }
+        else -> modelNetworkGate.cloudRefusal()
+            ?: CloudClientUnavailability.MissingCredentials.takeIf { apiKey(provider) == null }
+    }
+
+    /**
      * Builds the raw, un-decorated Koog client for [provider], applying the
-     * local-only gate and the per-provider credential checks. Retry wrapping is
+     * network gate and the per-provider credential checks. Retry wrapping is
      * applied separately by [createClient] / the public helpers.
      *
-     * @return The raw client, or `null` when credentials are missing or
-     *   local-only mode is on.
+     * @return The raw client, or `null` when [unavailabilityOf] reports a cause.
      */
     private suspend fun rawClient(provider: CloudProvider): LLMClient? = when (provider) {
         CloudProvider.OPENAI -> rawOpenAI()
@@ -147,8 +170,9 @@ class KoogClientFactory @Inject constructor(
     suspend fun createDeepSeekExecutor(): LLMClient? = rawDeepSeek()?.let { wrapNoObserve(it, CloudProvider.DEEPSEEK) }
 
     /**
-     * Creates a retry-wrapped Ollama LLMClient connected to the configured local server.
-     * @return The client, or null if the custom URL is not configured.
+     * Creates a retry-wrapped Ollama LLMClient connected to the configured server.
+     * @return The client, or null if the base URL is not configured or
+     *   [ModelNetworkGate.ollamaRefusal] refuses it.
      */
     suspend fun createOllamaExecutor(): LLMClient? = rawOllama()?.let { wrapNoObserve(it, CloudProvider.OLLAMA) }
 
@@ -157,9 +181,7 @@ class KoogClientFactory @Inject constructor(
         retryWrapper.wrap(client = client, provider = provider.id)
 
     private suspend fun rawOpenAI(): LLMClient? {
-        if (isLocalOnlyMode()) return null
-        val key = apiKeyRepository.getOpenAIKey().firstOrNull()?.trim()
-        if (key.isNullOrBlank()) return null
+        val key = admittedApiKey(CloudProvider.OPENAI) ?: return null
         return OpenAILLMClient(
             apiKey = key,
             settings = OpenAIClientSettings(timeoutConfig = timeoutConfig),
@@ -168,9 +190,7 @@ class KoogClientFactory @Inject constructor(
     }
 
     private suspend fun rawAnthropic(): LLMClient? {
-        if (isLocalOnlyMode()) return null
-        val key = apiKeyRepository.getAnthropicKey().firstOrNull()?.trim()
-        if (key.isNullOrBlank()) return null
+        val key = admittedApiKey(CloudProvider.ANTHROPIC) ?: return null
         return AnthropicLLMClient(
             apiKey = key,
             settings = AnthropicClientSettings(timeoutConfig = timeoutConfig),
@@ -179,9 +199,7 @@ class KoogClientFactory @Inject constructor(
     }
 
     private suspend fun rawGoogle(): LLMClient? {
-        if (isLocalOnlyMode()) return null
-        val key = apiKeyRepository.getGoogleKey().firstOrNull()?.trim()
-        if (key.isNullOrBlank()) return null
+        val key = admittedApiKey(CloudProvider.GOOGLE) ?: return null
         return GoogleLLMClient(
             apiKey = key,
             settings = GoogleClientSettings(timeoutConfig = timeoutConfig),
@@ -190,9 +208,7 @@ class KoogClientFactory @Inject constructor(
     }
 
     private suspend fun rawDeepSeek(): LLMClient? {
-        if (isLocalOnlyMode()) return null
-        val key = apiKeyRepository.getDeepSeekKey().firstOrNull()?.trim()
-        if (key.isNullOrBlank()) return null
+        val key = admittedApiKey(CloudProvider.DEEPSEEK) ?: return null
         return DeepSeekLLMClient(
             apiKey = key,
             settings = DeepSeekClientSettings(timeoutConfig = timeoutConfig),
@@ -201,17 +217,11 @@ class KoogClientFactory @Inject constructor(
     }
 
     private suspend fun rawOllama(): LLMClient? {
-        val url = apiKeyRepository.getOllamaBaseUrl().firstOrNull()?.trim()
-        if (url.isNullOrBlank()) return null
-        // Cleartext gate. The manifest permits unencrypted traffic app-wide
-        // because Android cannot express "any private-LAN address" there; the
-        // rule that replaces it lives in `CleartextPolicy` and is applied at
-        // every point that opens a connection to a user-configured address.
-        val verdict = CleartextPolicy.classify(url, settingsRepository.approvedCleartextOrigins.first())
-        CleartextPolicy.refusalMessage(verdict)?.let { reason ->
-            Timber.w("KoogClientFactory: Ollama client refused — %s", reason)
-            return null
-        }
+        val url = ollamaBaseUrl() ?: return null
+        // Both network rules that concern a user-configured address — the local-only
+        // restriction and the cleartext rule — are applied by the gate, the same one the
+        // Ollama embedding provider asks, so chat and memory cannot drift apart again.
+        if (modelNetworkGate.ollamaRefusal(url) != null) return null
         return OllamaClient(
             httpClientFactory = httpClientFactory,
             baseUrl = url,
@@ -219,10 +229,23 @@ class KoogClientFactory @Inject constructor(
         )
     }
 
-    /**
-     * Reads the local-only mode flag. Logs (at info level) when the gate
-     * fires so the user can trace why a cloud client returned `null`.
-     */
+    /** The saved key for a hosted [provider], or `null` when the gate refuses it or none is saved. */
+    private suspend fun admittedApiKey(provider: CloudProvider): String? =
+        if (modelNetworkGate.cloudRefusal() != null) null else apiKey(provider)
+
+    /** The trimmed, non-blank key saved for a hosted [provider]; `null` for Ollama, which has none. */
+    private suspend fun apiKey(provider: CloudProvider): String? = when (provider) {
+        CloudProvider.OPENAI -> apiKeyRepository.getOpenAIKey()
+        CloudProvider.ANTHROPIC -> apiKeyRepository.getAnthropicKey()
+        CloudProvider.GOOGLE -> apiKeyRepository.getGoogleKey()
+        CloudProvider.DEEPSEEK -> apiKeyRepository.getDeepSeekKey()
+        CloudProvider.OLLAMA -> null
+    }?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+
+    /** The trimmed, non-blank Ollama base URL, or `null` when none is configured. */
+    private suspend fun ollamaBaseUrl(): String? =
+        apiKeyRepository.getOllamaBaseUrl().firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+
     private companion object {
         /**
          * Longest the provider may stay silent between bytes. Applied per read, so a
@@ -235,11 +258,5 @@ class KoogClientFactory @Inject constructor(
 
         /** Outer backstop for a request that never ends despite continuous bytes. */
         const val REQUEST_TIMEOUT_MS: Long = 900_000
-    }
-
-    private suspend fun isLocalOnlyMode(): Boolean {
-        val blocked = settingsRepository.blockNetworkFromLocalModel.firstOrNull() ?: false
-        if (blocked) Timber.i("KoogClientFactory: cloud provider gated by local-only mode")
-        return blocked
     }
 }
