@@ -828,7 +828,10 @@ The agent talks to AppFunctions in two directions:
   and executing them requires `EXECUTE_APP_FUNCTIONS`, which Android 16
   declares `internal|privileged` and grants to privileged system apps
   only. An app installed from a store cannot hold it, so the catalogue
-  the user sees is built-ins plus MCP.
+  the user sees is built-ins plus MCP. Android 16 also carries a second,
+  flag-gated declaration of the same permission at `normal` — behind a
+  device allowlist and explicit user approval — so this is a door
+  designed to open; it is not what ships today.
 - **Callee-side** — the agent exposes a curated set of read-only
   built-ins to *other* apps. Wrappers live in
   `data/tools/local/appfunctions/` and are annotated with

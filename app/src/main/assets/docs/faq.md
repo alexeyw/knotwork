@@ -300,7 +300,7 @@ human-in-the-loop](user-guide.md#risk-levels-and-human-in-the-loop).
 Publishing them is not the problem — Android lets any app publish
 AppFunctions. Picking them up is: reading and running another app's
 AppFunctions needs a permission (`EXECUTE_APP_FUNCTIONS`) that Android 16 hands
-only to privileged system apps, and an app installed from Play is not one. So
+only to privileged system apps, and an app you install yourself is not one. So
 what you get is the built-in catalogue plus whatever you connect over MCP.
 See [Built-in tools](user-guide.md#built-in-tools).
 
@@ -444,7 +444,7 @@ would change it.
   existing confirmation path.
 - **Tools from other apps are not picked up.** Publishing AppFunctions is open
   to any app; calling one needs a permission Android reserves for privileged
-  system apps, and nothing on the roadmap changes that for a Play install.
+  system apps, and nothing on the roadmap changes that for an ordinary install.
 - **The node picker in the visual editor is hard to read** at the current number
   of node types, where labels overlap. Replacing it is accepted as needed, with
   no date attached; the browser editor is the workaround in the meantime.

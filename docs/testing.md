@@ -224,8 +224,8 @@ service, and that branch genuinely cannot execute on an API 36 emulator —
 but the only test that would reach it, `AppFunctionsEndToEndTest`, is on
 the device-only exclusion list, because Android 16 declares
 `EXECUTE_APP_FUNCTIONS` at `internal|privileged` and an emulator cannot
-grant it to a developer-installed app. The AppFunctions runtime
-is covered by nothing automated at any API level; it belongs to the manual
+grant it to a developer-installed app. The AppFunctions runtime is covered
+by nothing automated at any API level; it belongs to the manual
 reference-device pass, alongside `targetSdk` 37.
 
 ### Why the second axis is the flavour, not a second API level

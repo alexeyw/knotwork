@@ -77,8 +77,9 @@ import app.knotwork.android.domain.models.Result as DomainResult
  *
  * Why it carries [DeviceOnlyInstrumentedTest]: an emulator can host the class but
  * cannot grant a developer-installed caller `EXECUTE_APP_FUNCTIONS`, which Android 16
- * declares `internal|privileged`, so every scenario would resolve to a skip. The annotation excludes the
- * class from the automated emulator runs by name instead of letting it burn the
+ * declares `internal|privileged`, so every scenario would resolve to a skip. The
+ * annotation excludes the class from the automated emulator runs by name instead of
+ * letting it burn the
  * discovery poll to reach that skip; it stays part of the manual reference-device
  * pass, where the permission gate can actually apply.
  *
@@ -528,10 +529,11 @@ class AppFunctionsEndToEndTest {
      * packages. Android 16 declares the permission `internal|privileged`, so none of these
      * routes can succeed for a developer-installed app on a stock image; they are issued
      * anyway because platform images vary and because the shape of each refusal is the
-     * signal [platformDeniesExecuteAppFunctionsGrant] reads. The wire identifier the
-     * shell tool accepts both the all-caps Java constant (`EXECUTE_APP_FUNCTIONS`) and
-     * the canonical lowercase form (`android:execute_app_functions`), and `pm grant`
-     * works on some images where the permission is exposed as a runtime-style grant.
+     * signal [platformDeniesExecuteAppFunctionsGrant] reads. Three routes are tried
+     * because the wire identifier varies across platform images: the shell tool accepts
+     * both the all-caps Java constant (`EXECUTE_APP_FUNCTIONS`) and the canonical
+     * lowercase form (`android:execute_app_functions`), and `pm grant` works on some
+     * images where the permission is exposed as a runtime-style grant.
      * Issuing all three is harmless — the first one the platform recognises wins, the
      * others return an "Unknown operation" line that we deliberately drop on the
      * floor (and log to Logcat for after-the-fact triage).
