@@ -528,8 +528,8 @@ class AppFunctionsEndToEndTest {
      * Attempts to enable EXECUTE_APP_FUNCTIONS access for both the agent and the probe
      * packages. Android 16 declares the permission `internal|privileged`, so none of these
      * routes can succeed for a developer-installed app on a stock image; they are issued
-     * anyway because platform images vary and because the shape of each refusal is the
-     * signal [platformDeniesExecuteAppFunctionsGrant] reads. Three routes are tried
+     * anyway because the shape of each refusal is the signal
+     * [platformDeniesExecuteAppFunctionsGrant] reads. Three routes rather than one,
      * because the wire identifier varies across platform images: the shell tool accepts
      * both the all-caps Java constant (`EXECUTE_APP_FUNCTIONS`) and the canonical
      * lowercase form (`android:execute_app_functions`), and `pm grant` works on some
