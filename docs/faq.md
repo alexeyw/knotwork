@@ -106,13 +106,22 @@ device](../PRIVACY.md#4-what-never-leaves-your-device).
 
 ### So what *can* go out?
 
-Five paths, and every one of them is something you switched on: a **cloud
-model** using your own key — in a cloud node, through the `delegate_task` tool, or
-as the memory **Embedding model** — an **MCP server** you added, a **model download**, an
+Six paths. Five are something you switched on: a **cloud model** using your own
+key — in a cloud node, through the `delegate_task` tool, or as the memory
+**Embedding model** — an **MCP server** you added, a **model download**, an
 **`http_request` tool call** to a host you put on the allowed list, and **crash
-reports** if you consented to them. Nothing else has a way out. See [PRIVACY §
-What can leave your
-device](../PRIVACY.md#3-what-can-leave-your-device--and-only-if-you-set-it-up),
+reports** if you consented to them.
+
+The sixth is on from the first launch and it is the one to know about: the
+built-in **`search_tool`** looks a topic up on Wikipedia, and the pipeline the
+app starts you with calls it for questions it judges factual. The search term
+is written by the model, so it can carry wording from your conversation, and
+the tool is read-only, so it does not ask first. Turn it off with its switch on
+the **Tools** screen, or with **Block network from local model**, which
+withholds it along with the cloud paths.
+
+Nothing else has a way out. See [PRIVACY §
+What can leave your device](../PRIVACY.md#3-what-can-leave-your-device),
 and [SECURITY § Outbound HTTP and the exfiltration
 chain](../SECURITY.md#outbound-http-and-the-exfiltration-chain) for the layered
 restrictions on the tool path.
@@ -421,8 +430,10 @@ would change it.
 
 - **No arbitrary OpenAI-compatible endpoint.** The provider list is a closed set
   of five, and a base URL is configurable only for Ollama. Revisited on the
-  first request filed publicly as an issue. One person has asked for it in
-  private testing, which is a sample of one and does not reorder the work.
+  first request filed publicly as an issue. Two people have asked for it so far
+  — one in private testing, one in a public thread — which is two independent
+  requests, not the filed issue the condition names, and does not reorder the
+  work.
 - **No OAuth anywhere.** Not for MCP servers, not for model downloads. Bearer,
   Basic and API-key headers are what exist. Revisited with the first external
   report of a real server that cannot be reached any other way.

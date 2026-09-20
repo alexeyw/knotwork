@@ -1572,7 +1572,7 @@ The app ships with the following tools:
 
 | Tool             | What it does                                                                          |
 |------------------|---------------------------------------------------------------------------------------|
-| **search_tool**    | Looks up a topic on Wikipedia and returns a concise summary.                        |
+| **search_tool**    | Looks up a topic on Wikipedia and returns a concise summary. **This tool leaves the device**, and it is the only built-in that does so without asking: the search term the model wrote is sent to `https://<language>.wikipedia.org`, and the tool is read-only, so no confirmation card appears. It is on from the first launch and the seeded pipeline calls it — turn it off with its switch here, or with *Block network from local model*, which withholds it. |
 | **schedule_task**  | Schedules a task to run later in the background (one-off or recurring).             |
 | **delegate_task**  | Hands a hard subtask to a configured cloud LLM and stores the result in memory. Only appears when at least one cloud provider has an API key configured. |
 | **read_file**      | Reads a text file from the agent's private workspace, truncated to a token budget so a long file never overflows the model's context; supports byte `offset`/`limit` paging. |
@@ -2200,7 +2200,7 @@ repeated here.
 |---|---|
 | **Approve tool calls** | Which tool calls stop and wait for your approval. Never lets them all through, destructive ones too, unless you also block those. |
 | **Block destructive tools** | On, a destructive tool call is refused outright rather than offered for approval, and the run sees it as a failed call. |
-| **Block network from local model** | On, no cloud model is reached, not even for memory search. Ollama answers only at localhost or a private IP address, never by name. |
+| **Block network from local model** | On, no cloud model and no Wikipedia lookup runs, memory search included. Ollama answers only at localhost or a private IP, never by name. |
 | **Manage tools / MCP servers** | *(no explanation — opens a screen that explains itself)* |
 | **Approval wait** | How long a run waits for you to approve a tool call before it parks and asks again later. It does not bound the call itself. |
 | **Largest file** | The largest single file the workspace accepts, for both writing one and reading one whole. |
@@ -2526,9 +2526,14 @@ Basic:
     because a name says nothing about where it resolves; type the IP address
     instead. Tailscale (`100.x.x.x`) and IPv6 addresses are refused too. A Cloud
     step that hits the restriction fails and names the refused address.
-  - **Tools are not affected.** An MCP server or an `http_request` domain you
-    added is still reachable — those have their own controls (tool approval,
-    the allowed-domains list), described under
+  - **One tool is affected: `search_tool`.** The built-in Wikipedia lookup is
+    withheld from the model while the restriction is on, and a pipeline step
+    bound to it by name reports the refusal instead of a result. It is the one
+    tool the restriction covers, because it is the one that reaches the network
+    with neither a destination you named nor a confirmation.
+  - **The other tools are not affected.** An MCP server or an `http_request`
+    domain you added is still reachable — those have their own controls (tool
+    approval, the allowed-domains list), described under
     [Tools and MCP](#tools-and-mcp).
 - **Manage tools / MCP servers** *(link)* — enable tools, set per-tool risk
   overrides, add MCP servers. It opens the same surface as the **Tools** tab but

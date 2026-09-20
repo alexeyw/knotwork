@@ -395,9 +395,15 @@ only for gated repositories) is handled exactly like a cloud-provider key:
 - All inference performed through the on-device LiteRT-LM engine is local.
   No prompt, model output, memory chunk, tool input, or tool output leaves
   the device as part of normal operation.
-- The app reaches the network only for explicitly user-initiated actions:
+- The app reaches the network for these actions, and no others. All but the
+  last are user-initiated; the last one is not, and is listed as such:
   - Sending a request to a cloud LLM provider that the user has configured
-    with their own API key.
+    with their own API key — a `CLOUD` node, the structured-output path, the
+    `delegate_task` tool, or a **memory embedding** when the user has selected
+    a network embedding provider (OpenAI or Ollama) instead of the on-device
+    default.
+  - Connecting to an **MCP server** the user added, to list its tools and to
+    invoke them.
   - Browsing or searching the curated `litert-community` organisation on the
     Hugging Face Hub from the **Discover** screen, and downloading a model
     file the user selects there or supplies by URL. Browsing is read-only and
@@ -406,6 +412,13 @@ only for gated repositories) is handled exactly like a cloud-provider key:
     to the **allowed-domains allowlist** (empty by default; see *Outbound
     HTTP and the exfiltration chain* below).
   - Anonymous crash reporting **after** the user has opted in (see below).
+  - The built-in `search_tool` reaching `https://<language>.wikipedia.org` with
+    a model-composed search term. **This one is on by default** — the pipeline
+    seeded on first launch calls it for questions its router judges factual —
+    and being classified `READ_ONLY` it passes no confirmation. Its controls
+    are the tool's own switch on the **Tools** screen and the *Block network
+    from local model* restriction, which withholds it; it has no allowlist and
+    no per-call gate. See [PRIVACY.md § 3.4](PRIVACY.md#34-outbound-requests-from-tools).
 
 ### Prompt injection via tool content (accepted risk)
 
@@ -414,8 +427,7 @@ not attempt to sanitize it. This is a deliberate, accepted trade-off — not an
 oversight — and it works as follows:
 
 - Text returned by any tool — Wikipedia extracts from the built-in
-  `search_tool`, results from user-configured **MCP servers**, responses
-  from **AppFunctions** exposed by other installed apps, the body of an
+  `search_tool`, results from user-configured **MCP servers**, the body of an
   `http_request` response, and **the contents of a file the agent reads from
   its workspace** — is fed back into the context of subsequent pipeline
   nodes. A file the user imported through the Files screen (or that an
@@ -425,6 +437,15 @@ oversight — and it works as follows:
   planning and routing nodes (`DECOMPOSITION`, `INTENT_ROUTER`), so a crafted
   tool result or file can steer which branch a pipeline takes and
   **influence the arguments of later tool calls** in the same run.
+- **AppFunctions exposed by other installed apps are not on that list**, and
+  the omission is deliberate rather than an oversight. Calling another app's
+  AppFunction needs `EXECUTE_APP_FUNCTIONS`, which Android 16 grants to
+  privileged system apps only, so an ordinary install never reaches that path
+  and no untrusted input arrives through it. The reverse direction is open —
+  publishing AppFunctions is available to any app, this one included, so the
+  functions it publishes are an inbound entry surface rather than a source of
+  tool content; they are covered by *Automation triggers and entry surfaces*
+  above.
 - The backstop is the **human-in-the-loop gate**: before any `SENSITIVE` or
   `DESTRUCTIVE` tool executes, the chat surfaces a confirmation card showing
   the **tool name and the exact arguments** the model produced, and the run
