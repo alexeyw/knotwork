@@ -303,8 +303,9 @@ to log into, and nothing is uploaded for the app to work.
   through LiteRT-LM. Data leaves the phone only along the paths listed in
   [PRIVACY.md § 3](PRIVACY.md#3-what-can-leave-your-device): a cloud LLM node
   or memory embedding with your own API key, `delegate_task`, an MCP server you
-  added, a model download, an `http_request` call to a host you allowed — all
-  opt-in — and the built-in `search_tool`, which is **on from the first launch**
+  added, a model download, an `http_request` call to a host you allowed, and (in
+  the `full` build) the crash reports below — all opt-in — plus the built-in
+  `search_tool`, which is **on from the first launch**
   and looks topics up on Wikipedia for the pipeline the app starts you with.
   Its switch is on the Tools screen, and *Block network from local model*
   withholds it too.

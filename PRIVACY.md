@@ -133,8 +133,12 @@ browsing the catalogue is anonymous.
 
 ### 3.4 Outbound requests from tools
 
-Two built-in tools reach the network. They are the only ones that do; every
-other built-in works inside the device.
+Two built-in tools reach a destination of their own, and this section is about
+those two. A third tool also leaves the device — `delegate_task` — but it goes
+to the cloud provider whose key you entered, so it is described in section 3.1
+with the other paths to that provider. Every remaining built-in works inside the
+device: the workspace tools read and write files here, and `schedule_task` only
+asks the device to run something later.
 
 **`search_tool` — a Wikipedia lookup, and the one path in this document that is
 on by default.** When a pipeline step calls it, the app requests

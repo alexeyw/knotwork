@@ -14,9 +14,9 @@ import java.io.File
  * *which* surfaces do. A deny-list is silent about a path nobody thought to name, and the
  * project has now shipped three rounds of the same defect — a privacy text listing the
  * ways data can leave the device while a way was missing from the list. The last round
- * was the built-in `search_tool`, which had been reaching `wikipedia.org` since before
- * the first public release while four documents said the paths were five and every one of
- * them user-configured.
+ * was the built-in `search_tool`, added on 2026-04-06 and therefore reaching
+ * `wikipedia.org` since before the first tagged release (`v0.1.0`, 2026-05-17), while four
+ * documents said the paths were five and every one of them user-configured.
  *
  * **What it actually checks, and what it cannot.** Every production file that imports a
  * network client has to appear in [INVENTORY] with a verdict: either it opens a
@@ -113,10 +113,12 @@ class NetworkEgressInventoryKonsistTest {
     }
 
     @Test
-    fun `the privacy policy describes the tool egress section the built-in search tool belongs to`() {
-        // The regression that produced this suite, pinned by name: `SearchTool` is the
-        // one built-in that reaches the network with neither an allowlist nor a
-        // confirmation, and no public text named it until 0.10.1.
+    fun `the search tool is inventoried as an egress and the privacy policy names its destination`() {
+        // The regression that produced this suite, pinned by name: `SearchTool` is the one
+        // built-in that reaches the network with neither an allowlist nor a confirmation,
+        // and no public text named it until 0.10.1. The second assertion is deliberately
+        // weak — it proves the host appears in the document, not that the paragraph around
+        // it is true — and it is here because the document shipped without the word at all.
         val searchTool = INVENTORY[SEARCH_TOOL_PATH]
 
         assertTrue(
@@ -124,8 +126,24 @@ class NetworkEgressInventoryKonsistTest {
             searchTool is Egress.Opens,
         )
         assertTrue(
-            "PRIVACY.md must name Wikipedia where the tool path is described",
+            "PRIVACY.md must name the host the built-in search tool reaches",
             privacyPolicyText().contains("wikipedia.org"),
+        )
+    }
+
+    @Test
+    fun `every inventory entry that opens nothing gives a reason`() {
+        // The reason is the whole value of a `None` entry: it is what a reviewer checks the
+        // file against. An empty one turns the entry into a silent exemption, which is the
+        // shape of thing this gate exists to refuse.
+        val unexplained = INVENTORY
+            .filterValues { it is Egress.None && it.reason.isBlank() }
+            .keys
+
+        assertTrue(
+            "these inventory entries claim to open no connection without saying why: " +
+                "${unexplained.sorted()}. Write the reason, or reclassify the entry as an egress.",
+            unexplained.isEmpty(),
         )
     }
 
