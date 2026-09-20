@@ -2526,9 +2526,14 @@ Basic:
     because a name says nothing about where it resolves; type the IP address
     instead. Tailscale (`100.x.x.x`) and IPv6 addresses are refused too. A Cloud
     step that hits the restriction fails and names the refused address.
-  - **Tools are not affected.** An MCP server or an `http_request` domain you
-    added is still reachable — those have their own controls (tool approval,
-    the allowed-domains list), described under
+  - **One tool is affected: `search_tool`.** The built-in Wikipedia lookup is
+    withheld from the model while the restriction is on, and a pipeline step
+    bound to it by name reports the refusal instead of a result. It is the one
+    tool the restriction covers, because it is the one that reaches the network
+    with neither a destination you named nor a confirmation.
+  - **The other tools are not affected.** An MCP server or an `http_request`
+    domain you added is still reachable — those have their own controls (tool
+    approval, the allowed-domains list), described under
     [Tools and MCP](#tools-and-mcp).
 - **Manage tools / MCP servers** *(link)* — enable tools, set per-tool risk
   overrides, add MCP servers. It opens the same surface as the **Tools** tab but

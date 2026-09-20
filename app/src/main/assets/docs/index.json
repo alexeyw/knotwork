@@ -18,8 +18,8 @@
         "the-agent-stopped-mid-run": 5120,
         "a-trigger-didnt-fire": 6610,
         "memory-search-isnt-finding-an-obvious-entry": 9098,
-        "your-data-cant-be-unlocked-appears-at-startup": 11637,
-        "see-also": 12817
+        "your-data-cant-be-unlocked-appears-at-startup": 11820,
+        "see-also": 13000
       },
       "links": {
         "faq.md": {"kind": "bundled", "id": "faq", "anchor": null},

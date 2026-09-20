@@ -140,6 +140,13 @@ interface Tool {
   restriction silently: the Ollama chat client and both embedding providers once
   did. Name the cause of a `null` client with
   `CloudLlmClientFactory.unavailabilityOf`, never by re-reading settings.
+- **The gate also owns one tool.** `search_tool` asks
+  `ModelNetworkGate.networkToolRefusal` before it opens its connection, and
+  `ToolRepositoryImpl` withholds it from the catalogue while the restriction is
+  on. MCP and `http_request` stay outside — they are opt-in and each has its own
+  control, which `search_tool` does not. A new built-in tool that reaches the
+  network on its own belongs behind the same call, and behind an entry in
+  `NetworkEgressInventoryKonsistTest`.
 - API keys are stored in **the Keystore-backed encrypted store only**
   (`KeystoreBackedPrefsStore` — AES-GCM under a dedicated Android Keystore
   key; see [architecture.md](architecture.md) §5.2) — never in plain

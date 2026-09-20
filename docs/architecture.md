@@ -846,7 +846,12 @@ The agent talks to AppFunctions in two directions:
   supply Hilt-managed instances of those wrappers, so the callee path
   shares caches and rate limits with the caller path. The first wrapper
   is `SearchAppFunction`, a thin shell over the built-in `search_tool`
-  (READ_ONLY). `schedule_task` and `delegate_task` are intentionally
+  (READ_ONLY). Because it calls `SearchTool` directly, the checks
+  `ToolRepositoryImpl` makes — the per-tool switch among them — do not
+  run on this path; the *Block network from local model* refusal does,
+  because it lives in `SearchTool` itself. Anything a callee must not be
+  able to bypass belongs there rather than in the repository.
+  `schedule_task` and `delegate_task` are intentionally
   **not** exposed: scheduling a `WorkManager` job or burning the user's
   cloud API quota on behalf of a third-party caller would violate the
   user's expectation of agency.
@@ -1038,8 +1043,15 @@ scheme**, because `CleartextPolicy` answers whether traffic may be unencrypted
 and waves every `https://` address through. Host names are refused: a name says
 nothing about where DNS will send the request. A refused embedding provider
 reports itself unavailable, so `EmbeddingProviderResolver` falls back to the
-on-device model. Tools — MCP servers, `http_request` — are outside the
-restriction; they have their own controls.
+on-device model. Most tools are outside the restriction — MCP servers and
+`http_request` have their own controls — with one exception: the built-in
+`search_tool` asks `ModelNetworkGate.networkToolRefusal` before it opens its
+connection, and `ToolRepositoryImpl` withholds it from the agent-facing
+catalogue while the restriction is on. It is inside because it has neither of
+the controls the other two have: no allowlist, no per-call confirmation
+(`READ_ONLY`, and a built-in's risk cannot be overridden), and it is on from
+first launch. The check sits in `SearchTool` rather than the repository because
+`SearchAppFunction` reaches the same method without passing through it.
 
 The factory reports *why* a client is `null` through
 `CloudLlmClientFactory.unavailabilityOf` (a `CloudClientUnavailability`), decided

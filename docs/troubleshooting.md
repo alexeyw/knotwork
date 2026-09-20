@@ -210,7 +210,9 @@ screen's search), work down this list:
   OpenAI as the **Embedding model**, nor Ollama at an address that is not
   `localhost` or a private IP, and falls back to the on-device model — so
   entries embedded by the other provider score ~0 until you turn the
-  restriction off.
+  restriction off. The same restriction also withholds the built-in
+  `search_tool`, so a step that looked a fact up on Wikipedia reports a refusal
+  naming the setting instead of returning an extract.
 - **It was never extracted.** Auto-extract only keeps durable facts
   (preferences, events, relationships) and skips small talk and
   near-duplicates. If a fact didn't make the cut, add it by hand with
