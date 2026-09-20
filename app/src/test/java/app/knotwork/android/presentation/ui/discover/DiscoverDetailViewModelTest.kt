@@ -16,6 +16,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -204,6 +205,38 @@ class DiscoverDetailViewModelTest {
         vm.onCancelInstall("gemma.litertlm")
 
         assertEquals(null, vm.uiState.value.progress["gemma.litertlm"])
+    }
+
+    @Test
+    fun `given a cancelled install when the stream then reports an error then no failure is announced`() = runTest {
+        // Cancelling the work can make the download stream terminate as an error.
+        // The user pressed Cancel, so a "install failed" snackbar would be a lie —
+        // the collecting coroutine has to be cancelled too, and before that error
+        // can be delivered. This pins the ordering inside `onCancelInstall`.
+        val stream = MutableSharedFlow<DownloadState>(extraBufferCapacity = 4)
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        every { installModel(any()) } returns stream
+        val vm = createBound()
+        advanceUntilIdle()
+        vm.onInstallClick("gemma.litertlm")
+        vm.onLicenseConfirm("gemma.litertlm")
+        advanceUntilIdle()
+        stream.emit(DownloadState.Downloading(10))
+        advanceUntilIdle()
+
+        // Collect BEFORE the cancel: `installEvents` has no replay, so a collector
+        // started afterwards cannot observe the emission it is meant to rule out —
+        // which is what an earlier draft of this test did, and it passed against a
+        // deliberately broken ordering.
+        val announced = async { vm.installEvents.first() }
+        runCurrent()
+
+        vm.onCancelInstall("gemma.litertlm")
+        stream.emit(DownloadState.Error(DownloadError("cancelled", code = null)))
+        advanceUntilIdle()
+
+        assertTrue("a cancelled install must announce nothing", announced.isActive)
+        announced.cancel()
     }
 
     @Test

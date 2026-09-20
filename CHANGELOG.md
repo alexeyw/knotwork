@@ -25,43 +25,6 @@ details.
 
 ### Fixed
 
-- **Regenerating a documented file and then verifying it, in one command, failed
-  the build.** The contribution workflow asks for exactly that two-step — run a
-  generator, commit the result, run `./gradlew check` — and Gradle refuses a build
-  whose task graph contains a task reading another task's output with no ordering
-  between them. Five of the six generators could not be combined with `check` at
-  all, and only running them as two separate commands hid it. Developer-facing
-  only: nothing about the app changes.
-- **The documentation said five paths could send data off the device. There
-  were six.** The missing one is the built-in `search_tool`: it looks topics up
-  on Wikipedia, the search term is written by the model from what it is working
-  on, it is classified read-only so no confirmation appears, and **it is on from
-  the first launch** — the pipeline the app seeds for a new install calls it for
-  questions its router judges factual. Four texts stated an exhaustive list
-  without it (the privacy policy twice, the FAQ, the security document, the
-  README) and the store listing said data leaves only along a path you built
-  yourself. All of them now name it, say it is on by default, and say how to
-  turn it off. Nothing about what the tool sends has changed; what changed is
-  that it was never written down. A build-time rule now refuses any file that
-  can open a network connection unless it is listed with the section of the
-  privacy policy describing it.
-- **The README still described calling other apps' AppFunctions as an Android 16
-  feature.** It is not available to an ordinary install at any version, as the
-  FAQ and the store listing already said since the previous release; the
-  security document listed those calls as a source of untrusted input for the
-  same reason. Both now match.
-- **Cancelling a model install did not stop the download.** On the Discover
-  screen, **Cancel** stopped the progress bar and nothing else: the transfer runs
-  in the background so it survives leaving the screen, and it carried on to the
-  end — up to several gigabytes on whatever connection you were on — then
-  registered the model as if you had asked for it. It now stops the download
-  itself. Bytes already fetched stay on disk, so installing the same file again
-  resumes rather than starting over. The Models screen never had this defect.
-- **The roadmap listed two things that had already shipped** — file-oriented
-  tools as a candidate for the tool catalogue, and an instrumented test suite as
-  a gap in a "JVM-only" CI gate. Both moved to what the project does today, and
-  the remaining verification gap is named for what it actually is: real
-  hardware, not an emulator.
 - **"Block network from local model" let model traffic leave your network.** The
   setting promised that only a model on the device, or Ollama on your own
   network, would answer. Three paths ignored it:
@@ -100,6 +63,13 @@ details.
   connection, and an address with a leading zero such as `010.0.0.1` could be
   read as octal (`8.0.0.1`) when connecting. Both forms are now treated as
   public addresses.
+- **Cancelling a model install did not stop the download.** On the Discover
+  screen, **Cancel** stopped the progress bar and nothing else: the transfer runs
+  in the background so it survives leaving the screen, and it carried on to the
+  end — up to several gigabytes on whatever connection you were on — then
+  registered the model as if you had asked for it. It now stops the download
+  itself. Bytes already fetched stay on disk, so installing the same file again
+  resumes rather than starting over. The Models screen never had this defect.
 - **The documentation had the AppFunctions restriction backwards.** The FAQ and
   the store listing said other apps cannot publish AppFunctions. Android does
   let any app publish them — what an app installed from a store cannot do is
@@ -109,7 +79,36 @@ details.
   The permission's protection level was quoted wrongly too, in the developer
   documentation and in code comments — it is `internal|privileged`, neither
   signature-level nor appop-protected.
-
+- **The documentation said five paths could send data off the device. There
+  were six.** The missing one is the built-in `search_tool`: it looks topics up
+  on Wikipedia, the search term is written by the model from what it is working
+  on, it is classified read-only so no confirmation appears, and **it is on from
+  the first launch** — the pipeline the app seeds for a new install calls it for
+  questions its router judges factual. Four texts stated an exhaustive list
+  without it (the privacy policy twice, the FAQ, the security document, the
+  README) and the store listing said data leaves only along a path you built
+  yourself. All of them now name it, say it is on by default, and say how to
+  turn it off. Nothing about what the tool sends has changed; what changed is
+  that it was never written down. A build-time rule now refuses any file that
+  can open a network connection unless it is listed with the section of the
+  privacy policy describing it.
+- **The README still described calling other apps' AppFunctions as an Android 16
+  feature.** It is not available to an ordinary install at any version, as the
+  FAQ and the store listing already said since the previous release; the
+  security document listed those calls as a source of untrusted input for the
+  same reason. Both now match.
+- **The roadmap listed two things that had already shipped** — file-oriented
+  tools as a candidate for the tool catalogue, and an instrumented test suite as
+  a gap in a "JVM-only" CI gate. Both moved to what the project does today, and
+  the remaining verification gap is named for what it actually is: real
+  hardware, not an emulator.
+- **Regenerating a documented file and then verifying it, in one command, failed
+  the build.** The contribution workflow asks for exactly that two-step — run a
+  generator, commit the result, run `./gradlew check` — and Gradle refuses a build
+  whose task graph contains a task reading another task's output with no ordering
+  between them. Five of the six generators could not be combined with `check` at
+  all, and only running them as two separate commands hid it. Developer-facing
+  only: nothing about the app changes.
 ## [0.10.0] - 2026-09-14
 
 ### Added
