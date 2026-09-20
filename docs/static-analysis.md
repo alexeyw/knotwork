@@ -389,6 +389,7 @@ flag them with spurious, environment-dependent violations.
 | `UsageTelemetryNoNetworkKonsistTest` | No file on the local usage-telemetry path imports a network client. The statistics stay on-device. |
 | `PromptPackNoNetworkKonsistTest`   | No file on the prompt-pack path imports a network client — a pack is imported from a file the user picked, never fetched (see below). |
 | `JournalExportNoNetworkKonsistTest` | No file on the journal-export path imports a network client — the trigger and external-request journals leave the device only through the share sheet or a file the user picked (see below). |
+| `NetworkEgressInventoryKonsistTest` | Every file that imports a network client is named in an inventory, with either the `PRIVACY.md` section describing what leaves the device along it or the reason it opens nothing (see below). |
 | `TabRootEntryGuardTest`            | A bottom-nav tab root is entered as a tab switch, never pushed onto another subtree's back stack. |
 | `InstrumentedTestExclusionGuardTest` | The roster of device-only instrumented tests, and the annotation the emulator workflow excludes by, stay in step. |
 
@@ -427,6 +428,37 @@ them carries the export token in its own name. The filter now also matches on
 *imports* containing that token, and a third test pins the token to the real
 declarations' names — so a rename fails loudly instead of quietly emptying the
 guarded set.
+
+**The allow-list rule, and the question the three deny-lists cannot answer.**
+The three rules above each say "this surface must never reach the network".
+Between them they say nothing about *which* surfaces do — and that is the
+question every privacy text in the repository answers in prose. The project
+shipped the same defect three times on that gap: a document listing the ways
+data can leave the device while one of the ways was missing from the list. The
+third round was the built-in `search_tool`, reaching `wikipedia.org` since
+before the first public release while four documents said the paths were five
+and each one user-configured.
+
+`NetworkEgressInventoryKonsistTest` inverts the shape. Any file in `app/src/main`
+whose **imports** include a network client (the same five prefixes the deny-lists
+use) must appear in a hand-written inventory carrying a verdict: `Opens`, naming
+the `PRIVACY.md` subsection that describes what goes out along it, or `None`,
+with the reason it starts no request — a URL builder, a model descriptor, an
+interceptor on somebody else's client. A named section has to exist, and an entry
+naming no such file fails too, so the inventory cannot rot in either direction.
+Selection is by import rather than by name, which is what keeps it clear of the
+trap the three deny-lists share.
+
+What it does **not** do is check that the named section describes the path
+*truthfully*; no assertion can, because the truth of that prose is a claim about
+code somewhere else. It removes the failure mode that actually occurred — a path
+reaching the network with no entry anywhere, which nobody had to notice. It was
+observed red twice before it was believed: once with `SearchTool.kt` dropped from
+the inventory (the message names the file), and once against the privacy policy
+as it shipped in `0.10.0`, which the rule refuses. The privacy policy is already
+a declared `Test` input of the module, so an edit to it re-runs the rule instead
+of answering from cache — checked by running twice for `UP-TO-DATE`, editing, and
+watching the task execute.
 
 `android.net` is deliberately not on the forbidden list of the prompt-pack or
 journal-export rules. The file picker legitimately hands both paths an
@@ -876,6 +908,94 @@ file (ratchet, `app-main.undescribed: 1, recorded 0` and
 `app-main.no-kdoc-seed: 28, recorded 27`). The pure logic is unit-tested in
 `buildSrc` — `FileMapGeneratorTest`, `KdocSentenceExtractorTest`,
 `FileMapBaselineTest` (`./gradlew -p buildSrc test`).
+
+---
+
+## Generators and their consumers: the ordering rule
+
+Six tasks in this build **rewrite a committed file** — `generateFileMap`,
+`generateBrowserEditorConstants`, `generateSettingsHelpDocs`,
+`generateExternalAutomationDocs`, `generateCookbookDocs` and
+`generateDocumentationLinks` — and nine gates plus every unit-test task **read**
+those same files. Gradle refuses a build whose task graph contains a task consuming another
+task's declared output with no ordering between them, and the refusal is an
+**error raised before either task runs**, not a warning:
+
+```
+Task ':app:verifyBundledDocs' uses this output of task
+':app:generateSettingsHelpDocs' without declaring an explicit or implicit
+dependency.
+```
+
+This is invisible to `check`. Every gate passes run on its own; the failure needs
+a generator and a consumer in **one invocation** — which is exactly the two-step
+the contribution workflow prescribes (regenerate the file, then verify). Measured
+on `1f0515cb`, **five of the six** generators could not be combined with `check`
+at all: 24 task pairs enumerated by probing them one by one, plus — for the file
+maps alone — every compile and analysis task of every variant. The one that could
+was `generateDocumentationLinks`, the only one already fixed.
+
+### Two shapes, two answers
+
+Which fix applies depends on **where** the rewritten file lives.
+
+**A committed file under `docs/` (or the repository root) → declare the
+ordering.** The file is outside every source set, so its readers are a set someone
+can actually write down — the documentation gates, the bundled-docs pair, and the
+unit-test tasks, which declare `docs/cookbook.md`, `docs/recipes/` and
+`pipeline-editor.html` as inputs of their own. `mustRunAfter` is then enough: it
+states order without dependency, so neither side drags the other into a build that
+did not ask for it. `app/build.gradle.kts`
+declares this as the matrix it is — a list of generators, a list of consumers, and
+the product of the two, with self-pairs filtered out because a task that reads
+what it writes needs no ordering against itself and Gradle rejects the rule.
+
+**A committed file inside a source set → do not declare it as an output at all.**
+`app/src/main/java/…/FILE_MAP.md` and `…/domain/constants/DocumentationLinks.kt`
+live where Kotlin compilation, KSP, detekt, ktlint and lint all read. Declaring
+either as an `@OutputFile` makes it a build output in that directory, and *every*
+one of those tasks then collides with the generator. Ordering does not scale
+there — it would mean naming every compile and analysis task of every variant.
+Both generators are therefore `@UntrackedTask` with their file `@Internal`:
+`GenerateDocumentationLinksTask` had been for some time, and
+`GenerateFileMapTask` was brought in line after `./gradlew :app:generateFileMap
+check` — the command the *File Map Rule* prescribes — was observed failing on
+`kspFossDebugKotlin`.
+
+The two annotations do different jobs, and the difference was measured rather than
+assumed. `@Internal` on the file is what removes the collision: with
+`@UntrackedTask` already in place and the maps still declared `@OutputFiles`, the
+failure came back unchanged. `@UntrackedTask` is what keeps the task honest
+afterwards — once its real product is not a declared output, Gradle would judge it
+up to date from its inputs alone and skip a regeneration that was needed. The cost
+is that neither task can ever be up to date; both are invoked by a human, and
+`verifyFileMap` — the one in `check` — is unaffected and still reports
+`UP-TO-DATE` on a second run.
+
+The ordering rules stay declared anyway: untracking removes the validation error,
+not the reason a verifier must not read a map that is about to be rewritten.
+
+### Why pair-by-pair kept failing
+
+Each instance was previously met where it was found. That approach has now lost
+twice in a way worth recording:
+
+- The rule `verifySettingsHelpDocs.mustRunAfter(generateSettingsHelpDocs)` was
+  added with a comment naming `./gradlew :app:generateSettingsHelpDocs check` as
+  the reason it exists. That command **still failed** afterwards — on
+  `verifyBundledDocs`, a different consumer of the same file. Fixing the sibling
+  pair looked like fixing the command.
+- `verifyDocsHygiene` was later moved onto the shared documentation file set and
+  never added to the ordering list three lines below it.
+
+A list that has to be extended by hand every time a gate is added will be
+incomplete again. What keeps it honest is not the list but the check on it: a
+**single CI step** names every generator and every consumer in one invocation and
+lets Gradle's own validator answer. It is deliberately its own step — what is
+being tested is the composition of one task graph, so folding it into another
+command tests something else — and it costs seconds, because it runs after
+`check` has already done the work. A generator added without an ordering rule
+fails there.
 
 ---
 
@@ -1411,11 +1531,10 @@ build such a label from placeholders, which the rule does not match. If a
 fixture needs one, write "step" or use the placeholder form rather than
 weakening the rule.
 
-The task is typed and cacheable, so a no-op `check` skips it. It reads files
-that five generators rewrite (the file maps, the browser editor, the settings
-reference, the automation reference and the cookbook), and declares
-`mustRunAfter` on each of them — the ordering the combined
-`generate… check` invocation needs.
+The task is typed and cacheable, so a no-op `check` skips it. It reads files that
+every generator rewrites, so it sits in the consumer list of
+*Generators and their consumers: the ordering rule* above — which is where the
+`mustRunAfter` matrix and the reason for it are described.
 
 ### Observed failing
 

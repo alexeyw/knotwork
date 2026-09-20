@@ -16,7 +16,7 @@ It is deliberately not a mass-market "ask a question, get an answer" assistant -
 
 PRIVACY
 
-There is no account, no sign-in and no server of mine. Inference runs on the phone, so a normal conversation never leaves it. Data goes out only along a path you built yourself: a cloud node with your own key, or an MCP server you added - both visible in the pipeline. Usage statistics stay on the device and are never transmitted; a build-time check fails the build if any network dependency reaches that code. The database - chats, memory, run traces - is SQLCipher-encrypted, and API keys are sealed under an Android Keystore key. Crash reporting is opt-in, off by default, and absent entirely from the FOSS build.
+There is no account, no sign-in and no server of mine. Inference runs on the phone, so a normal conversation never leaves it. Data goes out only along paths the privacy policy lists, each off until you switch it on - except the built-in Wikipedia lookup, on by default. Usage statistics stay on the device and are never transmitted; a build-time check fails the build if any network dependency reaches that code. The database - chats, memory, run traces - is SQLCipher-encrypted, and API keys are sealed under an Android Keystore key. Crash reporting is opt-in, off by default, and absent entirely from the FOSS build.
 
 KNOWN LIMITATIONS
 

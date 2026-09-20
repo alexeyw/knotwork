@@ -62,6 +62,7 @@ class ToolRepositoryImplTest {
         )
         // http_request stays hidden from getAvailableTools unless a test opts a domain in.
         every { settingsRepository.allowedHttpDomains } returns flowOf(emptyList())
+        every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(false)
         coEvery { localAppFunctionManager.getAvailableFunctions() } returns
             listOf(AgentTool("get_system_time", "desc", "{}"))
         // mockk picks the most recent matching stub: default everything to "not discovered"
@@ -412,6 +413,52 @@ class ToolRepositoryImplTest {
         val result = repository.getAvailableTools()
 
         assertTrue(result.any { it.name == "http_request" })
+    }
+
+    @Test
+    fun `given the network restriction is on when getAvailableTools then search_tool is withheld`() = runTest {
+        // "Block network from local model" covers the built-in search tool: it is the one
+        // network tool with neither an allowlist nor a confirmation gate, so the model is
+        // not offered it at all while the restriction is on.
+        every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(true)
+        coEvery { mcpClient.getTools() } returns emptyList()
+
+        val result = repository.getAvailableTools()
+
+        assertFalse(result.any { it.name == "search_tool" })
+    }
+
+    @Test
+    fun `given the network restriction is off when getAvailableTools then search_tool is published`() = runTest {
+        coEvery { mcpClient.getTools() } returns emptyList()
+
+        val result = repository.getAvailableTools()
+
+        assertTrue(result.any { it.name == "search_tool" })
+    }
+
+    @Test
+    fun `given the network restriction is on when getAvailableTools then other tools are untouched`() = runTest {
+        // The restriction withholds the tools that reach the network on their own, not the
+        // catalogue: a workspace tool has nothing to do with it, and an MCP tool has its
+        // own control (the restriction deliberately does not cover MCP servers).
+        every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(true)
+        coEvery { mcpClient.getTools() } returns listOf(AgentTool("mcp_tool", "desc", "{}"))
+
+        val result = repository.getAvailableTools()
+
+        assertTrue(result.any { it.name == "read_file" })
+        assertTrue(result.any { it.name == "mcp_tool" })
+    }
+
+    @Test
+    fun `given the network restriction is on when getAllLocalTools then search_tool is still present`() = runTest {
+        // Same split as http_request: the full catalogue keeps the tool so executeTool and
+        // getRisk can still route to it; only the agent-facing view hides it.
+        every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(true)
+        coEvery { mcpClient.getTools() } returns emptyList()
+
+        assertTrue(repository.getAllLocalTools().any { it.name == "search_tool" })
     }
 
     @Test

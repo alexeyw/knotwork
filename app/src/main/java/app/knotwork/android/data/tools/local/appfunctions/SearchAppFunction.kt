@@ -33,6 +33,13 @@ import javax.inject.Singleton
  * state). External callers therefore do not need a Human-in-the-Loop confirmation —
  * matching the in-agent risk for `search_tool` set in `ToolRepositoryImpl`.
  *
+ * **What does still apply to an external caller.** This wrapper reaches [SearchTool]
+ * directly and never passes through `ToolRepositoryImpl`, so the checks that repository
+ * performs — the Tools screen's per-tool switch among them — do not run on this path.
+ * What does run is the check [SearchTool] makes itself: while *Block network from local
+ * model* is on, the search is refused for every caller. Anything a future caller must not
+ * be able to bypass belongs in [SearchTool], not in the repository.
+ *
  * **Hilt integration:** the AppFunctions framework calls a no-arg constructor by default,
  * but this wrapper depends on a Hilt-managed [SearchTool]. The agent's [app.knotwork.android.App]
  * therefore implements [androidx.appfunctions.service.AppFunctionConfiguration.Provider]

@@ -1,5 +1,6 @@
 package app.knotwork.android.data.tools.local
 
+import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentTool
 import kotlinx.coroutines.CancellationException
@@ -15,9 +16,25 @@ import javax.inject.Singleton
 /**
  * A local tool that performs a simple web search using the Wikipedia API.
  * This is used for queries that require fetching external data.
+ *
+ * **Why the network check lives here and not in the caller.** Two independent callers
+ * reach [executeSearch]: [app.knotwork.android.data.tools.local.executors.SearchToolExecutor]
+ * for the agent's own runs, and
+ * [app.knotwork.android.data.tools.local.appfunctions.SearchAppFunction] for a caller on
+ * the device going through the AppFunctions runtime. The second one bypasses
+ * `ToolRepositoryImpl` entirely, so a check placed in the repository would hold for one
+ * path and not the other. Placing it on the line that opens the connection is the only
+ * arrangement where every caller is covered by construction.
+ *
+ * @property llmEngine On-device engine used to summarise an over-long article extract.
+ * @property networkGate Decides whether this tool may reach the network right now — the
+ *   "Block network from local model" restriction covers it (see [ModelNetworkGate]).
  */
 @Singleton
-class SearchTool @Inject constructor(private val llmEngine: LlmInferenceEngine) {
+class SearchTool @Inject constructor(
+    private val llmEngine: LlmInferenceEngine,
+    private val networkGate: ModelNetworkGate,
+) {
 
     companion object {
         const val TOOL_NAME = "search_tool"
@@ -81,9 +98,11 @@ class SearchTool @Inject constructor(private val llmEngine: LlmInferenceEngine) 
      *
      * @param query The search query.
      * @param lang The 2-letter language code.
-     * @return A summary of the search results as a string.
+     * @return A summary of the search results, or the refusal text when the
+     *   "Block network from local model" restriction is on.
      */
     suspend fun executeSearch(query: String, lang: String): String = withContext(Dispatchers.IO) {
+        networkGate.networkToolRefusal(TOOL_NAME)?.let { return@withContext it }
         try {
             val encodedQuery = URLEncoder.encode(query, Charsets.UTF_8.name())
 
