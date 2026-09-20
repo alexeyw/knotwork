@@ -100,12 +100,13 @@ question the first outside reports answer better than guessing does.
 
 Writing the reference turned up a class of defect worth naming here, and
 then closed it: twenty-five configuration fields were shown, accepted and
-stored while nothing read them during a run. Nine were wired up, twelve
-were removed because the engine has no matching concept, and four are kept
-only so an older pipeline file round-trips. The cookbook's field table is
-generated from the code that defines a node, so this is a statement the
-build keeps true rather than one anybody maintains: a control that stops
-reaching the run grows its row back.
+stored while nothing read them during a run. Nine were wired up and twelve
+were removed, because the engine has no matching concept for them; a
+further eight were reclassified, having already lost their controls and
+being kept only so an older pipeline file round-trips. The cookbook's field
+table is generated from the code that defines a node, so this is a
+statement the build keeps true rather than one anybody maintains: a control
+that stops reaching the run grows its row back.
 
 ### Whatever the first users run into
 
