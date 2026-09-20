@@ -389,6 +389,7 @@ flag them with spurious, environment-dependent violations.
 | `UsageTelemetryNoNetworkKonsistTest` | No file on the local usage-telemetry path imports a network client. The statistics stay on-device. |
 | `PromptPackNoNetworkKonsistTest`   | No file on the prompt-pack path imports a network client — a pack is imported from a file the user picked, never fetched (see below). |
 | `JournalExportNoNetworkKonsistTest` | No file on the journal-export path imports a network client — the trigger and external-request journals leave the device only through the share sheet or a file the user picked (see below). |
+| `NetworkEgressInventoryKonsistTest` | Every file that imports a network client is named in an inventory, with either the `PRIVACY.md` section describing what leaves the device along it or the reason it opens nothing (see below). |
 | `TabRootEntryGuardTest`            | A bottom-nav tab root is entered as a tab switch, never pushed onto another subtree's back stack. |
 | `InstrumentedTestExclusionGuardTest` | The roster of device-only instrumented tests, and the annotation the emulator workflow excludes by, stay in step. |
 
@@ -427,6 +428,37 @@ them carries the export token in its own name. The filter now also matches on
 *imports* containing that token, and a third test pins the token to the real
 declarations' names — so a rename fails loudly instead of quietly emptying the
 guarded set.
+
+**The allow-list rule, and the question the three deny-lists cannot answer.**
+The three rules above each say "this surface must never reach the network".
+Between them they say nothing about *which* surfaces do — and that is the
+question every privacy text in the repository answers in prose. The project
+shipped the same defect three times on that gap: a document listing the ways
+data can leave the device while one of the ways was missing from the list. The
+third round was the built-in `search_tool`, reaching `wikipedia.org` since
+before the first public release while four documents said the paths were five
+and each one user-configured.
+
+`NetworkEgressInventoryKonsistTest` inverts the shape. Any file in `app/src/main`
+whose **imports** include a network client (the same five prefixes the deny-lists
+use) must appear in a hand-written inventory carrying a verdict: `Opens`, naming
+the `PRIVACY.md` subsection that describes what goes out along it, or `None`,
+with the reason it starts no request — a URL builder, a model descriptor, an
+interceptor on somebody else's client. A named section has to exist, and an entry
+naming no such file fails too, so the inventory cannot rot in either direction.
+Selection is by import rather than by name, which is what keeps it clear of the
+trap the three deny-lists share.
+
+What it does **not** do is check that the named section describes the path
+*truthfully*; no assertion can, because the truth of that prose is a claim about
+code somewhere else. It removes the failure mode that actually occurred — a path
+reaching the network with no entry anywhere, which nobody had to notice. It was
+observed red twice before it was believed: once with `SearchTool.kt` dropped from
+the inventory (the message names the file), and once against the privacy policy
+as it shipped in `0.10.0`, which the rule refuses. The privacy policy is already
+a declared `Test` input of the module, so an edit to it re-runs the rule instead
+of answering from cache — checked by running twice for `UP-TO-DATE`, editing, and
+watching the task execute.
 
 `android.net` is deliberately not on the forbidden list of the prompt-pack or
 journal-export rules. The file picker legitimately hands both paths an

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,6 +37,32 @@ class ModelNetworkGateTest {
         localOnlyMode.value = true
 
         assertEquals(CloudClientUnavailability.BlockedByLocalOnlyMode, gate.cloudRefusal())
+    }
+
+    @Test
+    fun `given local-only mode off when networkToolRefusal then the tool may run`() = runTest {
+        assertNull(gate.networkToolRefusal("search_tool"))
+    }
+
+    @Test
+    fun `given local-only mode on when networkToolRefusal then the tool is refused`() = runTest {
+        localOnlyMode.value = true
+
+        val refusal = gate.networkToolRefusal("search_tool")
+
+        assertNotNull(refusal)
+        // The model reads this text, so it has to name the tool and the setting that
+        // withheld it — a bare "disabled" sends the model looking at the Tools screen,
+        // where the tool's own switch is still on.
+        assertTrue(refusal!!.contains("search_tool"))
+        assertTrue(refusal.contains("Block network from local model"))
+    }
+
+    @Test
+    fun `given the restriction flag has not emitted when networkToolRefusal then the tool may run`() = runTest {
+        every { settingsRepository.blockNetworkFromLocalModel } returns emptyFlow()
+
+        assertNull(ModelNetworkGate(settingsRepository).networkToolRefusal("search_tool"))
     }
 
     @Test

@@ -13,6 +13,16 @@ details.
 
 ## [Unreleased]
 
+### Changed
+
+- **"Block network from local model" now covers the built-in Wikipedia search.**
+  It used to restrict model traffic only, so with the restriction on the
+  `search_tool` still sent a search term to `wikipedia.org`. It is now withheld
+  from the model while the restriction is on, and refuses a pipeline step that
+  names it directly. MCP servers and `http_request` are still outside the
+  restriction — each is something you set up and each has its own control —
+  and the setting's description says so.
+
 ### Fixed
 
 - **Regenerating a documented file and then verifying it, in one command, failed
@@ -20,9 +30,31 @@ details.
   generator, commit the result, run `./gradlew check` — and Gradle refuses a build
   whose task graph contains a task reading another task's output with no ordering
   between them. Five of the six generators could not be combined with `check` at
-  all, and only running them as two separate commands hid it. Developer-facing only: nothing about the app changes.
-
-### Fixed
+  all, and only running them as two separate commands hid it. Developer-facing
+  only: nothing about the app changes.
+- **The documentation said five paths could send data off the device. There
+  were six.** The missing one is the built-in `search_tool`: it looks topics up
+  on Wikipedia, the search term is written by the model from what it is working
+  on, it is classified read-only so no confirmation appears, and **it is on from
+  the first launch** — the pipeline the app seeds for a new install calls it for
+  questions its router judges factual. Four texts stated an exhaustive list
+  without it (the privacy policy twice, the FAQ, the security document, the
+  README) and the store listing said data leaves only along a path you built
+  yourself. All of them now name it, say it is on by default, and say how to
+  turn it off. Nothing about what the tool sends has changed; what changed is
+  that it was never written down. A build-time rule now refuses any file that
+  can open a network connection unless it is listed with the section of the
+  privacy policy describing it.
+- **The README still described calling other apps' AppFunctions as an Android 16
+  feature.** It is not available to an ordinary install at any version, as the
+  FAQ and the store listing already said since the previous release; the
+  security document listed those calls as a source of untrusted input for the
+  same reason. Both now match.
+- **The roadmap listed two things that had already shipped** — file-oriented
+  tools as a candidate for the tool catalogue, and an instrumented test suite as
+  a gap in a "JVM-only" CI gate. Both moved to what the project does today, and
+  the remaining verification gap is named for what it actually is: real
+  hardware, not an emulator.
 
 - **"Block network from local model" let model traffic leave your network.** The
   setting promised that only a model on the device, or Ollama on your own

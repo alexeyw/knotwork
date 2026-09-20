@@ -47,6 +47,13 @@ end-to-end:
 - Releases built, signed and published by CI from a tag, with the signing
   identity verified before and after the build (see
   [release.md](release.md)).
+- File-oriented tools in the built-in catalogue: the agent reads, lists,
+  finds, writes, edits, appends to and deletes documents in a private
+  workspace, with the mutating ones behind the confirmation gate.
+- An instrumented suite that actually runs: the emulator matrix covers both
+  distribution flavours at the current API level and the whole suite again at
+  the `minSdk` floor, on every pull request into `main` and nightly (see
+  [testing.md](testing.md#the-instrumented-gate)).
 
 See [README.md](../README.md) for the full feature list and
 [architecture.md](architecture.md) for how the pieces fit together.
@@ -112,23 +119,22 @@ X and got stuck at Y" are both useful; see
 Once background-run reliability is locked in, the biggest lever on how
 useful the agent feels is the breadth of its built-in tool catalogue. A
 dedicated workstream will grow the set of local tools the agent can call
-out of the box — including evaluating file-oriented tools (reading,
-writing, and organising on-device documents) and further system
-integrations. The design space (which tools, which permission and HITL
+out of the box. The file-oriented tools listed here as a candidate have
+since shipped; what remains is further system integration. The design space (which tools, which permission and HITL
 surfaces, which backing APIs) is intentionally **not** fixed yet;
 proposals and use-case reports in the issue tracker are welcome input
 while this is being scoped.
 
-### On-device verification beyond the JVM gate
+### On-device verification beyond the emulator
 
-The CI gate is deliberately JVM-only today; everything that needs real
-Android system services, native inference, or hardware is verified by a
-manual smoke test (see
-[testing.md](testing.md#what-the-automated-gate-does-not-cover)).
-Narrowing that gap — running the instrumented test suite (Room
-migrations, Compose UI flows, the AppFunctions end-to-end round-trip) on
-an emulator or device farm as a scheduled or pre-release job — would turn
-"green CI" into a much stronger signal.
+`./gradlew check` is JVM-only by design, and the instrumented suite now runs
+beside it on an emulator matrix (above). What that still does not reach is
+real hardware: native inference on an actual NPU or GPU, a background run
+under a real vendor's battery management, and the AppFunctions runtime —
+whose only end-to-end test is device-only and therefore runs on no emulator
+leg at all. Those are verified by a manual smoke test today (see
+[testing.md](testing.md#what-the-automated-gate-does-not-cover)). Closing
+the remaining gap means a device farm, not another emulator.
 
 ### Pipeline editor refinement
 
