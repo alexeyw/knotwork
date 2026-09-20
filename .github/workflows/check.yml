@@ -123,6 +123,56 @@ jobs:
           :app:compileFossDebugAndroidTestKotlin
           --stacktrace --no-daemon
 
+      # Generators and consumers of committed files, in ONE invocation — which is
+      # the only place the defect this guards against is visible.
+      #
+      # Gradle rejects a build whose graph contains a task reading another task's
+      # declared output with no ordering between them, and the rejection is an
+      # error before either task runs. That makes it invisible to `check`: every
+      # gate is green run on its own, and the pairing only fails when someone
+      # regenerates a committed file and then verifies it — the exact two-step
+      # the contribution workflow prescribes. Measured on `1f0515cb`, FIVE of the
+      # six generators could not be combined with `check` at all.
+      #
+      # Naming them all together hands the question to Gradle's own validator
+      # instead of reimplementing it, and it costs seconds: the tasks are
+      # incremental and the work is already done. A generator added later without
+      # an ordering rule fails HERE.
+      #
+      # Its own invocation for the same reason as the step above: what is being
+      # tested is the composition of one task graph, so it cannot be folded into
+      # another command without testing something else.
+      #
+      # AFTER `check`, and that order is load-bearing rather than incidental: this
+      # step RUNS the generators, so a committed file that had drifted is rewritten
+      # here. Run first, it would hand the drift gates a freshly corrected tree and
+      # they would pass on a repository that is wrong. Run second, `check` has
+      # already had the committed files as they were.
+      #
+      # The rewritten files stay in this job's workspace and reach nothing: the
+      # release workflow reuses this one as a separate job with its own checkout,
+      # so no signed artefact is ever built from a tree these generators touched.
+      - name: Generators and their consumers compose in one task graph
+        if: ${{ !cancelled() }}
+        run: >
+          ./gradlew
+          :app:generateFileMap
+          :app:generateBrowserEditorConstants
+          :app:generateSettingsHelpDocs
+          :app:generateExternalAutomationDocs
+          :app:generateCookbookDocs
+          :app:generateDocumentationLinks
+          :app:syncBundledDocs
+          :app:verifyBundledDocs
+          :app:verifyFileMap
+          :app:verifyDocLinks
+          :app:verifyDocsHygiene
+          :app:verifyDocumentationLinks
+          :app:reportExternalDocLinks
+          :app:verifyMermaidDiagrams
+          :app:verifyForbiddenVocabulary
+          --stacktrace --no-daemon
+
       # Renders this run's informational lint findings into the job summary, so
       # the answer to "what is out of date?" is readable without downloading the
       # lint-report artifact below. Selects by SEVERITY rather than by a list of

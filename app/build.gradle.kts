@@ -2245,29 +2245,72 @@ val verifyDocsHygiene by tasks.registering(VerifyDocsHygieneTask::class) {
 }
 tasks.named("check") { dependsOn(verifyDocsHygiene) }
 
-// The `FILE_MAP.md` files are Markdown, so they are inputs to the three tasks
-// above and outputs of `generateFileMap`. Without an ordering, asking for both
-// in one invocation fails Gradle's implicit-dependency validation outright —
-// and `./gradlew :app:generateFileMap check` is exactly what the contribution
-// workflow asks for after a Kotlin file is added or moved. Ordering only:
-// neither task should drag the other into a build that did not ask for it.
-listOf(verifyDocLinks, reportExternalDocLinks, verifyMermaidDiagrams).forEach { task ->
-    task { mustRunAfter(generateFileMap) }
+// Ordering between every task that REWRITES a committed file and every task that
+// READS one.
+//
+// Gradle's implicit-dependency validation is an error, not a warning: name a
+// generator and a consumer of its output in one invocation without an ordering
+// and the build fails before either runs. That is precisely the shape the
+// contribution workflow prescribes — regenerate, then `check` — so the pairing is
+// not exotic, it is the documented way to use these tasks.
+//
+// This used to be declared pair by pair, as each failure was met. That approach
+// kept losing: the sibling rule `verifySettingsHelpDocs.mustRunAfter(
+// generateSettingsHelpDocs)` was added with a comment citing
+// `./gradlew :app:generateSettingsHelpDocs check` as its reason, and that command
+// still failed afterwards — on `verifyBundledDocs`, a different consumer of the
+// same file. `verifyDocsHygiene` later joined the shared documentation file set
+// and was never added to the ordering rule that stood right beside it. Measured
+// on `1f0515cb`: FIVE of the six generators could not be combined with `check` at
+// all, over 24 enumerated task pairs plus, for the file maps, every compile and
+// analysis task of every variant. The one that could was
+// `generateDocumentationLinks` — already fixed the other way, by refusing to
+// declare its committed file as an output at all.
+//
+// So the ordering is declared as the matrix it is. `mustRunAfter` states order
+// without dependency: neither side drags the other into a build that did not ask
+// for it. Two costs worth knowing: a generator added without being listed here
+// re-opens the hole, which is what the combined invocation in `check.yml` exists
+// to catch; and `generateFileMap` stays listed even though it no longer declares
+// its maps as outputs — untracking removed the validation error, not the reason a
+// verifier must not read a map that is about to be rewritten.
+val committedFileGenerators = listOf(
+    generateFileMap,
+    generateBrowserEditorConstants,
+    generateSettingsHelpDocs,
+    generateExternalAutomationDocs,
+    generateCookbookDocs,
+    generateDocumentationLinks,
+)
+
+val committedFileConsumers = listOf(
+    // Documentation gates over the whole Markdown set, `FILE_MAP.md` included.
+    verifyDocLinks,
+    reportExternalDocLinks,
+    verifyMermaidDiagrams,
+    verifyDocsHygiene,
+    verifyForbiddenVocabulary,
+    // The bundled copy inside the APK, and its drift gate. Both read `docs/`,
+    // which is where three of the generators write.
+    syncBundledDocs,
+    verifyBundledDocs,
+    // The link registry resolves anchors against the same documents.
+    generateDocumentationLinks,
+    verifyDocumentationLinks,
+)
+
+committedFileConsumers.forEach { consumer ->
+    // A task reading what it also writes needs no ordering against itself, and
+    // Gradle rejects a self-referencing rule.
+    consumer { mustRunAfter(committedFileGenerators.filter { it.name != name }) }
 }
 
-// The vocabulary gate reads every public text file, so it reads the output of
-// every generator that rewrites a committed file: the file maps, the browser
-// editor, and the three generated reference documents. The same implicit-
-// dependency failure applies to each, and the same ordering-only answer.
-verifyForbiddenVocabulary {
-    mustRunAfter(
-        generateFileMap,
-        generateBrowserEditorConstants,
-        generateSettingsHelpDocs,
-        generateExternalAutomationDocs,
-        generateCookbookDocs,
-    )
-}
+// Unit tests read committed files that generators write: `docs/cookbook.md` and
+// `docs/recipes/` (the cookbook gates) and `pipeline-editor.html` (the browser
+// editor guard) are declared Test inputs for a reason of their own — see the
+// `tasks.withType<Test>` block above — and that declaration is what puts them in
+// this matrix too.
+tasks.withType<Test>().configureEach { mustRunAfter(committedFileGenerators) }
 
 // The version number, in every place a human wrote it down. `versionName` below
 // is the single source of truth for the build; the README badge, the topmost
