@@ -26,6 +26,17 @@ coverage materially.
 > `↑ 2026-06-02` note; the remaining per-package figures are still the
 > earlier measurement and will be re-measured wholesale at the next coverage
 > refresh.
+>
+> **Spot re-measurement (2026-09-20).** Three packages were re-measured while
+> the issue tracker was being seeded, and two of their rows had gone wrong in
+> opposite directions: `presentation.ui.pipeline.editor.config` had closed its
+> gap unaided (52.40 % → 90.15 %), and `presentation.ui.prompts` had fallen
+> (67.91 % → 43.67 %) by growing faster than its tests. `data.prompt` was
+> unchanged at 49.25 %. The lesson for the next reader of this file is the
+> second one: a per-package figure here is a claim about the tree on the day it
+> was taken, and a package that is *growing* can fall while its covered line
+> count rises. Re-measure before quoting a row — `./gradlew
+> :app:koverXmlReportFullDebug` takes about two minutes.
 
 ### Historical snapshots
 
@@ -96,9 +107,9 @@ and remains lifted.
 | `presentation.ui.more`                        | 100.00 % | 80 / 80         | ↑ `MoreViewModelTest` closes the gap |
 | `presentation.ui.onboarding`                  | 86.61 %  | 110 / 127       | ≥ 80 %  |
 | `presentation.ui.orchestrator`                | 85.03 %  | 335 / 394       | ≥ 80 %  |
-| `presentation.ui.pipeline.editor.config`      | 52.40 %  | 175 / 334       | known gap — `NodeConfigCodec` round-trip tests (follow-up) |
+| `presentation.ui.pipeline.editor.config`      | 90.15 %  | 366 / 406       | ↑ the gap closed: `NodeConfigCodecTest` grew from 10 tests to 37 while the codec grew to 759 lines. Re-measured 20.09.2026 |
 | `presentation.ui.pipeline.editor.core`        | 85.16 %  | 310 / 364       | ≥ 80 %  |
-| `presentation.ui.prompts`                     | 67.91 %  | 91 / 134        | ↑ the baseline's `PromptVariablesViewModel` no longer exists; the surface is `PromptLibraryViewModel` (covered). Residual gap is the `toViewState` mapper. |
+| `presentation.ui.prompts`                     | 43.67 %  | 145 / 332       | ↓ **and the direction is the point**: the covered count rose (91 → 145) while the package grew 134 → 332 lines, so the share fell. The `toViewState` mapper is still the densest uncovered piece. Re-measured 20.09.2026; tracked as issue #424 |
 | `presentation.ui.settings`                    | 88.89 %  | 256 / 288       | ≥ 80 %  |
 | `presentation.ui.settings.provider`           | 100.00 % | 83 / 83         | ↑ `ProviderDetailViewModelTest` closes the gap |
 | `presentation.ui.splash`                      | 97.30 %  | 36 / 37         | ≥ 90 %  |

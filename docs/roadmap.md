@@ -98,11 +98,14 @@ five worked examples is a starting library, not a cookbook. The examples
 worth adding next are the ones people actually get stuck on, which is a
 question the first outside reports answer better than guessing does.
 
-Writing the reference also turned up a class of defect worth naming here:
-several configuration fields are shown, accepted and stored while nothing
-reads them during a run. They are marked as such in the cookbook rather
-than hidden, and each is either wired up or removed — but that work is
-listed in the tracker, not here.
+Writing the reference turned up a class of defect worth naming here, and
+then closed it: twenty-five configuration fields were shown, accepted and
+stored while nothing read them during a run. Nine were wired up, twelve
+were removed because the engine has no matching concept, and four are kept
+only so an older pipeline file round-trips. The cookbook's field table is
+generated from the code that defines a node, so this is a statement the
+build keeps true rather than one anybody maintains: a control that stops
+reaching the run grows its row back.
 
 ### Whatever the first users run into
 
@@ -164,11 +167,15 @@ a good area for first-time contributors.
 
 ## How to get involved
 
-- Issues labelled
+- The [issue tracker](https://github.com/alexeyw/knotwork/issues) is the
+  list of concrete work, and it is short — the project is young and every
+  issue in it was written by the maintainer. Issues labelled
   [`good first issue`](https://github.com/alexeyw/knotwork/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
   are scoped to be approachable without deep knowledge of the codebase;
   [`help wanted`](https://github.com/alexeyw/knotwork/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
-  marks items where outside contributions are especially welcome.
+  marks items where outside contributions are especially welcome. Each one
+  names what to change, where, and what "done" means, because an issue that
+  costs an evening to decode is not an invitation.
 - [CONTRIBUTING.md](../CONTRIBUTING.md) covers dev setup, the branch
   model, and the PR checklist.
 - [extending.md](extending.md) has step-by-step recipes for the

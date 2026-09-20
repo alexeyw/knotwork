@@ -11,6 +11,18 @@ and on-device storage formats may ship in minor releases without a
 migration path. See the *Pre-release notice* in [README.md](README.md) for
 details.
 
+## [Unreleased]
+
+### Fixed
+
+- **The roadmap described work that had already finished, and the coverage
+  baseline had two wrong numbers.** The roadmap said configuration fields were
+  shown and stored while nothing read them, with the work "listed in the
+  tracker" — the cookbook now states there are none left, and every such field
+  has been wired up or removed. Two rows of `docs/coverage-baseline.md` were
+  re-measured and had drifted in opposite directions: one package had closed its
+  gap unaided, another had fallen by growing faster than its tests.
+
 ## [0.10.1] - 2026-09-20
 
 ### Changed
