@@ -226,7 +226,16 @@ abstract class GenerateFileMapTask : AbstractFileMapTask() {
     @get:Input
     abstract val acceptDroppedDescriptions: Property<Boolean>
 
-    /** The ratchet file, rewritten with lowered counts. */
+    /**
+     * The ratchet file, rewritten with lowered counts.
+     *
+     * Still an `@OutputFile` while [outputMaps] is not, and the difference is
+     * location rather than inconsistency: this file lives in `config/`, outside
+     * every source set, so declaring it collides with nothing. Its only reader is
+     * [VerifyFileMapTask], which is ordered after this task. Under
+     * [UntrackedTask] the declaration no longer drives up-to-date checking — it
+     * documents what the task produces and keeps the wiring honest.
+     */
     @get:OutputFile
     abstract val baselineFile: RegularFileProperty
 

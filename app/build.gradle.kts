@@ -2269,11 +2269,19 @@ tasks.named("check") { dependsOn(verifyDocsHygiene) }
 //
 // So the ordering is declared as the matrix it is. `mustRunAfter` states order
 // without dependency: neither side drags the other into a build that did not ask
-// for it. Two costs worth knowing: a generator added without being listed here
-// re-opens the hole, which is what the combined invocation in `check.yml` exists
-// to catch; and `generateFileMap` stays listed even though it no longer declares
-// its maps as outputs — untracking removed the validation error, not the reason a
-// verifier must not read a map that is about to be rewritten.
+// for it.
+//
+// What the combined invocation in `check.yml` catches, stated exactly rather than
+// generously: a CONSUMER added without ordering, and a generator named in that
+// command but missing from this matrix. What it does NOT catch is a generator
+// added to neither — no mechanism here does, because the list of tasks that write
+// committed files is a fact about intent, not one Gradle can be asked for. Adding
+// a generator means adding it in both places, and the comment on that CI step says
+// so too.
+//
+// `generateFileMap` stays listed even though it no longer declares its maps as
+// outputs: untracking removed the validation error, not the reason a verifier must
+// not read a map that is about to be rewritten.
 val committedFileGenerators = listOf(
     generateFileMap,
     generateBrowserEditorConstants,

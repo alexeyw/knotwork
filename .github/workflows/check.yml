@@ -136,8 +136,13 @@ jobs:
       #
       # Naming them all together hands the question to Gradle's own validator
       # instead of reimplementing it, and it costs seconds: the tasks are
-      # incremental and the work is already done. A generator added later without
-      # an ordering rule fails HERE.
+      # incremental and the work is already done. A consumer added later without an
+      # ordering rule fails HERE, and so does a generator named below but missing
+      # from the matrix in `app/build.gradle.kts`.
+      #
+      # A new generator has to be added in BOTH places — here and in that matrix.
+      # Nothing catches its absence from both, because "which tasks rewrite a
+      # committed file" is a fact about intent that Gradle cannot be asked for.
       #
       # Its own invocation for the same reason as the step above: what is being
       # tested is the composition of one task graph, so it cannot be folded into
