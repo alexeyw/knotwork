@@ -13,10 +13,10 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.VerificationException
 import java.io.File
 
@@ -192,19 +192,61 @@ abstract class AbstractFileMapTask : DefaultTask() {
  * of rationale in a diff that reads as a routine map update. The text is
  * printed in full so it can be moved to the new path; passing
  * `-PacceptFileMapDrops` confirms it is genuinely obsolete.
+ *
+ * Arranged like [GenerateDocumentationLinksTask], and for the same reason: the
+ * maps it rewrites live **inside `app/src/main/java`**, which every task that
+ * reads the main source set also reads — Kotlin compilation, KSP, detekt, ktlint,
+ * lint. Gradle's implicit-dependency validation is an error, not a warning, so
+ * each of those failed the moment this task appeared in the same invocation, and
+ * `./gradlew :app:generateFileMap check` is exactly what the File Map Rule
+ * prescribes after a Kotlin file is added or moved. (Observed: `kspFossDebugKotlin`
+ * failed on precisely that, and again when the annotation below was reverted.)
+ *
+ * The two annotations do different jobs, measured separately:
+ *
+ *  - `@Internal` on [outputMaps] is what removes the collision. With
+ *    [UntrackedTask] already in place but the maps still declared as
+ *    `@OutputFiles`, the failure came back unchanged.
+ *  - [UntrackedTask] is what keeps the task honest afterwards. Once its real
+ *    product is not a declared output, Gradle would otherwise judge it up to date
+ *    from its inputs and the ratchet file alone, and skip a regeneration that was
+ *    needed. The cost — it always runs — is acceptable for a task nothing but a
+ *    human invokes.
+ *
+ * The ordering declared in `app/build.gradle.kts` is a separate matter and stays:
+ * untracking removes the *validation* error, not the reason a verifier must not
+ * read a map this task is about to rewrite.
  */
+@UntrackedTask(
+    because = "it rewrites committed files inside the main source set, which must not become declared build outputs",
+)
 abstract class GenerateFileMapTask : AbstractFileMapTask() {
 
     /** Whether a dropped description is accepted rather than reported as a failure. */
     @get:Input
     abstract val acceptDroppedDescriptions: Property<Boolean>
 
-    /** The ratchet file, rewritten with lowered counts. */
+    /**
+     * The ratchet file, rewritten with lowered counts.
+     *
+     * Still an `@OutputFile` while [outputMaps] is not, and the difference is
+     * location rather than inconsistency: this file lives in `config/`, outside
+     * every source set, so declaring it collides with nothing. Its only reader is
+     * [VerifyFileMapTask], which is ordered after this task. Under
+     * [UntrackedTask] the declaration no longer drives up-to-date checking — it
+     * documents what the task produces and keeps the wiring honest.
+     */
     @get:OutputFile
     abstract val baselineFile: RegularFileProperty
 
-    /** The map files, declared so Gradle knows what this task produces. */
-    @get:OutputFiles
+    /**
+     * The map files this task rewrites.
+     *
+     * `@Internal`, not `@OutputFiles`, and the class KDoc says why: they live in
+     * the main source set, and a build output there collides with every task
+     * that reads it.
+     */
+    @get:Internal
     abstract val outputMaps: ConfigurableFileCollection
 
     /** Rewrites every block, then lowers the ratchet. */

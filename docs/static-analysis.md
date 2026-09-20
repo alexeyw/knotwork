@@ -911,6 +911,94 @@ file (ratchet, `app-main.undescribed: 1, recorded 0` and
 
 ---
 
+## Generators and their consumers: the ordering rule
+
+Six tasks in this build **rewrite a committed file** — `generateFileMap`,
+`generateBrowserEditorConstants`, `generateSettingsHelpDocs`,
+`generateExternalAutomationDocs`, `generateCookbookDocs` and
+`generateDocumentationLinks` — and nine gates plus every unit-test task **read**
+those same files. Gradle refuses a build whose task graph contains a task consuming another
+task's declared output with no ordering between them, and the refusal is an
+**error raised before either task runs**, not a warning:
+
+```
+Task ':app:verifyBundledDocs' uses this output of task
+':app:generateSettingsHelpDocs' without declaring an explicit or implicit
+dependency.
+```
+
+This is invisible to `check`. Every gate passes run on its own; the failure needs
+a generator and a consumer in **one invocation** — which is exactly the two-step
+the contribution workflow prescribes (regenerate the file, then verify). Measured
+on `1f0515cb`, **five of the six** generators could not be combined with `check`
+at all: 24 task pairs enumerated by probing them one by one, plus — for the file
+maps alone — every compile and analysis task of every variant. The one that could
+was `generateDocumentationLinks`, the only one already fixed.
+
+### Two shapes, two answers
+
+Which fix applies depends on **where** the rewritten file lives.
+
+**A committed file under `docs/` (or the repository root) → declare the
+ordering.** The file is outside every source set, so its readers are a set someone
+can actually write down — the documentation gates, the bundled-docs pair, and the
+unit-test tasks, which declare `docs/cookbook.md`, `docs/recipes/` and
+`pipeline-editor.html` as inputs of their own. `mustRunAfter` is then enough: it
+states order without dependency, so neither side drags the other into a build that
+did not ask for it. `app/build.gradle.kts`
+declares this as the matrix it is — a list of generators, a list of consumers, and
+the product of the two, with self-pairs filtered out because a task that reads
+what it writes needs no ordering against itself and Gradle rejects the rule.
+
+**A committed file inside a source set → do not declare it as an output at all.**
+`app/src/main/java/…/FILE_MAP.md` and `…/domain/constants/DocumentationLinks.kt`
+live where Kotlin compilation, KSP, detekt, ktlint and lint all read. Declaring
+either as an `@OutputFile` makes it a build output in that directory, and *every*
+one of those tasks then collides with the generator. Ordering does not scale
+there — it would mean naming every compile and analysis task of every variant.
+Both generators are therefore `@UntrackedTask` with their file `@Internal`:
+`GenerateDocumentationLinksTask` had been for some time, and
+`GenerateFileMapTask` was brought in line after `./gradlew :app:generateFileMap
+check` — the command the *File Map Rule* prescribes — was observed failing on
+`kspFossDebugKotlin`.
+
+The two annotations do different jobs, and the difference was measured rather than
+assumed. `@Internal` on the file is what removes the collision: with
+`@UntrackedTask` already in place and the maps still declared `@OutputFiles`, the
+failure came back unchanged. `@UntrackedTask` is what keeps the task honest
+afterwards — once its real product is not a declared output, Gradle would judge it
+up to date from its inputs alone and skip a regeneration that was needed. The cost
+is that neither task can ever be up to date; both are invoked by a human, and
+`verifyFileMap` — the one in `check` — is unaffected and still reports
+`UP-TO-DATE` on a second run.
+
+The ordering rules stay declared anyway: untracking removes the validation error,
+not the reason a verifier must not read a map that is about to be rewritten.
+
+### Why pair-by-pair kept failing
+
+Each instance was previously met where it was found. That approach has now lost
+twice in a way worth recording:
+
+- The rule `verifySettingsHelpDocs.mustRunAfter(generateSettingsHelpDocs)` was
+  added with a comment naming `./gradlew :app:generateSettingsHelpDocs check` as
+  the reason it exists. That command **still failed** afterwards — on
+  `verifyBundledDocs`, a different consumer of the same file. Fixing the sibling
+  pair looked like fixing the command.
+- `verifyDocsHygiene` was later moved onto the shared documentation file set and
+  never added to the ordering list three lines below it.
+
+A list that has to be extended by hand every time a gate is added will be
+incomplete again. What keeps it honest is not the list but the check on it: a
+**single CI step** names every generator and every consumer in one invocation and
+lets Gradle's own validator answer. It is deliberately its own step — what is
+being tested is the composition of one task graph, so folding it into another
+command tests something else — and it costs seconds, because it runs after
+`check` has already done the work. A generator added without an ordering rule
+fails there.
+
+---
+
 ## Public documentation hygiene guard (`verifyDocsHygiene`)
 
 `:app:verifyDocsHygiene` is a custom Gradle verification task, wired into
@@ -1443,11 +1531,10 @@ build such a label from placeholders, which the rule does not match. If a
 fixture needs one, write "step" or use the placeholder form rather than
 weakening the rule.
 
-The task is typed and cacheable, so a no-op `check` skips it. It reads files
-that five generators rewrite (the file maps, the browser editor, the settings
-reference, the automation reference and the cookbook), and declares
-`mustRunAfter` on each of them — the ordering the combined
-`generate… check` invocation needs.
+The task is typed and cacheable, so a no-op `check` skips it. It reads files that
+every generator rewrites, so it sits in the consumer list of
+*Generators and their consumers: the ordering rule* above — which is where the
+`mustRunAfter` matrix and the reason for it are described.
 
 ### Observed failing
 

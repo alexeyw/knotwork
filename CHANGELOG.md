@@ -25,6 +25,13 @@ details.
 
 ### Fixed
 
+- **Regenerating a documented file and then verifying it, in one command, failed
+  the build.** The contribution workflow asks for exactly that two-step — run a
+  generator, commit the result, run `./gradlew check` — and Gradle refuses a build
+  whose task graph contains a task reading another task's output with no ordering
+  between them. Five of the six generators could not be combined with `check` at
+  all, and only running them as two separate commands hid it. Developer-facing
+  only: nothing about the app changes.
 - **The documentation said five paths could send data off the device. There
   were six.** The missing one is the built-in `search_tool`: it looks topics up
   on Wikipedia, the search term is written by the model from what it is working
