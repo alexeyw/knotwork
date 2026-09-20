@@ -1,0 +1,5 @@
+"Block network from local model" now holds. With it on, Ollama answers only at localhost or a private IP address - a host name is refused, so type the IP - memory embeddings stay on the device, and the built-in Wikipedia lookup is withheld too.
+
+That Wikipedia lookup is on by default, and no document said so. The privacy policy, the FAQ and this listing now do, and say how to switch it off.
+
+Cancelling a model install now stops the download instead of letting it finish in the background.
