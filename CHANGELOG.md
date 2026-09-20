@@ -11,7 +11,7 @@ and on-device storage formats may ship in minor releases without a
 migration path. See the *Pre-release notice* in [README.md](README.md) for
 details.
 
-## [Unreleased]
+## [0.10.1] - 2026-09-20
 
 ### Changed
 
@@ -50,12 +50,18 @@ details.
   FAQ and the store listing already said since the previous release; the
   security document listed those calls as a source of untrusted input for the
   same reason. Both now match.
+- **Cancelling a model install did not stop the download.** On the Discover
+  screen, **Cancel** stopped the progress bar and nothing else: the transfer runs
+  in the background so it survives leaving the screen, and it carried on to the
+  end — up to several gigabytes on whatever connection you were on — then
+  registered the model as if you had asked for it. It now stops the download
+  itself. Bytes already fetched stay on disk, so installing the same file again
+  resumes rather than starting over. The Models screen never had this defect.
 - **The roadmap listed two things that had already shipped** — file-oriented
   tools as a candidate for the tool catalogue, and an instrumented test suite as
   a gap in a "JVM-only" CI gate. Both moved to what the project does today, and
   the remaining verification gap is named for what it actually is: real
   hardware, not an emulator.
-
 - **"Block network from local model" let model traffic leave your network.** The
   setting promised that only a model on the device, or Ollama on your own
   network, would answer. Three paths ignored it:
@@ -5845,7 +5851,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/alexeyw/knotwork/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/alexeyw/knotwork/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/alexeyw/knotwork/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/alexeyw/knotwork/compare/v0.7.3...v0.8.0

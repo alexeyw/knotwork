@@ -4,6 +4,7 @@ import app.knotwork.android.data.network.AndroidModelDownloadManager.DownloadErr
 import app.knotwork.android.domain.models.DiscoverableModelDetail
 import app.knotwork.android.domain.models.DiscoverableModelFile
 import app.knotwork.android.domain.models.DownloadState
+import app.knotwork.android.domain.repositories.ModelDownloadManager
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.GetDiscoverableModelDetailUseCase
 import app.knotwork.android.domain.usecases.InstallDiscoveredModelUseCase
@@ -11,6 +12,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -35,6 +37,7 @@ class DiscoverDetailViewModelTest {
     private val getDetail = mockk<GetDiscoverableModelDetailUseCase>()
     private val installModel = mockk<InstallDiscoveredModelUseCase>()
     private val settings = mockk<SettingsRepository>(relaxed = true)
+    private val downloadManager = mockk<ModelDownloadManager>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
     private val file = DiscoverableModelFile(
@@ -69,7 +72,7 @@ class DiscoverDetailViewModelTest {
     }
 
     private fun createBound(): DiscoverDetailViewModel {
-        val vm = DiscoverDetailViewModel(getDetail, installModel, settings)
+        val vm = DiscoverDetailViewModel(getDetail, installModel, settings, downloadManager)
         vm.bind("litert-community/gemma")
         return vm
     }
@@ -167,6 +170,54 @@ class DiscoverDetailViewModelTest {
 
         val event = eventDeferred.await()
         assertTrue(event is DiscoverInstallEvent.Failed && !event.gated)
+    }
+
+    @Test
+    fun `given an install in flight when cancelled then the download itself is stopped`() = runTest {
+        // The defect: cancelling only the collecting coroutine left the WorkManager
+        // job running, so a model of up to several GB finished downloading — and
+        // registered itself — after the user had pressed Cancel, on whatever
+        // connection they were on.
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        every { installModel(any()) } returns flowOf(DownloadState.Pending, DownloadState.Downloading(10))
+        val vm = createBound()
+        advanceUntilIdle()
+        vm.onInstallClick("gemma.litertlm")
+        vm.onLicenseConfirm("gemma.litertlm")
+        advanceUntilIdle()
+
+        vm.onCancelInstall("gemma.litertlm")
+
+        verify(exactly = 1) { downloadManager.cancelDownload("gemma.litertlm") }
+    }
+
+    @Test
+    fun `given an install in flight when cancelled then its progress is cleared`() = runTest {
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        every { installModel(any()) } returns flowOf(DownloadState.Pending, DownloadState.Downloading(10))
+        val vm = createBound()
+        advanceUntilIdle()
+        vm.onInstallClick("gemma.litertlm")
+        vm.onLicenseConfirm("gemma.litertlm")
+        advanceUntilIdle()
+
+        vm.onCancelInstall("gemma.litertlm")
+
+        assertEquals(null, vm.uiState.value.progress["gemma.litertlm"])
+    }
+
+    @Test
+    fun `given no install for a file when cancelled then the download is still stopped`() = runTest {
+        // Cancel arrives for a file this screen never started: after a process
+        // death the work survives and the screen does not re-attach to it, so the
+        // absence of a local job is exactly when stopping the work matters most.
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        val vm = createBound()
+        advanceUntilIdle()
+
+        vm.onCancelInstall("gemma.litertlm")
+
+        verify(exactly = 1) { downloadManager.cancelDownload("gemma.litertlm") }
     }
 
     @Test

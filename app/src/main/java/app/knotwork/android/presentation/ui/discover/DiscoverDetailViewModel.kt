@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.data.network.AndroidModelDownloadManager.DownloadError
 import app.knotwork.android.domain.models.DownloadState
+import app.knotwork.android.domain.repositories.ModelDownloadManager
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.GetDiscoverableModelDetailUseCase
 import app.knotwork.android.domain.usecases.InstallDiscoveredModelUseCase
@@ -31,12 +32,15 @@ import javax.inject.Inject
  * @property getDetail use case fetching the repository detail.
  * @property installModel use case streaming a file download + local registration.
  * @property settingsRepository source/sink of the Hugging Face token.
+ * @property downloadManager the background downloader, held so a cancel can stop
+ *   the transfer itself and not merely this screen's view of it.
  */
 @HiltViewModel
 class DiscoverDetailViewModel @Inject constructor(
     private val getDetail: GetDiscoverableModelDetailUseCase,
     private val installModel: InstallDiscoveredModelUseCase,
     private val settingsRepository: SettingsRepository,
+    private val downloadManager: ModelDownloadManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverDetailUiState())
@@ -141,8 +145,28 @@ class DiscoverDetailViewModel @Inject constructor(
         }
     }
 
-    /** Cancels an in-flight install for [fileName]. */
+    /**
+     * Cancels an in-flight install for [fileName].
+     *
+     * Cancels the **download** first and the collecting coroutine second, in that
+     * order and unconditionally. Cancelling only the coroutine — which is all this
+     * did until 0.10.1 — stops the progress updates while the work carries on:
+     * the transfer runs in `WorkManager`, outlives this ViewModel by design, and
+     * would finish and register the model minutes after the user pressed Cancel,
+     * on whatever connection they happened to be on. `ModelsViewModel.cancelDownload`
+     * has had the two-step form since the download moved to `WorkManager`; this
+     * screen was written before that and never caught up.
+     *
+     * The cancel is not conditional on a job being present. A download survives
+     * process death and this screen does not re-attach to it, so "no local job"
+     * is precisely the case where the work is running unobserved.
+     *
+     * Bytes already fetched stay on disk, so re-installing the same file resumes.
+     *
+     * @param fileName On-disk name of the file whose install is being cancelled.
+     */
     fun onCancelInstall(fileName: String) {
+        downloadManager.cancelDownload(fileName)
         installJobs.remove(fileName)?.cancel()
         clearProgress(fileName)
     }
