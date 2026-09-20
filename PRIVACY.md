@@ -1,6 +1,6 @@
 # Privacy Policy — Knotwork
 
-**Effective date:** 16 September 2026
+**Effective date:** 20 September 2026
 **Applies to:** the Knotwork Android application (package `app.knotwork.android`),
 both published distributions — `full` and `foss` — from version `0.7.1` onward.
 
@@ -13,11 +13,14 @@ server operated by the developer**. Nothing is uploaded for the app to work,
 and there is no back end that could hold your data.
 
 The app processes your conversations **on your phone**, using a language model
-you download to the device. Data leaves the device only along a path **you
-configured yourself** — a cloud model carrying your own API key (in a pipeline
-step, or as the embedding model for memory), an MCP server you added, a model download, an outbound request from a tool you
-explicitly allowed, or (in the `full` build only) crash reports you opted in to.
-Each of those is listed below with what it sends, where, and how to turn it off.
+you download to the device. Data leaves the device only along these paths — a
+cloud model carrying your own API key (in a pipeline step, or as the embedding
+model for memory), an MCP server you added, a model download, an outbound
+request from one of the two built-in tools that reach the network, or (in the
+`full` build only) crash reports you opted in to. All of them are off until you
+configure them except one: the built-in Wikipedia lookup is on from the first
+launch, and section 3.4 says so and says how to turn it off. Each path is
+listed below with what it sends, where, and how to stop it.
 
 This document is the privacy policy. The engineering-level threat model, the
 attack surfaces the app defends against, and what is explicitly *out* of scope
@@ -69,10 +72,12 @@ run history is also pruned automatically according to the retention setting.
 
 ---
 
-## 3. What can leave your device — and only if you set it up
+## 3. What can leave your device
 
-Every item in this section is **off until you configure it**. None of it is
-required for the app to work, and none of it sends data to the developer.
+None of this is required for the app to work, and none of it sends data to the
+developer. Every item here is **off until you configure it** with one exception,
+called out where it belongs: the built-in Wikipedia lookup in section 3.4 is on
+from the first launch.
 
 ### 3.1 Cloud model providers (opt-in, your own key)
 
@@ -105,8 +110,10 @@ one is present.
 **Block network from local model** (Settings → Tools & workspace) keeps every
 path in this section on your own network: no cloud provider is contacted — memory uses the
 on-device embedding model instead — and an Ollama endpoint is used only at
-`localhost` or a private IP address on your own network. It does not affect MCP
-servers (3.2), model downloads (3.3) or tool requests (3.4).
+`localhost` or a private IP address on your own network. It also withholds the
+built-in `search_tool` (3.4), which is the one tool it covers. It does not
+affect MCP servers (3.2), model downloads (3.3) or the `http_request` tool
+(3.4) — each of those is something you set up, and each has its own control.
 
 ### 3.2 MCP servers (opt-in)
 
@@ -126,11 +133,30 @@ browsing the catalogue is anonymous.
 
 ### 3.4 Outbound requests from tools
 
-The `http_request` tool can reach only hosts you have added to the
-allowed-domains list; while that list is empty the tool is not offered to the
-model at all. Every call passes a confirmation prompt showing the destination
-and the arguments before anything is sent. The layered restrictions on this
-path are documented in
+Two built-in tools reach the network. They are the only ones that do; every
+other built-in works inside the device.
+
+**`search_tool` — a Wikipedia lookup, and the one path in this document that is
+on by default.** When a pipeline step calls it, the app requests
+`https://<language>.wikipedia.org/w/api.php` with a search term. The model
+writes that term from what it is working on, so it can carry wording from your
+conversation. Nothing else of yours goes with it — no account, no device
+identifier, no credentials — though, like any web request, it shows your IP
+address to the Wikimedia Foundation, whose servers answer it.
+
+Being on by default is the part worth stating plainly: the pipeline the app
+creates for you on first launch calls this tool for questions it judges
+factual, so the lookup can happen before you have configured anything. The tool
+is classified read-only, so it does not stop for a confirmation. Either of two
+switches ends it — **Settings → Tools & workspace → Block network from local
+model**, which withholds this tool along with the cloud paths, or the tool's
+own switch on the **Tools** screen.
+
+**`http_request` — off until you name a destination.** It can reach only hosts
+you have added to the allowed-domains list; while that list is empty the tool
+is not offered to the model at all. Every call passes a confirmation prompt
+showing the destination and the arguments before anything is sent. The layered
+restrictions on this path are documented in
 [SECURITY.md](SECURITY.md#outbound-http-and-the-exfiltration-chain).
 
 ### 3.5 Crash reporting (`full` build only, opt-in, off by default)
@@ -256,13 +282,17 @@ operator; exercise any rights over it with them directly.
 ## 8. Third parties
 
 The app contacts a third party only along the paths in section 3. Depending on
-what you configure, those may be:
+what you configure — and, for the first entry below, on nothing at all — those
+may be:
 
 - The cloud model provider whose key you entered (OpenAI, Anthropic, Google,
   DeepSeek, or an Ollama endpoint you name), for pipeline steps, memory
   embeddings or `delegate_task`.
 - Hugging Face, or any host you paste a model URL for.
 - MCP servers you add.
+- The Wikimedia Foundation, for the built-in `search_tool` lookup described in
+  section 3.4 — the one entry here that does not wait for you to configure
+  something.
 - A host you added to the allowed-domains list for the `http_request` tool.
 - Google (Firebase Crashlytics), in the `full` build, if you opted in to crash
   reporting.

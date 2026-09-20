@@ -83,7 +83,7 @@ object DocumentationLinks {
             path = "docs/faq.md",
             anchor = null,
             delivery = Delivery.BUNDLED,
-            lineCount = 475,
+            lineCount = 486,
             sectionCount = 9,
         ),
         Entry(

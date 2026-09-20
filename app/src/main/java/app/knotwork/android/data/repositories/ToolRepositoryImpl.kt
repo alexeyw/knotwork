@@ -272,6 +272,10 @@ class ToolRepositoryImpl @Inject constructor(
      * filters MCP-advertised tools by their stable
      * `mcp:<sha8(serverUrl)>:<toolName>` id (see [McpServerRepositoryImpl.mcpToolId]).
      *
+     * Two built-ins are additionally withheld by a restriction of their own: `http_request`
+     * while no domain is allowlisted, and `search_tool` while "Block network from local
+     * model" is on.
+     *
      * @return A list of [AgentTool] representing all tools currently available to the agent.
      */
     override suspend fun getAvailableTools(): List<AgentTool> {
@@ -284,9 +288,16 @@ class ToolRepositoryImpl @Inject constructor(
         // the executor). This keeps the read_file → http_request exfiltration channel
         // closed by default until the user opts a destination in.
         val httpDisabled = settingsRepository.allowedHttpDomains.first().isEmpty()
+        // "Block network from local model" covers the built-in search tool: while the
+        // restriction is on the tool is withheld from the catalogue, so the model is not
+        // offered a path off the device it has no confirmation gate for. Hiding it is only
+        // half the answer — a pipeline node bound to `search_tool` by name never reads this
+        // catalogue — so the tool refuses the call itself as well (see `SearchTool`).
+        val localOnlyMode = settingsRepository.blockNetworkFromLocalModel.first()
         val availableLocal = getAllLocalTools().filter { tool ->
             tool.name !in disabledLocal &&
-                !(httpDisabled && tool.name == HttpRequestExecutor.TOOL_NAME)
+                !(httpDisabled && tool.name == HttpRequestExecutor.TOOL_NAME) &&
+                !(localOnlyMode && tool.name == SearchTool.TOOL_NAME)
         }
 
         // Walk the persisted config order rather than iterating the pool's own map:

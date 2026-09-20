@@ -202,11 +202,14 @@ browser's `prefers-color-scheme`.
 
 ## Requirements
 
-- **Android 14 or newer** (API level 34+). A few OS-integration features need
-  Android 16: calling functions that other apps expose, and the strict
-  intent-matching rules that harden the external-automation entry point. On
-  Android 14 and 15 everything else — local models, cloud providers, MCP
-  servers, triggers, scheduled tasks — works unchanged.
+- **Android 14 or newer** (API level 34+). One OS-integration feature needs
+  Android 16: the strict intent-matching rules that harden the
+  external-automation entry point. On Android 14 and 15 everything else — local
+  models, cloud providers, MCP servers, triggers, scheduled tasks — works
+  unchanged. (Calling AppFunctions that *other* apps expose is not on this list
+  at any API level: it needs a permission Android grants to privileged system
+  apps only, so an ordinary install cannot do it. Publishing them, which this
+  app does, is open to any app.)
 - Approximately **2 GB of free RAM** available for the LLM at runtime.
 - Optional: hardware acceleration via **NPU or GPU** for noticeably faster
   inference. CPU-only operation works but is slower.
@@ -297,9 +300,14 @@ Knotwork has no account, no sign-in, and no server of its own. There is nothing
 to log into, and nothing is uploaded for the app to work.
 
 - **Conversations stay on the device by default.** Inference runs locally
-  through LiteRT-LM. Data leaves the phone only through a path you configured
-  yourself: a cloud LLM node with your own API key, or an MCP server you added.
-  Both are opt-in and both are visible in the pipeline you built.
+  through LiteRT-LM. Data leaves the phone only along the paths listed in
+  [PRIVACY.md § 3](PRIVACY.md#3-what-can-leave-your-device): a cloud LLM node
+  or memory embedding with your own API key, `delegate_task`, an MCP server you
+  added, a model download, an `http_request` call to a host you allowed — all
+  opt-in — and the built-in `search_tool`, which is **on from the first launch**
+  and looks topics up on Wikipedia for the pipeline the app starts you with.
+  Its switch is on the Tools screen, and *Block network from local model*
+  withholds it too.
 - **Usage statistics are local-only.** The in-app statistics are computed and
   stored on the device and are never transmitted; a build-time architecture
   guard fails the build if any network dependency reaches that code. Exporting
