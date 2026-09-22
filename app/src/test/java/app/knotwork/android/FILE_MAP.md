@@ -177,6 +177,7 @@ Only Kotlin files appear inside the generated blocks.
       - `SkillNodeExecutorTest.kt` - Unit tests for `SkillNodeExecutor`.
       - `SystemNodeExecutorTest.kt` - Unit tests for `SystemNodeExecutor`.
       - `ToolCallParserTest.kt` - Unit tests for `ToolCallParser`, the non-repair tool-call parser used by `SkillNodeExecutor`.
+      - `ToolInvocationGateTest.kt` - Unit tests for `ToolInvocationGate`: a decision recorded on a parked request is the one the resumed run applies, whatever the policy, risk or `alwaysConfirm` say on resume; the record is consumed before any early exit.
       - `ToolNodeExecutorTest.kt` - Tests for ToolNodeExecutor.
     - `GraphExecutionEngineTest.kt` - Tests for GraphExecutionEngine.
     - `MemoryAccessLogFormatterTest.kt` - Unit tests for `MemoryAccessLogFormatter` — the pure formatter behind the `MemoryAccess` console event.

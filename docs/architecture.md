@@ -1557,7 +1557,11 @@ in two phases:
 
 1. **Live phase** — the run suspends on an in-process deferred; the
    chat card or the approval notification completes it. This is the
-   only phase an interactive, foregrounded session normally sees.
+   only phase an interactive, foregrounded session normally sees. The
+   notifications of both phases build their actions through one helper
+   in `ApprovalNotificationManager`: a `DESTRUCTIVE` call gets **Review
+   in chat** instead of **Approve**, because the typed confirmation the
+   card asks for cannot be collected from the shade.
 2. **Persistent phase (park)** — when the live wait times out (the UI
    is gone, the user did not respond), the run **parks**: the staged
    tool name and arguments are written to `pending_interactions`, the
@@ -1567,7 +1571,12 @@ in two phases:
    denying from it — even after process death — records the decision
    onto the parked record and resumes the run from its checkpoint, where
    the `TOOL` node consumes the decision under a TOCTOU guard (the
-   re-resolved tool call must match the parked snapshot exactly).
+   re-resolved tool call must match the parked snapshot exactly). The
+   decision is consumed before anything can end the gate early, and
+   applied whatever the approval policy or the tool's risk say at
+   resume time: those only decide whether a *new* question is needed,
+   so a denial recorded under a strict policy stays a denial after the
+   user relaxes it.
    Clarifications park the same way, answered via a deep link into the
    chat. An unanswered park is failed by the maintenance pass once the
    user-configurable **approval window** (default 24 h) elapses.

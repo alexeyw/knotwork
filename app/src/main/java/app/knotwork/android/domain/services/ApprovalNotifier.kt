@@ -16,10 +16,15 @@ interface ApprovalNotifier {
      * is only reached when the user has globally opted into "ask on every tool
      * call" and reuses the SENSITIVE channel.
      *
+     * Actions are risk-gated the same way as in [sendPersistentApprovalRequest]:
+     * a [ToolRisk.DESTRUCTIVE] request carries no Approve action — approving it
+     * requires the typed confirmation of the in-chat card, reached via a
+     * "Review in chat" deep link.
+     *
      * @param sessionId The ID of the session that triggered the request.
      * @param toolName The name of the tool.
      * @param arguments The arguments passed to the tool.
-     * @param risk Risk classification of the tool, used to pick channel / icon / copy.
+     * @param risk Risk classification of the tool, used to pick channel / icon / copy / actions.
      */
     fun sendApprovalRequest(sessionId: String, toolName: String, arguments: String, risk: ToolRisk)
 
