@@ -654,11 +654,11 @@ a colour-coded risk pill (`READ` / `SENS` / `DEST`), and **Approve** /
 tool name as a typed-confirm gate before the **Approve** button is
 enabled.
 
-When you are not looking at that chat, the request also arrives as a
-notification. For read-only and sensitive tools it offers **Approve**
-and **Deny**. Destructive tools never execute from a notification — it
-offers **Deny** and a **Review in chat** link to the regular
-typed-confirm card.
+If that chat is not on screen when the request comes in, it also
+arrives as a notification. For read-only and sensitive tools it offers
+**Approve** and **Deny**. Destructive tools never execute from a
+notification — it offers **Deny** and a **Review in chat** link to the
+regular typed-confirm card.
 
 An unanswered request does not fail the run. When the live waiting
 window elapses — say a scheduled run hits a sensitive tool at 6 a.m. —
