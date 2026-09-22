@@ -45,16 +45,62 @@ object CloudErrorSanitizer {
      * Returns [message] with any embedded credential replaced by [MASK].
      *
      * @param message Raw provider/transport error text, possibly `null`.
+     * @param causeName Simple class name of the failure's deepest cause, substituted for
+     *   a missing message and for one that trails off into the word `null`.
      * @return Text safe to surface to the user and to persist, never `null`.
      */
     fun sanitize(message: String?, causeName: String? = null): String {
         val raw = message?.takeIf { it.isNotBlank() } ?: return causeName ?: UNKNOWN
-        return raw
-            .replace(SECRET_QUERY_PARAM) { match -> "${match.groupValues[1]}=$MASK" }
-            .replace(BEARER_TOKEN, "Bearer $MASK")
+        return redactSecrets(raw)
             .let(::collapseRepeatedLines)
             .let { text -> replaceDanglingNull(text, causeName) }
     }
+
+    /**
+     * Returns the user-facing text for a failed provider call: [error]'s message,
+     * scrubbed, with its deepest cause's type standing in when the message says
+     * nothing (see [sanitize]).
+     *
+     * The deepest cause is what actually failed; the wrapper above it often carries no
+     * message of its own, which is how a user would otherwise end up reading `null`.
+     *
+     * @param error The exception a provider or transport call raised.
+     * @return Text safe to show, log and persist.
+     */
+    fun sanitize(error: Throwable): String = sanitize(error.message, deepestCause(error)::class.simpleName)
+
+    /**
+     * The last throwable in [error]'s cause chain. The walk stops at the first repeat:
+     * `initCause` rejects only a direct self-cause, so a longer loop is possible, and
+     * an error handler must not hang on one.
+     */
+    private fun deepestCause(error: Throwable): Throwable {
+        val seen = mutableListOf(error)
+        var current = error
+        while (true) {
+            val next = current.cause ?: return current
+            if (seen.any { it === next }) return current
+            seen += next
+            current = next
+        }
+    }
+
+    /**
+     * Masks credential-shaped fragments in [text] and changes nothing else.
+     *
+     * [sanitize] also rewrites the message it is given (repeated lines, a trailing
+     * `null`), which is right for a provider error on its way to an error card and
+     * wrong for arbitrary text. This is the variant for the places that see text of
+     * every kind — the engine's console and run-error choke point, and the crash
+     * reporter's log tree — where the only job is that no credential gets past.
+     *
+     * @param text Any text that may quote a failing request.
+     * @return [text] with secret-named query-parameter values and `Bearer` tokens
+     *   replaced by the mask; identical to [text] when there was nothing to mask.
+     */
+    fun redactSecrets(text: String): String = text
+        .replace(SECRET_QUERY_PARAM) { match -> "${match.groupValues[1]}=$MASK" }
+        .replace(BEARER_TOKEN, "Bearer $MASK")
 
     /**
      * Replaces a message that trails off into the literal word `null`.

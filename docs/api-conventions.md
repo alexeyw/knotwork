@@ -154,8 +154,11 @@ interface Tool {
   repository.
 - The **Hugging Face access token** used to install gated models from the
   Discover screen lives in the **same Keystore-backed store** (keyed
-  `hugging_face_token`), never in plain DataStore. It is sent only on the file
-  download that needs it — discovery browsing and metadata calls are anonymous.
+  `hugging_face_token`), never in plain DataStore. It is attached by the
+  downloader from the request's own URL — `https` and host `huggingface.co`, by
+  equality — never from "a token is saved": the Hub's CDN redirect needs no token
+  (OkHttp drops `Authorization` on a host change), and a pasted URL for any other
+  host never gets it. Discovery browsing and metadata calls are anonymous.
 - **Every cloud client carries an explicit `ConnectionTimeoutConfig`**, applied in
   `KoogClientFactory`: 60 s socket, 30 s connect, 900 s request. The socket value
   is the load-bearing one because Ktor applies it *per read* — it bounds how long
@@ -174,7 +177,10 @@ interface Tool {
 - **Provider error text is scrubbed before it is shown, logged or stored**
   (`CloudErrorSanitizer`). Google authenticates by query parameter, so its
   transport errors arrive carrying the API key; credentials must never reach the
-  run console, the run trace or logcat.
+  run console, the run trace or logcat. An executor that calls a provider scrubs
+  its own error (`sanitize(e)`) and logs the scrubbed message, not the
+  throwable. The engine and the crash-reporting tree redact again as a backstop
+  (`redactSecrets`) — a backstop, not a licence to skip the first step.
 - Use the unified `CLOUD` pipeline node with a `provider` parameter — do
   not add per-provider node types to the pipeline graph.
 

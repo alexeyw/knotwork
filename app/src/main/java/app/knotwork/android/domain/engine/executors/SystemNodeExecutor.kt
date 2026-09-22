@@ -2,6 +2,7 @@ package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.PipelineExecutionDefaults
+import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.CollectingRepairListener
@@ -157,10 +158,17 @@ class SystemNodeExecutor @Inject constructor(
             // would silently swallow cancellation and leave the parent coroutine running.
             throw e
         } catch (e: Exception) {
-            Timber.tag("PipelineDebug")
-                .e(e, "[NODE_ERR] type=${node.type.name} id=${node.id} error in SystemNodeExecutor generation")
-            emit(NodeOutput.State(AgentOrchestratorState.Error(e.message ?: "Unknown error")))
-            emit(NodeOutput.Result(NodeExecutionResult(error = e.message)))
+            // A cloud-backed node's failure is a provider error, and a provider that
+            // authenticates by query parameter (Google) quotes its own key in it. Scrub
+            // before the text becomes the node's error, and log the scrubbed message
+            // rather than the throwable, whose stack trace would print the original.
+            val safeMessage = CloudErrorSanitizer.sanitize(e)
+            Timber.tag("PipelineDebug").e(
+                "[NODE_ERR] type=${node.type.name} id=${node.id} " +
+                    "SystemNodeExecutor generation failed with ${e::class.simpleName}: $safeMessage",
+            )
+            emit(NodeOutput.State(AgentOrchestratorState.Error(safeMessage)))
+            emit(NodeOutput.Result(NodeExecutionResult(error = safeMessage)))
         }
     }
 

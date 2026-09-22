@@ -366,9 +366,10 @@ only for gated repositories) is handled exactly like a cloud-provider key:
   exported archives, or anything committed to the repository. An earlier
   development build kept it in plain DataStore; a **one-time migration moves any
   legacy value into the Keystore store and removes the plaintext entry**.
-- **Sent only on the file download** that needs it. Browsing and metadata calls
-  are public and carry **no token**, so the token is never put on the wire for
-  ordinary discovery traffic.
+- **Sent only to `huggingface.co`, over HTTPS, on a model-file download.** The
+  download code attaches it from the request's own address, so a link the user
+  pastes, a mirror, or the CDN a Hub download redirects to never receives it.
+  Browsing and metadata calls are public and carry **no token**.
 
 ### API keys for cloud providers
 
@@ -378,6 +379,10 @@ only for gated repositories) is handled exactly like a cloud-provider key:
   dedicated Android Keystore key).
 - Keys are never written to plain `SharedPreferences`, DataStore, log files,
   exported chat archives, or any artifact checked into the repository.
+- A provider error can quote the failing request, key included (Google
+  authenticates by query parameter). Such text is scrubbed before it becomes a
+  run's error, a console line or a crash report, so it cannot reach an export,
+  the clipboard or Crashlytics that way either.
 
 ### MCP server credentials
 
@@ -407,7 +412,8 @@ only for gated repositories) is handled exactly like a cloud-provider key:
   - Browsing or searching the curated `litert-community` organisation on the
     Hugging Face Hub from the **Discover** screen, and downloading a model
     file the user selects there or supplies by URL. Browsing is read-only and
-    anonymous; only a gated-file download carries the user's token.
+    anonymous; only a download from `huggingface.co` itself carries the user's
+    token.
   - The `http_request` tool reaching a host the user has explicitly added
     to the **allowed-domains allowlist** (empty by default; see *Outbound
     HTTP and the exfiltration chain* below).
@@ -580,7 +586,8 @@ enabled:
 - Long-term memory chunks or any user-authored text.
 - Tool inputs, tool outputs, or arguments produced by the agent.
 - API keys, passphrases, or any value stored in the Keystore-backed
-  encrypted stores.
+  encrypted stores. A key quoted inside an error message — Google puts it in
+  the request URL — is masked in every record before the record is forwarded.
 - Personally identifying information beyond the device/app metadata listed
   above.
 

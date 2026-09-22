@@ -36,6 +36,7 @@ import app.knotwork.android.data.services.ExternalAutomationCallbackSender
 import app.knotwork.android.data.services.WorkManagerTaskScheduler
 import app.knotwork.android.data.tools.local.AppFunctionDataCodec
 import app.knotwork.android.data.tools.local.LocalAppFunctionManager
+import app.knotwork.android.data.tools.local.SearchTool
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
@@ -385,6 +386,13 @@ object AppModule {
         // so a redirect cannot downgrade an https call mid-flight.
         .addInterceptor(CleartextGuardInterceptor())
         .build()
+
+    /**
+     * Provides how `search_tool` opens its connection: the platform's own, in the app.
+     * The seam exists for the unit suite only (see [SearchTool.ConnectionOpener]).
+     */
+    @Provides
+    fun provideSearchConnectionOpener(): SearchTool.ConnectionOpener = SearchTool.ConnectionOpener.SYSTEM
 
     /**
      * Provides the singleton instance of LocalAppFunctionManager.

@@ -1098,9 +1098,14 @@ a mid-answer cut on those two still reads as a short but complete reply.
 **Error text is scrubbed before it is shown.** Google authenticates by query
 parameter, so an ordinary socket timeout arrives carrying the API key in the
 quoted URL. `CloudErrorSanitizer` (pure `domain`) masks secret-bearing query
-parameters and `Bearer` fragments on the way to the console, the error banner,
-the persisted run trace and logcat, and substitutes the exception type for a
-message that trails off into the literal word `null`.
+parameters and `Bearer` fragments, and substitutes the exception type for a
+message that trails off into the literal word `null`. It is applied in three
+layers: each executor that calls a provider scrubs its own error; the engine
+redacts every node error, forwarded `Error` state and console line at the one
+point they all pass (so the run record, the exports, the console and the trace
+are covered even for an executor that forgets); and `CrashlyticsTimberTree`
+redacts every record — message, extras and each link of a cause chain — before
+it reaches Crashlytics.
 
 **Cloud-backed structured output.** A structured node (§3.5) can run its
 validate-and-repair gate against a cloud provider instead of the on-device

@@ -2845,6 +2845,70 @@ class GraphExecutionEngineTest {
     }
 
     /**
+     * The engine is the one point every node's failure passes through on its way to
+     * the run record, the console (and its *Copy all*), the persisted trace and the
+     * surface. A provider error that quotes a credential — Google authenticates by
+     * query parameter — must leave it scrubbed whichever executor produced it and
+     * however it arrived: as a forwarded `Error` state, as the node result's error,
+     * as a console line, or as an exception thrown out of the executor. The node is
+     * a stubbed SKILL executor on purpose: the guarantee must not depend on the
+     * executor remembering to scrub.
+     */
+    @Test
+    fun `given a node reports a credential-bearing error then everything the engine emits is scrubbed`() = runTest {
+        every { skillNodeExecutor.execute(any(), any(), any(), any(), any(), any()) } returns flowOf(
+            NodeOutput.Console(ConsoleEventType.Error, "provider said: $LEAKING_PROVIDER_ERROR"),
+            NodeOutput.State(AgentOrchestratorState.Error(LEAKING_PROVIDER_ERROR)),
+            NodeOutput.Result(NodeExecutionResult(error = LEAKING_PROVIDER_ERROR)),
+        )
+        val appended = mutableListOf<RunTraceRecord>()
+        coEvery { runTraceRepository.append(capture(appended)) } returns Unit
+
+        val states = engine(sessionId, "prompt", singleSkillGraph(), "run-leak").toList()
+
+        assertNothingCarriesTheKey(states, appended)
+    }
+
+    @Test
+    fun `given a node throws a credential-bearing exception then everything the engine emits is scrubbed`() = runTest {
+        every { skillNodeExecutor.execute(any(), any(), any(), any(), any(), any()) } returns flow {
+            throw IllegalStateException(LEAKING_PROVIDER_ERROR)
+        }
+        val appended = mutableListOf<RunTraceRecord>()
+        coEvery { runTraceRepository.append(capture(appended)) } returns Unit
+
+        val states = engine(sessionId, "prompt", singleSkillGraph(), "run-leak").toList()
+
+        assertNothingCarriesTheKey(states, appended)
+    }
+
+    private fun singleSkillGraph(): PipelineGraph = PipelineGraph(
+        id = "g-leak",
+        name = "Leak",
+        nodes = listOf(
+            NodeModel("input_1", NodeType.INPUT, 0f, 0f),
+            NodeModel("skill_1", NodeType.SKILL, 10f, 0f),
+            NodeModel("output_1", NodeType.OUTPUT, 20f, 0f, systemPrompt = null),
+        ),
+        connections = listOf(
+            ConnectionModel("c1", "input_1", "skill_1"),
+            ConnectionModel("c2", "skill_1", "output_1"),
+        ),
+    )
+
+    private fun assertNothingCarriesTheKey(states: List<AgentOrchestratorState>, trace: List<RunTraceRecord>) {
+        val errors = states.filterIsInstance<AgentOrchestratorState.Error>().map { it.message }
+        val console = states.filterIsInstance<AgentOrchestratorState.ConsoleLog>()
+            .flatMap { log -> log.events.map { it.message } }
+        val traced = trace.filterIsInstance<RunTraceRecord.ConsoleEntry>().map { it.message }
+        for (text in errors + console + traced) {
+            assertFalse("key leaked: $text", text.contains(LEAKED_KEY))
+        }
+        assertTrue("the run must still fail: $states", errors.isNotEmpty())
+        assertTrue("the failure must still reach the console: $console", console.any { it.contains("key=***") })
+    }
+
+    /**
      * The persistent run trace must be complete after a run: every console
      * event and every per-node I/O snapshot reaches the trace repository,
      * attributed to the run, with a strictly monotonic per-run seq shared
@@ -4955,4 +5019,11 @@ class GraphExecutionEngineTest {
     }
 
     // endregion
+
+    private companion object {
+        const val LEAKED_KEY = "AIzaSyTESTKEY"
+        const val LEAKING_PROVIDER_ERROR =
+            "Socket timeout has expired [url=https://generativelanguage.googleapis.com/v1beta/models/" +
+                "gemini:streamGenerateContent?alt=sse&key=$LEAKED_KEY]"
+    }
 }

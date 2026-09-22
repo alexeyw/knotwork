@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.EOFException
 
 class CloudErrorSanitizerTest {
 
@@ -108,5 +109,46 @@ class CloudErrorSanitizerTest {
     fun `given a blank or null message when sanitized then a readable fallback is returned`() {
         assertEquals("Unknown error", CloudErrorSanitizer.sanitize(null))
         assertEquals("Unknown error", CloudErrorSanitizer.sanitize("   "))
+    }
+
+    @Test
+    fun `given a wrapped provider failure when sanitize throwable then the key is masked and the cause named`() {
+        val wrapper = RuntimeException(null, EOFException())
+        val leaking = IllegalStateException("Socket timeout [url=https://x.googleapis.com/v1?alt=sse&key=AIzaSyA]")
+
+        assertEquals(
+            "Socket timeout [url=https://x.googleapis.com/v1?alt=sse&key=***]",
+            CloudErrorSanitizer.sanitize(leaking),
+        )
+        assertEquals("EOFException", CloudErrorSanitizer.sanitize(wrapper))
+    }
+
+    @Test
+    fun `given text with credentials when redactSecrets then only the secrets change`() {
+        val raw = "GET https://h/x?api_key=abc&q=1 failed: Authorization: Bearer sk-1\nError: null"
+
+        assertEquals(
+            "GET https://h/x?api_key=***&q=1 failed: Authorization: Bearer ***\nError: null",
+            CloudErrorSanitizer.redactSecrets(raw),
+        )
+    }
+
+    @Test
+    fun `given text without credentials when redactSecrets then it is returned unchanged`() {
+        // Unlike sanitize, redaction must not rewrite repeated lines or a trailing
+        // `null` — it runs over console lines and log records of every kind.
+        val raw = "routing verdict: null\nrouting verdict: null"
+
+        assertEquals(raw, CloudErrorSanitizer.redactSecrets(raw))
+    }
+
+    @Test(timeout = 5_000)
+    fun `given a cause chain that loops when sanitize throwable then it returns instead of hanging`() {
+        // `initCause` rejects only a direct self-cause, so A -> B -> A can be built.
+        val first = IllegalStateException("outer key=AIzaSyA")
+        val second = RuntimeException(null, first)
+        first.initCause(second)
+
+        assertEquals("outer key=***", CloudErrorSanitizer.sanitize(first))
     }
 }

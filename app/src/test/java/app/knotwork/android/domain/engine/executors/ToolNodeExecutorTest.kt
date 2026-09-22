@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.AgentOrchestratorState
@@ -105,6 +106,37 @@ class ToolNodeExecutorTest {
         // tests override `getRisk(...)` to drive the gate explicitly.
         coEvery { toolRepository.getRisk(any(), any()) } returns ToolRisk.READ_ONLY
     }
+
+    @Test
+    fun `given a cloud provider error carrying an api key when arguments are generated then the error is scrubbed`() =
+        runTest {
+            val leaking = ToolNodeExecutor(
+                llmEngine = llmEngine,
+                loadModelUseCase = loadModelUseCase,
+                toolRepository = toolRepository,
+                toolInvocationGate = toolInvocationGate,
+                structuredOutputGate = StructuredOutputGate(),
+                settingsRepository = settingsRepository,
+                cloudStructuredFactory = CloudStructuredInferenceClientFactory { _, _ ->
+                    CloudStructuredClient(
+                        inference = { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) },
+                        supportsNativeJson = true,
+                    )
+                },
+            )
+            val toolName = "MyTool"
+            val node = NodeModel("1", NodeType.TOOL, 0f, 0f, toolName = toolName, cloudProvider = "google")
+            coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool(toolName, "Desc", "Schema"))
+
+            val outputs = leaking.execute(node, "Do something", "session-1", "").toList()
+
+            val stateError = outputs.filterStates<AgentOrchestratorState.Error>().single().message
+            val resultError = outputs.lastResult().error.orEmpty()
+            for (text in listOf(stateError, resultError)) {
+                assertFalse("key leaked: $text", text.contains(LEAKED_KEY))
+                assertTrue("scrub marker missing: $text", text.contains("key=***"))
+            }
+        }
 
     @Test
     fun `execute uses LLM to generate arguments for specific tool`() = runTest {
@@ -1059,5 +1091,12 @@ class ToolNodeExecutorTest {
         val result = outputs.lastResult()
         assertNull(result.error)
         assertEquals("Tool A Success", result.outputText)
+    }
+
+    private companion object {
+        const val LEAKED_KEY = "AIzaSyTESTKEY"
+        const val LEAKING_PROVIDER_ERROR =
+            "Socket timeout has expired [url=https://generativelanguage.googleapis.com/v1beta/models/" +
+                "gemini:streamGenerateContent?alt=sse&key=$LEAKED_KEY]"
     }
 }

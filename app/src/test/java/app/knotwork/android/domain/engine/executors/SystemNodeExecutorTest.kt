@@ -2,6 +2,7 @@ package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.AgentOrchestratorState
@@ -59,6 +60,36 @@ class SystemNodeExecutorTest {
                     null
                 },
             )
+    }
+
+    @Test
+    fun `given a cloud provider error carrying an api key when execute then the emitted error is scrubbed`() = runTest {
+        // Google authenticates by query parameter, so an ordinary transport failure
+        // quotes the key. From this node's error it would reach the run record, the
+        // shared chat export, the console clipboard and Crashlytics.
+        val leaking = SystemNodeExecutor(
+            llmEngine,
+            loadModelUseCase,
+            chatRepository,
+            StructuredOutputGate(),
+            settingsRepository,
+            CloudStructuredInferenceClientFactory { _, _ ->
+                CloudStructuredClient(
+                    inference = { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) },
+                    supportsNativeJson = true,
+                )
+            },
+        )
+        val node = NodeModel("1", NodeType.EVALUATION, 0f, 0f, cloudProvider = "google")
+
+        val outputs = leaking.execute(node, "input", "session-1", "prompt").toList()
+
+        val stateError = outputs.filterStates<AgentOrchestratorState.Error>().single().message
+        val resultError = outputs.lastResult().error.orEmpty()
+        for (text in listOf(stateError, resultError)) {
+            assertFalse("key leaked: $text", text.contains(LEAKED_KEY))
+            assertTrue("scrub marker missing: $text", text.contains("key=***"))
+        }
     }
 
     @Test
@@ -243,5 +274,12 @@ class SystemNodeExecutorTest {
         val outputs = executor.execute(node, "input", "session-1", "prompt", scope = ExecutionScope()).toList()
 
         assertEquals("[\"a\",\"b\",\"c\"]", outputs.lastResult().outputText)
+    }
+
+    private companion object {
+        const val LEAKED_KEY = "AIzaSyTESTKEY"
+        const val LEAKING_PROVIDER_ERROR =
+            "Socket timeout has expired [url=https://generativelanguage.googleapis.com/v1beta/models/" +
+                "gemini:streamGenerateContent?alt=sse&key=$LEAKED_KEY]"
     }
 }

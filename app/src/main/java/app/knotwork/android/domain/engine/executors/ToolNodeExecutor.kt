@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.constants.DefaultPrompts
+import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.executors.ToolCallParser.ToolCall
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
@@ -129,8 +130,10 @@ class ToolNodeExecutor @Inject constructor(
         } catch (e: Exception) {
             // An engine-level failure during argument generation (not a validation
             // miss) — surface it as a graceful node error rather than tearing down the run.
-            Timber.tag("PipelineDebug").e(e, "Error generating tool arguments via LLM")
-            val errorMsg = "Error generating tool arguments: ${e.message}"
+            // The engine may be a cloud provider, whose error can quote its key (see
+            // CloudErrorSanitizer); the throwable is kept out of the log for the same reason.
+            val errorMsg = "Error generating tool arguments: ${CloudErrorSanitizer.sanitize(e)}"
+            Timber.tag("PipelineDebug").e("$errorMsg (${e::class.simpleName})")
             emit(NodeOutput.State(AgentOrchestratorState.Error(errorMsg)))
             emit(NodeOutput.Result(NodeExecutionResult(error = errorMsg)))
             return@flow

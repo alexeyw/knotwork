@@ -17,6 +17,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -110,6 +111,27 @@ class DelegateTaskToolTest {
             coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
         }
     }
+
+    @Test
+    fun `given the delegated client throws with a key in the url when executeDelegation then the result is scrubbed`() =
+        runTest {
+            // The tool result is persisted as the node output, shown in the console and
+            // fed back to the model as its observation — none of those may carry the key.
+            val leakedKey = "AIzaSyTESTKEY"
+            coEvery { koogClientFactory.createGoogleExecutor() } returns mockClient
+            coEvery { mockClient.models() } returns emptyList()
+            every { mockClient.llmProvider() } returns mockk(relaxed = true)
+            coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } throws RuntimeException(
+                "Socket timeout has expired [url=https://generativelanguage.googleapis.com/v1beta/models/" +
+                    "gemini:streamGenerateContent?alt=sse&key=$leakedKey]",
+            )
+
+            val result = delegateTaskTool.executeDelegation("Task", "google")
+
+            assertTrue(result, result.startsWith("Error: Task delegation failed"))
+            assertFalse("key leaked: $result", result.contains(leakedKey))
+            assertTrue("scrub marker missing: $result", result.contains("key=***"))
+        }
 
     @Test
     fun `executeDelegation returns error when target model is unsupported`() = runTest {

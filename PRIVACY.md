@@ -127,9 +127,9 @@ determines what happens to that data.
 
 Downloading an on-device model contacts the host serving it: Hugging Face for
 the models offered in the app, or any URL you paste yourself. These are
-ordinary file downloads. If a model is gated, your Hugging Face access token is
-sent to that host to authorise the download, and only for that download —
-browsing the catalogue is anonymous.
+ordinary file downloads. If you saved a Hugging Face access token, it goes only
+to Hugging Face (`huggingface.co`), with its model downloads — never to a link
+you paste for another host. Browsing the catalogue is anonymous.
 
 ### 3.4 Outbound requests from tools
 
@@ -142,7 +142,8 @@ asks the device to run something later.
 
 **`search_tool` — a Wikipedia lookup, and the one path in this document that is
 on by default.** When a pipeline step calls it, the app requests
-`https://<language>.wikipedia.org/w/api.php` with a search term. The model
+`https://<language>.wikipedia.org/w/api.php` with a search term. The language
+code is checked first, so the request can only go to a Wikipedia address. The model
 writes that term from what it is working on, so it can carry wording from your
 conversation. Nothing else of yours goes with it — no account, no device
 identifier, no credentials — though, like any web request, it shows your IP

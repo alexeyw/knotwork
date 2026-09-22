@@ -202,10 +202,7 @@ class CloudLlmNodeExecutor @Inject constructor(
             // message. Scrub before it reaches the console, the trace or logcat — passing
             // the message rather than the throwable to Timber keeps the key out of the
             // logged stack trace too.
-            // The deepest cause is what actually failed; the wrapper above it often has
-            // no message of its own, which is how a user ends up reading the word "null".
-            val rootCause = generateSequence(e as Throwable) { it.cause }.last()
-            val safeMessage = CloudErrorSanitizer.sanitize(e.message, rootCause::class.simpleName)
+            val safeMessage = CloudErrorSanitizer.sanitize(e)
             // The exception type is kept because it is the fastest triage signal and
             // carries no credential; only the throwable itself is withheld, since
             // logging it would print the unscrubbed message inside the stack trace.

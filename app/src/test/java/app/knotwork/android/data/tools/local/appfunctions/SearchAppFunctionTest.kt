@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -22,6 +23,8 @@ import org.junit.Test
  *     maps to `ERROR_INVALID_ARGUMENT` on the platform path).
  *  3. A blank `lang` is normalised to the default (`"en"`) so external callers can pass an
  *     empty string when they don't know which language to ask for.
+ *  4. A `lang` that cannot name a Wikipedia edition raises [IllegalArgumentException]
+ *     before [SearchTool] is reached, like a blank `query`.
  */
 class SearchAppFunctionTest {
 
@@ -55,5 +58,17 @@ class SearchAppFunctionTest {
 
         assertEquals("ok", result)
         coVerify(exactly = 1) { searchTool.executeSearch("kotlin", "en") }
+    }
+
+    @Test
+    fun `given a lang that cannot name a Wikipedia edition when invoke then throws and never searches`() {
+        // SearchTool refuses such a value too; rejecting it here gives the external caller
+        // the same typed ERROR_INVALID_ARGUMENT outcome a blank query gets.
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { searchAppFunction.invoke(appFunctionContext, query = "kotlin", lang = "evil.example/") }
+        }
+
+        assertTrue(exception.message.orEmpty().contains("'lang'"))
+        coVerify(exactly = 0) { searchTool.executeSearch(any(), any()) }
     }
 }
