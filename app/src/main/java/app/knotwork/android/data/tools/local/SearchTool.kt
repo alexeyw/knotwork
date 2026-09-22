@@ -10,6 +10,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +25,8 @@ import javax.inject.Singleton
  * the device going through the AppFunctions runtime. The second one bypasses
  * `ToolRepositoryImpl` entirely, so a check placed in the repository would hold for one
  * path and not the other. Placing it on the line that opens the connection is the only
- * arrangement where every caller is covered by construction.
+ * arrangement where every caller is covered by construction. The `lang` check
+ * ([searchUrl]) lives here for the same reason.
  *
  * @property llmEngine On-device engine used to summarise an over-long article extract.
  * @property networkGate Decides whether this tool may reach the network right now — the
@@ -63,6 +65,20 @@ class SearchTool @Inject constructor(
 
         /** TCP read timeout, in milliseconds, for the Wikipedia API request. */
         private const val HTTP_READ_TIMEOUT_MS: Int = 5_000
+
+        /**
+         * What `lang` must be: one DNS label — lower-case letters, digits and hyphens,
+         * at most 63 of them. That is the whole property the URL needs, since the
+         * value then cannot end the host (`/`, `?`, `#`), add a userinfo (`@`) or a
+         * port (`:`), or add a label (`.`): the request can only go to a subdomain of
+         * `wikipedia.org`. A stricter "language code" shape would be wrong — Simple
+         * English is `simple`, and `zh-min-nan` / `be-tarask` are real editions.
+         */
+        private val WIKIPEDIA_SUBDOMAIN = Regex("^[a-z0-9-]{1,63}$")
+
+        /** The tool result for a `lang` that is not a Wikipedia subdomain. */
+        const val INVALID_LANG_ERROR =
+            "Error: 'lang' must be a Wikipedia language code such as \"en\", \"de\" or \"simple\"."
     }
 
     /**
@@ -94,23 +110,46 @@ class SearchTool @Inject constructor(
     }
 
     /**
+     * Builds the Wikipedia API request for [query] in the [lang] edition.
+     *
+     * `lang` sits in the authority of the URL and arrives from a caller the app does
+     * not control — the model's own tool call, or another app through AppFunctions —
+     * so it is checked against [WIKIPEDIA_SUBDOMAIN] rather than interpolated as
+     * given. Case and surrounding whitespace are forgiven (`" EN "` is `en`).
+     *
+     * @param query The search term; percent-encoded into the query string.
+     * @param lang The Wikipedia edition, e.g. `en`, `de`, `simple`, `zh-min-nan`.
+     * @return The request URL, whose host is always `<lang>.wikipedia.org`, or `null`
+     *   when [lang] is not a single DNS label.
+     */
+    internal fun searchUrl(query: String, lang: String): URL? {
+        val edition = lang.trim().lowercase(Locale.ROOT)
+        if (!WIKIPEDIA_SUBDOMAIN.matches(edition)) return null
+        val encodedQuery = URLEncoder.encode(query, Charsets.UTF_8.name())
+        // Using generator=search is much more flexible than titles= because it does a real search.
+        return URL(
+            "https://$edition.wikipedia.org/w/api.php?action=query&format=json" +
+                "&prop=extracts&exintro=true&explaintext=true&generator=search" +
+                "&gsrsearch=$encodedQuery&gsrlimit=1",
+        )
+    }
+
+    /**
      * Executes the search query against Wikipedia.
      *
      * @param query The search query.
-     * @param lang The 2-letter language code.
-     * @return A summary of the search results, or the refusal text when the
-     *   "Block network from local model" restriction is on.
+     * @param lang The Wikipedia edition to search, e.g. `en` (see [searchUrl]).
+     * @return A summary of the search results; the refusal text when the
+     *   "Block network from local model" restriction is on; or
+     *   [INVALID_LANG_ERROR], before any connection, when [lang] is not a
+     *   Wikipedia subdomain.
      */
     suspend fun executeSearch(query: String, lang: String): String = withContext(Dispatchers.IO) {
         networkGate.networkToolRefusal(TOOL_NAME)?.let { return@withContext it }
+        // Refused rather than replaced with `en`: a silent fallback would search the
+        // wrong edition and hand the model a confident answer to a different question.
+        val url = searchUrl(query, lang) ?: return@withContext INVALID_LANG_ERROR
         try {
-            val encodedQuery = URLEncoder.encode(query, Charsets.UTF_8.name())
-
-            // Using generator=search is much more flexible than titles= because it does a real search.
-            val urlString = "https://$lang.wikipedia.org/w/api.php?action=query&format=json" +
-                "&prop=extracts&exintro=true&explaintext=true&generator=search" +
-                "&gsrsearch=$encodedQuery&gsrlimit=1"
-            val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = HTTP_CONNECT_TIMEOUT_MS

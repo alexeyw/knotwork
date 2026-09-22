@@ -52,6 +52,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -605,6 +606,32 @@ class TaskQueueManagerImplTest {
 
         coVerify { pipelineRunRepository.finishRun(task.id, PipelineRunStatus.FAILED, "engine blew up", null) }
     }
+
+    @Test
+    fun `given the engine throws with a credential in its message then neither the record nor the state carries it`() =
+        testScope.runTest {
+            // The run record's message is what the chat export and the trigger-journal
+            // export share; the state is what the error banner shows.
+            val leakedKey = "AIzaSyTESTKEY"
+            every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
+                emit(AgentOrchestratorState.Loading)
+                throw IllegalStateException(
+                    "Socket timeout [url=https://generativelanguage.googleapis.com/x?key=$leakedKey]",
+                )
+            }
+            val recorded = slot<String>()
+            coEvery { pipelineRunRepository.finishRun(any(), any(), capture(recorded), any()) } returns Unit
+
+            val task = AgentTask(sessionId = "session_leak", prompt = "p")
+            taskQueueManager.enqueueTask(task)
+            advanceUntilIdle()
+
+            val state = taskQueueManager.observeTaskState(task.sessionId).first() as AgentOrchestratorState.Error
+            for (text in listOf(recorded.captured, state.message)) {
+                assertFalse("key leaked: $text", text.contains(leakedKey))
+                assertTrue("scrub marker missing: $text", text.contains("key=***"))
+            }
+        }
 
     /**
      * Pipeline-resolution failures (no binding, no default) never reach the

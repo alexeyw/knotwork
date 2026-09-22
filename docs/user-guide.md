@@ -2723,10 +2723,12 @@ LLMs.
 - The **HuggingFace** section lets you paste a personal access token
   (stored encrypted, in the same Keystore-backed store as cloud API
   keys) so gated repositories can be downloaded. The `+ Paste` button
-  reads the system clipboard.
+  reads the system clipboard. The token is sent only to
+  `huggingface.co`.
 - The **Custom model URL** field accepts a direct link to any
   `.litertlm`, `.task`, or `.gguf` file. Tap `Get` to start
-  downloading.
+  downloading. A link to any other host is downloaded without your
+  token.
 - The **Available presets** list shows curated models, each row in
   one of three states: `Get` (not downloaded), progress bar with
   cancel-X (downloading), or `✓ ON DISK` (ready to activate).

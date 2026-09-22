@@ -13,6 +13,21 @@ details.
 
 ## [Unreleased]
 
+### Security
+
+- **A saved Hugging Face token is sent only to Hugging Face.** It used to go
+  with any model download while a token was saved, including one from a link
+  pasted for another host. The downloader now attaches it only to an HTTPS
+  request to `huggingface.co`.
+- **Cloud error messages no longer carry API keys.** A provider error can quote
+  the failing request, key included; three paths passed that text on unscrubbed,
+  into a run's error, the console, chat and trigger-journal exports and crash
+  reports. They are scrubbed now, and the pipeline engine and the crash-reporting
+  log scrub again, so a path added later is covered too.
+- **Wikipedia search can only reach Wikipedia.** The language code chosen for a
+  search is checked before the request is built, so it can no longer point the
+  request at another server.
+
 ### Fixed
 
 - **The roadmap described work that had already finished, and the coverage

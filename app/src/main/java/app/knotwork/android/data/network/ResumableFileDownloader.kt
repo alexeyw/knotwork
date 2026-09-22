@@ -1,12 +1,15 @@
 package app.knotwork.android.data.network
 
 import android.content.Context
+import app.knotwork.android.domain.constants.ModelDiscoveryConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.BufferedSource
@@ -77,7 +80,10 @@ class ResumableFileDownloader @Inject constructor(
      *
      * @param fileName Desired local file name (may be attacker-influenced — see
      *   [resolveSafeTarget]).
-     * @param authToken Bearer token for gated repositories, or `null`.
+     * @param authToken The saved Hugging Face token, or `null`. It is attached only
+     *   to an `https` request whose host is Hugging Face itself (see
+     *   [mayCarryHuggingFaceToken]) — whatever the caller decided, never to a URL the
+     *   user pasted, a mirror, or the CDN the Hub redirects to.
      * @param onProgress Invoked with 0..100 whenever the whole-percent figure
      *   changes. Not called when the server reports no content length.
      * @return [Outcome.Success] with the final path, or [Outcome.Failure]. Any
@@ -124,10 +130,13 @@ class ResumableFileDownloader @Inject constructor(
         val alreadyOnDisk = if (allowResume && part.exists()) part.length() else 0L
         if (!allowResume) part.delete()
 
+        val httpUrl = url.toHttpUrl()
         val request = Request.Builder()
-            .url(url)
+            .url(httpUrl)
             .apply {
-                if (!authToken.isNullOrBlank()) addHeader("Authorization", "Bearer $authToken")
+                if (!authToken.isNullOrBlank() && mayCarryHuggingFaceToken(httpUrl)) {
+                    addHeader("Authorization", "Bearer $authToken")
+                }
                 if (alreadyOnDisk > 0) addHeader("Range", "bytes=$alreadyOnDisk-")
             }
             .build()
@@ -287,7 +296,33 @@ class ResumableFileDownloader @Inject constructor(
     /** Stable, filename-safe fingerprint of the source URL. */
     private fun urlKey(url: String): String = Integer.toHexString(url.hashCode())
 
+    /**
+     * Whether a request to [url] may carry the saved Hugging Face token.
+     *
+     * **Why the decision is made here, from the destination.** Two callers decide
+     * whether to pass the token at all — the Models screen and the Discover install
+     * flow — and both decide it from "is a token saved?", because the token field
+     * sits beside a free-text model-URL field. Deciding it on the line that builds
+     * the request, from the URL itself, is the only arrangement where no caller can
+     * hand the credential to another host.
+     *
+     * **Why host equality is enough.** Measured on the Hub: a `resolve/main` download
+     * answers `302` with a signed URL on a different host (`*.cdn.hf.co`), and the
+     * signature authorises that hop. The token is needed on the first request only,
+     * and OkHttp drops `Authorization` from any redirect that changes host, port or
+     * scheme. A suffix rule would therefore buy nothing, while widening the set of
+     * hosts the token can reach. `https` is required so the token never travels in
+     * cleartext, even to the right host.
+     *
+     * @param url The request's own URL.
+     * @return `true` only for `https://huggingface.co/…`.
+     */
+    private fun mayCarryHuggingFaceToken(url: HttpUrl): Boolean = url.isHttps && url.host == HF_TOKEN_HOST
+
     private companion object {
+        /** The one host a saved Hugging Face token is ever sent to. */
+        val HF_TOKEN_HOST: String = ModelDiscoveryConstants.HF_BASE_URL.toHttpUrl().host
+
         /** Chunk read from the network and flushed to disk on each loop. */
         const val BUFFER_BYTES: Long = 65_536L
 

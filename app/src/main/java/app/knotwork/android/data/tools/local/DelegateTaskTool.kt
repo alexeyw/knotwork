@@ -11,6 +11,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
 import app.knotwork.android.data.engine.KoogClientFactory
 import app.knotwork.android.data.engine.KoogModelMapper
+import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
@@ -155,7 +156,9 @@ class DelegateTaskTool @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                "Error: Task delegation failed due to an exception: ${e.message}"
+                // The result becomes the node's output, the console line and the model's
+                // next observation — scrubbed, since a provider error can quote its key.
+                "Error: Task delegation failed due to an exception: ${CloudErrorSanitizer.sanitize(e)}"
             }
         }
 

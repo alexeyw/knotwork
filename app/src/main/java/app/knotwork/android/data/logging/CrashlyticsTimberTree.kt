@@ -1,6 +1,7 @@
 package app.knotwork.android.data.logging
 
 import android.util.Log
+import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.repositories.CrashReportingRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -18,6 +19,14 @@ import timber.log.Timber
  * additionally short-circuits when the opt-in flag is `false`, providing
  * a belt-and-braces guarantee that nothing ever leaves the device while
  * collection is disabled.
+ *
+ * **Every record is redacted on the way out.** A provider error can quote the
+ * failing request, and Google authenticates by query parameter, so an ordinary
+ * transport failure logged anywhere in the app would carry the API key into the
+ * crash report. The call-site message, the extras and the message of every
+ * throwable in the cause chain pass [CloudErrorSanitizer.redactSecrets] here —
+ * one place for every `Timber.w` / `Timber.e` in the app, including the ones
+ * written after this line.
  *
  * Crashlytics calls are dispatched via the supplied [CoroutineScope]
  * because the repository methods are `suspend` (they read the persisted
@@ -44,13 +53,14 @@ class CrashlyticsTimberTree(
      * Forwards the record to Crashlytics.
      *
      * When the caller supplied a [Throwable] (`Timber.e(t, "context %s", arg)`),
-     * the exception is reported verbatim and the formatted [message] / [tag]
+     * the exception is reported as-is — or as a redacted copy when a message in
+     * its cause chain carries a credential — and the formatted [message] / [tag]
      * are attached as `extras` so the call-site context survives — otherwise
      * Crashlytics would only see the bare stack trace.
      *
      * Message-only records (no throwable) are wrapped in a synthetic exception
      * whose message preserves the original tag + body so Crashlytics still has
-     * something to stack-trace and group on.
+     * something to stack-trace and group on. Every message is redacted first.
      */
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
         if (t != null) {
@@ -58,28 +68,76 @@ class CrashlyticsTimberTree(
             // throwable is present (Timber.Tree.prepareLog). The stack already lives on
             // the throwable itself — extract only the original call-site message before
             // the newline so the breadcrumb stays readable.
-            val callSiteMessage = message.substringBefore('\n')
+            val callSiteMessage = CloudErrorSanitizer.redactSecrets(message.substringBefore('\n'))
             val extras = buildMap {
                 put(EXTRA_MESSAGE, callSiteMessage)
                 if (!tag.isNullOrBlank()) put(EXTRA_TAG, tag)
             }
+            val reported = redactedChain(t)
             scope.launch {
-                crashReportingRepository.recordException(t, extras)
+                crashReportingRepository.recordException(reported, extras)
             }
             return
         }
         val synthetic = SyntheticLogException(
-            buildString {
-                if (!tag.isNullOrBlank()) {
-                    append("[")
-                    append(tag)
-                    append("] ")
-                }
-                append(message)
-            },
+            CloudErrorSanitizer.redactSecrets(
+                buildString {
+                    if (!tag.isNullOrBlank()) {
+                        append("[")
+                        append(tag)
+                        append("] ")
+                    }
+                    append(message)
+                },
+            ),
         )
         scope.launch {
             crashReportingRepository.recordException(synthetic)
+        }
+    }
+
+    /**
+     * Returns [error] itself when no throwable in its cause chain carries a
+     * credential, and otherwise a copy of the chain whose messages are redacted.
+     *
+     * The copy keeps what Crashlytics groups and triages on — each link's stack
+     * frames, and its original type, named at the head of its message — and drops
+     * only the secret. An untouched chain is passed through as the same instance,
+     * so the ordinary report is exactly what it was before redaction existed.
+     *
+     * @param error The throwable the Timber call site supplied.
+     * @return The throwable to report.
+     */
+    private fun redactedChain(error: Throwable): Throwable {
+        val chain = mutableListOf<Throwable>()
+        var link: Throwable? = error
+        // `initCause` rejects only a direct self-cause, so a longer loop is possible.
+        while (link != null && chain.none { it === link }) {
+            chain += link
+            link = link.cause
+        }
+        val leaks = chain.any { it.message?.let { text -> CloudErrorSanitizer.redactSecrets(text) != text } == true }
+        if (!leaks) return error
+        return chain.foldRight(null as Throwable?) { original, cause -> RedactedException(original, cause) }!!
+    }
+
+    /**
+     * Stand-in for a throwable whose message carried a credential: the original's
+     * type and redacted message as its message, the original's stack frames as its
+     * own.
+     *
+     * @param original The throwable being reported.
+     * @param cause The already-redacted stand-in for [original]'s cause, or `null`.
+     */
+    private class RedactedException(original: Throwable, cause: Throwable?) :
+        Exception(
+            original.message
+                ?.let { "${original::class.java.name}: ${CloudErrorSanitizer.redactSecrets(it)}" }
+                ?: original::class.java.name,
+            cause,
+        ) {
+        init {
+            stackTrace = original.stackTrace
         }
     }
 

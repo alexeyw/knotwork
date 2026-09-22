@@ -1,6 +1,7 @@
 package app.knotwork.android.data.engine
 
 import androidx.annotation.VisibleForTesting
+import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.GraphExecutionEngine
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
@@ -635,7 +636,9 @@ class TaskQueueManagerImpl @Inject constructor(
             // resets the session state.
             throw e
         } catch (e: Exception) {
-            val message = e.message ?: "Execution failed"
+            // The record's message is what the chat and trigger-journal exports share,
+            // and an exception escaping the engine may quote a provider's key.
+            val message = CloudErrorSanitizer.redactSecrets(e.message ?: "Execution failed")
             // The stall watchdog is the one exception the queue itself raises, and
             // it is a forced termination rather than a pipeline defect — typed so
             // it stops being recoverable only by matching its own message text.

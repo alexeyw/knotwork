@@ -5,6 +5,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -194,12 +196,103 @@ class ResumableFileDownloaderTest {
     }
 
     @Test
-    fun `given a gated repository when downloading then the bearer token is sent`() = runTest {
+    fun `given a Hugging Face download when a token is saved then the bearer token is sent`() = runTest {
         respondWith(response(code = 200, body = "gated"))
 
-        downloader.download(url, "model.bin", authToken = "hf_secret") {}
+        downloader.download(HF_URL, "model.bin", authToken = "hf_secret") {}
 
         assertEquals("Bearer hf_secret", sentRequest.captured.header("Authorization"))
+    }
+
+    @Test
+    fun `given a saved token when the URL only resembles Hugging Face then no token is sent`() = runTest {
+        // The token belongs to one account on one host. Everything below either is a
+        // different host that merely contains the name, or would put the token on the
+        // wire in cleartext.
+        val lookalikes = listOf(
+            "https://huggingface.co.evil.example/model.bin",
+            "https://evil-huggingface.co/model.bin",
+            "https://evil.example/huggingface.co/model.bin",
+            "https://huggingface.co@evil.example/model.bin",
+            "http://huggingface.co/org/repo/resolve/main/model.bin",
+            "https://hf.co/org/repo/resolve/main/model.bin",
+            "https://us.aws.cdn.hf.co/xet-bridge-us/model.bin",
+        )
+        for (lookalike in lookalikes) {
+            respondWith(response(code = 200, body = "data"))
+
+            downloader.download(lookalike, "model.bin", authToken = "hf_secret") {}
+
+            assertNull("token sent to $lookalike", sentRequest.captured.header("Authorization"))
+        }
+    }
+
+    @Test
+    fun `given a saved token when the model URL is not Hugging Face then the host receives no token`() = runTest {
+        startedServer().use { mirror ->
+            mirror.enqueue(MockResponse.Builder().code(200).body("mirrored").build())
+            val wired = wiredDownloader(mapOf("mirror.example" to mirror))
+
+            val outcome = wired.download("https://mirror.example/model.bin", "model.bin", authToken = "hf_secret") {}
+
+            assertTrue(outcome is ResumableFileDownloader.Outcome.Success)
+            assertNull(mirror.takeRequest().headers["Authorization"])
+        }
+    }
+
+    @Test
+    fun `given a saved token when Hugging Face serves the file then the request carries it`() = runTest {
+        startedServer().use { hub ->
+            hub.enqueue(MockResponse.Builder().code(200).body("gated").build())
+            val wired = wiredDownloader(mapOf(HF_HOST to hub))
+
+            wired.download(HF_URL, "model.bin", authToken = "hf_secret") {}
+
+            assertEquals("Bearer hf_secret", hub.takeRequest().headers["Authorization"])
+        }
+    }
+
+    @Test
+    fun `given Hugging Face redirects to its CDN when downloading then the CDN never sees the token`() = runTest {
+        // Measured on the real Hub: a `resolve/main` URL answers 302 with a signed URL on
+        // a different host (`us.aws.cdn.hf.co`). The signature authorises that hop; the
+        // token must stop at the first one. OkHttp drops `Authorization` whenever a
+        // redirect changes host, port or scheme — pinned here, since the Hub download
+        // working at all depends on it and a future OkHttp could change it.
+        startedServer().use { hub ->
+            startedServer().use { cdn ->
+                hub.enqueue(
+                    MockResponse.Builder().code(302).addHeader("Location", cdn.url("/signed/model.bin")).build(),
+                )
+                cdn.enqueue(MockResponse.Builder().code(200).body("weights").build())
+                val wired = wiredDownloader(mapOf(HF_HOST to hub))
+
+                val outcome = wired.download(HF_URL, "model.bin", authToken = "hf_secret") {}
+
+                assertEquals("weights", File((outcome as ResumableFileDownloader.Outcome.Success).path).readText())
+                assertEquals("Bearer hf_secret", hub.takeRequest().headers["Authorization"])
+                assertNull(cdn.takeRequest().headers["Authorization"])
+            }
+        }
+    }
+
+    /**
+     * A downloader over a real [OkHttpClient] whose requests reach [routes] instead of
+     * the internet. The interceptor stands in for DNS and TLS only: the downloader still
+     * builds its request — and decides on the token — from the real `https://` URL, and
+     * redirects are followed by OkHttp itself, after the interceptor, exactly as on a
+     * device.
+     */
+    private fun wiredDownloader(routes: Map<String, MockWebServer>): ResumableFileDownloader {
+        val routed = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val server = routes.getValue(request.url.host)
+                val local = request.url.newBuilder().scheme("http").host(server.hostName).port(server.port).build()
+                chain.proceed(request.newBuilder().url(local).build())
+            }
+            .build()
+        return ResumableFileDownloader(context, routed)
     }
 
     /** Mirrors the downloader's own part-file naming so tests can seed one. */
@@ -214,10 +307,17 @@ class ResumableFileDownloaderTest {
         .body(body.toResponseBody())
         .build()
 
+    private fun startedServer(): MockWebServer = MockWebServer().also { it.start() }
+
     /** Stubs a single response and captures the request that asked for it. */
     private fun respondWith(response: Response) {
         val call = mockk<Call>()
         every { call.execute() } returns response
         every { client.newCall(capture(sentRequest)) } returns call
+    }
+
+    private companion object {
+        const val HF_HOST = "huggingface.co"
+        const val HF_URL = "https://huggingface.co/org/repo/resolve/main/model.bin"
     }
 }

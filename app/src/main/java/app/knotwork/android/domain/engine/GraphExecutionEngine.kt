@@ -272,7 +272,12 @@ constructor(
             // sub-pipeline name so the merged console reads as `[Translator] ▶ …`
             // even before indentation; [depth] additionally drives the indented
             // rendering. Top-level runs keep the bare message.
-            val displayMessage = if (depth > 0) "[${graph.name}] $message" else message
+            //
+            // Every console line is redacted here: it is shown, copied whole by *Copy
+            // all*, and persisted in the run trace, and an executor's own diagnostics
+            // may quote a provider error (see CloudErrorSanitizer).
+            val redacted = CloudErrorSanitizer.redactSecrets(message)
+            val displayMessage = if (depth > 0) "[${graph.name}] $redacted" else redacted
             val event = ConsoleEvent(
                 timestamp = System.currentTimeMillis(),
                 type = type,
@@ -923,7 +928,7 @@ constructor(
                                         runSuspended =
                                             persistSuspensionTransition(runId, output.state, runSuspended)
                                     }
-                                    emit(output.state)
+                                    emit(output.state.withRedactedError())
                                 }
                                 is NodeOutput.Result -> nodeResult = output.result
                                 is NodeOutput.Console -> {
@@ -978,14 +983,19 @@ constructor(
                     // keep the flow alive past its collector's cancellation.
                     throw e
                 } catch (e: Exception) {
+                    // The exception may be a provider's, quoting its key. The throwable
+                    // still goes to Timber for its stack trace — the crash-reporting tree
+                    // redacts every record it forwards — but the text surfaced and
+                    // persisted from here is redacted at this line.
+                    val safeMessage = CloudErrorSanitizer.redactSecrets(e.message ?: "Unknown error")
                     Timber.tag(
                         "PipelineDebug",
-                    ).e(e, "[NODE_ERR] type=${currentNode.type.name} id=${currentNode.id} error=${e.message}")
+                    ).e(e, "[NODE_ERR] type=${currentNode.type.name} id=${currentNode.id} error=$safeMessage")
                     pushConsole(
                         ConsoleEventType.Error,
-                        "${currentNode.type.name}: ${e.message ?: "Unknown error"}",
+                        "${currentNode.type.name}: $safeMessage",
                     )
-                    emit(AgentOrchestratorState.Error(e.message ?: "Unknown error"))
+                    emit(AgentOrchestratorState.Error(safeMessage))
                     return@flow
                 }
                 nodeDurationMs = System.currentTimeMillis() - nodeStartMs
@@ -1057,13 +1067,18 @@ constructor(
             }
             val nodeTokenCount = nodeResult?.tokenCount
 
-            if (nodeResult?.error != null) {
+            val nodeError = nodeResult?.error?.let(CloudErrorSanitizer::redactSecrets)
+            if (nodeError != null) {
+                // Every node's failure passes this line on its way to the run record,
+                // the console and the surface, so this is where a credential quoted
+                // in a provider error is stopped regardless of which executor
+                // produced it — or forgot to scrub it.
                 Timber.tag(
                     "PipelineDebug",
-                ).e("[NODE_ERR] type=${currentNode.type.name} id=${currentNode.id} error=${nodeResult?.error}")
+                ).e("[NODE_ERR] type=${currentNode.type.name} id=${currentNode.id} error=$nodeError")
                 pushConsole(
                     ConsoleEventType.Error,
-                    "${currentNode.type.name}: ${nodeResult?.error}",
+                    "${currentNode.type.name}: $nodeError",
                 )
                 // A queue whose author turned `stopOnError` off keeps going: the
                 // failure becomes this item's result and the next item starts.
@@ -1080,7 +1095,7 @@ constructor(
                 val queueNode = failedQueueId?.let { id -> graph.nodes.find { it.id == id } }
                 val survivable = nodeResult?.terminationReason == null
                 if (survivable && failedQueueId != null && queueNode?.stopOnError == false) {
-                    queueResults.add("Subtask failed: ${nodeResult?.error}")
+                    queueResults.add("Subtask failed: $nodeError")
                     val step = stepQueue(graph, failedQueueId, activeQueue, queueResults)
                     if (step.queueFinished) activeQueueProcessorId = null
                     currentInputText = step.inputText
@@ -1090,7 +1105,7 @@ constructor(
                 // A `PIPELINE` node forwards its sub-pipeline's typed cause here.
                 // Re-emitting it is what keeps a ceiling breach one nesting
                 // level down from settling the root run as an ordinary failure.
-                emit(AgentOrchestratorState.Error(nodeResult?.error!!, reason = nodeResult?.terminationReason))
+                emit(AgentOrchestratorState.Error(nodeError, reason = nodeResult?.terminationReason))
                 return@flow
             }
 
@@ -1818,6 +1833,18 @@ constructor(
             tokensSpent = ledger.tokensSpent,
         )
     }
+
+    /**
+     * Returns this state with a credential quoted in its error message masked, and
+     * any other state unchanged.
+     *
+     * An executor forwards its own `Error` straight to the engine's collector, and from
+     * there it becomes the run record's message — the one the chat export and the
+     * trigger-journal export share. Redacting here covers the executors that scrub
+     * their provider errors and the ones that do not.
+     */
+    private fun AgentOrchestratorState.withRedactedError(): AgentOrchestratorState =
+        if (this is AgentOrchestratorState.Error) copy(message = CloudErrorSanitizer.redactSecrets(message)) else this
 
     private companion object {
         /**
