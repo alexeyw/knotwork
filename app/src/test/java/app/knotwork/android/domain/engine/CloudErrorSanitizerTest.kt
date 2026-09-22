@@ -141,4 +141,14 @@ class CloudErrorSanitizerTest {
 
         assertEquals(raw, CloudErrorSanitizer.redactSecrets(raw))
     }
+
+    @Test(timeout = 5_000)
+    fun `given a cause chain that loops when sanitize throwable then it returns instead of hanging`() {
+        // `initCause` rejects only a direct self-cause, so A -> B -> A can be built.
+        val first = IllegalStateException("outer key=AIzaSyA")
+        val second = RuntimeException(null, first)
+        first.initCause(second)
+
+        assertEquals("outer key=***", CloudErrorSanitizer.sanitize(first))
+    }
 }

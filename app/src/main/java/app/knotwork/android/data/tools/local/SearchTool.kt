@@ -79,6 +79,20 @@ class SearchTool @Inject constructor(
         /** The tool result for a `lang` that is not a Wikipedia subdomain. */
         const val INVALID_LANG_ERROR =
             "Error: 'lang' must be a Wikipedia language code such as \"en\", \"de\" or \"simple\"."
+
+        /**
+         * Returns the Wikipedia edition [lang] names, or `null` when it cannot be one.
+         *
+         * The single place the `lang` rule lives, so the agent path ([searchUrl]) and a
+         * caller that wants to reject the argument earlier (`SearchAppFunction`) can
+         * never disagree. Case and surrounding whitespace are forgiven (`" EN "` is `en`).
+         *
+         * @param lang Caller-supplied language code.
+         * @return The normalised edition — one DNS label, see [WIKIPEDIA_SUBDOMAIN] — or
+         *   `null`.
+         */
+        fun wikipediaEdition(lang: String): String? =
+            lang.trim().lowercase(Locale.ROOT).takeIf(WIKIPEDIA_SUBDOMAIN::matches)
     }
 
     /**
@@ -114,8 +128,7 @@ class SearchTool @Inject constructor(
      *
      * `lang` sits in the authority of the URL and arrives from a caller the app does
      * not control — the model's own tool call, or another app through AppFunctions —
-     * so it is checked against [WIKIPEDIA_SUBDOMAIN] rather than interpolated as
-     * given. Case and surrounding whitespace are forgiven (`" EN "` is `en`).
+     * so it passes [wikipediaEdition] rather than being interpolated as given.
      *
      * @param query The search term; percent-encoded into the query string.
      * @param lang The Wikipedia edition, e.g. `en`, `de`, `simple`, `zh-min-nan`.
@@ -123,8 +136,7 @@ class SearchTool @Inject constructor(
      *   when [lang] is not a single DNS label.
      */
     internal fun searchUrl(query: String, lang: String): URL? {
-        val edition = lang.trim().lowercase(Locale.ROOT)
-        if (!WIKIPEDIA_SUBDOMAIN.matches(edition)) return null
+        val edition = wikipediaEdition(lang) ?: return null
         val encodedQuery = URLEncoder.encode(query, Charsets.UTF_8.name())
         // Using generator=search is much more flexible than titles= because it does a real search.
         return URL(

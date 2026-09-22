@@ -15,6 +15,7 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -190,6 +191,40 @@ class CrashlyticsTimberTreeTest {
         val message = captured.captured.message.orEmpty()
         assertFalse("key leaked: $message", message.contains(LEAKED_KEY))
         assertTrue(message.contains("key=***"))
+    }
+
+    @Test
+    fun `given the credential sits in a suppressed exception then the original is not reported`() = runTest {
+        val captured = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
+        val leaking = IllegalStateException("close failed").apply {
+            addSuppressed(IOException(LEAKING_PROVIDER_ERROR))
+        }
+
+        Timber.e(leaking, "download failed")
+        scope.advanceUntilIdle()
+
+        val reported = captured.captured
+        assertNotSame(leaking, reported)
+        val texts = generateSequence(reported) { it.cause }
+            .flatMap { link -> sequenceOf(link) + link.suppressed.asSequence() }
+            .mapNotNull { it.message }
+            .toList()
+        assertTrue(texts.none { it.contains(LEAKED_KEY) })
+    }
+
+    @Test(timeout = 5_000)
+    fun `given a cause chain that loops when a leaking error is logged then the report is still produced`() = runTest {
+        val captured = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
+        val first = IllegalStateException(LEAKING_PROVIDER_ERROR)
+        val second = RuntimeException("wrapper", first)
+        first.initCause(second)
+
+        Timber.e(first, "looping chain")
+        scope.advanceUntilIdle()
+
+        assertFalse(captured.captured.message.orEmpty().contains(LEAKED_KEY))
     }
 
     private companion object {

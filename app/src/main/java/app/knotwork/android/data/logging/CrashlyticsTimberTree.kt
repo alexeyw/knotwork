@@ -97,29 +97,53 @@ class CrashlyticsTimberTree(
     }
 
     /**
-     * Returns [error] itself when no throwable in its cause chain carries a
-     * credential, and otherwise a copy of the chain whose messages are redacted.
+     * Returns [error] itself when no throwable reachable from it — through causes or
+     * suppressed exceptions — carries a credential, and otherwise a redacted copy of
+     * its cause chain.
      *
      * The copy keeps what Crashlytics groups and triages on — each link's stack
      * frames, and its original type, named at the head of its message — and drops
-     * only the secret. An untouched chain is passed through as the same instance,
-     * so the ordinary report is exactly what it was before redaction existed.
+     * the secret and the suppressed exceptions. An untouched chain is passed through
+     * as the same instance, so the ordinary report is exactly what it was before
+     * redaction existed.
      *
      * @param error The throwable the Timber call site supplied.
      * @return The throwable to report.
      */
     private fun redactedChain(error: Throwable): Throwable {
-        val chain = mutableListOf<Throwable>()
-        var link: Throwable? = error
-        // `initCause` rejects only a direct self-cause, so a longer loop is possible.
-        while (link != null && chain.none { it === link }) {
-            chain += link
-            link = link.cause
+        if (reachableFrom(error).none(::carriesSecret)) return error
+        val chain = mutableListOf(error)
+        while (true) {
+            val next = chain.last().cause ?: break
+            if (chain.any { it === next }) break
+            chain += next
         }
-        val leaks = chain.any { it.message?.let { text -> CloudErrorSanitizer.redactSecrets(text) != text } == true }
-        if (!leaks) return error
-        return chain.foldRight(null as Throwable?) { original, cause -> RedactedException(original, cause) }!!
+        return chain.dropLast(1).foldRight<Throwable, Throwable>(RedactedException(chain.last(), null)) { link, cause ->
+            RedactedException(link, cause)
+        }
     }
+
+    /**
+     * Every throwable reachable from [error] through causes and suppressed
+     * exceptions, each once. `initCause` rejects only a direct self-cause, so a
+     * longer loop is possible and the walk must not follow one forever.
+     */
+    private fun reachableFrom(error: Throwable): List<Throwable> {
+        val seen = mutableListOf<Throwable>()
+        val pending = ArrayDeque(listOf(error))
+        while (pending.isNotEmpty()) {
+            val next = pending.removeFirst()
+            if (seen.any { it === next }) continue
+            seen += next
+            next.cause?.let(pending::addLast)
+            next.suppressed.forEach(pending::addLast)
+        }
+        return seen
+    }
+
+    /** Whether [error]'s own message contains something [CloudErrorSanitizer] would mask. */
+    private fun carriesSecret(error: Throwable): Boolean =
+        error.message?.let { text -> CloudErrorSanitizer.redactSecrets(text) != text } == true
 
     /**
      * Stand-in for a throwable whose message carried a credential: the original's

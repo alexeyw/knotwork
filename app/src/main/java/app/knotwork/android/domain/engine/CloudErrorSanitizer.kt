@@ -67,9 +67,22 @@ object CloudErrorSanitizer {
      * @param error The exception a provider or transport call raised.
      * @return Text safe to show, log and persist.
      */
-    fun sanitize(error: Throwable): String {
-        val rootCause = generateSequence(error) { it.cause }.last()
-        return sanitize(error.message, rootCause::class.simpleName)
+    fun sanitize(error: Throwable): String = sanitize(error.message, deepestCause(error)::class.simpleName)
+
+    /**
+     * The last throwable in [error]'s cause chain. The walk stops at the first repeat:
+     * `initCause` rejects only a direct self-cause, so a longer loop is possible, and
+     * an error handler must not hang on one.
+     */
+    private fun deepestCause(error: Throwable): Throwable {
+        val seen = mutableListOf(error)
+        var current = error
+        while (true) {
+            val next = current.cause ?: return current
+            if (seen.any { it === next }) return current
+            seen += next
+            current = next
+        }
     }
 
     /**
