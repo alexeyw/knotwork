@@ -27,6 +27,15 @@ details.
 - **Wikipedia search can only reach Wikipedia.** The language code chosen for a
   search is checked before the request is built, so it can no longer point the
   request at another server.
+- **A denied tool call stays denied.** If the approval setting or the tool's
+  risk level was relaxed while a background run waited for an answer, a
+  **Deny** given afterwards was recorded but not applied, and the tool ran. The
+  recorded answer now decides, whatever the settings say when the run resumes.
+- **A destructive tool can no longer be approved from a notification.** While a
+  run was still waiting live, its approval notification offered one-tap
+  **Approve** for every tool. For a destructive one it now offers **Deny** and
+  **Review in chat**, as the notification of a longer wait already did, so
+  approving still takes the typed confirmation in the chat.
 
 ### Fixed
 

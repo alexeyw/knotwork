@@ -654,17 +654,21 @@ a colour-coded risk pill (`READ` / `SENS` / `DEST`), and **Approve** /
 tool name as a typed-confirm gate before the **Approve** button is
 enabled.
 
+When you are not looking at that chat, the request also arrives as a
+notification. For read-only and sensitive tools it offers **Approve**
+and **Deny**. Destructive tools never execute from a notification — it
+offers **Deny** and a **Review in chat** link to the regular
+typed-confirm card.
+
 An unanswered request does not fail the run. When the live waiting
 window elapses — say a scheduled run hits a sensitive tool at 6 a.m. —
 the run parks in a persistent waiting state and an ongoing notification
 becomes your way back to it; swiping the notification away simply
-re-posts it. For read-only and sensitive tools, **Approve** and
-**Deny** work straight from the notification, even if the app process
-has since been killed: the run resumes from its checkpoint and the
-tool call is re-validated before your stored decision is applied.
-Destructive tools never execute from a notification — it offers
-**Deny** and a **Review in chat** link to the regular typed-confirm
-card. Clarifying questions park the same way under an **Agent needs
+re-posts it. Its buttons work even if the app process has since been
+killed: the run resumes from its checkpoint and the tool call is
+re-validated before your stored decision is applied. A **Deny** stays
+a deny even if you change **Approve tool calls** while the run waits.
+Clarifying questions park the same way under an **Agent needs
 your input** notification that deep-links back to the chat. Parked
 requests expire after the **Settings → Background & triggers → Approval window**
 period (default 24 hours); an expired run fails with *Approval window
@@ -963,7 +967,9 @@ all on the **"Scheduled task results"** channel and gated by the same
 Tapping any of them deep-links straight into the trigger's chat. If a run
 pauses for approval of a sensitive or destructive tool, you get the usual
 **approval notification** with **Approve / Deny** actions, so you can let a
-background trigger run proceed (or stop it) without opening the app.
+background trigger run proceed (or stop it) without opening the app. A
+destructive tool is the exception: its notification offers **Deny** and
+**Review in chat**, and approving it takes the typed confirmation in the chat.
 
 ### Checking what a trigger has been doing
 

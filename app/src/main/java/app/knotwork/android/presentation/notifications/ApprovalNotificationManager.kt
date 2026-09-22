@@ -31,6 +31,11 @@ import javax.inject.Inject
  * even in the system shade. Both channels are eagerly registered on every send
  * — `NotificationManager.createNotificationChannel` is idempotent and the
  * channels survive process death.
+ *
+ * Both waiting phases build their decision actions through one helper, so the
+ * shade offers the same choice for the same risk whichever phase the run is in:
+ * [ToolRisk.DESTRUCTIVE] never gets a one-tap Approve — approving it takes the
+ * typed confirmation of the in-chat card, which a notification cannot collect.
  */
 class ApprovalNotificationManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -54,6 +59,10 @@ class ApprovalNotificationManager @Inject constructor(
      * Sends a notification to request user approval for a tool execution.
      * It suppresses the notification if the user is currently viewing the active session.
      *
+     * Actions are risk-gated exactly as in [sendPersistentApprovalRequest]:
+     * [ToolRisk.DESTRUCTIVE] offers a "Review in chat" deep link and Deny
+     * instead of Approve; the other tiers offer Approve and Deny.
+     *
      * @param sessionId The ID of the session requesting approval.
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
@@ -67,9 +76,6 @@ class ApprovalNotificationManager @Inject constructor(
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         ensureChannelsRegistered(notificationManager)
-
-        val approvePendingIntent = approvalPendingIntent(sessionId, ApprovalAction.APPROVE, requestCodeOffset = 0)
-        val denyPendingIntent = approvalPendingIntent(sessionId, ApprovalAction.DENY, requestCodeOffset = 1)
 
         val channelId = when (risk) {
             ToolRisk.DESTRUCTIVE -> NotificationChannels.AGENT_APPROVAL_DESTRUCTIVE
@@ -92,17 +98,13 @@ class ApprovalNotificationManager @Inject constructor(
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .addAction(
-                R.drawable.ic_notif_done,
-                context.getString(R.string.chat_thought_approve),
-                approvePendingIntent,
-            )
-            .addAction(
-                R.drawable.ic_action_deny,
-                context.getString(R.string.chat_thought_deny),
-                denyPendingIntent,
-            )
             .setAutoCancel(true)
+            .addDecisionActions(
+                risk = risk,
+                sessionId = sessionId,
+                approveIntent = { approvalPendingIntent(sessionId, ApprovalAction.APPROVE, APPROVE_OFFSET) },
+                denyIntent = approvalPendingIntent(sessionId, ApprovalAction.DENY, DENY_OFFSET),
+            )
             .build()
 
         // Use sessionId hashcode as notification ID so multiple requests can be shown if needed
@@ -168,25 +170,12 @@ class ApprovalNotificationManager @Inject constructor(
             .setOnlyAlertOnce(true)
             .setAutoCancel(false)
             .setDeleteIntent(persistentPendingIntent(sessionId, runId, ApprovalAction.REPOST, REPOST_OFFSET))
-
-        if (risk == ToolRisk.DESTRUCTIVE) {
-            builder.addAction(
-                R.drawable.ic_action_open,
-                context.getString(R.string.approval_notification_review_in_chat),
-                deepLink,
+            .addDecisionActions(
+                risk = risk,
+                sessionId = sessionId,
+                approveIntent = { persistentPendingIntent(sessionId, runId, ApprovalAction.APPROVE, APPROVE_OFFSET) },
+                denyIntent = persistentPendingIntent(sessionId, runId, ApprovalAction.DENY, DENY_OFFSET),
             )
-        } else {
-            builder.addAction(
-                R.drawable.ic_notif_done,
-                context.getString(R.string.chat_thought_approve),
-                persistentPendingIntent(sessionId, runId, ApprovalAction.APPROVE, APPROVE_OFFSET),
-            )
-        }
-        builder.addAction(
-            R.drawable.ic_action_deny,
-            context.getString(R.string.chat_thought_deny),
-            persistentPendingIntent(sessionId, runId, ApprovalAction.DENY, DENY_OFFSET),
-        )
 
         notificationManager.notify(notificationId(sessionId), builder.build())
     }
@@ -199,6 +188,41 @@ class ApprovalNotificationManager @Inject constructor(
     override fun cancelApprovalNotification(sessionId: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(notificationId(sessionId))
+    }
+
+    /**
+     * Adds the decision actions of an approval notification — the one place
+     * that decides what can be answered from the shade, shared by both
+     * waiting phases so they cannot drift apart.
+     *
+     * [ToolRisk.DESTRUCTIVE] gets a "Review in chat" deep link in place of
+     * Approve: the in-chat card asks for a typed confirmation before a
+     * destructive call may run, and a notification action cannot collect one.
+     * [approveIntent] is a factory so that no Approve intent is even created
+     * for such a call. Deny is always offered — refusing needs no ceremony.
+     *
+     * @param risk Risk classification of the staged call.
+     * @param sessionId Chat session the "Review in chat" link opens.
+     * @param approveIntent Builds the Approve broadcast; not invoked for [ToolRisk.DESTRUCTIVE].
+     * @param denyIntent The Deny broadcast.
+     * @return this builder, for chaining.
+     */
+    private fun NotificationCompat.Builder.addDecisionActions(
+        risk: ToolRisk,
+        sessionId: String,
+        approveIntent: () -> PendingIntent,
+        denyIntent: PendingIntent,
+    ): NotificationCompat.Builder {
+        if (risk == ToolRisk.DESTRUCTIVE) {
+            addAction(
+                R.drawable.ic_action_open,
+                context.getString(R.string.approval_notification_review_in_chat),
+                chatDeepLinkIntent(sessionId),
+            )
+        } else {
+            addAction(R.drawable.ic_notif_done, context.getString(R.string.chat_thought_approve), approveIntent())
+        }
+        return addAction(R.drawable.ic_action_deny, context.getString(R.string.chat_thought_deny), denyIntent)
     }
 
     private fun ensureChannelsRegistered(notificationManager: NotificationManager) {

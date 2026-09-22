@@ -13,6 +13,7 @@ import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
 import app.knotwork.android.presentation.receivers.ApprovalAction
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -143,8 +144,8 @@ class ApprovalNotificationManagerTest {
     }
 
     @Test
-    fun `given any send when actions are inspected then Approve and Deny pending intents carry the right extras`() {
-        manager.sendApprovalRequest("session-42", "delete_file", "{\"path\":\"/x\"}", ToolRisk.DESTRUCTIVE)
+    fun `given a SENSITIVE send when actions are inspected then Approve and Deny intents carry the right extras`() {
+        manager.sendApprovalRequest("session-42", "send_email", "{\"to\":\"x\"}", ToolRisk.SENSITIVE)
 
         val notification = Shadows.shadowOf(notificationManager()).allNotifications.first()
         val actions = notification.actions
@@ -174,6 +175,58 @@ class ApprovalNotificationManagerTest {
             AgentApprovalReceiver::class.java.name,
             denyIntent.component?.className,
         )
+    }
+
+    @Test
+    fun `given a DESTRUCTIVE live request when sendApprovalRequest then no approve action is attached`() {
+        manager.sendApprovalRequest("session-42", "delete_file", "{\"path\":\"/x\"}", ToolRisk.DESTRUCTIVE)
+
+        val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        assertFalse(
+            "A destructive call must not be approvable from the shade: the typed confirmation lives in the chat",
+            notification.approvesFromShade(),
+        )
+        assertEquals(
+            listOf(
+                context.getString(R.string.approval_notification_review_in_chat),
+                context.getString(R.string.chat_thought_deny),
+            ),
+            notification.actions.map { it.title.toString() },
+        )
+        val denyIntent = Shadows.shadowOf(notification.actions[1].actionIntent).savedIntent
+        assertEquals(ApprovalAction.DENY.action, denyIntent.action)
+        assertEquals("session-42", denyIntent.getStringExtra(AgentApprovalReceiver.EXTRA_SESSION_ID))
+    }
+
+    @Test
+    fun `given either approval surface and any risk when posted then Approve is offered only if not destructive`() {
+        // Guard for the class, not the instance: the live and the persistent
+        // notification are two builders of one decision surface, and a
+        // destructive call must be unapprovable from both. A third surface
+        // added to the notifier belongs in this list.
+        val surfaces = listOf<Pair<String, (ToolRisk) -> Unit>>(
+            "live" to { risk -> manager.sendApprovalRequest("s1", "t", "{}", risk) },
+            "persistent" to { risk -> manager.sendPersistentApprovalRequest("run-1", "s1", "t", "{}", risk) },
+        )
+        val failures = mutableListOf<String>()
+        for ((surface, post) in surfaces) {
+            for (risk in ToolRisk.entries) {
+                notificationManager().cancelAll()
+                post(risk)
+
+                val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+                val expected = risk != ToolRisk.DESTRUCTIVE
+                if (notification.approvesFromShade() != expected) {
+                    failures += "$surface/$risk: Approve offered=${!expected}, expected=$expected"
+                }
+            }
+        }
+        assertTrue(failures.joinToString(separator = "\n"), failures.isEmpty())
+    }
+
+    /** `true` when any action of this notification sends the Approve wire action. */
+    private fun Notification.approvesFromShade(): Boolean = actions.orEmpty().any { action ->
+        Shadows.shadowOf(action.actionIntent).savedIntent?.action == ApprovalAction.APPROVE.action
     }
 
     @Test
