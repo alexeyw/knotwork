@@ -31,12 +31,47 @@ import javax.inject.Singleton
  * @property llmEngine On-device engine used to summarise an over-long article extract.
  * @property networkGate Decides whether this tool may reach the network right now — the
  *   "Block network from local model" restriction covers it (see [ModelNetworkGate]).
+ * @property connectionOpener Opens the connection for a request both checks above have
+ *   already passed. [ConnectionOpener.SYSTEM] in the app; a test substitutes one that
+ *   answers from a local server.
  */
 @Singleton
 class SearchTool @Inject constructor(
     private val llmEngine: LlmInferenceEngine,
     private val networkGate: ModelNetworkGate,
+    private val connectionOpener: ConnectionOpener,
 ) {
+
+    /**
+     * Opens the HTTP connection for one Wikipedia API request.
+     *
+     * The seam exists so the unit suite can answer the request from a local server
+     * instead of the internet. It deliberately sits *after* the checks: [executeSearch]
+     * builds and validates the URL, and asks the network gate, before an opener ever
+     * sees it — so no substitute can widen what the tool is allowed to reach.
+     *
+     * The transport stays `HttpURLConnection` on purpose. Measured against the live API
+     * (22.09.2026): Wikimedia answers `403` to OkHttp's default `User-Agent`
+     * (`okhttp/5.5.0`), to the JVM's (`Java/…`) and to an empty one, and `200` to the
+     * Android platform's `Dalvik/…` — moving this request onto the shared OkHttp client
+     * would break the tool on the device.
+     */
+    fun interface ConnectionOpener {
+
+        /**
+         * Opens a connection to [url] without connecting yet.
+         *
+         * @param url The validated request URL; its host is always `<edition>.wikipedia.org`.
+         * @return The connection, for the caller to configure and read.
+         */
+        fun open(url: URL): HttpURLConnection
+
+        /** Holder for the production opener. */
+        companion object {
+            /** The platform's own URL connection — what the app uses. */
+            val SYSTEM: ConnectionOpener = ConnectionOpener { url -> url.openConnection() as HttpURLConnection }
+        }
+    }
 
     companion object {
         const val TOOL_NAME = "search_tool"
@@ -162,7 +197,7 @@ class SearchTool @Inject constructor(
         // wrong edition and hand the model a confident answer to a different question.
         val url = searchUrl(query, lang) ?: return@withContext INVALID_LANG_ERROR
         try {
-            val connection = url.openConnection() as HttpURLConnection
+            val connection = connectionOpener.open(url)
             connection.requestMethod = "GET"
             connection.connectTimeout = HTTP_CONNECT_TIMEOUT_MS
             connection.readTimeout = HTTP_READ_TIMEOUT_MS

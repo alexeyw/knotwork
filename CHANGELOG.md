@@ -30,6 +30,11 @@ details.
 
 ### Fixed
 
+- **The Wikipedia search tests no longer reach the internet.** Two of them called
+  the live API, which refuses the test environment's user agent, so they passed
+  without checking a real answer. They now run against a local server, and the
+  replies they check — an article, no match, an empty search, a refusal — are
+  shaped like the live ones.
 - **The roadmap described work that had already finished, and the coverage
   baseline had two wrong numbers.** The roadmap said configuration fields were
   shown and stored while nothing read them, with the work "listed in the
