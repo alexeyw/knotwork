@@ -111,6 +111,10 @@ details.
   10 sub-tasks but kept every sub-task the model produced; they now keep at most
   that many. Four routers showed a fallback route the run did not record; it is
   recorded now, and where a run goes is unchanged.
+- **The browser editor exports every setting the app runs from.** A router's
+  fallback class, a planner's sub-task limit and a clarification step's quick
+  replies were kept only in the editor's own copy of the node, not in the part of
+  the file the app runs. They now travel in both.
 - **Two nodes can no longer share an id in a pipeline file.** The import
   accepted them, checked the graph as if they were one node, and kept only one
   when saving. Such a file is now refused with the id named.

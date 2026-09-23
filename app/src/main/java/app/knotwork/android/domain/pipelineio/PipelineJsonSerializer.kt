@@ -85,7 +85,7 @@ import org.json.JSONObject
  * A document is content the user did not write, so [parse] normalises the
  * parts that are displayed and rejects the parts that would be stored
  * differently from how they validate:
- *  - `name` and every node `label` become one line within
+ *  - `name` and every node and connection `label` become one line within
  *    [PipelineConstants.MAX_NAME_LENGTH] / [PipelineConstants.MAX_IMPORTED_LABEL_LENGTH];
  *  - two nodes or two connections sharing an id fail the import;
  *  - every value quoted back in an error message goes through
@@ -531,7 +531,11 @@ object PipelineJsonSerializer {
         if (to !in nodeIds) {
             throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${to.toDisplaySafe()}\"")
         }
+        // Drawn on the canvas beside the edge, so it gets the node label's rule.
+        // Router and condition labels are single words, which this leaves alone.
         val label = json.optStringOrNull("label")
+            ?.toDisplaySafe(maxLength = PipelineConstants.MAX_IMPORTED_LABEL_LENGTH, ellipsis = "")
+            ?.takeIf { it.isNotEmpty() }
         return ConnectionModel(id = id, sourceNodeId = from, targetNodeId = to, label = label)
     }
 

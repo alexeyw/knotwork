@@ -9,7 +9,6 @@ import app.knotwork.android.domain.pipelineio.PipelineBundleIdRemapper
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.services.PipelineCompositionValidator
-import app.knotwork.android.domain.text.toDisplaySafe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.util.UUID
@@ -71,7 +70,7 @@ class ImportPipelineBundleUseCase @Inject constructor(
             errors.takeIf { it.isNotEmpty() }?.let { graph to it }
         }?.let { (graph, errors) ->
             return PipelineBundlePrepareResult.Failure(
-                "Pipeline \"${graph.name.toDisplaySafe()}\" is invalid: " +
+                "Pipeline \"${graph.name}\" is invalid: " +
                     PipelineValidationException(errors).message,
             )
         }

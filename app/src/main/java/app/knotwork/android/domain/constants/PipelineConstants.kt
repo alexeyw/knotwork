@@ -29,12 +29,15 @@ object PipelineConstants {
     const val MAX_IMPORTED_LABEL_LENGTH: Int = 60
 
     /**
-     * Largest pipeline or bundle file the importer reads, in bytes (8 MiB).
+     * Largest pipeline or bundle file the importer reads, in bytes (8 MB).
+     *
+     * Decimal, because the platform's size formatter prints decimal units: the
+     * refusal message and the documentation then name the same "8 MB".
      *
      * A bundle holds at most 50 pipelines, and the largest bundled preset is
      * 56 KB, so fifty of them come to about 2.8 MB: the ceiling leaves roughly
      * three times that. A larger file is refused before it is read into memory
      * rather than parsed until the heap runs out.
      */
-    const val MAX_IMPORT_FILE_BYTES: Long = 8L * 1024 * 1024
+    const val MAX_IMPORT_FILE_BYTES: Long = 8_000_000L
 }

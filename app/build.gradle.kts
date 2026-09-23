@@ -1,4 +1,5 @@
 import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator
+import app.knotwork.android.buildtools.BrowserEditorFlatExportGuard
 import app.knotwork.android.buildtools.BrowserEditorInertControlGuard
 import app.knotwork.android.buildtools.CookbookDocsGenerator
 import app.knotwork.android.buildtools.DetektAnalysisModeGuard
@@ -1268,6 +1269,16 @@ val verifyBrowserEditorConstants by tasks.registering {
                 "pipeline-editor.html offers controls for fields no run reads: ${inert.joinToString(", ")}.\n" +
                     "Remove them from renderFormFields (and their validation); keep the fields in the " +
                     "envelope encode/decode so files still round-trip. See docs/decisions/0005.",
+            )
+        }
+        // Also outside the generated blocks: everything the editor derives for the
+        // run must travel in the exported `config` block — the app's node sheet shows
+        // that copy, so a derived field left out is a browser setting lost on import.
+        val unexported = BrowserEditorFlatExportGuard.unexportedFlatFields(browserEditorHtmlFile.readText())
+        if (unexported.isNotEmpty()) {
+            throw GradleException(
+                "pipeline-editor.html derives run-time fields it never exports: ${unexported.joinToString(", ")}.\n" +
+                    "Add them to the `config` block in exportToJson — the app runs, and shows, only that copy.",
             )
         }
     }

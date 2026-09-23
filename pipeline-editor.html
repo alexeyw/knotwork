@@ -8102,6 +8102,12 @@
                     conditionPrompt: flat.conditionPrompt || null,
                     conditionKeywords: flat.conditionKeywords || null,
                     conditionComplexity: flat.conditionComplexity ?? null,
+                    // Router fallback, sub-task cap and clarification replies: the
+                    // app runs these from `config` and its node sheet shows them from
+                    // there too, so left out they were browser settings lost on import.
+                    fallbackClass: flat.fallbackClass || null,
+                    maxSubtasks: flat.maxSubtasks ?? null,
+                    quickReplies: flat.quickReplies || null,
                 },
                 contextConfig: Object.assign(
                     { chatHistory: true, originalTask: true, nodeInput: true, longTermMemory: true, toolResults: true },

@@ -44,7 +44,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyNoOrphanedKdoc` + `:catalog:verifyNoOrphanedKdoc` | Fails if a KDoc block documents no declaration — and so silently leaves the one below it undocumented (see below). |
 | `:app:verifyDialogInventory`                  | Fails if a dialog or sheet is composed in `:app` without a recorded reason, putting it out of reach of the design-system baselines (see below). |
 | `:app:checkNoInternalFqn`                     | Custom rule: forbid `app.knotwork.android.*` FQN references in code body (see below). |
-| `:app:verifyBrowserEditorConstants`           | Fails if `pipeline-editor.html` `AUTO-GEN` blocks drift from the domain sources and the bundled presets / prompt templates, or if its node forms offer a control for a field no run reads (see below). |
+| `:app:verifyBrowserEditorConstants`           | Fails if `pipeline-editor.html` `AUTO-GEN` blocks drift from the domain sources and the bundled presets / prompt templates, if its node forms offer a control for a field no run reads, or if its export leaves out a run-time field it derives (see below). |
 | `:app:verifyDocsHygiene`                      | Custom rule: guard the public docs against LLM tool-call artifacts and internal-document references (see below). |
 | `:app:verifyExternalAutomationDocs`           | Fails if the `docs/external-automation.md` `AUTO-GEN` tables drift from the contract sources (see below). |
 | `:app:verifySettingsHelpDocs`                 | Fails if the settings reference table in `docs/user-guide.md` drifts from the shipped help strings (see below). |
@@ -1684,17 +1684,29 @@ fields stay in the editor's encode/decode, so files still round-trip. The guard
 refuses to pass when `renderFormFields` or a node type's `case` cannot be found,
 so a rename cannot make it check nothing.
 
+**The third half: everything derived for the run is exported.** The editor
+derives the flat values the engine reads in `richToFlat`, and `exportToJson`
+writes the file's `config` block from its own list of keys.
+`BrowserEditorFlatExportGuard` fails when a key `richToFlat` sets is missing from
+that list. The app's node sheet shows the `config` copy — the one that runs — so
+a derived field left out of the export is a browser setting that is silently
+gone after import. It refuses to pass when either function or the `config` block
+cannot be found.
+
 To fix a failure, run `./gradlew :app:generateBrowserEditorConstants` and commit
 the updated `pipeline-editor.html`; for the inert-control half, remove the
-control and its validation from the form.
+control and its validation from the form; for the export half, add the key to
+the `config` block in `exportToJson`.
 
 ### Observed failing
 
 The inert-control guard's first run named **eight** controls — temperature,
 top-p, max new tokens and stop sequences on the on-device node; model,
 temperature, max tokens and timeout on the cloud node — against the seven the
-defect report had counted. The pure logic is unit-tested in `buildSrc`
-(`BrowserEditorConstantsGeneratorTest`, `BrowserEditorInertControlGuardTest`).
+defect report had counted. The export guard's first run named **three** —
+`fallbackClass`, `maxSubtasks` and `quickReplies`. The pure logic is unit-tested
+in `buildSrc` (`BrowserEditorConstantsGeneratorTest`,
+`BrowserEditorInertControlGuardTest`, `BrowserEditorFlatExportGuardTest`).
 
 ---
 

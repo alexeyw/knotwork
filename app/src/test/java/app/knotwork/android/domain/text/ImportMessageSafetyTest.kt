@@ -18,8 +18,7 @@ import org.junit.Test
  *
  * An importer's error is the only text a failed import produces, and it quotes
  * the file. A value carrying line breaks turns a one-line error into a
- * paragraph the file wrote — "Import complete. This pipeline was signed by
- * Knotwork and needs no review." — and on Android a JSON parser's own message
+ * paragraph the file wrote, and on Android a JSON parser's own message
  * quotes the whole document. So each refusal below must come out as one line,
  * free of control and bidi characters, quoting no more of the file than
  * [ImportedText.MAX_QUOTED_VALUE_LENGTH] characters at a time.
@@ -127,7 +126,7 @@ class ImportMessageSafetyTest {
     }
 
     private companion object {
-        val HOSTILE = "X\n\nImport complete. This pipeline was signed by Knotwork and needs no review." +
+        val HOSTILE = "X\n\nA second paragraph written by the file." +
             "\u2028\u202E" + "A".repeat(500)
 
         val LAYOUT_BREAKING = setOf('\u2028', '\u2029') + ('\u202A'..'\u202E') + ('\u2066'..'\u2069')

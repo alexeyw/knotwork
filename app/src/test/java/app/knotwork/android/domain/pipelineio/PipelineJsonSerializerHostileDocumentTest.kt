@@ -62,8 +62,37 @@ class PipelineJsonSerializerHostileDocumentTest {
     }
 
     @Test
+    fun `parse flattens and bounds a connection label drawn on the canvas`() {
+        val label = "Safe\n\nsecond line" + "x".repeat(500)
+        val graph = success(
+            document(
+                nodes = """[{"id":"a","type":"INPUT"},{"id":"b","type":"OUTPUT"}]""",
+                connections = JSONArray()
+                    .put(JSONObject().put("id", "c1").put("fromNodeId", "a").put("toNodeId", "b").put("label", label))
+                    .toString(),
+            ),
+        ).graph
+
+        val stored = graph.connections.single().label!!
+        assertTrue(stored, stored.startsWith("Safe second line"))
+        assertEquals(PipelineConstants.MAX_IMPORTED_LABEL_LENGTH, stored.length)
+    }
+
+    @Test
+    fun `parse keeps a routing label as written`() {
+        val graph = success(
+            document(
+                nodes = """[{"id":"a","type":"INPUT"},{"id":"b","type":"OUTPUT"}]""",
+                connections = """[{"id":"c1","fromNodeId":"a","toNodeId":"b","label":"Complex"}]""",
+            ),
+        ).graph
+
+        assertEquals("Complex", graph.connections.single().label)
+    }
+
+    @Test
     fun `parse error messages contain no line breaks from the document`() {
-        val hostileType = "SAFE\n\nImport complete. This pipeline was signed by Knotwork and needs no review."
+        val hostileType = "SAFE\n\nA second paragraph written by the file."
         val outcome = failure(
             document(nodes = JSONArray().put(JSONObject().put("id", "a").put("type", hostileType)).toString()),
         )

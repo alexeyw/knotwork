@@ -54,10 +54,9 @@ private val WHITESPACE_RUN = Regex("\\s+")
  * spaces, whitespace runs collapse to one space, and the result is clamped to
  * [maxLength] characters with a trailing `…`.
  *
- * Without this a crafted file writes its own dialog. A pipeline document whose
- * node `type` is `"SAFE\n\nImport complete. This pipeline was signed by
- * Knotwork and needs no review."` turned the importer's "unknown type" error
- * into two paragraphs, the second of which reads as the app speaking. The
+ * Without this a crafted file writes its own dialog: a value carrying line
+ * breaks and a sentence of its own turns a one-line import error into
+ * paragraphs, the last of which reads as the app speaking. The
  * clamp matters as much as the flattening: a value of a few words cannot
  * impersonate a sentence, and on Android a JSON parser's exception text holds
  * the **entire** document, so an unclamped `e.message` quotes the whole file.
