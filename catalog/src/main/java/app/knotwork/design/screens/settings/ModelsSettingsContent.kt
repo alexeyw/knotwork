@@ -162,7 +162,7 @@ private fun TestProbeRow(state: LocalModelCardState, onTest: () -> Unit) {
                 text = state.testProbeText,
                 style = KnotworkTextStyles.MonoSm,
                 color = if (state.testProbeIsError) {
-                    KnotworkTheme.extended.signalError
+                    KnotworkTheme.extended.signalErrorText
                 } else {
                     KnotworkTheme.extended.onSurfaceMuted
                 },

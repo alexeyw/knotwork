@@ -116,7 +116,7 @@ fun MemorySettingsContent(
                     Text(
                         text = state.validationError,
                         style = KnotworkTextStyles.MonoSm,
-                        color = KnotworkTheme.extended.signalError,
+                        color = KnotworkTheme.extended.signalErrorText,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag(MEMORY_VALIDATION_ERROR_TAG),

@@ -664,7 +664,12 @@ private fun ToolCallTile(content: ChatContent.ToolCall) {
             Text(
                 text = resultLine,
                 style = KnotworkTextStyles.MonoSm,
-                color = if (content.status == ToolCallStatus.Failed) accent else KnotworkTheme.extended.onSurface2,
+                // The strip carries the accent; a failure's words take the text-safe red.
+                color = if (content.status == ToolCallStatus.Failed) {
+                    KnotworkTheme.extended.signalErrorText
+                } else {
+                    KnotworkTheme.extended.onSurface2
+                },
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )

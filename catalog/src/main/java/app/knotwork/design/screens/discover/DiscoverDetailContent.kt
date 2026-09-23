@@ -275,7 +275,7 @@ private fun FileTrailingAction(file: DiscoverFileRow, callbacks: DiscoverDetailC
             Text(
                 text = stringResource(R.string.knotwork_discover_installed),
                 style = KnotworkTextStyles.LabelLg,
-                color = KnotworkTheme.extended.signalSuccess,
+                color = KnotworkTheme.extended.signalSuccessText,
             )
         }
         is DiscoverFileStatus.Downloading -> IconButton(onClick = { callbacks.onCancelInstall(file.fileName) }) {

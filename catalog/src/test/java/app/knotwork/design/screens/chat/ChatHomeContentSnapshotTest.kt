@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
+import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -278,7 +279,7 @@ class ChatHomeContentSnapshotTest {
             }
         }
         val themeTag = if (dark) "dark" else "light"
-        composeTestRule.onRoot().captureRoboImage(
+        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/chat_home_${name}_$themeTag.png",
         )

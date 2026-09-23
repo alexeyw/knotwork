@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
+import app.knotwork.design.a11y.alwaysDarkSurface
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette
@@ -172,7 +173,8 @@ fun ConsolePane(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(color = KnotworkTheme.extended.consoleBg),
+            .background(color = KnotworkTheme.extended.consoleBg)
+            .alwaysDarkSurface(),
     ) {
         ConsolePaneHeader(
             tab = tab,

@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
+import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -32,7 +33,7 @@ class ChatCatalogPageSnapshotTest {
         composeTestRule.setContent {
             KnotworkTheme(darkTheme = false) { ChatCatalogContent() }
         }
-        composeTestRule.onRoot().captureRoboImage(
+        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/chat_light.png",
         )
@@ -43,7 +44,7 @@ class ChatCatalogPageSnapshotTest {
         composeTestRule.setContent {
             KnotworkTheme(darkTheme = true) { ChatCatalogContent() }
         }
-        composeTestRule.onRoot().captureRoboImage(
+        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/chat_dark.png",
         )
@@ -58,7 +59,7 @@ class ChatCatalogPageSnapshotTest {
                 }
             }
         }
-        composeTestRule.onRoot().captureRoboImage(
+        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/chat_reduced_motion.png",
         )

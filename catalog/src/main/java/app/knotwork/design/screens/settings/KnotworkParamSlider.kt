@@ -99,7 +99,7 @@ fun KnotworkParamSlider(
             Text(
                 text = errorText,
                 style = KnotworkTextStyles.BodySm,
-                color = KnotworkTheme.extended.signalError,
+                color = KnotworkTheme.extended.signalErrorText,
             )
         }
         // Under the track, so the label-to-value pair the reader is watching

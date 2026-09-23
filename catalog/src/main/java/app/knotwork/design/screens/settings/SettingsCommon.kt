@@ -414,8 +414,9 @@ internal fun NavLinkRow(
                         Text(
                             text = state,
                             style = KnotworkTextStyles.MonoSm,
+                            // The amber glyph carries the warning; amber words are 2.3:1.
                             color = if (stateWarning) {
-                                KnotworkTheme.extended.signalWarn
+                                KnotworkTheme.extended.onSurface2
                             } else {
                                 KnotworkTheme.extended.onSurfaceMuted
                             },
@@ -574,7 +575,7 @@ internal fun SystemInstructionsField(
         Text(
             text = state.validationError,
             style = KnotworkTextStyles.BodySm,
-            color = KnotworkTheme.extended.signalError,
+            color = KnotworkTheme.extended.signalErrorText,
         )
     }
 }

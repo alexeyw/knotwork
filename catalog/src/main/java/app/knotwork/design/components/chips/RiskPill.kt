@@ -89,10 +89,20 @@ fun RiskPill(risk: Risk, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.2.sp,
                 ),
-                color = color,
+                // The accent marks the dot and the outline; the words take its
+                // text-safe tone (the light accents are 2.3–3.9:1 on the surface).
+                color = riskTextColor(risk),
             )
         }
     }
+}
+
+/** Maps a [Risk] to the text-safe `extended.risk*Text` tone of its colour. */
+@Composable
+private fun riskTextColor(risk: Risk): Color = when (risk) {
+    Risk.Readonly -> KnotworkTheme.extended.riskReadonlyText
+    Risk.Sensitive -> KnotworkTheme.extended.riskSensitiveText
+    Risk.Destructive -> KnotworkTheme.extended.riskDestructiveText
 }
 
 /** Maps a [Risk] to the matching `extended.risk*` colour. */

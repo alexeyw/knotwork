@@ -69,7 +69,7 @@ enum class PipelineLibraryFilter {
  * @property secondaryLine extra status line beneath [subtitle] (for example
  * "unbound" for an empty graph) — null hides the line entirely.
  * @property secondaryLineKind drives the colour of [secondaryLine]
- * (`Default` = muted, `Unbound` = `signalError`).
+ * (`Default` = muted, `Unbound` = `signalErrorText`).
  * @property status status pill rendered next to the leading icon (only used
  * by the swipe-rendered list-row variant; the rich row drops it in favour
  * of the badge + secondaryLine).
@@ -111,7 +111,7 @@ enum class PipelineSecondaryLineKind {
     /** Default muted secondary text. */
     Default,
 
-    /** Renders the line in `signalError` (used for "unbound" pipelines). */
+    /** Renders the line in `signalErrorText` (used for "unbound" pipelines). */
     Unbound,
 }
 

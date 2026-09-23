@@ -118,7 +118,7 @@ fun StatusPill(status: Status, modifier: Modifier = Modifier) {
             Text(
                 text = status.label,
                 style = KnotworkTextStyles.MonoSm,
-                color = color,
+                color = statusTextColor(status, color),
             )
         }
     }
@@ -149,6 +149,17 @@ private fun statusColor(status: Status): Color = when (status) {
     Status.Warning -> KnotworkTheme.extended.signalWarn
     Status.Error -> KnotworkTheme.extended.riskDestructive
     Status.Cancelled -> KnotworkTheme.extended.onSurfaceDim
+}
+
+/**
+ * The label's colour. A signal state keeps its hue on the dot and the outline and
+ * says its word in `onSurface2`: the light signal accents reach only 2.1–3.9:1 on
+ * the surface. The other states' colours are text colours already.
+ */
+@Composable
+private fun statusTextColor(status: Status, accent: Color): Color = when (status) {
+    Status.Success, Status.Warning, Status.Error -> KnotworkTheme.extended.onSurface2
+    else -> accent
 }
 
 /** Human-readable label rendered inside the pill (also used in `contentDescription`). */

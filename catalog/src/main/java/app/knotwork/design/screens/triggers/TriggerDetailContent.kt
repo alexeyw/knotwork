@@ -560,7 +560,10 @@ private fun OutcomeLine(outcome: TriggerJournalOutcomeUi, error: String?, string
                 modifier = Modifier.size(InlineGlyphSize),
             )
         }
-        Text(text = text, style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold), color = color)
+        // The glyph carries the outcome's hue; a signal outcome says its words in
+        // `onSurface2` (the light signal accents are 2.1–3.9:1 as text).
+        val textColor = if (outcome == TriggerJournalOutcomeUi.Pending) color else KnotworkTheme.extended.onSurface2
+        Text(text = text, style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold), color = textColor)
     }
 }
 
@@ -595,7 +598,8 @@ private fun HitlLine(hitl: TriggerJournalHitlUi, parked: Boolean, strings: Trigg
         Text(
             text = if (qualifier == null) label else "$label · $qualifier",
             style = KnotworkTextStyles.BodySm,
-            color = color,
+            // A timeout keeps its amber on the glyph; amber words are 2.3:1.
+            color = if (hitl == TriggerJournalHitlUi.Waiting) color else KnotworkTheme.extended.onSurface2,
         )
     }
 }

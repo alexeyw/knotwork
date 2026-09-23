@@ -214,7 +214,7 @@ private fun InlineError(failure: ValidationFailure?) {
         Text(
             text = stringResource(failure.stringRes),
             style = KnotworkTextStyles.BodySm,
-            color = KnotworkTheme.extended.signalError,
+            color = KnotworkTheme.extended.signalErrorText,
         )
     }
 }
@@ -1422,7 +1422,7 @@ private fun PipelineOptionRow(option: PipelineTargetOption) {
             Text(
                 text = reason,
                 style = KnotworkTextStyles.BodySm,
-                color = KnotworkTheme.extended.signalError,
+                color = KnotworkTheme.extended.signalErrorText,
             )
         }
     }

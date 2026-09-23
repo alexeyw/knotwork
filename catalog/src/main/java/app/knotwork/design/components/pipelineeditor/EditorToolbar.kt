@@ -192,7 +192,8 @@ private fun TitleStack(
                     Text(
                         text = stringResource(R.string.knotwork_editor_unsaved_changes),
                         style = KnotworkTextStyles.BodySm,
-                        color = KnotworkTheme.extended.signalWarn,
+                        // The amber dot beside it carries the signal; amber text is 2.3:1.
+                        color = KnotworkTheme.extended.onSurface2,
                         maxLines = 1,
                     )
                 }

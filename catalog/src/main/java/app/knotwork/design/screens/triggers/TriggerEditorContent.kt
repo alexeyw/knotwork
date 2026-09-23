@@ -705,7 +705,7 @@ private fun FieldLabel(label: String, error: Boolean = false, hint: String? = nu
         Text(
             text = label,
             style = KnotworkTextStyles.LabelSm,
-            color = if (error) KnotworkTheme.extended.riskDestructive else KnotworkTheme.extended.onSurfaceMuted,
+            color = if (error) KnotworkTheme.extended.riskDestructiveText else KnotworkTheme.extended.onSurfaceMuted,
             modifier = Modifier.weight(1f),
         )
         if (hint != null) {
@@ -723,7 +723,7 @@ private fun FieldError(text: String) {
             tint = KnotworkTheme.extended.riskDestructive,
             modifier = Modifier.size(12.dp),
         )
-        Text(text = text, style = KnotworkTextStyles.MonoSm, color = KnotworkTheme.extended.riskDestructive)
+        Text(text = text, style = KnotworkTextStyles.MonoSm, color = KnotworkTheme.extended.riskDestructiveText)
     }
 }
 
@@ -817,7 +817,7 @@ private fun DangerButton(label: String, onClick: () -> Unit) {
         Text(
             text = label,
             style = KnotworkTextStyles.LabelMd.copy(fontWeight = FontWeight.SemiBold),
-            color = KnotworkTheme.extended.riskDestructive,
+            color = KnotworkTheme.extended.riskDestructiveText,
         )
     }
 }

@@ -956,7 +956,9 @@ private fun PipelineNodeChip(name: String, accent: Boolean) {
         Text(
             text = name,
             style = KnotworkTextStyles.MonoSm.copy(fontWeight = FontWeight.SemiBold),
-            color = border,
+            // The routing node's green outline is the IF_CONDITION node hue, 2.9:1 on
+            // the light surface; its name takes the text-safe tone of the same hue.
+            color = if (accent) KnotworkTheme.extended.signalSuccessText else border,
         )
     }
 }

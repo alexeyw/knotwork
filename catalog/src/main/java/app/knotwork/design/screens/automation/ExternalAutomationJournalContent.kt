@@ -599,7 +599,7 @@ private fun OutcomeLine(status: ExternalRequestStatusUi, strings: ExternalAutoma
         Text(
             text = status.outcomeSentence(strings),
             style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
-            color = color,
+            color = status.textColor(),
         )
     }
 }
@@ -628,7 +628,7 @@ private fun RefusalLines(entry: ExternalRequestEntryUi, strings: ExternalAutomat
             Text(
                 text = entry.reason.sentence(strings),
                 style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
-                color = color,
+                color = entry.status.textColor(),
             )
         }
         if (entry.reason == ExternalRequestReasonUi.ReturnPackageMismatch) {
@@ -845,6 +845,21 @@ private fun ExternalRequestStatusUi.color(): Color = when (this) {
     // apologising for, so it reads as a warning rather than an error.
     ExternalRequestStatusUi.Rejected -> KnotworkTheme.extended.signalWarn
     ExternalRequestStatusUi.Blocked -> KnotworkTheme.extended.signalWarn
+}
+
+/**
+ * The colour a status's sentence is written in. The glyph beside it carries the
+ * status hue; a signal status says its words in `onSurface2`, because the light
+ * signal accents reach only 2.1–3.9:1 on the surface.
+ */
+@Composable
+private fun ExternalRequestStatusUi.textColor(): Color = when (this) {
+    ExternalRequestStatusUi.Accepted -> color()
+    ExternalRequestStatusUi.Completed,
+    ExternalRequestStatusUi.Failed,
+    ExternalRequestStatusUi.Rejected,
+    ExternalRequestStatusUi.Blocked,
+    -> KnotworkTheme.extended.onSurface2
 }
 
 private fun ExternalRequestReasonUi?.sentence(strings: ExternalAutomationJournalStrings): String = when (this) {

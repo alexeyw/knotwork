@@ -334,7 +334,7 @@ fun PresetManagerRow(row: PresetRowUi, actionLabels: PresetRowActionLabels, call
                                 tint = KnotworkTheme.extended.signalError,
                             )
                         },
-                        text = { Text(text = actionLabels.delete, color = KnotworkTheme.extended.signalError) },
+                        text = { Text(text = actionLabels.delete, color = KnotworkTheme.extended.signalErrorText) },
                         onClick = {
                             menuOpen = false
                             callbacks.onDelete(row.id)
@@ -372,15 +372,18 @@ fun PresetCategoryBadge(label: String, tone: PresetCategoryToneUi, modifier: Mod
                 .clip(RoundedCornerShape(percent = BADGE_CORNER_PERCENT))
                 .background(tint),
         )
-        Text(text = label, style = KnotworkTextStyles.LabelSm, color = tint)
+        // The dot and the outline carry the hue; the word is `onSurface2`. Several of
+        // these hues are 2.1–3.0:1 on the light surface — too faint for words.
+        Text(text = label, style = KnotworkTextStyles.LabelSm, color = KnotworkTheme.extended.onSurface2)
     }
 }
 
 /**
- * The accent for a category tone.
+ * The accent for a category tone — the badge's dot and outline.
  *
- * Node and signal hues, both hue-locked across light and dark themes, so a badge
- * stays legible in either palette.
+ * Node and signal hues, hue-locked across light and dark themes so a category
+ * keeps its colour in either palette. They are accents, not text colours: on the
+ * light surface several reach only 2.1–3.0:1, so the badge's word is `onSurface2`.
  *
  * @return The tint.
  */

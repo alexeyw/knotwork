@@ -68,6 +68,12 @@ details.
 
 ### Fixed
 
+- **Coloured words are readable in the light theme.** Risk labels, error
+  messages, "Delete" and other destructive actions, success badges and warning
+  lines were drawn in accent colours that are too faint for text on a light
+  background (2.1–3.9:1). They now use darker tones of the same colours, or, for
+  warnings, ordinary text beside the amber sign. The dark theme was already
+  readable and changes only slightly.
 - **A Skill step's "Always ask before this call" works.** A pipeline could carry
   the switch on a Skill step, but only Tool steps honoured it. Skill steps now
   ask before every tool call the skill makes, and the switch is on their

@@ -95,6 +95,18 @@ object KnotworkLight {
     val RiskSensitive = KnotworkPalette.SignalWarn
     val RiskDestructive = KnotworkPalette.SignalError
 
+    // Text-safe variants of the risk / signal hues. The accents above sit at
+    // 2.1–3.9:1 on the light surfaces — fine for a dot, a border or a glyph
+    // beside words, too faint for the words themselves (WCAG AA wants 4.5:1).
+    // Same OKLCH hue and chroma, lightness lowered until the colour reaches
+    // 4.5:1 on Surface4, the darkest light surface:
+    // readonly oklch(0.51 0.07 220), sensitive oklch(0.52 0.13 80),
+    // error/destructive oklch(0.535 0.16 25), success oklch(0.50 0.13 155).
+    val RiskReadonlyText = Color(0xFF316F82)
+    val RiskSensitiveText = Color(0xFF8F5E00)
+    val RiskDestructiveText = Color(0xFFB83C3B)
+    val SignalSuccessText = Color(0xFF007840)
+
     // Chat bubble pairs: user / agent / tool, each bg + fg.
     val ChatUserBg = KnotworkPalette.Accent100
     val ChatUserFg = KnotworkPalette.Accent800
@@ -154,6 +166,15 @@ object KnotworkDark {
     val RiskSensitive = Color(0xFFE9B452)
     val RiskDestructive = Color(0xFFF97770)
 
+    // Text-safe variants. The dark risk accents already reach 4.5:1 on every
+    // dark surface, so they double as text colours. Success is the exception:
+    // the shared SignalSuccess (oklch(0.66 0.13 155)) falls to 4.18:1 on
+    // Surface4, so its text tone is lifted to oklch(0.68 0.13 155).
+    val RiskReadonlyText = RiskReadonly
+    val RiskSensitiveText = RiskSensitive
+    val RiskDestructiveText = RiskDestructive
+    val SignalSuccessText = Color(0xFF4AB074)
+
     // Chat bubble pairs: user / agent / tool, each bg + fg.
     val ChatUserBg = Color(0xFF412805)
     val ChatUserFg = KnotworkPalette.Accent100
@@ -210,7 +231,10 @@ fun knotworkLightColorScheme(): ColorScheme = lightColorScheme(
     onTertiary = KnotworkLight.OnPrimary,
     tertiaryContainer = KnotworkLight.TertiaryContainer,
     onTertiaryContainer = KnotworkLight.OnTertiaryContainer,
-    error = KnotworkPalette.SignalError,
+    // The M3 error role colours text — field labels and supporting text in the
+    // error state, destructive menu items — so it is the text-safe red, not the
+    // SignalError accent (3.9:1 on the light surface). White on it is 5.5:1.
+    error = KnotworkLight.RiskDestructiveText,
     onError = KnotworkLight.OnPrimary,
     errorContainer = Color(0xFFFADCDA),
     onErrorContainer = Color(0xFF5A1410),

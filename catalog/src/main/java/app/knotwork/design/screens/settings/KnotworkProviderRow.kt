@@ -246,7 +246,7 @@ fun KnotworkProviderRow(
                                 if (ollama.baseUrlValidationError != null) {
                                     Text(
                                         text = ollama.baseUrlValidationError,
-                                        color = KnotworkTheme.extended.signalError,
+                                        color = KnotworkTheme.extended.signalErrorText,
                                     )
                                 }
                             },

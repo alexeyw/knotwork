@@ -129,7 +129,7 @@ private fun SplashError(message: String, retryLabel: String, onRetry: () -> Unit
         Text(
             text = message,
             style = KnotworkTextStyles.BodyBase,
-            color = KnotworkTheme.extended.signalError,
+            color = KnotworkTheme.extended.signalErrorText,
             textAlign = TextAlign.Center,
         )
         KnotworkPrimaryButton(text = retryLabel, onClick = onRetry)
@@ -151,7 +151,7 @@ private fun SplashDataLocked(state: SplashViewState.DataLocked, retryLabel: Stri
         Text(
             text = state.title,
             style = KnotworkTextStyles.TitleMd,
-            color = KnotworkTheme.extended.signalError,
+            color = KnotworkTheme.extended.signalErrorText,
             textAlign = TextAlign.Center,
         )
         Text(

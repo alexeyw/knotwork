@@ -721,7 +721,9 @@ private fun RecordingBar(state: ComposerState.Recording, onStop: () -> Unit, onD
                     formatClock(state.maxSec),
                 ),
                 style = KnotworkTextStyles.MonoSm,
-                color = if (state.nearLimit) warn else MaterialTheme.colorScheme.onSurface,
+                // Near the limit the pill's outline turns amber and the caption
+                // below says why; the digits stay readable (amber text is 2.3:1).
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Amplitude(dim = state.nearLimit, modifier = Modifier.weight(1f))
             RecordingCircleButton(
@@ -733,15 +735,27 @@ private fun RecordingBar(state: ComposerState.Recording, onStop: () -> Unit, onD
             )
         }
         if (state.nearLimit) {
-            Text(
-                text = stringResource(
-                    R.string.knotwork_composer_recording_limit_caption,
-                    formatClock(state.maxSec),
-                ),
-                style = KnotworkTextStyles.MonoSm,
-                color = warn,
+            // The amber glyph carries the warning; the words are `onSurface2`.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
                 modifier = Modifier.padding(start = KnotworkTheme.spacing.sp2),
-            )
+            ) {
+                Icon(
+                    imageVector = AppIcons.Warn,
+                    contentDescription = null,
+                    tint = warn,
+                    modifier = Modifier.size(LIMIT_CAPTION_GLYPH_SIZE),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.knotwork_composer_recording_limit_caption,
+                        formatClock(state.maxSec),
+                    ),
+                    style = KnotworkTextStyles.MonoSm,
+                    color = KnotworkTheme.extended.onSurface2,
+                )
+            }
         }
     }
 }
@@ -962,6 +976,9 @@ private val RECORDING_BUTTON_SIZE = 40.dp
 
 /** Diameter of the pulsing REC dot. */
 private val REC_DOT_SIZE = 10.dp
+
+/** Warning glyph beside the "approaching limit" caption — sized to its 11 sp mono text. */
+private val LIMIT_CAPTION_GLYPH_SIZE = 12.dp
 
 /** Lowest alpha the REC dot fades to at the bottom of its pulse. */
 private const val REC_DOT_MIN_ALPHA = 0.35f

@@ -463,7 +463,7 @@ private fun PipelineLibraryListRow(
                     style = KnotworkTextStyles.MonoSm,
                     color = when (row.secondaryLineKind) {
                         PipelineSecondaryLineKind.Default -> KnotworkTheme.extended.onSurfaceMuted
-                        PipelineSecondaryLineKind.Unbound -> KnotworkTheme.extended.signalError
+                        PipelineSecondaryLineKind.Unbound -> KnotworkTheme.extended.signalErrorText
                     },
                 )
             }
@@ -682,7 +682,7 @@ private fun RowOverflowMenu(row: PipelineLibraryRow, expanded: Boolean, callback
             text = {
                 Text(
                     text = stringResource(R.string.knotwork_library_menu_delete),
-                    color = KnotworkTheme.extended.signalError,
+                    color = KnotworkTheme.extended.signalErrorText,
                 )
             },
             onClick = {

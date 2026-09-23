@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
+import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -113,7 +114,7 @@ class RunLimitsSnapshotTest {
             }
         }
         val themeTag = if (dark) "dark" else "light"
-        composeTestRule.onRoot().captureRoboImage(
+        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/run_limits_${name}_$themeTag.png",
         )

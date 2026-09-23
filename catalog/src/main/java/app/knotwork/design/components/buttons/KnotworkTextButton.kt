@@ -52,7 +52,8 @@ fun KnotworkTextButton(
     leadingIcon: ImageVector? = null,
 ) {
     val accent = when {
-        destructive -> KnotworkTheme.extended.riskDestructive
+        // The label is the whole button, so it takes the text-safe tone.
+        destructive -> KnotworkTheme.extended.riskDestructiveText
         else -> MaterialTheme.colorScheme.primary
     }
     val visualHeight = KnotworkButtonDefaults.heightFor(size)

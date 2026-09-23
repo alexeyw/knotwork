@@ -799,10 +799,12 @@ private fun ChatTerminationTile(state: ChatTerminationUi, onAction: () -> Unit) 
                 tint = accent,
                 modifier = Modifier.size(KnotworkTheme.spacing.sp4),
             )
+            // The glyph and the outline carry the amber; the label is `onSurface2`
+            // (amber text is 2.3:1 on the surface). An info tone is muted throughout.
             Text(
                 text = state.toneLabel.uppercase(),
                 style = KnotworkTextStyles.MonoSm,
-                color = accent,
+                color = if (state.tone == RunTerminationToneUi.Info) accent else KnotworkTheme.extended.onSurface2,
             )
         }
         Text(
@@ -913,7 +915,7 @@ private fun ChatHomeErrorTile(message: String, onRetry: () -> Unit) {
         Text(
             text = stringResource(R.string.knotwork_chat_home_error_title),
             style = KnotworkTextStyles.TitleMd,
-            color = KnotworkTheme.extended.signalError,
+            color = KnotworkTheme.extended.signalErrorText,
         )
         Text(
             text = message,

@@ -5,23 +5,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * WCAG 2.1 AA contrast audit for the on-surface text pairs the Knotwork
- * design system depends on in both themes.
+ * WCAG 2.1 AA contrast audit for the text colours the Knotwork design system
+ * hands out, in both themes.
  *
  * Reference: <https://www.w3.org/TR/WCAG21/#contrast-minimum>.
  *
- * - Normal text (≤ 18pt or ≤ 14pt bold): minimum 4.5:1.
- * - Large text (≥ 18pt or ≥ 14pt bold) and "incidental" UI surfaces such
- *   as risk pills (label is paired with a glyph + word, so the colour
- *   is decorative-with-text, not the sole signal): minimum 3.0:1.
+ * - Normal text: minimum 4.5:1. "Large" text — 18pt, or 14pt bold, i.e. about
+ *   24 sp / 18.7 sp bold — may drop to 3:1. Nothing in the catalog that draws
+ *   words in a risk or signal colour is that large: the pills are 11 sp.
+ * - A glyph or a dot beside words is not the text: colour is then not the sole
+ *   signal (1.4.1), but the words themselves still owe 4.5:1 (1.4.3). An earlier
+ *   version of this file let the light risk accents pass as "large text paired
+ *   with a glyph"; neither half held, and the light pills read at 2.3–3.9:1.
  *
- * Every pair below was hand-picked from the surfaces called out in
- * `decisions.md §14`:
- * - Console foreground vs console background (mono log text — primary
- *   readability surface, AA normal).
- * - Risk pill labels vs their pill background (large pill text — AA
- *   large bar).
- * - `onSurface` vs `surface1` (primary screen text, AA normal).
+ * So the light risk and signal accents are accents only, and every word drawn in
+ * one of those hues uses its `…Text` token — pinned here on every surface step of
+ * its theme. `assertNoAccentText()` (test sources) checks the rendered screens use them.
  */
 class WcagContrastTest {
     @Test
@@ -47,47 +46,75 @@ class WcagContrastTest {
     }
 
     @Test
-    fun `risk destructive label meets AA large on surface1 — light theme`() {
+    fun `every risk and signal text tone meets AA normal on every light surface`() {
         val light = knotworkExtendedColorsLight()
-        // Risk-pill text is uppercased, semibold, and ~12sp — qualifies as
-        // "large" under WCAG once paired with the glyph. The pill background
-        // itself is the destructive hue, so we assert the *label-on-surface*
-        // pair that appears when the pill renders inline next to the chat
-        // bubble background (`surface1`).
-        assertContrastAtLeast(
-            foreground = light.riskDestructive,
-            background = light.surface1,
-            minimumRatio = AA_LARGE_TEXT,
-            label = "riskDestructive / surface1 (light)",
+        assertEveryTextToneReadsOn(
+            colors = light,
+            surfaces = listOf(KnotworkLight.Surface0, light.surface1, light.surface2, light.surface3, light.surface4),
+            theme = "light",
         )
     }
 
     @Test
-    fun `risk destructive label meets AA large on surface1 — dark theme`() {
+    fun `every risk and signal text tone meets AA normal on every dark surface`() {
         val dark = knotworkExtendedColorsDark()
-        assertContrastAtLeast(
-            foreground = dark.riskDestructive,
-            background = dark.surface1,
-            minimumRatio = AA_LARGE_TEXT,
-            label = "riskDestructive / surface1 (dark)",
+        assertEveryTextToneReadsOn(
+            colors = dark,
+            surfaces = listOf(KnotworkDark.Surface0, dark.surface1, dark.surface2, dark.surface3, dark.surface4),
+            theme = "dark",
         )
     }
 
-    // `riskSensitive` (warn-amber) is deliberately a low-contrast accent on
-    // light surfaces — the design pairs it with a glyph + uppercase label so
-    // colour is never the sole signal (`decisions.md §14`). We therefore do
-    // *not* assert AA contrast for amber-on-surface; we still gate the dark
-    // theme below where the warn accent is brighter and meets AA.
+    @Test
+    fun `the M3 error role is a text colour on every light surface`() {
+        // Material draws field labels, supporting text and destructive menu items in
+        // `colorScheme.error`, so the role has to be readable as text.
+        val light = knotworkExtendedColorsLight()
+        listOf(KnotworkLight.Surface0, light.surface1, light.surface2, light.surface3, light.surface4)
+            .forEachIndexed { step, surface ->
+                assertContrastAtLeast(
+                    foreground = knotworkLightColorScheme().error,
+                    background = surface,
+                    minimumRatio = AA_NORMAL_TEXT,
+                    label = "colorScheme.error / surface$step (light)",
+                )
+            }
+    }
 
     @Test
-    fun `risk sensitive label meets AA large on surface1 — dark theme`() {
-        val dark = knotworkExtendedColorsDark()
-        assertContrastAtLeast(
-            foreground = dark.riskSensitive,
-            background = dark.surface1,
-            minimumRatio = AA_LARGE_TEXT,
-            label = "riskSensitive / surface1 (dark)",
+    fun `the light risk and signal accents are not text colours`() {
+        // The reason the …Text tones exist. If an accent is ever re-tuned to read
+        // as text on its own, this fails and the split can be revisited.
+        val light = knotworkExtendedColorsLight()
+        listOf(
+            "signalWarn" to light.signalWarn,
+            "signalError" to light.signalError,
+            "signalSuccess" to light.signalSuccess,
+            "riskReadonly" to light.riskReadonly,
+        ).forEach { (name, accent) ->
+            val ratio = contrastRatio(accent, light.surface2)
+            assertTrue("$name / surface2 (light) is $ratio — no longer below AA", ratio < AA_NORMAL_TEXT)
+        }
+    }
+
+    private fun assertEveryTextToneReadsOn(colors: KnotworkExtendedColors, surfaces: List<Color>, theme: String) {
+        val tones = listOf(
+            "riskReadonlyText" to colors.riskReadonlyText,
+            "riskSensitiveText" to colors.riskSensitiveText,
+            "riskDestructiveText" to colors.riskDestructiveText,
+            "signalErrorText" to colors.signalErrorText,
+            "signalSuccessText" to colors.signalSuccessText,
         )
+        tones.forEach { (name, tone) ->
+            surfaces.forEachIndexed { step, surface ->
+                assertContrastAtLeast(
+                    foreground = tone,
+                    background = surface,
+                    minimumRatio = AA_NORMAL_TEXT,
+                    label = "$name / surface$step ($theme)",
+                )
+            }
+        }
     }
 
     private fun assertContrastAtLeast(foreground: Color, background: Color, minimumRatio: Double, label: String) {
@@ -134,9 +161,6 @@ class WcagContrastTest {
     private companion object {
         /** WCAG 2.1 AA threshold for "normal" body text. */
         const val AA_NORMAL_TEXT = 4.5
-
-        /** WCAG 2.1 AA threshold for large text / non-decorative UI. */
-        const val AA_LARGE_TEXT = 3.0
 
         /** Contrast-ratio offset preventing division-by-zero on pure black. */
         const val LUMINANCE_OFFSET = 0.05

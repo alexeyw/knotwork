@@ -156,7 +156,7 @@ private fun CancelAllScheduledDialog(strings: TaskMonitorStrings, callbacks: Tas
         text = { Text(text = strings.cancelAllBody) },
         confirmButton = {
             TextButton(onClick = callbacks.onCancelAllScheduledConfirm) {
-                Text(text = strings.cancelAllConfirm, color = KnotworkTheme.extended.signalError)
+                Text(text = strings.cancelAllConfirm, color = KnotworkTheme.extended.signalErrorText)
             }
         },
         dismissButton = {
