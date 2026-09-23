@@ -39,23 +39,37 @@ class AttachmentOrphanCleanupWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     /**
-     * Runs the orphan-cleanup pass, then the transient-cache sweep.
+     * Runs the orphan-cleanup pass, then the transient-cache sweep. The two are
+     * independent — one reads the database, the other only the cache — so a
+     * failing first pass does not skip the second.
      *
-     * @return [Result.success] when the pass completes; [Result.retry] when it
-     *   throws unexpectedly, so WorkManager re-attempts it under the same
-     *   constraints.
+     * @return [Result.success] when both passes complete; [Result.retry] when
+     *   either throws unexpectedly, so WorkManager re-attempts the job under the
+     *   same constraints.
      */
-    override suspend fun doWork(): Result = try {
-        val deleted = cleanupOrphanAttachmentsUseCase()
-        Timber.tag(TAG).d("Attachment orphan cleanup finished: %d file(s) deleted", deleted)
-        val swept = transientCacheSweeper.sweepExpired()
-        Timber.tag(TAG).d("Transient cache sweep finished: %d entr(ies) removed", swept)
-        Result.success()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Timber.tag(TAG).e(e, "Attachment orphan cleanup pass failed")
-        Result.retry()
+    override suspend fun doWork(): Result {
+        val orphansCleaned = try {
+            val deleted = cleanupOrphanAttachmentsUseCase()
+            Timber.tag(TAG).d("Attachment orphan cleanup finished: %d file(s) deleted", deleted)
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Attachment orphan cleanup pass failed")
+            false
+        }
+        val cacheSwept = try {
+            val swept = transientCacheSweeper.sweepExpired()
+            Timber.tag(TAG).d("Transient cache sweep finished: %d entr(ies) removed", swept)
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Only the type: a filesystem exception's message can quote a cache path.
+            Timber.tag(TAG).e("Transient cache sweep failed (%s)", e.javaClass.simpleName)
+            false
+        }
+        return if (orphansCleaned && cacheSwept) Result.success() else Result.retry()
     }
 
     companion object {

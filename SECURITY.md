@@ -144,9 +144,10 @@ the database's**, and this is the honest statement of that trade-off:
 - **Sharing hands over a copy, never the workspace.** The Files screen's
   **Share** stages a copy of the file in the app cache and grants the receiving
   app read access to that copy only. Deleting the file deletes its copies; any
-  other copy is removed once it is an hour old, by the next share or the daily
-  maintenance pass — never earlier, so one share cannot take another share's
-  file away from an app that is still reading it.
+  other copy is removed after it is an hour old, by the next share or the daily
+  maintenance pass (whichever comes first, so possibly up to a day later) —
+  never earlier, so one share cannot take another share's file away from an app
+  that is still reading it.
 - A path the filesystem cannot take — a NUL byte, or one it rejects — is
   refused with `WorkspaceError.InvalidPath` instead of an exception. A write that
   would **create** a file also needs a name without control characters or line

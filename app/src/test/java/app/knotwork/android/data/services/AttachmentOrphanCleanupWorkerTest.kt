@@ -65,6 +65,19 @@ class AttachmentOrphanCleanupWorkerTest {
     }
 
     @Test
+    fun `given the orphan pass throws when doWork runs then the sweep still runs and it asks to retry`() = runTest {
+        coEvery { orphanCleanup() } throws IllegalStateException("database locked")
+        coEvery { sweeper.sweepExpired() } returns 3
+
+        val result = buildWorker().doWork()
+
+        // The passes are independent: a database problem must not keep the camera
+        // captures and share copies in the cache.
+        coVerify(exactly = 1) { sweeper.sweepExpired() }
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
     fun `given the sweep throws when doWork runs then it asks to retry`() = runTest {
         coEvery { orphanCleanup() } returns 0
         coEvery { sweeper.sweepExpired() } throws IllegalStateException("cache unavailable")

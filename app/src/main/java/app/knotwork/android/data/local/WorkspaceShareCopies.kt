@@ -2,6 +2,7 @@ package app.knotwork.android.data.local
 
 import app.knotwork.android.domain.constants.TransientCacheDirectory
 import java.io.File
+import java.io.IOException
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -43,12 +44,19 @@ internal class WorkspaceShareCopies(
      * @param relativePath Its canonical path relative to the workspace root —
      *   the identity [discard] matches on.
      * @return The staged copy, named like [source].
+     * @throws IOException when the copy fails; the slot is removed first.
      */
     fun stage(source: File, relativePath: String): File {
         val dir = root().apply { mkdirs() }
         TransientCacheFiles.pruneOlderThan(dir, clock() - TransientCacheDirectory.RETENTION_MILLIS)
         val slot = File(dir, "${keyOf(relativePath)}$KEY_SEPARATOR${UUID.randomUUID()}").apply { mkdirs() }
-        return source.copyTo(File(slot, source.name))
+        return try {
+            source.copyTo(File(slot, source.name))
+        } catch (e: IOException) {
+            // A half-written copy is never handed out; leave nothing for the sweep.
+            slot.deleteRecursively()
+            throw e
+        }
     }
 
     /**

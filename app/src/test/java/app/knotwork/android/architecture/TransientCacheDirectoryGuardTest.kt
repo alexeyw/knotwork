@@ -19,13 +19,14 @@ import java.io.File
  * only covers what the registry lists. This guard makes the registry the list.
  *
  * **What it reads.** The production sources, comments removed
- * ([ProductionSources]): a use of `.cacheDir` must name a registry directory on
+ * ([ProductionSources]): a use of `cacheDir` — `context.cacheDir`, or a bare
+ * `cacheDir` inside a `Context` extension — must name a registry directory on
  * the same line (through `.dirName`, a property only the registry declares), or be
  * in [NOT_A_HANDOFF] with its reason. And `res/xml/file_paths.xml`: every
  * `<cache-path>` the `FileProvider` serves must be a registry directory. A cache
  * directory reached some other way (`cacheDir.resolve`, a path string) is not seen
- * — which is why the first rule forbids a bare `.cacheDir` rather than looking for
- * a particular constructor.
+ * — which is why the first rule flags every mention of `cacheDir` rather than
+ * looking for a particular constructor.
  */
 class TransientCacheDirectoryGuardTest {
 
@@ -77,16 +78,22 @@ class TransientCacheDirectoryGuardTest {
         assertTrue("only $sites cache-directory uses recognised", sites >= MIN_KNOWN_SITES)
         assertEquals(1, offendersIn("val dir = File(context.cacheDir, \"images\")").size)
         assertEquals(1, offendersIn("val dir = context.cacheDir.resolve(\"shared\")").size)
+        // The shape the Files screen's old staging had: a Context extension, no receiver.
+        assertEquals(1, offendersIn("val shareDir = File(cacheDir, SHARE_CACHE_DIR)").size)
+        assertEquals(0, offendersIn("val dir = File(externalCacheDir, \"x\")").size)
         assertEquals(0, offendersIn("File(context.cacheDir, TransientCacheDirectory.CAMERA_CAPTURE.dirName)").size)
     }
 
-    /** The lines of [code] that use `.cacheDir` without naming a registry directory. */
+    /** The lines of [code] that use `cacheDir` without naming a registry directory. */
     private fun offendersIn(code: String): List<String> =
         code.lines().filter { CACHE_DIR_USE.containsMatchIn(it) && !it.contains(".dirName") }.map { it.trim() }
 
     private companion object {
-        /** A use of the app's cache directory; `externalCacheDir` / `codeCacheDir` are other words. */
-        val CACHE_DIR_USE = Regex("""\.cacheDir\b""")
+        /**
+         * A use of the app's cache directory, with a receiver or without one (inside a
+         * `Context` extension); `externalCacheDir` / `codeCacheDir` are other words.
+         */
+        val CACHE_DIR_USE = Regex("""\bcacheDir\b""")
 
         /** A declaration of a `dirName` property. */
         val DIR_NAME_DECLARATION = Regex("""\bval\s+dirName\b""")

@@ -1907,8 +1907,8 @@ From the preview sheet (or a row's overflow menu) you can:
 - **Share** — opens the system share sheet. The app stages a temporary
   copy for sharing, so the workspace directory itself is never exposed
   to other apps; the receiving app gets read access to that one copy
-  only. The copy is deleted when you delete the file, and otherwise after
-  about an hour.
+  only. The copy is deleted when you delete the file; otherwise, once it
+  is more than an hour old, by your next share or the daily clean-up.
 - **Save as…** — opens the system "create document" picker so you can
   write the file out to a location of your choice (Downloads, Drive,
   etc.).

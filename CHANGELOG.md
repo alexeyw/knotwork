@@ -134,8 +134,9 @@ details.
   says why.
 - **A shared workspace file leaves no copy behind.** Sharing from the Files
   screen makes a temporary copy for the receiving app. Deleting the file now
-  deletes its copies, and any other copy goes after an hour. Sharing another
-  file no longer deletes a copy the receiving app may still be reading.
+  deletes its copies; any other copy is removed once it is more than an hour
+  old, by the next share or the daily clean-up. Sharing another file no longer
+  deletes a copy the receiving app may still be reading.
 - **Temporary files are cleared daily.** The daily maintenance pass also removes
   leftover temporary files older than an hour: camera captures, voice clips left
   by a crash, share copies and journal exports.

@@ -75,6 +75,7 @@ Only Kotlin files appear inside the generated blocks.
     - `SettingsManagerTest.kt` - Tests for SettingsManager.
     - `TagsCsvTest.kt` - Unit tests for the shared `TagsCsv` codec.
     - `TransientCacheSweeperImplTest.kt` - Verifies `TransientCacheSweeperImpl` on a real filesystem: every registered handoff directory is swept, only past the shared retention, a share slot counts as fresh while its copy is, and nothing outside the registry is touched.
+    - `WorkspaceShareCopiesTest.kt` - Unit tests for `WorkspaceShareCopies` on its own, for what the workspace tests cannot reach: a copy that fails half-way leaves nothing staged.
   - `logging/` - Tests for the application-level Timber sinks.
     - `CrashlyticsTimberTreeTest.kt` - Unit tests for `CrashlyticsTimberTree`.
   - `mappers/` - Tests for the entity ↔ domain mappers.
