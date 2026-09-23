@@ -902,10 +902,10 @@ HITL contract (live):
 - Before dispatching a tool, `ToolNodeExecutor` resolves the tool's risk
   through `ToolRepository.getRisk(name)` and applies the gate:
   - `SENSITIVE` and `DESTRUCTIVE` — always emit
-    `AgentOrchestratorState.WaitingForApproval(toolName, args, risk)` and
-    suspend on the per-session approval `CompletableDeferred` until the
-    user resolves it via the chat console row, the system notification
-    action, or the configured timeout.
+    `AgentOrchestratorState.WaitingForApproval(toolName, args, risk, requestId)`
+    and suspend on a `CompletableDeferred` registered for that one request
+    until the user resolves it via the chat console row, the system
+    notification action, or the configured timeout.
   - `READ_ONLY` — run without a prompt **unless** the user has globally
     enabled `SettingsRepository.requiresUserConfirmation`. That flag is
     now an opt-in "ask on every single tool call" override and never
@@ -1580,6 +1580,25 @@ in two phases:
    Clarifications park the same way, answered via a deep link into the
    chat. An unanswered park is failed by the maintenance pass once the
    user-configurable **approval window** (default 24 h) elapses.
+
+**An answer is addressed to a request, never to a session.** The gate
+mints an identity (`requestId`) for every request it raises; the
+`WaitingForApproval` state, the chat card, both notifications and the
+parked record all carry it, and `SubmitApprovalDecisionUseCase` — the one
+channel an answer reaches the gate through — settles the live gate only
+when it waits on that identity, and otherwise only the parked record of
+that identity (`recordApprovalDecision` writes only while the record
+still parks it). The session cannot serve as the address: a park ends the
+task and frees the serial queue worker, so a parked request and a live one
+coexist in one session whenever a second run starts there, and "whatever
+the session is waiting on" would let the answer given for one request
+settle another. The same identity keys the notification: the live and the
+persistent notification of one request share a slot, two requests get two,
+and the gate removes a request's notification on every way its wait ends
+except a park, whose ongoing notification takes over the slot.
+`HitlDispatchKonsistTest` pins the seams this rests on — the call sites of
+`executeTool`, `invokeByName` and `resumeWithApproval`, and who may hold a
+built-in tool executor.
 
 ### 6.3. Run retention
 

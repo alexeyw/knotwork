@@ -259,7 +259,10 @@ new risk surface, and the design constrains it deliberately:
   because no UI is attached. An unattended automation can therefore *propose* a
   sensitive action but never *execute* one unreviewed; an unanswered park is
   failed once the approval window elapses (see *Run-history retention* above and
-  *Two-phase HITL* in [docs/architecture.md](docs/architecture.md)). The
+  *Two-phase HITL* in [docs/architecture.md](docs/architecture.md)). An answer
+  settles only the request it was given for — the card and each notification
+  carry that request's identity — so a second run waiting in the same chat
+  cannot be approved by the answer meant for the first. The
   background-execution arc — trigger fires → background run → notification →
   result in the bound chat, including the park-and-approve path — is covered
   end-to-end by an integration test.

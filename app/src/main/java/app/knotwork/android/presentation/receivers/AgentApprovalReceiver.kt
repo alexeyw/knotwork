@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.VisibleForTesting
-import app.knotwork.android.domain.constants.TimeAndIdConstants
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.models.ceilingBreach
@@ -36,6 +35,11 @@ import javax.inject.Inject
  * notifications additionally route their delete-intent here
  * ([ApprovalAction.REPOST]) so a swiped-away notification is re-posted from
  * the durable record — it is the user's primary path back to a parked run.
+ *
+ * Every decision action names the request it was posted for
+ * ([EXTRA_REQUEST_ID]) and is submitted with that identity, so it settles that
+ * request or nothing — never a different request the same session happens to
+ * be waiting on when the tap arrives.
  *
  * The decision work suspends (Room + queue), which a `BroadcastReceiver`
  * cannot do inline: the receiver bridges via [goAsync] and an own supervisor
@@ -88,15 +92,23 @@ class AgentApprovalReceiver : BroadcastReceiver() {
 
         when (action) {
             ApprovalAction.APPROVE, ApprovalAction.DENY -> {
+                // A notification posted before requests had identities names
+                // none. Its slot was the session's; a parked one of those still
+                // names its run, which the store back-filled as that request's
+                // identity. A live one names nothing — its run died with the
+                // process the update killed — so it answers nothing.
+                val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                if (requestId == null) {
+                    notificationManager(context)
+                        .cancel(ApprovalNotificationManager.legacySessionNotificationId(sessionId))
+                }
+                val answered = requestId ?: runId ?: return
                 // Remove the notification immediately for responsive UX; the
                 // submission below settles the request itself.
-                val notificationManager =
-                    context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                notificationManager.cancel(
-                    ApprovalNotificationManager.NOTIFICATION_ID +
-                        sessionId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE,
-                )
-                launchAsync { submitApprovalDecisionUseCase(sessionId, action == ApprovalAction.APPROVE, runId) }
+                approvalNotifier.cancelApprovalNotification(answered)
+                launchAsync {
+                    submitApprovalDecisionUseCase(sessionId, answered, isApproved = action == ApprovalAction.APPROVE)
+                }
             }
             ApprovalAction.REPOST -> {
                 if (runId != null) {
@@ -119,6 +131,9 @@ class AgentApprovalReceiver : BroadcastReceiver() {
             PendingInteractionKind.APPROVAL -> approvalNotifier.sendPersistentApprovalRequest(
                 runId = pending.runId,
                 sessionId = pending.sessionId,
+                // Every approval record names its request: minted ones carry
+                // the gate's token, older ones were back-filled with the run id.
+                requestId = pending.requestId ?: pending.runId,
                 toolName = pending.toolName.orEmpty(),
                 arguments = pending.toolArgs.orEmpty(),
                 risk = pending.risk ?: ToolRisk.SENSITIVE,
@@ -141,6 +156,10 @@ class AgentApprovalReceiver : BroadcastReceiver() {
             }
         }
     }
+
+    /** The platform notification service, for the one slot the notifier no longer knows. */
+    private fun notificationManager(context: Context): NotificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     /**
      * Bridges suspending work out of `onReceive` via [goAsync]: the pending
@@ -171,5 +190,8 @@ class AgentApprovalReceiver : BroadcastReceiver() {
 
         /** Intent extra carrying the parked run id (persistent-phase notifications only). */
         const val EXTRA_RUN_ID: String = "runId"
+
+        /** Intent extra carrying the identity of the request a decision action answers. */
+        const val EXTRA_REQUEST_ID: String = "requestId"
     }
 }

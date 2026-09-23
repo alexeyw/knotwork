@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,6 +62,14 @@ import javax.inject.Singleton
  * instead of settling into an anonymous success. The reports are no-ops for runs
  * that own no journal row (every interactive one).
  *
+ * Every gate it raises gets an identity of its own — a token minted here and
+ * carried by the request state, the chat card, both notifications and the
+ * parked record — and an answer settles a request only when it names that
+ * token. A session is not an address: a parked request and a live one coexist
+ * in one session whenever a second run starts there, so "complete whatever
+ * this session waits on" would let the answer given for one request authorise
+ * another.
+ *
  * Marked `@Singleton` because [activeApprovalDeferreds] holds per-session
  * pending approval requests that must outlive any individual node execution
  * and be reachable from the UI / notification resume path regardless of which
@@ -95,26 +104,31 @@ class ToolInvocationGate @Inject constructor(
     )
 
     /**
-     * Completes the suspended approval request for [sessionId] with the user's decision.
+     * Completes the live approval request [requestId] of [sessionId] with the
+     * user's decision — and nothing else.
      *
-     * Invoked from the UI layer (`MainActivity`) and the notification-action receiver
-     * (`AgentApprovalReceiver`). No-ops silently when there is no pending request for
-     * the given session — duplicate dispatches (e.g. user taps the notification action
-     * after the dialog already resumed the executor) cannot corrupt state.
+     * Reached only through `SubmitApprovalDecisionUseCase` (the chat card and
+     * the notification receiver both route there). The request must be the one
+     * the session is suspended on right now: a decision for any other request
+     * — a parked one, an earlier one of the same run, one whose notification
+     * outlived it — leaves the live gate waiting and returns `false`, so the
+     * caller can look for the parked record that request names instead. The
+     * match and the removal are one atomic step, so a duplicate dispatch cannot
+     * settle a request twice.
+     *
+     * The approval notification is not touched here: the gate removes it itself
+     * when the wait ends, on this path and on every other one.
      *
      * @param sessionId chat session id used as the lookup key in [activeApprovalDeferreds].
+     * @param requestId identity of the request the decision was given for.
      * @param isApproved `true` if the user approved tool execution, `false` to deny it.
+     * @return `true` when the decision settled the live request it names;
+     *   `false` when no live request of [sessionId] carries [requestId].
      */
-    fun resumeWithApproval(sessionId: String, isApproved: Boolean) {
-        val holder = activeApprovalDeferreds.remove(sessionId)
-        holder?.deferred?.complete(isApproved)
-        // Settle any approval notification for this session. When the decision is
-        // made from the in-chat card (the common case) the live-phase notification
-        // — posted while the app was backgrounded — would otherwise keep hanging in
-        // the shade offering a choice that has already been made. Idempotent: a
-        // no-op when nothing was posted (e.g. the request was answered while the
-        // chat was on screen and the notification was suppressed to begin with).
-        approvalNotifier.cancelApprovalNotification(sessionId)
+    fun resumeWithApproval(sessionId: String, requestId: String, isApproved: Boolean): Boolean {
+        val holder = activeApprovalDeferreds[sessionId]?.takeIf { it.request.requestId == requestId } ?: return false
+        if (!activeApprovalDeferreds.remove(sessionId, holder)) return false
+        return holder.deferred.complete(isApproved)
     }
 
     /**
@@ -272,16 +286,18 @@ class ToolInvocationGate @Inject constructor(
             // never parks — and recording only parks would leave exactly that
             // case looking like "this run never asked for anything".
             recordTriggerHitlEvent(runId, TriggerHitlEvent.Raised(PendingInteractionKind.APPROVAL))
+            val requestId = UUID.randomUUID().toString()
             val approvalRequest =
-                AgentOrchestratorState.WaitingForApproval(resolvedToolName, resolvedToolArgs, risk)
+                AgentOrchestratorState.WaitingForApproval(resolvedToolName, resolvedToolArgs, risk, requestId)
             emit(NodeOutput.State(approvalRequest))
-            approvalNotifier.sendApprovalRequest(sessionId, resolvedToolName, resolvedToolArgs, risk)
+            approvalNotifier.sendApprovalRequest(sessionId, requestId, resolvedToolName, resolvedToolArgs, risk)
 
             // Register deferred before any suspension point so a fast approval is not dropped
             val deferred = CompletableDeferred<Boolean>()
             val holder = PendingApprovalHolder(deferred, approvalRequest)
             activeApprovalDeferreds[sessionId] = holder
             val timeoutMs = settingsRepository.toolCallTimeoutMs.first()
+            var parked = false
             isApproved = try {
                 withTimeout(timeoutMs) { deferred.await() }
             } catch (e: TimeoutCancellationException) {
@@ -298,11 +314,13 @@ class ToolInvocationGate @Inject constructor(
                 // live or durable, never both. The `finally` remove stays for
                 // every other exit path (it is a no-op once removed here).
                 activeApprovalDeferreds.remove(sessionId, holder)
-                if (runId != null && parkRun(runId, sessionId, resolvedToolName, resolvedToolArgs, risk)) {
+                val request = ParkedApprovalRequest(requestId, resolvedToolName, resolvedToolArgs, risk)
+                if (runId != null && parkRun(runId, sessionId, request)) {
                     // Two-phase wait, second phase: the run parks on its
                     // durable pending record instead of failing. No
                     // NodeOutput.Result on purpose — the engine stops the
                     // walk and the run record stays WAITING_APPROVAL.
+                    parked = true
                     recordTriggerHitlEvent(runId, TriggerHitlEvent.Parked)
                     emit(
                         NodeOutput.State(
@@ -332,6 +350,11 @@ class ToolInvocationGate @Inject constructor(
                 // ever settle. remove(key, value) leaves a newer
                 // registration for the same session untouched.
                 activeApprovalDeferreds.remove(sessionId, holder)
+                // The live notification goes with the wait, however it ended —
+                // answered, stopped, timed out without a park. Left behind it is
+                // an Approve button for a request nothing waits on any more.
+                // Not after a park: the ongoing notification took its slot.
+                if (!parked) approvalNotifier.cancelApprovalNotification(requestId)
             }
             // Reached only when the live phase settled with the user's
             // decision (the timeout path returns above), so the gate ends
@@ -443,35 +466,55 @@ class ToolInvocationGate @Inject constructor(
      * request snapshot as a [PendingInteraction] and, when durable, replaces
      * the transient approval notification with the persistent one.
      *
+     * The record keeps the request's identity, so the live-phase card and
+     * notification of this request go on answering it after the park — and
+     * the ongoing notification lands in the live one's slot.
+     *
      * @param runId Id of the persisted run being parked.
      * @param sessionId Id of the owning chat session.
-     * @param toolName Tool name of the staged call.
-     * @param arguments Argument string of the staged call.
-     * @param risk Risk classification of the staged call.
+     * @param request The staged call being parked.
      * @return `true` when the park is durable; `false` when the caller must
      *   fall back to failing the run.
      */
-    private suspend fun parkRun(
-        runId: String,
-        sessionId: String,
-        toolName: String,
-        arguments: String,
-        risk: ToolRisk,
-    ): Boolean {
+    private suspend fun parkRun(runId: String, sessionId: String, request: ParkedApprovalRequest): Boolean {
         val saved = pendingInteractionRepository.save(
             PendingInteraction(
                 runId = runId,
                 sessionId = sessionId,
                 kind = PendingInteractionKind.APPROVAL,
-                toolName = toolName,
-                toolArgs = arguments,
-                risk = risk,
+                toolName = request.toolName,
+                toolArgs = request.arguments,
+                risk = request.risk,
                 requestedAt = System.currentTimeMillis(),
+                requestId = request.requestId,
             ),
         )
         if (saved) {
-            approvalNotifier.sendPersistentApprovalRequest(runId, sessionId, toolName, arguments, risk)
+            approvalNotifier.sendPersistentApprovalRequest(
+                runId = runId,
+                sessionId = sessionId,
+                requestId = request.requestId,
+                toolName = request.toolName,
+                arguments = request.arguments,
+                risk = request.risk,
+            )
         }
         return saved
     }
+
+    /**
+     * The staged call a live gate parks, bundled so [parkRun] takes the request
+     * as one value rather than four loose parameters.
+     *
+     * @property requestId Identity of the request, minted when the gate was raised.
+     * @property toolName Tool name of the staged call.
+     * @property arguments Argument string of the staged call.
+     * @property risk Risk classification of the staged call.
+     */
+    private data class ParkedApprovalRequest(
+        val requestId: String,
+        val toolName: String,
+        val arguments: String,
+        val risk: ToolRisk,
+    )
 }

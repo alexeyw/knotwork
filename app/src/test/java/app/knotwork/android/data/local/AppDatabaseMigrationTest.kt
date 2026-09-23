@@ -1049,4 +1049,32 @@ class AppDatabaseMigrationTest {
                 assertFalse("Column $column must be nullable: $sql", sql.uppercase().contains("NOT NULL"))
             }
     }
+
+    @Test
+    fun `MIGRATION_61_62 targets versions 61 to 62`() {
+        val migration = AppDatabase.MIGRATION_61_62
+
+        assertEquals(61, migration.startVersion)
+        assertEquals(62, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_61_62 adds a nullable request id and back-fills approval rows with their run id`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statements = mutableListOf<String>()
+
+        AppDatabase.MIGRATION_61_62.migrate(db)
+
+        verify(exactly = 2) { db.execSQL(capture(statements)) }
+        val (alter, backfill) = statements
+        // Nullable with no default, matching the entity: clarifications and
+        // ceiling pauses have no approval request to name.
+        assertTrue(alter, alter.contains("ALTER TABLE `pending_interactions` ADD COLUMN `requestId` TEXT"))
+        assertFalse(alter, alter.uppercase().contains("NOT NULL"))
+        assertFalse(alter, alter.uppercase().contains("DEFAULT"))
+        // The back-fill is what keeps a request that was waiting across the
+        // update answerable: its notification names only the run.
+        assertTrue(backfill, backfill.contains("UPDATE `pending_interactions` SET `requestId` = `runId`"))
+        assertTrue(backfill, backfill.contains("WHERE `kind` = 'APPROVAL'"))
+    }
 }

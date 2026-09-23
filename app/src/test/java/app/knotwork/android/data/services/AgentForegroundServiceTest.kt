@@ -241,7 +241,8 @@ class AgentForegroundServiceTest {
         flushAll()
 
         // Waiting on a human must not pin the CPU awake until the safety timeout.
-        globalState.value = AgentOrchestratorState.WaitingForApproval("delete_file", "{}", ToolRisk.DESTRUCTIVE)
+        globalState.value =
+            AgentOrchestratorState.WaitingForApproval("delete_file", "{}", ToolRisk.DESTRUCTIVE, "req-1")
         flushAll()
 
         assertFalse(
@@ -361,6 +362,7 @@ class AgentForegroundServiceTest {
                 toolName = "x",
                 arguments = "{}",
                 risk = ToolRisk.SENSITIVE,
+                requestId = "req-1",
             ),
             AgentOrchestratorState.Answering("…"),
             AgentOrchestratorState.Completed("ok"),

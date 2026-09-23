@@ -316,6 +316,7 @@ class ChatHomeStateMappingTest {
                 toolName = "append_file",
                 arguments = """{"path":"inbox/captures.md"}""",
                 risk = ToolRisk.SENSITIVE,
+                requestId = "req-1",
             ),
         )
 
@@ -335,6 +336,7 @@ class ChatHomeStateMappingTest {
                 toolName = "fs.delete_file",
                 arguments = """{"path":"old-notes.md"}""",
                 risk = ToolRisk.DESTRUCTIVE,
+                requestId = "req-1",
             ),
         )
 

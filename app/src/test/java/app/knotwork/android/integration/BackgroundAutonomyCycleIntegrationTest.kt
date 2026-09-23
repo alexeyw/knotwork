@@ -266,7 +266,7 @@ class BackgroundAutonomyCycleIntegrationTest {
                     processB.pendingRepository.getForRun(runId) != null
             }
             verify(atLeast = 1) {
-                processB.approvalNotifier.sendApprovalRequest(any(), any(), any(), any())
+                processB.approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any())
             }
             // The resumed engine executed the LLM step live (the interrupted
             // run never completed it) and its record is now part of the
@@ -283,7 +283,7 @@ class BackgroundAutonomyCycleIntegrationTest {
                 processB.taskQueueManager,
                 processB.pendingRepository,
                 processB.parkedRunResumer,
-            )(SESSION_ID, isApproved = true, runId = runId)
+            )(SESSION_ID, processB.parkedRequestId(runId), isApproved = true)
             assertEquals(PendingSubmissionOutcome.Resumed, outcome)
 
             awaitUntil("run COMPLETED", dump = { processB.stateOf(runId) }) {
@@ -563,7 +563,17 @@ class BackgroundAutonomyCycleIntegrationTest {
         val approvalNotifier: ApprovalNotifier,
         val resumeRun: ResumePipelineRunUseCase,
         val parkedRunResumer: ParkedRunResumer,
-    )
+    ) {
+        /**
+         * Identity of the request run [runId] is parked on — what the buttons
+         * of its notification answer with.
+         *
+         * @param runId The parked run.
+         * @return The request id its record carries.
+         */
+        suspend fun parkedRequestId(runId: String): String =
+            requireNotNull(pendingRepository.getForRun(runId)?.requestId) { "run $runId parks no approval request" }
+    }
 
     private companion object {
         const val GRAPH_ID = "cycle-graph"

@@ -36,6 +36,13 @@ details.
   **Approve** for every tool. For a destructive one it now offers **Deny** and
   **Review in chat**, as the notification of a longer wait already did, so
   approving still takes the typed confirmation in the chat.
+- **An approval answers only the request it was shown for.** When two runs
+  waited in the same chat — a background run parked on one tool while another
+  run asked about a second — an answer from a notification or the chat card
+  could settle the other request. Each request now has an identity of its own
+  that its card and notification answer with, and an answer to anything else
+  settles nothing. Each waiting request also keeps its own notification, and a
+  notification is removed when its run stops without an answer.
 
 ### Fixed
 

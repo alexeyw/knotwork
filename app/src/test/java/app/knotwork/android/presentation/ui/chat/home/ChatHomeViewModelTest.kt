@@ -1144,6 +1144,7 @@ class ChatHomeViewModelTest {
                         toolName = "fs.write_file",
                         arguments = "{}",
                         risk = ToolRisk.SENSITIVE,
+                        requestId = "request-1",
                     ),
                 )
                 delay(10_000)
@@ -1907,6 +1908,7 @@ class ChatHomeViewModelTest {
                     toolName = "fs.write_file",
                     arguments = "{\"path\":\"/tmp/x\"}",
                     risk = ToolRisk.SENSITIVE,
+                    requestId = "request-1",
                 ),
             )
             delay(10_000)
@@ -1936,6 +1938,7 @@ class ChatHomeViewModelTest {
                     toolName = "calendar.create_event",
                     arguments = "{}",
                     risk = ToolRisk.SENSITIVE,
+                    requestId = "request-1",
                 ),
             )
             delay(10_000)
@@ -1947,7 +1950,7 @@ class ChatHomeViewModelTest {
         viewModel.hitl.approveTool()
         advanceUntilIdle()
 
-        coVerify { submitApprovalDecisionUseCase(sessionId, true, null) }
+        coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
         assertEquals(ChatHomeUiState.Generating(), viewModel.state.value.visual)
         assertNull(viewModel.state.value.pending.tool)
     }
@@ -1963,6 +1966,7 @@ class ChatHomeViewModelTest {
                     toolName = "fs.delete_file",
                     arguments = "{}",
                     risk = ToolRisk.DESTRUCTIVE,
+                    requestId = "request-1",
                 ),
             )
             delay(10_000)
@@ -1974,7 +1978,7 @@ class ChatHomeViewModelTest {
         viewModel.hitl.rejectTool()
         advanceUntilIdle()
 
-        coVerify { submitApprovalDecisionUseCase(sessionId, false, null) }
+        coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", false) }
         coVerify {
             chatRepository.saveMessage(
                 match { msg ->
@@ -2001,6 +2005,7 @@ class ChatHomeViewModelTest {
                     toolName = "fs.delete_file",
                     arguments = "{}",
                     risk = ToolRisk.DESTRUCTIVE,
+                    requestId = "request-1",
                 ),
             )
             delay(10_000)
@@ -2012,14 +2017,14 @@ class ChatHomeViewModelTest {
         // Empty typed-confirm — Allow must be refused.
         viewModel.hitl.approveTool()
         advanceUntilIdle()
-        coVerify(exactly = 0) { submitApprovalDecisionUseCase(any(), true, any()) }
+        coVerify(exactly = 0) { submitApprovalDecisionUseCase(any(), any(), true) }
         assertTrue(viewModel.state.value.visual is ChatHomeUiState.HitlConfirm)
 
         // Typing the canonical magic word unlocks the gate.
         viewModel.hitl.onTypedConfirmChange("yes")
         viewModel.hitl.approveTool()
         advanceUntilIdle()
-        coVerify { submitApprovalDecisionUseCase(sessionId, true, null) }
+        coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
         assertEquals(ChatHomeUiState.Generating(), viewModel.state.value.visual)
     }
 
@@ -2494,6 +2499,7 @@ class ChatHomeViewModelTest {
                     toolName = "fs.delete_file",
                     arguments = "{}",
                     risk = ToolRisk.SENSITIVE,
+                    requestId = "request-1",
                 )
 
             viewModel = createViewModel()
@@ -2502,6 +2508,69 @@ class ChatHomeViewModelTest {
             assertTrue(viewModel.state.value.visual is ChatHomeUiState.HitlConfirm)
             assertEquals("fs.delete_file", viewModel.state.value.pending.tool?.toolName)
         }
+
+    @Test
+    fun `given a run parked on approval when its restored card is approved then the answer names the parked request`() =
+        runTest(testDispatcher) {
+            // The card comes off the record; its answer must name that record's
+            // request. Answering "the session" would settle whatever the session
+            // is waiting on by the time the tap lands — possibly another request.
+            val sessionId = "session-parked"
+            seedSavedSession(sessionId)
+            coEvery { pipelineRunRepository.getActiveRunForSession(sessionId) } returns
+                runRecord(sessionId, PipelineRunStatus.WAITING_APPROVAL)
+            every { agentOrchestratorUseCase.observe(sessionId) } returns
+                flowOf(AgentOrchestratorState.ConsoleLog(events = emptyList(), runId = "run-1"))
+            every { agentOrchestratorUseCase.pendingApprovalFor(sessionId) } returns null
+            coEvery { pendingInteractionRepository.getForSession(sessionId) } returns parkedApproval(
+                sessionId,
+                requestId = "request-parked",
+            )
+
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.hitl.approveTool()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { submitApprovalDecisionUseCase(sessionId, "request-parked", true) }
+        }
+
+    @Test
+    fun `given a run parked before request ids existed when its card is approved then the answer names its run`() =
+        runTest(testDispatcher) {
+            // The store back-filled such a record's request id with its run id;
+            // a record read without one must still name the same identity.
+            val sessionId = "session-parked-old"
+            seedSavedSession(sessionId)
+            coEvery { pipelineRunRepository.getActiveRunForSession(sessionId) } returns
+                runRecord(sessionId, PipelineRunStatus.WAITING_APPROVAL)
+            every { agentOrchestratorUseCase.observe(sessionId) } returns
+                flowOf(AgentOrchestratorState.ConsoleLog(events = emptyList(), runId = "run-1"))
+            every { agentOrchestratorUseCase.pendingApprovalFor(sessionId) } returns null
+            coEvery { pendingInteractionRepository.getForSession(sessionId) } returns parkedApproval(
+                sessionId,
+                requestId = null,
+            )
+
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.hitl.approveTool()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { submitApprovalDecisionUseCase(sessionId, "run-parked", true) }
+        }
+
+    /** A parked SENSITIVE approval record of run `run-parked` in [sessionId]. */
+    private fun parkedApproval(sessionId: String, requestId: String?) = PendingInteraction(
+        runId = "run-parked",
+        sessionId = sessionId,
+        kind = PendingInteractionKind.APPROVAL,
+        toolName = "send_message",
+        toolArgs = "{}",
+        risk = ToolRisk.SENSITIVE,
+        requestedAt = 1_700_000_000_000L,
+        requestId = requestId,
+    )
 
     @Test
     fun `given a run waiting on a ceiling when session opens then the pause is restored from the record`() =

@@ -926,9 +926,11 @@ class GraphExecutionEngineTest {
             ceilingNotifier,
         )
 
-        engineWithMock.resumeWithApproval("session_id_123", true)
+        every { mockToolNodeExecutor.resumeWithApproval("session_id_123", "req-1", true) } returns true
 
-        io.mockk.verify { mockToolNodeExecutor.resumeWithApproval("session_id_123", true) }
+        assertTrue(engineWithMock.resumeWithApproval("session_id_123", "req-1", true))
+
+        io.mockk.verify { mockToolNodeExecutor.resumeWithApproval("session_id_123", "req-1", true) }
     }
 
     @Test
@@ -2634,7 +2636,7 @@ class GraphExecutionEngineTest {
 
         val sawApproval = emissions.any { it is AgentOrchestratorState.WaitingForApproval }
         assertTrue("READ_ONLY tool must not pause for approval", !sawApproval)
-        verify(exactly = 0) { approvalNotifier.sendApprovalRequest(any(), any(), any(), any()) }
+        verify(exactly = 0) { approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any()) }
         assertTrue(
             "Pipeline should reach Completed when HITL is skipped",
             emissions.any { it is AgentOrchestratorState.Completed },
@@ -2772,7 +2774,7 @@ class GraphExecutionEngineTest {
         // dropped and the gate would then time out and park the run.
         advanceTimeBy(2_000)
         runCurrent()
-        engine.resumeWithApproval(sessionId, true)
+        engine.resumeWithApproval(sessionId, requireNotNull(engine.pendingApprovalFor(sessionId)).requestId, true)
         advanceUntilIdle()
 
         coVerifyOrder {
@@ -2804,7 +2806,7 @@ class GraphExecutionEngineTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
         every { skillNodeExecutor.execute(any(), any(), any(), any(), any(), any()) } returns flowOf(
             NodeOutput.State(
-                AgentOrchestratorState.WaitingForApproval("sens.tool", "a=1", ToolRisk.SENSITIVE),
+                AgentOrchestratorState.WaitingForApproval("sens.tool", "a=1", ToolRisk.SENSITIVE, "req-1"),
             ),
             // The poison: a child console line arriving mid-wait.
             NodeOutput.State(
@@ -3027,7 +3029,7 @@ class GraphExecutionEngineTest {
         // dropped and the gate would then time out and park the run.
         advanceTimeBy(2_000)
         runCurrent()
-        engine.resumeWithApproval(sessionId, true)
+        engine.resumeWithApproval(sessionId, requireNotNull(engine.pendingApprovalFor(sessionId)).requestId, true)
         advanceUntilIdle()
 
         // The suspension flush must land between the WAITING_APPROVAL write
@@ -3388,7 +3390,7 @@ class GraphExecutionEngineTest {
         // Interrupted at the TOOL node → never replayed: a fresh approval
         // gate must be raised even though the run is a resume.
         assertTrue(states.filterIsInstance<AgentOrchestratorState.WaitingForApproval>().isNotEmpty())
-        engine.resumeWithApproval(sessionId, true)
+        engine.resumeWithApproval(sessionId, requireNotNull(engine.pendingApprovalFor(sessionId)).requestId, true)
         advanceUntilIdle()
 
         coVerify(exactly = 1) { toolRepository.executeTool("sens.tool", any(), any()) }

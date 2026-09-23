@@ -83,6 +83,7 @@ class ParkedRunResumerTest {
         toolArgs = "{}",
         risk = ToolRisk.SENSITIVE,
         requestedAt = requestedAt,
+        requestId = "request-1",
     )
 
     /** A run record that is still open, so the not-resumable branch has to settle it. */
@@ -106,7 +107,16 @@ class ParkedRunResumerTest {
 
         assertEquals(PendingSubmissionOutcome.Resumed, outcome)
         coVerify { resumePipelineRunUseCase("run-1") }
-        verify { approvalNotifier.cancelApprovalNotification("session-1") }
+        verify { approvalNotifier.cancelApprovalNotification("request-1") }
+    }
+
+    @Test
+    fun `given a park from before request ids when submitted then the notification of its run is removed`() = runTest {
+        // Such a record's notification was posted naming only its run, and the
+        // store back-filled that run id as its request id.
+        resumer.submit(parkedApproval().copy(requestId = null)) { true }
+
+        verify { approvalNotifier.cancelApprovalNotification("run-1") }
     }
 
     @Test
@@ -242,7 +252,7 @@ class ParkedRunResumerTest {
             )
         }
         coVerify { pendingInteractionRepository.delete("run-1") }
-        verify { approvalNotifier.cancelApprovalNotification("session-1") }
+        verify { approvalNotifier.cancelApprovalNotification("request-1") }
     }
 
     @Test

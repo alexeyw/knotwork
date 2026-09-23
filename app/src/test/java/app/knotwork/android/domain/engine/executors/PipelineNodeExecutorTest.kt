@@ -276,6 +276,7 @@ class PipelineNodeExecutorTest {
                     "delete_file",
                     "{}",
                     risk = ToolRisk.DESTRUCTIVE,
+                    requestId = "req-1",
                 ),
                 AgentOrchestratorState.Completed("after approval"),
             ),

@@ -233,7 +233,7 @@ class AppFunctionsEndToEndTest {
      * instrumented test run is prohibitively expensive) and real `ToolRepository` /
      * `SettingsRepository`. Drives `execute(...)` against a TOOL node configured to
      * call the probe's qualified echo, observes the [AgentOrchestratorState.WaitingForApproval]
-     * emission, and then calls `resumeWithApproval(sessionId, true)` to release the
+     * emission, and then calls `resumeWithApproval(sessionId, requestId, true)` to release the
      * suspended invocation. The final [NodeOutput.Result] must carry the echoed message.
      */
     @Test
@@ -268,7 +268,9 @@ class AppFunctionsEndToEndTest {
                             // this is deterministic regardless of emulator load.
                             launch {
                                 awaitPendingApproval(executor, sessionId)
-                                executor.resumeWithApproval(sessionId, true)
+                                // Answer the request the gate is waiting on, as the card would.
+                                val requestId = requireNotNull(executor.pendingApprovalFor(sessionId)).requestId
+                                executor.resumeWithApproval(sessionId, requestId, true)
                             }
                         }
                     }
@@ -754,7 +756,13 @@ class AppFunctionsEndToEndTest {
         coEvery { fakeLoadModel.invoke() } returns DomainResult.Success(Unit)
 
         val silentNotifier = object : ApprovalNotifier {
-            override fun sendApprovalRequest(sessionId: String, toolName: String, arguments: String, risk: ToolRisk) {
+            override fun sendApprovalRequest(
+                sessionId: String,
+                requestId: String,
+                toolName: String,
+                arguments: String,
+                risk: ToolRisk,
+            ) {
                 // Notification side effects are not part of this test's contract; the gate
                 // suspension is observed through the WaitingForApproval state emission, not
                 // via a system notification assertion. Swallowing here also keeps the test
@@ -764,6 +772,7 @@ class AppFunctionsEndToEndTest {
             override fun sendPersistentApprovalRequest(
                 runId: String,
                 sessionId: String,
+                requestId: String,
                 toolName: String,
                 arguments: String,
                 risk: ToolRisk,
@@ -771,7 +780,7 @@ class AppFunctionsEndToEndTest {
                 // Same rationale: the park is asserted through the durable record.
             }
 
-            override fun cancelApprovalNotification(sessionId: String) {
+            override fun cancelApprovalNotification(requestId: String) {
                 // No notification was posted, nothing to cancel.
             }
         }

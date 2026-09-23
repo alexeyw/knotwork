@@ -49,12 +49,6 @@ class AgentOrchestratorUseCaseTest {
     }
 
     @Test
-    fun `resumeWithApproval delegates to TaskQueueManager`() {
-        useCase.resumeWithApproval(sessionId, true)
-        verify { taskQueueManager.resumeWithApproval(sessionId, true) }
-    }
-
-    @Test
     fun `observe subscribes to the session state without enqueueing a task`() = runTest {
         every { taskQueueManager.observeTaskState(sessionId) } returns flowOf(
             AgentOrchestratorState.Thinking("working"),
@@ -72,6 +66,7 @@ class AgentOrchestratorUseCaseTest {
             toolName = "fs.delete_file",
             arguments = "{}",
             risk = ToolRisk.SENSITIVE,
+            requestId = "req-1",
         )
         every { taskQueueManager.pendingApproval(sessionId) } returns pending
 

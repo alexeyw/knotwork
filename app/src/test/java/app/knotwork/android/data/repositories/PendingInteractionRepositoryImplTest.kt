@@ -52,6 +52,7 @@ class PendingInteractionRepositoryImplTest {
         risk = ToolRisk.DESTRUCTIVE,
         decision = PendingDecision.APPROVED,
         requestedAt = 42L,
+        requestId = "request-1",
     )
 
     /** The persisted entity of a clarification park with options. */
@@ -83,8 +84,19 @@ class PendingInteractionRepositoryImplTest {
             assertEquals("DESTRUCTIVE", risk)
             assertEquals("APPROVED", decision)
             assertEquals(42L, requestedAt)
+            assertEquals("request-1", requestId)
             assertNull(optionsJson)
         }
+    }
+
+    @Test
+    fun `getForRequest maps the record parking that request back with its identity`() = runTest {
+        val stored = slot<PendingInteractionEntity>()
+        coEvery { dao.upsert(capture(stored)) } returns Unit
+        repository.save(approvalRecord())
+        coEvery { dao.getForRequest("request-1") } answers { stored.captured }
+
+        assertEquals(approvalRecord(), repository.getForRequest("request-1"))
     }
 
     @Test
@@ -147,6 +159,16 @@ class PendingInteractionRepositoryImplTest {
 
         coEvery { dao.recordDecision("run-1", "DENIED") } returns 0
         assertFalse(repository.recordDecision("run-1", PendingDecision.DENIED))
+    }
+
+    @Test
+    fun `recordApprovalDecision writes only through the request-guarded update`() = runTest {
+        coEvery { dao.recordApprovalDecision("run-1", "request-1", "APPROVED") } returns 1
+        assertTrue(repository.recordApprovalDecision("run-1", "request-1", PendingDecision.APPROVED))
+
+        coEvery { dao.recordApprovalDecision("run-1", "request-1", "APPROVED") } returns 0
+        assertFalse(repository.recordApprovalDecision("run-1", "request-1", PendingDecision.APPROVED))
+        coVerify(exactly = 0) { dao.recordDecision(any(), any()) }
     }
 
     @Test

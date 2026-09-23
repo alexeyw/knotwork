@@ -1157,7 +1157,7 @@ class TaskQueueManagerImplTest {
     fun `given a run waiting on an approval gate then the window does not apply`() = testScope.runTest {
         val window = taskQueueManager.silenceTimeoutMs
         every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
-            emit(AgentOrchestratorState.WaitingForApproval("echo", "{}", ToolRisk.SENSITIVE))
+            emit(AgentOrchestratorState.WaitingForApproval("echo", "{}", ToolRisk.SENSITIVE, "req-1"))
             delay(window * 3)
             emit(AgentOrchestratorState.Completed("approved and done"))
         }
@@ -1179,7 +1179,7 @@ class TaskQueueManagerImplTest {
     @Test
     fun `given silence after an approved tool starts then the run is still failed`() = testScope.runTest {
         every { graphExecutionEngine.invoke(any(), any(), any(), any()) } returns flow {
-            emit(AgentOrchestratorState.WaitingForApproval("echo", "{}", ToolRisk.SENSITIVE))
+            emit(AgentOrchestratorState.WaitingForApproval("echo", "{}", ToolRisk.SENSITIVE, "req-1"))
             emit(AgentOrchestratorState.ExecutingTool("echo", "{}"))
             awaitCancellation()
         }

@@ -39,6 +39,10 @@ import androidx.room.PrimaryKey
  * @property ceilingSpent What the run tree had charged when it bound; `null` for
  *   the other two kinds.
  * @property requestedAt Epoch millis when the persistent waiting phase began.
+ * @property requestId Identity of the parked approval request, minted by the
+ *   gate; `null` for clarifications and ceiling pauses. Rows parked before the
+ *   column existed were back-filled with their [runId] (`MIGRATION_61_62`). Not
+ *   indexed: the table holds one row per waiting run.
  */
 @Entity(
     tableName = "pending_interactions",
@@ -62,4 +66,5 @@ data class PendingInteractionEntity(
     val ceilingLimit: Int? = null,
     val ceilingSpent: Int? = null,
     val requestedAt: Long,
+    val requestId: String? = null,
 )

@@ -660,6 +660,10 @@ arrives as a notification. For read-only and sensitive tools it offers
 notification — it offers **Deny** and a **Review in chat** link to the
 regular typed-confirm card.
 
+Each notification and each card answers only the request it shows. If two
+runs are waiting in the same chat, each has its own notification, and a
+button for a request that has already been answered or stopped does nothing.
+
 An unanswered request does not fail the run. When the live waiting
 window elapses — say a scheduled run hits a sensitive tool at 6 a.m. —
 the run parks in a persistent waiting state and an ongoing notification

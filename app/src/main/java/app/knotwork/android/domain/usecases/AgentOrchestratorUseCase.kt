@@ -25,16 +25,6 @@ class AgentOrchestratorUseCase @Inject constructor(private val taskQueueManager:
     val globalState: StateFlow<AgentOrchestratorState> = taskQueueManager.globalState
 
     /**
-     * Resumes the suspended execution cycle after the user has made a decision on tool usage.
-     *
-     * @param sessionId The session ID that was waiting for approval.
-     * @param isApproved True if the user allowed the action, false otherwise.
-     */
-    fun resumeWithApproval(sessionId: String, isApproved: Boolean) {
-        taskQueueManager.resumeWithApproval(sessionId, isApproved)
-    }
-
-    /**
      * Subscribes to the execution state of [sessionId] without enqueueing a
      * new task. Backs the chat reattach protocol: when a session is reopened
      * while its run is still in flight (started earlier in this process and
@@ -52,10 +42,12 @@ class AgentOrchestratorUseCase @Inject constructor(private val taskQueueManager:
      * Returns the tool-approval request the run of [sessionId] is currently
      * suspended on, or `null` when no approval gate is active.
      *
-     * Counterpart of [resumeWithApproval] for the reattach path: a session
-     * whose persistent run record reads `WAITING_APPROVAL` restores its HITL
-     * confirmation card from this snapshot rather than from the state flow's
-     * replay cache (which console events overwrite while the run waits).
+     * Backs the reattach path: a session whose persistent run record reads
+     * `WAITING_APPROVAL` restores its HITL confirmation card from this
+     * snapshot rather than from the state flow's replay cache (which console
+     * events overwrite while the run waits). The answer to that card goes
+     * through `SubmitApprovalDecisionUseCase`, addressed to the snapshot's
+     * request id.
      *
      * @param sessionId The session ID whose pending approval is queried.
      * @return The pending [AgentOrchestratorState.WaitingForApproval], or `null`.

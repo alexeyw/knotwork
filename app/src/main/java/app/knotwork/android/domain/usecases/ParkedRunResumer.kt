@@ -213,7 +213,11 @@ class ParkedRunResumer @Inject constructor(
      */
     private fun cancelNotification(pending: PendingInteraction) {
         when (pending.kind) {
-            PendingInteractionKind.APPROVAL -> approvalNotifier.cancelApprovalNotification(pending.sessionId)
+            // The notification of this request only: another request of the
+            // same session keeps its own. A record parked before requests had
+            // identities was back-filled with its run id.
+            PendingInteractionKind.APPROVAL ->
+                approvalNotifier.cancelApprovalNotification(pending.requestId ?: pending.runId)
             PendingInteractionKind.CLARIFICATION ->
                 clarificationNotifier.cancelClarificationNotification(pending.sessionId)
             PendingInteractionKind.CEILING -> ceilingNotifier.cancelCeilingNotification(pending.sessionId)

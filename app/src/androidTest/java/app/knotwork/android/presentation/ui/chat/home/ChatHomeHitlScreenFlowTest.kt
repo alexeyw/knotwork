@@ -37,6 +37,7 @@ class ChatHomeHitlScreenFlowTest {
                 toolName = "calendar.create_event",
                 arguments = "{}",
                 risk = ToolRisk.SENSITIVE,
+                requestId = "request-1",
             ),
         )
 
@@ -60,6 +61,7 @@ class ChatHomeHitlScreenFlowTest {
                 toolName = "calendar.create_event",
                 arguments = "{}",
                 risk = ToolRisk.SENSITIVE,
+                requestId = "request-1",
             ),
         )
 
@@ -83,6 +85,7 @@ class ChatHomeHitlScreenFlowTest {
                 toolName = "fs.delete_file",
                 arguments = "{\"path\":\"/tmp/x\"}",
                 risk = ToolRisk.DESTRUCTIVE,
+                requestId = "request-1",
             ),
             initialPendingTypedConfirm = "",
         )
@@ -112,6 +115,7 @@ class ChatHomeHitlScreenFlowTest {
                 toolName = "fs.delete_file",
                 arguments = "{\"path\":\"/tmp/x\"}",
                 risk = ToolRisk.DESTRUCTIVE,
+                requestId = "request-1",
             ),
             initialPendingTypedConfirm = "yes",
         )
@@ -136,6 +140,7 @@ class ChatHomeHitlScreenFlowTest {
                 toolName = "calendar.create_event",
                 arguments = "{}",
                 risk = ToolRisk.SENSITIVE,
+                requestId = "request-1",
             ),
         )
 

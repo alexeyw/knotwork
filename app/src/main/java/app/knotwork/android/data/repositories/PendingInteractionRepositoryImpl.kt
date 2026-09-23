@@ -52,10 +52,23 @@ class PendingInteractionRepositoryImpl @Inject constructor(private val pendingIn
         }
     }
 
+    override suspend fun getForRequest(requestId: String): PendingInteraction? = absorbing("getForRequest") {
+        withContext(Dispatchers.IO) {
+            pendingInteractionDao.getForRequest(requestId)?.toDomain()
+        }
+    }
+
     override suspend fun recordDecision(runId: String, decision: PendingDecision): Boolean =
         absorbing("recordDecision") {
             withContext(Dispatchers.IO) {
                 pendingInteractionDao.recordDecision(runId, decision.name) == 1
+            }
+        } ?: false
+
+    override suspend fun recordApprovalDecision(runId: String, requestId: String, decision: PendingDecision): Boolean =
+        absorbing("recordApprovalDecision") {
+            withContext(Dispatchers.IO) {
+                pendingInteractionDao.recordApprovalDecision(runId, requestId, decision.name) == 1
             }
         } ?: false
 
@@ -120,6 +133,7 @@ private fun PendingInteraction.toEntity(): PendingInteractionEntity = PendingInt
     ceilingLimit = ceilingLimit,
     ceilingSpent = ceilingSpent,
     requestedAt = requestedAt,
+    requestId = requestId,
 )
 
 /**
@@ -148,4 +162,5 @@ private fun PendingInteractionEntity.toDomain(): PendingInteraction = PendingInt
     ceilingLimit = ceilingLimit,
     ceilingSpent = ceilingSpent,
     requestedAt = requestedAt,
+    requestId = requestId,
 )

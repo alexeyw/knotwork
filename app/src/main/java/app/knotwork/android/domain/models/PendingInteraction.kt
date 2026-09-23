@@ -58,6 +58,13 @@ package app.knotwork.android.domain.models
  * @property requestedAt Epoch millis when the persistent waiting phase began.
  *   The background approval window (`backgroundApprovalWindowHours` setting)
  *   counts from this moment.
+ * @property requestId Identity of the approval request this record parks — the
+ *   token the gate minted when it raised the request, carried by the card and
+ *   both notifications. An answer is recorded here only when it names this
+ *   token, so an answer given for one request can never land on the record that
+ *   replaced it (a re-park of the same run REPLACEs the row). `null` for
+ *   clarification and ceiling records; records parked before tokens existed
+ *   carry their [runId], which is what their notifications address.
  */
 data class PendingInteraction(
     val runId: String,
@@ -74,6 +81,7 @@ data class PendingInteraction(
     val ceilingLimit: Int? = null,
     val ceilingSpent: Int? = null,
     val requestedAt: Long,
+    val requestId: String? = null,
 )
 
 /**
