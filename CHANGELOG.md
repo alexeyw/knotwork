@@ -59,8 +59,8 @@ details.
   configuration sheet in the app and in the browser editor. The browser editor
   also left the switch out of the part of an exported file the app runs from, so
   a Tool step set to always ask in the browser showed the switch on in the app
-  and asked nothing; it now writes it there, and keeps it when it opens a file
-  that carries it only in that part.
+  but added no confirmation; it now writes it there, and keeps it when it opens
+  a file that carries it only in that part.
 - **The guide named the wrong confirmation word.** It said a destructive tool
   call is confirmed by typing the tool's name; the field accepts **yes**.
 - **The Wikipedia search tests no longer reach the internet.** Two of them called

@@ -970,8 +970,8 @@ interface SettingsRepository {
      * [ToolApprovalPolicy.requiresApproval]. Supersedes the legacy boolean
      * `requires_user_confirmation` key, which nothing else reads.
      *
-     * While the policy key is absent, a read performs a one-shot migration from
-     * that legacy key: `true` → [ToolApprovalPolicy.SensitiveOrDestructive],
+     * While the policy key is absent, every read maps that legacy key onto a
+     * policy (nothing is written): `true` → [ToolApprovalPolicy.SensitiveOrDestructive],
      * `false` → [ToolApprovalPolicy.NeverPrompt], absent →
      * [ToolApprovalPolicy.DEFAULT].
      */

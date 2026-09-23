@@ -71,8 +71,8 @@ class SettingsManager @Inject constructor(
 
         /**
          * Legacy "ask before tool calls" boolean, superseded by [TOOL_APPROVAL_POLICY].
-         * Read once, by the policy migration, while the policy key is absent; never
-         * written.
+         * Read only by the policy migration, on every policy read while the policy
+         * key is absent; never written.
          */
         val REQUIRES_USER_CONFIRMATION = booleanPreferencesKey("requires_user_confirmation")
         val SYSTEM_PROMPT_PREFIX = stringPreferencesKey("system_prompt_prefix")

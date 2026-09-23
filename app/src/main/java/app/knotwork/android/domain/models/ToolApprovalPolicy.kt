@@ -25,10 +25,11 @@ package app.knotwork.android.domain.models
  *    `DESTRUCTIVE` tools still prompt. For power-users running known-safe
  *    pipelines unattended.
  *
- * Migration from the legacy boolean `requires_user_confirmation` key is
- * one-shot and lives in `SettingsManager`: `true` → [SensitiveOrDestructive],
- * `false` → [NeverPrompt] (the legacy switch was the only way to quiet the
- * prompts; destructive calls ask under it like under every policy).
+ * Migration from the legacy boolean `requires_user_confirmation` key lives in
+ * `SettingsManager` and applies on read while no policy has been stored:
+ * `true` → [SensitiveOrDestructive], `false` → [NeverPrompt] (the legacy switch
+ * was the only way to quiet the prompts; destructive calls ask under it like
+ * under every policy).
  */
 enum class ToolApprovalPolicy(
     /** Wire identifier persisted to DataStore; stable across enum-order changes. */
