@@ -32,13 +32,15 @@ object ChatTranscript {
     /** Prefix of every continuation line. Never the first character of a label. */
     const val CONTINUATION_INDENT: String = "  "
 
-    private val LINE_BREAK = Regex("\r\n|[\n\u000B\u000C\r\u0085  ]")
+    private val LINE_BREAK = Regex("\r\n|[\n\u000B\u000C\r\u0085\u2028\u2029]")
 
     /**
      * Renders one speaker turn as `"$label: $content"`, continuation lines indented.
      *
-     * @param label Speaker label, possibly numbered (`User`, `3. AGENT`). Written
-     *   by the caller, never taken from content.
+     * @param label Speaker label, possibly numbered (`User`, `3. AGENT`,
+     *   `2. read_file`). Built by the caller from app-controlled values — a role,
+     *   an index, a tool name (an MCP name is already held to the MCP naming
+     *   rule, no whitespace) — never from message content; it is not neutralised.
      * @param content The stored message body.
      * @return The turn, of which only the first line starts in the first column.
      */

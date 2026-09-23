@@ -72,8 +72,9 @@ details.
   builds for the model also lay out a message of several lines so that it
   cannot pass for a separate turn.
 - **An imported memory file can no longer pin its entries or date them in the
-  future.** Either one kept an entry in every run's context and out of reach of
-  compaction. Imported entries now arrive unpinned — the import dialog says how
+  future.** A pinned entry is recalled whatever the question, a future-dated one
+  stays first among recent memories, and both escaped compaction. Imported
+  entries now arrive unpinned — the import dialog says how
   many the file had pinned — and a date in the future becomes the date of the
   import.
 

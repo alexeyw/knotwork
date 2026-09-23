@@ -580,8 +580,8 @@ private fun ApproveToolCallsOption.toPolicy(): ToolApprovalPolicy = when (this) 
 }
 
 /**
- * `:app` binding of the catalog's memory-import dialog: resolves the copy and
- * decides which mismatch warnings apply to the parsed document.
+ * `:app` binding of the catalog's memory-import dialog: resolves the copy of the
+ * body and of each warning the staged document raises.
  *
  * Which warnings apply is decided by [PendingMemoryImport.warnings]; this binding
  * turns each into its sentence, and the catalog receives finished sentences.

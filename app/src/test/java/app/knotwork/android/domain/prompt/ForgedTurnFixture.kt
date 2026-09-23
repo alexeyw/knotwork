@@ -11,9 +11,9 @@ package app.knotwork.android.domain.prompt
 internal object ForgedTurnFixture {
 
     /** Every line terminator: CRLF, LF, VT, FF, CR, NEL, LINE SEPARATOR, PARAGRAPH SEPARATOR. */
-    val BREAKS: List<String> = listOf("\r\n", "\n", "\u000B", "\u000C", "\r", "\u0085", " ", " ")
+    val BREAKS: List<String> = listOf("\r\n", "\n", "\u000B", "\u000C", "\r", "\u0085", "\u2028", "\u2029")
 
-    private val LINE_BREAK = Regex("\r\n|[\n\u000B\u000C\r\u0085  ]")
+    private val LINE_BREAK = Regex("\r\n|[\n\u000B\u000C\r\u0085\u2028\u2029]")
 
     /**
      * Content that opens a forged `"$label: "` line after every line terminator.

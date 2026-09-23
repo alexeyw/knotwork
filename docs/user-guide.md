@@ -1967,10 +1967,11 @@ ignored, and a fact that closely matches one you already have is
 skipped rather than duplicated.
 
 It reads your messages and the assistant's replies — never tool results
-(a web lookup, a file the agent read, an MCP server's answer), so text a
-tool fetched cannot plant itself in memory as something you said. Text
-you share into the app from another app is recorded as your message,
-though, so it is read as yours.
+(a web lookup, a file the agent read, an MCP server's answer) — and no
+message can pass for a turn of yours, so text a tool fetched is not put
+before the extractor as something you said. Text you share into the app
+from another app is recorded as your message, though, so it is read as
+yours.
 
 Each new chunk is tagged with the fact type it represents (`fact`,
 `preference`, `project`, …) and the chat it came from, so you can tell
@@ -2111,7 +2112,7 @@ and import the file on the new one:
 Two things are not taken from the file, whichever strategy you choose:
 
 - **Pins.** Every imported entry arrives unpinned. A pinned entry is
-  recalled in every run whatever the question, so pinning stays something
+  recalled whenever memory is read, whatever the question, so pinning stays something
   you do entry by entry — the import dialog tells you how many entries the
   file had pinned, and you can pin them again on the Memory screen.
 - **Dates in the future.** An entry dated later than the moment you import
