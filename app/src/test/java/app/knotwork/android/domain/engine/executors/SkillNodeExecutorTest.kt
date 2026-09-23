@@ -77,13 +77,18 @@ class SkillNodeExecutorTest {
         )
     }
 
-    private fun skillNode(skillId: String? = "skill-1", cloudProvider: String? = null) = NodeModel(
+    private fun skillNode(
+        skillId: String? = "skill-1",
+        cloudProvider: String? = null,
+        alwaysConfirm: Boolean? = null,
+    ) = NodeModel(
         id = "skill_node",
         type = NodeType.SKILL,
         x = 0f,
         y = 0f,
         skillId = skillId,
         cloudProvider = cloudProvider,
+        alwaysConfirm = alwaysConfirm,
     )
 
     private fun skill(instruction: String = "Translate to English.", allowlist: List<String>? = null) = Skill(
@@ -164,7 +169,7 @@ class SkillNodeExecutorTest {
         val result = outputs.filterIsInstance<NodeOutput.Result>().single()
         assertEquals("Hello world", result.result.outputText)
         assertNull(result.result.error)
-        coVerify(exactly = 0) { toolInvocationGate.dispatch(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { toolInvocationGate.dispatch(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -179,7 +184,7 @@ class SkillNodeExecutorTest {
         assertEquals("delete_file", result.result.resolvedToolName)
         assertTrue(result.result.outputText!!.contains("not in skill"))
         // Hard guarantee: the out-of-allowlist tool is never dispatched.
-        coVerify(exactly = 0) { toolInvocationGate.dispatch(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { toolInvocationGate.dispatch(any(), any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { toolRepository.executeTool(any(), any(), any()) }
     }
 
@@ -199,7 +204,23 @@ class SkillNodeExecutorTest {
                 runId = "run-1",
                 resolvedToolName = "write_file",
                 resolvedToolArgs = any(),
+                alwaysConfirm = false,
             )
+        }
+    }
+
+    @Test
+    fun `given a SKILL node that always confirms when it dispatches a tool then the gate is told to ask`() = runTest {
+        // The switch a shared pipeline can set on a SKILL node must reach the
+        // gate exactly as it does from a TOOL node — otherwise the author armed
+        // a confirmation the run never raises.
+        coEvery { skillRepository.getSkillById("skill-1") } returns skill(allowlist = null)
+        stubLiteRtOutput("""{"tool": "read_file", "arguments": {"path": "/x"}}""")
+
+        executor.execute(skillNode(alwaysConfirm = true), "x", "s1", "x", runId = "run-1").toList()
+
+        coVerify(exactly = 1) {
+            toolInvocationGate.dispatch(any(), any(), any(), any(), any(), "read_file", any(), alwaysConfirm = true)
         }
     }
 
@@ -211,7 +232,7 @@ class SkillNodeExecutorTest {
         executor.execute(skillNode(), "x", "s1", "x", runId = "run-1").toList()
 
         coVerify(exactly = 1) {
-            toolInvocationGate.dispatch(any(), any(), any(), any(), any(), "read_file", any())
+            toolInvocationGate.dispatch(any(), any(), any(), any(), any(), "read_file", any(), alwaysConfirm = false)
         }
     }
 

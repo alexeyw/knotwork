@@ -5805,7 +5805,7 @@
             // (NodeConfig.kt): only the durable reference id (+ SKILL engine) is
             // persisted; display names are resolved live by the host app.
             case 'PIPELINE':    return { ...base, targetPipelineId: '' };
-            case 'SKILL':       return { ...base, skillId: '', engine: 'LITE_RT' };
+            case 'SKILL':       return { ...base, skillId: '', engine: 'LITE_RT', alwaysConfirm: false };
             default:            return base;
         }
     }
@@ -5855,7 +5855,8 @@
             // blank (decoded back via engineFromProvider on the next open).
             case 'PIPELINE':      flat.targetPipelineId = cfg.targetPipelineId || ''; break;
             case 'SKILL':         flat.skillId = cfg.skillId || '';
-                flat.cloudProvider = cfg.engine === 'CLOUD' ? 'auto' : ''; break;
+                flat.cloudProvider = cfg.engine === 'CLOUD' ? 'auto' : '';
+                flat.alwaysConfirm = cfg.alwaysConfirm === true ? true : null; break;
             default: break;
         }
         return flat;
@@ -5943,17 +5944,23 @@
                 env.targetPipelineId = cfg.targetPipelineId ?? '';
                 break;
             case 'SKILL':
-                // Mirror NodeConfigCodec.encodeSkill: skill id + engine name.
+                // Mirror NodeConfigCodec.encodeSkill: skill id + engine name + always-ask switch.
                 env.skillId = cfg.skillId ?? '';
                 env.engine = cfg.engine || 'LITE_RT';
+                env.alwaysConfirm = cfg.alwaysConfirm === true;
                 break;
             default: break;
         }
         return env;
     }
 
-    /** Builds a rich `cfg` from a `nodeConfig` envelope, filling gaps with defaults. */
-    function decodeRichEnvelope(typeId, env) {
+    /**
+     * Builds a rich `cfg` from a `nodeConfig` envelope, filling gaps with defaults.
+     * `flat` (the document's flat `config`, optional) supplies `alwaysConfirm` when
+     * the envelope predates the key — as `NodeConfigCodec` falls back to the
+     * node's flat field — so a switch the runtime honours is not dropped here.
+     */
+    function decodeRichEnvelope(typeId, env, flat) {
         const cfg = defaultRichConfig(typeId);
         if (!env || typeof env !== 'object') return cfg;
         if (env.title != null) cfg.title = String(env.title);
@@ -6005,7 +6012,8 @@
                 break;
             case 'TOOL':
                 if (env.toolId != null) cfg.toolId = String(env.toolId);
-                cfg.alwaysConfirm = env.alwaysConfirm === true;
+                cfg.alwaysConfirm = env.alwaysConfirm != null
+                    ? env.alwaysConfirm === true : flat?.alwaysConfirm === true;
                 cfg.engineProvider = env.engineProvider != null ? String(env.engineProvider) : '';
                 break;
             case 'DECOMPOSITION':
@@ -6031,6 +6039,8 @@
                 if (env.skillId != null) cfg.skillId = String(env.skillId);
                 // Engine falls back to LITE_RT for rows written before the field.
                 cfg.engine = (env.engine === 'CLOUD' || env.engine === 'LITE_RT') ? env.engine : 'LITE_RT';
+                cfg.alwaysConfirm = env.alwaysConfirm != null
+                    ? env.alwaysConfirm === true : flat?.alwaysConfirm === true;
                 break;
             default: break;
         }
@@ -6059,6 +6069,7 @@
             case 'CLARIFICATION': cfg.questionTemplate = sp;
                 cfg.timeoutMs = (flat.clarificationTimeoutMs ?? null); break;
             case 'TOOL': cfg.toolId = flat.toolName || '';
+                cfg.alwaysConfirm = flat.alwaysConfirm === true;
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
             case 'DECOMPOSITION': cfg.planningPrompt = sp;
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
@@ -6068,7 +6079,8 @@
             case 'PIPELINE': cfg.targetPipelineId = flat.targetPipelineId || ''; break;
             // engineFromProvider: any non-blank cloudProvider ⇒ CLOUD, else LITE_RT.
             case 'SKILL': cfg.skillId = flat.skillId || '';
-                cfg.engine = (flat.cloudProvider && String(flat.cloudProvider).trim()) ? 'CLOUD' : 'LITE_RT'; break;
+                cfg.engine = (flat.cloudProvider && String(flat.cloudProvider).trim()) ? 'CLOUD' : 'LITE_RT';
+                cfg.alwaysConfirm = flat.alwaysConfirm === true; break;
             default: break;
         }
         return cfg;
@@ -6327,6 +6339,7 @@
                     { id: 'LITE_RT', label: 'On-device (LiteRT)' },
                     { id: 'CLOUD', label: 'Cloud' },
                 ], cfg.engine || 'LITE_RT'));
+                fields.push(cfgCheckbox('alwaysConfirm', 'Always ask before this call', cfg.alwaysConfirm === true));
                 fields.push(cfgHint(
                     'The browser has no skill library, so the id is entered by hand. The host app ' +
                     'resolves the skill name, instruction preview and tool allowlist, and flags an ' +
@@ -8074,6 +8087,10 @@
                     // PipelineJsonSerializer.serializeNode.
                     targetPipelineId: flat.targetPipelineId || null,
                     skillId: flat.skillId || null,
+                    // TOOL / SKILL "always ask": the gate reads the flat field, and
+                    // the app's importer does not derive it from nodeConfig — left
+                    // out, the switch showed ticked in the app and asked nothing.
+                    alwaysConfirm: flat.alwaysConfirm === true ? true : null,
                     clarificationTimeoutMs: flat.clarificationTimeoutMs ?? null,
                     conditionPrompt: flat.conditionPrompt || null,
                     conditionKeywords: flat.conditionKeywords || null,
@@ -8244,6 +8261,7 @@
                     toolName: jn.config?.toolName || '',
                     targetPipelineId: jn.config?.targetPipelineId || '',
                     skillId: jn.config?.skillId || '',
+                    alwaysConfirm: jn.config?.alwaysConfirm === true,
                     clarificationTimeoutMs: jn.config?.clarificationTimeoutMs ?? null,
                     conditionPrompt: jn.config?.conditionPrompt || '',
                     conditionKeywords: jn.config?.conditionKeywords || '',
@@ -8256,7 +8274,7 @@
                 // Prefer the rich nodeConfig envelope; otherwise derive the rich
                 // config from the flat fields (older exports / hand presets).
                 const cfg = (jn.nodeConfig && typeof jn.nodeConfig === 'object')
-                    ? decodeRichEnvelope(jn.type, jn.nodeConfig)
+                    ? decodeRichEnvelope(jn.type, jn.nodeConfig, flatIn)
                     : deriveRichFromFlat(jn.type, flatIn);
                 cfg.title = flatIn.label || cfg.title;
                 // Re-derive the flat fields from cfg so the two never drift.

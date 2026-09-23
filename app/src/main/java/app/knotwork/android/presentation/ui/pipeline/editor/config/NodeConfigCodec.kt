@@ -190,6 +190,8 @@ internal object NodeConfigCodec {
             is SkillConfig -> withJson.copy(
                 skillId = config.skillId.takeIf { it.isNotBlank() },
                 cloudProvider = if (config.engine == SkillEngine.CLOUD) CloudProvider.AUTO_KEY else null,
+                // Same encoding as TOOL: `false` stored as `null`.
+                alwaysConfirm = config.alwaysConfirm.takeIf { it },
             )
             // These four types name their prompt field differently on the
             // sheet, but the executors read exactly one thing —
@@ -441,6 +443,7 @@ internal object NodeConfigCodec {
                 title = title,
                 skillId = node.skillId.orEmpty(),
                 engine = engineFromProvider(node.cloudProvider),
+                alwaysConfirm = node.alwaysConfirm == true,
             )
         }
     }
@@ -533,13 +536,15 @@ internal object NodeConfigCodec {
         json.put("targetPipelineId", c.targetPipelineId)
     }
 
-    // Only the durable choices are persisted: the skill id and the engine.
-    // `skillName` / `instructionPreview` / `toolRestrictionSummary` are
-    // resolved from the live skill library when the sheet opens, so persisting
-    // them would only risk going stale when the skill is edited.
+    // Only the durable choices are persisted: the skill id, the engine and the
+    // always-ask switch. `skillName` / `instructionPreview` /
+    // `toolRestrictionSummary` are resolved from the live skill library when the
+    // sheet opens, so persisting them would only risk going stale when the skill
+    // is edited.
     private fun encodeSkill(json: JSONObject, c: SkillConfig) {
         json.put("skillId", c.skillId)
         json.put("engine", c.engine.name)
+        json.put("alwaysConfirm", c.alwaysConfirm)
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -709,6 +714,8 @@ internal object NodeConfigCodec {
             // Prefer the persisted engine; fall back to deriving it from the
             // node's `cloudProvider` for rows written before the field existed.
             engine = enumOrNull<SkillEngine>(p.optStringOrNull("engine")) ?: engineFromProvider(fb.cloudProvider),
+            // Envelopes written before the switch existed fall back to the flat field.
+            alwaysConfirm = p.optBoolean("alwaysConfirm", fb.alwaysConfirm == true),
         )
 
     /**

@@ -307,18 +307,20 @@ not edit it.
 
 Every tool has a `ToolRisk`:
 
-| Risk          | Behaviour                                                                 |
-|---------------|---------------------------------------------------------------------------|
-| `READ_ONLY`   | Runs immediately. No confirmation prompt.                                 |
-| `SENSITIVE`   | The orchestrator emits `PendingConfirmation` and suspends until approval. |
-| `DESTRUCTIVE` | Same as `SENSITIVE`. Use whenever data can be irreversibly modified.      |
+| Risk          | Behaviour                                                                                          |
+|---------------|----------------------------------------------------------------------------------------------------|
+| `READ_ONLY`   | Runs immediately, unless the user's *Approve tool calls* policy is `All`.                          |
+| `SENSITIVE`   | The gate emits `WaitingForApproval` and suspends until approval — unless the policy is `Never`.   |
+| `DESTRUCTIVE` | Asks under every policy, with a typed confirmation. Use whenever data can be irreversibly modified. |
 
 If your tool sends an email, deletes a file, makes a purchase, or
 mutates any system state the user would care to undo, set the risk to
-`DESTRUCTIVE`. If it reads private data (location, contacts, calendar)
-without modifying anything, set it to `SENSITIVE`. The
-human-in-the-loop gate in `ToolNodeExecutor` and the chat UI is
-non-optional — there is no code path that bypasses it.
+`DESTRUCTIVE` — it is the only tier no approval policy quiets. If it
+reads private data (location, contacts, calendar) without modifying
+anything, set it to `SENSITIVE`, knowing that a user who chose `Never`
+lets it run unasked. Which tiers ask is decided in one place,
+`ToolApprovalPolicy.requiresApproval`, and every tool call goes through
+`ToolInvocationGate` — there is no code path that bypasses the gate.
 
 For **discovered AppFunctions** (tools surfaced by `LocalAppFunctionManager`
 from other packages), the default is `SENSITIVE` — the platform

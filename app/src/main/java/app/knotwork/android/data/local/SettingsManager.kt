@@ -68,6 +68,12 @@ class SettingsManager @Inject constructor(
         val TEMPERATURE = androidx.datastore.preferences.core.floatPreferencesKey("temperature")
         val TOP_K = intPreferencesKey("top_k")
         val TOP_P = androidx.datastore.preferences.core.floatPreferencesKey("top_p")
+
+        /**
+         * Legacy "ask before tool calls" boolean, superseded by [TOOL_APPROVAL_POLICY].
+         * Read only by the policy migration, on every policy read while the policy
+         * key is absent; never written.
+         */
         val REQUIRES_USER_CONFIRMATION = booleanPreferencesKey("requires_user_confirmation")
         val SYSTEM_PROMPT_PREFIX = stringPreferencesKey("system_prompt_prefix")
         val MCP_SERVER_URLS = stringSetPreferencesKey("mcp_server_urls")
@@ -389,26 +395,6 @@ class SettingsManager @Inject constructor(
     override suspend fun setTopP(topP: Float) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TOP_P] = topP
-        }
-    }
-
-    override val requiresUserConfirmation: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.REQUIRES_USER_CONFIRMATION]
-                ?: SettingsDefaults.REQUIRES_USER_CONFIRMATION_DEFAULT
-        }
-
-    override suspend fun setRequiresUserConfirmation(required: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.REQUIRES_USER_CONFIRMATION] = required
         }
     }
 
@@ -1917,9 +1903,10 @@ class SettingsManager @Inject constructor(
             if (storedKey != null) {
                 ToolApprovalPolicy.fromKey(storedKey)
             } else {
-                // One-shot migration from the legacy boolean key.
+                // Migration from the legacy boolean key, until the policy is written.
                 // true  → SensitiveOrDestructive (default-with-care).
-                // false → NeverPrompt (only way the legacy UI let users skip destructive prompts).
+                // false → NeverPrompt (the legacy switch was the only way to quiet
+                // the prompts; a destructive call still asks under it).
                 when (preferences[PreferencesKeys.REQUIRES_USER_CONFIRMATION]) {
                     false -> ToolApprovalPolicy.NeverPrompt
                     true -> ToolApprovalPolicy.SensitiveOrDestructive
@@ -1931,10 +1918,6 @@ class SettingsManager @Inject constructor(
     override suspend fun setToolApprovalPolicy(policy: ToolApprovalPolicy) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TOOL_APPROVAL_POLICY] = policy.key
-            // Keep the legacy flag in sync so any consumer still reading the
-            // old boolean (until they migrate) sees a coherent value:
-            // anything other than NeverPrompt counts as "ask sometimes".
-            preferences[PreferencesKeys.REQUIRES_USER_CONFIRMATION] = policy != ToolApprovalPolicy.NeverPrompt
         }
     }
 
@@ -2099,12 +2082,9 @@ class SettingsManager @Inject constructor(
                 SettingsDefaults.CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS_DEFAULT
             preferences[PreferencesKeys.CHAT_HISTORY_LIVE_WINDOW_SIZE] =
                 SettingsDefaults.CHAT_HISTORY_LIVE_WINDOW_DEFAULT
-            // Security toggles. Both legacy boolean and typed policy go to their
-            // documented defaults so a reset matches a fresh install exactly (the
-            // typed key is what the migration reads; the boolean is superseded).
+            // Security toggles. The typed policy is written explicitly, so the
+            // legacy boolean the migration reads can never decide it again.
             preferences[PreferencesKeys.TOOL_APPROVAL_POLICY] = ToolApprovalPolicy.DEFAULT.key
-            preferences[PreferencesKeys.REQUIRES_USER_CONFIRMATION] =
-                SettingsDefaults.REQUIRES_USER_CONFIRMATION_DEFAULT
             preferences[PreferencesKeys.BLOCK_DESTRUCTIVE_TOOLS] =
                 SettingsDefaults.BLOCK_DESTRUCTIVE_TOOLS_DEFAULT
             preferences[PreferencesKeys.BLOCK_NETWORK_FROM_LOCAL_MODEL] =

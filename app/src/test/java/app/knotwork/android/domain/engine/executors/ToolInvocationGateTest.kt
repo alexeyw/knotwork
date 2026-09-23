@@ -126,6 +126,53 @@ class ToolInvocationGateTest {
         }
 
     @Test
+    fun `given a DESTRUCTIVE call under NeverPrompt when dispatched then it asks before running`() = runTest {
+        // `Never` quiets the prompts for read-only and sensitive calls; an
+        // irreversible one still asks. Refusing it outright is the separate
+        // destructive block, not a quieter policy.
+        val fixture = Fixture(policy = ToolApprovalPolicy.NeverPrompt, risk = ToolRisk.DESTRUCTIVE, record = null)
+
+        val outputs = fixture.dispatch()
+
+        assertEquals(1, outputs.filterStates<AgentOrchestratorState.WaitingForApproval>().size)
+        assertEquals("the destructive call ran without an answer", 0, fixture.executions)
+    }
+
+    @Test
+    fun `given any policy risk and node switch when a fresh call is dispatched then it asks exactly when due`() =
+        runTest {
+            // Guard for the policy as a whole: every combination a fresh call
+            // can meet, against the table the documents describe. Written out
+            // here rather than read from the policy, so a change to the rule
+            // has to change this table too.
+            val failures = mutableListOf<String>()
+            for (policy in ToolApprovalPolicy.entries) {
+                for (risk in ToolRisk.entries) {
+                    for (alwaysConfirm in listOf(false, true)) {
+                        val fixture = Fixture(policy = policy, risk = risk, record = null)
+
+                        val outputs = fixture.dispatch(alwaysConfirm)
+
+                        val combo = "policy=$policy risk=$risk alwaysConfirm=$alwaysConfirm"
+                        val expectedAsks = alwaysConfirm ||
+                            when (policy) {
+                                ToolApprovalPolicy.AllCalls -> true
+                                ToolApprovalPolicy.SensitiveOrDestructive -> risk != ToolRisk.READ_ONLY
+                                ToolApprovalPolicy.NeverPrompt -> risk == ToolRisk.DESTRUCTIVE
+                            }
+                        val asked = outputs.filterStates<AgentOrchestratorState.WaitingForApproval>().isNotEmpty()
+                        if (asked != expectedAsks) failures += "$combo: asked=$asked, expected $expectedAsks"
+                        val expectedRuns = if (expectedAsks) 0 else 1
+                        if (fixture.executions != expectedRuns) {
+                            failures += "$combo: executed ${fixture.executions}x, expected ${expectedRuns}x"
+                        }
+                    }
+                }
+            }
+            assertTrue(failures.joinToString(separator = "\n"), failures.isEmpty())
+        }
+
+    @Test
     fun `given a recorded decision and destructive tools blocked when resumed then the record is consumed`() = runTest {
         // The destructive block refuses the call before any approval logic —
         // it must not do so before the one-shot record is consumed, or the
@@ -372,6 +419,7 @@ class ToolInvocationGateTest {
                     runId = runId,
                     resolvedToolName = TOOL,
                     resolvedToolArgs = ARGS,
+                    alwaysConfirm = false,
                 )
             }.first { output -> (output as? NodeOutput.State)?.state?.let(stop) == true }
         }

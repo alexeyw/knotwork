@@ -287,6 +287,7 @@ class CookbookRuntimeReachTest {
             instructionPreview = "Instruction",
             toolRestrictionSummary = "No tools",
             engine = SkillEngine.CLOUD,
+            alwaysConfirm = true,
         )
     }
 

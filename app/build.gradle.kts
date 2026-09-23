@@ -1790,6 +1790,14 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("pipeline-editor.html"))
         .withPropertyName("browserEditorHtml")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `ApprovalPolicyDocumentsTest` pins the approval sentences of the threat model
+    // and the user guide to the code; both are read from the repository root.
+    inputs.file(rootProject.file("SECURITY.md"))
+        .withPropertyName("securityPolicy")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/user-guide.md"))
+        .withPropertyName("userGuide")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // Hilt/Dagger reads Kotlin metadata via `kotlin-metadata-jvm`, which is unshaded

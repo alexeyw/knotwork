@@ -300,6 +300,7 @@ Runs a reusable skill: a fixed instruction plus the list of tools that skill may
 |---|---|
 | Which skill is run — its instruction and its tool allowlist | the sheet's `skillId` |
 | Whether the skill runs on-device or in the cloud | the sheet's `engine` |
+| Whether every tool call the skill makes is confirmed, on top of whatever the tool's risk and your settings already require | the sheet's `alwaysConfirm` |
 
 <!-- /AUTO-GEN:NODE_CONFIG -->
 
@@ -568,6 +569,7 @@ grows its own row back.
 | `SKILL` | `instructionPreview` | `null` | **Not a setting** — the app fills it in from the skill you picked; edit the text in the skill library |
 | `SKILL` | `toolRestrictionSummary` | `null` | **Not a setting** — the app fills it in from the skill you picked; edit the allowlist in the skill library |
 | `SKILL` | `engine` | `SkillEngine.LITE_RT` | **Yes** — saved as the node's `cloudProvider` |
+| `SKILL` | `alwaysConfirm` | `false` | **Yes** — saved as the node's `alwaysConfirm` |
 <!-- /AUTO-GEN:FIELD_TABLE -->
 
 ## See also

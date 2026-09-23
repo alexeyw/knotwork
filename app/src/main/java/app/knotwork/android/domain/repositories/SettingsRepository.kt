@@ -119,25 +119,6 @@ interface SettingsRepository {
     suspend fun setTopP(topP: Float)
 
     /**
-     * Global "ask before every tool call" override for the Human-in-the-loop gate.
-     *
-     * Semantics (canonical implementation in `ToolNodeExecutor`):
-     *  - `SENSITIVE` and `DESTRUCTIVE` tools **always** prompt; this flag has no effect.
-     *  - `READ_ONLY` tools prompt **only** when this flag is `true`. Default `false`:
-     *    read-only invocations run silently so the agent feels fluid.
-     *
-     * Renamed semantically from "requires confirmation for critical actions" — critical
-     * actions are now classified per-tool by `ToolRepository.getRisk`. This flag exists
-     * solely to let cautious users opt into a prompt on every single tool invocation.
-     */
-    val requiresUserConfirmation: Flow<Boolean>
-
-    /**
-     * Updates the requirement for user confirmation.
-     */
-    suspend fun setRequiresUserConfirmation(required: Boolean)
-
-    /**
      * A [Flow] representing the system prompt prefix.
      */
     val systemPromptPrefix: Flow<String>
@@ -984,14 +965,15 @@ interface SettingsRepository {
     suspend fun setMemorySummaryDefaultLimit(limit: Int)
 
     /**
-     * Policy that drives the Human-in-the-Loop approval gate in
-     * `ToolNodeExecutor`. Supersedes the legacy boolean
-     * [requiresUserConfirmation] flag.
+     * Policy that drives the Human-in-the-Loop approval gate
+     * (`ToolInvocationGate`); which risks it stops for is
+     * [ToolApprovalPolicy.requiresApproval]. Supersedes the legacy boolean
+     * `requires_user_confirmation` key, which nothing else reads.
      *
-     * The first read of this flow performs a one-shot migration from the
-     * legacy boolean key: `true` → [ToolApprovalPolicy.SensitiveOrDestructive],
-     * `false` → [ToolApprovalPolicy.NeverPrompt]. Migration only fires when
-     * the new key is absent.
+     * While the policy key is absent, every read maps that legacy key onto a
+     * policy (nothing is written): `true` → [ToolApprovalPolicy.SensitiveOrDestructive],
+     * `false` → [ToolApprovalPolicy.NeverPrompt], absent →
+     * [ToolApprovalPolicy.DEFAULT].
      */
     val toolApprovalPolicy: Flow<ToolApprovalPolicy>
 

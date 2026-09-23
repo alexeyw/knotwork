@@ -87,6 +87,7 @@ class SettingsManagerTest {
     private val topKKey = androidx.datastore.preferences.core.intPreferencesKey("top_k")
     private val topPKey = androidx.datastore.preferences.core.floatPreferencesKey("top_p")
     private val requiresUserConfirmationKey = booleanPreferencesKey("requires_user_confirmation")
+    private val toolApprovalPolicyKey = stringPreferencesKey("tool_approval_policy")
     private val lastReembedProviderIdKey = stringPreferencesKey("last_reembed_provider_id")
     private val pipelineMaxStepsKey = androidx.datastore.preferences.core.intPreferencesKey("pipeline_max_steps")
     private val pipelineMaxStepsBackgroundKey =
@@ -208,16 +209,32 @@ class SettingsManagerTest {
     }
 
     @Test
-    fun `requiresUserConfirmation returns the documented default when unset`() = runTest {
+    fun `given only the legacy approval flag when the policy is read then it maps onto a policy`() = runTest {
+        // The legacy boolean is read by the policy migration and nothing else;
+        // this is its whole contract now.
+        val expected = mapOf(
+            false to ToolApprovalPolicy.NeverPrompt,
+            true to ToolApprovalPolicy.SensitiveOrDestructive,
+            null to ToolApprovalPolicy.DEFAULT,
+        )
+        for ((legacy, policy) in expected) {
+            val prefs = mockk<Preferences>()
+            every { prefs[toolApprovalPolicyKey] } returns null
+            every { prefs[requiresUserConfirmationKey] } returns legacy
+            every { dataStore.data } returns flowOf(prefs)
+
+            assertEquals("legacy=$legacy", policy, SettingsManager(dataStore, secretStore).toolApprovalPolicy.first())
+        }
+    }
+
+    @Test
+    fun `given a stored policy and a legacy flag when the policy is read then the stored policy wins`() = runTest {
         val prefs = mockk<Preferences>()
-        every { prefs[requiresUserConfirmationKey] } returns null
+        every { prefs[toolApprovalPolicyKey] } returns ToolApprovalPolicy.AllCalls.key
+        every { prefs[requiresUserConfirmationKey] } returns false
         every { dataStore.data } returns flowOf(prefs)
 
-        val settingsManager = SettingsManager(dataStore, secretStore)
-        val result = settingsManager.requiresUserConfirmation.first()
-        // `false`: READ_ONLY tools run silently out of the box; the typed
-        // ToolApprovalPolicy (not this superseded flag) governs real prompts.
-        assertEquals(SettingsDefaults.REQUIRES_USER_CONFIRMATION_DEFAULT, result)
+        assertEquals(ToolApprovalPolicy.AllCalls, SettingsManager(dataStore, secretStore).toolApprovalPolicy.first())
     }
 
     @Test
@@ -1583,20 +1600,11 @@ class SettingsManagerTest {
     fun `resetToRecommendedDefaults restores security toggles to a fresh-install state`() = runTest {
         val (manager, scope) = freshManagerWithRealDataStore()
         try {
-            // Drive the typed policy and the superseded boolean off their defaults
-            // (in this order so the boolean ends up `true`, opposite its default).
             manager.setToolApprovalPolicy(ToolApprovalPolicy.NeverPrompt)
-            manager.setRequiresUserConfirmation(true)
 
             manager.resetToRecommendedDefaults()
 
             assertEquals(ToolApprovalPolicy.DEFAULT, manager.toolApprovalPolicy.first())
-            // Matches a fresh install: the superseded flag returns to its documented
-            // default (false), not the policy-derived `true`.
-            assertEquals(
-                SettingsDefaults.REQUIRES_USER_CONFIRMATION_DEFAULT,
-                manager.requiresUserConfirmation.first(),
-            )
         } finally {
             scope.cancel()
         }
@@ -1650,6 +1658,11 @@ class SettingsManagerTest {
                 // independent choice. A reset that wrote it would hand the user
                 // a deliberate-looking decision they never made.
                 "pipeline_max_steps_background",
+                // Superseded legacy boolean, read only by the approval-policy
+                // migration while the policy key is absent. The reset writes the
+                // policy key, after which nothing reads this one — writing it
+                // would only store a value no code consults.
+                "requires_user_confirmation",
             )
 
             val uncovered = allKeys - written - excluded

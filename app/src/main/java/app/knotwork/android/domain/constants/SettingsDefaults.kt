@@ -488,16 +488,6 @@ object SettingsDefaults {
     const val CLOUD_RETRY_BASE_DELAY_MS_MAX: Long = 10_000L
 
     /**
-     * Default for the legacy "ask before every tool call" override
-     * (`requiresUserConfirmation`). `false` so `READ_ONLY` tools run silently and
-     * the agent feels fluid — the per-tool risk classification and
-     * [app.knotwork.android.domain.models.ToolApprovalPolicy] govern when a prompt
-     * is actually shown. This flag is fully superseded by the typed policy and
-     * retained only for one-shot migration of pre-redesign installs.
-     */
-    const val REQUIRES_USER_CONFIRMATION_DEFAULT: Boolean = false
-
-    /**
      * Default for the anonymous crash-reporting opt-in. `false` to honour the
      * project's on-device privacy positioning: no telemetry leaves the device
      * until the user explicitly opts in (Settings → Privacy).

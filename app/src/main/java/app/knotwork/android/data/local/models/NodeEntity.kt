@@ -27,7 +27,7 @@ import app.knotwork.android.domain.models.NodeContextConfig
  * @property conditionPrompt Free-form prompt for condition classification.
  * @property fallbackClass INTENT_ROUTER: class an unmatched answer routes to.
  * @property quickReplies CLARIFICATION: comma-separated answer chips.
- * @property alwaysConfirm TOOL: ask for approval on every call through this node.
+ * @property alwaysConfirm TOOL / SKILL: ask for approval on every call through this node.
  * @property maxSubtasks DECOMPOSITION: cap on the generated sub-task list.
  * @property stopOnError QUEUE_PROCESSOR: fail the run on the first failing item.
  * @property conditionHasImage When `true` on an IF_CONDITION node, branch True whenever the run

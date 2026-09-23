@@ -107,7 +107,7 @@
     <string name="external_automation_consent_intro">Automation apps like Tasker or MacroDroid — and shell scripts over adb — will be able to ask Knotwork to run one pipeline for them.</string>
     <string name="external_automation_consent_any_app">Any app on this device that can send a broadcast may ask. There is no per-app list: the pipeline you pick is the whole permission.</string>
     <string name="external_automation_consent_one_pipeline">Only that one pipeline can be run. A request naming anything else is refused, never redirected to the one you picked.</string>
-    <string name="external_automation_consent_approvals">Your approvals still apply. Destructive and sensitive tools stop and ask you first, exactly as they do for the app’s own background runs.</string>
+    <string name="external_automation_consent_approvals">Your approval settings still apply: a tool call stops and asks you first exactly as in the app’s own background runs, and a destructive one always does.</string>
     <string name="external_automation_consent_cost">A run started this way can use your cloud API key, and costs whatever that run costs.</string>
     <string name="external_automation_consent_reversible">One tap on the same switch turns this off again.</string>
     <string name="external_automation_consent_confirm">Turn on</string>

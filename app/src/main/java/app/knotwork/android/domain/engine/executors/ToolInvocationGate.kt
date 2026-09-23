@@ -8,7 +8,6 @@ import app.knotwork.android.domain.models.PendingDecision
 import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.Role
-import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.models.TriggerHitlEvent
@@ -51,9 +50,9 @@ import javax.inject.Singleton
  *  3. hard-denies the call when it is [ToolRisk.DESTRUCTIVE] and the user has
  *     blocked destructive tools in Settings;
  *  4. applies the recorded decision whatever the current policy says — or, when
- *     there is none, raises a HITL approval gate according to the
- *     [ToolApprovalPolicy], using the two-phase live-deferred → durable-park
- *     protocol;
+ *     there is none, raises a HITL approval gate when
+ *     `ToolApprovalPolicy.requiresApproval` (or the node's `alwaysConfirm`) says
+ *     so, using the two-phase live-deferred → durable-park protocol;
  *  5. executes the tool through [ToolRepository] and emits the observation.
  *
  * Every gate it raises is also reported to the trigger-evaluation journal via
@@ -175,6 +174,10 @@ class ToolInvocationGate @Inject constructor(
      * @param runId persistent run id, or `null` for non-persisted (editor test) runs.
      * @param resolvedToolName the tool to run.
      * @param resolvedToolArgs the tool's argument JSON string.
+     * @param alwaysConfirm the dispatching node's own "always ask" switch; `true`
+     *   adds an approval the policy would not have raised, and can never remove
+     *   one. Deliberately without a default: every node type that dispatches
+     *   tools must pass its switch, so a new caller cannot silently drop it.
      */
     @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
     suspend fun dispatch(
@@ -185,7 +188,7 @@ class ToolInvocationGate @Inject constructor(
         runId: String?,
         resolvedToolName: String,
         resolvedToolArgs: String,
-        alwaysConfirm: Boolean = false,
+        alwaysConfirm: Boolean,
     ) = with(collector) {
         // Consume the parked record first, before anything that can end the
         // gate early (a failed risk lookup, the destructive hard block). The
@@ -256,18 +259,14 @@ class ToolInvocationGate @Inject constructor(
             )
             return@with
         }
-        val approvalPolicy = settingsRepository.toolApprovalPolicy.first()
-        // The node's own switch can only ADD a prompt, never remove one — which
-        // is why it ORs into the policy instead of replacing it. A pipeline file
-        // is a document that can be shared, and a node able to declare "do not
-        // ask about this destructive call" would let somebody else's document
-        // walk straight past the gate.
-        val needsApproval = alwaysConfirm ||
-            when (approvalPolicy) {
-                ToolApprovalPolicy.AllCalls -> true
-                ToolApprovalPolicy.NeverPrompt -> false
-                ToolApprovalPolicy.SensitiveOrDestructive -> risk == ToolRisk.SENSITIVE || risk == ToolRisk.DESTRUCTIVE
-            }
+        // Which risks ask is the policy's rule, written once in
+        // `ToolApprovalPolicy.requiresApproval` — a destructive call asks under
+        // every policy. The node's own switch can only ADD a prompt, never
+        // remove one — which is why it ORs into the policy instead of replacing
+        // it. A pipeline file is a document that can be shared, and a node able
+        // to declare "do not ask about this destructive call" would let
+        // somebody else's document walk straight past the gate.
+        val needsApproval = alwaysConfirm || settingsRepository.toolApprovalPolicy.first().requiresApproval(risk)
         var isApproved = true
 
         if (parkedDecision != null) {

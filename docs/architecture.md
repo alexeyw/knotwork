@@ -899,17 +899,22 @@ merges three layers:
 
 HITL contract (live):
 
-- Before dispatching a tool, `ToolNodeExecutor` resolves the tool's risk
-  through `ToolRepository.getRisk(name)` and applies the gate:
-  - `SENSITIVE` and `DESTRUCTIVE` — always emit
+- Before dispatching a tool, `ToolInvocationGate` (shared by the `TOOL` and
+  `SKILL` executors) resolves the tool's risk through
+  `ToolRepository.getRisk(name)` and asks
+  `ToolApprovalPolicy.requiresApproval(risk)` whether the call must wait —
+  ORed with the node's own `alwaysConfirm` switch, which can only add a
+  prompt:
+  - `DESTRUCTIVE` — asks under every policy (`All`, `Sensitive +`, `Never`).
+    The only control that removes the prompt is *Block destructive tools*,
+    which refuses the call before the gate instead of running it.
+  - `SENSITIVE` — asks unless the policy is `Never`.
+  - `READ_ONLY` — asks only under `All`.
+  - A call that must wait emits
     `AgentOrchestratorState.WaitingForApproval(toolName, args, risk, requestId)`
-    and suspend on a `CompletableDeferred` registered for that one request
+    and suspends on a `CompletableDeferred` registered for that one request
     until the user resolves it via the chat console row, the system
     notification action, or the configured timeout.
-  - `READ_ONLY` — run without a prompt **unless** the user has globally
-    enabled `SettingsRepository.requiresUserConfirmation`. That flag is
-    now an opt-in "ask on every single tool call" override and never
-    silences `SENSITIVE` / `DESTRUCTIVE`.
 - `WaitingForApproval` carries the resolved `risk` so the chat console
   can render a coloured risk chip (`READ` / `SENS` / `DEST`) next to the
   tool name without re-resolving.

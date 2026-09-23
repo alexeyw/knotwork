@@ -159,8 +159,10 @@ own switch on the **Tools** screen.
 
 **`http_request` — off until you name a destination.** It can reach only hosts
 you have added to the allowed-domains list; while that list is empty the tool
-is not offered to the model at all. Every call passes a confirmation prompt
-showing the destination and the arguments before anything is sent. The layered
+is not offered to the model at all. A call waits for your approval, showing
+the destination and the arguments before anything is sent, unless you set
+*Approve tool calls* to *Never* — then a `GET` goes without asking, while a
+`POST`, `PUT` or `DELETE` still asks. The layered
 restrictions on this path are documented in
 [SECURITY.md](SECURITY.md#outbound-http-and-the-exfiltration-chain).
 

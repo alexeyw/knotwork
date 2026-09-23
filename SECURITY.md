@@ -252,14 +252,17 @@ new risk surface, and the design constrains it deliberately:
   distinct run origin (`TRIGGER` / `SHARE` / `QUICK_TILE` / `EXTERNAL`) only for
   accounting. **An external call asks for a run; it does not approve what the run
   then wants to do.** Crucially, the
-  **human-in-the-loop gate stays fully in force**: before any `SENSITIVE` or
-  `DESTRUCTIVE` tool executes inside any of these unattended runs, the run
-  **parks**
-  on a persistent approval notification and waits — it does **not** auto-approve
-  because no UI is attached. An unattended automation can therefore *propose* a
-  sensitive action but never *execute* one unreviewed; an unanswered park is
-  failed once the approval window elapses (see *Run-history retention* above and
-  *Two-phase HITL* in [docs/architecture.md](docs/architecture.md)). An answer
+  **human-in-the-loop gate stays fully in force**: a tool call the approval
+  policy would stop in a chat stops these unattended runs too, and the run
+  **parks** on a persistent approval notification and waits — it does **not**
+  auto-approve because no UI is attached. Under the default policy that is every
+  `SENSITIVE` or `DESTRUCTIVE` call, so an unattended automation can *propose* a
+  sensitive action but never *execute* one unreviewed. Setting *Approve tool
+  calls* to *Never* lets `SENSITIVE` calls through here exactly as in a chat;
+  a `DESTRUCTIVE` call asks under every policy, and the setting is the user's —
+  no caller can choose it. An unanswered park is failed once the approval
+  window elapses (see *Run-history retention* above and *Two-phase HITL* in
+  [docs/architecture.md](docs/architecture.md)). An answer
   settles only the request it was given for — the card and each notification
   carry that request's identity — so a second run waiting in the same chat
   cannot be approved by the answer meant for the first. The
@@ -455,17 +458,23 @@ oversight — and it works as follows:
   functions it publishes are an inbound entry surface rather than a source of
   tool content; they are covered by *Automation triggers and entry surfaces*
   above.
-- The backstop is the **human-in-the-loop gate**: before any `SENSITIVE` or
+- The backstop is the **human-in-the-loop gate**: before a `SENSITIVE` or
   `DESTRUCTIVE` tool executes, the chat surfaces a confirmation card showing
   the **tool name and the exact arguments** the model produced, and the run
   suspends until the user approves or denies. An injected instruction can
-  therefore *propose* a harmful call, but cannot *execute* it unreviewed.
+  therefore *propose* a harmful call, but cannot *execute* it unreviewed. That
+  holds under the default approval policy. Setting *Approve tool calls* to
+  *Never* removes the card for `SENSITIVE` tools — writing a workspace file,
+  delegating to a cloud model, an `http_request` `GET` — so under it an
+  injection can make those run unreviewed; a `DESTRUCTIVE` tool asks under
+  every policy.
 - `READ_ONLY` tools are **not gated by design** — prompting on every lookup
   would make the agent unusable. The residual exposure is that injected
   content can shape further read-only queries and the text of the final
   answer.
 - Tools without a known risk level (all MCP-provided tools included) default
-  to `SENSITIVE`, the conservative fallback, so they always hit the gate.
+  to `SENSITIVE`, the conservative fallback, so they hit the gate unless
+  *Approve tool calls* is set to *Never*.
 
 **Recommendation:** when connecting an MCP server you do not fully trust —
 or one that serves content from the open web — set the tool-approval policy
@@ -493,13 +502,15 @@ The defences are layered so that no single one has to be perfect:
 - **Exact-host matching, no implied sub-domains.** Matching is exact and
   case-insensitive: adding `example.com` does not authorise `api.example.com`.
   An injection cannot widen the user's grant by guessing a neighbouring host.
-- **Human-in-the-loop on every call, by method.** Risk is resolved per
-  request through `HttpRequestPolicy`: a `GET` is `SENSITIVE` and a
-  `POST`/`PUT`/`DELETE` is `DESTRUCTIVE`, so every `http_request` passes the
-  HITL gate. The confirmation card shows the model-produced **URL and
-  arguments**, so a user who is paying attention sees the destination before
-  the data leaves the device. An unparsable call falls back to the strictest
-  risk.
+- **Human-in-the-loop, by method.** Risk is resolved per request through
+  `HttpRequestPolicy`: a `GET` is `SENSITIVE` and a `POST`/`PUT`/`DELETE` is
+  `DESTRUCTIVE`. A `POST`/`PUT`/`DELETE` passes the HITL gate under every
+  approval policy; a `GET` passes it unless *Approve tool calls* is set to
+  *Never*, which leaves a `GET` — a request that can still carry data out in
+  its query string — with the allowlist as its only control. The confirmation
+  card shows the model-produced **URL and arguments**, so a user who is paying
+  attention sees the destination before the data leaves the device. An
+  unparsable call falls back to the strictest risk.
 - **Stored-credential filter.** Before a request is sent, its URL, headers,
   and body are scanned for any saved cloud-provider API key (OpenAI,
   Anthropic, Google, DeepSeek). If a request would carry one, it is refused
@@ -518,7 +529,8 @@ The defences are layered so that no single one has to be perfect:
 
 The residual risk is the honest one: a user who has **deliberately added a
 host to the allowlist** and then **approves** a `SENSITIVE`/`DESTRUCTIVE`
-`http_request` to it can still send workspace data to that host — the tool is
+`http_request` to it — or has set *Approve tool calls* to *Never*, so a `GET`
+needs no approval — can still send workspace data to that host — the tool is
 doing exactly what the user authorised. The allowlist and the HITL gate make
 that an explicit, reviewable decision rather than a silent capability, which
 is the design goal; they do not (and cannot) override a user who chooses to

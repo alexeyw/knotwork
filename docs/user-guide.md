@@ -650,9 +650,8 @@ If the agent needs your approval to run a sensitive or destructive
 tool, the chat shifts into the **HitlConfirm** state — a card appears
 inline in the message stream with the tool name, the typed arguments,
 a colour-coded risk pill (`READ` / `SENS` / `DEST`), and **Approve** /
-**Deny** buttons. Destructive tools also require typing the literal
-tool name as a typed-confirm gate before the **Approve** button is
-enabled.
+**Deny** buttons. Destructive tools also require typing **yes** into a
+confirmation field before the **Approve** button is enabled.
 
 If that chat is not on screen when the request comes in, it also
 arrives as a notification. For read-only and sensitive tools it offers
@@ -1592,7 +1591,7 @@ The app ships with the following tools:
 | **edit_file**      | Makes a targeted change to an existing workspace file by replacing a unique snippet of text. The snippet must match exactly once, so an edit never lands in the wrong place. Asks for confirmation before running. |
 | **append_file**    | Adds text to the **end** of a workspace file, creating it on the first call. Existing content is always kept (there is no overwrite), so it is the natural fit for accumulating entries in a daily log or report. Asks for confirmation before running. |
 | **delete_file**    | Deletes a file from the workspace. This is irreversible and always asks you to confirm before it runs. |
-| **http_request**   | Calls a remote HTTP(S) API (GET/POST/PUT/DELETE). It can only reach domains you have explicitly added to the **Allowed domains** list — until you add one, the tool is hidden from the agent entirely. A GET asks for confirmation; a POST/PUT/DELETE asks for the stronger destructive-action confirmation. See the warning below before adding a domain. |
+| **http_request**   | Calls a remote HTTP(S) API (GET/POST/PUT/DELETE). It can only reach domains you have explicitly added to the **Allowed domains** list — until you add one, the tool is hidden from the agent entirely. A GET asks for confirmation unless **Approve tool calls** is set to `Never`; a POST/PUT/DELETE always asks for the stronger destructive-action confirmation. See the warning below before adding a domain. |
 
 Each tool has a switch on the Tools screen. Turn a tool off to hide
 it from the agent for the next run; turn it on to make it available
@@ -1675,9 +1674,9 @@ can run it on its own:
   fact).
 - **SENSITIVE** — surfaces an **Approve / Deny** prompt in the chat
   before the call happens.
-- **DESTRUCTIVE** — same approval gate as **SENSITIVE**, used for
-  actions that cannot be undone (for example, sending a message or
-  deleting data).
+- **DESTRUCTIVE** — same approval gate as **SENSITIVE**, plus a typed
+  confirmation, used for actions that cannot be undone (for example,
+  sending a message or deleting data).
 
 When approval is required, the mini-console shows inline
 **Approve** and **Deny** buttons. The agent waits for your response
@@ -1686,7 +1685,11 @@ killing the run.
 
 The **Approve tool calls** control in **Settings → Tools & workspace** lets
 you require approval for **every** tool call (`All`), regardless of its risk
-level. Choose it if you want to confirm even read-only lookups.
+level. Choose it if you want to confirm even read-only lookups. `Never` goes the
+other way: read-only and sensitive tools run without asking, but a destructive
+tool still stops for your approval under every setting. To keep destructive
+tools from running at all, turn on **Block destructive tools** — they are then
+refused instead of offered for approval.
 
 #### Changing a tool's risk level
 
@@ -2208,7 +2211,7 @@ repeated here.
 
 | Setting | What it means |
 |---|---|
-| **Approve tool calls** | Which tool calls stop and wait for your approval. Never lets them all through, destructive ones too, unless you also block those. |
+| **Approve tool calls** | Which tool calls stop and wait for your approval. Never lets read-only and sensitive ones through; destructive ones still ask. |
 | **Block destructive tools** | On, a destructive tool call is refused outright rather than offered for approval, and the run sees it as a failed call. |
 | **Block network from local model** | On, no cloud model and no Wikipedia lookup runs, memory search included. Ollama answers only at localhost or a private IP, never by name. |
 | **Manage tools / MCP servers** | *(no explanation — opens a screen that explains itself)* |
@@ -2516,8 +2519,8 @@ Tool approval, safety guardrails, and the agent workspace / HTTP limits.
 Basic:
 
 - **Approve tool calls** — segmented control: `All` (prompt for every call),
-  `Sensitive +` (only sensitive/destructive — recommended), `Never` (no prompts;
-  reserved for known-safe pipelines).
+  `Sensitive +` (only sensitive/destructive — recommended), `Never` (only
+  destructive tools still ask; for known-safe pipelines).
 - **Block destructive tools** — when on, destructive tools are refused outright
   rather than going through the HITL prompt. Useful when the agent runs
   unattended.
@@ -2893,6 +2896,9 @@ of a pipeline. The node configuration sheet offers:
 - **Tool allowlist** — an indicator showing the skill's restriction
   (All tools / N tools / No tools).
 - **Inference engine** — run the skill **on-device** or in the **cloud**.
+- **Always ask before this call** — every tool call the skill makes stops for
+  your approval, whatever the tool's risk. It can only add a confirmation,
+  never remove one.
 - **Context toggles** — these start **inherited** from the skill's own
   default context; change any one and it's marked **overridden** so you
   can see at a glance where the node diverges from the skill.
