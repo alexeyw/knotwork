@@ -32,6 +32,8 @@ import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.services.PipelineCompositionValidator
 import app.knotwork.android.domain.services.findDependentPipelines
+import app.knotwork.android.domain.text.ImportedText
+import app.knotwork.android.domain.text.toDisplaySafe
 import app.knotwork.android.domain.usecases.ConfirmedImport
 import app.knotwork.android.domain.usecases.CreatePipelineUseCase
 import app.knotwork.android.domain.usecases.DeletePipelineUseCase
@@ -784,7 +786,12 @@ constructor(
                         state.copy(
                             isLoading = false,
                             pendingImport = null,
-                            errorMessage = UiText.Dynamic(outcome.message),
+                            // Display-safe as a whole, behind the per-value rule in
+                            // the serializer: the message quotes a file the user did
+                            // not write.
+                            errorMessage = UiText.Dynamic(
+                                outcome.message.toDisplaySafe(ImportedText.MAX_MESSAGE_LENGTH),
+                            ),
                         )
                 }
             }
@@ -837,7 +844,12 @@ constructor(
             when (val prepared = importPipelineBundleUseCase.prepare(jsonString)) {
                 is PipelineBundlePrepareResult.Failure ->
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = UiText.Dynamic(prepared.message))
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = UiText.Dynamic(
+                                prepared.message.toDisplaySafe(ImportedText.MAX_MESSAGE_LENGTH),
+                            ),
+                        )
                     }
 
                 is PipelineBundlePrepareResult.Ready -> {

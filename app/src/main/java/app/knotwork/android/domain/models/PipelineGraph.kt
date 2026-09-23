@@ -39,51 +39,58 @@ data class PipelineGraph(
     /**
      * Validates if the current graph is a valid Directed Acyclic Graph (DAG).
      *
+     * An edge into a `QUEUE_PROCESSOR` is ignored: it is the loop's back-edge,
+     * the one cycle the engine is built to run.
+     *
+     * The walk is iterative, with its own stack. The graph can come from a
+     * file the user picked, so its depth is the file's choice: the recursive
+     * walk this replaces overflowed the thread's stack on a long enough chain —
+     * a `StackOverflowError`, which no importer's `catch (e: Exception)` sees.
+     * Linear in nodes plus edges.
+     *
      * @return True if the graph contains no cycles, false otherwise.
      */
     fun isValidDAG(): Boolean {
         if (nodes.isEmpty()) return true
 
-        val adjacencyList = mutableMapOf<String, MutableList<String>>()
-        nodes.forEach { adjacencyList[it.id] = mutableListOf() }
-
+        val typeById = nodes.associate { it.id to it.type }
+        val successors = HashMap<String, MutableList<String>>(nodes.size)
+        nodes.forEach { successors[it.id] = mutableListOf() }
         connections.forEach { connection ->
-            val targetNode = nodes.find { it.id == connection.targetNodeId }
-            // Ignore back-edges to QUEUE_PROCESSOR for DAG validation
-            if (targetNode?.type != NodeType.QUEUE_PROCESSOR) {
-                if (adjacencyList.containsKey(connection.sourceNodeId)) {
-                    adjacencyList[connection.sourceNodeId]?.add(connection.targetNodeId)
+            if (typeById[connection.targetNodeId] != NodeType.QUEUE_PROCESSOR) {
+                successors[connection.sourceNodeId]?.add(connection.targetNodeId)
+            }
+        }
+
+        // White (absent) → grey (on the current path) → black (fully explored).
+        // An edge to a grey node closes a cycle.
+        val onPath = HashSet<String>()
+        val done = HashSet<String>()
+        for (root in nodes) {
+            if (root.id in done) continue
+            // Each frame is a node and the index of the next successor to visit.
+            val stack = ArrayDeque<Pair<String, Int>>()
+            stack.addLast(root.id to 0)
+            onPath += root.id
+            while (stack.isNotEmpty()) {
+                val (current, next) = stack.removeLast()
+                val children = successors[current].orEmpty()
+                if (next < children.size) {
+                    stack.addLast(current to next + 1)
+                    val child = children[next]
+                    when {
+                        child in onPath -> return false
+                        child !in done && child in successors -> {
+                            onPath += child
+                            stack.addLast(child to 0)
+                        }
+                    }
+                } else {
+                    onPath -= current
+                    done += current
                 }
             }
         }
-
-        val visited = mutableSetOf<String>()
-        val recursionStack = mutableSetOf<String>()
-
-        fun isCyclic(nodeId: String): Boolean {
-            if (recursionStack.contains(nodeId)) return true
-            if (visited.contains(nodeId)) return false
-
-            visited.add(nodeId)
-            recursionStack.add(nodeId)
-
-            val neighbors = adjacencyList[nodeId] ?: emptyList()
-            for (neighbor in neighbors) {
-                if (isCyclic(neighbor)) return true
-            }
-
-            recursionStack.remove(nodeId)
-            return false
-        }
-
-        for (node in nodes) {
-            if (!visited.contains(node.id)) {
-                if (isCyclic(node.id)) {
-                    return false // Cycle detected
-                }
-            }
-        }
-
         return true
     }
 

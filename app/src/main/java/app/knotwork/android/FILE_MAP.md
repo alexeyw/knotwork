@@ -227,6 +227,7 @@ Only Kotlin files appear inside the generated blocks.
     - `OnboardingModelCatalog.kt` - Maps the catalog-side `OnboardingLiteRtModel.id` (`gemma_4_e2b` / `gemma_4_e4b`) to the on-disk filename + HuggingFace URL consumed by `OnboardingViewModel.startDownload` and `LocalModelRepository.isInstalled`. Also derives a filename from the user-supplied custom URL row.
     - `OnboardingScenarioCatalog.kt` - Single source of truth wiring each onboarding value-gallery scenario id (`styled_translation` / `share_handler` / `virtual_companion_mood_router`) to its bundled preset, the `EntrySurface` it binds (or none), and the LiteRT model it needs. Consumed by `SetUpScenarioUseCase`; mirrored on the design side by the catalog `OnboardingScenario` enum.
     - `PerformanceConstants.kt` - Tunables for the model performance feature: `SAMPLE_WINDOW` (runs averaged into the Performance card) and `MEMORY_SAMPLE_INTERVAL_MS` (peak-native-heap sampling cadence). Code-level (no Settings UI).
+    - `PipelineConstants.kt` - Limits shared by every path that stores a pipeline, so the library, the editor toolbar and the import dialogs see one ceiling rather than one per feature.
     - `PipelineExecutionDefaults.kt` - Engine-level timing and log-size constants consumed by `GraphExecutionEngine` and the LLM-backed node executors (post-emit pause, LiteRT pre-warm delay, node-IO log char limit).
     - `PromptPresetConstants.kt` - Cross-module limits + `LLM_DRIVEN_NODE_TYPES` set shared by the prompt-preset domain: `MAX_NAME_LENGTH = 60`, `MAX_SYSTEM_PROMPT_LENGTH = 8000`, and the set of node types that can host a system-prompt preset.
     - `RepositoryLinks.kt` - The public repository, and the URLs the app builds from it.
@@ -399,6 +400,7 @@ Only Kotlin files appear inside the generated blocks.
     - `WorkspaceTextPreview.kt` - Bounded read-only preview of a workspace text file (`text`, `totalBytes`, `truncated`); unlike `readText` it always returns a leading slice so any text file can be shown, flagging truncation when the file exceeds the preview budget.
     - `WorkspaceUsage.kt` - Storage-budget snapshot (`usedBytes`, `limitBytes`, derived `fraction`) for the Files screen quota indicator; read-side view of the total-size ceiling the workspace enforces on writes.
   - `pipelineio/` - JSON serialisation gateway for pipeline import/export.
+    - `ImportedPipelineClaims.kt` - Checks what an imported pipeline says about itself against what its graph does, before the import use cases store it.
     - `PipelineBundleIdRemapper.kt` - Pure id regeneration for the "import as copy" path: regenerates every pipeline/node/connection id and remaps intra-bundle `targetPipelineId` references so a copied composition never points back at the originals.
     - `PipelineBundleJsonSerializer.kt` - Two-way mapper for the pipeline **bundle** envelope (`{ bundleVersion: 1, exportedAt, pipelines: [...] }`) — a root plus the transitive closure of its `PIPELINE` dependencies. Delegates each element to `PipelineJsonSerializer`; `parse` enforces referential integrity, no duplicate ids, and the 50-pipeline limit. Also exposes `looksLikeBundle` for the shared import affordance.
     - `PipelineJsonSerializer.kt` - Two-way mapper between `PipelineGraph` and the `schemaVersion: 1` JSON document shared with the browser-side editor (`pipeline-editor.html`). Carries the flat runtime `config` fields plus an optional opaque `nodeConfig` object (the rich `NodeConfigCodec` payload) round-tripped verbatim into `NodeModel.configJson` without interpreting it.
@@ -489,6 +491,7 @@ Only Kotlin files appear inside the generated blocks.
   - `skillio/` - JSON serialisation gateway for skill import/export.
     - `SkillJsonSerializer.kt` - Two-way `Skill` ↔ schema-versioned JSON (org.json). Omits `toolAllowlist` when null so "all tools" round-trips back to null; never throws (maps errors to `SkillImportOutcome.Failure`).
   - `text/` - Pure-Kotlin text helpers.
+    - `ImportedText.kt` - Ceilings for text the app quotes back from a file the user picked — an import error, a dialog line.
     - `TitleText.kt` - `String.collapseWhitespace()` + `String.toSingleLineTitle(maxLength, ellipsis)`, shared by chat auto-rename and share-session naming so their single-line-title logic cannot drift.
   - `triggerio/` - JSON serialisation gateway for automation-trigger conditions.
     - `TriggerConditionCodec.kt` - Single source of truth for the `TriggerCondition` ↔ JSON wire shape stored in `triggers.conditionJson` (org.json, discriminator under `type`). Total decode: null/blank/malformed/unknown-type/missing-payload all return `null` (the repository skips such rows).
@@ -604,6 +607,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PreviewWorkspaceFileUseCase.kt` - Reads a bounded text preview (`PREVIEW_MAX_BYTES` = 64 KiB) for the preview sheet.
 - `presentation/` - UI and presentation layer.
   - `common/` - Cross-feature presentation utilities.
+    - `BoundedText.kt` - What reading a picked file within a size limit produced.
     - `DisplayFormat.kt` - Shared display formatters (`formatBytes` byte-size ladder, `approxTokenCount`, `CHARS_PER_TOKEN`) so byte sizes / token estimates render identically across Memory and Settings instead of drifting between per-screen copies.
   - `notifications/` - Notification handling.
     - `ApprovalNotificationManager.kt` - Manager for approval notifications: transient live-phase prompts plus the persistent parked-run variant (ongoing, `REPOST` delete-intent, chat deep-link; DESTRUCTIVE offers Deny + "Review in chat" instead of a direct Approve).

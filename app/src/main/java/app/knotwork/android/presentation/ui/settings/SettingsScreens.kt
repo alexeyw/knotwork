@@ -27,6 +27,7 @@ import app.knotwork.android.domain.models.EntrySurface
 import app.knotwork.android.domain.models.MemoryImportStrategy
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.models.ToolApprovalPolicy
+import app.knotwork.android.domain.text.toDisplaySafe
 import app.knotwork.android.presentation.tile.requestAddDutyTile
 import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.components.dialogs.SingleChoiceDialog
@@ -607,7 +608,8 @@ private fun MemoryImportDialog(
                     MemoryImportWarning.SchemaMismatch -> stringResource(R.string.settings_memory_import_schema_warning)
                     MemoryImportWarning.ProviderMismatch -> stringResource(
                         R.string.settings_memory_import_provider_warning,
-                        pending.document.embeddingProviderId,
+                        // Taken from the file as written: quoted, so display-safe.
+                        pending.document.embeddingProviderId.toDisplaySafe(),
                     )
                     MemoryImportWarning.PinsNotImported -> stringResource(
                         R.string.settings_memory_import_pins_warning,

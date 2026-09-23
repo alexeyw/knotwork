@@ -4,6 +4,7 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
+import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -137,7 +138,8 @@ object PipelineBundleJsonSerializer {
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
-            return PipelineBundleImportOutcome.Failure("Invalid JSON: ${e.message}")
+            // Clamped: on Android the message quotes the entire input.
+            return PipelineBundleImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
         }
 
         if (!root.has("bundleVersion")) {
@@ -183,14 +185,14 @@ object PipelineBundleJsonSerializer {
             .filterValues { it > 1 }.keys
         if (duplicateIds.isNotEmpty()) {
             return PipelineBundleImportOutcome.Failure(
-                "Bundle contains duplicate pipeline ids: ${duplicateIds.sorted().joinToString()}",
+                "Bundle contains duplicate pipeline ids: ${quoteSome(duplicateIds.sorted())}",
             )
         }
 
         val danglingReferences = danglingTargets(graphs)
         if (danglingReferences.isNotEmpty()) {
             return PipelineBundleImportOutcome.Failure(
-                "Bundle references pipelines not contained in it: ${danglingReferences.joinToString()}",
+                "Bundle references pipelines not contained in it: ${quoteSome(danglingReferences)}",
             )
         }
 
@@ -200,6 +202,21 @@ object PipelineBundleJsonSerializer {
             PipelineBundleImportOutcome.PartialSchemaMismatch(pipelines = graphs, mismatches = mismatches)
         }
     }
+
+    /**
+     * Quotes at most [MAX_QUOTED_IDS] file-supplied ids for an error message,
+     * each made display-safe, and says how many more there were. A bundle holds
+     * up to [MAX_BUNDLE_PIPELINES] pipelines, so an unbounded list would let
+     * the file decide how long the error is.
+     */
+    private fun quoteSome(ids: List<String>): String {
+        val quoted = ids.take(MAX_QUOTED_IDS).joinToString { "\"${it.toDisplaySafe()}\"" }
+        val more = ids.size - MAX_QUOTED_IDS
+        return if (more > 0) "$quoted and $more more" else quoted
+    }
+
+    /** Most ids an error message quotes before summarising the rest. */
+    private const val MAX_QUOTED_IDS = 5
 
     /**
      * Collects every `PIPELINE`-node `targetPipelineId` across [graphs] that

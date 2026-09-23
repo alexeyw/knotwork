@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.usecases
 
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.repositories.PipelineRepository
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
@@ -63,10 +64,10 @@ class RenamePipelineUseCase @Inject constructor(private val pipelineRepository: 
 
     private companion object {
         /**
-         * Upper bound on the rendered name length. Mirrors the FAB / rename
-         * dialog client-side limit so JSON imports cannot smuggle longer
-         * names past the UI rule.
+         * Upper bound on the rendered name length — the shared ceiling, which
+         * the JSON importer applies too (by truncation), so a file cannot
+         * carry a longer name past the rule.
          */
-        const val MAX_NAME_LENGTH = 60
+        const val MAX_NAME_LENGTH = PipelineConstants.MAX_NAME_LENGTH
     }
 }

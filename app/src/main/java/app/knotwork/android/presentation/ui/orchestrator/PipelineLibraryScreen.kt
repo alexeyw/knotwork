@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.orchestrator
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -35,9 +36,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.EntrySurface
 import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.PipelineGraph
+import app.knotwork.android.presentation.common.BoundedText
+import app.knotwork.android.presentation.common.readTextWithin
 import app.knotwork.android.presentation.ui.common.asString
 import app.knotwork.android.presentation.ui.orchestrator.presets.GraphFlowPreview
 import app.knotwork.android.presentation.ui.orchestrator.presets.PipelineLibrarySpeedDial
@@ -100,27 +104,36 @@ fun PipelineLibraryScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val importUnreadableMessage = stringResource(R.string.orchestrator_library_import_unreadable)
+    val importTooLargeMessage = stringResource(
+        R.string.orchestrator_library_import_too_large,
+        Formatter.formatShortFileSize(context, PipelineConstants.MAX_IMPORT_FILE_BYTES),
+    )
 
     // SAF launcher for the footer "Import JSON" affordance. Reads the picked
     // document off the main thread and hands the text to the VM, which parses,
     // validates, persists, and (on a schemaVersion mismatch) stashes the graph
-    // in `pendingImport` for the confirmation dialog below.
+    // in `pendingImport` for the confirmation dialog below. The read stops at
+    // the import ceiling: the file's size is its author's choice, and an
+    // unbounded read ended in an out-of-memory crash in the parser.
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val json = withContext(Dispatchers.IO) {
+            val read = withContext(Dispatchers.IO) {
                 runCatching {
-                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    context.contentResolver.openInputStream(uri)?.use {
+                        it.readTextWithin(PipelineConstants.MAX_IMPORT_FILE_BYTES)
+                    }
                 }.getOrNull()
             }
-            if (json.isNullOrBlank()) {
-                snackbarHostState.showSnackbar(message = importUnreadableMessage)
-            } else {
+            when {
+                read is BoundedText.TooLarge -> snackbarHostState.showSnackbar(message = importTooLargeMessage)
+                read !is BoundedText.Read || read.text.isBlank() ->
+                    snackbarHostState.showSnackbar(message = importUnreadableMessage)
                 // Detects a bundle envelope vs a single-pipeline document and
                 // routes to the matching flow — one affordance, two shapes.
-                viewModel.importJson(json)
+                else -> viewModel.importJson(read.text)
             }
         }
     }

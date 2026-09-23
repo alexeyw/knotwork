@@ -91,7 +91,7 @@ object DocumentationLinks {
             path = "docs/user-guide.md",
             anchor = null,
             delivery = Delivery.REMOTE,
-            lineCount = 3106,
+            lineCount = 3124,
             sectionCount = 22,
         ),
         Entry(
@@ -99,7 +99,7 @@ object DocumentationLinks {
             path = "docs/cookbook.md",
             anchor = null,
             delivery = Delivery.REMOTE,
-            lineCount = 582,
+            lineCount = 590,
             sectionCount = 5,
         ),
         Entry(
@@ -115,7 +115,7 @@ object DocumentationLinks {
             path = "docs/user-guide.md",
             anchor = "adding-an-mcp-server",
             delivery = Delivery.REMOTE,
-            lineCount = 3106,
+            lineCount = 3124,
             sectionCount = 22,
         ),
         Entry(
@@ -123,7 +123,7 @@ object DocumentationLinks {
             path = "docs/user-guide.md",
             anchor = "triggers",
             delivery = Delivery.REMOTE,
-            lineCount = 3106,
+            lineCount = 3124,
             sectionCount = 22,
         ),
     )

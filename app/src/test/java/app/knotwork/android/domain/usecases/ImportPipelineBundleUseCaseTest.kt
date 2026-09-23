@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
+import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.pipelineio.PipelineBundleTestFixtures.linearGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
@@ -19,6 +20,7 @@ import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -77,6 +79,29 @@ class ImportPipelineBundleUseCaseTest {
         val json = bundleOf(linearGraph("a", targets = listOf("b")), linearGraph("b", targets = listOf("a")))
 
         assertTrue(useCase.prepare(json) is PipelineBundlePrepareResult.Failure)
+    }
+
+    @Test
+    fun `given a bundle pipeline hinting a tool it does not call when prepare then the hint is dropped`() = runTest {
+        val graph = PipelineGraph(
+            id = "p1",
+            name = "Hinted",
+            nodes = listOf(
+                NodeModel(id = "in", type = NodeType.INPUT, x = 0f, y = 0f),
+                NodeModel(id = "t", type = NodeType.TOOL, x = 0f, y = 0f, toolName = "delete_file"),
+                NodeModel(id = "out", type = NodeType.OUTPUT, x = 0f, y = 0f),
+            ),
+            connections = listOf(
+                ConnectionModel(id = "c1", sourceNodeId = "in", targetNodeId = "t"),
+                ConnectionModel(id = "c2", sourceNodeId = "t", targetNodeId = "out"),
+            ),
+            updatedAt = 0L,
+            samplePrompts = listOf(PipelineSamplePrompt(title = "Tidy up my notes", toolsHint = "read_file")),
+        )
+
+        val ready = useCase.prepare(bundleOf(graph)) as PipelineBundlePrepareResult.Ready
+
+        assertNull(ready.pipelines.single().samplePrompts.single().toolsHint)
     }
 
     @Test

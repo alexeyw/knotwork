@@ -205,6 +205,14 @@ add a `case` to `defaultRichConfig`, `richToFlat`, `encodeRichEnvelope`,
 Kotlin `NodeConfigCodec` encoder so a document round-trips through both
 editors unchanged.
 
+The envelope is not what runs, and the app never shows it for a field the run
+reads: `NodeConfigCodec.decode` takes every such field from the flat `config`
+block, so an imported file cannot display one value and run another. The flip
+side is that every producer has to write those fields into the flat block —
+the browser editor's `exportToJson` and every bundled preset — or the app shows
+the field empty or at its default. `BundledPresetEditabilityTest` fails for a
+preset whose flat block lacks a value its envelope sets.
+
 If your node **references another entity by id** (like `PIPELINE` →
 target pipeline, `SKILL` → skill), there are two extra obligations:
 
@@ -944,7 +952,10 @@ the starter ("quick action") cards shown on a new chat's empty state when
 this pipeline is the active one. Each entry is `{ "title": "…",
 "toolsHint": "…" }`; `toolsHint` is optional and, when omitted, the card
 renders without its `uses · …` subtitle. Keep the hints honest — only name
-tools the pipeline actually wires:
+tools the pipeline actually wires. For an imported file the app checks it: a
+hint keeps only the tools a Tool node of the same pipeline calls by name (a Tool
+node that lets the model choose backs none). Every pipeline keeps at most six
+prompts, each title one line of at most 200 characters:
 
 ```json
 "samplePrompts": [

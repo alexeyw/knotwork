@@ -134,6 +134,60 @@ class ImportPipelineUseCaseTest {
         )
     }
 
+    /**
+     * A pipeline whose sample prompts name tools: [wiredTool] is what its TOOL
+     * node calls, [hints] is what the file claims each prompt uses.
+     */
+    private fun jsonWithSamplePrompts(wiredTool: String, vararg hints: String): String {
+        val prompts = hints.mapIndexed { i, hint -> """{"title":"Prompt $i","toolsHint":"$hint"}""" }
+        return """
+            {
+              "schemaVersion": 1, "id": "p", "name": "demo",
+              "nodes":[
+                {"id":"n1","type":"INPUT"},
+                {"id":"n2","type":"TOOL","config":{"toolName":"$wiredTool"}},
+                {"id":"n3","type":"OUTPUT"}
+              ],
+              "connections":[
+                {"id":"c1","fromNodeId":"n1","toNodeId":"n2"},
+                {"id":"c2","fromNodeId":"n2","toNodeId":"n3"}
+              ],
+              "samplePrompts":[${prompts.joinToString(",")}]
+            }
+        """.trimIndent()
+    }
+
+    @Test
+    fun `given a tools hint naming a tool the graph does not call when invoke then the hint is dropped`() = runTest {
+        val saved = slot<PipelineGraph>()
+        coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
+
+        useCase(jsonWithSamplePrompts(wiredTool = "delete_file", "read_file"))
+
+        assertEquals("Prompt 0", saved.captured.samplePrompts.single().title)
+        assertNull(saved.captured.samplePrompts.single().toolsHint)
+    }
+
+    @Test
+    fun `given a tools hint mixing wired and unwired tools when invoke then only the wired one is kept`() = runTest {
+        val saved = slot<PipelineGraph>()
+        coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
+
+        useCase(jsonWithSamplePrompts(wiredTool = "search_tool", "search_tool, read_file", "search_tool"))
+
+        assertEquals(listOf("search_tool", "search_tool"), saved.captured.samplePrompts.map { it.toolsHint })
+    }
+
+    @Test
+    fun `given an imported hint when the import collides then the pending graph already carries the checked hint`() =
+        runTest {
+            coEvery { pipelineRepository.getPipelineById("p") } returns PipelineGraph(id = "p", name = "existing")
+
+            val invocation = useCase(jsonWithSamplePrompts(wiredTool = "delete_file", "read_file"))
+
+            assertNull(invocation.pendingCollision!!.samplePrompts.single().toolsHint)
+        }
+
     @Test
     fun `given schema mismatch when invoke then save is not called`() = runTest {
         val invocation = useCase(mismatchJson)

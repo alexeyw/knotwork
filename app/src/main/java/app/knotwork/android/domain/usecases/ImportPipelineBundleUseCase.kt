@@ -4,10 +4,12 @@ import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineValidationException
+import app.knotwork.android.domain.pipelineio.ImportedPipelineClaims
 import app.knotwork.android.domain.pipelineio.PipelineBundleIdRemapper
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.services.PipelineCompositionValidator
+import app.knotwork.android.domain.text.toDisplaySafe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.util.UUID
@@ -46,7 +48,7 @@ class ImportPipelineBundleUseCase @Inject constructor(
      *   a contained graph is structurally invalid.
      */
     suspend fun prepare(jsonText: String): PipelineBundlePrepareResult {
-        val (pipelines, mismatches) = when (val outcome = PipelineBundleJsonSerializer.parse(jsonText)) {
+        val (parsed, mismatches) = when (val outcome = PipelineBundleJsonSerializer.parse(jsonText)) {
             is PipelineBundleImportOutcome.Failure ->
                 return PipelineBundlePrepareResult.Failure(outcome.message)
 
@@ -54,6 +56,7 @@ class ImportPipelineBundleUseCase @Inject constructor(
 
             is PipelineBundleImportOutcome.PartialSchemaMismatch -> outcome.pipelines to outcome.mismatches
         }
+        val pipelines = parsed.map(ImportedPipelineClaims::checked)
 
         // Per-graph structural validation, then cross-pipeline composition
         // validation resolved against the incoming set (so intra-bundle cycles,
@@ -68,7 +71,8 @@ class ImportPipelineBundleUseCase @Inject constructor(
             errors.takeIf { it.isNotEmpty() }?.let { graph to it }
         }?.let { (graph, errors) ->
             return PipelineBundlePrepareResult.Failure(
-                "Pipeline \"${graph.name}\" is invalid: ${PipelineValidationException(errors).message}",
+                "Pipeline \"${graph.name.toDisplaySafe()}\" is invalid: " +
+                    PipelineValidationException(errors).message,
             )
         }
 

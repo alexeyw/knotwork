@@ -1,11 +1,13 @@
 package app.knotwork.android.domain.pipelineio
 
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
+import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -77,6 +79,20 @@ import org.json.JSONObject
  * `NodeConfigCodec` parses it). The field is additive and optional:
  * documents without it (older exports, hand-written presets) parse fine and
  * the app re-derives the rich config from the flat fields on first edit.
+ *
+ * ### What a file cannot make the app store or say
+ *
+ * A document is content the user did not write, so [parse] normalises the
+ * parts that are displayed and rejects the parts that would be stored
+ * differently from how they validate:
+ *  - `name` and every node `label` become one line within
+ *    [PipelineConstants.MAX_NAME_LENGTH] / [PipelineConstants.MAX_IMPORTED_LABEL_LENGTH];
+ *  - two nodes or two connections sharing an id fail the import;
+ *  - every value quoted back in an error message goes through
+ *    [toDisplaySafe], so a crafted id or type cannot add lines to the error.
+ *
+ * `nodeConfig` stays opaque here; the editor reads every field that reaches
+ * the run from the flat `config` block, never from it (`NodeConfigCodec.decode`).
  *
  * ### Forward-compatibility
  *
@@ -281,7 +297,10 @@ object PipelineJsonSerializer {
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
-            return PipelineImportOutcome.Failure("Invalid JSON: ${e.message}")
+            // Clamped, not echoed: on Android the parser's message ends with
+            // " at character N of <the entire input>", so an unbounded echo put
+            // the whole picked file into the error the user reads.
+            return PipelineImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
         }
 
         if (!root.has("schemaVersion")) {
@@ -299,7 +318,7 @@ object PipelineJsonSerializer {
         } catch (e: PipelineParseException) {
             return PipelineImportOutcome.Failure(e.message ?: "Parse failed")
         } catch (e: JSONException) {
-            return PipelineImportOutcome.Failure("Malformed pipeline document: ${e.message}")
+            return PipelineImportOutcome.Failure("Malformed pipeline document: ${e.message.orEmpty().toDisplaySafe()}")
         }
 
         return if (supported) {
@@ -365,10 +384,19 @@ object PipelineJsonSerializer {
     private fun unknownKeys(json: JSONObject, known: Set<String>): List<String> =
         json.keys().asSequence().filterNot { it in known }.toList()
 
+    // Reason: one throw per required field or identity rule, each with its own
+    // message — the same trade-off as `buildConnection`.
+    @Suppress("ThrowsCount")
     private fun buildGraph(root: JSONObject): PipelineGraph {
         val id = root.optString("id").takeIf { it.isNotBlank() }
             ?: throw PipelineParseException("Missing required field: id")
-        val name = root.optString("name").takeIf { it.isNotBlank() }
+        // Normalised, not just checked: the name comes from a file the user did
+        // not write and is rendered in the library list, the editor toolbar and
+        // the import dialogs, so it gets the ceiling every in-app path enforces —
+        // by truncation, so a long name does not fail an otherwise good file.
+        val name = root.optString("name")
+            .toDisplaySafe(maxLength = PipelineConstants.MAX_NAME_LENGTH, ellipsis = "")
+            .takeIf { it.isNotEmpty() }
             ?: throw PipelineParseException("Missing required field: name")
         val updatedAt = root.optLong("updatedAt", System.currentTimeMillis())
 
@@ -377,11 +405,21 @@ object PipelineJsonSerializer {
         val nodes = (0 until nodesJson.length()).map { i ->
             buildNode(nodesJson.getJSONObject(i), index = i)
         }
+        // Rejected here, where they are first visible. Accepted, two nodes with
+        // one id validated as a single vertex, were both assigned the same fresh
+        // id when stored, and one silently replaced the other — the graph that
+        // was checked was not the graph that was saved.
+        firstDuplicate(nodes.map { it.id })?.let { duplicate ->
+            throw PipelineParseException("Duplicate node id \"${duplicate.toDisplaySafe()}\"")
+        }
 
         val connectionsJson = root.optJSONArray("connections") ?: JSONArray()
         val nodeIds = nodes.mapTo(mutableSetOf()) { it.id }
         val connections = (0 until connectionsJson.length()).map { i ->
             buildConnection(connectionsJson.getJSONObject(i), index = i, nodeIds = nodeIds)
+        }
+        firstDuplicate(connections.map { it.id })?.let { duplicate ->
+            throw PipelineParseException("Duplicate connection id \"${duplicate.toDisplaySafe()}\"")
         }
 
         // Optional + additive: documents from older builds simply lack the key,
@@ -409,17 +447,21 @@ object PipelineJsonSerializer {
         val id = json.optString("id").takeIf { it.isNotBlank() }
             ?: throw PipelineParseException("Node #$index missing id")
         val typeRaw = json.optString("type").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Node \"$id\" missing type")
+            ?: throw PipelineParseException("Node \"${id.toDisplaySafe()}\" missing type")
         val type = try {
             NodeType.valueOf(typeRaw)
         } catch (e: IllegalArgumentException) {
-            throw PipelineParseException("Node \"$id\" has unknown type \"$typeRaw\"")
+            throw PipelineParseException(
+                "Node \"${id.toDisplaySafe()}\" has unknown type \"${typeRaw.toDisplaySafe()}\"",
+            )
         }
 
         val position = json.optJSONObject("position")
         val x = position?.optDouble("x", 0.0)?.toFloat() ?: 0f
         val y = position?.optDouble("y", 0.0)?.toFloat() ?: 0f
-        val label = json.optString("label").takeIf { it.isNotBlank() } ?: type.name
+        val label = json.optString("label")
+            .toDisplaySafe(maxLength = PipelineConstants.MAX_IMPORTED_LABEL_LENGTH, ellipsis = "")
+            .ifEmpty { type.name }
 
         val config = json.optJSONObject("config") ?: JSONObject()
         val contextConfigJson = json.optJSONObject("contextConfig")
@@ -478,14 +520,25 @@ object PipelineJsonSerializer {
     private fun buildConnection(json: JSONObject, index: Int, nodeIds: Set<String>): ConnectionModel {
         val id = json.optString("id").takeIf { it.isNotBlank() }
             ?: throw PipelineParseException("Connection #$index missing id")
+        val quotedId = id.toDisplaySafe()
         val from = json.optString("fromNodeId").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Connection \"$id\" missing fromNodeId")
+            ?: throw PipelineParseException("Connection \"$quotedId\" missing fromNodeId")
         val to = json.optString("toNodeId").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Connection \"$id\" missing toNodeId")
-        if (from !in nodeIds) throw PipelineParseException("Connection \"$id\" references unknown node \"$from\"")
-        if (to !in nodeIds) throw PipelineParseException("Connection \"$id\" references unknown node \"$to\"")
+            ?: throw PipelineParseException("Connection \"$quotedId\" missing toNodeId")
+        if (from !in nodeIds) {
+            throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${from.toDisplaySafe()}\"")
+        }
+        if (to !in nodeIds) {
+            throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${to.toDisplaySafe()}\"")
+        }
         val label = json.optStringOrNull("label")
         return ConnectionModel(id = id, sourceNodeId = from, targetNodeId = to, label = label)
+    }
+
+    /** The first value of [ids] that occurs twice, or `null` when every id is distinct. */
+    private fun firstDuplicate(ids: List<String>): String? {
+        val seen = HashSet<String>(ids.size)
+        return ids.firstOrNull { !seen.add(it) }
     }
 
     private class PipelineParseException(message: String) : RuntimeException(message)

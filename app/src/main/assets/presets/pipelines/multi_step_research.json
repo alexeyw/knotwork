@@ -77,7 +77,8 @@
         "conditionPrompt": null,
         "conditionKeywords": null,
         "conditionComplexity": null,
-        "conditionHasImage": null
+        "conditionHasImage": null,
+        "maxSubtasks": 5
       },
       "contextConfig": {
         "chatHistory": false,

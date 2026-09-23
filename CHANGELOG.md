@@ -77,6 +77,24 @@ details.
   entries now arrive unpinned — the import dialog says how
   many the file had pinned — and a date in the future becomes the date of the
   import.
+- **A node's settings sheet shows the settings that run.** A pipeline file keeps
+  each node's settings twice, one copy for the run and one for the editor, and
+  the sheet showed the editor's copy. An imported file could fill it with a
+  different tool, prompt or confirmation switch from the ones the run used. The
+  sheet now shows the run's copy, for pipelines imported before this change too.
+- **Import errors quote the file in one short line.** An error quoted the
+  offending value as written, line breaks included, so a file could add
+  sentences of its own to the message — and on a phone, a file that was not
+  valid JSON was quoted in full. Each quoted value is now one line of at most
+  60 characters. The embedding provider named in the memory import dialog gets
+  the same treatment.
+- **Imported names stay short.** A pipeline's name and its nodes' labels are
+  kept to one line of at most 60 characters, the limit the app already applied
+  to names you type.
+- **An imported pipeline's starter prompts name only tools it calls.** The
+  `uses · …` line under a starter prompt keeps a tool only if one of the
+  pipeline's Tool nodes calls it, and a pipeline shows at most six starter
+  prompts.
 
 ### Fixed
 
@@ -88,6 +106,20 @@ details.
   a Tool step set to always ask in the browser showed the switch on in the app
   but added no confirmation; it now writes it there, and keeps it when it opens
   a file that carries it only in that part.
+- **Bundled pipelines apply the limits their sheets show.** The planning steps
+  of the full agent and the multi-step research pipeline showed a limit of 5 or
+  10 sub-tasks but kept every sub-task the model produced; they now keep at most
+  that many. Four routers showed a fallback route the run did not record; it is
+  recorded now, and where a run goes is unchanged.
+- **Two nodes can no longer share an id in a pipeline file.** The import
+  accepted them, checked the graph as if they were one node, and kept only one
+  when saving. Such a file is now refused with the id named.
+- **A very long pipeline no longer crashes the app.** The check for loops in a
+  pipeline could run out of stack on a chain of tens of thousands of nodes.
+- **Files too large to import get a message instead of a crash.** A pipeline or
+  bundle file over 8 MB is not read. A memory file is refused when it holds more
+  than 20,000 entries — the most memory can keep — or is larger than a quarter
+  of the memory the app may use.
 - **The guide named the wrong confirmation word.** It said a destructive tool
   call is confirmed by typing the tool's name; the field accepts **yes**.
 - **The Wikipedia search tests no longer reach the internet.** Two of them called

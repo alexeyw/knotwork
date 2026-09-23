@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.usecases
 
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PipelineValidationException
@@ -82,7 +83,7 @@ class SavePipelineAsPresetUseCase @Inject constructor(private val pipelinePreset
     }
 
     private companion object {
-        /** Mirrors the limit enforced by [CreatePipelineUseCase] / [RenamePipelineUseCase]. */
-        const val MAX_NAME_LENGTH = 60
+        /** The shared pipeline-name ceiling ([PipelineConstants.MAX_NAME_LENGTH]). */
+        const val MAX_NAME_LENGTH = PipelineConstants.MAX_NAME_LENGTH
     }
 }

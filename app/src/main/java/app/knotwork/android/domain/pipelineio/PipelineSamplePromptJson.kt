@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.pipelineio
 
 import app.knotwork.android.domain.models.PipelineSamplePrompt
+import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -17,8 +18,23 @@ import org.json.JSONObject
  * `title` are skipped on decode; a blank `toolsHint` decodes back to `null`.
  * Decoding is total — malformed or blank input yields an empty list rather than
  * throwing, so a corrupt column or document never aborts a pipeline load.
+ *
+ * Decoding is also bounded. The list is rendered, whole, on the new-chat empty
+ * state, and a pipeline file can declare it: without a ceiling one import put
+ * as many cards there as the file listed. At most [MAX_SAMPLE_PROMPTS] entries
+ * are kept, and each title and hint becomes one line within
+ * [MAX_TITLE_LENGTH] / [MAX_TOOLS_HINT_LENGTH].
  */
 object PipelineSamplePromptJson {
+
+    /** Most sample prompts a pipeline keeps — twice what any bundled preset declares. */
+    const val MAX_SAMPLE_PROMPTS: Int = 6
+
+    /** Longest sample-prompt title kept — about three times the longest bundled one. */
+    const val MAX_TITLE_LENGTH: Int = 200
+
+    /** Longest tools hint kept; a hint is a short list of tool names. */
+    const val MAX_TOOLS_HINT_LENGTH: Int = 120
 
     private const val KEY_TITLE = "title"
     private const val KEY_TOOLS_HINT = "toolsHint"
@@ -42,18 +58,29 @@ object PipelineSamplePromptJson {
     /**
      * Decodes a [JSONArray] produced by [encodeToArray] back into a list of
      * [PipelineSamplePrompt]. Entries missing a non-blank title are skipped; a
-     * missing or blank `toolsHint` decodes to `null`.
+     * missing or blank `toolsHint` decodes to `null`. At most
+     * [MAX_SAMPLE_PROMPTS] prompts are returned, each field flattened to one
+     * line and cut at its ceiling.
      *
      * @param array The array to decode, or `null` (absent key) → empty list.
      * @return The decoded prompts.
      */
     fun decodeFromArray(array: JSONArray?): List<PipelineSamplePrompt> {
         if (array == null) return emptyList()
-        return (0 until array.length()).mapNotNull { index ->
-            val obj = array.optJSONObject(index) ?: return@mapNotNull null
-            val title = obj.optString(KEY_TITLE).takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            PipelineSamplePrompt(title = title, toolsHint = obj.optString(KEY_TOOLS_HINT).takeIf { it.isNotBlank() })
-        }
+        return (0 until array.length()).asSequence()
+            .mapNotNull { index ->
+                val obj = array.optJSONObject(index) ?: return@mapNotNull null
+                val title = obj.optString(KEY_TITLE)
+                    .toDisplaySafe(maxLength = MAX_TITLE_LENGTH, ellipsis = "")
+                    .takeIf { it.isNotEmpty() }
+                    ?: return@mapNotNull null
+                val hint = obj.optString(KEY_TOOLS_HINT)
+                    .toDisplaySafe(maxLength = MAX_TOOLS_HINT_LENGTH, ellipsis = "")
+                    .takeIf { it.isNotEmpty() }
+                PipelineSamplePrompt(title = title, toolsHint = hint)
+            }
+            .take(MAX_SAMPLE_PROMPTS)
+            .toList()
     }
 
     /**

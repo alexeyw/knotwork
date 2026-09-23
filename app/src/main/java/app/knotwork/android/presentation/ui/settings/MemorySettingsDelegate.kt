@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.settings
 
 import android.content.Context
+import android.text.format.Formatter
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.MemoryExportDocument
@@ -10,11 +11,16 @@ import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
+import app.knotwork.android.domain.text.ImportedText
+import app.knotwork.android.domain.text.toDisplaySafe
 import app.knotwork.android.domain.usecases.ClearAllMemoryUseCase
 import app.knotwork.android.domain.usecases.ExportMemoryBaseUseCase
 import app.knotwork.android.domain.usecases.MemoryImportResult
 import app.knotwork.android.domain.usecases.MemoryImportUseCase
 import app.knotwork.android.domain.usecases.ReembedAllMemoriesUseCase
+import app.knotwork.android.presentation.common.BoundedText
+import app.knotwork.android.presentation.common.memoryImportLimitBytes
+import app.knotwork.android.presentation.common.readTextWithin
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -339,8 +345,12 @@ class MemorySettingsDelegate(
      */
     fun importMemory(source: InputStream) {
         scope.launch {
-            val jsonText = try {
-                withContext(Dispatchers.IO) { source.bufferedReader().use { it.readText() } }
+            // Bounded by the heap, not by a fixed size: the app's own export of a
+            // full memory can be hundreds of MB, and what a device can parse is
+            // what its heap holds (see `memoryImportLimitBytes`).
+            val limitBytes = memoryImportLimitBytes(Runtime.getRuntime().maxMemory())
+            val read = try {
+                withContext(Dispatchers.IO) { source.use { it.readTextWithin(limitBytes) } }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -348,10 +358,28 @@ class MemorySettingsDelegate(
                 emitSnackbar(appContext.getString(R.string.settings_memory_import_failed, e.message.orEmpty()))
                 return@launch
             }
+            val jsonText = when (read) {
+                is BoundedText.Read -> read.text
+                is BoundedText.TooLarge -> {
+                    emitSnackbar(
+                        appContext.getString(
+                            R.string.settings_memory_import_too_large,
+                            Formatter.formatShortFileSize(appContext, read.limitBytes),
+                        ),
+                    )
+                    return@launch
+                }
+            }
 
             when (val outcome = memoryImportUseCase.parse(jsonText)) {
                 is MemoryImportOutcome.Failure ->
-                    emitSnackbar(appContext.getString(R.string.settings_memory_import_failed, outcome.message))
+                    emitSnackbar(
+                        appContext.getString(
+                            R.string.settings_memory_import_failed,
+                            // The message quotes the file; one bounded line whatever it holds.
+                            outcome.message.toDisplaySafe(ImportedText.MAX_MESSAGE_LENGTH),
+                        ),
+                    )
                 is MemoryImportOutcome.Success -> stagePendingImport(outcome.document, schemaMismatch = false)
                 is MemoryImportOutcome.SchemaMismatch -> stagePendingImport(outcome.document, schemaMismatch = true)
             }

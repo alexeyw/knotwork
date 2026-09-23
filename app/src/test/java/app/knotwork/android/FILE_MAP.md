@@ -213,6 +213,7 @@ Only Kotlin files appear inside the generated blocks.
     - `NodeContextConfigTest.kt` - Locks the contract that legacy nodes (created before the `context_config` column) keep receiving the full pipeline context.
     - `OnboardingJourneyTest.kt` - Verifies the derived figures and first-value attribution rules of `OnboardingJourney` — the pure half of the repeatable "< 10 minutes to first value" measurement.
     - `PipelineGraphContentHashTest.kt` - Unit tests for `PipelineGraph.contentHash` — the checkpoint-invalidation contract of the persistent pipeline-run records.
+    - `PipelineGraphValidationTest.kt` - Cycle detection in `PipelineGraph.isValidDAG` / `PipelineGraph.validate`.
     - `PipelinePresetTest.kt` - Tests for `PipelinePreset` and `PresetCategory`.
     - `ResultTest.kt` - Tests for Result.
     - `RunBudgetLedgerTest.kt` - Unit tests for `RunBudgetLedger` — the run-tree spend ledger every autonomous ceiling is charged against.
@@ -222,12 +223,15 @@ Only Kotlin files appear inside the generated blocks.
     - `TriggerTelemetryTest.kt` - Pins the stable `telemetryKind` strings for every `TriggerCondition` variant.
   - `pipelineio/` - Tests for the pipeline import/export gateway.
     - `CookbookRecipeValidationTest.kt` - Validates the pipeline recipes published in `docs/recipes/`, which [docs/cookbook.md] tells a reader to download and import.
+    - `ImportedPipelineClaimsTest.kt` - `ImportedPipelineClaims` — an imported pipeline's `uses · …` hints keep only the tools its own TOOL nodes call.
     - `PipelineBundleIdRemapperTest.kt` - Tests for `PipelineBundleIdRemapper` — the "import as copy" id rewrite.
     - `PipelineBundleJsonSerializerTest.kt` - Tests for `PipelineBundleJsonSerializer` — the envelope round-trip and every parse-time invariant (referential integrity, duplicate ids, limits, schema aggregation).
     - `PipelineBundleTestFixtures.kt` - Shared builders for pipeline-bundle tests: a structurally valid linear graph `INPUT → [PIPELINE(target)…] → OUTPUT` whose PIPELINE nodes name arbitrary targets, so referential-integrity, closure-walk and remap behaviour can be exercised without hand-writing JSON in every test.
+    - `PipelineJsonSerializerHostileDocumentTest.kt` - `PipelineJsonSerializer` against documents that are well-formed and hostile.
     - `PipelineJsonSerializerTest.kt` - Tests for `PipelineJsonSerializer`.
     - `PipelinePresetCatalogValidationTest.kt` - Catalogue-level validation for the bundled pipeline-preset JSON files that ship under `app/src/main/assets/presets/pipelines/`.
     - `PipelinePresetJsonSerializerTest.kt` - Tests for `PipelinePresetJsonSerializer`.
+    - `PipelineSamplePromptJsonTest.kt` - `PipelineSamplePromptJson` — the wire shape of a pipeline's sample prompts, including the ceilings that keep a file from filling the new-chat screen.
   - `preset/` - Integration tests over the bundled pipeline and prompt presets, the showcase compositions, skill report writing and nested-pipeline resume.
     - `NestedResumeIntegrationTest.kt` - End-to-end integration test for **resume across a sub-pipeline boundary** — the nested human-in-the-loop scenario the composition feature has to get right (the scenario behind the nested-HITL fix).
     - `PipelinePresetIntegrationTest.kt` - End-to-end integration test for the **pipeline-preset** path
@@ -271,6 +275,8 @@ Only Kotlin files appear inside the generated blocks.
   - `skillio/` - Tests for the skill export/import gateway.
     - `SkillJsonSerializerTest.kt` - Round-trip and edge-case contract for `SkillJsonSerializer`.
   - `text/` - Tests for the pure text helpers.
+    - `ImportedTextTest.kt` - `toDisplaySafe` — the one rule every importer uses to quote a file back into the app's own sentence: every kind of line break, control and bidi character out, whitespace collapsed, length clamped without splitting a character.
+    - `ImportMessageSafetyTest.kt` - Every way an importer can refuse a file, fed a value written to take over the error message.
     - `TitleTextTest.kt` - Unit tests for the shared single-line-title helpers.
   - `triggerio/` - Tests for the trigger export/import gateway.
     - `TriggerConditionCodecTest.kt` - Unit tests for `TriggerConditionCodec` — the single source of truth for the `TriggerCondition` ↔ JSON wire shape persisted in `triggers.conditionJson`.
@@ -387,6 +393,8 @@ Only Kotlin files appear inside the generated blocks.
   - `JournalExportRoundTripTest.kt` - The round-trip guarantee of the journal exports: **one document, one parse.**
   - `TriggerBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **automation-trigger → background run → notification → result-in-chat** arc — the privacy-sensitive surface automation triggers add on top of the persisted background-run infrastructure.
 - `presentation/` - Tests for the presentation layer.
+  - `common/` - Tests for the cross-feature presentation utilities.
+    - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
     - `ScheduledTaskNotifierImplTest.kt` - Robolectric coverage for `ScheduledTaskNotifierImpl` — the notifier that announces scheduled-run outcomes ("Task completed" / "Task failed") with a deep-link into the bound chat session.
@@ -463,6 +471,8 @@ Only Kotlin files appear inside the generated blocks.
           - `BundledPresetEditabilityTest.kt` - Proves every node of every bundled pipeline preset opens **cleanly** in the editor's `NodeConfigSheet` — decoded by `NodeConfigCodec` and accepted by `NodeConfigValidation` with zero field errors.
           - `CookbookRuntimeReachTest.kt` - Holds the published claim "this configuration field reaches the run" against what `NodeConfigCodec` actually does.
           - `NodeConfigCodecTest.kt` - Unit tests for `NodeConfigCodec`.
+          - `NodeConfigMutations.kt` - One configuration per node type with every field moved off its default, plus the view of a stored node the engine reads.
+          - `NodeConfigRuntimeAuthorityTest.kt` - Guards the rule "the configuration sheet shows the value the run uses" for every field of every node type.
           - `NodeTypeMapperTest.kt` - Unit tests for the editor `NodeType` mapping.
         - `core/` - Tests for auto-layout, edge geometry and undo/redo.
           - `AutoLayoutTest.kt` - Unit tests for the editor auto-layout.

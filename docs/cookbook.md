@@ -518,6 +518,14 @@ keyword list and a length threshold *before* it asks the model anything, and
 neither had a control at all — an imported pipeline could decide every branch on
 a keyword while the sheet said nothing about it.
 
+**The sheet shows the value that runs.** A pipeline file stores each node twice:
+the `config` block the run reads, and a `nodeConfig` copy the editor keeps its
+form in. A file written outside the app can make the two disagree, so every
+**Yes** field below is shown from `config`. A file cannot put one tool, prompt or
+confirmation switch on the sheet while the run uses another. The editor's copy
+still supplies what only it holds: router classes, the Retry branch, and the
+fields marked **Not a control**.
+
 This page is generated from the code that defines a node, so the count above is
 not a promise anyone has to keep by hand: a control that stops reaching the run
 grows its own row back.
