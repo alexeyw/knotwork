@@ -65,6 +65,18 @@ details.
   response, and a server's tool list is limited in size, tool count and
   description length. The **Largest web response** setting is now **Largest
   tool response** and covers both.
+- **Tool results no longer reach long-term memory.** Automatic memory
+  extraction read the whole recent chat, tool results included, so text a web
+  page or an MCP server returned could be saved as something you said. It now
+  reads only your messages and the assistant's replies. The transcripts the app
+  builds for the model also lay out a message of several lines so that it
+  cannot pass for a separate turn.
+- **An imported memory file can no longer pin its entries or date them in the
+  future.** A pinned entry is recalled whatever the question, a future-dated one
+  stays first among recent memories, and both escaped compaction. Imported
+  entries now arrive unpinned — the import dialog says how
+  many the file had pinned — and a date in the future becomes the date of the
+  import.
 
 ### Fixed
 

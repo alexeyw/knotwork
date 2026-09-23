@@ -25,8 +25,8 @@ import java.io.ByteArrayOutputStream
 
 /**
  * End-to-end round-trip coverage for the memory export/import feature
- * Export → wipe → import (Replace) → assert the store is
- * byte-for-byte identical. Exercises [ExportMemoryBaseUseCase] and
+ * Export → wipe → import (Replace) → assert the store is identical except for
+ * the pins, which a file never carries back (security audit 07/F3). Exercises [ExportMemoryBaseUseCase] and
  * [MemoryImportUseCase] against a real in-memory store so the serializer, the
  * strategy, and the id/provenance preservation all compose.
  */
@@ -41,7 +41,7 @@ class MemoryExportImportRoundTripTest {
     }
 
     @Test
-    fun `export then wipe then import Replace reproduces the original store`() = runTest {
+    fun `export then wipe then import Replace reproduces the original store except its pins`() = runTest {
         val store = InMemoryMemoryStore()
         val original = listOf(
             MemoryChunk(
@@ -82,7 +82,13 @@ class MemoryExportImportRoundTripTest {
         )
 
         assertEquals(2, result.imported)
-        assertEquals(original.sortedBy { it.id }, store.getAllMemories().sortedBy { it.id })
+        // Deliberately not a byte-for-byte round-trip: an import cannot pin, even
+        // the user's own backup. The dialog reports the dropped pin instead.
+        assertEquals(1, outcome.document.pinnedInFile)
+        assertEquals(
+            original.map { it.copy(isPinned = false) }.sortedBy { it.id },
+            store.getAllMemories().sortedBy { it.id },
+        )
     }
 
     @Test

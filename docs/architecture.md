@@ -249,7 +249,9 @@ Step-by-step notes:
    30-second per-session debounce — and only when
    `SettingsRepository.autoExtractEnabled` is set — it runs
    `MemoryExtractionUseCase`, which makes one local-model pass to distil
-   durable facts from the recent dialogue, embeds them with the active
+   durable facts from the recent dialogue — the user's and the assistant's
+   turns only; tool observations and other `SYSTEM` rows are never read —
+   embeds them with the active
    `EmbeddingProvider`, drops near-duplicates, and writes survivors to
    `memory_chunks` tagged with `MemorySource.ChatSession`. This is
    fire-and-forget background work and never blocks or fails the chat.
@@ -269,9 +271,13 @@ Import (`MemoryImportUseCase`) parses the file (`Success` /
 `SchemaMismatch` / `Failure`) and reconciles it under a user-chosen
 strategy: **Merge** (insert only ids not already present) or **Replace**
 (an atomic wipe-and-load, a no-op when the document carries no chunks),
-preserving each chunk's id, provenance, pin state and tags. The parser
+preserving each chunk's id, provenance and tags. The parser
 rejects chunks with a malformed embedding (empty array / non-finite
-value) so a corrupt vector never reaches the store.
+value) so a corrupt vector never reaches the store. Two fields that decide
+whether a chunk is retrieved at all are not taken from a file: every chunk is
+imported unpinned (the count of pins the file carried,
+`MemoryExportDocument.pinnedInFile`, becomes a notice in the import dialog),
+and a `timestamp` later than the parse is capped to it.
 
 When the document's embedding provider differs from the importing
 device's active **resolved** provider — `EmbeddingProviderResolver.resolve()`,
@@ -429,7 +435,8 @@ which subset is enabled:
 1. `--- Original Task ---` — the user message that started the current
    run.
 2. `--- Chat History ---` — numbered conversation history with
-   `USER`/`AGENT` roles.
+   `USER`/`AGENT`/`SYSTEM` roles (`SYSTEM` rows carry the tool observations
+   recorded earlier in the chat).
 3. `--- Long-Term Memory ---` — semantic-retrieval hits over past
    memory chunks. A vector search ranks chunks by cosine similarity;
    `MemoryReranker` then filters the pool by that similarity and re-scores
@@ -458,6 +465,15 @@ reasons:
 An enabled block with no data does not produce an empty header — the
 block is simply skipped. If no enabled block has content, the builder
 returns an empty string.
+
+The three list blocks (chat history, memory, tool results) render each
+entry through `ChatTranscript` (`domain/prompt/`): an entry's first line
+carries its number and label, and every further line of its content is
+indented. A line starting in the first column is therefore always a real
+entry — stored content, a tool result above all, cannot open a turn, an
+entry or a `--- Block ---` header of its own. The extraction and history
+compression transcripts use the same rule. *Original Task* and
+*Previous Node Output* are single payloads and are passed as written.
 
 ### 3.3. `NodeContextConfig` flags
 

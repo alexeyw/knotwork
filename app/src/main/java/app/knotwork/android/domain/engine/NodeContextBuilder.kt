@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.ToolInvocationResult
+import app.knotwork.android.domain.prompt.ChatTranscript
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -107,16 +108,24 @@ class NodeContextBuilder @Inject constructor() {
      * would otherwise be replayed into the prompt for the rest of that chat's
      * life. Stored messages are deliberately left as they were written; nothing
      * is rewritten behind the user's back for a display concern.
+     *
+     * Every list the builder renders (history, memory, tool results) goes through
+     * [ChatTranscript]: continuation lines are indented, so stored content — tool
+     * output above all — cannot open a turn, an entry or a `--- Block ---` header
+     * of its own.
      */
     private fun formatChatHistory(messages: List<ChatMessage>): String = messages.mapIndexed { index, message ->
-        "${index + 1}. ${message.role.name}: ${ReasoningBlockSplitter.split(message.content).answer}"
+        ChatTranscript.turn(
+            label = "${index + 1}. ${message.role.name}",
+            content = ReasoningBlockSplitter.split(message.content).answer,
+        )
     }.joinToString("\n")
 
     private fun formatMemory(entries: List<MemoryChunk>): String =
-        entries.mapIndexed { index, chunk -> "${index + 1}. ${chunk.text}" }.joinToString("\n")
+        entries.mapIndexed { index, chunk -> ChatTranscript.entry("${index + 1}. ", chunk.text) }.joinToString("\n")
 
     private fun formatToolResults(results: List<ToolInvocationResult>): String = results.mapIndexed { index, result ->
-        "${index + 1}. ${result.toolName}: ${result.output}"
+        ChatTranscript.turn(label = "${index + 1}. ${result.toolName}", content = result.output)
     }.joinToString("\n")
 
     private companion object {

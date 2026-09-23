@@ -120,6 +120,7 @@
     <string name="settings_memory_import_replace">Replace all</string>
     <string name="settings_memory_import_cancel">Cancel</string>
     <string name="settings_memory_import_schema_warning">This file was written by a different app version. Some data may not import cleanly.</string>
+    <string name="settings_memory_import_pins_warning" tools:ignore="PluralsCandidate">%1$d of these chunks were pinned in the file. Pins are not imported — pin the ones you want again on the Memory screen.</string>
     <string name="settings_memory_import_provider_warning">Memory was exported with embedding provider \"%1$s\", which differs from the one you\'re using. Embeddings will be re-computed in the background after import.</string>
     <string name="settings_memory_import_success" tools:ignore="PluralsCandidate">Imported %1$d chunks, skipped %2$d duplicates.</string>
     <string name="settings_memory_import_reembed_note">Embeddings are being re-computed in the background.</string>

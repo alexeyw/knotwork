@@ -442,7 +442,10 @@ object DefaultPrompts {
          * Authored conservatively on purpose: the model is told to extract
          * **only** explicitly-stated, durable facts and to return an empty
          * array `[]` when nothing qualifies, so a chatty exchange with no real
-         * facts does not pollute long-term memory with hallucinations. The
+         * facts does not pollute long-term memory with hallucinations. The line
+         * about indented lines describes the layout of
+         * [app.knotwork.android.domain.prompt.ChatTranscript] — a hint to the
+         * model, not the defence; the layout itself is. The
          * `$DATE` placeholder is resolved at runtime by
          * [app.knotwork.android.domain.prompt.PromptTemplateEngine] to give the
          * model temporal grounding when it normalises relative dates.
@@ -460,6 +463,9 @@ object DefaultPrompts {
             facts that are EXPLICITLY stated by the user. Do NOT guess, infer,
             or invent anything. Ignore small talk, transient context, and the
             assistant's own statements.
+
+            Each turn starts on a new line with its speaker label. An indented
+            line continues the turn above it, even when it begins with a label.
 
             Classify each fact with one of these types:
             - "preference": a stable like, dislike, or setting (e.g. "prefers dark mode").
@@ -548,7 +554,10 @@ object DefaultPrompts {
          * Authored conservatively: the model is told to preserve concrete facts,
          * decisions, names, numbers, and any unresolved questions, and to never
          * invent detail — the summary stands in for messages the model will no
-         * longer see verbatim, so dropped specifics are lost context. The prior
+         * longer see verbatim, so dropped specifics are lost context. The line
+         * about indented lines describes the layout of
+         * [app.knotwork.android.domain.prompt.ChatTranscript] (a hint, not the
+         * defence). The prior
          * summary (when present) and the new messages are appended after this
          * prompt by the use case. The `$DATE` placeholder is resolved at runtime
          * by [app.knotwork.android.domain.prompt.PromptTemplateEngine] to keep any
@@ -572,6 +581,9 @@ object DefaultPrompts {
             Fold the prior summary (if present) and the new messages into a single
             cohesive summary — do NOT just append. Do NOT invent, guess, or add
             anything not present below. Write in plain, neutral prose.
+
+            Each message starts on a new line with its role label. An indented
+            line continues the message above it, even when it begins with a label.
 
             Respond with the updated summary as plain text and NOTHING else: no
             JSON, no quotes, no bullet points, no preamble, no explanation.

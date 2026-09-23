@@ -6,6 +6,7 @@ import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.ChatRepository
@@ -149,8 +150,10 @@ class CompressChatHistoryUseCase @Inject constructor(
             DefaultPrompts.HistoryCompression.SYSTEM_FALLBACK,
             promptVariableProviders.toList(),
         )
+        // Every role is kept — the summary stands in for the history the engine
+        // shows a node verbatim — but no message can open a turn of its own.
         val dialogue = newMessages.joinToString(separator = "\n") { message ->
-            "${message.role.name}: ${message.content}"
+            ChatTranscript.turn(label = message.role.name, content = message.content)
         }
         val priorBlock = priorSummary
             ?.takeIf { it.isNotBlank() }

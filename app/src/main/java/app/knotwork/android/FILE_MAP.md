@@ -405,6 +405,7 @@ Only Kotlin files appear inside the generated blocks.
     - `PipelinePresetJsonSerializer.kt` - Two-way mapper between `PipelinePreset` and the pipeline-preset JSON format used by `assets/presets/pipelines/*.json` and the browser editor's `*.preset.json` export. Strict superset of the pipeline JSON; delegates the graph half to `PipelineJsonSerializer`.
     - `PipelineSamplePromptJson.kt` - Single source of truth for the `{title, toolsHint?}` JSON wire shape of a pipeline's `samplePrompts`; both `PipelineJsonSerializer` (export/import) and the Room `Converters` (the `pipelines.samplePrompts` column) delegate here so the two encodings cannot drift. Total decode (blank/malformed → empty list).
   - `prompt/` - Prompt templating layer.
+    - `ChatTranscript.kt` - Renders stored content into the line-oriented lists the app builds for a model — a conversation transcript, the numbered memory and tool-result lists — so that the content cannot open a line of its own.
     - `PromptSegment.kt` - Sealed interface modelling rendered prompt chunks (literal/resolved/unknown) for previews.
     - `PromptTemplateEngine.kt` - Renders templates by substituting `$KEY` placeholders.
     - `PromptVariableProvider.kt` - Contract for a single substitutable prompt variable.

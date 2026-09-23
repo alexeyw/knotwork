@@ -459,7 +459,38 @@ oversight — and it works as follows:
   contain text that reads as instructions to the model. That content reaches
   planning and routing nodes (`DECOMPOSITION`, `INTENT_ROUTER`), so a crafted
   tool result or file can steer which branch a pipeline takes and
-  **influence the arguments of later tool calls** in the same run.
+  **influence the arguments of later tool calls** in the same run. It also
+  outlives the run, within the chat it arrived in: tool results are part of
+  that chat's history, which later turns replay to their nodes, and of the
+  summary *Compress long chat history* folds that history into.
+- Three more sources reach the model the same way without being tool results,
+  and are untrusted in the same sense: text **shared into the app from another
+  app**, which becomes the run's prompt (the *Original Task*) and is recorded
+  as the user's own message; an MCP server's **tool catalogue** — names and
+  descriptions, rendered into `$TOOLS` on every run whether or not the server
+  is called; and an **imported memory file**, whose text reaches every node
+  that reads long-term memory. An import never pins a chunk and never dates
+  one later than the import itself — a pinned chunk skips the relevance
+  threshold and compaction, and a future date would keep a chunk first in
+  `$MEMORY_SUMMARY` — and the import dialog says how many pins the file
+  carried.
+- **Tool output does not reach long-term memory through auto-extract.** The
+  extraction pass reads the user's messages and the assistant's replies only —
+  never a tool result, a refusal note or a run-outcome line. The transcripts
+  and lists the app assembles for a model — the extraction and history
+  compression transcripts, and a node's chat history, memory and tool-result
+  lists — indent each continuation line of an entry, so an entry cannot open a
+  line of its own: a tool result there cannot write a line that reads as a
+  user turn, another entry, or a context-block header. The payload a node acts
+  on (*Previous Node Output*, often a raw tool result) and the *Original Task*
+  are passed as written.
+  What remains: the assistant's replies are read, and a reply can repeat what a
+  tool returned, so an injection that gets the model to restate it in its
+  answer can still reach the extractor, whose prompt tells the model to ignore
+  the assistant's own statements. Two other paths put untrusted text into
+  memory by design: `delegate_task` stores the cloud model's answer (it is
+  `SENSITIVE`, so it asks under the default policy), and shared text is read
+  as the user's message.
 - **AppFunctions exposed by other installed apps are not on that list**, and
   the omission is deliberate rather than an oversight. Calling another app's
   AppFunction needs `EXECUTE_APP_FUNCTIONS`, which Android 16 grants to

@@ -10,6 +10,7 @@ import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.Role
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.MemoryRepository
@@ -32,7 +33,8 @@ import javax.inject.Inject
  * the novel ones into long-term memory.
  *
  * Lifecycle of one extraction pass:
- *  1. Take the most recent slice of the dialogue (see [RECENT_MESSAGE_WINDOW]).
+ *  1. Keep only the conversational turns ([EXTRACTED_ROLES]) and take the most
+ *     recent slice of them (see [RECENT_MESSAGE_WINDOW]).
  *  2. Render the conservative extraction system prompt
  *     ([DefaultPrompts.MemoryExtraction.SYSTEM_FALLBACK]) — resolving `$DATE`
  *     for temporal grounding — and run it once through the local LiteRT model.
@@ -44,6 +46,18 @@ import javax.inject.Inject
  *     pool — an old fact must stay dedup-visible no matter its age) or a fact
  *     accepted earlier in the same pass.
  *  5. Save the survivors tagged with [MemorySource.ChatSession].
+ *
+ * **Which rows are read.** Only [Role.USER] and [Role.AGENT] — an allowlist, so
+ * a role added later is excluded until someone decides otherwise. [Role.SYSTEM]
+ * rows are never mined: they are tool observations, refusal notes and run
+ * outcomes, none of which is a fact the user stated, and a tool observation is
+ * untrusted content (a web page, an MCP server, a file). The filter runs before
+ * the window, so a tool-heavy run cannot crowd the user's own turns out of it.
+ * Agent turns stay in as context for the user's; the prompt tells the model to
+ * ignore the assistant's own statements. Whether agent turns should be read at
+ * all is an open design question (issue #426), not settled here. Each turn is
+ * rendered through [ChatTranscript], so no message body can open a turn of its
+ * own — the prompt's "only what the user stated" is read against real turns.
  *
  * The use case is intentionally free of the auto-extract feature toggle: the
  * trigger that calls it owns that gate, leaving this use case reusable by the
@@ -84,15 +98,16 @@ class MemoryExtractionUseCase @Inject constructor(
      *
      * @param sessionId Id of the chat session the [messages] belong to; recorded
      *   as [MemorySource.ChatSession] on every saved chunk.
-     * @param messages The conversation to mine. Only the trailing
-     *   [RECENT_MESSAGE_WINDOW] entries are considered; passes with fewer than
-     *   [MIN_MESSAGES_TO_EXTRACT] messages are skipped (too little signal).
+     * @param messages The conversation to mine. Only its [EXTRACTED_ROLES] rows
+     *   are read, and of those only the trailing [RECENT_MESSAGE_WINDOW]; passes
+     *   with fewer than [MIN_MESSAGES_TO_EXTRACT] such rows are skipped (too
+     *   little signal).
      * @return A summary of how many facts were parsed, saved, and skipped as
      *   duplicates.
      */
     suspend operator fun invoke(sessionId: String, messages: List<ChatMessage>): MemoryExtractionOutcome =
         withContext(Dispatchers.Default) {
-            val recent = messages.takeLast(RECENT_MESSAGE_WINDOW)
+            val recent = messages.filter { it.role in EXTRACTED_ROLES }.takeLast(RECENT_MESSAGE_WINDOW)
             if (recent.size < MIN_MESSAGES_TO_EXTRACT) {
                 return@withContext MemoryExtractionOutcome.EMPTY
             }
@@ -138,7 +153,7 @@ class MemoryExtractionUseCase @Inject constructor(
             promptVariableProviders.toList(),
         )
         val dialogue = messages.joinToString(separator = "\n") { message ->
-            "${message.role.label()}: ${message.content}"
+            ChatTranscript.turn(label = message.role.label(), content = message.content)
         }
         val fullPrompt = "$systemPrompt\n\nCONVERSATION:\n$dialogue\n\nJSON OUTPUT: "
         val maxRepairs = settingsRepository.structuredOutputMaxRepairs.first()
@@ -291,11 +306,18 @@ class MemoryExtractionUseCase @Inject constructor(
     private companion object {
         const val TAG = "MemoryExtraction"
 
-        /** Maximum number of trailing messages fed to the extractor. */
+        /** Maximum number of trailing conversational turns fed to the extractor. */
         const val RECENT_MESSAGE_WINDOW = 20
 
-        /** Minimum messages required before a pass is worthwhile. */
+        /** Minimum conversational turns required before a pass is worthwhile. */
         const val MIN_MESSAGES_TO_EXTRACT = 2
+
+        /**
+         * The roles whose rows reach the extraction prompt — an allowlist, so a
+         * role added later stays out until it is decided on. [Role.SYSTEM] rows
+         * (tool observations, refusal notes, run outcomes) never do.
+         */
+        val EXTRACTED_ROLES = setOf(Role.USER, Role.AGENT)
 
         /**
          * Synthetic node key under which this off-graph consumer records its
