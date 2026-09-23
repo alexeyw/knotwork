@@ -9,7 +9,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -514,81 +513,40 @@ fun PipelineLibraryScreen(
             onDismissRequest = viewModel::cancelPendingImport,
         )
     }
-    uiState.pendingCollision?.let { graph ->
-        AlertDialog(
-            onDismissRequest = viewModel::cancelCollision,
-            title = { Text(stringResource(R.string.orchestrator_library_import_collision_title)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.orchestrator_library_import_collision_single_body,
-                        graph.name.ifBlank { "untitled" },
-                    ),
-                )
-            },
-            confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1)) {
-                    TextButton(onClick = { viewModel.resolveCollision(ImportCollisionResolution.REPLACE) }) {
-                        Text(stringResource(R.string.orchestrator_library_import_collision_replace))
-                    }
-                    TextButton(onClick = { viewModel.resolveCollision(ImportCollisionResolution.IMPORT_AS_COPY) }) {
-                        Text(stringResource(R.string.orchestrator_library_import_collision_copy))
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::cancelCollision) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
+    uiState.pendingCollision?.let { collision ->
+        PipelineCollisionDialog(
+            collision = collision,
+            onReplace = { viewModel.resolveCollision(ImportCollisionResolution.REPLACE) },
+            onImportAsCopy = { viewModel.resolveCollision(ImportCollisionResolution.IMPORT_AS_COPY) },
+            onDismiss = viewModel::cancelCollision,
         )
     }
     uiState.pendingBundleImport?.let { pending ->
-        val hasCollision = pending.collidingIds.isNotEmpty()
-        AlertDialog(
-            onDismissRequest = viewModel::cancelBundleImport,
-            title = { Text(stringResource(R.string.orchestrator_library_import_bundle_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2)) {
-                    if (hasCollision) {
-                        Text(
-                            pluralStringResource(
-                                R.plurals.orchestrator_library_import_bundle_collision_body,
-                                pending.collidingIds.size,
-                                pending.collidingIds.size,
-                                pending.pipelines.size,
-                            ),
-                        )
-                    }
-                    if (pending.schemaMismatches.isNotEmpty()) {
-                        Text(stringResource(R.string.orchestrator_library_import_bundle_schema_body))
-                    }
-                }
-            },
-            confirmButton = {
-                if (hasCollision) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1)) {
-                        TextButton(onClick = { viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE) }) {
-                            Text(stringResource(R.string.orchestrator_library_import_bundle_replace))
-                        }
-                        TextButton(
-                            onClick = { viewModel.resolveBundleImport(ImportCollisionResolution.IMPORT_AS_COPY) },
-                        ) {
-                            Text(stringResource(R.string.orchestrator_library_import_bundle_copies))
-                        }
-                    }
-                } else {
+        if (pending.collisions.isNotEmpty()) {
+            BundleCollisionDialog(
+                pending = pending,
+                onReplace = { viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE) },
+                onImportAsCopies = { viewModel.resolveBundleImport(ImportCollisionResolution.IMPORT_AS_COPY) },
+                onDismiss = viewModel::cancelBundleImport,
+            )
+        } else {
+            // Nothing collides; only a schema-version note needs the user's nod.
+            AlertDialog(
+                onDismissRequest = viewModel::cancelBundleImport,
+                title = { Text(stringResource(R.string.orchestrator_library_import_bundle_title)) },
+                text = { Text(stringResource(R.string.orchestrator_library_import_bundle_schema_body)) },
+                confirmButton = {
                     TextButton(onClick = { viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE) }) {
                         Text(stringResource(R.string.orchestrator_library_import_anyway))
                     }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::cancelBundleImport) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
+                },
+                dismissButton = {
+                    TextButton(onClick = viewModel::cancelBundleImport) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                },
+            )
+        }
     }
 }
 

@@ -22,6 +22,7 @@ Only Kotlin files appear inside the generated blocks.
   - `JournalExportNoNetworkKonsistTest.kt` - Konsist guard on the journal exports: **the journal leaves the device only in the user's own hands.**
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
+  - `PipelineBindingCensusTest.kt` - Census of every place the domain stores a pipeline id, each with a decision: is it a binding the Replace confirmation must list, or not, and why.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
   - `RepositoryPlacementKonsistTest.kt` - Konsist guard enforcing the repository placement convention from the api-conventions rule: the abstraction (`<Noun>Repository` interface) is owned by the `domain` layer, and its implementation (`<Noun>RepositoryImpl`) lives in the `data` layer.
@@ -310,6 +311,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ExportChatUseCaseTest.kt` - Unit tests for `ExportChatUseCase`.
     - `ExportMemoryBaseUseCaseTest.kt` - Unit tests for `ExportMemoryBaseUseCase`.
     - `ExportPipelineBundleUseCaseTest.kt` - Tests for `ExportPipelineBundleUseCase` — the dependency-closure walk with diamond/cycle collapse, the library-then-preset resolution order, and the fail-fast guards.
+    - `FindPipelineBindingsUseCaseTest.kt` - `FindPipelineBindingsUseCase` — every id-keyed binding, one source at a time.
     - `FindPipelinesUsingSkillUseCaseTest.kt` - The skill-usage scan is wired now but dormant until the SKILL node ships (no `PipelineGraph` node can reference a skill yet), so it must return empty for every skill regardless of the saved pipelines.
     - `FireTriggerUseCaseTest.kt` - Unit tests for `FireTriggerUseCase` — the worker-side orchestration that loads a trigger, defers the decision to `EvaluateTriggerFiringUseCase`, acts (resolve the bound session, enqueue, mark fired, disarm event triggers, re-arm, or auto-disable), and — the focus of the journal write-point tests — records exactly one evaluation verdict per evaluated trigger.
     - `GetContextWindowUseCaseTest.kt` - Tests for GetContextWindowUseCase.
@@ -460,6 +462,7 @@ Only Kotlin files appear inside the generated blocks.
       - `components/` - Tests for the pipeline-library components.
         - `PromptPresetPickerDialogTest.kt` - Pure-logic tests for the filter helper backing `PromptPresetPickerDialog`.
       - `OrchestratorViewModelTest.kt` - Tests for OrchestratorViewModel.
+      - `PipelineBindingsTextTest.kt` - The Replace confirmation's lines for what is bound to a pipeline.
       - `presets/` - Tests for the preset gallery and its graph-flow preview.
         - `GraphFlowPreviewTest.kt` - Unit tests for the preset graph-flow preview.
         - `PipelinePresetsViewModelTest.kt` - Unit tests for `PipelinePresetsViewModel`.

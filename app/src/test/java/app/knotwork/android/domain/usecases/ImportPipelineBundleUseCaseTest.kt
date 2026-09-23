@@ -4,6 +4,7 @@ import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.domain.models.PipelineBindings
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
@@ -33,6 +34,7 @@ class ImportPipelineBundleUseCaseTest {
 
     private lateinit var pipelineRepository: PipelineRepository
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var findPipelineBindings: FindPipelineBindingsUseCase
     private lateinit var useCase: ImportPipelineBundleUseCase
 
     @Before
@@ -45,9 +47,13 @@ class ImportPipelineBundleUseCaseTest {
         coEvery { pipelineRepository.getPipelineById(any()) } returns null
         every { pipelineRepository.observePipelineNames() } returns flowOf(emptyMap())
         coEvery { pipelineRepository.savePipelines(any()) } returns Unit
+        findPipelineBindings = mockk()
+        coEvery { findPipelineBindings(any()) } answers
+            { firstArg<Collection<String>>().associateWith { PipelineBindings() } }
         useCase = ImportPipelineBundleUseCase(
             pipelineRepository,
             PipelineCompositionValidator(pipelineRepository, settingsRepository),
+            findPipelineBindings,
         )
     }
 
@@ -112,8 +118,22 @@ class ImportPipelineBundleUseCaseTest {
         val prepared = useCase.prepare(json)
 
         assertTrue(prepared is PipelineBundlePrepareResult.Ready)
-        assertEquals(listOf("root"), (prepared as PipelineBundlePrepareResult.Ready).collidingIds)
+        assertEquals(listOf("root"), (prepared as PipelineBundlePrepareResult.Ready).collisions.map { it.incoming.id })
         coVerify(exactly = 0) { pipelineRepository.savePipelines(any()) }
+    }
+
+    @Test
+    fun `given a collision when prepare then it names the library pipeline and what is bound to it`() = runTest {
+        every { pipelineRepository.observePipelineNames() } returns flowOf(mapOf("sub" to "Act on the task"))
+        coEvery { findPipelineBindings(listOf("sub")) } returns
+            mapOf("sub" to PipelineBindings(callerNames = listOf("Full agent")))
+        val json = bundleOf(linearGraph("root", targets = listOf("sub")), linearGraph("sub"))
+
+        val collision = (useCase.prepare(json) as PipelineBundlePrepareResult.Ready).collisions.single()
+
+        assertEquals("sub", collision.incoming.id)
+        assertEquals("Act on the task", collision.existingName)
+        assertEquals(listOf("Full agent"), collision.bindings.callerNames)
     }
 
     @Test

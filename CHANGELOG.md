@@ -77,6 +77,14 @@ details.
   entries now arrive unpinned — the import dialog says how
   many the file had pinned — and a date in the future becomes the date of the
   import.
+- **Replacing a pipeline on import says what it replaces.** When an imported
+  file had the same identity as a pipeline in the library, the confirmation
+  named the file's own name — so it could name a pipeline the library did not
+  have — and did not say that everything bound to that pipeline would run the
+  file from then on. It now names the pipeline already in the library and lists
+  what runs it: the default pipeline, the share target, the tile, requests from
+  other apps, automation triggers, chats and calling pipelines. **Import as
+  copy** is now the suggested choice. Bundles get the same list.
 - **A node's settings sheet shows the settings that run.** A pipeline file keeps
   each node's settings twice, one copy for the run and one for the editor, and
   the sheet showed the editor's copy. An imported file could fill it with a
@@ -115,6 +123,11 @@ details.
   fallback class, a planner's sub-task limit and a clarification step's quick
   replies were kept only in the editor's own copy of the node, not in the part of
   the file the app runs. They now travel in both.
+- **Saving right after an import no longer reuses the file's node ids.** An
+  import stores the pipeline under fresh node ids, but the editor kept the
+  file's ones, so the next Save wrote them back — and two imported files that
+  numbered their nodes the same way could take each other's nodes. The editor
+  now continues from the pipeline as stored.
 - **Two nodes can no longer share an id in a pipeline file.** The import
   accepted them, checked the graph as if they were one node, and kept only one
   when saving. Such a file is now refused with the id named.

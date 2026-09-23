@@ -750,11 +750,15 @@ constructor(
                         val saveErr = invocation.saveResult?.let { res ->
                             res.exceptionOrNull()?.let(::messageForSaveError)
                         }
-                        val saved = collision == null && saveErr == null
+                        // The graph as written, not as parsed: the importer freshens
+                        // node and connection ids, and an editor holding the file's
+                        // ids would write them back on its next Save.
+                        val savedGraph = invocation.saveResult?.getOrNull()
+                        val saved = collision == null && savedGraph != null
                         state.copy(
-                            currentPipeline = if (saved) outcome.graph else state.currentPipeline,
+                            currentPipeline = savedGraph ?: state.currentPipeline,
                             // An import that reached storage IS the saved state.
-                            persistedPipeline = if (saved) outcome.graph else state.persistedPipeline,
+                            persistedPipeline = savedGraph ?: state.persistedPipeline,
                             isLoading = false,
                             pendingImport = null,
                             pendingCollision = collision,
@@ -807,16 +811,19 @@ constructor(
      * @param resolution The user's collision choice.
      */
     fun resolveCollision(resolution: ImportCollisionResolution) {
-        val graph = _uiState.value.pendingCollision ?: return
+        val collision = _uiState.value.pendingCollision ?: return
         _uiState.update { it.copy(isLoading = true, pendingCollision = null) }
         viewModelScope.launch {
-            val result = importPipelineUseCase.persistWithResolution(graph, resolution)
+            val result = importPipelineUseCase.persistWithResolution(collision.incoming, resolution)
             _uiState.update { state ->
                 val saveErr = result.exceptionOrNull()?.let(::messageForSaveError)
-                val replaced = saveErr == null && resolution == ImportCollisionResolution.REPLACE
+                // Only Replace opens the result: a copy is a new pipeline beside
+                // the one the user was looking at. Either way the editor takes
+                // the graph as written (freshened ids), never the parsed one.
+                val replaced = result.getOrNull()?.takeIf { resolution == ImportCollisionResolution.REPLACE }
                 state.copy(
-                    currentPipeline = if (replaced) graph else state.currentPipeline,
-                    persistedPipeline = if (replaced) graph else state.persistedPipeline,
+                    currentPipeline = replaced ?: state.currentPipeline,
+                    persistedPipeline = replaced ?: state.persistedPipeline,
                     isLoading = false,
                     errorMessage = saveErr,
                 )
@@ -853,14 +860,14 @@ constructor(
                     }
 
                 is PipelineBundlePrepareResult.Ready -> {
-                    val needsPrompt = prepared.collidingIds.isNotEmpty() || prepared.schemaMismatches.isNotEmpty()
+                    val needsPrompt = prepared.collisions.isNotEmpty() || prepared.schemaMismatches.isNotEmpty()
                     if (needsPrompt) {
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 pendingBundleImport = PendingBundleImport(
                                     pipelines = prepared.pipelines,
-                                    collidingIds = prepared.collidingIds,
+                                    collisions = prepared.collisions,
                                     schemaMismatches = prepared.schemaMismatches,
                                 ),
                             )
@@ -989,14 +996,15 @@ constructor(
                 // The confirmed graph collides with an existing pipeline: defer
                 // to the collision dialog instead of silently overwriting.
                 is ConfirmedImport.Collision ->
-                    _uiState.update { it.copy(isLoading = false, pendingCollision = confirmed.graph) }
+                    _uiState.update { it.copy(isLoading = false, pendingCollision = confirmed.collision) }
 
                 is ConfirmedImport.Saved ->
                     _uiState.update { state ->
                         val saveErr = confirmed.result.exceptionOrNull()?.let(::messageForSaveError)
+                        val savedGraph = confirmed.result.getOrNull()
                         state.copy(
-                            currentPipeline = if (saveErr == null) pending.graph else state.currentPipeline,
-                            persistedPipeline = if (saveErr == null) pending.graph else state.persistedPipeline,
+                            currentPipeline = savedGraph ?: state.currentPipeline,
+                            persistedPipeline = savedGraph ?: state.persistedPipeline,
                             isLoading = false,
                             errorMessage = saveErr,
                         )
