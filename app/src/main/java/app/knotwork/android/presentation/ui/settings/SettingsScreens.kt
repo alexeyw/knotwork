@@ -583,8 +583,8 @@ private fun ApproveToolCallsOption.toPolicy(): ToolApprovalPolicy = when (this) 
  * `:app` binding of the catalog's memory-import dialog: resolves the copy and
  * decides which mismatch warnings apply to the parsed document.
  *
- * Which warnings apply is a judgement about the import, so it is made here; the
- * catalog receives finished sentences.
+ * Which warnings apply is decided by [PendingMemoryImport.warnings]; this binding
+ * turns each into its sentence, and the catalog receives finished sentences.
  *
  * @param pending The parsed document awaiting a strategy.
  * @param onMerge Keep existing entries, skip duplicate ids.
@@ -602,14 +602,16 @@ private fun MemoryImportDialog(
         ui = MemoryImportDialogUi(
             title = stringResource(R.string.settings_memory_import_dialog_title),
             body = stringResource(R.string.settings_memory_import_dialog_body, pending.document.chunks.size),
-            warnings = buildList {
-                if (pending.schemaMismatch) add(stringResource(R.string.settings_memory_import_schema_warning))
-                if (pending.providerMismatch) {
-                    add(
-                        stringResource(
-                            R.string.settings_memory_import_provider_warning,
-                            pending.document.embeddingProviderId,
-                        ),
+            warnings = pending.warnings.map { warning ->
+                when (warning) {
+                    MemoryImportWarning.SchemaMismatch -> stringResource(R.string.settings_memory_import_schema_warning)
+                    MemoryImportWarning.ProviderMismatch -> stringResource(
+                        R.string.settings_memory_import_provider_warning,
+                        pending.document.embeddingProviderId,
+                    )
+                    MemoryImportWarning.PinsNotImported -> stringResource(
+                        R.string.settings_memory_import_pins_warning,
+                        pending.document.pinnedInFile,
                     )
                 }
             },

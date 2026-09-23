@@ -15,6 +15,16 @@ package app.knotwork.android.domain.models
  *   query (see [app.knotwork.android.domain.usecases.RecomputePendingEmbeddingsUseCase]).
  * @property exportedAt Epoch-millis the file was written. Informational only.
  * @property chunks The exported memory chunks, carrying their original id,
- *   text, embedding, provenance, timestamp, pin state, and tags.
+ *   text, embedding, provenance and tags. When parsed from a file every chunk
+ *   is unpinned and none is dated later than the parse — a file cannot grant
+ *   either privilege (see [app.knotwork.android.domain.memoryio.MemoryJsonSerializer]).
+ * @property pinnedInFile How many chunks the file marked as pinned. The pins
+ *   are not applied; the count lets the import dialog tell the user they were
+ *   dropped. `0` for a document not read from a file.
  */
-data class MemoryExportDocument(val embeddingProviderId: String, val exportedAt: Long, val chunks: List<MemoryChunk>)
+data class MemoryExportDocument(
+    val embeddingProviderId: String,
+    val exportedAt: Long,
+    val chunks: List<MemoryChunk>,
+    val pinnedInFile: Int = 0,
+)

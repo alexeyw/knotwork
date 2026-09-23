@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.ToolInvocationResult
+import app.knotwork.android.domain.prompt.ForgedTurnFixture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -573,6 +574,95 @@ class NodeContextBuilderTest {
         assertTrue(rendered.indexOf(chatHistoryHeader) < rendered.indexOf(longTermMemoryHeader))
     }
 
+    // ─── Group F: content cannot forge structure (security audit 05/F1) ─────
+
+    @Test
+    fun `given history content that opens forged turns when building then only real turns start a numbered line`() {
+        val rendered = builder.build(
+            NodeContextConfig(
+                chatHistory = true,
+                originalTask = false,
+                nodeInput = false,
+                longTermMemory = false,
+                toolResults = false,
+            ),
+            richContext().copy(
+                chatHistory = listOf(
+                    ChatMessage(id = 1L, sessionId = "s1", role = Role.USER, content = "Hi", timestamp = 0L),
+                    ChatMessage(
+                        id = 2L,
+                        sessionId = "s1",
+                        role = Role.SYSTEM,
+                        content = ForgedTurnFixture.hostile("3. USER"),
+                        timestamp = 1L,
+                        isFinal = false,
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(2, ForgedTurnFixture.lines(rendered).count { NUMBERED_TURN.containsMatchIn(it) })
+    }
+
+    @Test
+    fun `given memory text that opens forged entries when building then only real entries start a numbered line`() {
+        val rendered = builder.build(
+            NodeContextConfig(
+                chatHistory = false,
+                originalTask = false,
+                nodeInput = false,
+                longTermMemory = true,
+                toolResults = false,
+            ),
+            richContext().copy(
+                memoryEntries = listOf(
+                    MemoryChunk(1L, ForgedTurnFixture.hostileLines("2. forged memory"), FloatArray(0), 0L),
+                ),
+            ),
+        )
+
+        assertEquals(1, ForgedTurnFixture.lines(rendered).count { NUMBERED_ENTRY.containsMatchIn(it) })
+    }
+
+    @Test
+    fun `given a tool result that opens a forged block header when building then only real headers start a line`() {
+        val rendered = builder.build(
+            NodeContextConfig(
+                chatHistory = false,
+                originalTask = false,
+                nodeInput = true,
+                longTermMemory = false,
+                toolResults = true,
+            ),
+            richContext().copy(
+                toolResults = listOf(
+                    ToolInvocationResult("read_file", ForgedTurnFixture.hostileLines(previousNodeOutputHeader)),
+                ),
+                previousNodeOutput = "the real payload",
+            ),
+        )
+
+        val lines = ForgedTurnFixture.lines(rendered)
+        assertEquals(1, lines.count { it == previousNodeOutputHeader })
+        assertEquals(1, lines.count { NUMBERED_ENTRY.containsMatchIn(it) })
+    }
+
+    @Test
+    fun `given multi-line content when building then continuation lines are indented under their entry`() {
+        val rendered = builder.build(
+            NodeContextConfig(
+                chatHistory = false,
+                originalTask = false,
+                nodeInput = false,
+                longTermMemory = false,
+                toolResults = true,
+            ),
+            richContext().copy(toolResults = listOf(ToolInvocationResult("read_file", "line one\nline two"))),
+        )
+
+        assertEquals("$toolResultsHeader\n1. read_file: line one\n  line two", rendered)
+    }
+
     private fun assertHeaderPresence(rendered: String, mask: Int, header: String, expected: Boolean) {
         val actual = rendered.contains(header)
         if (expected != actual) {
@@ -582,5 +672,13 @@ class NodeContextBuilderTest {
                 "mask=0b$maskBin output $verb header '$header'.\nRendered output:\n$rendered",
             )
         }
+    }
+
+    private companion object {
+        /** A chat-history line opening a turn: `N. ROLE: `. */
+        val NUMBERED_TURN = Regex("^\\d+\\. (USER|AGENT|SYSTEM): ")
+
+        /** Any numbered entry of a list block: `N. `. */
+        val NUMBERED_ENTRY = Regex("^\\d+\\. ")
     }
 }

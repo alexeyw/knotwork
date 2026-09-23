@@ -4,6 +4,7 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemorySource
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,7 +32,7 @@ class MemoryJsonSerializerTest {
     )
 
     @Test
-    fun `serialize then parse round-trips every field including provenance and tags`() {
+    fun `serialize then parse round-trips every field a file may carry, pins reported but not applied`() {
         val chunks = listOf(
             chunk(1, "alpha", floatArrayOf(0.1f, 0.2f), MemorySource.Manual, listOf("preference"), isPinned = true),
             chunk(2, "beta", floatArrayOf(0.3f), MemorySource.ChatSession("sess-7")),
@@ -46,7 +47,10 @@ class MemoryJsonSerializerTest {
         val document = (outcome as MemoryImportOutcome.Success).document
         assertEquals("use", document.embeddingProviderId)
         assertEquals(99L, document.exportedAt)
-        assertEquals(chunks, document.chunks)
+        // Changed on purpose (security audit 07/F3): this test once asserted the
+        // pin came back, which is exactly what let a file pin its own text.
+        assertEquals(chunks.map { it.copy(isPinned = false) }, document.chunks)
+        assertEquals(1, document.pinnedInFile)
     }
 
     @Test
@@ -195,5 +199,118 @@ class MemoryJsonSerializerTest {
         assertEquals(false, chunk.isPinned)
         assertEquals(emptyList<String>(), chunk.tags)
         assertEquals(MemorySource.Unknown, chunk.source)
+    }
+
+    // --- What a file may claim (security audit 07/F3) ---
+
+    @Test
+    fun `parse does not honour isPinned from the document`() {
+        // A pinned chunk skips the similarity threshold, sorts first in every
+        // retrieval and is exempt from compaction; a file must not grant that.
+        val json = """
+            {"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+             "chunks":[{"text":"x","embedding":[0.1],"timestamp":5,"isPinned":true}]}
+        """.trimIndent()
+
+        val outcome = MemoryJsonSerializer.parse(json)
+
+        assertTrue(outcome is MemoryImportOutcome.Success)
+        val document = (outcome as MemoryImportOutcome.Success).document
+        assertFalse(document.chunks.single().isPinned)
+        assertEquals(1, document.pinnedInFile)
+    }
+
+    @Test
+    fun `parse re-dates a timestamp in the future to the moment of import`() {
+        // Year 2100: would hold the head of $MEMORY_SUMMARY and stay out of the
+        // compaction window for as long as the device lives.
+        val json = """
+            {"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+             "chunks":[{"text":"x","embedding":[0.1],"timestamp":4102444800000}]}
+        """.trimIndent()
+
+        val outcome = MemoryJsonSerializer.parse(json, nowMillis = NOW)
+
+        assertTrue(outcome is MemoryImportOutcome.Success)
+        assertEquals(NOW, (outcome as MemoryImportOutcome.Success).document.chunks.single().timestamp)
+    }
+
+    @Test
+    fun `parse keeps a past timestamp as written`() {
+        val json = """
+            {"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+             "chunks":[{"text":"x","embedding":[0.1],"timestamp":${NOW - 1}}]}
+        """.trimIndent()
+
+        val outcome = MemoryJsonSerializer.parse(json, nowMillis = NOW)
+
+        assertEquals(NOW - 1, (outcome as MemoryImportOutcome.Success).document.chunks.single().timestamp)
+    }
+
+    @Test
+    fun `a file without pins reports none`() {
+        val json = MemoryJsonSerializer.serialize(listOf(chunk(1, "x", floatArrayOf(0.1f))), "use", exportedAt = 0L)
+
+        assertEquals(0, (MemoryJsonSerializer.parse(json) as MemoryImportOutcome.Success).document.pinnedInFile)
+    }
+
+    @Test
+    fun `every MemoryChunk field has a declared import policy`() {
+        // Guard for the class of 07/F3: a field that decides whether a chunk is
+        // retrieved (as isPinned and timestamp do) must not be taken from a file
+        // by default. A new field fails here until someone decides what an
+        // import does with it — and pins that decision below.
+        val fields = MemoryChunk::class.java.declaredFields
+            .filterNot { it.isSynthetic || java.lang.reflect.Modifier.isStatic(it.modifiers) }
+            .map { it.name }
+            .toSet()
+
+        assertEquals(IMPORT_POLICY.keys, fields)
+    }
+
+    @Test
+    fun `a document claiming every privilege yields a chunk holding none`() {
+        val json = """
+            {"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+             "chunks":[{"id":7,"text":"x","embedding":[0.1],"timestamp":4102444800000,"isPinned":true,
+                        "useCount":999,"lastUsedAt":4102444800000,"needsReembedding":false}]}
+        """.trimIndent()
+
+        val chunk = (MemoryJsonSerializer.parse(json, nowMillis = NOW) as MemoryImportOutcome.Success)
+            .document.chunks.single()
+
+        // One assertion per non-CARRIED policy in IMPORT_POLICY.
+        assertEquals(NOW, chunk.timestamp)
+        assertFalse(chunk.isPinned)
+        assertEquals(0, chunk.useCount)
+        assertEquals(null, chunk.lastUsedAt)
+    }
+
+    /** What an import does with each [MemoryChunk] field. */
+    private enum class Policy {
+        /** Taken from the file as written. */
+        CARRIED,
+
+        /** Taken from the file, bounded (a timestamp no later than the import). */
+        CAPPED,
+
+        /** Never taken from the file; always the fresh default. */
+        RESET,
+    }
+
+    private companion object {
+        const val NOW = 1_758_000_000_000L
+
+        val IMPORT_POLICY = mapOf(
+            "id" to Policy.CARRIED,
+            "text" to Policy.CARRIED,
+            "embedding" to Policy.CARRIED,
+            "timestamp" to Policy.CAPPED,
+            "isPinned" to Policy.RESET,
+            "source" to Policy.CARRIED,
+            "tags" to Policy.CARRIED,
+            "useCount" to Policy.RESET,
+            "lastUsedAt" to Policy.RESET,
+        )
     }
 }

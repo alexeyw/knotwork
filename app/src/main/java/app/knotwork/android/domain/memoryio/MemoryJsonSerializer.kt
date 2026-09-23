@@ -39,6 +39,21 @@ import org.json.JSONObject
  * telemetry (`useCount` / `lastUsedAt`) is intentionally omitted — it is
  * per-device and not meaningful after a transfer.
  *
+ * ### What a file may not claim
+ *
+ * Two fields decide whether a chunk is retrieved at all rather than how, and no
+ * screen of the app lets the user set them in bulk, so [parse] does not take
+ * them from the file:
+ *  - `isPinned` is read as `false` for every chunk. A pinned chunk bypasses the
+ *    similarity threshold, sorts first in every retrieval and is exempt from
+ *    compaction; pinning stays a per-entry act on the Memory screen. How many
+ *    chunks the file had pinned is reported as
+ *    [MemoryExportDocument.pinnedInFile] so the import dialog can say so.
+ *  - `timestamp` is capped at the moment of parsing. A date in the future would
+ *    hold the head of `$MEMORY_SUMMARY` (newest first) and stay outside the
+ *    compaction window indefinitely; re-dated to "now" it ages like any new
+ *    chunk. A file from a device whose clock ran ahead imports as well.
+ *
  * Uses `org.json` per the project's API conventions. [parse] never throws —
  * every error becomes a [MemoryImportOutcome.Failure] with a human-readable
  * message.
@@ -109,10 +124,12 @@ object MemoryJsonSerializer {
      * differs from [CURRENT_SCHEMA_VERSION] yields [MemoryImportOutcome.SchemaMismatch].
      *
      * @param jsonText Raw JSON text.
+     * @param nowMillis Wall-clock "now"; no parsed `timestamp` is later than it.
+     *   Defaults to the system clock; tests pass a fixed value.
      * @return The parse outcome the UI should branch on.
      */
     @Suppress("ReturnCount")
-    fun parse(jsonText: String): MemoryImportOutcome {
+    fun parse(jsonText: String, nowMillis: Long = System.currentTimeMillis()): MemoryImportOutcome {
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
@@ -131,10 +148,12 @@ object MemoryJsonSerializer {
             ?: return MemoryImportOutcome.Failure("Missing chunks array")
 
         val chunks = ArrayList<MemoryChunk>(chunksJson.length())
+        var pinnedInFile = 0
         for (i in 0 until chunksJson.length()) {
             val chunkJson = chunksJson.optJSONObject(i)
                 ?: return MemoryImportOutcome.Failure("Malformed chunk at index $i")
-            val chunk = parseChunk(chunkJson) ?: return MemoryImportOutcome.Failure(
+            if (chunkJson.optBoolean(KEY_IS_PINNED, false)) pinnedInFile++
+            val chunk = parseChunk(chunkJson, nowMillis) ?: return MemoryImportOutcome.Failure(
                 "Chunk at index $i has a missing or malformed required field: text must be non-blank, " +
                     "embedding a non-empty array of finite numbers, and timestamp a positive epoch-millis value",
             )
@@ -145,6 +164,7 @@ object MemoryJsonSerializer {
             embeddingProviderId = providerId,
             exportedAt = exportedAt,
             chunks = chunks,
+            pinnedInFile = pinnedInFile,
         )
         return if (foundVersion != CURRENT_SCHEMA_VERSION) {
             MemoryImportOutcome.SchemaMismatch(
@@ -170,9 +190,12 @@ object MemoryJsonSerializer {
      *    non-numeric / null `timestamp` to `0`, which would store the memory at
      *    epoch 1970 — maximally stale to the recency re-ranker and an immediate
      *    compaction-deletion candidate — so it is rejected like the other fields.
+     *
+     * A valid chunk is returned unpinned and with its `timestamp` capped at
+     * [nowMillis] (see *What a file may not claim* on the object).
      */
     @Suppress("ReturnCount")
-    private fun parseChunk(json: JSONObject): MemoryChunk? {
+    private fun parseChunk(json: JSONObject, nowMillis: Long): MemoryChunk? {
         if (!json.has(KEY_TEXT) || !json.has(KEY_EMBEDDING) || !json.has(KEY_TIMESTAMP)) return null
         // optString returns "" for an explicit JSON null, so a blank check also
         // rejects `"text": null` — a memory with no text is meaningless.
@@ -202,8 +225,8 @@ object MemoryJsonSerializer {
             id = json.optLong(KEY_ID, 0L),
             text = text,
             embedding = embedding,
-            timestamp = timestamp,
-            isPinned = json.optBoolean(KEY_IS_PINNED, false),
+            timestamp = timestamp.coerceAtMost(nowMillis),
+            isPinned = false,
             source = MemorySourceJson.decode(json.optJSONObject(KEY_SOURCE)),
             tags = tags,
         )

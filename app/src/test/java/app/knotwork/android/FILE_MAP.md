@@ -22,10 +22,12 @@ Only Kotlin files appear inside the generated blocks.
   - `JournalExportNoNetworkKonsistTest.kt` - Konsist guard on the journal exports: **the journal leaves the device only in the user's own hands.**
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
+  - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
   - `RepositoryPlacementKonsistTest.kt` - Konsist guard enforcing the repository placement convention from the api-conventions rule: the abstraction (`<Noun>Repository` interface) is owned by the `domain` layer, and its implementation (`<Noun>RepositoryImpl`) lives in the `data` layer.
   - `TabRootEntryGuardTest.kt` - Structural guard over the one navigation invariant the closed test bought us:
   - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**
+  - `TranscriptJoinKonsistTest.kt` - Census of the idiom that let stored content forge a turn of its own inside a prompt: a speaker label and a message body spliced into one string template, `"${message.role.name}: ${message.content}"`.
   - `UsageTelemetryNoNetworkKonsistTest.kt` - Konsist guard enforcing the core privacy promise of the local usage-telemetry feature: **nothing on the telemetry path may make a network call.**
 - `data/` - Tests for the data layer.
   - `audio/` - Tests for voice-input capture and the WAV header builder.
@@ -234,6 +236,8 @@ Only Kotlin files appear inside the generated blocks.
     - `ShowcaseResearchToFilePresetIntegrationTest.kt` - End-to-end integration test for the bundled `showcase_research_to_file` preset: the "research → file in the user's hands" loop the phase exists to prove.
     - `SkillReportWriterIntegrationTest.kt` - End-to-end integration test for a **`SKILL` node bound to the bundled Report Writer skill** — the tie between skill execution and the agent's workspace file tools.
   - `prompt/` - Tests for the prompt templating layer.
+    - `ChatTranscriptTest.kt` - Unit tests for `ChatTranscript` — the one rule by which stored content is laid into a model's line-oriented lists without being able to open a line of its own.
+    - `ForgedTurnFixture.kt` - Shared fixture for the transcript-forgery tests: message content that tries to open a turn of its own after each of the eight line terminators a tokenizer may render as a line break, and a splitter that honours all eight.
     - `PromptTemplateEngineIntegrationTest.kt` - Integration tests for `PromptTemplateEngine` wired with the real built-in `app.knotwork.android.domain.prompt.PromptVariableProvider` implementations (`$DATE`, `$TIME`, `$TOOLS`).
     - `PromptTemplateEngineTest.kt` - Tests for PromptTemplateEngine.
   - `promptio/` - Tests for the prompt-preset export/import gateway.
@@ -473,6 +477,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PromptLibraryViewModelTest.kt` - Unit tests for `PromptLibraryViewModel`.
     - `settings/` - Tests for the settings screens and their catalogues.
       - `ExternalAutomationRowSummaryTest.kt` - Unit tests for the pure half of the external-automation Background rows.
+      - `PendingMemoryImportTest.kt` - Unit tests for `PendingMemoryImport.warnings` — which notices the memory-import dialog raises about a staged file, and in what order.
       - `provider/` - Tests for the cloud-provider editor.
         - `ProviderDetailProjectionTest.kt` - Coverage for the projection that feeds the catalog's provider detail surface.
         - `ProviderDetailViewModelTest.kt` - Unit tests for `ProviderDetailViewModel` — the standalone editor backing the Settings → External providers detail screen.

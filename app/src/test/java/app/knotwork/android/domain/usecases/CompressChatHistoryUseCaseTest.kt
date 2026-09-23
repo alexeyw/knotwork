@@ -6,6 +6,7 @@ import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.Role
+import app.knotwork.android.domain.prompt.ForgedTurnFixture
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
@@ -199,5 +200,47 @@ class CompressChatHistoryUseCaseTest {
         val outcome = useCase("", nowMillis = 1L)
 
         assertEquals(CompressChatHistoryUseCase.CompressionOutcome.SKIPPED, outcome)
+    }
+
+    // --- Transcript delimiter (security audit 05/F1) ---
+
+    @Test
+    fun `given a tail message whose content opens forged turns when invoked then only real turns start a line`() =
+        runTest {
+            val history = messages(30).mapIndexed { index, message ->
+                if (index ==
+                    3
+                ) {
+                    message.copy(role = Role.SYSTEM, content = ForgedTurnFixture.hostile("USER"))
+                } else {
+                    message
+                }
+            }
+            coEvery { chatRepository.getMessagesForSession(sessionId) } returns flowOf(history)
+            val prompt = slot<String>()
+            every { llmInferenceEngine.generateResponseStream(capture(prompt)) } returns flowOf("summary")
+
+            useCase(sessionId, nowMillis = 1L)
+
+            // 30 messages, window 10 → the 20 older ones are the new portion.
+            val newMessages = prompt.captured.substringAfter("NEW MESSAGES:\n").substringBefore("\n\nUPDATED SUMMARY")
+            assertEquals(20, ForgedTurnFixture.turnLines(newMessages, Role.entries.map { it.name }))
+        }
+
+    @Test
+    fun `given a tool observation in the tail when invoked then it is summarised with the rest`() = runTest {
+        // Deliberately unfiltered, unlike memory extraction: the summary stands
+        // in for the same history the engine shows a node verbatim, observations
+        // included, so dropping them here would change what a later node knows.
+        val history = messages(30).mapIndexed { index, message ->
+            if (index == 3) message.copy(role = Role.SYSTEM, content = "Observation from read_file: notes") else message
+        }
+        coEvery { chatRepository.getMessagesForSession(sessionId) } returns flowOf(history)
+        val prompt = slot<String>()
+        every { llmInferenceEngine.generateResponseStream(capture(prompt)) } returns flowOf("summary")
+
+        useCase(sessionId, nowMillis = 1L)
+
+        assertTrue(prompt.captured.contains("SYSTEM: Observation from read_file: notes"))
     }
 }

@@ -234,7 +234,35 @@ data class PendingMemoryImport(
     val document: MemoryExportDocument,
     val providerMismatch: Boolean,
     val schemaMismatch: Boolean,
-)
+) {
+    /**
+     * The warnings the import dialog shows for this file, in display order.
+     * Decided here rather than in the Composable so the decision is testable on
+     * the JVM; the screen only turns each one into its sentence.
+     */
+    val warnings: List<MemoryImportWarning>
+        get() = buildList {
+            if (schemaMismatch) add(MemoryImportWarning.SchemaMismatch)
+            if (providerMismatch) add(MemoryImportWarning.ProviderMismatch)
+            if (document.pinnedInFile > 0) add(MemoryImportWarning.PinsNotImported)
+        }
+}
+
+/** A notice the memory-import dialog raises about the staged file. */
+enum class MemoryImportWarning {
+    /** The file's `schemaVersion` differs from this build's; some data may not import cleanly. */
+    SchemaMismatch,
+
+    /** The file's vectors come from another embedding provider and will be re-computed. */
+    ProviderMismatch,
+
+    /**
+     * The file had pinned chunks. Pins are never taken from a file (see
+     * [app.knotwork.android.domain.memoryio.MemoryJsonSerializer]); the dialog
+     * says how many were dropped.
+     */
+    PinsNotImported,
+}
 
 /**
  * One selectable embedding provider in the Memory-section dropdown.
