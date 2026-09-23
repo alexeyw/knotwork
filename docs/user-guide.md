@@ -1497,6 +1497,20 @@ the app's import flow, so there is no manual conversion step.
 4. The imported pipeline is saved into the library and becomes the
    one currently open in the editor.
 
+A pipeline file can come from anyone, so a few things are checked on the way
+in rather than taken as written:
+
+- **The node settings you see are the ones that run.** A file keeps each node's
+  settings twice — once for the run, once for the editor. Opening a node shows
+  the copy the run uses, whatever the editor copy says.
+- **Names stay short.** The pipeline name and each node's label are kept to one
+  line of at most 60 characters; anything longer is cut.
+- **Starter prompts only name tools the pipeline calls.** The `uses · …` line
+  under a starter prompt keeps a tool only if one of the pipeline's Tool nodes
+  is set to call it, and a pipeline keeps at most six starter prompts.
+- **Files over 8 MB are not read.** That is about three times a bundle of fifty
+  of the largest bundled pipelines.
+
 ### Moving a whole composition — bundles
 
 A single **Export JSON** / **Import JSON** moves *one* pipeline. If your
@@ -2117,6 +2131,10 @@ Two things are not taken from the file, whichever strategy you choose:
   file had pinned, and you can pin them again on the Memory screen.
 - **Dates in the future.** An entry dated later than the moment you import
   it is dated to the import instead, so it ages like any new entry.
+
+A file holding more than 20,000 entries — the most memory can be set to keep —
+is refused whole. So is a file too large for the device to read in one go: the
+limit is a quarter of the memory the app may use, and the message names it.
 
 If the file was exported with a **different embedding provider** than the
 one the new device is using, the app shows a notice and re-computes the

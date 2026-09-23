@@ -35,13 +35,14 @@ import app.knotwork.design.components.pipelineeditor.NodeType as CatalogNodeType
  * [NodeModel] persistence layer.
  *
  * Two responsibilities:
- *  - **Encode / decode** the configuration as a JSON blob written to `NodeModel.configJson`.
- *    The blob carries the typed
- *    payload introduced by the new `NodeConfigSheet`.
- *  - **Derive defaults** from the legacy flat fields (`systemPrompt`, `cloudProvider`,
- *    `toolName`, `conditionComplexity`, …) when a row was saved by an older app version. This way
- *    pre-existing pipelines open in the new editor with sensible field values without
- *    forcing a one-shot data migration.
+ *  - **Save** ([apply]): write an edited configuration onto the node — the flat
+ *    fields the runtime engine reads, plus the whole configuration as a JSON
+ *    envelope in `NodeModel.configJson` for the fields the engine never reads.
+ *  - **Show** ([decode]): rebuild the configuration from the node, taking every
+ *    field that reaches the run from the flat fields, so the sheet always shows
+ *    the value the run uses — including for a node imported from a file whose
+ *    envelope says something else, and for a row saved before the envelope
+ *    existed.
  *
  * Pure Kotlin — Android-free — so the codec is unit-testable on the JVM. JSON I/O uses
  * `org.json.JSONObject` per the project's API-conventions doc.
@@ -58,22 +59,37 @@ internal object NodeConfigCodec {
     private const val DESCRIPTION_KEY = "description"
 
     /**
-     * Decodes the [NodeConfig] backing [node]. Falls back to legacy flat fields when
-     * [NodeModel.configJson] is `null` or malformed.
+     * Decodes the [NodeConfig] the configuration sheet shows for [node].
+     *
+     * **Every field that reaches the run is read from the flat [NodeModel]
+     * property the engine reads — never from [NodeModel.configJson].** A pipeline
+     * file stores each node twice: the flat `config` block the runtime executes
+     * and the `nodeConfig` envelope kept here. The app's own files agree only
+     * because [apply] writes both; nothing makes a file written elsewhere agree.
+     * This sheet is the only screen that shows a node's tool, prompt, provider or
+     * model, so while it read the envelope first, an imported document could show
+     * one tool, one prompt and a "confirm every call" switch while the run used a
+     * different tool, a different prompt and no confirmation.
+     *
+     * The envelope now supplies only what the run never reads as a value: the
+     * intent classes and the evaluation retry count (which decide the node's
+     * ports), the per-node sampling and cloud-client values no sheet shows, and
+     * the description. The title is the node's label — what the canvas card
+     * shows and what a tool result is attributed to.
+     *
+     * A node with no envelope, or a malformed one, is a row saved before the
+     * sheet existed; for those a blank prompt shows the node type's registered
+     * default rather than an empty field, as it always has.
      *
      * @return the typed configuration; the catalog form receives this as its starting value.
      */
     fun decode(node: NodeModel): NodeConfig {
-        val payload = node.configJson?.takeIf { it.isNotBlank() }
-        if (payload != null) {
-            val parsed = runCatching { JSONObject(payload) }.getOrNull()
-            if (parsed != null) {
-                return decodeFromJson(parsed, node)
-            } else {
-                Timber.w("NodeConfig payload for node=%s is not valid JSON; falling back to legacy", node.id)
-            }
+        val raw = node.configJson?.takeIf { it.isNotBlank() }
+        val payload = raw?.let { runCatching { JSONObject(it) }.getOrNull() }
+        if (raw != null && payload == null) {
+            Timber.w("NodeConfig payload for node=%s is not valid JSON; falling back to legacy", node.id)
         }
-        return deriveFromLegacy(node)
+        return decodeFrom(node = node, payload = payload ?: JSONObject(), legacyRow = payload == null)
     }
 
     /**
@@ -258,13 +274,14 @@ internal object NodeConfigCodec {
         ?.let { CloudProviderMapper.fromWireId(it) }
 
     /**
-     * Decodes the structured engine selection from a node's rich payload,
-     * preferring the persisted `engineProvider` name and falling back to the
-     * flat `cloudProvider` wire-id for rows written before the field existed.
+     * The CLOUD node's provider tile for its flat `cloudProvider`, as the run
+     * resolves it. `null` behaves exactly like the `"auto"` sentinel in
+     * `CloudLlmNodeExecutor` — both pick a provider from the configured keys — so
+     * it shows as Auto, not as the OpenAI default [CloudProviderMapper.fromWireId]
+     * falls back to for an id it cannot name.
      */
-    private fun decodeEngineProvider(p: JSONObject, fb: NodeModel): CatalogCloudProvider? =
-        enumOrNull<CatalogCloudProvider>(p.optStringOrNull("engineProvider"))
-            ?: engineProviderFromWire(fb.cloudProvider)
+    private fun cloudProviderShown(wireId: String?): CatalogCloudProvider =
+        if (wireId.isNullOrBlank()) CatalogCloudProvider.AUTO else CloudProviderMapper.fromWireId(wireId)
 
     /**
      * Builds a fresh default [NodeConfig] for [type] — used by the editor when the user picks
@@ -326,127 +343,161 @@ internal object NodeConfigCodec {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Decode dispatch
+    // Decode
     // ─────────────────────────────────────────────────────────────────────
 
-    private fun decodeFromJson(payload: JSONObject, fallback: NodeModel): NodeConfig {
-        val title = payload.optString(TITLE_KEY).ifBlank { fallback.label }
+    /**
+     * Builds the sheet's configuration for [node]: every field the run reads
+     * from the flat [NodeModel] property it lands on (the inverse of [apply]),
+     * every field it never reads from [payload].
+     *
+     * @param payload The parsed envelope, or an empty object when the row has none.
+     * @param legacyRow `true` when the row carries no usable envelope: a blank
+     *   prompt then shows the registered default, and the title falls back to
+     *   the node type's name rather than to the envelope's title.
+     */
+    @Suppress("CyclomaticComplexMethod", "LongMethod") // One arm per node type; each is a literal.
+    private fun decodeFrom(node: NodeModel, payload: JSONObject, legacyRow: Boolean): NodeConfig {
+        val title = node.label.ifBlank { payload.optString(TITLE_KEY).ifBlank { node.type.name } }
         val description = payload.optStringOrNull(DESCRIPTION_KEY)
-        return when (NodeTypeMapper.toCatalog(fallback.type)) {
-            CatalogNodeType.INPUT -> decodeInput(title, description)
-            CatalogNodeType.OUTPUT -> decodeOutput(payload, title, description)
-            CatalogNodeType.LITE_RT -> decodeLiteRt(payload, title, description, fallback)
-            CatalogNodeType.CLOUD -> decodeCloud(payload, title, description, fallback)
-            CatalogNodeType.INTENT_ROUTER -> decodeIntentRouter(payload, title, description, fallback)
-            CatalogNodeType.IF_CONDITION -> decodeIfCondition(payload, title, description, fallback)
-            CatalogNodeType.CLARIFICATION -> decodeClarification(payload, title, description, fallback)
-            CatalogNodeType.TOOL -> decodeTool(payload, title, description, fallback)
-            CatalogNodeType.DECOMPOSITION -> decodeDecomposition(payload, title, description, fallback)
-            CatalogNodeType.QUEUE_PROCESSOR -> decodeQueueProcessor(payload, title, description, fallback)
-            CatalogNodeType.EVALUATION -> decodeEvaluation(payload, title, description, fallback)
-            CatalogNodeType.SUMMARY -> decodeSummary(payload, title, description, fallback)
-            CatalogNodeType.PIPELINE -> decodePipeline(payload, title, description, fallback)
-            CatalogNodeType.SKILL -> decodeSkill(payload, title, description, fallback)
+        // A legacy row created before `DefaultPrompts.getDefaultPromptForNodeType`
+        // was wired into node construction can carry an empty prompt; it shows the
+        // registered default instead of an empty field (users read the empty one
+        // as "the standard prompts disappeared"). A row with an envelope was saved
+        // through the sheet, so its empty prompt is the value it was saved with.
+        val prompt = if (legacyRow) {
+            node.systemPrompt?.takeIf { it.isNotBlank() }
+                ?: DefaultPrompts.getDefaultPromptForNodeType(node.type).orEmpty()
+        } else {
+            node.systemPrompt.orEmpty()
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Legacy-field derivation (older saved rows)
-    // ─────────────────────────────────────────────────────────────────────
-
-    private fun deriveFromLegacy(node: NodeModel): NodeConfig {
-        val title = node.label.ifBlank { node.type.name }
-        // When a legacy node persists with
-        // an empty `systemPrompt` (older pipelines created before
-        // `DefaultPrompts.getDefaultPromptForNodeType` was wired into NodeModel
-        // construction), fall back to the registered default prompt instead of
-        // showing an empty field. Users were rightly confused that "standard
-        // prompts disappeared" for these node types.
-        val systemPromptOrDefault = node.systemPrompt
-            ?.takeIf { it.isNotBlank() }
-            ?: DefaultPrompts.getDefaultPromptForNodeType(node.type).orEmpty()
+        val engineProvider = engineProviderFromWire(node.cloudProvider)
         return when (NodeTypeMapper.toCatalog(node.type)) {
-            CatalogNodeType.INPUT -> InputConfig(title = title)
-            // Legacy rows that pre-date F10 keep their persisted
-            // `node.systemPrompt` here so the editor surfaces what they were
-            // already sending to the LLM, instead of silently clearing it.
+            CatalogNodeType.INPUT -> InputConfig(title = title, description = description)
+            // No default substitution here: an empty OUTPUT prompt is a real
+            // setting — echo the upstream answer verbatim.
             CatalogNodeType.OUTPUT -> OutputConfig(
                 title = title,
+                description = description,
                 systemPrompt = node.systemPrompt.orEmpty(),
             )
             CatalogNodeType.LITE_RT -> LiteRtConfig(
                 title = title,
-                systemPrompt = systemPromptOrDefault,
+                description = description,
                 modelId = node.modelPath.orEmpty(),
+                systemPrompt = prompt,
+                temperature = payload.optDouble("temperature", DEFAULT_TEMPERATURE).toFloat(),
+                topP = payload.optDouble("topP", DEFAULT_TOP_P).toFloat(),
+                maxNewTokens = payload.optInt("maxNewTokens", DEFAULT_MAX_NEW_TOKENS),
+                stopTokens = payload.optStringList("stopTokens"),
             )
             CatalogNodeType.CLOUD -> CloudConfig(
                 title = title,
-                systemPrompt = systemPromptOrDefault,
-                provider = CloudProviderMapper.fromWireId(node.cloudProvider),
+                description = description,
+                provider = cloudProviderShown(node.cloudProvider),
+                model = payload.optString("model"),
+                systemPrompt = prompt,
+                temperature = payload.optDouble("temperature", DEFAULT_TEMPERATURE).toFloat(),
+                maxTokens = payload.optInt("maxTokens", DEFAULT_MAX_TOKENS),
+                timeoutMs = payload.optInt("timeoutMs", DEFAULT_TIMEOUT_MS),
             )
             CatalogNodeType.INTENT_ROUTER -> IntentRouterConfig(
                 title = title,
-                classifierPrompt = systemPromptOrDefault,
+                description = description,
+                classes = decodeIntentClasses(payload),
+                classifierPrompt = prompt,
                 fallbackClass = node.fallbackClass,
-                engineProvider = engineProviderFromWire(node.cloudProvider),
+                engineProvider = engineProvider,
             )
+            // `conditionKeywords` and `conditionComplexity` decide the branch
+            // before any model call, and were runtime inputs long before they
+            // had controls — an imported pipeline once decided every branch on a
+            // keyword while this sheet showed nothing.
             CatalogNodeType.IF_CONDITION -> IfConditionConfig(
                 title = title,
+                description = description,
                 expression = node.conditionPrompt.orEmpty(),
-                // Carried through here as well as in `decodeIfCondition`: a row
-                // saved before the sheet had these controls has no `configJson`
-                // at all, and that is exactly the pipeline whose branch was
-                // being decided by a keyword the editor never showed.
                 keywords = node.conditionKeywords.orEmpty(),
                 complexityThreshold = node.conditionComplexity?.takeIf { it > 0 },
                 branchOnImage = node.conditionHasImage == true,
-                engineProvider = engineProviderFromWire(node.cloudProvider),
+                engineProvider = engineProvider,
             )
             CatalogNodeType.CLARIFICATION -> ClarificationConfig(
                 title = title,
-                questionTemplate = systemPromptOrDefault,
-                quickReplies = node.quickReplies?.split(",").orEmpty()
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() },
+                description = description,
+                questionTemplate = prompt,
+                quickReplies = splitQuickReplies(node.quickReplies),
                 timeoutMs = node.clarificationTimeoutMs?.toInt(),
             )
             CatalogNodeType.TOOL -> ToolConfig(
                 title = title,
+                description = description,
                 toolId = node.toolName.orEmpty(),
                 alwaysConfirm = node.alwaysConfirm == true,
-                engineProvider = engineProviderFromWire(node.cloudProvider),
+                engineProvider = engineProvider,
             )
             CatalogNodeType.DECOMPOSITION -> DecompositionConfig(
                 title = title,
-                planningPrompt = systemPromptOrDefault,
+                description = description,
+                planningPrompt = prompt,
                 maxSubtasks = node.maxSubtasks ?: DEFAULT_MAX_SUBTASKS,
-                engineProvider = engineProviderFromWire(node.cloudProvider),
+                engineProvider = engineProvider,
             )
             CatalogNodeType.QUEUE_PROCESSOR -> QueueProcessorConfig(
                 title = title,
+                description = description,
+                // The engine stops on a failed item unless the flag is explicitly
+                // `false`, so an unset flag is shown as on.
                 stopOnError = node.stopOnError ?: true,
             )
             CatalogNodeType.EVALUATION -> EvaluationConfig(
                 title = title,
-                criteriaPrompt = systemPromptOrDefault,
-                engineProvider = engineProviderFromWire(node.cloudProvider),
+                description = description,
+                criteriaPrompt = prompt,
+                maxRetries = payload.optInt("maxRetries", DEFAULT_MAX_RETRIES),
+                engineProvider = engineProvider,
             )
+            // SUMMARY's prompt is optional: blank means "keep the built-in
+            // summarisation prompt", so it stays `null` rather than `""`.
             CatalogNodeType.SUMMARY -> SummaryConfig(
                 title = title,
-                customPrompt = systemPromptOrDefault.takeIf { it.isNotBlank() },
+                description = description,
+                customPrompt = prompt.takeIf { it.isNotBlank() },
             )
             CatalogNodeType.PIPELINE -> PipelineConfig(
                 title = title,
+                description = description,
                 targetPipelineId = node.targetPipelineId.orEmpty(),
             )
             CatalogNodeType.SKILL -> SkillConfig(
                 title = title,
+                description = description,
                 skillId = node.skillId.orEmpty(),
                 engine = engineFromProvider(node.cloudProvider),
                 alwaysConfirm = node.alwaysConfirm == true,
             )
         }
     }
+
+    /** The router's intent classes, which exist only in the envelope (they decide its ports). */
+    private fun decodeIntentClasses(payload: JSONObject): List<IntentClass> =
+        payload.optJSONArray("classes")?.let { arr ->
+            (0 until arr.length()).mapNotNull { i ->
+                val obj = arr.optJSONObject(i) ?: return@mapNotNull null
+                IntentClass(
+                    name = obj.optString("name"),
+                    description = obj.optString("description"),
+                    examples = obj.optJSONArray("examples")?.toStringList().orEmpty(),
+                )
+            }
+        }.orEmpty()
+
+    /**
+     * Splits the flat `quickReplies` column exactly as `ClarificationNodeExecutor`
+     * does, so the sheet lists the chips the run will offer.
+     */
+    private fun splitQuickReplies(joined: String?): List<String> =
+        joined?.split(",").orEmpty().map { it.trim() }.filter { it.isNotEmpty() }
 
     // ─────────────────────────────────────────────────────────────────────
     // Per-type encoders
@@ -547,177 +598,6 @@ internal object NodeConfigCodec {
         json.put("alwaysConfirm", c.alwaysConfirm)
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Per-type decoders
-    // ─────────────────────────────────────────────────────────────────────
-
-    // No `payload` parameter, unlike every sibling: INPUT carries nothing beyond
-    // the shared title and description, and a parameter the body cannot use
-    // would only invite someone to look for a field that is not there.
-    private fun decodeInput(title: String, description: String?): InputConfig = InputConfig(
-        title = title,
-        description = description,
-    )
-
-    private fun decodeOutput(p: JSONObject, title: String, description: String?): OutputConfig = OutputConfig(
-        title = title,
-        description = description,
-        // Optional — older persisted rows simply lack this key and fall back to the default
-        // empty string (echo-through mode).
-        systemPrompt = p.optString("systemPrompt"),
-    )
-
-    private fun decodeLiteRt(p: JSONObject, title: String, description: String?, fb: NodeModel): LiteRtConfig =
-        LiteRtConfig(
-            title = title,
-            description = description,
-            modelId = p.optString("modelId").ifBlank { fb.modelPath.orEmpty() },
-            systemPrompt = p.optString("systemPrompt").ifBlank { fb.systemPrompt.orEmpty() },
-            temperature = p.optDouble("temperature", DEFAULT_TEMPERATURE).toFloat(),
-            topP = p.optDouble("topP", DEFAULT_TOP_P).toFloat(),
-            maxNewTokens = p.optInt("maxNewTokens", DEFAULT_MAX_NEW_TOKENS),
-            stopTokens = p.optStringList("stopTokens"),
-        )
-
-    private fun decodeCloud(p: JSONObject, title: String, description: String?, fb: NodeModel): CloudConfig =
-        CloudConfig(
-            title = title,
-            description = description,
-            provider = enumOrDefault(
-                p.optStringOrNull("provider"),
-                CloudProviderMapper.fromWireId(fb.cloudProvider),
-            ),
-            model = p.optString("model"),
-            systemPrompt = p.optString("systemPrompt").ifBlank { fb.systemPrompt.orEmpty() },
-            temperature = p.optDouble("temperature", DEFAULT_TEMPERATURE).toFloat(),
-            maxTokens = p.optInt("maxTokens", DEFAULT_MAX_TOKENS),
-            timeoutMs = p.optInt("timeoutMs", DEFAULT_TIMEOUT_MS),
-        )
-
-    private fun decodeIntentRouter(
-        p: JSONObject,
-        title: String,
-        description: String?,
-        fb: NodeModel,
-    ): IntentRouterConfig = IntentRouterConfig(
-        title = title,
-        description = description,
-        classes = p.optJSONArray("classes")?.let { arr ->
-            (0 until arr.length()).mapNotNull { i ->
-                val obj = arr.optJSONObject(i) ?: return@mapNotNull null
-                IntentClass(
-                    name = obj.optString("name"),
-                    description = obj.optString("description"),
-                    examples = obj.optJSONArray("examples")?.toStringList().orEmpty(),
-                )
-            }
-        }.orEmpty(),
-        classifierPrompt = p.optString("classifierPrompt").ifBlank { fb.systemPrompt.orEmpty() },
-        fallbackClass = p.optStringOrNull("fallbackClass") ?: fb.fallbackClass,
-        engineProvider = decodeEngineProvider(p, fb),
-    )
-
-    private fun decodeIfCondition(
-        p: JSONObject,
-        title: String,
-        description: String?,
-        fb: NodeModel,
-    ): IfConditionConfig = IfConditionConfig(
-        title = title,
-        description = description,
-        expression = p.optString("expression").ifBlank { fb.conditionPrompt.orEmpty() },
-        // Both deterministic checks read the flat NodeModel field first: they
-        // were runtime inputs for far longer than they were editor fields, so an
-        // imported pipeline's value is the authority over an absent JSON key.
-        keywords = p.optString("keywords").ifBlank { fb.conditionKeywords.orEmpty() },
-        complexityThreshold = (
-            if (p.has("complexityThreshold")) p.optInt("complexityThreshold") else fb.conditionComplexity
-            )?.takeIf { it > 0 },
-        branchOnImage = p.optBoolean("branchOnImage", fb.conditionHasImage == true),
-        engineProvider = decodeEngineProvider(p, fb),
-    )
-
-    private fun decodeClarification(
-        p: JSONObject,
-        title: String,
-        description: String?,
-        fb: NodeModel,
-    ): ClarificationConfig = ClarificationConfig(
-        title = title,
-        description = description,
-        questionTemplate = p.optString("questionTemplate").ifBlank { fb.systemPrompt.orEmpty() },
-        quickReplies = p.optStringList("quickReplies")
-            .ifEmpty { fb.quickReplies?.split(",").orEmpty().map { it.trim() }.filter { it.isNotEmpty() } },
-        timeoutMs = if (p.has("timeoutMs")) p.optInt("timeoutMs") else fb.clarificationTimeoutMs?.toInt(),
-    )
-
-    private fun decodeTool(p: JSONObject, title: String, description: String?, fb: NodeModel): ToolConfig = ToolConfig(
-        title = title,
-        description = description,
-        toolId = p.optString("toolId").ifBlank { fb.toolName.orEmpty() },
-        alwaysConfirm = p.optBoolean("alwaysConfirm", fb.alwaysConfirm == true),
-        engineProvider = decodeEngineProvider(p, fb),
-    )
-
-    private fun decodeDecomposition(
-        p: JSONObject,
-        title: String,
-        description: String?,
-        fb: NodeModel,
-    ): DecompositionConfig = DecompositionConfig(
-        title = title,
-        description = description,
-        planningPrompt = p.optString("planningPrompt").ifBlank { fb.systemPrompt.orEmpty() },
-        maxSubtasks = p.optInt("maxSubtasks", fb.maxSubtasks ?: DEFAULT_MAX_SUBTASKS),
-        engineProvider = decodeEngineProvider(p, fb),
-    )
-
-    private fun decodeQueueProcessor(
-        p: JSONObject,
-        title: String,
-        description: String?,
-        fb: NodeModel,
-    ): QueueProcessorConfig = QueueProcessorConfig(
-        title = title,
-        description = description,
-        stopOnError = p.optBoolean("stopOnError", fb.stopOnError ?: true),
-    )
-
-    private fun decodeEvaluation(p: JSONObject, title: String, description: String?, fb: NodeModel): EvaluationConfig =
-        EvaluationConfig(
-            title = title,
-            description = description,
-            criteriaPrompt = p.optString("criteriaPrompt").ifBlank { fb.systemPrompt.orEmpty() },
-            maxRetries = p.optInt("maxRetries", DEFAULT_MAX_RETRIES),
-            engineProvider = decodeEngineProvider(p, fb),
-        )
-
-    private fun decodeSummary(p: JSONObject, title: String, description: String?, fb: NodeModel): SummaryConfig =
-        SummaryConfig(
-            title = title,
-            description = description,
-            customPrompt = p.optStringOrNull("customPrompt") ?: fb.systemPrompt,
-        )
-
-    private fun decodePipeline(p: JSONObject, title: String, description: String?, fb: NodeModel): PipelineConfig =
-        PipelineConfig(
-            title = title,
-            description = description,
-            targetPipelineId = p.optString("targetPipelineId").ifBlank { fb.targetPipelineId.orEmpty() },
-        )
-
-    private fun decodeSkill(p: JSONObject, title: String, description: String?, fb: NodeModel): SkillConfig =
-        SkillConfig(
-            title = title,
-            description = description,
-            skillId = p.optString("skillId").ifBlank { fb.skillId.orEmpty() },
-            // Prefer the persisted engine; fall back to deriving it from the
-            // node's `cloudProvider` for rows written before the field existed.
-            engine = enumOrNull<SkillEngine>(p.optStringOrNull("engine")) ?: engineFromProvider(fb.cloudProvider),
-            // Envelopes written before the switch existed fall back to the flat field.
-            alwaysConfirm = p.optBoolean("alwaysConfirm", fb.alwaysConfirm == true),
-        )
-
     /**
      * Maps a node's `cloudProvider` to the SKILL engine choice: any non-blank
      * provider (including the "auto" sentinel) means the cloud engine; `null`
@@ -744,16 +624,6 @@ internal object NodeConfigCodec {
     }
 
     private fun JSONArray.toStringList(): List<String> = (0 until length()).map { optString(it) }
-
-    private inline fun <reified T : Enum<T>> enumOrDefault(raw: String?, default: T): T = if (raw == null) {
-        default
-    } else {
-        runCatching { enumValueOf<T>(raw) }.getOrDefault(default)
-    }
-
-    private inline fun <reified T : Enum<T>> enumOrNull(raw: String?): T? = raw?.let {
-        runCatching { enumValueOf<T>(it) }.getOrNull()
-    }
 
     // Numeric defaults for node configuration.
     private const val DEFAULT_TEMPERATURE = 0.7

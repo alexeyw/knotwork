@@ -1989,7 +1989,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "fallbackClass": "Casual"
                     },
                     "contextConfig": {
                         "chatHistory": true,
@@ -2481,7 +2482,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "fallbackClass": "Chat"
                     },
                     "contextConfig": {
                         "chatHistory": true,
@@ -2715,7 +2717,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "maxSubtasks": 5
                     },
                     "contextConfig": {
                         "chatHistory": false,
@@ -2862,7 +2865,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "maxSubtasks": 10
                     },
                     "contextConfig": {
                         "chatHistory": false,
@@ -2936,7 +2940,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "fallbackClass": "Clarify"
                     },
                     "contextConfig": {
                         "chatHistory": false,
@@ -4057,7 +4062,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "fallbackClass": "Simple"
                     },
                     "contextConfig": {
                         "chatHistory": true,
@@ -4823,7 +4829,8 @@
                         "conditionPrompt": null,
                         "conditionKeywords": null,
                         "conditionComplexity": null,
-                        "conditionHasImage": null
+                        "conditionHasImage": null,
+                        "maxSubtasks": 5
                     },
                     "contextConfig": {
                         "chatHistory": false,
@@ -8095,6 +8102,12 @@
                     conditionPrompt: flat.conditionPrompt || null,
                     conditionKeywords: flat.conditionKeywords || null,
                     conditionComplexity: flat.conditionComplexity ?? null,
+                    // Router fallback, sub-task cap and clarification replies: the
+                    // app runs these from `config` and its node sheet shows them from
+                    // there too, so left out they were browser settings lost on import.
+                    fallbackClass: flat.fallbackClass || null,
+                    maxSubtasks: flat.maxSubtasks ?? null,
+                    quickReplies: flat.quickReplies || null,
                 },
                 contextConfig: Object.assign(
                     { chatHistory: true, originalTask: true, nodeInput: true, longTermMemory: true, toolResults: true },

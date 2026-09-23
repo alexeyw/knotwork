@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.usecases
 
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
 import kotlinx.coroutines.CancellationException
@@ -116,8 +117,8 @@ class DuplicatePipelineUseCase @Inject constructor(private val pipelineRepositor
     }
 
     private companion object {
-        /** Mirrors the limit enforced by `CreatePipelineUseCase` / `RenamePipelineUseCase`. */
-        const val MAX_NAME_LENGTH = 60
+        /** The shared pipeline-name ceiling ([PipelineConstants.MAX_NAME_LENGTH]). */
+        const val MAX_NAME_LENGTH = PipelineConstants.MAX_NAME_LENGTH
 
         /** Suffix appended to the source name to mark a duplicate. */
         const val COPY_SUFFIX = " (copy)"

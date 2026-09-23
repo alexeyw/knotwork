@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.memoryio
 
+import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemorySource
@@ -174,6 +175,34 @@ class MemoryJsonSerializerTest {
                         "source":{"type":"compaction","ids":["oops"]}}]}
         """.trimIndent()
         assertTrue(MemoryJsonSerializer.parse(json) is MemoryImportOutcome.Success)
+    }
+
+    @Test
+    fun `parse refuses a file holding more chunks than the memory can keep`() {
+        val tooMany = SettingsDefaults.MAX_MEMORY_CHUNKS_MAX + 1
+        val chunks = (1..tooMany).joinToString(",") { """{"text":"m$it","embedding":[0.1],"timestamp":1}""" }
+        val json = """{"schemaVersion":1,"embeddingProviderId":"use","chunks":[$chunks]}"""
+
+        val outcome = MemoryJsonSerializer.parse(json)
+
+        assertEquals(
+            MemoryImportOutcome.Failure(
+                "File contains $tooMany memory chunks, more than the " +
+                    "${SettingsDefaults.MAX_MEMORY_CHUNKS_MAX} the memory can hold",
+            ),
+            outcome,
+        )
+    }
+
+    @Test
+    fun `parse accepts a file at exactly the chunk ceiling`() {
+        val chunks = (1..SettingsDefaults.MAX_MEMORY_CHUNKS_MAX)
+            .joinToString(",") { """{"text":"m$it","embedding":[0.1],"timestamp":1}""" }
+        val json = """{"schemaVersion":1,"embeddingProviderId":"use","chunks":[$chunks]}"""
+
+        val outcome = MemoryJsonSerializer.parse(json) as MemoryImportOutcome.Success
+
+        assertEquals(SettingsDefaults.MAX_MEMORY_CHUNKS_MAX, outcome.document.chunks.size)
     }
 
     @Test

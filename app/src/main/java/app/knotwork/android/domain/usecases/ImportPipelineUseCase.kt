@@ -3,6 +3,7 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
+import app.knotwork.android.domain.pipelineio.ImportedPipelineClaims
 import app.knotwork.android.domain.pipelineio.PipelineBundleIdRemapper
 import app.knotwork.android.domain.pipelineio.PipelineJsonSerializer
 import app.knotwork.android.domain.repositories.PipelineRepository
@@ -17,7 +18,8 @@ import javax.inject.Inject
  *
  * 1. The JSON is parsed by [PipelineJsonSerializer.parse], which surfaces
  *    one of [PipelineImportOutcome.Success] / [PipelineImportOutcome.SchemaMismatch]
- *    / [PipelineImportOutcome.Failure].
+ *    / [PipelineImportOutcome.Failure]; what the file claims about itself is
+ *    then checked against its graph ([ImportedPipelineClaims]).
  * 2. On a clean [PipelineImportOutcome.Success] this use case checks whether
  *    the imported graph's id already names a saved pipeline. If it does **not**,
  *    the graph is persisted immediately through [SavePipelineUseCase]. If it
@@ -62,7 +64,13 @@ class ImportPipelineUseCase @Inject constructor(
      * @return the [ImportInvocation] the UI should render.
      */
     suspend operator fun invoke(jsonText: String): ImportInvocation {
-        val outcome = PipelineJsonSerializer.parse(jsonText)
+        // Checked once, here, so every later step — the collision prompt, the
+        // mismatch confirmation, both resolutions — works on the checked graph.
+        val outcome = when (val parsed = PipelineJsonSerializer.parse(jsonText)) {
+            is PipelineImportOutcome.Success -> parsed.copy(graph = ImportedPipelineClaims.checked(parsed.graph))
+            is PipelineImportOutcome.SchemaMismatch -> parsed.copy(graph = ImportedPipelineClaims.checked(parsed.graph))
+            is PipelineImportOutcome.Failure -> parsed
+        }
         if (outcome !is PipelineImportOutcome.Success) {
             return ImportInvocation(outcome = outcome, saveResult = null)
         }

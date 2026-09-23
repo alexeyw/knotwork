@@ -1,8 +1,10 @@
 package app.knotwork.android.domain.memoryio
 
+import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryExportDocument
 import app.knotwork.android.domain.models.MemoryImportOutcome
+import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -53,6 +55,9 @@ import org.json.JSONObject
  *    hold the head of `$MEMORY_SUMMARY` (newest first) and stay outside the
  *    compaction window indefinitely; re-dated to "now" it ages like any new
  *    chunk. A file from a device whose clock ran ahead imports as well.
+ *
+ * A document may hold at most `SettingsDefaults.MAX_MEMORY_CHUNKS_MAX` chunks —
+ * the most the memory store can be set to keep.
  *
  * Uses `org.json` per the project's API conventions. [parse] never throws —
  * every error becomes a [MemoryImportOutcome.Failure] with a human-readable
@@ -133,7 +138,8 @@ object MemoryJsonSerializer {
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
-            return MemoryImportOutcome.Failure("Invalid JSON: ${e.message}")
+            // Clamped: on Android the message quotes the entire input.
+            return MemoryImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
         }
 
         val foundVersion = root.optInt(KEY_SCHEMA_VERSION, -1)
@@ -146,6 +152,15 @@ object MemoryJsonSerializer {
 
         val chunksJson = root.optJSONArray(KEY_CHUNKS)
             ?: return MemoryImportOutcome.Failure("Missing chunks array")
+        // Counted before any chunk is decoded: a file holding more memories than
+        // the store can ever keep is refused whole, the way a bundle over its
+        // pipeline ceiling is, rather than imported and compacted away.
+        if (chunksJson.length() > SettingsDefaults.MAX_MEMORY_CHUNKS_MAX) {
+            return MemoryImportOutcome.Failure(
+                "File contains ${chunksJson.length()} memory chunks, more than the " +
+                    "${SettingsDefaults.MAX_MEMORY_CHUNKS_MAX} the memory can hold",
+            )
+        }
 
         val chunks = ArrayList<MemoryChunk>(chunksJson.length())
         var pinnedInFile = 0

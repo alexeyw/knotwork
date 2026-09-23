@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.usecases
 
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelinePreset
@@ -189,6 +190,6 @@ class LoadPipelineFromPresetUseCase @Inject constructor(
     }
 
     private companion object {
-        const val MAX_NAME_LENGTH = 60
+        const val MAX_NAME_LENGTH = PipelineConstants.MAX_NAME_LENGTH
     }
 }

@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.usecases
 
+import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
@@ -86,8 +87,8 @@ class CreatePipelineUseCase @Inject constructor(private val pipelineRepository: 
     }
 
     private companion object {
-        /** Mirrors the rename rule so the two flows agree on what is acceptable. */
-        const val MAX_NAME_LENGTH = 60
+        /** The shared pipeline-name ceiling, so every path agrees on what is acceptable. */
+        const val MAX_NAME_LENGTH = PipelineConstants.MAX_NAME_LENGTH
 
         /** Y coordinate shared by both seed nodes — keeps them on a single horizontal track. */
         const val SEED_NODE_Y = 300f
