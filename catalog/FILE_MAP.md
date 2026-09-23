@@ -534,5 +534,5 @@ matters.
   - `KnotworkThemeTest.kt` - Verifies that `KnotworkTheme` wires the Knotwork tokens into the underlying `MaterialTheme` and into the `KnotworkTheme.*` composition-local accessors.
 - `tokens/` - the token data classes themselves, plus the WCAG contrast audit over every on-surface text pair.
   - `KnotworkTokensTest.kt` - Pure-JVM sanity tests for the token data classes — no Compose runtime, no Robolectric.
-  - `WcagContrastTest.kt` - WCAG 2.1 AA contrast audit for the on-surface text pairs the Knotwork design system depends on in both themes.
+  - `WcagContrastTest.kt` - Contrast checks for a few colour pairs of the Knotwork design system, in both themes, measured with the WCAG 2.1 formula.
 <!-- /AUTO-GEN:FILE_MAP_TESTS -->
