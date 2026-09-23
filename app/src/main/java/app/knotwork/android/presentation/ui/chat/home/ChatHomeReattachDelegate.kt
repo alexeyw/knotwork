@@ -191,6 +191,11 @@ class ChatHomeReattachDelegate(
                                     toolName = parked.toolName.orEmpty(),
                                     arguments = parked.toolArgs.orEmpty(),
                                     risk = parked.risk ?: ToolRisk.SENSITIVE,
+                                    // The card answers the record it shows, not
+                                    // whatever the session parks next. Records
+                                    // from before request ids were back-filled
+                                    // with their run id.
+                                    requestId = parked.requestId ?: parked.runId,
                                 ),
                             )
                         }

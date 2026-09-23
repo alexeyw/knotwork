@@ -45,12 +45,21 @@ interface TaskQueueManager {
     fun observeTaskState(sessionId: String): Flow<AgentOrchestratorState>
 
     /**
-     * Resumes a paused execution cycle for a specific session.
+     * Completes the live approval request [requestId] of [sessionId] with the
+     * user's decision.
+     *
+     * The decision settles only the request it names: when the session is live
+     * on a different request (or on none), nothing is settled and `false` comes
+     * back, so the caller can look for the parked record [requestId] names
+     * instead. Answers reach this only through
+     * `SubmitApprovalDecisionUseCase`.
      *
      * @param sessionId The session ID waiting for approval.
+     * @param requestId Identity of the request the decision was given for.
      * @param isApproved True if the user approved the action.
+     * @return `true` when the decision settled the live request it names.
      */
-    fun resumeWithApproval(sessionId: String, isApproved: Boolean)
+    fun resumeWithApproval(sessionId: String, requestId: String, isApproved: Boolean): Boolean
 
     /**
      * Cancels the run of [sessionId] — the one executing, and any of that

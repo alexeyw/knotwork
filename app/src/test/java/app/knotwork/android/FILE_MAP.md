@@ -17,6 +17,7 @@ Only Kotlin files appear inside the generated blocks.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
   - `DomainPurityKonsistTest.kt` - Konsist guard enforcing the strictest project rule for the `domain` layer: it is pure Kotlin with **zero** Android/framework imports, so it can be compiled and unit-tested off-device.
   - `FirebaseIsolationKonsistTest.kt` - Konsist guard keeping the Firebase SDK out of the shared `main` source set.
+  - `HitlDispatchKonsistTest.kt` - Census of the seams through which a tool call can take effect, and of the one channel through which a human answer can reach the gate in front of them.
   - `InstrumentedTestExclusionGuardTest.kt` - Guard over the **instrumented-test exclusion list** — the set of instrumented tests the automated emulator runs deliberately do not execute.
   - `JournalExportNoNetworkKonsistTest.kt` - Konsist guard on the journal exports: **the journal leaves the device only in the user's own hands.**
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
@@ -53,6 +54,8 @@ Only Kotlin files appear inside the generated blocks.
       - `FakeAeadCipher.kt` - Deterministic `AeadCipher` stand-in for JVM unit tests.
       - `InMemorySharedPreferences.kt` - Minimal map-backed `SharedPreferences` for JVM unit tests.
       - `KeystoreBackedPrefsStoreTest.kt` - Verifies the storage semantics of `KeystoreBackedPrefsStore` against a `FakeAeadCipher`: framing, slot binding via associated data, the absent-vs-unreadable distinction, and the destroy contract.
+    - `dao/` - Room DAO tests against a real in-memory database, for queries whose correctness lives in their SQL.
+      - `PendingInteractionDaoTest.kt` - `PendingInteractionDao` against a real (in-memory) Room database, for the two queries whose correctness lives in their SQL rather than in any Kotlin a mock could stand in for: finding a parked approval by the request it parks, and writing a decision only onto the record of the request it answers.
     - `DatabaseResetServiceImplTest.kt` - Verifies that `DatabaseResetServiceImpl` deletes both halves of the encrypted-database state — the database file and the stored passphrase — in a single quiesced wipe operation, and refuses to destroy the passphrase while the database file survives.
     - `DeferredPassphraseOpenHelperFactoryTest.kt` - Verifies the deferral contract of `DeferredPassphraseOpenHelperFactory`: no passphrase access during factory/helper construction (i.e. during Hilt provision), lazy delegate creation on first database access, no caching of failed construction (Retry support), and WAL-flag replay.
     - `EmbeddingBlobCodecTest.kt` - Unit tests for `EmbeddingBlobCodec` — the binary wire format of the `memory_chunks.embedding` BLOB column.
@@ -268,6 +271,7 @@ Only Kotlin files appear inside the generated blocks.
   - `usecases/` - Tests for the use cases.
     - `AgentOrchestratorUseCaseTest.kt` - Tests for AgentOrchestratorUseCase.
     - `AppInitializationUseCaseTest.kt` - Unit tests for `AppInitializationUseCase`.
+    - `ApprovalRequestAddressingTest.kt` - The decision channel end to end, from the surface that shows a request to the gate that waits on one: a real `SubmitApprovalDecisionUseCase` in front of a real `ToolInvocationGate`.
     - `ArchiveChatUseCaseTest.kt` - Unit tests for `ArchiveChatUseCase`.
     - `AttachmentMessageContentTest.kt` - Unit tests for `AttachmentMessageContent`, the shared image-only message contract used by both the composer and the share target.
     - `automation/` - Tests for the external-automation use cases.

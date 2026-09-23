@@ -63,12 +63,15 @@ class ChatHomeHitlDelegate(
     }
 
     /**
-     * Approves the tool the orchestrator is paused on. For a destructive tool
-     * the approval is gated on the typed-confirm matching the canonical magic
-     * word (`"yes"`, trimmed, case-insensitive) — the catalog
-     * `HitlConfirmationCard` already disables the Allow CTA in that case, but
-     * the gate is mirrored defensively so a programmatic caller cannot bypass
-     * it. No-op when no tool is pending.
+     * Approves the request the card shows. For a destructive tool the approval
+     * is gated on the typed-confirm matching the canonical magic word (`"yes"`,
+     * trimmed, case-insensitive) — the catalog `HitlConfirmationCard` already
+     * disables the Allow CTA in that case, but the gate is mirrored defensively
+     * so a programmatic caller cannot bypass it. No-op when no tool is pending.
+     *
+     * The answer names the card's request, so the risk checked here is the risk
+     * of the request that can be settled: when the run has since moved on to a
+     * different request, this answer settles nothing rather than that one.
      */
     fun approveTool() {
         val pending = state.value.pending.tool ?: return
@@ -82,7 +85,7 @@ class ChatHomeHitlDelegate(
                 visual = ChatHomeUiState.Generating(),
             )
         }
-        scope.launch { submitApprovalDecision(sessionId, isApproved = true) }
+        scope.launch { submitApprovalDecision(sessionId, pending.requestId, isApproved = true) }
     }
 
     /**
@@ -106,7 +109,7 @@ class ChatHomeHitlDelegate(
             )
         }
         scope.launch {
-            submitApprovalDecision(sessionId, isApproved = false)
+            submitApprovalDecision(sessionId, pending.requestId, isApproved = false)
             chatRepository.saveMessage(
                 ChatMessage(
                     sessionId = sessionId,
@@ -279,6 +282,7 @@ class ChatHomeHitlDelegate(
                         toolName = approval.toolName,
                         arguments = approval.arguments,
                         risk = approval.risk,
+                        requestId = approval.requestId,
                     ),
                 ),
                 composer = it.composer.copy(typedConfirm = ""),
@@ -341,12 +345,16 @@ class ChatHomeHitlDelegate(
     }
 
     /**
-     * Routes the user's approve / deny decision through
+     * Routes the user's approve / deny decision on request [requestId] through
      * [SubmitApprovalDecisionUseCase] (live gate first, then the parked record)
      * and folds the outcome onto the resume plumbing via [routePendingOutcome].
+     *
+     * @param sessionId The session the card belongs to.
+     * @param requestId Identity of the request the card showed.
+     * @param isApproved `true` to approve, `false` to deny.
      */
-    private suspend fun submitApprovalDecision(sessionId: String, isApproved: Boolean) {
-        routePendingOutcome(submitApprovalDecisionUseCase(sessionId, isApproved), sessionId) {
+    private suspend fun submitApprovalDecision(sessionId: String, requestId: String, isApproved: Boolean) {
+        routePendingOutcome(submitApprovalDecisionUseCase(sessionId, requestId, isApproved), sessionId) {
             state.update { it.copy(visual = it.restingVisual()) }
         }
     }

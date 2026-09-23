@@ -371,7 +371,7 @@ class TriggerBackgroundRunIntegrationTest {
                     process.taskQueueManager.pendingApproval(SESSION_ID) == null
             }
             verify(atLeast = 1) {
-                process.approvalNotifier.sendApprovalRequest(any(), any(), any(), any())
+                process.approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any())
             }
 
             // ── Approve from the notification — the run resumes and completes ──
@@ -379,7 +379,7 @@ class TriggerBackgroundRunIntegrationTest {
                 process.taskQueueManager,
                 process.pendingRepository,
                 process.parkedRunResumer,
-            )(SESSION_ID, isApproved = true, runId = runId)
+            )(SESSION_ID, process.parkedRequestId(runId), isApproved = true)
             assertEquals(PendingSubmissionOutcome.Resumed, submission)
 
             awaitUntil("run COMPLETED after approval") {
@@ -726,7 +726,17 @@ class TriggerBackgroundRunIntegrationTest {
         val approvalNotifier: ApprovalNotifier,
         val parkedRunResumer: ParkedRunResumer,
         val triggerJournal: TriggerJournalRepositoryImpl,
-    )
+    ) {
+        /**
+         * Identity of the request run [runId] is parked on — what the buttons
+         * of its notification answer with.
+         *
+         * @param runId The parked run.
+         * @return The request id its record carries.
+         */
+        suspend fun parkedRequestId(runId: String): String =
+            requireNotNull(pendingRepository.getForRun(runId)?.requestId) { "run $runId parks no approval request" }
+    }
 
     private companion object {
         const val GRAPH_ID = "trigger-graph"

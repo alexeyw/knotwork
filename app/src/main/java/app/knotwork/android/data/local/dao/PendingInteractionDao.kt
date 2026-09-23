@@ -49,7 +49,17 @@ interface PendingInteractionDao {
     suspend fun getForSession(sessionId: String): PendingInteractionEntity?
 
     /**
-     * Records the user's approval decision, guarded to first-writer-wins.
+     * Returns the record parking approval request [requestId], or `null` when
+     * no record parks it.
+     *
+     * @param requestId Identity of the approval request to look up.
+     */
+    @Query("SELECT * FROM pending_interactions WHERE requestId = :requestId")
+    suspend fun getForRequest(requestId: String): PendingInteractionEntity?
+
+    /**
+     * Records the user's decision, guarded to first-writer-wins. For a ceiling
+     * pause; an approval answer goes through [recordApprovalDecision].
      *
      * @param runId Id of the parked run.
      * @param decision The `PendingDecision` name to record.
@@ -61,6 +71,24 @@ interface PendingInteractionDao {
             "WHERE runId = :runId AND decision IS NULL",
     )
     suspend fun recordDecision(runId: String, decision: String): Int
+
+    /**
+     * Records the user's approval decision, guarded to first-writer-wins and
+     * to the request it answers: a record the same run re-parked with a
+     * different request in the meantime is not written.
+     *
+     * @param runId Id of the parked run.
+     * @param requestId Identity of the request the decision was given for.
+     * @param decision The `PendingDecision` name to record.
+     * @return The number of updated rows — `1` when this call recorded the
+     *   decision, `0` when the record is missing, parks another request, or is
+     *   already decided.
+     */
+    @Query(
+        "UPDATE pending_interactions SET decision = :decision " +
+            "WHERE runId = :runId AND requestId = :requestId AND decision IS NULL",
+    )
+    suspend fun recordApprovalDecision(runId: String, requestId: String, decision: String): Int
 
     /**
      * Records the user's clarification answer, guarded to first-writer-wins.

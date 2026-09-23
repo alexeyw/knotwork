@@ -76,6 +76,14 @@ interface LiteRtRepository {
   tools read-only could walk straight past the gate.
   `requiresUserConfirmation` is now an opt-in "ask on every single call"
   override and never silences `SENSITIVE` / `DESTRUCTIVE`.
+- **An approval answers a request, never a session.** The gate mints a
+  `requestId` for every request it raises; the chat card, both
+  notifications and the parked record carry it, and every answer goes
+  through `SubmitApprovalDecisionUseCase`, which settles only the request
+  it names. A parked request and a live one coexist in one session, so
+  "whatever the session is waiting on" is not an address. A new answering
+  surface carries the id; a new caller of `resumeWithApproval`,
+  `executeTool` or `invokeByName` fails `HitlDispatchKonsistTest`.
 
 ```kotlin
 enum class ToolRisk { READ_ONLY, SENSITIVE, DESTRUCTIVE }

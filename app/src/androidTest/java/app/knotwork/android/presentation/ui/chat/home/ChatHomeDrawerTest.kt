@@ -166,6 +166,7 @@ class ChatHomeDrawerTest {
                 toolName = "calendar.create_event",
                 arguments = "{}",
                 risk = ToolRisk.SENSITIVE,
+                requestId = "request-1",
             ),
         )
 

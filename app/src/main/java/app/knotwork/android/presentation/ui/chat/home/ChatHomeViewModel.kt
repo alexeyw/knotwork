@@ -1343,8 +1343,11 @@ data class PipelineSummary(
  * @property toolName fully-qualified tool id (e.g. `fs.write_file`).
  * @property arguments raw JSON-encoded argument blob emitted by the agent.
  * @property risk per-tool risk tier resolved by `ToolRepository.getRisk`.
+ * @property requestId identity of the request this card shows. The card's
+ *   answer names it, so it settles this request or nothing — which is also what
+ *   makes the risk above the right one to decide the typed confirmation by.
  */
-data class HitlPending(val toolName: String, val arguments: String, val risk: ToolRisk)
+data class HitlPending(val toolName: String, val arguments: String, val risk: ToolRisk, val requestId: String)
 
 /**
  * Snapshot of the session's interrupted run, exposed through

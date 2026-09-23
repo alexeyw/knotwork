@@ -36,6 +36,12 @@ import javax.inject.Inject
  * shade offers the same choice for the same risk whichever phase the run is in:
  * [ToolRisk.DESTRUCTIVE] never gets a one-tap Approve — approving it takes the
  * typed confirmation of the in-chat card, which a notification cannot collect.
+ *
+ * Everything is keyed by the **request**: the notification slot, the identity
+ * of every action intent, and the answer each action carries. The live and the
+ * persistent notification of one request share a slot (the park replaces the
+ * one with the other); two requests of one session get two notifications, and
+ * settling one leaves the other.
  */
 class ApprovalNotificationManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -43,6 +49,7 @@ class ApprovalNotificationManager @Inject constructor(
 ) : ApprovalNotifier {
 
     companion object {
+        /** Base of the approval notification id range. */
         const val NOTIFICATION_ID = 201
 
         /** Request-code offset of the Approve action within one request's intent family. */
@@ -53,6 +60,30 @@ class ApprovalNotificationManager @Inject constructor(
 
         /** Request-code offset of the repost delete-intent within one request's intent family. */
         private const val REPOST_OFFSET = 2
+
+        /**
+         * Notification slot of request [requestId]: shared by its live and
+         * persistent notification, so the park replaces the one with the other
+         * and a single cancel clears whichever is showing — and distinct from
+         * the slot of every other request, of the same session included.
+         *
+         * @param requestId Identity of the request owning the slot.
+         * @return The notification id.
+         */
+        fun notificationId(requestId: String): Int =
+            NOTIFICATION_ID + requestId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
+
+        /**
+         * Slot an approval notification of [sessionId] occupied when releases
+         * before request addressing keyed notifications by session. Only the
+         * receiver needs it: a notification posted by such a release can still
+         * be in the shade after the update, and answering it must remove it.
+         *
+         * @param sessionId Id of the session the old notification was posted for.
+         * @return The notification id that release used.
+         */
+        fun legacySessionNotificationId(sessionId: String): Int =
+            NOTIFICATION_ID + sessionId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
     }
 
     /**
@@ -64,11 +95,18 @@ class ApprovalNotificationManager @Inject constructor(
      * instead of Approve; the other tiers offer Approve and Deny.
      *
      * @param sessionId The ID of the session requesting approval.
+     * @param requestId Identity of the request: the slot, and the answer the actions carry.
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
      * @param risk Risk classification, drives the channel / icon / title selection.
      */
-    override fun sendApprovalRequest(sessionId: String, toolName: String, arguments: String, risk: ToolRisk) {
+    override fun sendApprovalRequest(
+        sessionId: String,
+        requestId: String,
+        toolName: String,
+        arguments: String,
+        risk: ToolRisk,
+    ) {
         // If the user is currently on the chat screen for this session, they will see the inline prompt.
         if (activeSessionTracker.activeSessionId.value == sessionId) {
             return
@@ -91,6 +129,7 @@ class ApprovalNotificationManager @Inject constructor(
         }
         val contentText = context.getString(R.string.approval_notification_text, toolName)
         val bigText = context.getString(R.string.approval_notification_big_text, toolName, arguments)
+        val address = RequestAddress(sessionId, requestId)
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(smallIcon)
@@ -102,13 +141,12 @@ class ApprovalNotificationManager @Inject constructor(
             .addDecisionActions(
                 risk = risk,
                 sessionId = sessionId,
-                approveIntent = { approvalPendingIntent(sessionId, ApprovalAction.APPROVE, APPROVE_OFFSET) },
-                denyIntent = approvalPendingIntent(sessionId, ApprovalAction.DENY, DENY_OFFSET),
+                approveIntent = { decisionPendingIntent(address, ApprovalAction.APPROVE, APPROVE_OFFSET) },
+                denyIntent = decisionPendingIntent(address, ApprovalAction.DENY, DENY_OFFSET),
             )
             .build()
 
-        // Use sessionId hashcode as notification ID so multiple requests can be shown if needed
-        notificationManager.notify(notificationId(sessionId), notification)
+        notificationManager.notify(notificationId(requestId), notification)
     }
 
     /**
@@ -127,8 +165,9 @@ class ApprovalNotificationManager @Inject constructor(
      *    "Review in chat" deep link instead of a direct Approve — a typed
      *    confirmation cannot be collected from a notification.
      *
-     * @param runId Id of the parked run the decision must address.
+     * @param runId Id of the parked run, carried for the re-post of a dismissed notification.
      * @param sessionId The ID of the session that triggered the request.
+     * @param requestId Identity of the parked request: the slot, and the answer the actions carry.
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
      * @param risk Risk classification, drives the channel / icon / title / actions.
@@ -136,6 +175,7 @@ class ApprovalNotificationManager @Inject constructor(
     override fun sendPersistentApprovalRequest(
         runId: String,
         sessionId: String,
+        requestId: String,
         toolName: String,
         arguments: String,
         risk: ToolRisk,
@@ -159,6 +199,7 @@ class ApprovalNotificationManager @Inject constructor(
         val bigText = context.getString(R.string.approval_notification_big_text, toolName, arguments)
         val deepLink = chatDeepLinkIntent(sessionId)
 
+        val address = RequestAddress(sessionId, requestId, runId)
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(smallIcon)
             .setContentTitle(title)
@@ -169,25 +210,26 @@ class ApprovalNotificationManager @Inject constructor(
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setAutoCancel(false)
-            .setDeleteIntent(persistentPendingIntent(sessionId, runId, ApprovalAction.REPOST, REPOST_OFFSET))
+            .setDeleteIntent(decisionPendingIntent(address, ApprovalAction.REPOST, REPOST_OFFSET))
             .addDecisionActions(
                 risk = risk,
                 sessionId = sessionId,
-                approveIntent = { persistentPendingIntent(sessionId, runId, ApprovalAction.APPROVE, APPROVE_OFFSET) },
-                denyIntent = persistentPendingIntent(sessionId, runId, ApprovalAction.DENY, DENY_OFFSET),
+                approveIntent = { decisionPendingIntent(address, ApprovalAction.APPROVE, APPROVE_OFFSET) },
+                denyIntent = decisionPendingIntent(address, ApprovalAction.DENY, DENY_OFFSET),
             )
 
-        notificationManager.notify(notificationId(sessionId), builder.build())
+        notificationManager.notify(notificationId(requestId), builder.build())
     }
 
     /**
-     * Removes the approval notification of [sessionId], if any is showing.
+     * Removes the notification of request [requestId], if it is showing; the
+     * notifications of other requests, of the same session included, stay.
      *
-     * @param sessionId The session whose approval notification to remove.
+     * @param requestId The request whose notification to remove.
      */
-    override fun cancelApprovalNotification(sessionId: String) {
+    override fun cancelApprovalNotification(requestId: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(notificationId(sessionId))
+        notificationManager.cancel(notificationId(requestId))
     }
 
     /**
@@ -244,49 +286,38 @@ class ApprovalNotificationManager @Inject constructor(
         notificationManager.createNotificationChannel(destructiveChannel)
     }
 
-    private fun approvalPendingIntent(
-        sessionId: String,
-        action: ApprovalAction,
-        requestCodeOffset: Int,
-    ): PendingIntent {
-        val intent = Intent(context, AgentApprovalReceiver::class.java).apply {
-            this.action = action.action
-            putExtra(AgentApprovalReceiver.EXTRA_SESSION_ID, sessionId)
-        }
-        return PendingIntent.getBroadcast(
-            context,
-            sessionId.hashCode() + requestCodeOffset,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
-
     /**
-     * Builds a broadcast [PendingIntent] addressing a parked run. Request
-     * codes derive from the run id (not the session id, which the live-phase
-     * intents use) so the persistent intents of a run never overwrite — and
-     * are never overwritten by — live-phase intents whose extras differ but
-     * whose `Intent.filterEquals` identity matches.
+     * Builds a broadcast [PendingIntent] carrying one request's answer (or its
+     * re-post) to [AgentApprovalReceiver].
      *
-     * @param sessionId Id of the owning chat session.
-     * @param runId Id of the parked run carried to [AgentApprovalReceiver].
+     * The intent's identity is the request: [Intent.setIdentifier] takes part
+     * in `Intent.filterEquals` while extras do not, so without it two requests
+     * of one session would share one `PendingIntent`, and posting the second
+     * would rewrite — through `FLAG_UPDATE_CURRENT` — the extras behind the
+     * first notification's buttons to answer the second. The live and the
+     * persistent intents of one request do share an identity, on purpose: the
+     * park replaces the one notification with the other, and the update adds
+     * the run id to the intents the live one already had.
+     *
+     * @param address The request the intent answers.
      * @param action The wire action to emit.
-     * @param requestCodeOffset Disambiguates the actions of one run.
+     * @param requestCodeOffset Disambiguates the actions of one request.
      */
-    private fun persistentPendingIntent(
-        sessionId: String,
-        runId: String,
+    private fun decisionPendingIntent(
+        address: RequestAddress,
         action: ApprovalAction,
         requestCodeOffset: Int,
     ): PendingIntent {
         val intent = Intent(context, AgentApprovalReceiver::class.java).apply {
             this.action = action.action
-            putExtra(AgentApprovalReceiver.EXTRA_SESSION_ID, sessionId)
-            putExtra(AgentApprovalReceiver.EXTRA_RUN_ID, runId)
+            identifier = address.requestId
+            putExtra(AgentApprovalReceiver.EXTRA_SESSION_ID, address.sessionId)
+            putExtra(AgentApprovalReceiver.EXTRA_REQUEST_ID, address.requestId)
+            address.runId?.let { putExtra(AgentApprovalReceiver.EXTRA_RUN_ID, it) }
         }
         return PendingIntent.getBroadcast(
             context,
-            runId.hashCode() + requestCodeOffset,
+            address.requestId.hashCode() + requestCodeOffset,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -309,20 +340,23 @@ class ApprovalNotificationManager @Inject constructor(
         )
         return TaskStackBuilder.create(context).run {
             addNextIntentWithParentStack(intent)
+            // The deep link is per session (its uri names the chat), not per
+            // request: every request of a chat opens the same screen.
             getPendingIntent(
-                notificationId(sessionId),
+                sessionId.hashCode(),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }
     }
 
     /**
-     * Notification slot of [sessionId]: shared by the live and persistent
-     * phases so the persistent notification replaces the live one, and a
-     * single cancel clears whichever is showing.
+     * Where a decision intent points: the request it answers, the session it
+     * belongs to, and — for a parked request — the run it parks, which the
+     * re-post of a dismissed notification reads its record by.
      *
-     * @param sessionId Id of the chat session owning the slot.
+     * @property sessionId Id of the owning chat session.
+     * @property requestId Identity of the request.
+     * @property runId Id of the parked run; `null` for a live request.
      */
-    private fun notificationId(sessionId: String): Int =
-        NOTIFICATION_ID + sessionId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
+    private data class RequestAddress(val sessionId: String, val requestId: String, val runId: String? = null)
 }

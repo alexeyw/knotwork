@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import app.knotwork.android.domain.constants.TimeAndIdConstants
 import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.ToolRisk
@@ -78,23 +77,22 @@ class AgentApprovalReceiverTest {
     private fun notificationManager(): NotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    private fun expectedNotificationId(sessionId: String): Int = ApprovalNotificationManager.NOTIFICATION_ID +
-        sessionId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
-
-    /** Posts a placeholder notification at the slot the receiver is expected to cancel. */
-    private fun postPlaceholder(sessionId: String) {
+    /** Posts a placeholder notification at [id], standing in for one the receiver must remove. */
+    private fun postPlaceholder(id: Int) {
         val notification = Notification.Builder(context, "test-channel")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("placeholder")
             .build()
-        notificationManager().notify(expectedNotificationId(sessionId), notification)
+        notificationManager().notify(id, notification)
     }
 
-    private fun intent(action: String?, sessionId: String?, runId: String? = null): Intent = Intent().apply {
-        if (action != null) this.action = action
-        if (sessionId != null) putExtra(AgentApprovalReceiver.EXTRA_SESSION_ID, sessionId)
-        if (runId != null) putExtra(AgentApprovalReceiver.EXTRA_RUN_ID, runId)
-    }
+    private fun intent(action: String?, sessionId: String?, runId: String? = null, requestId: String? = null): Intent =
+        Intent().apply {
+            if (action != null) this.action = action
+            if (sessionId != null) putExtra(AgentApprovalReceiver.EXTRA_SESSION_ID, sessionId)
+            if (runId != null) putExtra(AgentApprovalReceiver.EXTRA_RUN_ID, runId)
+            if (requestId != null) putExtra(AgentApprovalReceiver.EXTRA_REQUEST_ID, requestId)
+        }
 
     /** Runs [body] with the receiver's scope bound to the test's unconfined dispatcher. */
     private fun runReceiverTest(body: suspend () -> Unit) = runTest {
@@ -103,31 +101,63 @@ class AgentApprovalReceiverTest {
     }
 
     @Test
-    fun `given APPROVE action when onReceive then decision use case is called with true`() = runReceiverTest {
-        receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1"))
+    fun `given APPROVE for a request when onReceive then the decision names that request`() = runReceiverTest {
+        receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1", requestId = "request-1"))
 
-        coVerify(exactly = 1) { submitDecision("s1", true, null) }
+        coVerify(exactly = 1) { submitDecision("s1", "request-1", true) }
+        confirmVerified(submitDecision)
+        verify { approvalNotifier.cancelApprovalNotification("request-1") }
+    }
+
+    @Test
+    fun `given DENY for a request when onReceive then the decision names that request`() = runReceiverTest {
+        receiver.onReceive(context, intent(ApprovalAction.DENY.action, "s1", requestId = "request-1"))
+
+        coVerify(exactly = 1) { submitDecision("s1", "request-1", false) }
         confirmVerified(submitDecision)
     }
 
     @Test
-    fun `given DENY action when onReceive then decision use case is called with false`() = runReceiverTest {
-        receiver.onReceive(context, intent(ApprovalAction.DENY.action, "s1"))
+    fun `given a parked request's action with its run too when onReceive then the request is what is answered`() =
+        runReceiverTest {
+            receiver.onReceive(
+                context,
+                intent(ApprovalAction.APPROVE.action, "s1", runId = "run-1", requestId = "request-1"),
+            )
 
-        coVerify(exactly = 1) { submitDecision("s1", false, null) }
-        confirmVerified(submitDecision)
-    }
+            coVerify(exactly = 1) { submitDecision("s1", "request-1", true) }
+        }
 
     @Test
-    fun `given APPROVE with runId extra when onReceive then run id reaches the use case`() = runReceiverTest {
-        receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1", runId = "run-1"))
+    fun `given a pre-update parked notification when onReceive then its run is answered and its old slot cleared`() =
+        runReceiverTest {
+            // Posted by a release that keyed notifications by session and named
+            // only the run; the store back-filled that run id as the request id.
+            postPlaceholder(ApprovalNotificationManager.legacySessionNotificationId("s1"))
 
-        coVerify(exactly = 1) { submitDecision("s1", true, "run-1") }
-    }
+            receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1", runId = "run-1"))
+
+            coVerify(exactly = 1) { submitDecision("s1", "run-1", true) }
+            assertEquals(0, Shadows.shadowOf(notificationManager()).size())
+        }
+
+    @Test
+    fun `given a pre-update live notification when onReceive then nothing is answered and its slot is cleared`() =
+        runReceiverTest {
+            // It names neither a request nor a run: whatever it asked about died
+            // with the process the update replaced. Answering "the session"
+            // instead is exactly what the request address exists to rule out.
+            postPlaceholder(ApprovalNotificationManager.legacySessionNotificationId("s1"))
+
+            receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1"))
+
+            coVerify(exactly = 0) { submitDecision(any(), any(), any()) }
+            assertEquals(0, Shadows.shadowOf(notificationManager()).size())
+        }
 
     @Test
     fun `given unknown action when onReceive then nothing is dispatched`() = runReceiverTest {
-        receiver.onReceive(context, intent("app.knotwork.android.ACTION_UNKNOWN", "s1"))
+        receiver.onReceive(context, intent("app.knotwork.android.ACTION_UNKNOWN", "s1", requestId = "request-1"))
 
         coVerify(exactly = 0) { submitDecision(any(), any(), any()) }
         confirmVerified(submitDecision)
@@ -135,33 +165,17 @@ class AgentApprovalReceiverTest {
 
     @Test
     fun `given missing sessionId extra when onReceive then use case skipped and notification kept`() = runReceiverTest {
-        postPlaceholder("would-be-cancelled")
+        postPlaceholder(ApprovalNotificationManager.notificationId("request-1"))
         assertEquals(1, Shadows.shadowOf(notificationManager()).size())
 
-        receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, sessionId = null))
+        receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, sessionId = null, requestId = "request-1"))
 
         coVerify(exactly = 0) { submitDecision(any(), any(), any()) }
+        verify(exactly = 0) { approvalNotifier.cancelApprovalNotification(any()) }
         // Pre-existing notification must still be there — the receiver
         // returned before reaching the cancel call.
         assertEquals(1, Shadows.shadowOf(notificationManager()).size())
     }
-
-    @Test
-    fun `given a pending notification when onReceive APPROVE then it is cancelled at the matching id`() =
-        runReceiverTest {
-            val sessionId = "session-cancel"
-            postPlaceholder(sessionId)
-            assertEquals(
-                "Precondition: placeholder notification must be posted before onReceive runs",
-                1,
-                Shadows.shadowOf(notificationManager()).size(),
-            )
-
-            receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, sessionId))
-
-            assertEquals(0, Shadows.shadowOf(notificationManager()).size())
-            coVerify(exactly = 1) { submitDecision(sessionId, true, null) }
-        }
 
     @Test
     fun `given REPOST for a parked approval when onReceive then notification reposted from record`() = runReceiverTest {
@@ -173,6 +187,7 @@ class AgentApprovalReceiverTest {
             toolArgs = "{\"to\":\"a@b.c\"}",
             risk = ToolRisk.DESTRUCTIVE,
             requestedAt = 0L,
+            requestId = "request-1",
         )
 
         receiver.onReceive(context, intent(ApprovalAction.REPOST.action, "s1", runId = "run-1"))
@@ -181,6 +196,7 @@ class AgentApprovalReceiverTest {
             approvalNotifier.sendPersistentApprovalRequest(
                 runId = "run-1",
                 sessionId = "s1",
+                requestId = "request-1",
                 toolName = "send_email",
                 arguments = "{\"to\":\"a@b.c\"}",
                 risk = ToolRisk.DESTRUCTIVE,
@@ -213,7 +229,9 @@ class AgentApprovalReceiverTest {
 
         receiver.onReceive(context, intent(ApprovalAction.REPOST.action, "s3", runId = "run-3"))
 
-        verify(exactly = 0) { approvalNotifier.sendPersistentApprovalRequest(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) {
+            approvalNotifier.sendPersistentApprovalRequest(any(), any(), any(), any(), any(), any())
+        }
         verify(exactly = 0) { clarificationNotifier.sendPersistentClarificationRequest(any(), any(), any()) }
     }
 

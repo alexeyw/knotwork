@@ -64,15 +64,18 @@ class ToolNodeExecutor @Inject constructor(
 ) : NodeExecutor {
 
     /**
-     * Completes the suspended approval request for [sessionId] with the user's decision.
-     * Delegates to the shared [ToolInvocationGate]; kept here so existing callers
-     * (`GraphExecutionEngine`, the AppFunctions E2E entry point) keep working unchanged.
+     * Completes the live approval request [requestId] of [sessionId] with the
+     * user's decision. Delegates to the shared [ToolInvocationGate]; kept here so
+     * existing callers (`GraphExecutionEngine`, the AppFunctions E2E test) keep
+     * working unchanged.
      *
      * @param sessionId chat session id whose pending approval is being resolved.
+     * @param requestId identity of the request the decision was given for.
      * @param isApproved `true` if the user approved tool execution, `false` to deny it.
+     * @return `true` when the decision settled the live request it names.
      */
-    fun resumeWithApproval(sessionId: String, isApproved: Boolean) =
-        toolInvocationGate.resumeWithApproval(sessionId, isApproved)
+    fun resumeWithApproval(sessionId: String, requestId: String, isApproved: Boolean): Boolean =
+        toolInvocationGate.resumeWithApproval(sessionId, requestId, isApproved)
 
     /**
      * Returns the approval request the run of [sessionId] is currently suspended on, or

@@ -266,7 +266,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
                 process.taskQueueManager,
                 process.pendingRepository,
                 process.parkedRunResumer,
-            )(SESSION_ID, isApproved = true, runId = runId)
+            )(SESSION_ID, process.parkedRequestId(runId), isApproved = true)
             assertEquals(PendingSubmissionOutcome.Resumed, outcome)
             awaitUntil("run COMPLETED after the approval") {
                 process.runRepository.getRun(runId)?.status == PipelineRunStatus.COMPLETED
@@ -365,7 +365,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
             process.taskQueueManager,
             process.pendingRepository,
             process.parkedRunResumer,
-        )(SESSION_ID, isApproved = false, runId = runId)
+        )(SESSION_ID, process.parkedRequestId(runId), isApproved = false)
         awaitUntil("the request journal settled the terminal status") {
             process.externalJournal.findByRunId(runId)?.status.let {
                 it == ExternalAutomationStatus.Completed || it == ExternalAutomationStatus.Failed
@@ -750,7 +750,17 @@ class ExternalAutomationBackgroundRunIntegrationTest {
         val parkedRunResumer: ParkedRunResumer,
         val externalJournal: ExternalAutomationJournalRepositoryImpl,
         val externalCallback: RecordingCallbackNotifier,
-    )
+    ) {
+        /**
+         * Identity of the request run [runId] is parked on — what the buttons
+         * of its notification answer with.
+         *
+         * @param runId The parked run.
+         * @return The request id its record carries.
+         */
+        suspend fun parkedRequestId(runId: String): String =
+            requireNotNull(pendingRepository.getForRun(runId)?.requestId) { "run $runId parks no approval request" }
+    }
 
     private companion object {
         const val GRAPH_ID = "external-graph"

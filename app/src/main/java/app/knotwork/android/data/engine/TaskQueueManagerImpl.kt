@@ -745,9 +745,8 @@ class TaskQueueManagerImpl @Inject constructor(
     override fun observeTaskState(sessionId: String): Flow<AgentOrchestratorState> =
         getOrCreateStateFlow(sessionId).asSharedFlow()
 
-    override fun resumeWithApproval(sessionId: String, isApproved: Boolean) {
-        graphExecutionEngine.resumeWithApproval(sessionId, isApproved)
-    }
+    override fun resumeWithApproval(sessionId: String, requestId: String, isApproved: Boolean): Boolean =
+        graphExecutionEngine.resumeWithApproval(sessionId, requestId, isApproved)
 
     override fun pendingApproval(sessionId: String): AgentOrchestratorState.WaitingForApproval? =
         graphExecutionEngine.pendingApprovalFor(sessionId)

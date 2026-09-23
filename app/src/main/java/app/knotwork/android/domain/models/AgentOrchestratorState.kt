@@ -51,9 +51,18 @@ sealed interface AgentOrchestratorState {
      * @property risk Risk classification of the tool, surfaced to the UI so the
      *   approval prompt can show a risk chip (and, in the notification fallback,
      *   pick a channel / icon that matches the action's reversibility).
+     * @property requestId Identity of this one request, minted by the gate when it
+     *   is raised and kept by its parked record. Every surface that shows the
+     *   request answers with it, and an answer settles only the request it names —
+     *   never "whatever the session is waiting on now", which after a second run
+     *   starts in the same session is a different request.
      */
-    data class WaitingForApproval(val toolName: String, val arguments: String, val risk: ToolRisk) :
-        AgentOrchestratorState
+    data class WaitingForApproval(
+        val toolName: String,
+        val arguments: String,
+        val risk: ToolRisk,
+        val requestId: String,
+    ) : AgentOrchestratorState
 
     /**
      * The agent has paused pipeline execution and is waiting for the user to answer a

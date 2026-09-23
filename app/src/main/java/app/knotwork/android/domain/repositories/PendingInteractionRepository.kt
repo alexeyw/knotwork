@@ -54,9 +54,26 @@ interface PendingInteractionRepository {
     suspend fun getForSession(sessionId: String): PendingInteraction?
 
     /**
-     * Records the user's approval [decision] onto the pending interaction of
-     * run [runId], guarded to first-writer-wins: a record that already holds
-     * a decision is left untouched.
+     * Returns the parked record of the approval request [requestId], or `null`
+     * when no record parks that request (never parked, already consumed, or
+     * replaced by a later request of the same run).
+     *
+     * The lookup an approval answer takes: it names the request it was given
+     * for, never the session, because one session can hold a parked request
+     * and a live one at the same time.
+     *
+     * @param requestId Identity of the request, as minted by the gate.
+     */
+    suspend fun getForRequest(requestId: String): PendingInteraction?
+
+    /**
+     * Records the user's [decision] onto the pending interaction of run
+     * [runId], guarded to first-writer-wins: a record that already holds a
+     * decision is left untouched.
+     *
+     * For a ceiling pause, which asks about the run rather than about a
+     * request. An approval answer goes through [recordApprovalDecision], which
+     * also checks that the record still parks the request answered.
      *
      * @param runId Id of the parked run.
      * @param decision The user's decision to record.
@@ -64,6 +81,24 @@ interface PendingInteractionRepository {
      *   record is missing or already decided (duplicate notification tap).
      */
     suspend fun recordDecision(runId: String, decision: PendingDecision): Boolean
+
+    /**
+     * Records the user's approval [decision] onto the pending interaction of
+     * run [runId] — only while that record still parks request [requestId] —
+     * guarded to first-writer-wins like [recordDecision].
+     *
+     * The request guard makes the write exact: between reading a record and
+     * writing to it, a re-park of the same run can replace it with a different
+     * request, and the answer given for the first must not land on the second.
+     *
+     * @param runId Id of the parked run.
+     * @param requestId Identity of the request the decision was given for.
+     * @param decision The user's decision to record.
+     * @return `true` when this call recorded the decision; `false` when the
+     *   record is missing, parks a different request, or is already decided
+     *   (duplicate notification tap).
+     */
+    suspend fun recordApprovalDecision(runId: String, requestId: String, decision: PendingDecision): Boolean
 
     /**
      * Records the user's clarification [answer] onto the pending interaction
