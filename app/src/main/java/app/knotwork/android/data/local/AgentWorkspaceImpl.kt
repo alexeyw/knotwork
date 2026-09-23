@@ -42,19 +42,19 @@ import javax.inject.Singleton
  * at or under the canonicalised root (compared with a trailing [File.separator]
  * so a sibling directory such as `agent_workspace_evil` cannot pass the prefix
  * check). This is the project's path-traversal mitigation, per the official
- * Android guidance. The same gate refuses a path the filesystem cannot take (a NUL
- * byte, or one it rejects outright) with [WorkspaceError.InvalidPath] rather than
- * letting the exception escape, and a write that would **create** an entry checks its
- * path against [WorkspaceNamePolicy].
+ * Android guidance. The same gate refuses a path the filesystem cannot take (a
+ * NUL byte, or one it rejects outright) with [WorkspaceError.InvalidPath] rather
+ * than letting the exception escape, and a write that would **create** an entry
+ * checks its path against [WorkspaceNamePolicy].
  *
  * **What the quota counts.** Two resources, both bounded: the bytes of the files
  * (against the settings' total) and the number of entries, files and directories
- * together (against [maxEntries]) — a directory costs no bytes and a tiny file almost
- * none, so bytes alone would not bound a write loop. Both are counted over the same
- * walk [list] uses ([WorkspaceTree.realEntries]), which never follows a symbolic link, so neither
- * can reach outside the root or loop. Directories never outlive their contents: a
- * delete removes the ancestors it empties, and each recount removes any empty
- * directory left from before.
+ * together (against [maxEntries]) — a directory costs no bytes and a tiny file
+ * almost none, so bytes alone would not bound a write loop. Both are counted over
+ * the same walk [list] uses ([WorkspaceTree.realEntries]), which never follows a
+ * symbolic link, so neither can reach outside the root or loop. Directories never
+ * outlive their contents: a delete removes the ancestors it empties, and each
+ * recount removes any empty directory left from before.
  *
  * **Concurrency.** Mutating operations serialise on [mutex], which also guards
  * the cached counts ([cachedTally]). The cache is valid because the workspace is
@@ -275,13 +275,16 @@ class AgentWorkspaceImpl internal constructor(
 
     /**
      * Canonicalises [file], or returns `null` when the filesystem rejects the path
-     * itself — the interface promises a typed refusal, not an exception. The path is
-     * not logged: it is caller-supplied.
+     * itself — the interface promises a typed refusal, not an exception.
+     *
+     * Only the exception's type is logged. A warning reaches crash reports once the
+     * user opts in, the path is caller-supplied, and a platform's exception message
+     * may quote it.
      */
     private fun canonicalOrNull(file: File): File? = try {
         file.canonicalFile
     } catch (e: IOException) {
-        Timber.w(e, "Workspace path could not be canonicalised")
+        Timber.w("Workspace path could not be canonicalised (%s)", e.javaClass.simpleName)
         null
     }
 

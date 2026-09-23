@@ -1919,7 +1919,7 @@ system file picker and copy it into the workspace for the agent to read.
 Imports are subject to the same per-file and total-size limits as the
 agent's own writes. A name carrying line breaks, tabs or other control
 characters is imported with `_` in their place, and a name longer than 242
-bytes is refused. If a file with the same name already exists, you are
+bytes (about 240 Latin letters, or half as many Cyrillic ones) is refused. If a file with the same name already exists, you are
 asked whether to **keep both** (the import is saved under a numbered
 name like `report (1).md`) or **replace** the existing file.
 

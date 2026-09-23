@@ -14,9 +14,9 @@ import javax.inject.Inject
  * The picked name is reduced to a bare basename — imports always land at the
  * workspace root, never in a sub-directory the picker's display name might
  * imply — with control characters replaced, and a blank name falls back to
- * [DEFAULT_NAME]. The actual byte copy,
- * quota and size checks are delegated to [AgentWorkspace.importBytes]; this use
- * case adds the name-collision policy the UI needs:
+ * [DEFAULT_NAME]. The actual byte copy, quota and size checks are delegated to
+ * [AgentWorkspace.importBytes]; this use case adds the name-collision policy the
+ * UI needs:
  *
  *  - [ImportMode.CreateOrFail] — the default first attempt. If the name is free
  *    the file is imported; if it is taken the result is

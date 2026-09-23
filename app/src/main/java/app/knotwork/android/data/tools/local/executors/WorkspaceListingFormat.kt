@@ -9,10 +9,11 @@ import java.time.Instant
  * `find_files` tools, so both present entries identically to the model.
  *
  * Each entry is one line: relative path (control characters escaped), size in
- * bytes, and the last-modified timestamp as an ISO-8601 UTC instant (locale- and timezone-independent, hence
- * stable across devices and in tests). The number of lines is capped so a
- * workspace with very many files cannot, by itself, overflow the context
- * window; the omitted count is reported with a truncation marker.
+ * bytes, and the last-modified timestamp as an ISO-8601 UTC instant (locale- and
+ * timezone-independent, hence stable across devices and in tests). The number of
+ * lines is capped so a workspace with very many files cannot, by itself,
+ * overflow the context window; the omitted count is reported with a truncation
+ * marker.
  */
 internal object WorkspaceListingFormat {
 

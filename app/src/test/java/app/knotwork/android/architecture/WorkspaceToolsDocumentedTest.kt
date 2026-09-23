@@ -79,8 +79,11 @@ class WorkspaceToolsDocumentedTest {
 
         const val EXECUTORS_DIRECTORY = "/data/tools/local/executors/"
 
-        /** A constructor parameter typed `AgentWorkspace`. */
-        val WORKSPACE_PARAMETER = Regex("""\bval\s+\w+\s*:\s*AgentWorkspace\b""")
+        /**
+         * A parameter or property typed `AgentWorkspace` — with or without `val`, so an
+         * executor that only passes the workspace on is counted too.
+         */
+        val WORKSPACE_PARAMETER = Regex("""\b\w+\s*:\s*AgentWorkspace\b""")
 
         val TOOL_NAME = Regex("""const\s+val\s+TOOL_NAME\s*(?::\s*String\s*)?=\s*"([a-z_]+)"""")
     }

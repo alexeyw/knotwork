@@ -114,8 +114,8 @@ The agent has a small private **workspace** — a single jailed directory
 (`files/agent_workspace/` inside the app's private `filesDir`) that the file
 tools (`read_file`, `write_file`, `edit_file`, `append_file`, `delete_file`,
 `list_files`, `find_files`) read from and write to, and that the **Files**
-screen surfaces to the user. Its at-rest posture is deliberately **weaker than the
-database's**, and this is the honest statement of that trade-off:
+screen surfaces to the user. Its at-rest posture is deliberately **weaker than
+the database's**, and this is the honest statement of that trade-off:
 
 - The workspace lives in app-private internal storage, so it is protected by
   the device's **file-based encryption (FBE)** — the OS-level encryption that
@@ -476,8 +476,8 @@ oversight — and it works as follows:
   `http_request` response, and **the contents of a file the agent reads from
   its workspace** (and the file **names** a listing returns: an imported file
   keeps the name the source app gave it) — is fed back into the context of
-  subsequent pipeline nodes. A file the user imported through the Files screen (or that an
-  earlier `write_file` produced from untrusted material) is therefore
+  subsequent pipeline nodes. A file the user imported through the Files screen
+  (or that an earlier `write_file` produced from untrusted material) is therefore
   **untrusted model input**, exactly like a network tool result: it may
   contain text that reads as instructions to the model. That content reaches
   planning and routing nodes (`DECOMPOSITION`, `INTENT_ROUTER`), so a crafted
