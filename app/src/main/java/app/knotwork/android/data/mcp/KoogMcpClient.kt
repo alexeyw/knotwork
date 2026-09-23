@@ -59,7 +59,8 @@ import javax.inject.Inject
  * - a server publishes at most [MAX_PUBLISHED_TOOLS] tools and
  *   [CATALOGUE_BUDGET_CHARS] of catalogue; the tail past either is left out;
  * - a result is cut at [resultByteBudget] — the user's *Largest tool response*
- *   setting, shared with `http_request` — with a marker saying so.
+ *   setting, shared with `http_request` — with a marker saying so, and so is the
+ *   message of a failure the call raises ([boundedFailure]).
  *
  * A tool that is not published cannot be executed either.
  *
@@ -309,10 +310,10 @@ class KoogMcpClient(
     private fun publishedTools(tools: List<ToolBase<*, *>>): List<AgentTool> {
         val published = mutableListOf<AgentTool>()
         var budget = CATALOGUE_BUDGET_CHARS
+        var malformed = 0
         for (tool in tools) {
             if (!isPublishableName(tool.name)) {
-                // The name itself is not logged: it is the part that broke the rule.
-                Timber.w("MCP tool with a malformed name (%d chars) was not published", tool.name.length)
+                malformed++
                 continue
             }
             if (published.size == MAX_PUBLISHED_TOOLS) {
@@ -331,6 +332,11 @@ class KoogMcpClient(
             }
             budget -= size
             published += agentTool
+        }
+        if (malformed > 0) {
+            // One line, however many: a hostile catalogue could send any number. The
+            // names themselves are not logged — they are the part that broke the rule.
+            Timber.w("MCP server published %d tools with malformed names; they were not published", malformed)
         }
         return published
     }
@@ -389,8 +395,10 @@ class KoogMcpClient(
      * @param arguments A JSON string representing the arguments.
      * The result is cut at [resultByteBudget] with a marker: it is untrusted text
      * that the chat history, the run state and every later prompt would otherwise
-     * carry whole. The cut bounds what leaves this client, not what the transport
-     * buffered to decode the response — on the wire the only bound is the deadline.
+     * carry whole. A failure's message is held to the same budget ([boundedFailure]),
+     * because the gate turns it into the observation just the same. The cut bounds
+     * what leaves this client, not what the transport buffered to decode the
+     * response — on the wire the only bound is the deadline.
      *
      * @return A string containing the serialized result of the execution.
      * @throws IllegalStateException if the client is not connected.
@@ -407,19 +415,29 @@ class KoogMcpClient(
             ?.takeIf { current.publishedTools().any { published -> published.name == name } }
             ?: throw IllegalArgumentException("Tool $name not found")
 
-        val text = withTimeoutOrNull(toolCallTimeoutMs) {
-            val kotlinxJsonArgs = Json.parseToJsonElement(arguments).jsonObject
-            val koogJsonArgs = kotlinxJsonArgs.toKoogJSONObject()
-            // Fail with a descriptive error rather than an opaque NPE when a
-            // misbehaving MCP server / Koog tool yields null for the decoded args or
-            // the result; the caller (ToolInvocationGate) maps the throw to a tool
-            // error observation.
-            val args = tool.decodeArgs(koogJsonArgs, serializer)
-                ?: throw IllegalStateException("MCP tool $name produced null decoded arguments")
-            val result = tool.executeUnsafe(args)
-                ?: throw IllegalStateException("MCP tool $name produced a null result")
-            tool.encodeResultToStringUnsafe(result, serializer)
-        } ?: throw IOException(
+        val outcome = try {
+            withTimeoutOrNull(toolCallTimeoutMs) {
+                val kotlinxJsonArgs = Json.parseToJsonElement(arguments).jsonObject
+                val koogJsonArgs = kotlinxJsonArgs.toKoogJSONObject()
+                // Fail with a descriptive error rather than an opaque NPE when a
+                // misbehaving MCP server / Koog tool yields null for the decoded args or
+                // the result; the caller (ToolInvocationGate) maps the throw to a tool
+                // error observation.
+                val args = tool.decodeArgs(koogJsonArgs, serializer)
+                    ?: throw IllegalStateException("MCP tool $name produced null decoded arguments")
+                val result = tool.executeUnsafe(args)
+                    ?: throw IllegalStateException("MCP tool $name produced a null result")
+                tool.encodeResultToStringUnsafe(result, serializer)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A server can answer with a protocol error instead of a result, and the
+            // gate turns its message into the tool's observation — the same sinks a
+            // result reaches, so the same budget applies.
+            throw boundedFailure(name = name, failure = e, maxBytes = resultByteBudget())
+        }
+        val text = outcome ?: throw IOException(
             "MCP tool $name did not respond within ${toolCallTimeoutMs / MILLIS_PER_SECOND}s",
         )
         capResult(text = text, maxBytes = resultByteBudget())
@@ -542,7 +560,7 @@ class KoogMcpClient(
          * a real server's ordinary tool, and it is exactly the field a hostile
          * catalogue would use to forge a line of the prompt's tool list.
          */
-        private val PUBLISHABLE_NAME = Regex("[A-Za-z0-9_.-]{1,128}")
+        private val PUBLISHABLE_NAME = Regex("[A-Za-z0-9_.-]+")
 
         /** Bytes a UTF-16 char can take in UTF-8 at most (a surrogate pair: 4 bytes for 2 chars). */
         private const val MAX_UTF8_BYTES_PER_CHAR = 3
@@ -553,8 +571,39 @@ class KoogMcpClient(
         /** Top two bits of a UTF-8 continuation byte (`10xxxxxx`). */
         private const val UTF8_CONTINUATION_BITS = 0x80
 
-        /** Whether [name] follows the MCP tool-name rule and may be published. */
-        internal fun isPublishableName(name: String): Boolean = PUBLISHABLE_NAME.matches(name)
+        /** Longest tool name the MCP specification allows. */
+        private const val MAX_NAME_CHARS = 128
+
+        /**
+         * Whether [name] follows the MCP tool-name rule and may be published. The
+         * length is checked first, so a huge name costs nothing to reject.
+         */
+        internal fun isPublishableName(name: String): Boolean =
+            name.length <= MAX_NAME_CHARS && PUBLISHABLE_NAME.matches(name)
+
+        /**
+         * [failure] with its message held to [maxBytes], for a failure raised inside
+         * a tool call.
+         *
+         * A failure whose message already fits is returned as it is, type and all.
+         * One that does not is replaced by an [IllegalStateException] carrying the cut
+         * message and the original stack frames — but not the original as its cause,
+         * since the point is that the unbounded text travels no further: the gate's
+         * log line and the crash reporter print the whole cause chain.
+         *
+         * @param name the tool, named in the replacement message.
+         * @param failure what the call threw.
+         * @param maxBytes the result budget.
+         * @return [failure] itself, or its bounded replacement.
+         */
+        internal fun boundedFailure(name: String, failure: Exception, maxBytes: Long): Exception {
+            val message = failure.message ?: return failure
+            // capResult hands back the very same instance when the text fits.
+            if (capResult(message, maxBytes) === message) return failure
+            return IllegalStateException(capResult("MCP tool $name failed: $message", maxBytes)).also {
+                it.stackTrace = failure.stackTrace
+            }
+        }
 
         /**
          * Clamps [description] to [MAX_DESCRIPTION_CHARS], never splitting a

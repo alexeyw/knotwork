@@ -974,8 +974,9 @@ serving server's risk no longer matches.
 enter the app, and the one place that covers both the agent and the Tools
 screen, so the limits live there: a tool name outside the MCP naming rule is
 not published (and cannot be called), descriptions are clamped, a catalogue is
-capped by tool count and rendered size, and a result is cut at the user's
-*Largest tool response* budget — shared with `http_request` — with a marker.
+capped by tool count and rendered size, and a result — or the message of an
+error the call raises instead — is cut at the user's *Largest tool response*
+budget, shared with `http_request`, with a marker.
 
 **Deadlines.** Every round trip carries an explicit deadline applied in our
 own code: **60 s** for a tool call, **30 s** for the connect handshake, both

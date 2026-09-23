@@ -1804,8 +1804,9 @@ anything past that is left out. Ordinary servers are nowhere near these limits:
 GitHub's MCP server, one of the largest, publishes 125 tools in about half the
 size.
 
-A tool's **result** is limited too: past the **Largest tool response** setting
-(*Settings → Tools & workspace*, default 1 024 KB) it is cut, with a marker saying so.
+A tool's **result** is limited too, and so is an error message the server
+sends instead: past the **Largest tool response** setting (*Settings → Tools &
+workspace*, default 1 024 KB) it is cut, with a marker saying so.
 
 #### How long a server is given to answer
 
@@ -1832,7 +1833,7 @@ queue behind it.
 | *Tool … not found across active providers* | No connected server publishes a tool by that name. Read the tool-count note above before concluding the server is broken. |
 | *MCP client is not connected; cannot execute …* | The connection dropped between planning the call and making it. This is deliberately worded differently from *not found*, because the tool does exist — trying again normally reconnects. |
 | *Tool … is disabled* | The tool exists but its switch is off on the Tools screen — on every server that offers it. |
-| *MCP tool … is now served by a server whose risk level … differs …; the call was not made* | A server came back between the approval check and the call and took the tool's name over (see *When two tools share a name*). Run it again: the check is repeated for the server that now serves it. |
+| *MCP tool … now resolves to risk level …, not the … its approval check used* | Between the approval check and the call, a server came back and took the tool's name over (see *When two tools share a name*), or the tool's risk level was changed on the Tools screen. The call was not made. Run it again: the check is repeated for the server that serves it now. |
 
 ---
 

@@ -60,10 +60,11 @@ details.
   device always wins its name; a server tool with the same name (or the same
   name as a tool on a server listed above) is not offered to the agent, and the
   Tools screen says so under it.
-- **MCP servers are limited in how much text they can send.** A tool result is
-  cut at the same size limit as a web response, and a server's tool list is
-  limited in size, tool count and description length. The **Largest web
-  response** setting is now **Largest tool response** and covers both.
+- **MCP servers are limited in how much text they can send.** A tool result, or
+  an error message sent instead, is cut at the same size limit as a web
+  response, and a server's tool list is limited in size, tool count and
+  description length. The **Largest web response** setting is now **Largest
+  tool response** and covers both.
 
 ### Fixed
 

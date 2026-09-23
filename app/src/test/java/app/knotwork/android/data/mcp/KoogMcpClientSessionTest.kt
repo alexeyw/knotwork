@@ -3,12 +3,16 @@ package app.knotwork.android.data.mcp
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
+import app.knotwork.android.domain.repositories.SettingsRepository
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -57,6 +61,12 @@ class KoogMcpClientSessionTest {
      */
     private var callResultText: String? = null
 
+    /**
+     * Message of a JSON-RPC error the stub returns from `tools/call` instead of a
+     * result. `null` (the default) answers normally.
+     */
+    private var callErrorMessage: String? = null
+
     /** Released in [tearDown] so a stalled dispatcher thread never outlives the test. */
     private val stallRelease = CountDownLatch(1)
 
@@ -86,7 +96,12 @@ class KoogMcpClientSessionTest {
                 }
                 val body = request.body?.utf8().orEmpty()
                 val method = Regex("\"method\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1)
-                val id = Regex("\"id\"\\s*:\\s*(\\d+)").find(body)?.groupValues?.get(1) ?: "1"
+                // The raw JSON token, quotes included: the client sends string ids (a
+                // UUID) for most requests. A numeric-only match fell back to `1`, which
+                // a result survived only because the transport rewrites a result's id
+                // to the request's — it does not do that for an error, so an error
+                // answered with the wrong id was never delivered.
+                val id = Regex("\"id\"\\s*:\\s*(\"[^\"]*\"|\\d+)").find(body)?.groupValues?.get(1) ?: "1"
                 received += "${method ?: "?"} sid=${request.headers["mcp-session-id"]}"
 
                 if (method != null && method == stallMethod) {
@@ -117,7 +132,12 @@ class KoogMcpClientSessionTest {
                              "required":["message"]}}]}}
                         """.trimIndent(),
                     )
-                    "tools/call" -> callResultText?.let { text ->
+                    "tools/call" -> callErrorMessage?.let { message ->
+                        sse(
+                            """{"jsonrpc":"2.0","id":$id,"error":{"code":-32603,"message":""" +
+                                JSONObject.quote(message) + "}}",
+                        )
+                    } ?: callResultText?.let { text ->
                         sse(
                             """{"jsonrpc":"2.0","id":$id,"result":{"content":[{"type":"text","text":""" +
                                 JSONObject.quote(text) + "}]}}",
@@ -339,6 +359,68 @@ class KoogMcpClientSessionTest {
             "a cut result must say so, tail was: ${result.takeLast(MARKER_ALLOWANCE)}",
             result.endsWith("[... result truncated at $budget bytes]"),
         )
+        client.disconnect()
+    }
+
+    /**
+     * A server can answer a call with a protocol error instead of a result. Its
+     * message reaches the same sinks a result does — the gate turns it into the
+     * tool's observation — so it is bounded by the same budget.
+     */
+    @Test
+    fun `given a protocol error with a huge message when executeTool then the error text is cut too`() = runTest {
+        callErrorMessage = "e".repeat(SMALL_BUDGET_BYTES.toInt() * 4)
+        start()
+        val client = KoogMcpClient(resultByteBudget = { SMALL_BUDGET_BYTES })
+        client.connect(
+            McpServerConfig(
+                url = server.url("/mcp").toString(),
+                transport = McpTransport.STREAMABLE_HTTP,
+            ),
+        )
+
+        // Deliberately catching without re-throwing: the message the caller
+        // observes IS the assertion. Nothing suspends afterwards.
+        @Suppress("SwallowedException", "TooGenericExceptionCaught")
+        val observed: Throwable? = try {
+            client.executeTool(name = "echo", arguments = """{"message":"hi"}""")
+            null
+        } catch (e: Throwable) {
+            e
+        }
+
+        val message = observed?.message.orEmpty()
+        assertTrue("expected a failure, got $observed", observed != null && observed !is CancellationException)
+        assertTrue(
+            "the error text must be cut at the budget, got ${message.length} chars",
+            message.toByteArray(Charsets.UTF_8).size < SMALL_BUDGET_BYTES + MARKER_ALLOWANCE,
+        )
+        assertTrue(message.contains("echo"))
+        client.disconnect()
+    }
+
+    /**
+     * The factory is what production uses, and the budget reaches the client only
+     * through it: without this, a factory that dropped the setting would leave
+     * every client on the default while all the tests above stayed green.
+     */
+    @Test
+    fun `given a client from the factory when executeTool then the result is cut at the setting's budget`() = runTest {
+        callResultText = "z".repeat(SMALL_BUDGET_BYTES.toInt() * 4)
+        start()
+        val settings = mockk<SettingsRepository>()
+        every { settings.httpToolMaxResponseBytes } returns flowOf(SMALL_BUDGET_BYTES)
+        val client = KoogMcpClientFactory(mockk(relaxed = true), settings).create()
+        client.connect(
+            McpServerConfig(
+                url = server.url("/mcp").toString(),
+                transport = McpTransport.STREAMABLE_HTTP,
+            ),
+        )
+
+        val result = client.executeTool(name = "echo", arguments = """{"message":"hi"}""")
+
+        assertTrue(result.endsWith("[... result truncated at $SMALL_BUDGET_BYTES bytes]"))
         client.disconnect()
     }
 

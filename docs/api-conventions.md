@@ -148,8 +148,9 @@ interface Tool {
 - **Everything a server sends is bounded in `KoogMcpClient`**, the one place
   that covers both the agent and the Tools screen: a name outside the MCP
   naming rule is not published (nor callable), descriptions are clamped, the
-  catalogue is capped by tool count and rendered size, and a result is cut at
-  the user's `httpToolMaxResponseBytes` budget with a marker. Read MCP content
+  catalogue is capped by tool count and rendered size, and a result (or an
+  error message sent instead) is cut at the user's `httpToolMaxResponseBytes`
+  budget with a marker. Read MCP content
   through the client, never around it.
 - **MCP credentials** (Bearer tokens, Basic passwords, API-key values) are
   stored in the **Keystore-backed encrypted store**, keyed per server by a hash

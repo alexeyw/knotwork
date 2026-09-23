@@ -158,8 +158,9 @@ confidentiality:
   window, and the `http_request` response is capped (1 MB default) so untrusted
   remote content cannot do the same. Both limits are user-tunable.
 - **MCP servers are bounded where their content enters the app** (`KoogMcpClient`).
-  A tool result is cut at the same user-tunable budget as an `http_request`
-  response, with a marker saying so. A server's catalogue — which reaches the
+  A tool result — and the text of an error the server returns instead — is cut
+  at the same user-tunable budget as an `http_request` response, with a marker
+  saying so. A server's catalogue — which reaches the
   system prompt of every run, called or not — publishes at most 256 tools and
   256 KB of names, descriptions and parameter schemas, with each description
   clamped to 4 096 characters; a tool whose name breaks the MCP naming rule is

@@ -172,6 +172,26 @@ class KoogMcpClientTest {
     }
 
     @Test
+    fun `given a failure whose message fits when boundedFailure then the failure itself is kept`() {
+        val failure = IllegalArgumentException("bad argument")
+
+        assertTrue(KoogMcpClient.boundedFailure(name = "echo", failure = failure, maxBytes = 1_000) === failure)
+    }
+
+    @Test
+    fun `given a failure with an oversized message when boundedFailure then the text goes no further`() {
+        val failure = IllegalStateException("x".repeat(10_000))
+
+        val bounded = KoogMcpClient.boundedFailure(name = "echo", failure = failure, maxBytes = 1_000)
+
+        assertTrue(bounded.message!!.startsWith("MCP tool echo failed: "))
+        assertTrue(bounded.message!!.endsWith("[... result truncated at 1000 bytes]"))
+        // The original is not kept as the cause: log lines print the cause chain.
+        assertEquals(null, bounded.cause)
+        assertTrue(bounded.stackTrace.contentEquals(failure.stackTrace))
+    }
+
+    @Test
     fun `given a result that fits when capResult then it is returned unchanged`() {
         assertEquals("short", KoogMcpClient.capResult("short", maxBytes = 5))
     }

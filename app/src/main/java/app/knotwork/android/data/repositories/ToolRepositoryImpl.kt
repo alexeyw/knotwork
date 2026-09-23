@@ -410,9 +410,13 @@ class ToolRepositoryImpl @Inject constructor(
             val currentRisk = mcpRisk(server = server, toolName = name)
             if (currentRisk != gatedRisk) {
                 Timber.w("MCP tool %s: serving risk %s differs from gated %s; refused", name, currentRisk, gatedRisk)
+                // Two causes lead here and the message names both: a reconnect handed
+                // the name to another server, or the user changed this server's risk
+                // level while the approval card was up.
                 throw IllegalStateException(
-                    "MCP tool $name is now served by a server whose risk level ($currentRisk) differs from the " +
-                        "one its approval check used ($gatedRisk); the call was not made. Run it again to re-check.",
+                    "MCP tool $name now resolves to risk level $currentRisk, not the $gatedRisk its approval " +
+                        "check used — the serving server or its risk setting changed. The call was not made; " +
+                        "run it again to re-check.",
                 )
             }
         }
