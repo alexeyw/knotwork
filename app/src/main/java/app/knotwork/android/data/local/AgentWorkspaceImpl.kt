@@ -1,6 +1,7 @@
 package app.knotwork.android.data.local
 
 import android.content.Context
+import app.knotwork.android.data.local.WorkspaceTree.Tally
 import app.knotwork.android.domain.models.WorkspaceError
 import app.knotwork.android.domain.models.WorkspaceFile
 import app.knotwork.android.domain.models.WorkspaceResult
@@ -8,6 +9,7 @@ import app.knotwork.android.domain.models.WorkspaceTextPreview
 import app.knotwork.android.domain.models.WorkspaceUsage
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AgentWorkspace
+import app.knotwork.android.domain.services.WorkspaceNamePolicy
 import app.knotwork.android.domain.services.WorkspaceTextEdit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -40,26 +42,54 @@ import javax.inject.Singleton
  * at or under the canonicalised root (compared with a trailing [File.separator]
  * so a sibling directory such as `agent_workspace_evil` cannot pass the prefix
  * check). This is the project's path-traversal mitigation, per the official
- * Android guidance.
+ * Android guidance. The same gate refuses a path the filesystem cannot take (a NUL
+ * byte, or one it rejects outright) with [WorkspaceError.InvalidPath] rather than
+ * letting the exception escape, and a write that would **create** an entry checks its
+ * path against [WorkspaceNamePolicy].
+ *
+ * **What the quota counts.** Two resources, both bounded: the bytes of the files
+ * (against the settings' total) and the number of entries, files and directories
+ * together (against [maxEntries]) — a directory costs no bytes and a tiny file almost
+ * none, so bytes alone would not bound a write loop. Both are counted over the same
+ * walk [list] uses ([WorkspaceTree.realEntries]), which never follows a symbolic link, so neither
+ * can reach outside the root or loop. Directories never outlive their contents: a
+ * delete removes the ancestors it empties, and each recount removes any empty
+ * directory left from before.
  *
  * **Concurrency.** Mutating operations serialise on [mutex], which also guards
- * the cached total-size counter ([cachedTotalBytes]). The cache is valid because
- * the workspace is the only writer of its directory; it is recomputed by walking
- * the tree whenever it is unset and updated in place after each write.
+ * the cached counts ([cachedTally]). The cache is valid because the workspace is
+ * the only writer of its directory; it is recomputed by walking the tree whenever
+ * it is unset and updated in place after each write.
  *
  * @property context Application context, used solely to locate [Context.filesDir].
  * @property settingsRepository Source of the per-file and total-size quotas.
+ * @property maxEntries Ceiling on the number of entries — files and directories
+ *   together — the workspace may hold; [DEFAULT_MAX_ENTRIES] in the app, lowered
+ *   by tests so the boundary can be reached cheaply.
  */
 @Singleton
-class AgentWorkspaceImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+class AgentWorkspaceImpl internal constructor(
+    private val context: Context,
     private val settingsRepository: SettingsRepository,
+    private val maxEntries: Int,
 ) : AgentWorkspace {
+
+    /**
+     * The constructor Hilt uses: the entry ceiling is the fixed [DEFAULT_MAX_ENTRIES].
+     *
+     * @param context Application context, used solely to locate [Context.filesDir].
+     * @param settingsRepository Source of the per-file and total-size quotas.
+     */
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        settingsRepository: SettingsRepository,
+    ) : this(context, settingsRepository, DEFAULT_MAX_ENTRIES)
 
     private val mutex = Mutex()
 
     @Volatile
-    private var cachedTotalBytes: Long? = null
+    private var cachedTally: Tally? = null
 
     override suspend fun resolve(relativePath: String): WorkspaceResult<WorkspaceFile> = withContext(Dispatchers.IO) {
         when (val resolved = canonicalResolve(relativePath)) {
@@ -114,15 +144,11 @@ class AgentWorkspaceImpl @Inject constructor(
 
     override suspend fun list(): WorkspaceResult<List<WorkspaceFile>> = withContext(Dispatchers.IO) {
         val root = rootDir()
-        // `walkTopDown` follows directory symlinks, so canonicalise each entry and drop
-        // any whose real path escapes the workspace — the same containment rule as the
-        // resolve gate, so a symlink pointing out can never appear in a listing. Transient
-        // atomic-write scratch files are filtered too so a crashed write's leftover never
-        // surfaces to the agent.
-        val files = root.walkTopDown()
+        // The same walk the quota counts, so the two can never disagree about what is in
+        // the workspace. Transient atomic-write scratch files are filtered so a crashed
+        // write's leftover never surfaces to the agent.
+        val files = WorkspaceTree.realEntries(root)
             .filter { it.isFile && !isScratchFile(it) }
-            .map { it.canonicalFile }
-            .filter { isInsideRoot(it, root) }
             .map { toWorkspaceFile(it, root) }
             .sortedBy { it.relativePath }
             .toList()
@@ -131,7 +157,7 @@ class AgentWorkspaceImpl @Inject constructor(
 
     override suspend fun usage(): WorkspaceResult<WorkspaceUsage> = withContext(Dispatchers.IO) {
         val limit = settingsRepository.workspaceMaxTotalBytes.first()
-        val used = mutex.withLock { currentTotalBytesLocked() }
+        val used = mutex.withLock { tallyLocked().bytes }
         WorkspaceResult.Success(WorkspaceUsage(usedBytes = used, limitBytes = limit))
     }
 
@@ -212,39 +238,58 @@ class AgentWorkspaceImpl @Inject constructor(
     }
 
     /**
-     * The single canonicalisation gate. Rejects absolute paths outright, then
-     * canonicalises `root/relativePath` and accepts it only if it stays inside
-     * the canonical root.
+     * The single canonicalisation gate. Refuses a NUL byte and rejects absolute
+     * paths outright, then canonicalises `root/relativePath` and accepts it only if
+     * it stays inside the canonical root.
      *
      * @param relativePath The caller-supplied workspace-relative path.
      * @return [WorkspaceResult.Success] with the canonical [File] (which may not
      *   yet exist), or [WorkspaceResult.Failure] with
-     *   [WorkspaceError.PathOutsideWorkspace].
+     *   [WorkspaceError.PathOutsideWorkspace], [WorkspaceError.InvalidPath] (a NUL
+     *   byte, or a path the filesystem refuses to canonicalise) or
+     *   [WorkspaceError.NotFound] (the reserved scratch suffix).
      */
     private fun canonicalResolve(relativePath: String): WorkspaceResult<File> {
-        if (File(relativePath).isAbsolute) {
-            return WorkspaceResult.Failure(WorkspaceError.PathOutsideWorkspace)
+        val lexical = when {
+            // No existing name can hold a NUL, and `java.io.File` answers one by throwing
+            // (or, below the JDK, by cutting the string short): refuse it before either.
+            relativePath.indexOf(NUL) >= 0 -> WorkspaceError.InvalidPath
+            File(relativePath).isAbsolute -> WorkspaceError.PathOutsideWorkspace
+            else -> null
         }
+        if (lexical != null) return WorkspaceResult.Failure(lexical)
         val root = rootDir()
-        val target = File(root, relativePath).canonicalFile
-        if (!isInsideRoot(target, root)) {
-            return WorkspaceResult.Failure(WorkspaceError.PathOutsideWorkspace)
+        val target = canonicalOrNull(File(root, relativePath))
+            ?: return WorkspaceResult.Failure(WorkspaceError.InvalidPath)
+        val refusal = when {
+            !isInsideRoot(target, root) -> WorkspaceError.PathOutsideWorkspace
+            // Reject the reserved atomic-write scratch suffix: such files are hidden from
+            // listings and excluded from quota accounting, so letting the agent address one
+            // would let it write storage the quota never counts (and that it could never see
+            // or clean up). Reported as NotFound so the artifact stays invisible.
+            isScratchFile(target) -> WorkspaceError.NotFound
+            else -> null
         }
-        // Reject the reserved atomic-write scratch suffix: such files are hidden from
-        // listings and excluded from quota accounting, so letting the agent address one
-        // would let it write storage the quota never counts (and that it could never see
-        // or clean up). Reported as NotFound so the artifact stays invisible.
-        if (isScratchFile(target)) {
-            return WorkspaceResult.Failure(WorkspaceError.NotFound)
-        }
-        return WorkspaceResult.Success(target)
+        return refusal?.let { WorkspaceResult.Failure(it) } ?: WorkspaceResult.Success(target)
     }
 
     /**
-     * Containment predicate shared by [canonicalResolve] and [list]: a
-     * canonicalised path is in-bounds when it is the root itself or sits under
-     * it. The trailing [File.separator] stops a sibling directory such as
-     * `agent_workspace_evil` from passing the prefix check.
+     * Canonicalises [file], or returns `null` when the filesystem rejects the path
+     * itself — the interface promises a typed refusal, not an exception. The path is
+     * not logged: it is caller-supplied.
+     */
+    private fun canonicalOrNull(file: File): File? = try {
+        file.canonicalFile
+    } catch (e: IOException) {
+        Timber.w(e, "Workspace path could not be canonicalised")
+        null
+    }
+
+    /**
+     * Containment predicate of [canonicalResolve]: a canonicalised path is
+     * in-bounds when it is the root itself or sits under it. The trailing
+     * [File.separator] stops a sibling directory such as `agent_workspace_evil`
+     * from passing the prefix check.
      *
      * @param canonical An already-canonicalised candidate path.
      * @param root The canonicalised workspace root.
@@ -291,29 +336,59 @@ class AgentWorkspaceImpl @Inject constructor(
         newBytes: ByteArray,
         overwrite: Boolean,
     ): WorkspaceResult<WorkspaceFile> {
+        val root = rootDir()
+        val exists = target.isFile
+        writeRefusal(target, root, exists, overwrite, newBytes.size.toLong())
+            ?.let { return WorkspaceResult.Failure(it) }
+
+        val tally = tallyLocked()
+        val newEntries = if (exists) 0 else 1 + WorkspaceTree.missingDirectoryCount(target, root)
+        val existingSize = if (exists) target.length() else 0L
+        val projectedBytes = tally.bytes - existingSize + newBytes.size
+        val overQuota = tally.entries + newEntries > maxEntries ||
+            projectedBytes > settingsRepository.workspaceMaxTotalBytes.first()
+        if (overQuota) return WorkspaceResult.Failure(WorkspaceError.QuotaExceeded)
+
+        // Invalidate the cache before the risky write: if the write throws partway
+        // (disk full, parent turned into a file) the next read recomputes from disk —
+        // removing any directory the failed write created — instead of trusting a
+        // stale count. The cache is set only on full success.
+        cachedTally = null
+        target.parentFile?.mkdirs()
+        writeAtomically(target, newBytes)
+        cachedTally = Tally(bytes = projectedBytes, entries = tally.entries + newEntries)
+        return WorkspaceResult.Success(toWorkspaceFile(target, root))
+    }
+
+    /**
+     * Decides whether a write of [size] bytes to [target] is refused before the
+     * quota is consulted, and why.
+     *
+     * @param target The resolved (in-bounds) destination.
+     * @param root The canonical workspace root.
+     * @param exists Whether [target] is an existing regular file.
+     * @param overwrite Whether the caller allows replacing an existing file.
+     * @param size The size of the new content, in bytes.
+     * @return The refusal, or `null` when the write may proceed to the quota check.
+     */
+    private suspend fun writeRefusal(
+        target: File,
+        root: File,
+        exists: Boolean,
+        overwrite: Boolean,
+        size: Long,
+    ): WorkspaceError? = when {
         // A directory can never be replaced by a file, even with `overwrite`. Report it
         // distinctly so the tool does not hand back a "retry with overwrite" hint that
         // would loop forever (the overwrite flag is checked only for an existing file).
-        if (target.isDirectory) return WorkspaceResult.Failure(WorkspaceError.IsDirectory)
-        val exists = target.isFile
-        if (exists && !overwrite) return WorkspaceResult.Failure(WorkspaceError.AlreadyExists)
-
-        if (newBytes.size.toLong() > maxFileSizeBytes()) return WorkspaceResult.Failure(WorkspaceError.TooLarge)
-
-        val existingSize = if (exists) target.length() else 0L
-        val projectedTotal = currentTotalBytesLocked() - existingSize + newBytes.size
-        if (projectedTotal > settingsRepository.workspaceMaxTotalBytes.first()) {
-            return WorkspaceResult.Failure(WorkspaceError.QuotaExceeded)
-        }
-
-        // Invalidate the cache before the risky write: if the write throws partway
-        // (disk full, parent turned into a file) the next read recomputes from disk
-        // instead of trusting a stale total. The cache is set only on full success.
-        cachedTotalBytes = null
-        target.parentFile?.mkdirs()
-        writeAtomically(target, newBytes)
-        cachedTotalBytes = projectedTotal
-        return WorkspaceResult.Success(toWorkspaceFile(target))
+        target.isDirectory -> WorkspaceError.IsDirectory
+        exists && !overwrite -> WorkspaceError.AlreadyExists
+        // A new entry must have a name the workspace may create. An existing file is
+        // replaced in place, whatever its name, so one made before the rules stays usable.
+        !exists && WorkspaceNamePolicy.violationOf(WorkspaceTree.relativePath(target, root)) != null ->
+            WorkspaceError.InvalidPath
+        size > maxFileSizeBytes() -> WorkspaceError.TooLarge
+        else -> null
     }
 
     /**
@@ -389,20 +464,21 @@ class AgentWorkspaceImpl @Inject constructor(
 
     /**
      * Deletes an already-resolved (in-bounds) [target] if it is a regular file,
-     * keeping the cached total-size counter in step. Must be called while
-     * holding [mutex].
+     * then the directories above it that the delete left empty, keeping the cached
+     * counts in step. Must be called while holding [mutex].
      */
     private fun deleteLocked(target: File): WorkspaceResult<Unit> {
         if (!target.isFile) return WorkspaceResult.Failure(WorkspaceError.NotFound)
         val size = target.length()
-        val previousTotal = currentTotalBytesLocked()
+        val previous = tallyLocked()
         // Invalidate before the mutation: if delete reports failure the next read
         // recomputes from disk rather than trusting a counter that may be wrong.
-        cachedTotalBytes = null
+        cachedTally = null
         if (!target.delete() || target.exists()) {
             return WorkspaceResult.Failure(WorkspaceError.NotFound)
         }
-        cachedTotalBytes = previousTotal - size
+        val removedDirectories = WorkspaceTree.removeEmptiedAncestors(target, rootDir())
+        cachedTally = Tally(bytes = previous.bytes - size, entries = previous.entries - 1 - removedDirectories)
         return WorkspaceResult.Success(Unit)
     }
 
@@ -410,18 +486,12 @@ class AgentWorkspaceImpl @Inject constructor(
     private suspend fun maxFileSizeBytes(): Long = settingsRepository.workspaceMaxFileSizeBytes.first()
 
     /**
-     * Returns the workspace's total occupied bytes, using the cached value when
-     * present and otherwise walking the tree. Must be called while holding
-     * [mutex].
+     * Returns what the workspace holds, using the cached value when present and
+     * otherwise measuring the tree — which also removes the empty directories it
+     * finds ([WorkspaceTree.measureAndPrune]). Must be called while holding [mutex].
      */
-    private fun currentTotalBytesLocked(): Long {
-        cachedTotalBytes?.let { return it }
-        val total = rootDir().walkTopDown()
-            .filter { it.isFile && !isScratchFile(it) }
-            .sumOf { it.length() }
-        cachedTotalBytes = total
-        return total
-    }
+    private fun tallyLocked(): Tally =
+        cachedTally ?: WorkspaceTree.measureAndPrune(rootDir(), ::isScratchFile).also { cachedTally = it }
 
     /**
      * Reports whether [file] is a transient atomic-write scratch file. Such a
@@ -440,7 +510,7 @@ class AgentWorkspaceImpl @Inject constructor(
 
     /** Maps a canonical workspace [File] to its [WorkspaceFile] metadata snapshot. */
     private fun toWorkspaceFile(file: File, root: File = rootDir()): WorkspaceFile {
-        val relativePath = file.toRelativeString(root).replace(File.separatorChar, '/')
+        val relativePath = WorkspaceTree.relativePath(file, root)
         val isFile = file.isFile
         return WorkspaceFile(
             relativePath = relativePath,
@@ -519,8 +589,21 @@ class AgentWorkspaceImpl @Inject constructor(
     }
 
     private companion object {
+        /**
+         * How many entries — files and directories together — the workspace may
+         * hold. The byte quotas cannot see an entry's own cost: a directory counts
+         * zero bytes and a one-byte file still occupies a filesystem block, so
+         * without a count a write loop of tiny files or nested directories is
+         * unbounded. At a 4 KB block this bounds what the byte quota does not see
+         * to about 40 MB.
+         */
+        const val DEFAULT_MAX_ENTRIES: Int = 10_000
+
         /** Name of the workspace directory inside [Context.filesDir]. */
         const val WORKSPACE_DIR_NAME = "agent_workspace"
+
+        /** The NUL character, which no filesystem name can hold. */
+        val NUL: Char = Char(0)
 
         /**
          * Suffix of the sibling scratch file used to stage an atomic write before

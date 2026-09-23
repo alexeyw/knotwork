@@ -1182,7 +1182,7 @@ path that the design deliberately constrains. The honest at-rest and
 threat-model framing lives in [`SECURITY.md`](../SECURITY.md); this section
 is the structural map.
 
-The six file tools and their effective risk:
+The seven file tools and their effective risk:
 
 | Tool         | `ToolRisk`     | Touches                                              |
 |--------------|----------------|-----------------------------------------------------|
@@ -1191,6 +1191,7 @@ The six file tools and their effective risk:
 | `find_files` | `READ_ONLY`    | glob search over relative paths                     |
 | `write_file` | `SENSITIVE`    | atomic create / overwrite, quota-checked            |
 | `edit_file`  | `SENSITIVE`    | unique-anchor find-replace in an existing file      |
+| `append_file`| `SENSITIVE`    | adds to the end of a file, creating it if missing   |
 | `delete_file`| `DESTRUCTIVE`  | irreversible single-file delete                     |
 | `http_request` | `SENSITIVE` (GET) / `DESTRUCTIVE` (POST/PUT/DELETE) | outbound HTTP(S) to an allowlisted host |
 
@@ -1201,8 +1202,11 @@ Two integrity boundaries sit underneath the risk gate:
   point every other method funnels through — and checked for containment. A
   `../` traversal, an absolute path, or a symlink that escapes the directory
   is refused with a typed `WorkspaceError.PathOutsideWorkspace` before any I/O
-  — a tool can only ever act inside the workspace. Size quotas
-  (`WorkspaceError.TooLarge` / `QuotaExceeded`) are enforced in the same layer.
+  — a tool can only ever act inside the workspace. A path the filesystem cannot
+  take, or a new name with control characters or over the length limits, is
+  `WorkspaceError.InvalidPath` (rules: `WorkspaceNamePolicy`). Size and entry
+  quotas (`WorkspaceError.TooLarge` / `QuotaExceeded`) are enforced in the same
+  layer, over one walk that never follows a symbolic link.
 - **The HTTP allowlist gate.** `http_request` is published to the agent only
   when the user's allowed-domains allowlist is non-empty (Settings → Tools →
   Allowed domains, persisted in DataStore under `allowed_http_domains`). The

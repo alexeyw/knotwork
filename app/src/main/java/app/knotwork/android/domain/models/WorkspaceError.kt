@@ -76,4 +76,17 @@ sealed class WorkspaceError {
      * maps this to an error that carries no "retry with overwrite" hint.
      */
     data object IsDirectory : WorkspaceError()
+
+    /**
+     * The path is inside the workspace but is not one the workspace will accept:
+     * it contains a NUL byte or a path the filesystem itself rejects (for any
+     * operation), or — when the operation would **create** a new entry — it breaks
+     * a rule of [app.knotwork.android.domain.services.WorkspaceNamePolicy] (a
+     * control character or line break, an over-long name or path).
+     *
+     * Distinct from [PathOutsideWorkspace] on purpose: the path does not escape,
+     * so telling the caller it is "outside the workspace" would be false and
+     * would not say what to change.
+     */
+    data object InvalidPath : WorkspaceError()
 }

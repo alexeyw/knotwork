@@ -3,6 +3,7 @@ package app.knotwork.android.domain.usecases.workspace
 import app.knotwork.android.domain.models.WorkspaceFile
 import app.knotwork.android.domain.models.WorkspaceResult
 import app.knotwork.android.domain.services.AgentWorkspace
+import app.knotwork.android.domain.services.WorkspaceNamePolicy
 import java.io.InputStream
 import javax.inject.Inject
 
@@ -12,7 +13,8 @@ import javax.inject.Inject
  *
  * The picked name is reduced to a bare basename — imports always land at the
  * workspace root, never in a sub-directory the picker's display name might
- * imply — and a blank name falls back to [DEFAULT_NAME]. The actual byte copy,
+ * imply — with control characters replaced, and a blank name falls back to
+ * [DEFAULT_NAME]. The actual byte copy,
  * quota and size checks are delegated to [AgentWorkspace.importBytes]; this use
  * case adds the name-collision policy the UI needs:
  *
@@ -60,10 +62,20 @@ class ImportFileToWorkspaceUseCase @Inject constructor(private val workspace: Ag
         /** Fallback name when the picker yields a blank display name. */
         const val DEFAULT_NAME: String = "imported-file"
 
-        /** Reduces a picker display name to a safe, root-level basename. */
+        /**
+         * Reduces a picker display name to a safe, root-level basename: the part after
+         * the last separator, trimmed, with every character [WorkspaceNamePolicy]
+         * forbids replaced by [WorkspaceNamePolicy.REPLACEMENT]. The display name is
+         * whatever the source app's provider reports, and a line break kept in it would
+         * forge an entry in the agent's file listing.
+         *
+         * @param name The picker's display name.
+         * @return A basename the workspace accepts as far as characters go (its length
+         *   is still checked by the workspace), or [DEFAULT_NAME] when nothing is left.
+         */
         fun sanitize(name: String): String {
             val basename = name.substringAfterLast('/').substringAfterLast('\\').trim()
-            return basename.ifEmpty { DEFAULT_NAME }
+            return WorkspaceNamePolicy.replaceForbidden(basename).ifEmpty { DEFAULT_NAME }
         }
 
         /**

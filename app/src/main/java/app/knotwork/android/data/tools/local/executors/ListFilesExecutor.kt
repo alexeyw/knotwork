@@ -68,6 +68,7 @@ class ListFilesExecutor @Inject constructor(private val workspace: AgentWorkspac
     private fun errorMessage(path: String, error: WorkspaceError): String = when (error) {
         WorkspaceError.PathOutsideWorkspace -> "Error: path '$path' is outside the workspace."
         WorkspaceError.NotFound -> "Error: '$path' not found."
+        WorkspaceError.InvalidPath -> WorkspaceToolMessages.INVALID_PATH
         WorkspaceError.NotAText,
         WorkspaceError.TooLarge,
         WorkspaceError.AlreadyExists,

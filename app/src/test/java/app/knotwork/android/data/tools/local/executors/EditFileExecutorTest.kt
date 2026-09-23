@@ -129,4 +129,13 @@ class EditFileExecutorTest {
 
         assertEquals("Error: editing 'a.txt' would exceed the workspace storage quota.", result)
     }
+
+    @Test
+    fun `given an invalid-path failure when execute then names the rules without echoing the path`() = runTest {
+        editFails(WorkspaceError.InvalidPath)
+
+        val result = executor.execute("""{"path":"bad","oldText":"x","newText":"y"}""")
+
+        assertEquals(WorkspaceToolMessages.INVALID_PATH, result)
+    }
 }

@@ -91,6 +91,18 @@ For the broader layering rationale, see
   Cleanup that must also run on the cancellation path belongs in `finally`
   (with `withContext(NonCancellable)` if it suspends).
 
+## Regular expressions
+
+- A regex pattern is a **string literal** in the source. Runtime text goes into
+  it only through `Regex.escape`, which adds characters, never quantifiers.
+  `java.util.regex` backtracks: a pattern shaped by input can take time
+  exponential in its length, and the match cannot be stopped — it never
+  suspends, so a coroutine timeout does not fire.
+- To match input against a pattern that itself comes from the model or the user
+  (a glob, a filter), use a matcher that cannot backtrack, as `WorkspaceGlob`
+  does. `RegexConstructionKonsistTest` fails a `Regex(…)`, `Pattern.compile(…)`
+  or `.toRegex()` built any other way.
+
 ## Dependency injection (Hilt)
 
 - Use `@HiltViewModel` for every `ViewModel`.

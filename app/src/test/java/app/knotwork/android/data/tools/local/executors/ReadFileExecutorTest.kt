@@ -197,4 +197,13 @@ class ReadFileExecutorTest {
 
         assertEquals("Error: 'big.log' exceeds the per-file read limit.", result)
     }
+
+    @Test
+    fun `given an invalid-path failure when execute then names the rules without echoing the path`() = runTest {
+        coEvery { workspace.readText(any()) } returns WorkspaceResult.Failure(WorkspaceError.InvalidPath)
+
+        val result = executor.execute("""{"path":"bad"}""")
+
+        assertEquals(WorkspaceToolMessages.INVALID_PATH, result)
+    }
 }

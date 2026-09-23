@@ -1809,6 +1809,14 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/user-guide.md"))
         .withPropertyName("userGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `WorkspaceToolsDocumentedTest` reads the tool enumerations of the architecture
+    // map and the extension guide (and of SECURITY.md, declared above).
+    inputs.file(rootProject.file("docs/architecture.md"))
+        .withPropertyName("architectureDocument")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("docs/extending.md"))
+        .withPropertyName("extendingGuide")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // Hilt/Dagger reads Kotlin metadata via `kotlin-metadata-jvm`, which is unshaded

@@ -54,6 +54,7 @@ class EditFileExecutor @Inject constructor(private val workspace: AgentWorkspace
         WorkspaceError.TooLarge -> "Error: the edited content of '$path' exceeds the per-file size limit."
         WorkspaceError.QuotaExceeded -> "Error: editing '$path' would exceed the workspace storage quota."
         WorkspaceError.IsDirectory -> "Error: '$path' is a directory, not a file."
+        WorkspaceError.InvalidPath -> WorkspaceToolMessages.INVALID_PATH
         WorkspaceError.AlreadyExists -> "Error: '$path' could not be edited."
     }
 

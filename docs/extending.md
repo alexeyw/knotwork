@@ -545,14 +545,17 @@ Contract reminders specific to the workspace:
   blocks.
 - **Map the typed error, never throw for a refusable condition.** Workspace
   calls return `WorkspaceResult.Failure` with a `WorkspaceError`
-  (`PathOutsideWorkspace`, `NotFound`, `NotAText`, `AlreadyExists`,
-  `IsDirectory`, `TooLarge`, `QuotaExceeded`, `AnchorNotFound`,
+  (`PathOutsideWorkspace`, `InvalidPath`, `NotFound`, `NotAText`,
+  `AlreadyExists`, `IsDirectory`, `TooLarge`, `QuotaExceeded`, `AnchorNotFound`,
   `AnchorNotUnique`). Turn each into a short, model-readable observation
   string. A refused call must surface as a `ToolResult.Error` so the run
   continues — it must not crash the pipeline.
-- **Respect the quotas; don't recompute them.** The per-file and workspace-wide
-  limits are enforced inside `writeText` / `importBytes`. Never stage bytes
-  outside the workspace to dodge them.
+- **Respect the quotas; don't recompute them.** The per-file, workspace-wide
+  and entry-count limits are enforced inside `writeText` / `importBytes`. Never
+  stage bytes outside the workspace to dodge them.
+- **Render names through `WorkspaceListingFormat`.** A name created before the
+  name rules may still carry a line break; the shared renderer escapes it, a
+  hand-rolled one would let it forge a line.
 
 **Step 2 — register it like any other tool.** Add the `@Binds @IntoMap
 @StringKey(CountLinesExecutor.TOOL_NAME)` entry to

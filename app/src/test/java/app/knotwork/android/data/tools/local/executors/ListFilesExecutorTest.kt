@@ -64,6 +64,18 @@ class ListFilesExecutorTest {
     }
 
     @Test
+    fun `given a name carrying a line break when execute then the entry stays on one line`() = runTest {
+        // A name created before the name rules (or by anything but the workspace) may still
+        // carry a line break; rendered raw it would forge a second entry.
+        listReturns(file("notes.md\nFORGED.txt\t142 bytes"))
+
+        val result = executor.execute("{}")
+
+        assertEquals(1, result.lines().size)
+        assertTrue(result.startsWith("notes.md\\nFORGED.txt\\t142 bytes\t1 bytes\t"))
+    }
+
+    @Test
     fun `given path filter when execute then lists only that subtree`() = runTest {
         coEvery { workspace.resolve("reports") } returns WorkspaceResult.Success(file("reports", 0L))
         listReturns(file("a.txt"), file("reports/b.md"), file("reports/2026/c.md"))
@@ -130,5 +142,14 @@ class ListFilesExecutorTest {
 
         assertTrue(result.contains("[... 5 more entries truncated]"))
         assertEquals(WorkspaceListingFormat.MAX_LINES + 1, result.lines().size)
+    }
+
+    @Test
+    fun `given an invalid-path failure when execute then names the rules without echoing the path`() = runTest {
+        coEvery { workspace.resolve(any()) } returns WorkspaceResult.Failure(WorkspaceError.InvalidPath)
+
+        val result = executor.execute("""{"path":"bad"}""")
+
+        assertEquals(WorkspaceToolMessages.INVALID_PATH, result)
     }
 }

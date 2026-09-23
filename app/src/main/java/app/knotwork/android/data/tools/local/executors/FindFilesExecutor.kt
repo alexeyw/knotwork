@@ -28,6 +28,11 @@ class FindFilesExecutor @Inject constructor(private val workspace: AgentWorkspac
         val json = JSONObject(arguments)
         val glob = json.optString("glob", "").trim()
         if (glob.isBlank()) return "Error: missing 'glob' argument."
+        // The matcher's cost is linear in the glob's length times each path's; this bound
+        // keeps a single call over a full workspace short, not merely finite.
+        if (glob.length > WorkspaceGlob.MAX_GLOB_LENGTH) {
+            return "Error: the glob is longer than ${WorkspaceGlob.MAX_GLOB_LENGTH} characters."
+        }
 
         return when (val listing = workspace.list()) {
             is WorkspaceResult.Failure -> errorMessage(listing.error)
@@ -50,6 +55,7 @@ class FindFilesExecutor @Inject constructor(private val workspace: AgentWorkspac
         WorkspaceError.AnchorNotFound,
         is WorkspaceError.AnchorNotUnique,
         WorkspaceError.IsDirectory,
+        WorkspaceError.InvalidPath,
         -> "Error: could not search the workspace."
     }
 

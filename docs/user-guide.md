@@ -1882,6 +1882,11 @@ a banner explains that the agent's writes are being refused until space
 is freed; delete files or raise the limit (Settings → Tools & workspace →
 Advanced → Workspace size limit) to recover.
 
+The workspace also holds at most **10,000 files and folders**, however small.
+Past that, new files are refused even while the indicator shows room; deleting
+files frees the count again. Folders are never shown on their own and never
+kept empty: deleting the last file in a folder removes the folder too.
+
 Pull down to refresh the listing.
 
 ### Previewing a file
@@ -1912,7 +1917,9 @@ Tap **Import** (the button in the quota header, the floating action
 button, or the empty-state call to action) to pick a file with the
 system file picker and copy it into the workspace for the agent to read.
 Imports are subject to the same per-file and total-size limits as the
-agent's own writes. If a file with the same name already exists, you are
+agent's own writes. A name carrying line breaks, tabs or other control
+characters is imported with `_` in their place, and a name longer than 242
+bytes is refused. If a file with the same name already exists, you are
 asked whether to **keep both** (the import is saved under a numbered
 name like `report (1).md`) or **replace** the existing file.
 

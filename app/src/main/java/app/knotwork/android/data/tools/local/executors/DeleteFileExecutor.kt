@@ -41,6 +41,7 @@ class DeleteFileExecutor @Inject constructor(private val workspace: AgentWorkspa
     private fun errorMessage(path: String, error: WorkspaceError): String = when (error) {
         WorkspaceError.PathOutsideWorkspace -> "Error: path '$path' is outside the workspace."
         WorkspaceError.NotFound -> "Error: file '$path' not found."
+        WorkspaceError.InvalidPath -> WorkspaceToolMessages.INVALID_PATH
         WorkspaceError.AlreadyExists,
         WorkspaceError.QuotaExceeded,
         WorkspaceError.NotAText,

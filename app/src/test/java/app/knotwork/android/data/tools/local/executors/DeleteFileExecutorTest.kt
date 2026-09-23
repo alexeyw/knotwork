@@ -70,4 +70,13 @@ class DeleteFileExecutorTest {
 
         assertEquals("Error: path '../../secrets' is outside the workspace.", result)
     }
+
+    @Test
+    fun `given an invalid-path failure when execute then names the rules without echoing the path`() = runTest {
+        coEvery { workspace.delete(any()) } returns WorkspaceResult.Failure(WorkspaceError.InvalidPath)
+
+        val result = executor.execute("""{"path":"bad"}""")
+
+        assertEquals(WorkspaceToolMessages.INVALID_PATH, result)
+    }
 }
