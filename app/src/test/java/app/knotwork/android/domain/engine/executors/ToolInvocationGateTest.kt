@@ -21,6 +21,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -202,6 +203,24 @@ class ToolInvocationGateTest {
     }
 
     @Test
+    fun `given a run that parks when its collector stops at the park then the ongoing notification is kept`() =
+        runTest {
+            // The collector may stop at the very state that announces the park
+            // (the flow is aborted inside that emit). The park already posted
+            // the ongoing notification into the request's slot; removing it on
+            // the way out would strand the run with no way back.
+            val fixture =
+                Fixture(policy = ToolApprovalPolicy.SensitiveOrDestructive, risk = ToolRisk.SENSITIVE, record = null)
+
+            fixture.dispatchUntil { it is AgentOrchestratorState.SuspendedInBackground }
+
+            verify {
+                fixture.approvalNotifier.sendPersistentApprovalRequest(RUN_ID, SESSION_ID, any(), TOOL, ARGS, any())
+            }
+            verify(exactly = 0) { fixture.approvalNotifier.cancelApprovalNotification(any()) }
+        }
+
+    @Test
     fun `given an answer that claims the request as the live wait runs out then that answer is applied`() = runTest {
         // The answer was accepted — resumeWithApproval returned true, and the
         // surface was told the request is settled — so the timeout firing in
@@ -341,6 +360,21 @@ class ToolInvocationGateTest {
 
         /** Identity of the request the gate is live on now. */
         fun liveRequestId(): String = requireNotNull(gate.pendingApprovalFor(SESSION_ID)) { "no live gate" }.requestId
+
+        /** Dispatches the call and stops collecting at the first state matching [stop]. */
+        suspend fun dispatchUntil(stop: (AgentOrchestratorState) -> Boolean) {
+            flow {
+                gate.dispatch(
+                    collector = this,
+                    nodeType = "TOOL",
+                    nodeId = "node-1",
+                    sessionId = SESSION_ID,
+                    runId = runId,
+                    resolvedToolName = TOOL,
+                    resolvedToolArgs = ARGS,
+                )
+            }.first { output -> (output as? NodeOutput.State)?.state?.let(stop) == true }
+        }
 
         /** Dispatches the call and collects everything the gate emits. */
         suspend fun dispatch(alwaysConfirm: Boolean = false): List<NodeOutput> = flow {

@@ -322,7 +322,25 @@ class ToolInvocationGate @Inject constructor(
                 } else {
                     Timber.tag("PipelineDebug").w("Live approval phase timed out for session: $sessionId")
                     val request = ParkedApprovalRequest(requestId, resolvedToolName, resolvedToolArgs, risk)
-                    parked = parkOrAbandon(runId, sessionId, request)
+                    if (runId != null && parkRun(runId, sessionId, request)) {
+                        // Two-phase wait, second phase: the run parks on its
+                        // durable pending record instead of failing. No
+                        // NodeOutput.Result on purpose — the engine stops the
+                        // walk and the run record stays WAITING_APPROVAL.
+                        // Flagged before the emit: a collector that stops at
+                        // this state aborts the flow inside it, and the
+                        // `finally` must still know the ongoing notification
+                        // now holds the request's slot.
+                        parked = true
+                        recordTriggerHitlEvent(runId, TriggerHitlEvent.Parked)
+                        emit(
+                            NodeOutput.State(
+                                AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.APPROVAL),
+                            ),
+                        )
+                    } else {
+                        abandonTimedOutGate(runId)
+                    }
                     return@with
                 }
             } finally {
@@ -446,8 +464,7 @@ class ToolInvocationGate @Inject constructor(
     }
 
     /**
-     * Ends a live wait that ran out unanswered: parks the run on its durable
-     * record when it has one, and otherwise fails the call.
+     * Fails a call whose live wait ran out and that could not park.
      *
      * Non-persisted runs (editor test runs) and storage failures keep the
      * legacy fail-fast semantics: a park without a durable record would be
@@ -455,29 +472,11 @@ class ToolInvocationGate @Inject constructor(
      * chance to answer it — ABANDONED, not TIMED_OUT.
      *
      * @param runId Id of the run, or `null` for a non-persisted run.
-     * @param sessionId Id of the owning chat session.
-     * @param request The staged call whose wait ran out.
-     * @return `true` when the run parked — its ongoing notification now holds
-     *   the request's slot; `false` when the call failed instead.
      */
-    private suspend fun FlowCollector<NodeOutput>.parkOrAbandon(
-        runId: String?,
-        sessionId: String,
-        request: ParkedApprovalRequest,
-    ): Boolean {
-        if (runId != null && parkRun(runId, sessionId, request)) {
-            // Two-phase wait, second phase: the run parks on its durable
-            // pending record instead of failing. No NodeOutput.Result on
-            // purpose — the engine stops the walk and the run record stays
-            // WAITING_APPROVAL.
-            recordTriggerHitlEvent(runId, TriggerHitlEvent.Parked)
-            emit(NodeOutput.State(AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.APPROVAL)))
-            return true
-        }
+    private suspend fun FlowCollector<NodeOutput>.abandonTimedOutGate(runId: String?) {
         recordTriggerHitlEvent(runId, TriggerHitlEvent.Resolved(TriggerHitlResolution.ABANDONED))
         emit(NodeOutput.State(AgentOrchestratorState.Error("Approval request timed out")))
         emit(NodeOutput.Result(NodeExecutionResult(error = "Approval request timed out")))
-        return false
     }
 
     /**
