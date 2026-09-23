@@ -112,10 +112,10 @@ storage and credentials:
 
 The agent has a small private **workspace** — a single jailed directory
 (`files/agent_workspace/` inside the app's private `filesDir`) that the file
-tools (`read_file`, `write_file`, `edit_file`, `delete_file`, `list_files`,
-`find_files`) read from and write to, and that the **Files** screen surfaces
-to the user. Its at-rest posture is deliberately **weaker than the
-database's**, and this is the honest statement of that trade-off:
+tools (`read_file`, `write_file`, `edit_file`, `append_file`, `delete_file`,
+`list_files`, `find_files`) read from and write to, and that the **Files**
+screen surfaces to the user. Its at-rest posture is deliberately **weaker than
+the database's**, and this is the honest statement of that trade-off:
 
 - The workspace lives in app-private internal storage, so it is protected by
   the device's **file-based encryption (FBE)** — the OS-level encryption that
@@ -141,6 +141,13 @@ database's**, and this is the honest statement of that trade-off:
   directory is refused with a typed `WorkspaceError.PathOutsideWorkspace`
   before any file is touched. A tool can therefore only ever read or write
   **inside** the workspace, never the rest of the app's private storage.
+- A path the filesystem cannot take — a NUL byte, or one it rejects — is
+  refused with `WorkspaceError.InvalidPath` instead of an exception. A write that
+  would **create** a file also needs a name without control characters or line
+  breaks, at most 242 bytes per name and 512 bytes per path. Imports replace such
+  characters with `_`; a file named before this rule can still be read and
+  deleted, and the file listings the agent reads show its control characters
+  escaped, so a name cannot add a line of its own to a listing.
 
 ### Workspace quotas (availability control)
 
@@ -153,6 +160,15 @@ confidentiality:
   pre-checked before any bytes are committed by the atomic stage-and-rename
   write) keep a runaway `write_file` loop from exhausting device storage. User
   imports through the Files screen are charged against the same limits.
+- Bytes are not the only cost: a directory counts none and a tiny file almost
+  none. So the workspace also holds at most **10,000 entries** (files and
+  directories together, also `QuotaExceeded`), and a directory never outlives
+  its contents — deleting a file removes the directories it empties. The count
+  walks the directory without following symbolic links, the same walk the
+  listings use.
+- `find_files` matches its glob without backtracking, so a glob's cost grows with
+  its length times the path's, not exponentially; globs over 256 characters are
+  refused.
 - A **per-read token budget** (default 2000 tokens) truncates `read_file`
   output so a single large file cannot blow out the local model's context
   window, and the `http_request` response is capped (1 MB default) so untrusted
@@ -458,9 +474,10 @@ oversight — and it works as follows:
 - Text returned by any tool — Wikipedia extracts from the built-in
   `search_tool`, results from user-configured **MCP servers**, the body of an
   `http_request` response, and **the contents of a file the agent reads from
-  its workspace** — is fed back into the context of subsequent pipeline
-  nodes. A file the user imported through the Files screen (or that an
-  earlier `write_file` produced from untrusted material) is therefore
+  its workspace** (and the file **names** a listing returns: an imported file
+  keeps the name the source app gave it) — is fed back into the context of
+  subsequent pipeline nodes. A file the user imported through the Files screen
+  (or that an earlier `write_file` produced from untrusted material) is therefore
   **untrusted model input**, exactly like a network tool result: it may
   contain text that reads as instructions to the model. That content reaches
   planning and routing nodes (`DECOMPOSITION`, `INTENT_ROUTER`), so a crafted

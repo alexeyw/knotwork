@@ -49,6 +49,7 @@ class AppendFileExecutor @Inject constructor(private val workspace: AgentWorkspa
         WorkspaceError.NotAText -> "Error: '$path' is not a UTF-8 text file, so text cannot be appended to it."
         WorkspaceError.TooLarge -> "Error: appending to '$path' would exceed the per-file size limit."
         WorkspaceError.QuotaExceeded -> "Error: appending to '$path' would exceed the workspace storage quota."
+        WorkspaceError.InvalidPath -> WorkspaceToolMessages.INVALID_PATH
         WorkspaceError.NotFound,
         WorkspaceError.AlreadyExists,
         WorkspaceError.AnchorNotFound,

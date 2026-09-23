@@ -139,6 +139,7 @@ class ReadFileExecutor @Inject constructor(
         WorkspaceError.NotFound -> "Error: file '$path' not found."
         WorkspaceError.NotAText -> "Error: '$path' is not a UTF-8 text file and cannot be read as text."
         WorkspaceError.TooLarge -> "Error: '$path' exceeds the per-file read limit."
+        WorkspaceError.InvalidPath -> WorkspaceToolMessages.INVALID_PATH
         WorkspaceError.AlreadyExists,
         WorkspaceError.QuotaExceeded,
         WorkspaceError.AnchorNotFound,

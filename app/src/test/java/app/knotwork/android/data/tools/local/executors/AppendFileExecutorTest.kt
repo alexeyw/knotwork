@@ -116,4 +116,14 @@ class AppendFileExecutorTest {
 
         assertEquals("Error: appending to 'a.txt' would exceed the workspace storage quota.", result)
     }
+
+    @Test
+    fun `given an invalid-path failure when execute then names the rules without echoing the path`() = runTest {
+        coEvery { workspace.appendText(any(), any()) } returns
+            WorkspaceResult.Failure(WorkspaceError.InvalidPath)
+
+        val result = executor.execute("""{"path":"bad","content":"x"}""")
+
+        assertEquals(WorkspaceToolMessages.INVALID_PATH, result)
+    }
 }

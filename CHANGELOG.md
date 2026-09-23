@@ -103,6 +103,22 @@ details.
   `uses · …` line under a starter prompt keeps a tool only if one of the
   pipeline's Tool nodes calls it, and a pipeline shows at most six starter
   prompts.
+- **The workspace limits count folders and small files.** A folder cost nothing
+  against the size limit, stayed behind when its last file was deleted, and could
+  not be removed from the app; tiny files were nearly free too. Deleting a file
+  now removes the folders it empties, leftover empty folders are cleared, and the
+  workspace holds at most 10,000 files and folders.
+- **A file search can no longer stall the agent.** `find_files` turned its
+  pattern into a check whose running time could grow without bound, and nothing
+  could interrupt it. It now takes time in proportion to the pattern and the
+  path, and patterns are limited to 256 characters.
+- **A file name cannot add lines to the agent's file list.** A name with a line
+  break — such as one supplied by the app a file was imported from — could show
+  up as extra entries. Imports replace control characters with `_`, the agent's
+  own writes refuse them, and the list shows any older such name escaped.
+- **Unusable file paths get an error instead of an exception.** A path with a
+  NUL byte or a name too long for the filesystem is now refused with a clear
+  message to the agent.
 
 ### Fixed
 

@@ -4,6 +4,7 @@ import app.knotwork.android.domain.models.WorkspaceError
 import app.knotwork.android.domain.models.WorkspaceFile
 import app.knotwork.android.domain.models.WorkspaceResult
 import app.knotwork.android.domain.services.AgentWorkspace
+import app.knotwork.android.domain.services.WorkspaceGlob
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -47,6 +48,29 @@ class FindFilesExecutorTest {
 
         assertEquals("Error: missing 'glob' argument.", result)
         coVerify(exactly = 0) { workspace.list() }
+    }
+
+    @Test
+    fun `given a glob longer than the limit when execute then errors without listing`() = runTest {
+        val glob = "a".repeat(WorkspaceGlob.MAX_GLOB_LENGTH + 1)
+
+        val result = executor.execute("""{"glob":"$glob"}""")
+
+        assertEquals(
+            "Error: the glob is longer than ${WorkspaceGlob.MAX_GLOB_LENGTH} characters.",
+            result,
+        )
+        coVerify(exactly = 0) { workspace.list() }
+    }
+
+    @Test
+    fun `given a glob at the limit when execute then it is matched`() = runTest {
+        val name = "a".repeat(WorkspaceGlob.MAX_GLOB_LENGTH)
+        listReturns(file(name))
+
+        val result = executor.execute("""{"glob":"$name"}""")
+
+        assertTrue(result.startsWith(name))
     }
 
     @Test

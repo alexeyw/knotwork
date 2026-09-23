@@ -25,11 +25,13 @@ Only Kotlin files appear inside the generated blocks.
   - `PipelineBindingCensusTest.kt` - Census of every place the domain stores a pipeline id, each with a decision: is it a binding the Replace confirmation must list, or not, and why.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
+  - `RegexConstructionKonsistTest.kt` - Census of how production code builds a regular expression: every pattern must be a **string literal in the source**, and anything spliced into it at runtime must pass through `Regex.escape` (or `Pattern.quote`).
   - `RepositoryPlacementKonsistTest.kt` - Konsist guard enforcing the repository placement convention from the api-conventions rule: the abstraction (`<Noun>Repository` interface) is owned by the `domain` layer, and its implementation (`<Noun>RepositoryImpl`) lives in the `data` layer.
   - `TabRootEntryGuardTest.kt` - Structural guard over the one navigation invariant the closed test bought us:
   - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**
   - `TranscriptJoinKonsistTest.kt` - Census of the idiom that let stored content forge a turn of its own inside a prompt: a speaker label and a message body spliced into one string template, `"${message.role.name}: ${message.content}"`.
   - `UsageTelemetryNoNetworkKonsistTest.kt` - Konsist guard enforcing the core privacy promise of the local usage-telemetry feature: **nothing on the telemetry path may make a network call.**
+  - `WorkspaceToolsDocumentedTest.kt` - Pins the three places that enumerate the tools able to read and write the agent's workspace to the tools that actually can.
 - `data/` - Tests for the data layer.
   - `audio/` - Tests for voice-input capture and the WAV header builder.
     - `WavHeaderTest.kt` - Unit tests for `WavHeader`, the pure 44-byte canonical PCM WAV header builder.
@@ -269,6 +271,7 @@ Only Kotlin files appear inside the generated blocks.
     - `PipelineCompositionValidatorTest.kt` - Tests for PipelineCompositionValidator (cycles, depth limit, dangling targets).
     - `ScheduledTaskTagTest.kt` - Verifies `ScheduledTaskTag`: the label a scheduled task carries is the only thing the task monitor can say about it (a queued task's input data is not readable), so it has to survive a round trip through a plain tag string and degrade to `null` — never to a wrong label — on anything it does not recognise.
     - `WorkspaceGlobTest.kt` - Unit tests for `WorkspaceGlob`, pinning the documented glob semantics: `*` stays within a path segment, `**` crosses directories, `?` matches a single non-separator character, and everything else is literal.
+    - `WorkspaceNamePolicyTest.kt` - Unit tests for `WorkspaceNamePolicy`: which characters a new name may not carry, the byte limits at their exact boundaries (in UTF-8, not characters), and the two renderings of a forbidden character — replaced on import, escaped in a listing.
     - `WorkspaceTextEditTest.kt` - Unit tests for `WorkspaceTextEdit`.
   - `settings/` - Tests for the settings registry and its metadata.
     - `SettingsRegistryTest.kt` - Unit tests for `SettingsRegistry` — the single source of truth for the settings information architecture.
