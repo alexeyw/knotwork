@@ -128,7 +128,7 @@ private val TOOLS_ENTRIES = listOf(
     setting("WORKSPACE_MAX_FILE_SIZE_BYTES", ADVANCED, SLIDER, syn = listOf("file", "max")),
     setting("WORKSPACE_MAX_TOTAL_BYTES", ADVANCED, SLIDER, syn = listOf("workspace", "max", "total")),
     setting("WORKSPACE_READ_TOKEN_BUDGET", ADVANCED, SLIDER, syn = listOf("max", "tokens", "read")),
-    setting("HTTP_TOOL_MAX_RESPONSE_BYTES", ADVANCED, SLIDER, syn = listOf("http", "response", "max")),
+    setting("HTTP_TOOL_MAX_RESPONSE_BYTES", ADVANCED, SLIDER, syn = listOf("http", "mcp", "response", "result", "max")),
     link(ADVANCED, "Files / domains", syn = listOf("http", "domains", "allowlist")),
 )
 

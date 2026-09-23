@@ -31,7 +31,7 @@
     <string name="settings_row_workspace_max_file_size_title">Largest file</string>
     <string name="settings_row_workspace_max_total_title">Workspace size limit</string>
     <string name="settings_row_workspace_read_budget_title">Single read budget</string>
-    <string name="settings_row_http_tool_max_response_title">Largest web response</string>
+    <string name="settings_row_http_tool_max_response_title">Largest tool response</string>
     <string name="settings_pipeline_nesting_depth_title">Max nesting depth</string>
     <string name="settings_pipeline_structured_repairs_title">Structured-output repairs</string>
     <string name="settings_memory_summary_limit_title">Memory summary size</string>

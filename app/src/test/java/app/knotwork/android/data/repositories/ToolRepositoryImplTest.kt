@@ -741,30 +741,32 @@ class ToolRepositoryImplTest {
     }
 
     @Test
-    fun `executeTool falls through to next provider when first server execute throws`() = runTest {
-        // Regression: a single break inside the for-loop blew up
-        // multi-provider resilience — one flaky server made every other
-        // healthy provider unreachable. The fix is to keep walking.
-        val urlA = "http://10.0.0.4:8080"
-        val urlB = "http://10.0.0.5:8080"
-        val toolName = "shared_tool"
-        val clientB: McpClient = mockk(relaxed = true)
-        every { settingsRepository.mcpServers } returns
-            flowOf(listOf(McpServerConfig(url = urlA), McpServerConfig(url = urlB)))
-        every { mcpClientFactory.create() } returnsMany listOf(mcpClient, clientB)
-        coEvery { mcpClient.getTools() } returns
-            listOf(AgentTool(name = toolName, description = "A", parameters = "{}"))
-        coEvery { clientB.getTools() } returns
-            listOf(AgentTool(name = toolName, description = "B", parameters = "{}"))
-        coEvery { mcpClient.executeTool(toolName, any()) } throws RuntimeException("flaky upstream")
-        coEvery { clientB.executeTool(toolName, any()) } returns "from-B"
+    fun `given the serving server fails when executeTool then its error is returned and no other server is called`() =
+        runTest {
+            // No failover: B publishes the same name, but the call was gated under
+            // A's decision, and a call that failed on A (a timeout, say) may still
+            // be running there — retrying on B would repeat the side effect.
+            val urlA = "http://10.0.0.4:8080"
+            val urlB = "http://10.0.0.5:8080"
+            val toolName = "shared_tool"
+            val clientB: McpClient = mockk(relaxed = true)
+            every { settingsRepository.mcpServers } returns
+                flowOf(listOf(McpServerConfig(url = urlA), McpServerConfig(url = urlB)))
+            every { mcpClientFactory.create() } returnsMany listOf(mcpClient, clientB)
+            coEvery { mcpClient.getTools() } returns
+                listOf(AgentTool(name = toolName, description = "A", parameters = "{}"))
+            coEvery { clientB.getTools() } returns
+                listOf(AgentTool(name = toolName, description = "B", parameters = "{}"))
+            coEvery { mcpClient.executeTool(toolName, any()) } throws IllegalStateException("flaky upstream")
+            coEvery { clientB.executeTool(toolName, any()) } returns "from-B"
 
-        val result = repository.executeTool(toolName, "{}")
+            val exception = runCatching { repository.executeTool(toolName, "{}") }.exceptionOrNull()
 
-        assertEquals("from-B", result)
-        coVerify(exactly = 1) { mcpClient.executeTool(toolName, "{}") }
-        coVerify(exactly = 1) { clientB.executeTool(toolName, "{}") }
-    }
+            assertTrue("expected A's own failure, got $exception", exception is IllegalStateException)
+            assertEquals("flaky upstream", exception!!.message)
+            coVerify(exactly = 1) { mcpClient.executeTool(toolName, "{}") }
+            coVerify(exactly = 0) { clientB.executeTool(any(), any()) }
+        }
 
     @Test
     fun `executeTool dispatches MCP tool exactly once when settings persists duplicate server URLs`() = runTest {
@@ -809,32 +811,158 @@ class ToolRepositoryImplTest {
         assertEquals(1, result.count { it.name == "shared_tool" })
     }
 
+    // ───────────────────────────────────────────────────────────────────
+    // One server per MCP tool name: the risk, the call and the catalogue
+    // entry all come from the same server.
+    // ───────────────────────────────────────────────────────────────────
+
     @Test
-    fun `executeTool rethrows last execute error when every advertising provider fails`() = runTest {
-        // When nobody can serve the call, the agent gets a concrete cause
-        // (network error / 5xx / parse failure) instead of a generic
-        // "not found across active providers" — which would mislead the
-        // operator into thinking the tool was never registered.
-        val urlA = "http://10.0.0.1:8080"
-        val urlB = "http://10.0.0.2:8080"
-        val toolName = "shared_tool"
-        val clientB: McpClient = mockk(relaxed = true)
-        every { settingsRepository.mcpServers } returns
-            flowOf(listOf(McpServerConfig(url = urlA), McpServerConfig(url = urlB)))
-        every { mcpClientFactory.create() } returnsMany listOf(mcpClient, clientB)
-        coEvery { mcpClient.getTools() } returns
-            listOf(AgentTool(name = toolName, description = "A", parameters = "{}"))
-        coEvery { clientB.getTools() } returns
-            listOf(AgentTool(name = toolName, description = "B", parameters = "{}"))
-        coEvery { mcpClient.executeTool(toolName, any()) } throws RuntimeException("first-failure")
-        coEvery { clientB.executeTool(toolName, any()) } throws IllegalStateException("last-failure")
+    fun `given the first server has the tool disabled when getRisk then the risk is the executing server's`() =
+        runTest {
+            // A's decision (Read-only) must not gate a call that can only run on B:
+            // A has the tool switched off, so B serves it, and B's decision is the
+            // SENSITIVE default.
+            val urlA = "http://10.0.0.1:8080"
+            val urlB = "http://10.0.0.2:8080"
+            val toolName = "create_issue"
+            val clientB: McpClient = mockk(relaxed = true)
+            every { settingsRepository.mcpServers } returns
+                flowOf(listOf(McpServerConfig(url = urlA), McpServerConfig(url = urlB)))
+            every { mcpClientFactory.create() } returnsMany listOf(mcpClient, clientB)
+            coEvery { mcpClient.getTools() } returns listOf(AgentTool(toolName, "A", "{}"))
+            coEvery { clientB.getTools() } returns listOf(AgentTool(toolName, "B", "{}"))
+            val keyA = McpServerRepositoryImpl.mcpToolId(serverUrl = urlA, toolName = toolName)
+            every { settingsRepository.disabledMcpTools } returns flowOf(setOf(keyA))
+            every { settingsRepository.toolRiskOverrides } returns flowOf(mapOf(keyA to ToolRisk.READ_ONLY))
 
-        val exception = runCatching { repository.executeTool(toolName, "{}") }.exceptionOrNull()
+            val risk = repository.getRisk(toolName, "{}")
 
-        assertTrue(
-            "Expected the last execute failure to be rethrown, got $exception",
-            exception is IllegalStateException,
+            assertEquals(ToolRisk.SENSITIVE, risk)
+        }
+
+    @Test
+    fun `given an MCP server advertising a built-in name when getAvailableTools then the built-in wins`() = runTest {
+        // A filesystem-style server advertising `read_file` must not add a second
+        // `read_file` to the catalogue: the call would run the built-in anyway, so
+        // the server's description would only mislead the model.
+        coEvery { mcpClient.getTools() } returns listOf(
+            AgentTool(name = "read_file", description = "imposter description", parameters = "{}"),
+            AgentTool(name = "remote_only", description = "desc", parameters = "{}"),
         )
-        assertEquals("last-failure", exception!!.message)
+
+        val result = repository.getAvailableTools()
+
+        val readFileEntries = result.filter { it.name == "read_file" }
+        assertEquals(1, readFileEntries.size)
+        assertFalse(readFileEntries.single().description == "imposter description")
+        assertTrue(result.any { it.name == "remote_only" })
+    }
+
+    @Test
+    fun `given two servers publishing one name when getAvailableTools then only the serving entry is offered`() =
+        runTest {
+            // The model must choose from the description of the server the call will
+            // reach — A, the first in the user's order — not from B's.
+            val urlA = "http://10.0.0.1:8080"
+            val urlB = "http://10.0.0.2:8080"
+            val clientB: McpClient = mockk(relaxed = true)
+            every { settingsRepository.mcpServers } returns
+                flowOf(listOf(McpServerConfig(url = urlA), McpServerConfig(url = urlB)))
+            every { mcpClientFactory.create() } returnsMany listOf(mcpClient, clientB)
+            coEvery { mcpClient.getTools() } returns listOf(AgentTool("create_issue", "A", "{}"))
+            coEvery { clientB.getTools() } returns listOf(
+                AgentTool("create_issue", "B", "{}"),
+                AgentTool("only_on_b", "B", "{}"),
+            )
+
+            val result = repository.getAvailableTools()
+
+            assertEquals(listOf("A"), result.filter { it.name == "create_issue" }.map { it.description })
+            assertTrue(result.any { it.name == "only_on_b" })
+        }
+
+    @Test
+    fun `given an MCP server publishing an AppFunction's name when getAvailableTools then the AppFunction wins`() =
+        runTest {
+            // `get_system_time` is a discovered AppFunction in the fixture, and
+            // executeTool routes a discovered name to the AppFunction manager first.
+            coEvery { mcpClient.getTools() } returns
+                listOf(AgentTool("get_system_time", "server description", "{}"))
+
+            val result = repository.getAvailableTools()
+
+            val entries = result.filter { it.name == "get_system_time" }
+            assertEquals(1, entries.size)
+            assertEquals("desc", entries.single().description)
+        }
+
+    @Test
+    fun `given a disabled built-in when an MCP server publishes its name then neither is offered`() = runTest {
+        // A disabled built-in still owns its name: executeTool refuses it as
+        // disabled before looking at MCP, so offering the server's namesake would
+        // advertise a call that can never reach it.
+        every { settingsRepository.disabledAppFunctions } returns flowOf(setOf("schedule_task"))
+        coEvery { mcpClient.getTools() } returns listOf(AgentTool("schedule_task", "server description", "{}"))
+
+        val result = repository.getAvailableTools()
+
+        assertFalse(result.any { it.name == "schedule_task" })
+    }
+
+    @Test
+    fun `given an MCP server publishing search_tool when executeTool then only the built-in runs`() = runTest {
+        // The execution half of the collision rule. The risk of such a call is the
+        // built-in's READ_ONLY — correctly, because the built-in is what runs.
+        coEvery { mcpClient.getTools() } returns listOf(AgentTool("search_tool", "server description", "{}"))
+        coEvery { searchToolExecutor.execute(any(), any()) } returns "wiki"
+
+        val result = repository.executeTool("search_tool", """{"query":"x"}""")
+
+        assertEquals("wiki", result)
+        assertEquals(ToolRisk.READ_ONLY, repository.getRisk("search_tool", "{}"))
+        coVerify(exactly = 0) { mcpClient.executeTool(any(), any()) }
+    }
+
+    @Test
+    fun `given every server publishing the name has it disabled when getRisk then it refuses as disabled`() = runTest {
+        // No approval card for a call that cannot run.
+        coEvery { mcpClient.getTools() } returns listOf(AgentTool("create_issue", "desc", "{}"))
+        every { settingsRepository.disabledMcpTools } returns flowOf(setOf(mcpKey("create_issue")))
+
+        val exception = runCatching { repository.getRisk("create_issue", "{}") }.exceptionOrNull()
+
+        assertTrue(exception is IllegalArgumentException)
+        assertTrue(exception!!.message!!.contains("disabled"))
+    }
+
+    @Test
+    fun `given a gated risk unlike the serving server's when executeTool then the call is refused`() = runTest {
+        coEvery { mcpClient.getTools() } returns listOf(AgentTool("create_issue", "desc", "{}"))
+
+        val exception = runCatching {
+            repository.executeTool(
+                "create_issue",
+                "{}",
+                ToolExecutionContext(sessionId = "s", gatedRisk = ToolRisk.READ_ONLY),
+            )
+        }.exceptionOrNull()
+
+        assertTrue("expected a refusal, got $exception", exception is IllegalStateException)
+        assertTrue(exception!!.message!!.contains("was not made"))
+        coVerify(exactly = 0) { mcpClient.executeTool(any(), any()) }
+    }
+
+    @Test
+    fun `given the gate decided on the serving server's risk when executeTool then the call runs`() = runTest {
+        coEvery { mcpClient.getTools() } returns listOf(AgentTool("create_issue", "desc", "{}"))
+        coEvery { mcpClient.executeTool("create_issue", "{}") } returns "done"
+
+        val result = repository.executeTool(
+            "create_issue",
+            "{}",
+            ToolExecutionContext(sessionId = "s", gatedRisk = ToolRisk.SENSITIVE),
+        )
+
+        assertEquals("done", result)
     }
 }

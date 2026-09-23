@@ -134,6 +134,24 @@ interface Tool {
   call unbounded. `withTimeoutOrNull` rather than `withTimeout`, because a
   timeout surfacing as a `CancellationException` would propagate past the
   tool-error mapping and cancel the entire run.
+- **One server per tool name.** Which server answers a name is decided by one
+  rule, `McpToolRouting` in the domain layer, and read everywhere — the agent
+  catalogue, `ToolRepository.getRisk`, `executeTool` and the Tools screen. A
+  local tool (built-in or AppFunction, disabled included) owns its name;
+  otherwise the first server in the user's order with the name switched on
+  serves it, and every other entry is left out of the catalogue. There is no
+  failover to another server after an error. The gate passes the risk it
+  decided on (`ToolExecutionContext.gatedRisk`) and the dispatch refuses a call
+  whose serving server's risk no longer matches. Never pick an MCP server for a
+  name any other way: `McpRoutingMatrixTest` runs every routing state of two
+  servers and fails a second resolver.
+- **Everything a server sends is bounded in `KoogMcpClient`**, the one place
+  that covers both the agent and the Tools screen: a name outside the MCP
+  naming rule is not published (nor callable), descriptions are clamped, the
+  catalogue is capped by tool count and rendered size, and a result (or an
+  error message sent instead) is cut at the user's `httpToolMaxResponseBytes`
+  budget with a marker. Read MCP content
+  through the client, never around it.
 - **MCP credentials** (Bearer tokens, Basic passwords, API-key values) are
   stored in the **Keystore-backed encrypted store**, keyed per server by a hash
   of its URL — never in the plain `mcp_servers_json` DataStore entry, which

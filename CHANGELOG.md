@@ -50,6 +50,21 @@ details.
   stops for approval under every setting; **Block destructive tools** still
   refuses it outright. Read-only and sensitive calls run under **Never** as
   before, and the setting's help text and the security documents now say so.
+- **An MCP tool call runs on the server it was approved for.** When two servers
+  offered the same tool name, the risk level could come from one server while
+  the call ran on the other. Now one server serves each name — the first listed
+  that has the tool switched on — and the risk, the approval and the call all
+  come from it. A call that fails is no longer retried on another server, and a
+  call is stopped if the serving server changes after the approval check.
+- **A server tool can no longer take a built-in tool's name.** A tool on your
+  device always wins its name; a server tool with the same name (or the same
+  name as a tool on a server listed above) is not offered to the agent, and the
+  Tools screen says so under it.
+- **MCP servers are limited in how much text they can send.** A tool result, or
+  an error message sent instead, is cut at the same size limit as a web
+  response, and a server's tool list is limited in size, tool count and
+  description length. The **Largest web response** setting is now **Largest
+  tool response** and covers both.
 
 ### Fixed
 

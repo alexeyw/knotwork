@@ -157,6 +157,17 @@ confidentiality:
   output so a single large file cannot blow out the local model's context
   window, and the `http_request` response is capped (1 MB default) so untrusted
   remote content cannot do the same. Both limits are user-tunable.
+- **MCP servers are bounded where their content enters the app** (`KoogMcpClient`).
+  A tool result — and the text of an error the server returns instead — is cut
+  at the same user-tunable budget as an `http_request` response, with a marker
+  saying so. A server's catalogue — which reaches the
+  system prompt of every run, called or not — publishes at most 256 tools and
+  256 KB of names, descriptions and parameter schemas, with each description
+  clamped to 4 096 characters; a tool whose name breaks the MCP naming rule is
+  not published, and an unpublished tool cannot be called. The cut bounds what
+  the chat history, the run and later prompts carry, not what the transport
+  buffers while decoding a response: on the wire the only bound is the 60 s
+  call deadline.
 
 ### Run-history retention (mitigating control)
 
@@ -475,6 +486,16 @@ oversight — and it works as follows:
 - Tools without a known risk level (all MCP-provided tools included) default
   to `SENSITIVE`, the conservative fallback, so they hit the gate unless
   *Approve tool calls* is set to *Never*.
+- **An MCP tool cannot borrow another tool's name, or another server's
+  decision.** A server tool with the name of a built-in tool or a discovered
+  AppFunction is not offered to the agent at all — the call by that name runs
+  the device tool, under the device tool's risk. When two servers publish the
+  same name, only the first in the user's order that has it switched on serves
+  it: the catalogue entry, the per-server risk decision and the call all come
+  from that server, and a call that fails there is not retried on another. The
+  risk is re-checked against the serving server just before the call, which is
+  refused if a reconnect handed the name to a server with a different decision
+  after the gate asked. The Tools screen marks a server tool that is not offered.
 
 **Recommendation:** when connecting an MCP server you do not fully trust —
 or one that serves content from the open web — set the tool-approval policy

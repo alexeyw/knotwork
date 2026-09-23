@@ -27,9 +27,13 @@ interface ToolRepository {
      *
      * @param name The name of the tool to execute.
      * @param arguments The arguments to pass to the tool, formatted as a JSON string.
+     * An MCP call goes to exactly one server — the one [getRisk] resolved for the
+     * same name — with no failover to another server when it fails.
+     *
      * @param context Engine-supplied [ToolExecutionContext] with trusted environment
-     *   values (invoking session id). Forwarded to built-in [LocalToolExecutor]
-     *   strategies; the AppFunction and MCP branches ignore it.
+     *   values. The session id is forwarded to built-in [LocalToolExecutor]
+     *   strategies; the gated risk is re-checked against the MCP server about to run
+     *   the call, which is refused when they differ.
      * @return The result of the tool execution as a string.
      */
     suspend fun executeTool(
@@ -53,8 +57,12 @@ interface ToolRepository {
      *    name) if set, otherwise [ToolRisk.SENSITIVE] (we cannot trust the
      *    AppFunctionManager metadata for side-effect signal).
      * 3. MCP tools return the user override from the same map, keyed by the
-     *    `mcp:<sha8(serverUrl)>:<toolName>` id of the server that advertised the
-     *    tool, otherwise [ToolRisk.SENSITIVE].
+     *    `mcp:<sha8(serverUrl)>:<toolName>` id of the server that **serves** the
+     *    name — the first in the user's order that publishes it and has not
+     *    switched it off, the same server [executeTool] sends the call to —
+     *    otherwise [ToolRisk.SENSITIVE]. An MCP tool never takes the name of a
+     *    built-in or an AppFunction: those resolve in steps 1–2, and the MCP
+     *    namesake is not offered to the agent at all.
      *
      * The override is the **user's** voice, never the server's. MCP's
      * `readOnlyHint` / `destructiveHint` tool annotations are deliberately not

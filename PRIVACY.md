@@ -123,6 +123,13 @@ URL to list its tools and to invoke them. Tool arguments produced during a run
 along with any credentials you stored for it. The operator of that server
 determines what happens to that data.
 
+What the server sends back stays on your device, like the rest of a
+conversation: the tool results are saved in the chat history, and the tool list
+and results become part of what the model reads next. That includes a cloud
+model, if a later step in the run uses one (see 3.1). The app keeps only a
+bounded amount of each: a result is cut at the *Largest tool response* setting,
+and a tool list is limited in size.
+
 ### 3.3 Model downloads
 
 Downloading an on-device model contacts the host serving it: Hugging Face for

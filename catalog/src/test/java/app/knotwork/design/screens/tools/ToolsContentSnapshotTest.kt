@@ -168,6 +168,19 @@ class ToolsContentSnapshotTest {
         ToolsContent(state = ToolsPreview.defaultCollidingNames())
     }
 
+    // A tool the agent is not offered because another takes its name: one row
+    // shadowed by a tool on the device, one by a server listed above, and an
+    // ordinary row between them for contrast.
+    @Test
+    fun tools_shadowed_light() = snapshot(name = "shadowed", dark = false) {
+        ToolsContent(state = ToolsPreview.defaultShadowed())
+    }
+
+    @Test
+    fun tools_shadowed_dark() = snapshot(name = "shadowed", dark = true) {
+        ToolsContent(state = ToolsPreview.defaultShadowed())
+    }
+
     @Test
     fun tools_colliding_tool_names_dark() = snapshot(name = "colliding_tool_names", dark = true) {
         ToolsContent(state = ToolsPreview.defaultCollidingNames())
@@ -303,6 +316,46 @@ internal object ToolsPreview {
         mcpServers = servers().mapIndexed { index, row ->
             if (index == 0) row.copy(tools = collidingNameTools(), expanded = true) else row
         },
+    )
+
+    /**
+     * The second server expanded, with two of its tools not offered to the agent:
+     * `read_file` because a tool on the device has that name, `arxiv.search`
+     * because the server listed above serves it. One built-in row only, so the
+     * expanded server's rows fall inside the captured viewport.
+     */
+    fun defaultShadowed(): ToolsViewState = ToolsViewState(
+        visualState = ToolsVisualState.Default,
+        builtInTools = builtIns().take(1),
+        mcpServers = servers().mapIndexed { index, row ->
+            if (index == 1) row.copy(tools = shadowedTools(), expanded = true) else row
+        },
+    )
+
+    private fun shadowedTools(): List<McpToolEntry> = listOf(
+        McpToolEntry(
+            id = "mcp:def67890:read_file",
+            name = "read_file",
+            description = "Read a file from the server's shared folder",
+            risk = BuiltInToolRisk.Sensitive,
+            enabled = true,
+            shadowing = McpToolShadowing.DeviceTool,
+        ),
+        McpToolEntry(
+            id = "mcp:def67890:create_issue",
+            name = "create_issue",
+            description = "Open an issue in the team tracker",
+            risk = BuiltInToolRisk.Sensitive,
+            enabled = true,
+        ),
+        McpToolEntry(
+            id = "mcp:def67890:arxiv.search",
+            name = "arxiv.search",
+            description = "Search arXiv abstracts by query",
+            risk = BuiltInToolRisk.ReadOnly,
+            enabled = false,
+            shadowing = McpToolShadowing.EarlierServer(serverName = "mcp://arxiv-search.local:7411"),
+        ),
     )
 
     fun empty(): ToolsViewState = ToolsViewState(visualState = ToolsVisualState.Empty)

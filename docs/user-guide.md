@@ -1713,6 +1713,28 @@ different tools. A server's own hints about its tools are deliberately not
 consulted: a server that could declare itself read-only could walk straight past
 the gate.
 
+#### When two tools share a name
+
+The agent calls a tool by its name, so each name reaches exactly one tool:
+
+- **A tool on your device wins.** If a server offers a tool named like a
+  built-in one — `read_file`, say — the agent only ever gets the built-in. The
+  server's tool is not offered to it at all.
+- **Otherwise the first server wins.** If two servers offer the same name, the
+  one listed first on the Tools screen serves it, as long as the tool is
+  switched on there. Switch it off there and the next server takes over.
+
+The Tools screen says so under a server tool the agent is not offered: *Not
+offered to the agent*, and why. Switching that tool on does not help; rename or
+switch off the tool that takes the name instead.
+
+The approval prompt, the risk level and the call itself all come from that one
+server. If the call fails there, it is not retried on another server — a call
+that timed out may still be running where it was sent. And if a server comes
+back between the approval check and the call and takes the name over, the call
+is stopped and you are told to run it again, rather than run under a decision
+you made for a different server.
+
 ### Adding an MCP server
 
 The **Tools** screen groups your own **MCP Servers** — external **Model
@@ -1772,6 +1794,20 @@ explanation — the tool needs a client feature the app does not have.
 Tools that just take arguments and return a result are unaffected, and
 that is the large majority of what MCP servers publish.
 
+The app also sets limits of its own on what a server can publish, because
+every tool's name and description goes into the model's instructions on every
+run. A tool whose name is not a plain identifier (letters, digits, `_`, `-`
+and `.`, up to 128 characters, as the MCP specification asks) is left out; a
+description longer than 4 096 characters is cut, with a note saying so; and one
+server publishes at most 256 tools and about 256 KB of tool definitions —
+anything past that is left out. Ordinary servers are nowhere near these limits:
+GitHub's MCP server, one of the largest, publishes 125 tools in about half the
+size.
+
+A tool's **result** is limited too, and so is an error message the server
+sends instead: past the **Largest tool response** setting (*Settings → Tools &
+workspace*, default 1 024 KB) it is cut, with a marker saying so.
+
 #### How long a server is given to answer
 
 Two deadlines apply, and neither is adjustable:
@@ -1796,7 +1832,8 @@ queue behind it.
 | *MCP tool … did not respond within 60s* | The call hit the deadline above. The server may still be working on it; nothing was cancelled on its side. |
 | *Tool … not found across active providers* | No connected server publishes a tool by that name. Read the tool-count note above before concluding the server is broken. |
 | *MCP client is not connected; cannot execute …* | The connection dropped between planning the call and making it. This is deliberately worded differently from *not found*, because the tool does exist — trying again normally reconnects. |
-| *Tool … is disabled* | The tool exists but its switch is off on the Tools screen. |
+| *Tool … is disabled* | The tool exists but its switch is off on the Tools screen — on every server that offers it. |
+| *MCP tool … now resolves to risk level …, not the … its approval check used* | Between the approval check and the call, a server came back and took the tool's name over (see *When two tools share a name*), or the tool's risk level was changed on the Tools screen. The call was not made. Run it again: the check is repeated for the server that serves it now. |
 
 ---
 
@@ -2219,7 +2256,7 @@ repeated here.
 | **Largest file** | The largest single file the workspace accepts, for both writing one and reading one whole. |
 | **Workspace size limit** | How much device storage the whole workspace may hold. A write that would push past it is refused rather than trimmed. |
 | **Single read budget** | How much of a file one read may put in front of the model. The rest is cut, leaving room for the prompt and the thread. |
-| **Largest web response** | How much of a web response reaches the model. Past it the body is cut and marked, so remote text cannot flood the context. |
+| **Largest tool response** | How much of a web response or MCP tool result reaches the model. Past it the text is cut and marked, so it cannot flood the context. |
 | **Allowed HTTP domains** | *(no explanation — opens a screen that explains itself)* |
 
 #### Background & triggers
@@ -2564,9 +2601,9 @@ Advanced:
 - **Single read budget** (200 – 8 000 tokens, default 2 000) — how much of a file
   one `read_file` call may return. Anything past it is cut, with a marker, so one
   read cannot fill the model's whole context.
-- **Largest web response** (64 – 8 192 KB, default 1 024) — how much of an
-  `http_request` response is read into the answer. Bounds how much untrusted
-  remote text a single call can put in front of the model.
+- **Largest tool response** (64 – 8 192 KB, default 1 024) — how much of an
+  `http_request` response or an MCP tool result is read into the answer. Bounds
+  how much untrusted remote text a single call can put in front of the model.
 - **Files / allowed domains** *(link)* — the `http_request` domain allowlist and
   the workspace file browser.
 

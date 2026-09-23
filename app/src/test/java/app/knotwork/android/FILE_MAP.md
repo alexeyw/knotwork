@@ -94,6 +94,7 @@ Only Kotlin files appear inside the generated blocks.
     - `LocalPipelinePresetRepositoryImplTest.kt` - Unit tests for `LocalPipelinePresetRepositoryImpl`.
     - `LocalPipelineRepositoryImplTest.kt` - Tests for LocalPipelineRepositoryImpl.
     - `LocalPromptPresetRepositoryImplTest.kt` - Unit tests for `LocalPromptPresetRepositoryImpl`.
+    - `McpRoutingMatrixTest.kt` - Guard for the class of defect behind "the risk comes from one server, the call goes to another": two resolvers answering "which server serves this name?" for the approval gate and for the dispatch, and disagreeing.
     - `McpServerRepositoryImplTest.kt` - Unit tests for `McpServerRepositoryImpl`.
     - `MemoryConsolidationPersistenceTest.kt` - Verifies the compaction write path against a **real** in-memory Room database rather than a mocked DAO: consolidation must leave the store holding the summary and nothing it replaced.
     - `MemoryRepositoryImplTest.kt` - Tests for MemoryRepositoryImpl.
@@ -251,6 +252,7 @@ Only Kotlin files appear inside the generated blocks.
     - `HttpRequestPolicyTest.kt` - Unit tests for `HttpRequestPolicy` — the pure security policy behind the `http_request` tool.
     - `KMeansClustererTest.kt` - Unit tests for `KMeansClusterer`.
     - `LocalOnlyPolicyTest.kt` - Unit tests for `LocalOnlyPolicy` — which model endpoints stay reachable while "Block network from local model" is on.
+    - `McpToolRoutingTest.kt` - Pins the one rule for which MCP server answers a tool name: a device tool wins, then the first server in the user's order with the name switched on.
     - `MemoryAutoExtractionCoordinatorTest.kt` - Unit tests for `MemoryAutoExtractionCoordinator`.
     - `MemoryRerankerTest.kt` - Unit tests for `MemoryReranker`.
     - `MemorySearchStatsTrackerTest.kt` - Unit tests for `MemorySearchStatsTracker` — the session-scoped rolling window behind the Settings AVG SCORE stat cell.
@@ -495,6 +497,7 @@ Only Kotlin files appear inside the generated blocks.
       - `AllowedDomainsViewModelTest.kt` - Unit tests for `AllowedDomainsViewModel` — the add-field feedback computation (delegated to `HttpRequestPolicy.normalizeDomain`) and the add / remove persistence gestures.
       - `McpServerConfigViewModelTest.kt` - Unit tests for `McpServerConfigViewModel`.
       - `ToolRiskResolutionTest.kt` - Guards the one rule the Tools list and the tool-detail screen must agree on: which tools the approval gate resolves from an override, and which it resolves from the code.
+      - `ToolsUiStateTest.kt` - The Tools screen's "not offered to the agent" line must tell the story the agent lives in: these cases mirror the ones `ToolRepositoryImplTest` pins for the agent's catalogue.
       - `ToolsViewModelTest.kt` - Tests for ToolsViewModel.
     - `triggers/` - Tests for the triggers surface.
       - `TriggerConditionFormatterTest.kt` - Unit tests for `TriggerConditionFormatter` — the pure mapping from a domain `TriggerCondition` to a `TriggerConditionLabel`.

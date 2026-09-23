@@ -398,8 +398,15 @@ class ToolInvocationGate @Inject constructor(
         val result = try {
             // The context carries the engine-known session id so tools that
             // bind follow-up work to the conversation (schedule_task) get it
-            // from a source the LLM-emitted arguments cannot spoof.
-            toolRepository.executeTool(resolvedToolName, resolvedToolArgs, ToolExecutionContext(sessionId))
+            // from a source the LLM-emitted arguments cannot spoof — and the
+            // risk this gate decided on, so the repository can refuse a call
+            // whose serving tool changed since (an MCP name taken over by a
+            // server that reconnected while the card was up).
+            toolRepository.executeTool(
+                resolvedToolName,
+                resolvedToolArgs,
+                ToolExecutionContext(sessionId = sessionId, gatedRisk = risk),
+            )
         } catch (e: CancellationException) {
             // Preserve structured-concurrency cancellation: tool execution may suspend,
             // and a broad `catch (Exception)` would silently swallow the cancel.
