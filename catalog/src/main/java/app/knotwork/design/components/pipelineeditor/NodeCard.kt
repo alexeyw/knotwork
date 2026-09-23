@@ -254,7 +254,7 @@ private fun NodeBody(title: String, subtitle: String?, error: NodeError?) {
             is NodeError.Runtime -> Text(
                 text = error.message,
                 style = KnotworkTextStyles.BodySm,
-                color = KnotworkTheme.extended.signalErrorText,
+                color = KnotworkTheme.extended.signalError,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

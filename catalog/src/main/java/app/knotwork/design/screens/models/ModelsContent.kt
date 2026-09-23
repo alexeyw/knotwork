@@ -647,7 +647,7 @@ private fun PresetTrailing(preset: PresetRow, strings: ModelsStrings, callbacks:
             Text(
                 text = strings.activeBadge,
                 style = KnotworkTextStyles.LabelSm,
-                color = KnotworkTheme.extended.signalSuccessText,
+                color = KnotworkTheme.extended.signalSuccess,
             )
             Box(
                 modifier = Modifier
@@ -716,7 +716,7 @@ private fun PresetOverflowMenu(
                     Text(
                         text = strings.presetDelete,
                         style = KnotworkTextStyles.BodyBase,
-                        color = KnotworkTheme.extended.signalErrorText,
+                        color = KnotworkTheme.extended.signalError,
                     )
                 },
                 onClick = {

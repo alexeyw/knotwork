@@ -421,7 +421,7 @@ fun PipelineLibraryScreen(
                                 dependents.size,
                             ),
                             style = KnotworkTextStyles.LabelMd,
-                            color = KnotworkTheme.extended.signalErrorText,
+                            color = KnotworkTheme.extended.signalError,
                         )
                         dependents.forEach { dependent ->
                             Text(text = dependent.name.ifBlank { "untitled" })

@@ -72,8 +72,6 @@ fun KnotworkSecondaryButton(
     } else {
         KnotworkTheme.extended.onSurface2
     }
-    // The outline carries the accent; the label and icon take the text-safe tone.
-    val content = if (destructive) KnotworkTheme.extended.riskDestructiveText else accent
     val borderColor = if (effectiveEnabled) accent else KnotworkTheme.extended.outlineStrong
     val visualHeight = KnotworkButtonDefaults.heightFor(size)
     OutlinedButton(
@@ -83,7 +81,7 @@ fun KnotworkSecondaryButton(
         border = BorderStroke(width = 1.dp, color = borderColor),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = Color.Transparent,
-            contentColor = content,
+            contentColor = accent,
             disabledContainerColor = Color.Transparent,
             disabledContentColor = KnotworkTheme.extended.onSurfaceDim,
         ),

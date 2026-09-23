@@ -70,9 +70,7 @@ fun HealthBadge(state: TriggerHealthUi, label: String, modifier: Modifier = Modi
                 modifier = Modifier.size(BadgeGlyphSize),
             )
             if (!iconOnly) {
-                // The hue marks the glyph, the fill and the outline; the word is
-                // `onSurface2` — the light signal accents are too faint for text.
-                Text(text = label, style = KnotworkTextStyles.MonoSm, color = KnotworkTheme.extended.onSurface2)
+                Text(text = label, style = KnotworkTextStyles.MonoSm, color = color)
             }
         }
     }

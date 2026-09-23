@@ -23,7 +23,6 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
 
 <!-- AUTO-GEN:FILE_MAP -->
 - `a11y/` - accessibility scaffolding (`docs/testing.md`).
-  - `AlwaysDarkSurface.kt` - Semantics marker for a subtree drawn on the always-dark console surface, so the accent-text guard judges its text against the dark palette.
   - `KnotworkA11y.kt` - `KnotworkA11y` interface, `DefaultKnotworkA11y` implementation backed by `Settings.Global`, `FixedKnotworkA11y` test double, and the `LocalKnotworkA11y` composition local.
   - `RespectReducedMotionTransitions.kt` - `respectReducedMotionTransitions` helper that swaps caller-supplied enter/exit transitions for an 80 ms alpha-only crossfade when reduced motion is on.
 - `components/` - atomic components.
@@ -404,7 +403,6 @@ matters.
   - `A11yMatrixSnapshotTest.kt` - Accessibility matrix baseline.
   - `KnotworkA11yTest.kt` - Verifies the `KnotworkA11y` contract in three parts: the default local resolves to `DefaultKnotworkA11y`, a test may pin `FixedKnotworkA11y` for deterministic snapshots, and that override survives `KnotworkTheme` applied from either side of it.
   - `TalkBackHappyPathsTest.kt` - Compose-side scaffolds for the five TalkBack happy paths (`docs/testing.md`).
-- `AssertNoAccentText.kt` - Fails when any text on screen is drawn in a risk or signal **accent** of the light theme — the colours that reach only 2.1–3.9:1 on the light surfaces, short of the 4.5:1 WCAG AA asks of body text.
 - `components/` - one suite per component family. Each family pairs a Roborazzi baseline (what it looks like) with behavioural tests (what a baseline cannot show — gating, affordances, semantics).
   - `buttons/` - the button family's baseline.
     - `KnotworkButtonsSnapshotTest.kt` - Roborazzi snapshot baseline for the `KnotworkButtonsCatalogContent` harness in both themes — covers every primary / secondary / text / icon button state in two snapshots (`buttons_light.png`, `buttons_dark.png`).
@@ -536,5 +534,5 @@ matters.
   - `KnotworkThemeTest.kt` - Verifies that `KnotworkTheme` wires the Knotwork tokens into the underlying `MaterialTheme` and into the `KnotworkTheme.*` composition-local accessors.
 - `tokens/` - the token data classes themselves, plus the WCAG contrast audit over every on-surface text pair.
   - `KnotworkTokensTest.kt` - Pure-JVM sanity tests for the token data classes — no Compose runtime, no Robolectric.
-  - `WcagContrastTest.kt` - WCAG 2.1 AA contrast audit for the text colours the Knotwork design system hands out, in both themes.
+  - `WcagContrastTest.kt` - WCAG 2.1 AA contrast audit for the on-surface text pairs the Knotwork design system depends on in both themes.
 <!-- /AUTO-GEN:FILE_MAP_TESTS -->

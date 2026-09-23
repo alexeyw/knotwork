@@ -44,7 +44,7 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  * @param helper optional helper / counter line rendered below [content].
  *  Replaced by [errorText] when [isError] is `true`.
  * @param isError when `true`, the helper row is forced into the destructive
- *  palette and the label colour shifts to `riskDestructiveText` so the field's
+ *  palette and the label colour shifts to `riskDestructive` so the field's
  *  error state reads even when the input itself is off-screen.
  * @param errorText error message shown in place of [helper] when [isError].
  *  When `null` and [isError] is `true`, [helper] is rendered in the
@@ -63,7 +63,7 @@ fun KnotworkField(
     content: @Composable () -> Unit,
 ) {
     val labelColor = if (isError) {
-        KnotworkTheme.extended.riskDestructiveText
+        KnotworkTheme.extended.riskDestructive
     } else {
         KnotworkTheme.extended.onSurfaceMuted
     }
@@ -119,7 +119,7 @@ fun KnotworkField(
 @Composable
 private fun HelperRow(text: String, isError: Boolean) {
     val color = if (isError) {
-        KnotworkTheme.extended.riskDestructiveText
+        KnotworkTheme.extended.riskDestructive
     } else {
         KnotworkTheme.extended.onSurfaceMuted
     }

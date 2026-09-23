@@ -187,12 +187,10 @@ fun KnotworkSectionHeader(
                             tint = KnotworkTheme.extended.signalWarn,
                             modifier = Modifier.size(HeaderIconSize),
                         )
-                        // The amber glyph carries the warning; the words are
-                        // `onSurface2` (amber text is 2.3:1 on the light surface).
                         Text(
                             text = warning,
                             style = KnotworkTextStyles.MonoSm,
-                            color = KnotworkTheme.extended.onSurface2,
+                            color = KnotworkTheme.extended.signalWarn,
                         )
                     }
                 }

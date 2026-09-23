@@ -278,11 +278,10 @@ private fun QuotaStrip(quota: QuotaView, onImport: () -> Unit) {
         QuotaTone.Warn -> KnotworkTheme.extended.signalWarn
         QuotaTone.Over -> KnotworkTheme.extended.signalError
     }
-    // The bar carries the tone's hue; the usage line only steps up from muted to
-    // `onSurface2` — the light signal accents are too faint for text.
     val usageColor = when (quota.tone) {
         QuotaTone.Normal -> KnotworkTheme.extended.onSurfaceMuted
-        QuotaTone.Warn, QuotaTone.Over -> KnotworkTheme.extended.onSurface2
+        QuotaTone.Warn -> KnotworkTheme.extended.signalWarn
+        QuotaTone.Over -> KnotworkTheme.extended.signalError
     }
     Column(
         modifier = Modifier

@@ -10,7 +10,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
-import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.screens.settings.MemoryImportDialog
 import app.knotwork.design.screens.settings.MemoryImportDialogUi
 import app.knotwork.design.theme.KnotworkTheme
@@ -143,7 +142,7 @@ class DialogsSnapshotTest {
             }
         }
         val theme = if (dark) "dark" else "light"
-        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
+        composeTestRule.onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/dialog_${name}_$theme.png",
         )

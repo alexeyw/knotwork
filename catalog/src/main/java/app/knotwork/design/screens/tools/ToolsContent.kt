@@ -624,13 +624,7 @@ private fun RiskOutlinePill(risk: BuiltInToolRisk) {
         Text(
             text = label,
             style = KnotworkTextStyles.LabelSm,
-            // The word takes the text-safe tone of [riskAccent]: the accents
-            // themselves are 2.3–3.9:1 as text on the light surface.
-            color = when (risk) {
-                BuiltInToolRisk.ReadOnly -> KnotworkTheme.extended.riskReadonlyText
-                BuiltInToolRisk.Sensitive -> KnotworkTheme.extended.riskSensitiveText
-                BuiltInToolRisk.Destructive -> KnotworkTheme.extended.riskDestructiveText
-            },
+            color = accent,
         )
     }
 }
@@ -734,12 +728,10 @@ private fun McpServerRowView(server: McpServerRow, callbacks: ToolsCallbacks, ro
                             tint = KnotworkTheme.extended.signalWarn,
                             modifier = Modifier.size(StatusDotSize),
                         )
-                        // The amber glyph carries the state; the word is `onSurface2`
-                        // (amber text is 2.3:1, and the whole row is dimmed besides).
                         Text(
                             text = stringResource(R.string.knotwork_tools_mcp_disconnected),
                             style = KnotworkTextStyles.MonoSm,
-                            color = KnotworkTheme.extended.onSurface2,
+                            color = KnotworkTheme.extended.signalWarn,
                             maxLines = 1,
                         )
                     }
@@ -831,7 +823,7 @@ private fun ServerRowOverflowMenu(server: McpServerRow, callbacks: ToolsCallback
                 text = {
                     Text(
                         text = stringResource(R.string.knotwork_tools_row_action_delete),
-                        color = KnotworkTheme.extended.signalErrorText,
+                        color = KnotworkTheme.extended.signalError,
                     )
                 },
                 onClick = {
@@ -1220,7 +1212,7 @@ fun ToolDetailContent(
                     Text(
                         text = stringResource(R.string.knotwork_tools_detail_schema_error),
                         style = KnotworkTextStyles.BodyBase,
-                        color = KnotworkTheme.extended.signalErrorText,
+                        color = KnotworkTheme.extended.signalError,
                         modifier = Modifier.padding(KnotworkTheme.spacing.sp3),
                     )
                 }
@@ -1346,7 +1338,7 @@ fun McpServerConfigContent(
                 Text(
                     text = form.urlError,
                     style = KnotworkTextStyles.BodySm,
-                    color = KnotworkTheme.extended.signalErrorText,
+                    color = KnotworkTheme.extended.signalError,
                 )
             }
             // Unencrypted traffic to a private address is refused until the user

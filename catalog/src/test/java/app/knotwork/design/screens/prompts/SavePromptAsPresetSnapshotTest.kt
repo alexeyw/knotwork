@@ -15,7 +15,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
-import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -88,7 +87,7 @@ class SavePromptAsPresetSnapshotTest {
             }
         }
         val theme = if (dark) "dark" else "light"
-        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
+        composeTestRule.onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/prompt_dialog_${name}_$theme.png",
         )

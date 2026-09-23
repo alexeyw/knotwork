@@ -338,15 +338,14 @@ private fun AddHelperLine(addState: AddHostState) {
             icon = AppIcons.AlertCircle,
             tint = KnotworkTheme.extended.signalError,
             text = stringResource(R.string.knotwork_allowed_domains_add_invalid),
-            textColor = KnotworkTheme.extended.signalErrorText,
+            textColor = KnotworkTheme.extended.signalError,
         )
 
         is AddHostState.Duplicate -> HelperRow(
             icon = AppIcons.Info,
             tint = KnotworkTheme.extended.signalWarn,
-            // The amber glyph carries the notice; amber text is 2.3:1 on the surface.
             text = stringResource(R.string.knotwork_allowed_domains_add_duplicate, addState.existing),
-            textColor = KnotworkTheme.extended.onSurface2,
+            textColor = KnotworkTheme.extended.signalWarn,
         )
 
         AddHostState.Idle -> Text(

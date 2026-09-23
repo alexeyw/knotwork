@@ -454,7 +454,7 @@ private fun TriggerRowMenu(
 
 @Composable
 private fun TriggerMenuItem(label: String, icon: ImageVector, destructive: Boolean = false, onClick: () -> Unit) {
-    val tint = if (destructive) KnotworkTheme.extended.riskDestructiveText else MaterialTheme.colorScheme.onSurface
+    val tint = if (destructive) KnotworkTheme.extended.riskDestructive else MaterialTheme.colorScheme.onSurface
     DropdownMenuItem(
         text = { Text(text = label, style = KnotworkTextStyles.BodySm, color = tint) },
         leadingIcon = {

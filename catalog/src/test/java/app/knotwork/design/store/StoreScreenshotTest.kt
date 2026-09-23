@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
-import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.screens.chat.ChatHomeContent
 import app.knotwork.design.screens.chat.ChatHomePreview
@@ -103,7 +102,7 @@ class StoreScreenshotTest {
                 }
             }
         }
-        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
+        composeTestRule.onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/$name.png",
         )

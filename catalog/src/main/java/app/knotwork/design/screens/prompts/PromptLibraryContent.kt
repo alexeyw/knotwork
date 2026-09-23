@@ -535,9 +535,7 @@ private fun PromptCardActions(
                         },
                     )
                     DropdownMenuItem(
-                        text = {
-                            Text(text = strings.deleteAction, color = KnotworkTheme.extended.riskDestructiveText)
-                        },
+                        text = { Text(text = strings.deleteAction, color = KnotworkTheme.extended.riskDestructive) },
                         leadingIcon = {
                             Icon(
                                 imageVector = AppIcons.Trash,

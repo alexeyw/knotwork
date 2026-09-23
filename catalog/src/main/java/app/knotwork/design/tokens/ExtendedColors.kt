@@ -37,19 +37,6 @@ import androidx.compose.ui.graphics.Color
  * @property signalSuccess hue-locked success signal (status pills, validation OK).
  * @property signalWarn hue-locked warning signal (status pills, validation warn).
  * @property signalError hue-locked error signal (status pills, validation error).
- * @property riskReadonlyText text-safe tone of [riskReadonly], for words drawn in it.
- * @property riskSensitiveText text-safe tone of [riskSensitive], for words drawn in it.
- * @property riskDestructiveText text-safe tone of [riskDestructive], for words drawn in it.
- * @property signalErrorText text-safe tone of [signalError], for words drawn in it.
- * @property signalSuccessText text-safe tone of [signalSuccess], for words drawn in it.
- *
- * **Accents versus text.** On the light surfaces the risk and signal accents
- * reach only 2.1–3.9:1 — enough for a dot, a border, a fill or a glyph beside
- * words, not for the words themselves, which WCAG AA holds to 4.5:1. Words in a
- * risk or signal colour use the matching `…Text` token; `signalWarn` has none on
- * purpose — a warning keeps its amber on the glyph and says it in
- * [onSurface2]. `consoleBg` is the exception: it is near-black in both themes,
- * and the accents read on it as they are.
  * @property memAutoBg/memAutoFg/memAutoRail source-tag tones for auto-extracted
  * memory chunks (blue, hue 220). bg = pill fill, fg = pill text, rail = 3px card edge.
  * @property memManualBg/memManualFg/memManualRail source-tag tones for manually
@@ -97,11 +84,6 @@ data class KnotworkExtendedColors(
     val signalSuccess: Color,
     val signalWarn: Color,
     val signalError: Color,
-    val riskReadonlyText: Color,
-    val riskSensitiveText: Color,
-    val riskDestructiveText: Color,
-    val signalErrorText: Color,
-    val signalSuccessText: Color,
     val memAutoBg: Color,
     val memAutoFg: Color,
     val memAutoRail: Color,
@@ -160,11 +142,6 @@ fun knotworkExtendedColorsLight() = KnotworkExtendedColors(
     signalSuccess = KnotworkPalette.SignalSuccess,
     signalWarn = KnotworkPalette.SignalWarn,
     signalError = KnotworkPalette.SignalError,
-    riskReadonlyText = KnotworkLight.RiskReadonlyText,
-    riskSensitiveText = KnotworkLight.RiskSensitiveText,
-    riskDestructiveText = KnotworkLight.RiskDestructiveText,
-    signalErrorText = KnotworkLight.RiskDestructiveText,
-    signalSuccessText = KnotworkLight.SignalSuccessText,
     memAutoBg = KnotworkLight.MemAutoBg,
     memAutoFg = KnotworkLight.MemAutoFg,
     memAutoRail = KnotworkLight.MemAutoRail,
@@ -226,11 +203,6 @@ fun knotworkExtendedColorsDark() = KnotworkExtendedColors(
     signalSuccess = KnotworkPalette.SignalSuccess,
     signalWarn = KnotworkDark.RiskSensitive,
     signalError = KnotworkDark.RiskDestructive,
-    riskReadonlyText = KnotworkDark.RiskReadonlyText,
-    riskSensitiveText = KnotworkDark.RiskSensitiveText,
-    riskDestructiveText = KnotworkDark.RiskDestructiveText,
-    signalErrorText = KnotworkDark.RiskDestructiveText,
-    signalSuccessText = KnotworkDark.SignalSuccessText,
     memAutoBg = KnotworkDark.MemAutoBg,
     memAutoFg = KnotworkDark.MemAutoFg,
     memAutoRail = KnotworkDark.MemAutoRail,

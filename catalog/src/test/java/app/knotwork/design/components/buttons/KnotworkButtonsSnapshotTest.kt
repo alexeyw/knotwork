@@ -4,7 +4,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
-import app.knotwork.design.assertNoAccentText
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -34,7 +33,7 @@ class KnotworkButtonsSnapshotTest {
         composeTestRule.setContent {
             KnotworkTheme(darkTheme = false) { KnotworkButtonsCatalogContent() }
         }
-        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
+        composeTestRule.onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/buttons_light.png",
         )
@@ -45,7 +44,7 @@ class KnotworkButtonsSnapshotTest {
         composeTestRule.setContent {
             KnotworkTheme(darkTheme = true) { KnotworkButtonsCatalogContent() }
         }
-        composeTestRule.assertNoAccentText().onRoot().captureRoboImage(
+        composeTestRule.onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/buttons_dark.png",
         )
