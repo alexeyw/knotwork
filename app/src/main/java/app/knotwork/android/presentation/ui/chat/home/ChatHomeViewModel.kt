@@ -26,14 +26,15 @@ import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
 import app.knotwork.android.domain.services.ChatHistoryCompressionCoordinator
+import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.MemoryAutoExtractionCoordinator
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
 import app.knotwork.android.domain.usecases.ArchiveChatUseCase
 import app.knotwork.android.domain.usecases.AttachmentMessageContent
+import app.knotwork.android.domain.usecases.CheckImageAttachmentUseCase
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.GetContextWindowUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
-import app.knotwork.android.domain.usecases.ResolveEntryInferenceUseCase
 import app.knotwork.android.domain.usecases.ResumePipelineRunUseCase
 import app.knotwork.android.domain.usecases.SaveMessageToMemoryUseCase
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
@@ -143,7 +144,8 @@ constructor(
     private val submitClarificationAnswerUseCase: SubmitClarificationAnswerUseCase,
     private val submitCeilingDecisionUseCase: SubmitCeilingDecisionUseCase,
     private val attachmentStore: AttachmentStore,
-    private val resolveEntryInferenceUseCase: ResolveEntryInferenceUseCase,
+    private val imageCaptureStore: ImageCaptureStore,
+    private val checkImageAttachmentUseCase: CheckImageAttachmentUseCase,
     private val audioRecorder: AudioRecorder,
     private val audioCaptureStore: AudioCaptureStore,
     private val transcribeAudioUseCase: TranscribeAudioUseCase,
@@ -283,7 +285,8 @@ constructor(
         scope = viewModelScope,
         state = _state,
         attachmentStore = attachmentStore,
-        resolveEntryInferenceUseCase = resolveEntryInferenceUseCase,
+        imageCaptureStore = imageCaptureStore,
+        checkImageAttachment = checkImageAttachmentUseCase,
         sessions = { threads.sessionsSnapshot() },
     )
 

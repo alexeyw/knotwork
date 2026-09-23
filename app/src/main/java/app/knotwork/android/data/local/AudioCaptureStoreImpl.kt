@@ -3,6 +3,7 @@ package app.knotwork.android.data.local
 import android.content.Context
 import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
+import app.knotwork.android.domain.constants.TransientCacheDirectory
 import app.knotwork.android.domain.services.AudioCaptureStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -45,6 +46,11 @@ class AudioCaptureStoreImpl @Inject constructor(@ApplicationContext private val 
         var target: File? = null
         try {
             val parsed = uri.toUri()
+            // A picker result today, but the read runs with the app's identity, so
+            // the same rule as the image sink applies: another app's content only.
+            if (!ForeignContentUri.isAcceptable(context, parsed)) {
+                return@withContext Result.failure(SecurityException("Audio URI is not another app's content URI"))
+            }
             val extension = extensionFor(uri)
             val file = File(rootDir(), "${UUID.randomUUID()}.$extension").also { target = it }
             val copied = context.contentResolver.openInputStream(parsed)?.use { input ->
@@ -55,7 +61,7 @@ class AudioCaptureStoreImpl @Inject constructor(@ApplicationContext private val 
                 Result.success(file.absolutePath)
             } else {
                 target?.delete()
-                Result.failure(IOException("Could not read audio URI: $uri"))
+                Result.failure(IOException("Could not read audio URI"))
             }
         } catch (e: CancellationException) {
             target?.delete()
@@ -63,8 +69,9 @@ class AudioCaptureStoreImpl @Inject constructor(@ApplicationContext private val 
         } catch (e: Exception) {
             // Resolver failures vary by source (FileNotFoundException,
             // SecurityException, provider-specific RuntimeExceptions); any of them
-            // means "could not import", surfaced as a failed Result.
-            Timber.e(e, "Failed to import audio URI")
+            // means "could not import", surfaced as a failed Result. Only the type
+            // is logged: a resolver's message usually quotes the URI.
+            Timber.e("Failed to import audio URI (%s)", e.javaClass.simpleName)
             target?.delete()
             Result.failure(e)
         }
@@ -90,7 +97,7 @@ class AudioCaptureStoreImpl @Inject constructor(@ApplicationContext private val 
      * Returns the audio cache directory, creating it lazily on first access.
      */
     private fun rootDir(): File {
-        val dir = File(context.cacheDir, AUDIO_DIR)
+        val dir = File(context.cacheDir, TransientCacheDirectory.VOICE_CLIP.dirName)
         if (!dir.exists()) {
             dir.mkdirs()
         }
@@ -99,14 +106,14 @@ class AudioCaptureStoreImpl @Inject constructor(@ApplicationContext private val 
 
     /**
      * Resolves an absolute path to a file, but only when it lives inside the
-     * audio cache directory — a guard so [delete] can never be tricked into
-     * removing a file outside the store.
+     * audio cache directory — a guard so [delete] cannot remove a file outside
+     * the store. The test is [PathContainment]'s: canonicalise, then compare, so
+     * `…/audio/../files/x` is refused rather than passing a prefix test on the
+     * string as written.
      */
     private fun resolveSafe(path: String): File? {
         if (path.isEmpty()) return null
-        val target = File(path)
-        val rootPath = rootDir().absolutePath + File.separator
-        return target.takeIf { it.absolutePath.startsWith(rootPath) }
+        return PathContainment.childOrNull(File(path), rootDir())
     }
 
     /**
@@ -123,9 +130,6 @@ class AudioCaptureStoreImpl @Inject constructor(@ApplicationContext private val 
     }
 
     private companion object {
-        /** Cache sub-directory owning every ephemeral voice-input clip. */
-        const val AUDIO_DIR = "audio"
-
         /** Extension used for recorder output and the import fallback. */
         const val WAV_EXTENSION = "wav"
     }

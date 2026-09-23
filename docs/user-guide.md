@@ -380,7 +380,8 @@ message. A small sheet offers two sources:
 
 The chosen image is **downscaled on the device** (its aspect ratio is kept —
 never cropped to a square) and re-encoded to JPEG before it is stored; the
-original file is never copied into the app. A removable preview appears above
+original is never kept — a photo you take is deleted from the app's cache as
+soon as its smaller copy is made. A removable preview appears above
 the input row while you finish typing — tap the **✕** to drop it. You can send
 an image on its own, without any caption.
 
@@ -776,9 +777,11 @@ The app appears in the Android share sheet for **text and images**.
 Share something and pick the app: it runs your chosen *share pipeline*
 over the shared content and opens the chat so you can watch the run.
 A shared image is attached exactly like a composer attachment (the local
-model reads it; it never leaves the device). If you have not bound a
-share pipeline yet, the app opens with a reminder instead of running
-anything.
+model reads it; it never leaves the device), and it gets the same checks
+first: if the share pipeline starts with a cloud step, the active model
+can't read images, or no on-device step would see the picture, the app
+says so and runs nothing. If you have not bound a share pipeline yet, the
+app opens with a reminder instead of running anything.
 
 By default every share lands in one running **Shared** chat, so
 everything you send accumulates in one place — new shares are appended to
@@ -1904,7 +1907,8 @@ From the preview sheet (or a row's overflow menu) you can:
 - **Share** — opens the system share sheet. The app stages a temporary
   copy for sharing, so the workspace directory itself is never exposed
   to other apps; the receiving app gets read access to that one copy
-  only.
+  only. The copy is deleted when you delete the file, and otherwise after
+  about an hour.
 - **Save as…** — opens the system "create document" picker so you can
   write the file out to a location of your choice (Downloads, Drive,
   etc.).

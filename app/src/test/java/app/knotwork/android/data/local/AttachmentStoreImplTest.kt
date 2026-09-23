@@ -1,7 +1,10 @@
 package app.knotwork.android.data.local
 
 import android.content.Context
+import android.content.pm.ProviderInfo
 import android.graphics.Bitmap
+import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -10,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -168,6 +172,69 @@ class AttachmentStoreImplTest {
         val result = store.ingestUri("content://test/missing")
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `given a file-scheme uri to an app-private image when ingestUri then it is refused`() = runTest {
+        val privateFile = File(context.filesDir, "private-photo.jpg").apply { writeBytes(jpegBytes(640, 480)) }
+        val uri = Uri.fromFile(privateFile)
+        // Precondition: the resolver would read it with the app's own identity, so a
+        // failure below is the policy, not an unreadable fixture.
+        assertTrue(context.contentResolver.openInputStream(uri)?.use { it.read() != -1 } == true)
+
+        val result = store.ingestUri(uri.toString())
+
+        assertTrue("a file:// uri must be refused", result.isFailure)
+        assertTrue("nothing may be stored", store.listStoredPaths().getOrThrow().isEmpty())
+    }
+
+    @Test
+    fun `given a uri served by this app's own provider when ingestUri then it is refused`() = runTest {
+        val uri = ownProviderUri(File(context.cacheDir, "images").apply { mkdirs() }, "capture_1.jpg")
+        assertTrue(context.contentResolver.openInputStream(uri)?.use { it.read() != -1 } == true)
+
+        val result = store.ingestUri(uri.toString())
+
+        assertTrue("a uri of the app's own FileProvider must be refused", result.isFailure)
+        assertTrue("nothing may be stored", store.listStoredPaths().getOrThrow().isEmpty())
+    }
+
+    @Test
+    fun `given this app's provider addressed with a user-id prefix when ingestUri then it is refused`() = runTest {
+        val own = ownProviderUri(File(context.cacheDir, "images").apply { mkdirs() }, "capture_3.jpg")
+        // On a device the resolver strips `<userId>@` and reaches the same provider.
+        // Robolectric does not, so the bytes are registered for the prefixed URI
+        // itself: without the policy the ingest below would succeed.
+        val prefixed = own.buildUpon().encodedAuthority("0@${own.encodedAuthority}").build()
+        shadowOf(context.contentResolver).registerInputStream(prefixed, ByteArrayInputStream(jpegBytes(640, 480)))
+
+        val result = store.ingestUri(prefixed.toString())
+
+        assertTrue("`0@<own authority>` is the own provider and must be refused", result.isFailure)
+    }
+
+    @Test
+    fun `given an android-resource uri when ingestUri then it is refused`() = runTest {
+        val result = store.ingestUri("android.resource://${context.packageName}/raw/anything")
+
+        assertTrue(result.isFailure)
+    }
+
+    /**
+     * Writes a decodable JPEG into [dir] and returns the URI this app's real
+     * `FileProvider` serves it under, with the provider attached so the
+     * resolver can actually open it.
+     */
+    private fun ownProviderUri(dir: File, name: String): Uri {
+        File(dir, name).writeBytes(jpegBytes(640, 480))
+        val authority = "${context.packageName}.fileprovider"
+        val info = ProviderInfo().apply {
+            this.authority = authority
+            grantUriPermissions = true
+            exported = false
+        }
+        Robolectric.buildContentProvider(FileProvider::class.java).create(info)
+        return FileProvider.getUriForFile(context, authority, File(dir, name))
     }
 
     private companion object {

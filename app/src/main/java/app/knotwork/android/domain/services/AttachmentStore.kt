@@ -31,12 +31,18 @@ interface AttachmentStore {
     suspend fun ingest(bytes: ByteArray): Result<MessageAttachment>
 
     /**
-     * Reads the bytes behind a content URI (a picked gallery image or a camera
-     * capture) and ingests them via [ingest].
+     * Reads the bytes behind a content URI another app handed over (a photo
+     * picker result, a shared image) and ingests them via [ingest].
      *
-     * @param uri content URI string of the picked/captured image.
+     * The read runs with this app's identity, so only a `content://` URI served
+     * by **another** app's provider is opened: a `file://` URI or one of this
+     * app's own providers is refused without being read. The app's own camera
+     * captures therefore do not come through here — see [ImageCaptureStore].
+     *
+     * @param uri content URI string of the picked/shared image.
      * @return [Result.success] with the stored [MessageAttachment], or
-     *   [Result.failure] when the URI cannot be read or decoded.
+     *   [Result.failure] when the URI is refused, cannot be read, or cannot be
+     *   decoded.
      */
     suspend fun ingestUri(uri: String): Result<MessageAttachment>
 

@@ -10,6 +10,7 @@ import app.knotwork.android.domain.usecases.workspace.ImportFileToWorkspaceUseCa
 import app.knotwork.android.domain.usecases.workspace.ImportMode
 import app.knotwork.android.domain.usecases.workspace.ListWorkspaceUseCase
 import app.knotwork.android.domain.usecases.workspace.PreviewWorkspaceFileUseCase
+import app.knotwork.android.domain.usecases.workspace.StageWorkspaceFileForShareUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -39,10 +40,10 @@ import javax.inject.Inject
  * @property previewUseCase Reads a bounded text preview.
  * @property deleteUseCase Deletes one or more files.
  * @property importUseCase Imports an external document with a collision policy.
- * @property exportUseCase Streams a file out (save-as / share staging).
- * @property messages What the screen tells the user when an operation fails.
- *   Public because `FilesScreen` stages a share itself and therefore reports
- *   that outcome itself; see [FilesMessenger].
+ * @property exportUseCase Streams a file out for save-as.
+ * @property stageForShareUseCase Stages a copy of a file for the share sheet.
+ * @property messages What the screen tells the user when an operation fails;
+ *   see [FilesMessenger].
  */
 @HiltViewModel
 class FilesViewModel @Inject constructor(
@@ -51,6 +52,7 @@ class FilesViewModel @Inject constructor(
     private val deleteUseCase: DeleteWorkspaceFilesUseCase,
     private val importUseCase: ImportFileToWorkspaceUseCase,
     private val exportUseCase: ExportWorkspaceFileUseCase,
+    private val stageForShareUseCase: StageWorkspaceFileForShareUseCase,
     val messages: FilesMessenger,
 ) : ViewModel() {
 
@@ -312,21 +314,46 @@ class FilesViewModel @Inject constructor(
         if (!exportTo(path, sink)) messages.failure(R.string.files_message_export_failed)
     }
 
-    /** Ask the screen to stage + share a single file. */
+    /** Stage a single file and ask the screen to offer it to the share sheet. */
     fun requestShare(path: String) {
-        emit(FilesEvent.ShareFiles(listOf(path)))
+        share(listOf(path))
     }
 
-    /** Ask the screen to stage + share the current selection. */
+    /** Stage the current selection and ask the screen to offer it to the share sheet. */
     fun requestShareSelected() {
         val selected = _uiState.value.selectedPaths.toList()
-        if (selected.isNotEmpty()) emit(FilesEvent.ShareFiles(selected))
+        if (selected.isNotEmpty()) share(selected)
         exitSelection()
     }
 
     /**
+     * Stages a copy of each of [paths] through the workspace, reports how many
+     * made it, and hands the copies to the screen — only when there is at least
+     * one, so a total failure never opens an empty share sheet. A file that
+     * cannot be staged is skipped; only the failure's type is logged, because the
+     * path is the user's file name and a warning reaches crash reports once the
+     * user opts in.
+     */
+    private fun share(paths: List<String>) {
+        viewModelScope.launch {
+            val staged = paths.mapNotNull { path ->
+                try {
+                    (stageForShareUseCase(path) as? WorkspaceResult.Success)?.value
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w("Workspace share staging threw (%s)", e.javaClass.simpleName)
+                    null
+                }
+            }
+            messages.shareStaged(staged = staged.size, requested = paths.size)
+            if (staged.isNotEmpty()) emit(FilesEvent.ShareStaged(staged))
+        }
+    }
+
+    /**
      * Streams the workspace file at [path] into [sink] through the export use
-     * case. Used by `FilesScreen` for both save-as and share staging.
+     * case — the save-as destination `FilesScreen` opened.
      *
      * @return `true` on success, `false` on a typed failure or I/O error.
      */

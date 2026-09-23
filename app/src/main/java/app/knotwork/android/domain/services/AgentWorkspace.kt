@@ -162,7 +162,8 @@ interface AgentWorkspace {
      * Human-in-the-Loop confirmation path. Only regular files are deletable: a
      * path that resolves to a directory (or to nothing) is reported as
      * [WorkspaceError.NotFound], never silently traversed. The directories above
-     * the file that the delete leaves empty are removed with it.
+     * the file that the delete leaves empty are removed with it, and so is every
+     * copy of the file [stageForShare] made.
      *
      * @param relativePath Path of the file to delete, relative to the workspace
      *   root.
@@ -265,4 +266,21 @@ interface AgentWorkspace {
      *   [WorkspaceError.PathOutsideWorkspace] or [WorkspaceError.NotFound].
      */
     suspend fun exportTo(relativePath: String, sink: OutputStream): WorkspaceResult<Unit>
+
+    /**
+     * Stages a copy of the file at [relativePath] for the system share sheet and
+     * returns where the copy is.
+     *
+     * The share sheet is handed the copy, never the workspace. The copy is the
+     * workspace's to clean up: [delete] removes every copy of the file it deletes,
+     * and a copy older than an hour is removed by the next staging (and by the
+     * daily maintenance pass) — never sooner, so staging one share does not take
+     * another share's copy from an app still reading it.
+     *
+     * @param relativePath Path of the file to share, relative to the workspace root.
+     * @return [WorkspaceResult.Success] with the copy's absolute path, or
+     *   [WorkspaceResult.Failure] with [WorkspaceError.PathOutsideWorkspace] or
+     *   [WorkspaceError.NotFound].
+     */
+    suspend fun stageForShare(relativePath: String): WorkspaceResult<String>
 }

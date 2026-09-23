@@ -76,9 +76,11 @@ sealed interface FilesEvent {
     data class LaunchSaveAs(val suggestedName: String) : FilesEvent
 
     /**
-     * Stage the given workspace files and offer them to the system share sheet.
+     * Offer already-staged copies of workspace files to the system share sheet.
+     * The ViewModel has staged them through the workspace, which owns the copies'
+     * lifetime; the screen only turns the paths into `FileProvider` URIs.
      *
-     * @property paths Workspace-relative paths to share.
+     * @property stagedPaths Absolute paths of the staged copies, at least one.
      */
-    data class ShareFiles(val paths: List<String>) : FilesEvent
+    data class ShareStaged(val stagedPaths: List<String>) : FilesEvent
 }

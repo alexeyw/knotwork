@@ -1,6 +1,7 @@
 package app.knotwork.android.data.local
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -64,6 +65,18 @@ class AudioCaptureStoreImplTest {
     }
 
     @Test
+    fun `importFromUri refuses a file uri to app-private storage without copying it`() = runTest {
+        val privateFile = File(context.filesDir, "private.wav").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val uri = Uri.fromFile(privateFile)
+        assertTrue(context.contentResolver.openInputStream(uri)?.use { it.read() != -1 } == true)
+
+        val result = store.importFromUri(uri.toString())
+
+        assertTrue("a file:// uri must be refused", result.isFailure)
+        assertTrue("nothing may be copied into the store", audioDir().listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
     fun `importFromUri returns failure when the URI cannot be read`() = runTest {
         val result = store.importFromUri("content://media/audio/missing")
 
@@ -120,6 +133,20 @@ class AudioCaptureStoreImplTest {
         assertTrue(result.isSuccess)
         assertTrue("file outside the store must not be deleted", outside.exists())
     }
+
+    @Test
+    fun `given a path that traverses out of the audio directory when delete then the outside file survives`() =
+        runTest {
+            store.newRecordingFile() // creates the audio directory
+            val outsideDir = File(context.cacheDir, "not-audio").apply { mkdirs() }
+            val victim = File(outsideDir, "victim.wav").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+            // Starts with the store's root string, resolves outside it.
+            val traversal = "${audioDir().absolutePath}/../${outsideDir.name}/${victim.name}"
+
+            store.delete(traversal)
+
+            assertTrue("a `..` path must not reach outside the store", victim.exists())
+        }
 
     private fun assertArrayEqualsBytes(expected: ByteArray, actual: ByteArray) {
         assertEquals("byte length", expected.size, actual.size)

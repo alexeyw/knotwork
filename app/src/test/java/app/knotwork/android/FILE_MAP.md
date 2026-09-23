@@ -15,13 +15,16 @@ Only Kotlin files appear inside the generated blocks.
   - `ArchitectureScope.kt` - Shared Konsist scope for the architecture guard suite.
   - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
+  - `ContentUriReadInventoryTest.kt` - Inventory of every production file that opens a URI through `ContentResolver`, with where that URI comes from.
   - `DomainPurityKonsistTest.kt` - Konsist guard enforcing the strictest project rule for the `domain` layer: it is pure Kotlin with **zero** Android/framework imports, so it can be compiled and unit-tested off-device.
   - `FirebaseIsolationKonsistTest.kt` - Konsist guard keeping the Firebase SDK out of the shared `main` source set.
   - `HitlDispatchKonsistTest.kt` - Census of the seams through which a tool call can take effect, and of the one channel through which a human answer can reach the gate in front of them.
+  - `ImageAttachmentEntryCensusTest.kt` - Census of the production files that start runs through `AgentOrchestratorUseCase`, with whether each can attach an image — and, if it can, proof that it asks the multimodal pre-flight (`CheckImageAttachmentUseCase`) first.
   - `InstrumentedTestExclusionGuardTest.kt` - Guard over the **instrumented-test exclusion list** — the set of instrumented tests the automated emulator runs deliberately do not execute.
   - `JournalExportNoNetworkKonsistTest.kt` - Konsist guard on the journal exports: **the journal leaves the device only in the user's own hands.**
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
+  - `PathContainmentGuardTest.kt` - A path prefix test lives in exactly one production file: `PathContainment`.
   - `PipelineBindingCensusTest.kt` - Census of every place the domain stores a pipeline id, each with a decision: is it a binding the Replace confirmation must list, or not, and why.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
@@ -30,6 +33,7 @@ Only Kotlin files appear inside the generated blocks.
   - `TabRootEntryGuardTest.kt` - Structural guard over the one navigation invariant the closed test bought us:
   - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**
   - `TranscriptJoinKonsistTest.kt` - Census of the idiom that let stored content forge a turn of its own inside a prompt: a speaker label and a message body spliced into one string template, `"${message.role.name}: ${message.content}"`.
+  - `TransientCacheDirectoryGuardTest.kt` - Every directory the app creates under its cache is an entry of `TransientCacheDirectory` — and therefore swept by the daily maintenance pass.
   - `UsageTelemetryNoNetworkKonsistTest.kt` - Konsist guard enforcing the core privacy promise of the local usage-telemetry feature: **nothing on the telemetry path may make a network call.**
   - `WorkspaceToolsDocumentedTest.kt` - Pins the three places that enumerate the tools able to read and write the agent's workspace to the tools that actually can.
 - `data/` - Tests for the data layer.
@@ -65,9 +69,12 @@ Only Kotlin files appear inside the generated blocks.
     - `DeferredPassphraseOpenHelperFactoryTest.kt` - Verifies the deferral contract of `DeferredPassphraseOpenHelperFactory`: no passphrase access during factory/helper construction (i.e. during Hilt provision), lazy delegate creation on first database access, no caching of failed construction (Retry support), and WAL-flag replay.
     - `EmbeddingBlobCodecTest.kt` - Unit tests for `EmbeddingBlobCodec` — the binary wire format of the `memory_chunks.embedding` BLOB column.
     - `EncryptedDbPassphraseProviderTest.kt` - Verifies the loss-protection invariant of `EncryptedDbPassphraseProvider`: the passphrase is generated only when no database file exists, and any failure to read it back while the database is present surfaces as `DbPassphraseUnavailableException` instead of a silent regeneration that would destroy the user's encrypted data.
+    - `ImageCaptureStoreImplTest.kt` - Verifies `ImageCaptureStoreImpl`: the camera's full-resolution original — the only copy that keeps its EXIF — is deleted on every way out of the store, and a URI that is not one of its captures can reach no file.
     - `McpServerCollisionCheckTest.kt` - Pure-Kotlin unit coverage for `McpServerCollisionCheck.detectCollision`.
+    - `PathContainmentTest.kt` - Verifies `PathContainment` on a real filesystem: `..`, a sibling sharing the root's name as a prefix, and a symlink out are all refused — the three ways a prefix test on the string as written lets a path escape.
     - `SettingsManagerTest.kt` - Tests for SettingsManager.
     - `TagsCsvTest.kt` - Unit tests for the shared `TagsCsv` codec.
+    - `TransientCacheSweeperImplTest.kt` - Verifies `TransientCacheSweeperImpl` on a real filesystem: every registered handoff directory is swept, only past the shared retention, a share slot counts as fresh while its copy is, and nothing outside the registry is touched.
   - `logging/` - Tests for the application-level Timber sinks.
     - `CrashlyticsTimberTreeTest.kt` - Unit tests for `CrashlyticsTimberTree`.
   - `mappers/` - Tests for the entity ↔ domain mappers.
@@ -121,6 +128,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AgentIdleManagerTest.kt` - Tests for AgentIdleManager.
     - `AgentPowerManagerTest.kt` - Tests for AgentPowerManager.
     - `AgentWorkerTest.kt` - Tests for AgentWorker.
+    - `AttachmentOrphanCleanupWorkerTest.kt` - Robolectric coverage for the daily file-maintenance `AttachmentOrphanCleanupWorker`: both passes run, and a failure asks WorkManager to retry.
     - `ChargingTriggerSweepWorkerTest.kt` - Robolectric coverage for `ChargingTriggerSweepWorker` — the one-shot worker `PowerConnectionReceiver` enqueues on a power edge to fire charging triggers immediately.
     - `embedding/` - Tests for the embedding service layer.
       - `CloudEmbeddingProviderTest.kt` - Unit tests for `CloudEmbeddingProvider`.
@@ -300,6 +308,7 @@ Only Kotlin files appear inside the generated blocks.
     - `BuildUsageTelemetryExportUseCaseTest.kt` - Verifies that `BuildUsageTelemetryExportUseCase` renders the on-device statistics into a correct text + JSON document, resolves pipeline names, and carries the local-only marker.
     - `CalculateUsageRetentionUseCaseTest.kt` - Verifies every boundary of the pre-committed retention definitions (`UsageRetention`): the window edges, the previous-window comparison, which pipelines count as live, the streak rule, what counts as a break the user returned from, and the first-week figure.
     - `CancelScheduledTasksUseCaseTest.kt` - Unit tests for `CancelScheduledTasksUseCase` — the escape hatch from a task that keeps re-scheduling itself.
+    - `CheckImageAttachmentUseCaseTest.kt` - Unit tests for `CheckImageAttachmentUseCase`: each of the three refusals, their precedence, and the pass — the one decision both the composer and the share target ask.
     - `CleanupOrphanAttachmentsUseCaseTest.kt` - Unit tests for `CleanupOrphanAttachmentsUseCase` — the backstop sweep that deletes attachment files no chat message references.
     - `CleanupPipelineRunsUseCaseTest.kt` - Unit tests for `CleanupPipelineRunsUseCase`: the two retention settings are read fresh per pass, the max-age cutoff is derived from the configured day count, and the outcome counters mirror what the repositories report.
     - `CleanupTriggerJournalUseCaseTest.kt` - Unit tests for `CleanupTriggerJournalUseCase`: it derives the age cutoff from the configured window and delegates the bounded pass to the repository.

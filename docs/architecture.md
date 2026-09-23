@@ -663,15 +663,19 @@ into a run is deliberately narrow so the rest of the engine stays text-only:
 
 **Capability and privacy guards.** The LiteRT runtime exposes no vision-capability
 probe, so `LocalModel.supportsVision` is a manual per-model flag (Models screen
-toggle, default `false`). Before enqueueing an image message, `ChatHomeViewModel`
-runs a pre-flight on `ResolveEntryInferenceUseCase`, which classifies the bound
+toggle, default `false`). Before an image run is enqueued — from the composer
+(`ChatHomeViewModel`) or the share target (`LaunchSharePipelineUseCase`) —
+`CheckImageAttachmentUseCase` runs the pre-flight on `ResolveEntryInferenceUseCase`,
+which classifies the bound
 pipeline the same way the engine delivers: `CLOUD` when the run starts on a cloud
 node, `LOCAL` when a **vision sink** (a `LITE_RT` node carrying the original task)
 is reachable from `INPUT` — **recursing into `PIPELINE` nodes' sub-graphs**, since
 the engine forwards the image there — else `NONE`. The three guards, in order, are: `CLOUD`
 → blocked (attachments never leave the device); active model not vision-capable →
-blocked; `NONE` (no reachable vision sink) → blocked. Each preserves the draft and
-shows a clear message. Branch-dependent routing can still take a path that skips
+blocked; `NONE` (no reachable vision sink) → blocked. The composer keeps the draft
+and shows the reason; a blocked share stores nothing and says why. Every file that
+starts runs is in `ImageAttachmentEntryCensusTest`, so a new image entry cannot skip
+the pre-flight unnoticed. Branch-dependent routing can still take a path that skips
 the sink even when one exists; the engine emits an *"Image not used"* console note
 in that case rather than letting the earlier `Image input` line imply otherwise.
 `CloudLlmNodeExecutor` structurally ignores `ExecutionScope.imagePath`, so an
@@ -1412,13 +1416,16 @@ explicitly in [`SECURITY.md`](../SECURITY.md) (*Agent file workspace*).
 | **Agent workspace** (`files/agent_workspace/`) | Agent-produced and user-imported files (reports, exports, inputs)                                              | **FBE + app sandbox only** — *not* SQLCipher-encrypted (see `SECURITY.md`) |
 | **Attachment store** (`files/attachments/`) | Downscaled JPEG image attachments of chat messages                                                            | **FBE + app sandbox only** — *not* SQLCipher-encrypted (same posture as the workspace) |
 
-**Image attachments.** A user message can carry one image. The picked /
-captured content URI is read, decoded, EXIF-rotated, downscaled **preserving
-aspect ratio** (longest side ≤ 1536 px — a client-side storage bound; the model
-does its own token-budget resize at inference time) and re-encoded to JPEG into
-`files/attachments/` by `AttachmentStore` (domain interface; impl
-`data/local/AttachmentStoreImpl`). Only the derived file is kept; the original
-is never copied. The store-relative path plus MIME and pixel dimensions are
+**Image attachments.** A user message can carry one image. A picked or shared
+image is read from its content URI — only another app's `content://` provider,
+never a `file://` path or the app's own `FileProvider` (`ForeignContentUri`) — and
+a camera photo from its capture file in `cacheDir/images/` (`ImageCaptureStore`,
+which deletes the full-resolution original on every way out). The bytes are
+decoded, EXIF-rotated, downscaled **preserving aspect ratio** (longest side
+≤ 1536 px — a client-side storage bound; the model does its own token-budget
+resize at inference time) and re-encoded to JPEG into `files/attachments/` by
+`AttachmentStore` (domain interface; impl `data/local/AttachmentStoreImpl`). Only
+the derived file is kept. The store-relative path plus MIME and pixel dimensions are
 persisted on `chat_messages` (nullable columns added in `MIGRATION_38_39`,
 schema v39) and carried on the domain `ChatMessage` / `AgentTask` as
 `MessageAttachment`. By contract the attachment rides the **user message** but
@@ -1429,6 +1436,12 @@ a daily `AttachmentOrphanCleanupWorker` (mirroring `RunRetentionWorker`) sweeps
 files no message references — the same charging + idle maintenance window. The
 sweep skips files younger than a 24 h grace window, so an attachment that is
 already on disk but not yet sent (still in the composer) is never reclaimed.
+The same worker then runs `TransientCacheSweeper` over every handoff directory
+in the cache registered in `TransientCacheDirectory` (camera captures, workspace
+share copies, journal exports, voice clips), removing entries older than an hour
+— the backstop for a file its owner never got to clean up.
+`TransientCacheDirectoryGuardTest` refuses a cache directory that is not in the
+registry.
 
 **Audio clips (transient, not a storage tier).** Voice-input clips are *not*
 persisted alongside attachments: `AudioCaptureStore` writes them to the app

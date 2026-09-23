@@ -1,6 +1,7 @@
 package app.knotwork.android.data.network
 
 import android.content.Context
+import app.knotwork.android.data.local.PathContainment
 import app.knotwork.android.domain.constants.ModelDiscoveryConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -282,8 +283,8 @@ class ResumableFileDownloader @Inject constructor(
         if (safeName.isBlank() || safeName == "." || safeName == "..") return null
         val dir = context.getExternalFilesDir(null) ?: return null
         val target = File(dir, safeName)
-        val dirPrefix = dir.canonicalPath + File.separator
-        return target.takeIf { it.canonicalPath.startsWith(dirPrefix) }
+        // The path handed back keeps the form callers store; only the check is canonical.
+        return target.takeIf { PathContainment.childOrNull(it, dir) != null }
     }
 
     /**

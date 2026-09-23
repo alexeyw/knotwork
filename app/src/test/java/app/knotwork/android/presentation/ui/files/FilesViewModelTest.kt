@@ -14,6 +14,7 @@ import app.knotwork.android.domain.usecases.workspace.ImportFileToWorkspaceUseCa
 import app.knotwork.android.domain.usecases.workspace.ImportMode
 import app.knotwork.android.domain.usecases.workspace.ListWorkspaceUseCase
 import app.knotwork.android.domain.usecases.workspace.PreviewWorkspaceFileUseCase
+import app.knotwork.android.domain.usecases.workspace.StageWorkspaceFileForShareUseCase
 import app.knotwork.android.domain.usecases.workspace.WorkspaceDeleteSummary
 import app.knotwork.android.presentation.state.TransientMessageRelay
 import io.mockk.coEvery
@@ -52,6 +53,7 @@ class FilesViewModelTest {
     private lateinit var deleteUseCase: DeleteWorkspaceFilesUseCase
     private lateinit var importUseCase: ImportFileToWorkspaceUseCase
     private lateinit var exportUseCase: ExportWorkspaceFileUseCase
+    private lateinit var stageForShareUseCase: StageWorkspaceFileForShareUseCase
     private lateinit var relay: TransientMessageRelay
     private lateinit var appContext: Context
 
@@ -69,6 +71,7 @@ class FilesViewModelTest {
         deleteUseCase = mockk()
         importUseCase = mockk()
         exportUseCase = mockk()
+        stageForShareUseCase = mockk()
         relay = mockk(relaxed = true)
         appContext = mockk()
         every { appContext.getString(capture(resolvedRes)) } returns SNACKBAR_TEXT
@@ -89,6 +92,7 @@ class FilesViewModelTest {
         deleteUseCase,
         importUseCase,
         exportUseCase,
+        stageForShareUseCase,
         FilesMessenger(relay, appContext),
     )
 
@@ -272,7 +276,8 @@ class FilesViewModelTest {
     }
 
     @Test
-    fun `given share requested then a share event carries the path`() = runTest {
+    fun `given share requested then the workspace stages the copy and the event carries it`() = runTest {
+        coEvery { stageForShareUseCase("a.txt") } returns WorkspaceResult.Success("/cache/shared/k-1/a.txt")
         val vm = build()
         advanceUntilIdle()
         val events = mutableListOf<FilesEvent>()
@@ -281,7 +286,45 @@ class FilesViewModelTest {
         vm.requestShare("a.txt")
         advanceUntilIdle()
 
-        assertTrue(events.any { it is FilesEvent.ShareFiles && it.paths == listOf("a.txt") })
+        assertTrue(events.any { it is FilesEvent.ShareStaged && it.stagedPaths == listOf("/cache/shared/k-1/a.txt") })
+        verify(exactly = 0) { relay.post(any()) }
+        job.cancel()
+    }
+
+    @Test
+    fun `given no selected file can be staged then no share sheet opens and the failure is said`() = runTest {
+        coEvery { stageForShareUseCase(any()) } returns WorkspaceResult.Failure(WorkspaceError.NotFound)
+        val vm = build()
+        advanceUntilIdle()
+        val events = mutableListOf<FilesEvent>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) { vm.events.collect { events += it } }
+
+        vm.requestShare("a.txt")
+        advanceUntilIdle()
+
+        assertFalse(events.any { it is FilesEvent.ShareStaged })
+        assertEquals(R.string.files_message_share_failed, resolvedRes.captured)
+        verify { relay.post(SNACKBAR_TEXT) }
+        job.cancel()
+    }
+
+    @Test
+    fun `given staging throws for one file then the others are still shared`() = runTest {
+        coEvery { stageForShareUseCase("a.txt") } throws IOException("disk full")
+        coEvery { stageForShareUseCase("b.bin") } returns WorkspaceResult.Success("/cache/shared/k-2/b.bin")
+        every { appContext.resources.getQuantityString(any(), any(), any(), any()) } returns SNACKBAR_TEXT
+        val vm = build()
+        advanceUntilIdle()
+        val events = mutableListOf<FilesEvent>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) { vm.events.collect { events += it } }
+        vm.onRowLongClick("a.txt")
+        vm.onRowClick("b.bin")
+
+        vm.requestShareSelected()
+        advanceUntilIdle()
+
+        assertTrue(events.any { it is FilesEvent.ShareStaged && it.stagedPaths == listOf("/cache/shared/k-2/b.bin") })
+        verify { relay.post(SNACKBAR_TEXT) }
         job.cancel()
     }
 

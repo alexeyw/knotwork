@@ -35,8 +35,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
 import kotlin.math.roundToInt
 
 /**
@@ -79,7 +77,7 @@ fun FilesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: Fi
             when (event) {
                 FilesEvent.LaunchImport -> importLauncher.launch(arrayOf(IMPORT_MIME_FILTER))
                 is FilesEvent.LaunchSaveAs -> saveAsLauncher.launch(event.suggestedName)
-                is FilesEvent.ShareFiles -> scope.launch { context.stageAndShare(event.paths, viewModel) }
+                is FilesEvent.ShareStaged -> context.openShareSheet(event.stagedPaths)
             }
         }
     }
@@ -212,31 +210,15 @@ private fun Context.queryDisplayName(uri: Uri): String {
 }
 
 /**
- * Stages [paths] into the share cache as real files and offers them to the
- * system share sheet via [FileProvider]. Staging a per-share copy (rather than
- * exposing the workspace directory directly) keeps the sandbox boundary intact.
+ * Offers already-staged copies of workspace files to the system share sheet via
+ * [FileProvider]. The workspace staged them (and owns how long they live), so
+ * this only mints one read-only URI per copy: the workspace directory itself is
+ * never exposed, and the grant is per file and not persistable.
  *
- * Each file is staged under its own freshly-created sub-directory so two selected
- * files that share a basename (e.g. `reports/q2.md` and `archive/q2.md`) keep
- * their original names and distinct content instead of one overwriting the other.
- * The share cache is cleared first so stale copies from earlier shares do not
- * accumulate. `file_paths.xml` already exposes `shared/` recursively, so the
- * nested sub-directories need no extra path declaration.
+ * @param stagedPaths Absolute paths of the staged copies under the share cache.
  */
-private suspend fun Context.stageAndShare(paths: List<String>, viewModel: FilesViewModel) {
-    val uris = withContext(Dispatchers.IO) {
-        val shareDir = File(cacheDir, SHARE_CACHE_DIR)
-        shareDir.deleteRecursively()
-        shareDir.mkdirs()
-        paths.mapNotNull { path ->
-            val slot = File(shareDir, UUID.randomUUID().toString()).apply { mkdirs() }
-            val staged = File(slot, path.substringAfterLast('/'))
-            val ok = FileOutputStream(staged).use { viewModel.exportTo(path, it) }
-            if (ok) FileProvider.getUriForFile(this@stageAndShare, "$packageName.fileprovider", staged) else null
-        }
-    }
-    viewModel.messages.shareStaged(staged = uris.size, requested = paths.size)
-    if (uris.isEmpty()) return
+private fun Context.openShareSheet(stagedPaths: List<String>) {
+    val uris = stagedPaths.map { FileProvider.getUriForFile(this, "$packageName.fileprovider", File(it)) }
     val intent = if (uris.size == 1) {
         Intent(Intent.ACTION_SEND).apply {
             type = SHARE_MIME
@@ -262,7 +244,6 @@ private const val FALLBACK_IMPORT_NAME = "imported-file"
 private const val SAVE_AS_MIME = "application/octet-stream"
 private const val IMPORT_MIME_FILTER = "*/*"
 private const val SHARE_MIME = "*/*"
-private const val SHARE_CACHE_DIR = "shared"
 private const val PERCENT = 100f
 private const val WARN_PERCENT = 90
 private const val FRESH_WINDOW_MS = 60L * 60L * 1000L

@@ -105,10 +105,12 @@
                 tools:node="remove" />
         </provider>
 
-        <!-- FileProvider for sharing exported workspace files. The Files screen
-             stages a per-share copy into cacheDir/shared and grants temporary
-             read access to the receiving app, so the workspace directory itself
-             is never exposed. -->
+        <!-- FileProvider for the app's handoff files (res/xml/file_paths.xml):
+             workspace share copies staged into cacheDir/shared, camera captures,
+             journal exports. Grants are temporary and per file, so the workspace
+             directory itself is never exposed. Being unexported does not stop the
+             app's own uid from opening it, which is why a URI another app hands
+             over is refused when it names this provider (ForeignContentUri). -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

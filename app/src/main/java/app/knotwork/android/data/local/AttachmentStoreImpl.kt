@@ -88,19 +88,26 @@ class AttachmentStoreImpl @Inject constructor(@ApplicationContext private val co
     }
 
     override suspend fun ingestUri(uri: String): Result<MessageAttachment> {
+        val parsed = uri.toUri()
+        if (!ForeignContentUri.isAcceptable(context, parsed)) {
+            // The URI is caller-supplied (a share can come from any app), so it is
+            // neither logged nor quoted: a warning reaches crash reports after opt-in.
+            return Result.failure(SecurityException("Attachment URI is not another app's content URI"))
+        }
         val bytes = withContext(dispatcher) {
             try {
-                context.contentResolver.openInputStream(uri.toUri())?.use { it.readBytes() }
+                context.contentResolver.openInputStream(parsed)?.use { it.readBytes() }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // Resolver failures vary by source (FileNotFoundException,
                 // SecurityException, provider-specific RuntimeExceptions); any of
-                // them means "could not read", surfaced as a failed Result.
-                Timber.e(e, "Failed to read attachment URI")
+                // them means "could not read", surfaced as a failed Result. Only
+                // the type is logged: a resolver's message usually quotes the URI.
+                Timber.e("Failed to read attachment URI (%s)", e.javaClass.simpleName)
                 null
             }
-        } ?: return Result.failure(IOException("Could not read attachment URI: $uri"))
+        } ?: return Result.failure(IOException("Could not read attachment URI"))
         return ingest(bytes)
     }
 

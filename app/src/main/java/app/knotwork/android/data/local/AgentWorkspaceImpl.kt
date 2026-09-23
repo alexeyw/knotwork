@@ -2,6 +2,7 @@ package app.knotwork.android.data.local
 
 import android.content.Context
 import app.knotwork.android.data.local.WorkspaceTree.Tally
+import app.knotwork.android.domain.constants.TransientCacheDirectory
 import app.knotwork.android.domain.models.WorkspaceError
 import app.knotwork.android.domain.models.WorkspaceFile
 import app.knotwork.android.domain.models.WorkspaceResult
@@ -61,7 +62,12 @@ import javax.inject.Singleton
  * the only writer of its directory; it is recomputed by walking the tree whenever
  * it is unset and updated in place after each write.
  *
- * @property context Application context, used solely to locate [Context.filesDir].
+ * **Share copies.** [stageForShare] copies a file into the share staging
+ * ([WorkspaceShareCopies]) under the same [mutex], and [delete] removes those
+ * copies with the file, so no copy of a deleted file survives in the cache.
+ *
+ * @property context Application context, used to locate [Context.filesDir] (the
+ *   workspace) and [Context.cacheDir] (the share staging).
  * @property settingsRepository Source of the per-file and total-size quotas.
  * @property maxEntries Ceiling on the number of entries — files and directories
  *   together — the workspace may hold; [DEFAULT_MAX_ENTRIES] in the app, lowered
@@ -77,7 +83,7 @@ class AgentWorkspaceImpl internal constructor(
     /**
      * The constructor Hilt uses: the entry ceiling is the fixed [DEFAULT_MAX_ENTRIES].
      *
-     * @param context Application context, used solely to locate [Context.filesDir].
+     * @param context Application context, used to locate the workspace and its share staging.
      * @param settingsRepository Source of the per-file and total-size quotas.
      */
     @Inject
@@ -87,6 +93,11 @@ class AgentWorkspaceImpl internal constructor(
     ) : this(context, settingsRepository, DEFAULT_MAX_ENTRIES)
 
     private val mutex = Mutex()
+
+    /** Copies staged for the share sheet; cleaned up with the files they copy. */
+    private val shareCopies = WorkspaceShareCopies(
+        root = { File(context.cacheDir, TransientCacheDirectory.WORKSPACE_SHARE.dirName) },
+    )
 
     @Volatile
     private var cachedTally: Tally? = null
@@ -193,6 +204,24 @@ class AgentWorkspaceImpl internal constructor(
             }
         }
 
+    override suspend fun stageForShare(relativePath: String): WorkspaceResult<String> = withContext(Dispatchers.IO) {
+        when (val resolved = canonicalResolve(relativePath)) {
+            is WorkspaceResult.Failure -> resolved
+            is WorkspaceResult.Success -> mutex.withLock { stageForShareLocked(resolved.value) }
+        }
+    }
+
+    /**
+     * Copies an already-resolved [target] into the share staging. Under [mutex],
+     * so a concurrent delete either sees the copy (and removes it) or runs first
+     * (and staging finds no file).
+     */
+    private fun stageForShareLocked(target: File): WorkspaceResult<String> {
+        if (!target.isFile) return WorkspaceResult.Failure(WorkspaceError.NotFound)
+        val staged = shareCopies.stage(target, WorkspaceTree.relativePath(target, rootDir()))
+        return WorkspaceResult.Success(staged.absolutePath)
+    }
+
     /**
      * Reads a bounded leading slice of an already-resolved (in-bounds) [target]
      * for preview, enforcing existence and text-ness but never the size cap.
@@ -290,17 +319,14 @@ class AgentWorkspaceImpl internal constructor(
 
     /**
      * Containment predicate of [canonicalResolve]: a canonicalised path is
-     * in-bounds when it is the root itself or sits under it. The trailing
-     * [File.separator] stops a sibling directory such as `agent_workspace_evil`
-     * from passing the prefix check.
+     * in-bounds when it is the root itself or sits under it — [PathContainment]'s
+     * test, whose trailing [File.separator] stops a sibling directory such as
+     * `agent_workspace_evil` from passing.
      *
      * @param canonical An already-canonicalised candidate path.
      * @param root The canonicalised workspace root.
      */
-    private fun isInsideRoot(canonical: File, root: File): Boolean {
-        val rootPath = root.path
-        return canonical.path == rootPath || canonical.path.startsWith(rootPath + File.separator)
-    }
+    private fun isInsideRoot(canonical: File, root: File): Boolean = PathContainment.isSelfOrInside(canonical, root)
 
     /**
      * Reads an already-resolved (in-bounds) [target] as UTF-8 text, enforcing
@@ -480,8 +506,12 @@ class AgentWorkspaceImpl internal constructor(
         if (!target.delete() || target.exists()) {
             return WorkspaceResult.Failure(WorkspaceError.NotFound)
         }
-        val removedDirectories = WorkspaceTree.removeEmptiedAncestors(target, rootDir())
+        val root = rootDir()
+        val removedDirectories = WorkspaceTree.removeEmptiedAncestors(target, root)
         cachedTally = Tally(bytes = previous.bytes - size, entries = previous.entries - 1 - removedDirectories)
+        // "Delete" means every copy too: a share staged earlier must not keep the
+        // file's content after the file itself is gone.
+        shareCopies.discard(WorkspaceTree.relativePath(target, root))
         return WorkspaceResult.Success(Unit)
     }
 

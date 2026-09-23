@@ -13,7 +13,9 @@ import app.knotwork.android.data.local.ApiKeyManager
 import app.knotwork.android.data.local.AttachmentStoreImpl
 import app.knotwork.android.data.local.AudioCaptureStoreImpl
 import app.knotwork.android.data.local.DatabaseResetServiceImpl
+import app.knotwork.android.data.local.ImageCaptureStoreImpl
 import app.knotwork.android.data.local.SettingsManager
+import app.knotwork.android.data.local.TransientCacheSweeperImpl
 import app.knotwork.android.data.local.crypto.AeadCipher
 import app.knotwork.android.data.local.crypto.AndroidKeystoreAeadCipher
 import app.knotwork.android.data.mcp.KoogMcpClientFactory
@@ -87,8 +89,10 @@ import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
 import app.knotwork.android.domain.services.DatabaseResetService
+import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.MemoryReembedScheduler
 import app.knotwork.android.domain.services.NativeMemorySampler
+import app.knotwork.android.domain.services.TransientCacheSweeper
 import app.knotwork.android.domain.services.TriggerScheduler
 import dagger.Binds
 import dagger.Module
@@ -464,6 +468,22 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindAudioCaptureStore(store: AudioCaptureStoreImpl): AudioCaptureStore
+
+    /**
+     * Binds [ImageCaptureStoreImpl] to [ImageCaptureStore] — the camera-capture
+     * files under `cacheDir/images/`, read once and deleted on ingest.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindImageCaptureStore(store: ImageCaptureStoreImpl): ImageCaptureStore
+
+    /**
+     * Binds [TransientCacheSweeperImpl] to [TransientCacheSweeper] — the daily
+     * backstop over every handoff directory in the cache.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindTransientCacheSweeper(sweeper: TransientCacheSweeperImpl): TransientCacheSweeper
 
     /**
      * Binds [AudioRecorderImpl] to [AudioRecorder] — the platform-`AudioRecord`

@@ -3,8 +3,9 @@ package app.knotwork.android.presentation.ui.chat.home
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.services.AttachmentStore
-import app.knotwork.android.domain.usecases.EntryInferenceKind
-import app.knotwork.android.domain.usecases.ResolveEntryInferenceUseCase
+import app.knotwork.android.domain.services.ImageCaptureStore
+import app.knotwork.android.domain.usecases.CheckImageAttachmentUseCase
+import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +32,10 @@ import kotlinx.coroutines.launch
  * @property state The ViewModel's single source-of-truth state flow (shared reducer).
  * @property attachmentStore Ingests / downscales / deletes attachment files and
  *   resolves absolute paths for the preview / viewer.
- * @property resolveEntryInferenceUseCase Resolves where a pipeline's first
- *   inference runs (on-device vision sink / cloud / none) for the pre-flight.
+ * @property imageCaptureStore Mints the camera's capture target and hands its
+ *   bytes over exactly once, deleting the full-resolution original.
+ * @property checkImageAttachment The multimodal pre-flight shared with the share
+ *   target.
  * @property sessions Provider of the live session cache (the pre-flight reads the
  *   active session's pipeline binding); supplied by the ViewModel which owns the cache.
  */
@@ -40,7 +43,8 @@ class ChatHomeAttachmentDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<ChatHomeScreenState>,
     private val attachmentStore: AttachmentStore,
-    private val resolveEntryInferenceUseCase: ResolveEntryInferenceUseCase,
+    private val imageCaptureStore: ImageCaptureStore,
+    private val checkImageAttachment: CheckImageAttachmentUseCase,
     private val sessions: () -> List<ChatSession>,
 ) {
 
@@ -81,28 +85,16 @@ class ChatHomeAttachmentDelegate(
      * Resolves whether an image message must be blocked before it is enqueued,
      * returning the user-facing block reason or `null` when the send may proceed.
      *
-     * Three guards, in precedence order:
-     * 1. The run starts on a `CLOUD` node — attachments are never sent off-device
-     *    ([CLOUD_ATTACHMENT_BLOCKED_MESSAGE]).
-     * 2. The active local model is not marked vision-capable — it cannot read an
-     *    image ([MODEL_NO_VISION_MESSAGE]); the most common, most actionable fix.
-     * 3. The pipeline has no on-device step that could receive the image (no
-     *    reachable vision sink), so the picture would be silently ignored
-     *    ([PIPELINE_NO_VISION_MESSAGE]).
+     * The decision is [CheckImageAttachmentUseCase]'s — the same one the share
+     * target asks — for the pipeline bound to the active session; the words are
+     * [ImageAttachmentBlockCopy]'s.
      *
      * @return The block reason, or `null` to allow the send.
      */
     suspend fun preflightBlockReason(): String? {
         val sessionId = state.value.thread.currentSessionId
         val pipelineId = sessions().firstOrNull { it.id == sessionId }?.pipelineId
-        val entryKind = resolveEntryInferenceUseCase(pipelineId)
-        if (entryKind == EntryInferenceKind.CLOUD) return CLOUD_ATTACHMENT_BLOCKED_MESSAGE
-        val activeSupportsVision = state.value.model.let { model ->
-            model.installed.firstOrNull { it.id == model.activeId }?.supportsVision == true
-        }
-        if (!activeSupportsVision) return MODEL_NO_VISION_MESSAGE
-        if (entryKind == EntryInferenceKind.NONE) return PIPELINE_NO_VISION_MESSAGE
-        return null
+        return checkImageAttachment(pipelineId)?.let(ImageAttachmentBlockCopy::messageFor)
     }
 
     /** Opens the image-source chooser sheet (Photo library / Camera). */
@@ -116,14 +108,55 @@ class ChatHomeAttachmentDelegate(
     }
 
     /**
-     * Ingests a picked/captured image: marks the composer attachment
-     * [ComposerAttachmentDraft.Processing], downscales + re-encodes it through
-     * [AttachmentStore], then settles to [ComposerAttachmentDraft.Ready] (or
-     * clears the draft and surfaces an error on failure).
+     * Ingests an image picked from the photo library: marks the composer
+     * attachment [ComposerAttachmentDraft.Processing], downscales + re-encodes it
+     * through [AttachmentStore], then settles to [ComposerAttachmentDraft.Ready]
+     * (or restores the previous draft and surfaces an error on failure).
      *
-     * @param uri content URI string of the picked/captured image.
+     * @param uri content URI string of the picked image (another app's provider).
      */
     fun onImagePicked(uri: String) {
+        ingestIntoSlot { attachmentStore.ingestUri(uri) }
+    }
+
+    /**
+     * Allocates the file the camera app will write a new photo to.
+     *
+     * @return The content URI to launch the camera with; hand it back to
+     *   [onCaptureResult] when the camera returns.
+     */
+    fun newCaptureUri(): String = imageCaptureStore.newCaptureUri()
+
+    /**
+     * Settles a camera capture. On success the photo is ingested like a picked
+     * image; either way the full-resolution original the camera wrote is deleted
+     * — it is the only copy that keeps the photo's EXIF, GPS included.
+     *
+     * @param uri The URI [newCaptureUri] returned for this capture.
+     * @param success Whether the camera reports a photo was taken. A cancelled
+     *   capture may still have left a partial file, which is discarded.
+     */
+    fun onCaptureResult(uri: String, success: Boolean) {
+        if (!success) {
+            scope.launch { imageCaptureStore.discard(uri) }
+            return
+        }
+        ingestIntoSlot {
+            imageCaptureStore.consume(uri).fold(
+                onSuccess = { bytes -> attachmentStore.ingest(bytes) },
+                onFailure = { error -> Result.failure(error) },
+            )
+        }
+    }
+
+    /**
+     * The composer-slot protocol shared by a picked and a captured image: mark the
+     * slot [ComposerAttachmentDraft.Processing], run [ingest], then settle the slot
+     * only if this ingest still owns it.
+     *
+     * @param ingest Produces the stored attachment (or a failure) for this pick.
+     */
+    private fun ingestIntoSlot(ingest: suspend () -> Result<MessageAttachment>) {
         // Discard any prior pending attachment's file (it was never sent) before
         // replacing the draft, so a re-pick doesn't leave an orphan behind.
         val replaced = state.value.composer.attachment as? ComposerAttachmentDraft.Ready
@@ -140,7 +173,7 @@ class ChatHomeAttachmentDelegate(
             // Deleting first meant a failed ingest destroyed the image the user
             // already had and left the composer empty — the loss was real
             // whether or not anything said so.
-            val stored = attachmentStore.ingestUri(uri).getOrNull()
+            val stored = ingest().getOrNull()
             // Two ways this pick can stop owning the slot while its ingest is in
             // flight: the user taps ✕ (live during `Processing`), or picks again.
             // Anything that puts an image back — the new one on success, the
@@ -242,38 +275,8 @@ class ChatHomeAttachmentDelegate(
         return if (sizeKb > 0) "$dimensions · $sizeKb KB" else dimensions
     }
 
-    companion object {
-        /**
-         * Surfaced when the user attaches an image but the active local model is
-         * not marked vision-capable. The run is blocked before it starts so the
-         * native inference layer never receives an image it cannot decode; the
-         * draft and attachment are preserved so the user can switch models and
-         * resend. Calm, non-alarmist copy in line with the attachment UX.
-         */
-        const val MODEL_NO_VISION_MESSAGE: String =
-            "This model can't read images. Turn on image support for it on the Models screen, " +
-                "or switch to a vision-capable model."
-
-        /**
-         * Surfaced when the user attaches an image but the bound pipeline starts
-         * on a CLOUD node. Attachments stay on-device by design, so the run is
-         * blocked before it starts rather than silently dropping the image.
-         */
-        const val CLOUD_ATTACHMENT_BLOCKED_MESSAGE: String =
-            "Images stay on your device and aren't sent to cloud models. Use a pipeline that starts " +
-                "with an on-device step to send a picture."
-
-        /**
-         * Surfaced when the user attaches an image but the bound pipeline has no
-         * on-device step that could read it (no reachable `LITE_RT` node that
-         * carries the original task). Blocking is honest: the engine would
-         * otherwise drop the image silently while the run looks normal.
-         */
-        const val PIPELINE_NO_VISION_MESSAGE: String =
-            "This pipeline has no on-device step that can read an image. Pick a pipeline with an " +
-                "on-device model step to send a picture."
-
+    private companion object {
         /** Divisor used to render an attachment's file size in kilobytes. */
-        private const val BYTES_PER_KB: Long = 1024L
+        const val BYTES_PER_KB: Long = 1024L
     }
 }
