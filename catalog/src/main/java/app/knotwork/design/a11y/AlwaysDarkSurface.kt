@@ -14,8 +14,8 @@ import androidx.compose.ui.semantics.semantics
  * `…Text` tokens are used instead; on this surface the accents themselves read
  * (the error accent is 4.6:1 on the light theme's console background), and a
  * darkened text tone would not. The marker lets a check that walks rendered
- * text — the catalog's accent-text check (`assertNoAccentText`) — tell the two situations apart
- * instead of carrying a list of exempt screens.
+ * text — the catalog's accent-text check (`assertNoAccentText`) — tell the two
+ * situations apart instead of carrying a list of exempt screens.
  *
  * It carries no information for accessibility services and changes nothing
  * they announce.

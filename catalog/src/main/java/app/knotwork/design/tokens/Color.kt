@@ -233,7 +233,7 @@ fun knotworkLightColorScheme(): ColorScheme = lightColorScheme(
     onTertiaryContainer = KnotworkLight.OnTertiaryContainer,
     // The M3 error role colours text — field labels and supporting text in the
     // error state, destructive menu items — so it is the text-safe red, not the
-    // SignalError accent (3.9:1 on the light surface). White on it is 5.5:1.
+    // SignalError accent (3.9:1 on the light surface). White on it is 5.4:1.
     error = KnotworkLight.RiskDestructiveText,
     onError = KnotworkLight.OnPrimary,
     errorContainer = Color(0xFFFADCDA),
