@@ -37,7 +37,7 @@
     <string name="settings_help_memory_actions">Re-embed rebuilds every vector for the current model. Stay on this screen while it runs, and expect poor recall until it finishes.</string>
     <string name="settings_help_pipeline_max_nesting_depth">How many levels of sub-pipeline a run may descend into before it is refused. Deeper composes more; shallow fails a runaway sooner.</string>
     <string name="settings_help_structured_output_max_repairs">When a model answers in the wrong shape, how many times it is shown its own output and asked again before the node gives up.</string>
-    <string name="settings_help_tool_approval_policy">Which tool calls stop and wait for your approval. Never lets them all through, destructive ones too, unless you also block those.</string>
+    <string name="settings_help_tool_approval_policy">Which tool calls stop and wait for your approval. Never lets read-only and sensitive ones through; destructive ones still ask.</string>
     <string name="settings_help_block_destructive_tools">On, a destructive tool call is refused outright rather than offered for approval, and the run sees it as a failed call.</string>
     <string name="settings_help_block_network_from_local_model">On, no cloud model and no Wikipedia lookup runs, memory search included. Ollama answers only at localhost or a private IP, never by name.</string>
     <string name="settings_help_tool_call_timeout_ms">How long a run waits for you to approve a tool call before it parks and asks again later. It does not bound the call itself.</string>

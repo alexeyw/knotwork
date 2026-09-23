@@ -1454,15 +1454,17 @@ private fun EmptyPipelinePickerNote() {
 }
 
 /**
- * Form body for [NodeType.SKILL]. Three controls: the skill [SkillPicker], a
- * read-only instruction preview + allowlist indicator for the chosen skill, and
- * the inference-engine segmented control. The instruction and allowlist are
- * edited in the Skill library, never here; the form only chooses *which* skill
- * and *which engine* runs it.
+ * Form body for [NodeType.SKILL]. Four controls: the skill [SkillPicker], a
+ * read-only instruction preview + allowlist indicator for the chosen skill, the
+ * inference-engine segmented control, and the "always ask" switch the TOOL form
+ * carries too — a skill dispatches tools, so a pipeline author can require a
+ * confirmation on every call it makes. The instruction and allowlist are edited
+ * in the Skill library, never here; the form only chooses *which* skill, *which
+ * engine* runs it, and whether its tool calls always ask.
  *
  * @param config the working SKILL configuration.
  * @param errors validator output; the picker reads [FieldId.SKILL_ID].
- * @param onChange emits the next config when the user picks a skill or engine.
+ * @param onChange emits the next config when the user picks a skill, an engine or flips the switch.
  * @param availableSkills the skill library rows supplied by the app.
  */
 @Composable
@@ -1491,6 +1493,12 @@ private fun SkillFormBody(
             selected = config.engine,
             onSelect = { engine -> onChange(config.copy(engine = engine)) },
         )
+        ToggleRowField(
+            label = stringResource(R.string.knotwork_node_field_always_confirm),
+            checked = config.alwaysConfirm,
+            onChange = { next -> onChange(config.copy(alwaysConfirm = next)) },
+        )
+        FieldCaption(text = stringResource(R.string.knotwork_node_field_always_confirm_help))
     }
 }
 

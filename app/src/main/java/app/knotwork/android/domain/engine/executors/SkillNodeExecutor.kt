@@ -38,7 +38,9 @@ import javax.inject.Inject
  *     outside the allowlist is rejected with a typed error observation and is
  *     never executed; an allowed call is dispatched through the shared
  *     [ToolInvocationGate], so the tool risk / Human-in-the-Loop contract is
- *     never weakened by the skill.
+ *     never weakened by the skill. The node's `alwaysConfirm` switch reaches the
+ *     gate exactly as it does from a TOOL node: it can add a confirmation to
+ *     every call the skill makes, never remove one.
  *
  * The instruction restriction is substantive, not cosmetic: scoping `$TOOLS`
  * keeps a tool out of the model's view, and the executor-level allowlist check
@@ -161,6 +163,7 @@ class SkillNodeExecutor @Inject constructor(
             runId = runId,
             resolvedToolName = toolName,
             resolvedToolArgs = toolArgs,
+            alwaysConfirm = node.alwaysConfirm == true,
         )
     }
 

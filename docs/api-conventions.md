@@ -61,9 +61,8 @@ interface LiteRtRepository {
   walking in callers — the codec is the source of truth for type
   coercion rules and `IllegalArgumentException` boundaries.
 - **`ToolRepository.getRisk(name)` is the single source of truth for
-  HITL.** The gate in `ToolNodeExecutor` consults it once per
-  invocation, never the legacy `SettingsRepository.requiresUserConfirmation`
-  flag in isolation. The risk resolves through three layers:
+  HITL.** The gate (`ToolInvocationGate`) consults it once per
+  invocation. The risk resolves through three layers:
   built-in defaults (`search_tool` → `READ_ONLY`,
   `schedule_task` / `delegate_task` → `SENSITIVE`), per-tool overrides
   for discovered AppFunctions (keyed by tool name) and for MCP tools
@@ -74,8 +73,17 @@ interface LiteRtRepository {
   server's — MCP's `readOnlyHint` / `destructiveHint` annotations are
   deliberately not consulted, since a server able to declare its own
   tools read-only could walk straight past the gate.
-  `requiresUserConfirmation` is now an opt-in "ask on every single call"
-  override and never silences `SENSITIVE` / `DESTRUCTIVE`.
+- **Which risks ask is `ToolApprovalPolicy.requiresApproval(risk)` —
+  written once, interpreted nowhere else.** `AllCalls` asks for every
+  call, `SensitiveOrDestructive` (the default) for `SENSITIVE` and
+  `DESTRUCTIVE`, `NeverPrompt` for `DESTRUCTIVE` only: **no policy quiets
+  a `DESTRUCTIVE` call.** The one control that removes its prompt is
+  *Block destructive tools*, and it refuses the call instead of running
+  it. A node's `alwaysConfirm` (TOOL and SKILL — the node types that
+  dispatch tools) is ORed on top and can only add a prompt;
+  `ToolInvocationGate.dispatch` takes it without a default, so a new node
+  type that dispatches tools has to pass its own. The legacy
+  `requires_user_confirmation` DataStore key is a migration input only.
 - **An approval answers a request, never a session.** The gate mints a
   `requestId` for every request it raises; the chat card, both
   notifications and the parked record carry it, and every answer goes

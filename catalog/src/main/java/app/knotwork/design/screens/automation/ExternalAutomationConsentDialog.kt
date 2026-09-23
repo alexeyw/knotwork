@@ -76,8 +76,8 @@ data class ExternalAutomationConsentStrings(
         "Only that one pipeline can be run. A request naming anything else is refused, never " +
             "redirected to the one you picked.",
     val bulletApprovals: String =
-        "Your approvals still apply. Destructive and sensitive tools stop and ask you first, exactly " +
-            "as they do for the app's own background runs.",
+        "Your approval settings still apply: a tool call stops and asks you first exactly as in the " +
+            "app's own background runs, and a destructive one always does.",
     val bulletCost: String =
         "A run started this way can use your cloud API key, and costs whatever that run costs.",
     val bulletReversible: String = "One tap on the same switch turns this off again.",

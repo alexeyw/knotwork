@@ -387,6 +387,7 @@ object CookbookDocsGenerator {
         "SkillConfig.toolRestrictionSummary" to
             Reach.DisplayOnly("the app fills it in from the skill you picked; edit the allowlist in the skill library"),
         "SkillConfig.engine" to Reach.Runtime("cloudProvider"),
+        "SkillConfig.alwaysConfirm" to Reach.Runtime("alwaysConfirm"),
     )
 
     /** How a sheet-less prompt can still be changed, worded once. */
@@ -510,6 +511,12 @@ object CookbookDocsGenerator {
         "SKILL" to listOf(
             RuntimeInput("Which skill is run — its instruction and its tool allowlist", "skillId", SetVia.Sheet),
             RuntimeInput("Whether the skill runs on-device or in the cloud", "cloudProvider", SetVia.Sheet),
+            RuntimeInput(
+                decides = "Whether every tool call the skill makes is confirmed, on top of whatever the tool's " +
+                    "risk and your settings already require",
+                property = "alwaysConfirm",
+                setVia = SetVia.Sheet,
+            ),
         ),
     )
 

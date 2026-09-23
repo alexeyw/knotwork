@@ -451,6 +451,40 @@ class NodeConfigCodecTest {
     }
 
     @Test
+    fun `given a Skill node that always confirms when encode-then-decode then the switch survives`() {
+        val config = SkillConfig(title = "Translate", skillId = "skill-7", alwaysConfirm = true)
+        val applied = node(NodeType.SKILL, "Translate").copy(configJson = NodeConfigCodec.encode(config))
+
+        assertTrue((NodeConfigCodec.decode(applied) as SkillConfig).alwaysConfirm)
+    }
+
+    @Test
+    fun `given a Skill node that always confirms when apply then the flat field the executor reads is set`() {
+        // `SkillNodeExecutor` reads the flat `alwaysConfirm`, not the envelope:
+        // a switch that reached only the envelope would be shown and ignored.
+        val src = node(NodeType.SKILL, "Translate")
+
+        val on = NodeConfigCodec.apply(src, SkillConfig(title = "Translate", skillId = "s", alwaysConfirm = true))
+        val off = NodeConfigCodec.apply(on, SkillConfig(title = "Translate", skillId = "s", alwaysConfirm = false))
+
+        assertEquals(true, on.alwaysConfirm)
+        assertNull("false is stored as null, as for TOOL", off.alwaysConfirm)
+    }
+
+    @Test
+    fun `given a SKILL node with only the flat switch when decode then the sheet shows it`() {
+        // An imported file may carry the flat field without an envelope, or an
+        // envelope written before the switch existed.
+        val flatOnly = node(NodeType.SKILL, "Translate").copy(skillId = "s", alwaysConfirm = true)
+        val oldEnvelope = flatOnly.copy(
+            configJson = """{"v":1,"type":"SKILL","title":"Translate","skillId":"s","engine":"LITE_RT"}""",
+        )
+
+        assertTrue((NodeConfigCodec.decode(flatOnly) as SkillConfig).alwaysConfirm)
+        assertTrue((NodeConfigCodec.decode(oldEnvelope) as SkillConfig).alwaysConfirm)
+    }
+
+    @Test
     fun `given Tool engineProvider when apply then flat cloudProvider set and decodes back`() {
         val src = node(NodeType.TOOL, "Tool")
         val config = ToolConfig(title = "Tool", toolId = "fs.write", engineProvider = CloudProvider.GOOGLE)

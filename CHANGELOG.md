@@ -43,9 +43,26 @@ details.
   that its card and notification answer with, and an answer to anything else
   settles nothing. Each waiting request also keeps its own notification, and a
   notification is removed when its run stops without an answer.
+- **"Never" no longer quiets destructive tools.** With **Approve tool calls**
+  set to **Never**, a destructive call — deleting a file, an `http_request`
+  `POST`/`PUT`/`DELETE` — used to run without asking, although the app, its
+  documentation and the tool's own description said it always asks. It now
+  stops for approval under every setting; **Block destructive tools** still
+  refuses it outright. Read-only and sensitive calls run under **Never** as
+  before, and the setting's help text and the security documents now say so.
 
 ### Fixed
 
+- **A Skill step's "Always ask before this call" works.** A pipeline could carry
+  the switch on a Skill step, but only Tool steps honoured it. Skill steps now
+  ask before every tool call the skill makes, and the switch is on their
+  configuration sheet in the app and in the browser editor. The browser editor
+  also left the switch out of the part of an exported file the app runs from, so
+  a Tool step set to always ask in the browser showed the switch on in the app
+  and asked nothing; it now writes it there, and keeps it when it opens a file
+  that carries it only in that part.
+- **The guide named the wrong confirmation word.** It said a destructive tool
+  call is confirmed by typing the tool's name; the field accepts **yes**.
 - **The Wikipedia search tests no longer reach the internet.** Two of them called
   the live API, which refuses the test environment's user agent, so they passed
   without checking a real answer. They now run against a local server, and the

@@ -436,6 +436,9 @@ data class SkillOption(
  * allowlist indicator. `null` when no skill is selected.
  * @property engine which inference engine runs the skill ([SkillEngine.LITE_RT]
  * local or [SkillEngine.CLOUD]).
+ * @property alwaysConfirm ask for approval on every tool call the skill makes
+ * through this node, whatever the tool's risk — the same one-directional switch
+ * as [ToolConfig.alwaysConfirm]: it can add a prompt, never remove one.
  */
 data class SkillConfig(
     override val title: String,
@@ -445,6 +448,7 @@ data class SkillConfig(
     val instructionPreview: String? = null,
     val toolRestrictionSummary: String? = null,
     val engine: SkillEngine = SkillEngine.LITE_RT,
+    val alwaysConfirm: Boolean = false,
 ) : NodeConfig {
     override val type: NodeType get() = NodeType.SKILL
 }

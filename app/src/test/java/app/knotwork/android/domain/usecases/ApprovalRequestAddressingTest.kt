@@ -163,6 +163,7 @@ class ApprovalRequestAddressingTest {
                         runId = LIVE_RUN_ID,
                         resolvedToolName = LIVE_TOOL,
                         resolvedToolArgs = LIVE_ARGS,
+                        alwaysConfirm = false,
                     )
                 }.toList(outputs)
             }
