@@ -903,6 +903,34 @@ private fun McpToolEntryRowView(entry: McpToolEntry, callbacks: ToolsCallbacks, 
                     color = KnotworkTheme.extended.onSurfaceMuted,
                 )
             }
+            // The words carry the meaning; the warn glyph only draws the eye. The
+            // text is not drawn in the warn colour, which reads at about 2.3:1 on the
+            // light surface — below what body text needs.
+            entry.shadowing?.let { shadowing ->
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Warn,
+                        contentDescription = null,
+                        tint = KnotworkTheme.extended.signalWarn,
+                        modifier = Modifier
+                            .padding(top = KnotworkTheme.spacing.sp1)
+                            .size(StatusDotSize),
+                    )
+                    Text(
+                        text = when (shadowing) {
+                            McpToolShadowing.DeviceTool ->
+                                stringResource(R.string.knotwork_tools_mcp_shadowed_by_device)
+                            is McpToolShadowing.EarlierServer ->
+                                stringResource(R.string.knotwork_tools_mcp_shadowed_by_server, shadowing.serverName)
+                        },
+                        style = KnotworkTextStyles.BodySm,
+                        color = KnotworkTheme.extended.onSurface2,
+                    )
+                }
+            }
         }
         Switch(
             checked = entry.enabled,

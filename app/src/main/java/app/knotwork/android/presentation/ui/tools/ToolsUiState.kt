@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTool
 import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.domain.services.McpToolRouting
 
 /**
  * UI state for the Tools screen.
@@ -37,7 +38,43 @@ data class ToolsUiState(
     val expandedServerUrls: Set<String> = emptySet(),
     val allowedHttpDomainCount: Int = 0,
     val toolRiskOverrides: Map<String, ToolRisk> = emptyMap(),
-)
+) {
+    /**
+     * Why each MCP tool — keyed by [McpTool.id] — is not offered to the agent
+     * although its server publishes it. A tool that is offered has no entry.
+     *
+     * Computed by [McpToolRouting], the rule `ToolRepository` routes calls and
+     * builds the agent's catalogue with, so the screen cannot tell a different
+     * story from the one the agent lives in. Servers are taken in settings order
+     * and deduplicated by URL, as the repository does.
+     */
+    val mcpShadowing: Map<String, McpToolRouting.Shadow>
+        get() {
+            val servers = mcpServers.distinctBy { it.url }
+            val catalogues = servers.map { server ->
+                McpToolRouting.ServerCatalogue(
+                    serverUrl = server.url,
+                    toolNames = server.tools.mapTo(LinkedHashSet()) { it.name },
+                    disabledToolNames = server.tools.filter {
+                        it.id in disabledMcpTools
+                    }.mapTo(mutableSetOf()) { it.name },
+                )
+            }
+            val localNames = localTools.mapTo(mutableSetOf()) { it.name }
+            return buildMap {
+                servers.forEach { server ->
+                    server.tools.forEach { tool ->
+                        McpToolRouting.shadowOf(
+                            toolName = tool.name,
+                            serverUrl = server.url,
+                            localToolNames = localNames,
+                            servers = catalogues,
+                        )?.let { put(tool.id, it) }
+                    }
+                }
+            }
+        }
+}
 
 /**
  * Per-server slice surfaced to the UI.

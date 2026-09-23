@@ -81,6 +81,11 @@ something that would fail. See [What the tool count on a server row
 means](user-guide.md#what-the-tool-count-on-a-server-row-means) — it is a real
 limitation, not a misconfiguration you can fix from the Tools screen.
 
+If the tool is listed under the server but marked *Not offered to the agent*,
+another tool has the same name — a tool on the device, or the same tool on a
+server listed above. See [When two tools share a
+name](user-guide.md#when-two-tools-share-a-name).
+
 ## The same question goes to the cloud one time and stays local the next
 
 That is usually the router reading the conversation, not a bug. See [Why

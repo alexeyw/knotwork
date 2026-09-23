@@ -1,5 +1,6 @@
 package app.knotwork.android.data.mcp
 
+import ai.koog.agents.core.tools.ToolBase
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
@@ -8,11 +9,13 @@ import ai.koog.agents.mcp.metadata.McpServerInfo
 import ai.koog.serialization.kotlinx.KotlinxSerializer
 import ai.koog.serialization.kotlinx.toKoogJSONObject
 import androidx.annotation.VisibleForTesting
+import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
+import app.knotwork.android.domain.repositories.SettingsRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.defaultRequest
@@ -23,6 +26,7 @@ import io.modelcontextprotocol.kotlin.sdk.client.mcpStreamableHttpTransport
 import io.modelcontextprotocol.kotlin.sdk.shared.Transport
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -39,9 +43,35 @@ import javax.inject.Inject
 /**
  * Concrete implementation of [McpClient] using the Koog framework's MCP tools.
  * It manages the underlying Ktor HttpClient and the Koog ToolRegistry.
+ *
+ * ### Everything a server sends is bounded here
+ *
+ * A server's catalogue and its tool results are untrusted remote text: the
+ * catalogue lands in the system prompt of every run through `$TOOLS`, a result
+ * in the chat history, the run state and every later prompt. This client is
+ * where both enter the app, and the one place that covers the agent's path and
+ * the Tools screen's alike, so the limits live here:
+ *
+ * - a tool whose name breaks the MCP naming rule ([isPublishableName]) is not
+ *   published;
+ * - a description — the tool's or a parameter's — is clamped to
+ *   [MAX_DESCRIPTION_CHARS];
+ * - a server publishes at most [MAX_PUBLISHED_TOOLS] tools and
+ *   [CATALOGUE_BUDGET_CHARS] of catalogue; the tail past either is left out;
+ * - a result is cut at [resultByteBudget] — the user's *Largest tool response*
+ *   setting, shared with `http_request` — with a marker saying so.
+ *
+ * A tool that is not published cannot be executed either.
+ *
+ * @param networkActivityTracker feeds the privacy indicator; `null` in tests.
+ * @param resultByteBudget reads the current result budget, in UTF-8 bytes, on
+ *   every call, so a change to the setting applies to the next call.
  */
 @OptIn(ai.koog.agents.core.tools.annotations.InternalAgentToolsApi::class)
-class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? = null) : McpClient {
+class KoogMcpClient(
+    private val networkActivityTracker: NetworkActivityTracker? = null,
+    private val resultByteBudget: suspend () -> Long = { SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT },
+) : McpClient {
 
     /**
      * One live connection: the Ktor client, the transport it speaks over, and
@@ -60,7 +90,21 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      *   terminated server-side on teardown rather than merely dropped.
      * @property registry Koog tool registry discovered from the server.
      */
-    private class Session(val httpClient: HttpClient, val transport: Transport, val registry: ToolRegistry)
+    private class Session(val httpClient: HttpClient, val transport: Transport, val registry: ToolRegistry) {
+        /**
+         * The registry's tools with the catalogue limits applied, computed on first
+         * use. The registry is fixed for the life of a session (Koog lists the tools
+         * once, at connect), so the published set is too — and a hostile catalogue's
+         * warnings are logged once per session instead of on every prompt render.
+         * Two readers racing on the first use both compute the same list.
+         */
+        @Volatile
+        var published: List<AgentTool>? = null
+    }
+
+    /** [Session.published], computing it on first use. */
+    private fun Session.publishedTools(): List<AgentTool> =
+        published ?: publishedTools(registry.tools).also { published = it }
 
     @Volatile
     private var session: Session? = null
@@ -243,36 +287,75 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
     }
 
     /**
-     * Retrieves the list of available tools from the connected Koog ToolRegistry.
-     * Maps the Koog tool descriptors to the domain-specific [AgentTool] models.
+     * Retrieves the tools this server publishes to the app: the Koog registry's
+     * tools mapped to [AgentTool], with the catalogue limits applied (see the
+     * class KDoc) — a malformed name is skipped, descriptions are clamped, and
+     * the list stops at the count or size limit.
      *
-     * @return A list of [AgentTool] objects, or an empty list if not connected.
+     * @return The published tools, in the server's order, or an empty list if not connected.
      */
     override suspend fun getTools(): List<AgentTool> = withContext(Dispatchers.IO) {
-        val current = sessionMutex.withLock { session }
-        current?.registry?.tools?.map { tool ->
-            AgentTool(
-                name = tool.name,
-                description = tool.descriptor.description,
-                parameters = run {
-                    val root = JSONObject()
-                    root.put("type", "object")
-                    val props = JSONObject()
-                    val required = JSONArray()
-                    tool.descriptor.requiredParameters.forEach { param ->
-                        props.put(param.name, param.toJsonSchema())
-                        required.put(param.name)
-                    }
-                    tool.descriptor.optionalParameters.forEach { param ->
-                        props.put(param.name, param.toJsonSchema())
-                    }
-                    root.put("properties", props)
-                    if (required.length() > 0) root.put("required", required)
-                    root.toString()
-                },
-            )
-        } ?: emptyList()
+        val current = sessionMutex.withLock { session } ?: return@withContext emptyList()
+        current.publishedTools()
     }
+
+    /**
+     * Applies the catalogue limits to [tools], in the server's order. The size
+     * budget counts what a prompt renders — name, description and parameter
+     * schema — and publishing stops at the first tool that would exceed it, so
+     * the published set is a stable prefix rather than whichever tools happen to
+     * be small.
+     */
+    private fun publishedTools(tools: List<ToolBase<*, *>>): List<AgentTool> {
+        val published = mutableListOf<AgentTool>()
+        var budget = CATALOGUE_BUDGET_CHARS
+        for (tool in tools) {
+            if (!isPublishableName(tool.name)) {
+                // The name itself is not logged: it is the part that broke the rule.
+                Timber.w("MCP tool with a malformed name (%d chars) was not published", tool.name.length)
+                continue
+            }
+            if (published.size == MAX_PUBLISHED_TOOLS) {
+                Timber.w("MCP server publishes more than %d tools; the rest were not published", MAX_PUBLISHED_TOOLS)
+                break
+            }
+            val agentTool = tool.toAgentTool()
+            val size = agentTool.name.length + agentTool.description.length + agentTool.parameters.length
+            if (size > budget) {
+                Timber.w(
+                    "MCP catalogue exceeds %d chars at tool %s; it and the rest were not published",
+                    CATALOGUE_BUDGET_CHARS,
+                    agentTool.name,
+                )
+                break
+            }
+            budget -= size
+            published += agentTool
+        }
+        return published
+    }
+
+    /** Maps one registry tool to an [AgentTool], clamping every description on the way. */
+    private fun ToolBase<*, *>.toAgentTool(): AgentTool = AgentTool(
+        name = name,
+        description = clampDescription(descriptor.description),
+        parameters = run {
+            val root = JSONObject()
+            root.put("type", "object")
+            val props = JSONObject()
+            val required = JSONArray()
+            descriptor.requiredParameters.forEach { param ->
+                props.put(param.name, param.toJsonSchema())
+                required.put(param.name)
+            }
+            descriptor.optionalParameters.forEach { param ->
+                props.put(param.name, param.toJsonSchema())
+            }
+            root.put("properties", props)
+            if (required.length() > 0) root.put("required", required)
+            root.toString()
+        },
+    )
 
     /**
      * Executes a specific tool by name from the Koog ToolRegistry.
@@ -304,19 +387,27 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      *
      * @param name The name of the tool to execute.
      * @param arguments A JSON string representing the arguments.
+     * The result is cut at [resultByteBudget] with a marker: it is untrusted text
+     * that the chat history, the run state and every later prompt would otherwise
+     * carry whole. The cut bounds what leaves this client, not what the transport
+     * buffered to decode the response — on the wire the only bound is the deadline.
+     *
      * @return A string containing the serialized result of the execution.
      * @throws IllegalStateException if the client is not connected.
-     * @throws IllegalArgumentException if the server does not advertise [name].
+     * @throws IllegalArgumentException if the server does not publish [name] (see [getTools]).
      * @throws IOException if the server does not answer within [toolCallTimeoutMs].
      */
     override suspend fun executeTool(name: String, arguments: String): String = withContext(Dispatchers.IO) {
         networkActivityTracker?.recordOutbound()
         val current = sessionMutex.withLock { session }
             ?: throw IllegalStateException("MCP client is not connected; cannot execute $name")
+        // A tool the catalogue limits left out is not callable either: otherwise a
+        // name the model learnt elsewhere would reach a tool nobody reviewed.
         val tool = current.registry.getToolOrNull(name)
+            ?.takeIf { current.publishedTools().any { published -> published.name == name } }
             ?: throw IllegalArgumentException("Tool $name not found")
 
-        withTimeoutOrNull(toolCallTimeoutMs) {
+        val text = withTimeoutOrNull(toolCallTimeoutMs) {
             val kotlinxJsonArgs = Json.parseToJsonElement(arguments).jsonObject
             val koogJsonArgs = kotlinxJsonArgs.toKoogJSONObject()
             // Fail with a descriptive error rather than an opaque NPE when a
@@ -331,6 +422,7 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
         } ?: throw IOException(
             "MCP tool $name did not respond within ${toolCallTimeoutMs / MILLIS_PER_SECOND}s",
         )
+        capResult(text = text, maxBytes = resultByteBudget())
     }
 
     /**
@@ -346,7 +438,7 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
      * meaning from its name alone.
      */
     private fun ToolParameterDescriptor.toJsonSchema(): JSONObject = type.toJsonSchema().apply {
-        if (description.isNotBlank()) put("description", description)
+        if (description.isNotBlank()) put("description", clampDescription(description))
     }
 
     /**
@@ -418,6 +510,85 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
         private const val MILLIS_PER_SECOND = 1_000L
 
         /**
+         * Longest description kept, for a tool or a parameter. The MCP
+         * specification sets no limit, so the number is ours: about 3.7× the
+         * longest description in GitHub's MCP server (1 115 chars across its 125
+         * tools), so a real catalogue is untouched while one description can no
+         * longer fill the prompt.
+         */
+        internal const val MAX_DESCRIPTION_CHARS = 4_096
+
+        /** Appended to a clamped description, so the model can tell it was cut. */
+        internal const val DESCRIPTION_TRUNCATED_MARKER = " [... description truncated]"
+
+        /**
+         * Most tools one server publishes. About twice GitHub's MCP server (125
+         * tools), one of the largest real catalogues.
+         */
+        internal const val MAX_PUBLISHED_TOOLS = 256
+
+        /**
+         * Largest catalogue one server publishes, counted as the characters a
+         * prompt renders (name + description + parameter schema). About twice the
+         * whole of GitHub's MCP server (≈124 000 chars). It bounds an unbounded or
+         * hostile catalogue; it does not make a big honest one fit a small model's
+         * context — switching unneeded tools off does that.
+         */
+        internal const val CATALOGUE_BUDGET_CHARS = 256 * 1024
+
+        /**
+         * The MCP specification's tool-name rule: 1–128 characters from
+         * `A–Z a–z 0–9 _ - .`. A name outside it is not published — it cannot be
+         * a real server's ordinary tool, and it is exactly the field a hostile
+         * catalogue would use to forge a line of the prompt's tool list.
+         */
+        private val PUBLISHABLE_NAME = Regex("[A-Za-z0-9_.-]{1,128}")
+
+        /** Bytes a UTF-16 char can take in UTF-8 at most (a surrogate pair: 4 bytes for 2 chars). */
+        private const val MAX_UTF8_BYTES_PER_CHAR = 3
+
+        /** Mask selecting the top two bits of a UTF-8 byte. */
+        private const val UTF8_TOP_BITS_MASK = 0xC0
+
+        /** Top two bits of a UTF-8 continuation byte (`10xxxxxx`). */
+        private const val UTF8_CONTINUATION_BITS = 0x80
+
+        /** Whether [name] follows the MCP tool-name rule and may be published. */
+        internal fun isPublishableName(name: String): Boolean = PUBLISHABLE_NAME.matches(name)
+
+        /**
+         * Clamps [description] to [MAX_DESCRIPTION_CHARS], never splitting a
+         * surrogate pair, and marks the cut.
+         */
+        internal fun clampDescription(description: String): String {
+            if (description.length <= MAX_DESCRIPTION_CHARS) return description
+            var end = MAX_DESCRIPTION_CHARS
+            if (Character.isHighSurrogate(description[end - 1])) end--
+            return description.substring(0, end) + DESCRIPTION_TRUNCATED_MARKER
+        }
+
+        /**
+         * Cuts [text] to at most [maxBytes] UTF-8 bytes on a character boundary
+         * and appends the same kind of marker `http_request` uses for a cut body.
+         *
+         * @param text the tool result.
+         * @param maxBytes the budget in bytes.
+         * @return [text] unchanged when it fits, otherwise its longest prefix that
+         *   fits, followed by `[... result truncated at <maxBytes> bytes]`.
+         */
+        internal fun capResult(text: String, maxBytes: Long): String {
+            // Cheap exit for the common case, without encoding the whole result.
+            if (text.length.toLong() * MAX_UTF8_BYTES_PER_CHAR <= maxBytes) return text
+            val bytes = text.toByteArray(Charsets.UTF_8)
+            if (bytes.size <= maxBytes) return text
+            var end = maxBytes.toInt()
+            // `bytes[end]` is the first byte left out; while it continues a character,
+            // that character is split, so step back to where it starts.
+            while (end > 0 && (bytes[end].toInt() and UTF8_TOP_BITS_MASK) == UTF8_CONTINUATION_BITS) end--
+            return String(bytes, 0, end, Charsets.UTF_8) + "\n[... result truncated at $maxBytes bytes]"
+        }
+
+        /**
          * Builds the final request-header map for [config]: typed
          * [McpAuth] is rendered first, then user-supplied
          * `config.headers` are overlaid on top (custom rows win on
@@ -449,14 +620,23 @@ class KoogMcpClient(private val networkActivityTracker: NetworkActivityTracker? 
  * Factory class for creating [KoogMcpClient] instances.
  * Injected via Hilt for dependency management.
  */
-class KoogMcpClientFactory @Inject constructor(private val networkActivityTracker: NetworkActivityTracker) :
-    McpClientFactory {
+class KoogMcpClientFactory @Inject constructor(
+    private val networkActivityTracker: NetworkActivityTracker,
+    private val settingsRepository: SettingsRepository,
+) : McpClientFactory {
     /**
      * Creates a new instance of [KoogMcpClient]. Each instance carries the
      * shared [NetworkActivityTracker] so MCP traffic surfaces in the More
-     * tab's privacy indicator.
+     * tab's privacy indicator, and reads the result budget from the same
+     * *Largest tool response* setting `http_request` uses.
      *
      * @return A new [McpClient] implementation.
      */
-    override fun create(): McpClient = KoogMcpClient(networkActivityTracker = networkActivityTracker)
+    override fun create(): McpClient = KoogMcpClient(
+        networkActivityTracker = networkActivityTracker,
+        resultByteBudget = {
+            settingsRepository.httpToolMaxResponseBytes.firstOrNull()
+                ?: SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT
+        },
+    )
 }

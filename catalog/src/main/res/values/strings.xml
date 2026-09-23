@@ -330,6 +330,10 @@
     <!-- Disconnected is never colour alone: glyph + word + the action it needs. -->
     <string name="knotwork_tools_mcp_disconnected">Disconnected</string>
     <string name="knotwork_tools_mcp_reconnect">Reconnect</string>
+    <!-- Under an MCP tool the agent is not offered because a tool on the device has the same name. -->
+    <string name="knotwork_tools_mcp_shadowed_by_device">Not offered to the agent: a tool on this device has the same name.</string>
+    <!-- Under an MCP tool the agent is not offered because a server listed above serves the same name. %1$s: that server's display name. -->
+    <string name="knotwork_tools_mcp_shadowed_by_server">Not offered to the agent: %1$s, listed above, has a tool with this name.</string>
     <!-- MCP SERVERS section header. -->
     <string name="knotwork_tools_section_mcp">MCP SERVERS</string>
     <!-- Outline pill label for a Read-only tool. -->

@@ -892,7 +892,9 @@ merges three layers:
    the same map — keyed per server by the tool's
    `mcp:<sha8(serverUrl)>:<toolName>` id rather than its bare name, so
    two servers advertising the same `create_issue` stay independent
-   decisions. The override is the **user's** voice, never the server's:
+   decisions. The key is the one of the server that **serves** the name
+   (§4.3), the same server the call is sent to. The override is the
+   **user's** voice, never the server's:
    MCP's `readOnlyHint` / `destructiveHint` annotations are deliberately
    not consulted, because a remote server that could declare its own
    tools read-only could walk straight past this gate.
@@ -950,6 +952,30 @@ raw exceptions never reach the presentation layer. `runCatching` is
 never used around these suspending calls (it would swallow
 cancellation; see [`docs/api-conventions.md`](api-conventions.md) §
 Model Context Protocol).
+
+**One server per name.** Which server answers a tool name is decided by one
+rule, [`McpToolRouting`](../app/src/main/java/app/knotwork/android/domain/services/McpToolRouting.kt),
+read by the agent's catalogue (`getAvailableTools`), the risk lookup
+(`getRisk`), the dispatch (`executeTool`) and the Tools screen alike: a tool on
+the device — built-in or discovered AppFunction — always owns its name, and
+otherwise the first server in the user's order that publishes the name with it
+switched on serves it. Any other server's entry is left out of the catalogue,
+so the description the model chose from, the decision that gated the call and
+the server that runs it are always the same one. There is no failover: a call
+that fails on the serving server is not retried elsewhere, because the retry
+would run under a decision made for another server and could repeat a side
+effect of a call that timed out but is still running. The rule is applied twice
+per call — once for the risk, once for the dispatch — and the pool may reconnect
+a server in between, so the gate passes the risk it decided on
+(`ToolExecutionContext.gatedRisk`) and the dispatch refuses the call when the
+serving server's risk no longer matches.
+
+**Bounded input.** `KoogMcpClient` is where a server's catalogue and results
+enter the app, and the one place that covers both the agent and the Tools
+screen, so the limits live there: a tool name outside the MCP naming rule is
+not published (and cannot be called), descriptions are clamped, a catalogue is
+capped by tool count and rendered size, and a result is cut at the user's
+*Largest tool response* budget — shared with `http_request` — with a marker.
 
 **Deadlines.** Every round trip carries an explicit deadline applied in our
 own code: **60 s** for a tool call, **30 s** for the connect handshake, both

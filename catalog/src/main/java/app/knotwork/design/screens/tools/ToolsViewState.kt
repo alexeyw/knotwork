@@ -89,6 +89,10 @@ data class McpServerRow(
  * @property description body text under the title.
  * @property risk risk tier rendered as the outline pill next to the name.
  * @property enabled toggle state — wired to the trailing Switch.
+ * @property shadowing why the agent is not offered this tool although the
+ * server publishes it, rendered as one line under the description; `null` when
+ * nothing else takes its name. Shown whatever [enabled] says: it tells the user
+ * that switching this tool on would not make it reachable.
  */
 data class McpToolEntry(
     val id: String,
@@ -96,7 +100,24 @@ data class McpToolEntry(
     val description: String,
     val risk: BuiltInToolRisk,
     val enabled: Boolean,
+    val shadowing: McpToolShadowing? = null,
 )
+
+/**
+ * Why an MCP tool its server publishes is not offered to the agent: another
+ * tool takes its name, and a call by that name reaches the other one.
+ */
+sealed interface McpToolShadowing {
+    /** A tool on this device — built in, or discovered — has the same name. */
+    data object DeviceTool : McpToolShadowing
+
+    /**
+     * A server listed above this one publishes the same name, and serves it.
+     *
+     * @property serverName display name of that server, as its row shows it.
+     */
+    data class EarlierServer(val serverName: String) : McpToolShadowing
+}
 
 /**
  * Transport mode selector shown in the MCP server form. Mirrors

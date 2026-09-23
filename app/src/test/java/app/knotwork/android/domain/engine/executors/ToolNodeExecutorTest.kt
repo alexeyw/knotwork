@@ -155,12 +155,15 @@ class ToolNodeExecutorTest {
     }
 
     @Test
-    fun `execute passes the session id to the tool through the execution context`() = runTest {
+    fun `execute passes the session id and the gated risk to the tool through the execution context`() = runTest {
         // schedule_task binds the scheduled run back to the conversation via this
         // context — the id must come from the engine, never from the LLM arguments.
+        // The risk the gate decided on travels with it, so the repository can refuse
+        // a call whose serving tool changed after the decision.
         val toolName = "MyTool"
         val node = NodeModel("1", NodeType.TOOL, 0f, 0f, toolName = toolName)
         coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool(toolName, "Desc", "Schema"))
+        coEvery { toolRepository.getRisk(toolName, any()) } returns ToolRisk.READ_ONLY
         every { llmEngine.generateResponseStream(any()) } returns
             flowOf("""{"tool": "MyTool", "arguments": "arg_value"}""")
         coEvery { toolRepository.executeTool(any(), any(), any()) } returns "ok"
@@ -168,7 +171,11 @@ class ToolNodeExecutorTest {
         executor.execute(node, "Do something", "session-77", "").toList()
 
         coVerify(exactly = 1) {
-            toolRepository.executeTool(toolName, "arg_value", ToolExecutionContext(sessionId = "session-77"))
+            toolRepository.executeTool(
+                toolName,
+                "arg_value",
+                ToolExecutionContext(sessionId = "session-77", gatedRisk = ToolRisk.READ_ONLY),
+            )
         }
     }
 

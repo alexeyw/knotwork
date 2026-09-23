@@ -14,15 +14,20 @@ import io.modelcontextprotocol.kotlin.sdk.shared.Transport
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KoogMcpClientTest {
 
     private fun makeClient(tools: List<Tool<*, *>>): KoogMcpClient {
-        val client = KoogMcpClient()
         val mockRegistry = mockk<ToolRegistry>()
         every { mockRegistry.tools } returns tools
+        return makeClient(mockRegistry)
+    }
+
+    private fun makeClient(mockRegistry: ToolRegistry): KoogMcpClient {
+        val client = KoogMcpClient()
         // `connect` publishes an atomic Session snapshot rather than separate
         // registry / httpClient fields, so the stub has to be installed the same way.
         // The Session type is reached through the field itself — naming it inline
@@ -60,6 +65,124 @@ class KoogMcpClientTest {
         assertEquals("test description", tools[0].description)
         val schema = JSONObject(tools[0].parameters)
         assertEquals("object", schema.getString("type"))
+    }
+
+    @Test
+    fun `given a tool description longer than the cap when getTools then the description is clamped`() = runTest {
+        // A description is untrusted remote text that lands in the system prompt of
+        // every run through `$TOOLS`, whether or not the server is ever called.
+        val longDescription = "d".repeat(OVERSIZED_DESCRIPTION_CHARS)
+        val tools = makeClient(listOf(tool(name = "longTool", description = longDescription))).getTools()
+
+        val description = tools.single().description
+        assertTrue(
+            "the description must be clamped, got ${description.length} chars",
+            description.length < OVERSIZED_DESCRIPTION_CHARS / 2,
+        )
+        assertTrue(description.startsWith("d".repeat(DESCRIPTION_PREFIX_CHARS)))
+    }
+
+    @Test
+    fun `given a name outside the MCP naming rule when getTools then the tool is not published`() = runTest {
+        val tools = makeClient(
+            listOf(
+                tool(name = "ok_name.v2-x", description = "fine"),
+                tool(name = "two\nlines", description = "forges a catalogue line"),
+                tool(name = "", description = "empty"),
+                tool(name = "n".repeat(MAX_NAME_CHARS + 1), description = "too long"),
+                tool(name = "has space", description = "space"),
+            ),
+        ).getTools()
+
+        assertEquals(listOf("ok_name.v2-x"), tools.map { it.name })
+    }
+
+    @Test
+    fun `given a tool the catalogue limits left out when executeTool then it is refused as not found`() = runTest {
+        val hidden = tool(name = "has space", description = "not published")
+        val registry = mockk<ToolRegistry>()
+        every { registry.tools } returns listOf(hidden)
+        every { registry.getToolOrNull("has space") } returns hidden
+        val client = makeClient(registry)
+
+        val exception = runCatching { client.executeTool("has space", "{}") }.exceptionOrNull()
+
+        assertTrue("expected not-found, got $exception", exception is IllegalArgumentException)
+        assertTrue(exception!!.message!!.contains("not found"))
+    }
+
+    @Test
+    fun `given more tools than the count limit when getTools then the tail is not published`() = runTest {
+        val many = (0 until KoogMcpClient.MAX_PUBLISHED_TOOLS + 10).map { tool(name = "t$it", description = "d") }
+
+        val tools = makeClient(many).getTools()
+
+        assertEquals(KoogMcpClient.MAX_PUBLISHED_TOOLS, tools.size)
+        assertEquals("t0", tools.first().name)
+    }
+
+    @Test
+    fun `given a catalogue past the size budget when getTools then publishing stops at the first tool over it`() =
+        runTest {
+            // Each tool renders just under a quarter of the budget, so the fifth one
+            // is the first that does not fit — and nothing after it is published,
+            // even a small one: the published set is a prefix of the server's order.
+            val quarter = KoogMcpClient.CATALOGUE_BUDGET_CHARS / 4 - QUARTER_SLACK
+            val bulky = (0 until 5).map { bulkyTool(name = "big$it", size = quarter) }
+            val tools = makeClient(bulky + tool(name = "small", description = "s")).getTools()
+
+            assertEquals(listOf("big0", "big1", "big2", "big3"), tools.map { it.name })
+        }
+
+    @Test
+    fun `given a parameter description longer than the cap when getTools then it is clamped`() = runTest {
+        val longParam = ToolParameterDescriptor(
+            name = "query",
+            description = "q".repeat(OVERSIZED_DESCRIPTION_CHARS),
+            type = ToolParameterType.String,
+        )
+        val descriptor = mockk<ToolDescriptor>()
+        every { descriptor.description } returns "desc"
+        every { descriptor.requiredParameters } returns listOf(longParam)
+        every { descriptor.optionalParameters } returns emptyList()
+        val tool = mockk<Tool<Any, Any>>()
+        every { tool.name } returns "search"
+        every { tool.descriptor } returns descriptor
+
+        val schema = JSONObject(makeClient(listOf(tool)).getTools().single().parameters)
+
+        val description = schema.getJSONObject("properties").getJSONObject("query").getString("description")
+        assertTrue(description.endsWith(KoogMcpClient.DESCRIPTION_TRUNCATED_MARKER))
+        assertEquals(
+            KoogMcpClient.MAX_DESCRIPTION_CHARS + KoogMcpClient.DESCRIPTION_TRUNCATED_MARKER.length,
+            description.length,
+        )
+    }
+
+    @Test
+    fun `given a clamp that would split a surrogate pair when clampDescription then the pair is kept whole`() {
+        val emoji = "\uD83D\uDE00"
+        val text = "a".repeat(KoogMcpClient.MAX_DESCRIPTION_CHARS - 1) + emoji + "tail"
+
+        val clamped = KoogMcpClient.clampDescription(text)
+
+        val body = clamped.removeSuffix(KoogMcpClient.DESCRIPTION_TRUNCATED_MARKER)
+        assertEquals(KoogMcpClient.MAX_DESCRIPTION_CHARS - 1, body.length)
+        assertFalse(Character.isHighSurrogate(body.last()))
+    }
+
+    @Test
+    fun `given a result that fits when capResult then it is returned unchanged`() {
+        assertEquals("short", KoogMcpClient.capResult("short", maxBytes = 5))
+    }
+
+    @Test
+    fun `given a cut that lands inside a multibyte character when capResult then it cuts before that character`() {
+        // "é" is two bytes in UTF-8, so "aéé" is five: a 4-byte budget would end
+        // halfway through the second "é", and the cut steps back to before it.
+        val capped = KoogMcpClient.capResult("aéé", maxBytes = 4)
+
+        assertEquals("aé\n[... result truncated at 4 bytes]", capped)
     }
 
     @Test
@@ -284,5 +407,51 @@ class KoogMcpClientTest {
         )
         assertTrue(emptyBearer.isEmpty())
         assertTrue(emptyApiKey.isEmpty())
+    }
+
+    /** A registry tool with no parameters, named [name] and described by [description]. */
+    private fun tool(name: String, description: String): Tool<Any, Any> {
+        val descriptor = mockk<ToolDescriptor>()
+        every { descriptor.description } returns description
+        every { descriptor.requiredParameters } returns emptyList()
+        every { descriptor.optionalParameters } returns emptyList()
+        val tool = mockk<Tool<Any, Any>>()
+        every { tool.name } returns name
+        every { tool.descriptor } returns descriptor
+        return tool
+    }
+
+    /**
+     * A tool whose optional parameters carry about [size] characters of parameter
+     * descriptions — each at the description cap — so its rendered schema weighs
+     * roughly that much.
+     */
+    private fun bulkyTool(name: String, size: Int): Tool<Any, Any> {
+        val perParam = KoogMcpClient.MAX_DESCRIPTION_CHARS
+        val params = (0 until size / perParam).map { i ->
+            ToolParameterDescriptor(name = "p$i", description = "x".repeat(perParam), type = ToolParameterType.String)
+        }
+        val descriptor = mockk<ToolDescriptor>()
+        every { descriptor.description } returns "d"
+        every { descriptor.requiredParameters } returns emptyList()
+        every { descriptor.optionalParameters } returns params
+        val tool = mockk<Tool<Any, Any>>()
+        every { tool.name } returns name
+        every { tool.descriptor } returns descriptor
+        return tool
+    }
+
+    private companion object {
+        /** The MCP specification's longest tool name. */
+        const val MAX_NAME_CHARS = 128
+
+        /** Keeps four bulky tools just inside the budget once names and JSON punctuation count. */
+        const val QUARTER_SLACK = 2_048
+
+        /** A description far past any cap a real catalogue needs. */
+        const val OVERSIZED_DESCRIPTION_CHARS = 50_000
+
+        /** How much of the original text a clamped description must still start with. */
+        const val DESCRIPTION_PREFIX_CHARS = 1_000
     }
 }

@@ -23,6 +23,7 @@ import app.knotwork.android.domain.repositories.LocalToolExecutor
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.services.HttpRequestPolicy
+import app.knotwork.android.domain.services.McpToolRouting
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -272,6 +273,12 @@ class ToolRepositoryImpl @Inject constructor(
      * filters MCP-advertised tools by their stable
      * `mcp:<sha8(serverUrl)>:<toolName>` id (see [McpServerRepositoryImpl.mcpToolId]).
      *
+     * Every name appears **once**, and it is the entry a call by that name reaches
+     * ([McpToolRouting]): an MCP tool whose name a local tool takes — disabled or
+     * withheld ones included — is left out, and so is one a server earlier in the
+     * user's order serves. Listing either would put one tool's description in the
+     * prompt for a call that runs another.
+     *
      * Two built-ins are additionally withheld by a restriction of their own: `http_request`
      * while no domain is allowlisted, and `search_tool` while "Block network from local
      * model" is on.
@@ -279,8 +286,7 @@ class ToolRepositoryImpl @Inject constructor(
      * @return A list of [AgentTool] representing all tools currently available to the agent.
      */
     override suspend fun getAvailableTools(): List<AgentTool> {
-        syncMcpClients()
-        val configs = distinctMcpConfigs()
+        val servers = connectedMcpServers()
         val disabledLocal = settingsRepository.disabledAppFunctions.first()
         val disabledMcp = settingsRepository.disabledMcpTools.first()
         // http_request is its own master switch: while no domain is allowlisted the
@@ -294,26 +300,30 @@ class ToolRepositoryImpl @Inject constructor(
         // half the answer — a pipeline node bound to `search_tool` by name never reads this
         // catalogue — so the tool refuses the call itself as well (see `SearchTool`).
         val localOnlyMode = settingsRepository.blockNetworkFromLocalModel.first()
-        val availableLocal = getAllLocalTools().filter { tool ->
+        val allLocal = getAllLocalTools()
+        val availableLocal = allLocal.filter { tool ->
             tool.name !in disabledLocal &&
                 !(httpDisabled && tool.name == HttpRequestExecutor.TOOL_NAME) &&
                 !(localOnlyMode && tool.name == SearchTool.TOOL_NAME)
         }
 
-        // Walk the persisted config order rather than iterating the pool's own map:
-        // its iteration order is non-deterministic, and the user's ordering in
-        // Settings → External providers must dictate the probe order so
-        // multi-provider routing stays predictable.
-        val mcpTools = configs.flatMap { config ->
-            val client = mcpConnectionPool.peek(config.url) ?: return@flatMap emptyList()
-            try {
-                client.getTools().filter { tool ->
-                    McpServerRepositoryImpl.mcpToolId(serverUrl = config.url, toolName = tool.name) !in disabledMcp
+        // The local names are taken from the unfiltered list on purpose: a disabled or
+        // withheld local tool still owns its name — `executeTool` dispatches it (and
+        // refuses it) before it ever looks at MCP.
+        val localNames = allLocal.mapTo(mutableSetOf()) { it.name }
+        val catalogues = servers.map { it.catalogue(disabledMcp) }
+        val mcpTools = servers.flatMap { server ->
+            server.tools.filter { tool ->
+                val offered = McpToolRouting.isOffered(
+                    toolName = tool.name,
+                    serverUrl = server.config.url,
+                    localToolNames = localNames,
+                    servers = catalogues,
+                )
+                if (!offered && tool.name in localNames) {
+                    Timber.w("MCP tool %s collides with a tool on the device; the device tool wins", tool.name)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                emptyList()
+                offered
             }
         }
 
@@ -329,18 +339,20 @@ class ToolRepositoryImpl @Inject constructor(
      *     owns the end-to-end pipeline (codec encode → `ExecuteAppFunctionRequest` →
      *     system call → codec decode). All Android AppFunctions types stay encapsulated
      *     behind that surface; this method only sees plain `String` in and out.
-     *  3. MCP — forwarded to any connected client that advertises the name.
+     *  3. MCP — forwarded to the one server that serves the name ([McpToolRouting]).
      *
      * @param name The name of the tool to execute.
      * @param arguments A JSON string containing the arguments required by the tool.
      * @param context Engine-supplied [ToolExecutionContext] carrying trusted environment
-     *   values (the invoking session id). Forwarded to built-in executors only; the
-     *   AppFunction and MCP protocols have no session notion, so those branches drop it.
+     *   values. The session id is forwarded to built-in executors only; the AppFunction
+     *   and MCP protocols have no session notion. The gated risk is checked on the MCP
+     *   branch, the one whose serving tool can change between the gate and the call.
      * @return A string representing the result of the tool execution.
      * @throws IllegalArgumentException If the tool is disabled, has no executor registered,
      *   or is not found across active providers.
      * @throws IllegalStateException If a system-level AppFunction call reports a failure
-     *   (re-thrown verbatim by [LocalAppFunctionManager.invokeByName]).
+     *   (re-thrown verbatim by [LocalAppFunctionManager.invokeByName]), or if the MCP
+     *   server now serving [name] carries a different risk than the gate decided on.
      */
     override suspend fun executeTool(name: String, arguments: String, context: ToolExecutionContext): String {
         val builtinTools = getBuiltinTools()
@@ -363,71 +375,48 @@ class ToolRepositoryImpl @Inject constructor(
             return localAppFunctionManager.invokeByName(name, arguments)
         }
 
-        return executeMcpTool(name = name, arguments = arguments)
+        return executeMcpTool(name = name, arguments = arguments, gatedRisk = context.gatedRisk)
     }
 
     /**
-     * MCP-side dispatch for [executeTool]. Walks every active MCP client and
-     * forwards the call to the first one that successfully executes [name].
+     * MCP-side dispatch for [executeTool]. The call goes to exactly **one** server:
+     * the one [routeMcpTool] resolves, which is the same resolution [getRisk] gave
+     * the gate. There is no failover to another server when that one throws — its
+     * error is the answer. Retrying elsewhere would run the call under the user's
+     * decision for a different server, and could repeat a side effect: a call that
+     * timed out may still be running where it was sent.
      *
-     * The walk is resilient by design — `disabledMcpTools` is scoped per
-     * server (id = `mcp:<sha8(serverUrl)>:<toolName>`), and two servers can
-     * advertise the same tool name. The loop therefore:
+     * The resolution is still made twice — once for [getRisk], once here — and
+     * the pool can reconnect a server in between, handing the name to a server
+     * that was down a moment ago. [gatedRisk] closes that: when the server serving
+     * the name now carries a different risk than the one the gate decided on, the
+     * call is refused rather than run under the old decision.
      *
-     *  - **Skips** providers that do not advertise [name] (silent `continue`).
-     *  - **Skips** providers whose per-server `mcpId` is in
-     *    [SettingsRepository.disabledMcpTools]; tracks that fact via
-     *    `sawDisabled` so the loop can keep probing other providers — a
-     *    sibling server with the same tool name and a non-disabled `mcpId`
-     *    still gets a chance to run.
-     *  - **Keeps going** when an advertising provider throws on execute;
-     *    the failure is remembered as `lastExecutionError` so the agent
-     *    can still get the canonical error shape if every remaining
-     *    provider also fails.
-     *
-     * Post-loop decision:
-     *
-     *  - If at least one advertising provider threw → re-throw the most
-     *    recent failure (preserves the cloud / network error the caller
-     *    actually needs to see, instead of a generic "not found").
-     *  - Else if every advertising provider was disabled → throw the
-     *    `is disabled` message so the HITL gate / Settings UI can guide
-     *    the user to re-enable the tool.
-     *  - Else (no provider advertised the name at all) → throw
-     *    `not found across active providers`.
+     * @param name The tool name.
+     * @param arguments The JSON argument string.
+     * @param gatedRisk The risk the gate decided on, or `null` outside the gate.
+     * @return The serving server's result.
+     * @throws IllegalArgumentException when every server publishing [name] has it
+     *   switched off (`is disabled`), or no server publishes it (`not found`).
+     * @throws IllegalStateException when the serving server's risk differs from [gatedRisk].
      */
-    private suspend fun executeMcpTool(name: String, arguments: String): String {
-        syncMcpClients()
-        val configs = distinctMcpConfigs()
-        val disabledMcp = settingsRepository.disabledMcpTools.first()
-        var sawDisabled = false
-        var lastExecutionError: Throwable? = null
-        // Walk in user-controlled order (Settings → External providers) rather than
-        // iterating the pool's own map, whose order is non-deterministic — so
-        // multi-provider routing is both deterministic and matches the priority the
-        // user actually configured.
-        for (config in configs) {
-            val client = mcpConnectionPool.peek(config.url) ?: continue
-            if (!advertisesTool(client, name)) continue
-            val mcpId = McpServerRepositoryImpl.mcpToolId(serverUrl = config.url, toolName = name)
-            if (mcpId in disabledMcp) {
-                sawDisabled = true
-                continue
-            }
-            try {
-                return client.executeTool(name, arguments)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                Timber.w(e, "MCP execute of %s on %s failed; trying other providers", name, config.url)
-                lastExecutionError = e
+    private suspend fun executeMcpTool(name: String, arguments: String, gatedRisk: ToolRisk?): String {
+        val server = when (val route = routeMcpTool(name)) {
+            is McpRoute.Served -> route.server
+            McpRoute.Disabled -> throw IllegalArgumentException("Tool $name is disabled")
+            McpRoute.Unknown -> throw IllegalArgumentException("Tool $name not found across active providers")
+        }
+        if (gatedRisk != null) {
+            val currentRisk = mcpRisk(server = server, toolName = name)
+            if (currentRisk != gatedRisk) {
+                Timber.w("MCP tool %s: serving risk %s differs from gated %s; refused", name, currentRisk, gatedRisk)
+                throw IllegalStateException(
+                    "MCP tool $name is now served by a server whose risk level ($currentRisk) differs from the " +
+                        "one its approval check used ($gatedRisk); the call was not made. Run it again to re-check.",
+                )
             }
         }
-        lastExecutionError?.let { throw it }
-        if (sawDisabled) {
-            throw IllegalArgumentException("Tool $name is disabled")
-        }
-        throw IllegalArgumentException("Tool $name not found across active providers")
+        return server.client.executeTool(name, arguments)
     }
 
     /**
@@ -459,38 +448,100 @@ class ToolRepositoryImpl @Inject constructor(
             return overrides[toolName] ?: ToolRisk.SENSITIVE
         }
 
-        syncMcpClients()
-        val overrides = settingsRepository.toolRiskOverrides.first()
-        // Walk in persisted-config order for the same determinism reasons as
-        // executeMcpTool / getAvailableTools. distinctMcpConfigs() defends
-        // against a duplicate-URL row that updateMcpServer can persist.
-        for (config in distinctMcpConfigs()) {
-            val client = mcpConnectionPool.peek(config.url) ?: continue
-            if (advertisesTool(client, toolName)) {
-                // Keyed per server, not per bare name: a long shared prefix is
-                // normal in MCP catalogues, and two servers advertising the same
-                // `create_issue` must stay independent decisions — the same rule
-                // `disabledMcpTools` already follows.
-                val key = McpServerRepositoryImpl.mcpToolId(serverUrl = config.url, toolName = toolName)
-                return overrides[key] ?: ToolRisk.SENSITIVE
-            }
+        // The same resolution `executeTool` dispatches with: the risk is the user's
+        // decision for the server that will run the call, never for another server
+        // publishing the same name.
+        return when (val route = routeMcpTool(toolName)) {
+            is McpRoute.Served -> mcpRisk(server = route.server, toolName = toolName)
+            // No approval card for a call that cannot run: every server publishing
+            // the name has it switched off.
+            McpRoute.Disabled -> throw IllegalArgumentException("Tool $toolName is disabled")
+            McpRoute.Unknown -> throw IllegalArgumentException("Unknown tool: $toolName")
         }
-
-        throw IllegalArgumentException("Unknown tool: $toolName")
     }
 
     /**
-     * Probes whether the connected [client] advertises a tool named [toolName].
-     * A failed `tools/list` call counts as "not advertised" so multi-provider
-     * routing keeps walking the remaining providers; cancellation is re-thrown
-     * to keep the probe cooperative.
+     * The user's risk decision for [toolName] on [server], or the conservative
+     * [ToolRisk.SENSITIVE] default. Keyed per server, not per bare name: a long
+     * shared prefix is normal in MCP catalogues, and two servers publishing the same
+     * `create_issue` stay independent decisions — the rule `disabledMcpTools` follows.
      */
-    private suspend fun advertisesTool(client: McpClient, toolName: String): Boolean = try {
-        client.getTools().any { it.name == toolName }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Throwable) {
-        false
+    private suspend fun mcpRisk(server: ConnectedMcpServer, toolName: String): ToolRisk {
+        val key = McpServerRepositoryImpl.mcpToolId(serverUrl = server.config.url, toolName = toolName)
+        return settingsRepository.toolRiskOverrides.first()[key] ?: ToolRisk.SENSITIVE
+    }
+
+    /**
+     * Resolves which connected server serves [toolName], by [McpToolRouting] — the
+     * single resolution behind [getRisk] and [executeTool]. Local names are routed
+     * by both callers before they get here.
+     */
+    private suspend fun routeMcpTool(toolName: String): McpRoute {
+        val servers = connectedMcpServers()
+        val disabledMcp = settingsRepository.disabledMcpTools.first()
+        val servingUrl = McpToolRouting.servingServer(toolName, servers.map { it.catalogue(disabledMcp) })
+        if (servingUrl != null) {
+            return McpRoute.Served(servers.first { it.config.url == servingUrl })
+        }
+        return if (servers.any { server -> server.tools.any { it.name == toolName } }) {
+            McpRoute.Disabled
+        } else {
+            McpRoute.Unknown
+        }
+    }
+
+    /**
+     * Syncs the pool and snapshots every connected server, in the user's order,
+     * with the tools it publishes. A server whose `tools/list` fails counts as
+     * publishing nothing, so routing moves on; cancellation is re-thrown.
+     */
+    private suspend fun connectedMcpServers(): List<ConnectedMcpServer> {
+        syncMcpClients()
+        // Walk the persisted config order rather than the pool's own map: its
+        // iteration order is non-deterministic, and the user's ordering in
+        // Settings → External providers decides which server serves a shared name.
+        return distinctMcpConfigs().mapNotNull { config ->
+            val client = mcpConnectionPool.peek(config.url) ?: return@mapNotNull null
+            val tools = try {
+                client.getTools()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "MCP tools/list failed for a configured server; routing skips it")
+                emptyList()
+            }
+            ConnectedMcpServer(config = config, client = client, tools = tools)
+        }
+    }
+
+    /**
+     * One connected MCP server as the router sees it: the config it is keyed by,
+     * the live client, and the tools it published when asked.
+     */
+    private class ConnectedMcpServer(val config: McpServerConfig, val client: McpClient, val tools: List<AgentTool>) {
+        /** This server's catalogue for [McpToolRouting], with [disabledMcp] resolved to names. */
+        fun catalogue(disabledMcp: Set<String>): McpToolRouting.ServerCatalogue {
+            val names = tools.mapTo(LinkedHashSet()) { it.name }
+            return McpToolRouting.ServerCatalogue(
+                serverUrl = config.url,
+                toolNames = names,
+                disabledToolNames = names.filterTo(mutableSetOf()) { name ->
+                    McpServerRepositoryImpl.mcpToolId(serverUrl = config.url, toolName = name) in disabledMcp
+                },
+            )
+        }
+    }
+
+    /** Outcome of routing an MCP tool name. */
+    private sealed interface McpRoute {
+        /** [server] serves the name. */
+        class Served(val server: ConnectedMcpServer) : McpRoute
+
+        /** Servers publish the name, but every one of them has it switched off. */
+        data object Disabled : McpRoute
+
+        /** No connected server publishes the name. */
+        data object Unknown : McpRoute
     }
 
     /**

@@ -319,7 +319,7 @@ internal object SettingsPreview {
         ),
         SettingSliderRow(
             SLIDER_HTTP_TOOL_MAX_RESPONSE,
-            "Largest web response",
+            "Largest tool response",
             "1024 KB",
             1024f,
             64f..8192f,

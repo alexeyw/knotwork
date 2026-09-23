@@ -1,5 +1,6 @@
 package app.knotwork.android.data.mcp
 
+import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
 import kotlinx.coroutines.CancellationException
@@ -13,6 +14,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.RecordedRequest
 import okhttp3.Headers
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,6 +50,12 @@ class KoogMcpClientSessionTest {
      * silent-server failures a directed on-device test found. `null` (the default) makes the stub answer everything.
      */
     private var stallMethod: String? = null
+
+    /**
+     * Text the stub returns from `tools/call`. `null` (the default) answers with an
+     * empty result, which is all the session tests need.
+     */
+    private var callResultText: String? = null
 
     /** Released in [tearDown] so a stalled dispatcher thread never outlives the test. */
     private val stallRelease = CountDownLatch(1)
@@ -109,6 +117,12 @@ class KoogMcpClientSessionTest {
                              "required":["message"]}}]}}
                         """.trimIndent(),
                     )
+                    "tools/call" -> callResultText?.let { text ->
+                        sse(
+                            """{"jsonrpc":"2.0","id":$id,"result":{"content":[{"type":"text","text":""" +
+                                JSONObject.quote(text) + "}]}}",
+                        )
+                    } ?: sse("""{"jsonrpc":"2.0","id":$id,"result":{}}""")
                     else -> sse("""{"jsonrpc":"2.0","id":$id,"result":{}}""")
                 }
             }
@@ -296,7 +310,67 @@ class KoogMcpClientSessionTest {
         )
     }
 
+    /**
+     * The result of a tool call is untrusted remote text that reaches the chat
+     * history, the run state and every later prompt, so it is cut where it enters
+     * the app — the same way `http_request` cuts a response body — instead of being
+     * handed on whole.
+     */
+    @Test
+    fun `given a tool result longer than the budget when executeTool then the result is cut with a marker`() = runTest {
+        callResultText = "x".repeat(OVERSIZED_RESULT_CHARS)
+        start()
+        val client = KoogMcpClient()
+        client.connect(
+            McpServerConfig(
+                url = server.url("/mcp").toString(),
+                transport = McpTransport.STREAMABLE_HTTP,
+            ),
+        )
+
+        val result = client.executeTool(name = "echo", arguments = """{"message":"hi"}""")
+
+        val budget = SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT
+        assertTrue(
+            "the result must be cut at the budget, got ${result.length} chars",
+            result.toByteArray(Charsets.UTF_8).size < budget + MARKER_ALLOWANCE,
+        )
+        assertTrue(
+            "a cut result must say so, tail was: ${result.takeLast(MARKER_ALLOWANCE)}",
+            result.endsWith("[... result truncated at $budget bytes]"),
+        )
+        client.disconnect()
+    }
+
+    @Test
+    fun `given the user lowered the budget when executeTool then the result is cut at the user's budget`() = runTest {
+        callResultText = "y".repeat(SMALL_BUDGET_BYTES.toInt() * 4)
+        start()
+        val client = KoogMcpClient(resultByteBudget = { SMALL_BUDGET_BYTES })
+        client.connect(
+            McpServerConfig(
+                url = server.url("/mcp").toString(),
+                transport = McpTransport.STREAMABLE_HTTP,
+            ),
+        )
+
+        val result = client.executeTool(name = "echo", arguments = """{"message":"hi"}""")
+
+        assertTrue(result.endsWith("[... result truncated at $SMALL_BUDGET_BYTES bytes]"))
+        assertTrue(result.toByteArray(Charsets.UTF_8).size < SMALL_BUDGET_BYTES + MARKER_ALLOWANCE)
+        client.disconnect()
+    }
+
     private companion object {
+        /** A budget the user could set (the slider floor is 64 KB), small enough to see. */
+        const val SMALL_BUDGET_BYTES = 65_536L
+
+        /** A result comfortably past the default 1 MiB budget. */
+        const val OVERSIZED_RESULT_CHARS = 1_200_000
+
+        /** Room for the truncation marker on top of the budget. */
+        const val MARKER_ALLOWANCE = 64
+
         /** Deadline used by the timeout tests — short enough to keep them quick. */
         const val TEST_DEADLINE_MS = 300L
 

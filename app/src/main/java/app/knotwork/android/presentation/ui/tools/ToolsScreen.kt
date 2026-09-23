@@ -13,11 +13,13 @@ import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpTool
 import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.domain.services.McpToolRouting
 import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.screens.tools.BuiltInToolRow
 import app.knotwork.design.screens.tools.McpConnectionState
 import app.knotwork.design.screens.tools.McpServerRow
 import app.knotwork.design.screens.tools.McpToolEntry
+import app.knotwork.design.screens.tools.McpToolShadowing
 import app.knotwork.design.screens.tools.ToolsCallbacks
 import app.knotwork.design.screens.tools.ToolsContent
 import app.knotwork.design.screens.tools.ToolsViewState
@@ -64,6 +66,8 @@ fun ToolsScreen(
     }
     val mcpServers by remember(uiState) {
         derivedStateOf {
+            val shadowing = uiState.mcpShadowing
+            val serverNames = uiState.mcpServers.associate { it.url to it.config.displayName }
             uiState.mcpServers.map { snapshot ->
                 McpServerRow(
                     id = snapshot.url,
@@ -75,6 +79,7 @@ fun ToolsScreen(
                         it.toEntry(
                             disabled = uiState.disabledMcpTools,
                             overrides = uiState.toolRiskOverrides,
+                            shadowing = shadowing[it.id]?.toCatalog(serverNames),
                         )
                     },
                     expanded = snapshot.url in uiState.expandedServerUrls,
@@ -141,15 +146,33 @@ private fun McpConnectionStatus.toLabel(): String = when (this) {
  *
  * @param disabled Ids the user has paused.
  * @param overrides The user's per-tool risk decisions.
+ * @param shadowing Why the agent is not offered this tool, or `null` when it is.
  * @return The catalog row model.
  */
-private fun McpTool.toEntry(disabled: Set<String>, overrides: Map<String, ToolRisk>): McpToolEntry = McpToolEntry(
+private fun McpTool.toEntry(
+    disabled: Set<String>,
+    overrides: Map<String, ToolRisk>,
+    shadowing: McpToolShadowing?,
+): McpToolEntry = McpToolEntry(
     id = id,
     name = name,
     description = description,
     risk = ToolRiskResolution.forMcpTool(this, overrides),
     enabled = id !in disabled,
+    shadowing = shadowing,
 )
+
+/**
+ * Projects a routing [McpToolRouting.Shadow] onto the catalog's
+ * [McpToolShadowing], naming an earlier server the way its row does.
+ *
+ * @param serverNames display name per server URL.
+ */
+private fun McpToolRouting.Shadow.toCatalog(serverNames: Map<String, String>): McpToolShadowing = when (this) {
+    McpToolRouting.Shadow.LocalTool -> McpToolShadowing.DeviceTool
+    is McpToolRouting.Shadow.EarlierServer ->
+        McpToolShadowing.EarlierServer(serverName = serverNames[serverUrl] ?: serverUrl)
+}
 
 /**
  * Trims AppFunction-shaped tool ids (`<pkg>/<FQN>#invoke`) down to the
