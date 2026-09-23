@@ -44,7 +44,12 @@ internal fun PipelineCollisionDialog(
             R.string.orchestrator_library_import_collision_title_format,
             collision.existingName.toDisplaySafe(),
         ),
-        body = stringResource(R.string.orchestrator_library_import_collision_single_body),
+        // The file's own name, as the file's claim — so a user who picked the
+        // wrong file can tell, without the name standing in for the library's.
+        body = stringResource(
+            R.string.orchestrator_library_import_collision_single_body,
+            collision.incoming.name.toDisplaySafe(),
+        ),
         namedList = bound.takeIf { it.isNotEmpty() }?.let { items ->
             OutcomeNamedList(
                 heading = stringResource(R.string.orchestrator_library_import_collision_bindings_heading),

@@ -145,7 +145,7 @@
     <!-- Pipeline id-collision resolution (single import) -->
     <!-- Headline names the pipeline already in the library, never the file's own name. -->
     <string name="orchestrator_library_import_collision_title_format">“%1$s” is already in your library</string>
-    <string name="orchestrator_library_import_collision_single_body">Replace swaps its steps for the ones in this file. Import as copy keeps both.</string>
+    <string name="orchestrator_library_import_collision_single_body">The file calls it “%1$s”. Replace swaps its steps for the file\'s; Import as copy keeps both.</string>
     <string name="orchestrator_library_import_collision_bindings_heading">Replace keeps everything that runs it. After Replace, these run the file\'s steps:</string>
     <string name="orchestrator_library_import_collision_replace">Replace</string>
     <string name="orchestrator_library_import_collision_copy">Import as copy</string>

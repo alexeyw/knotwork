@@ -14,6 +14,7 @@ import app.knotwork.android.domain.models.PipelineValidationError
 import app.knotwork.android.domain.models.PipelineValidationException
 import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.models.PromptPreset
+import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.prompt.PromptSegment
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
@@ -657,6 +658,31 @@ class OrchestratorViewModelTest {
             assertEquals("Act on the task", collision.existingName)
             assertEquals(listOf("Full agent"), collision.bindings.callerNames)
             coVerify(exactly = 0) { savePipelineUseCase(any()) }
+        }
+
+    @Test
+    fun `given a bundle colliding with the library when imported then nothing is written until the user decides`() =
+        runTest {
+            viewModel.applyBasePreset()
+            val graph = viewModel.uiState.value.currentPipeline
+            every { pipelineRepository.observePipelineNames() } returns flowOf(mapOf(graph.id to "In the library"))
+            coEvery { compositionValidator.validate(any(), any()) } returns emptyList()
+            coEvery { findPipelineBindings(listOf(graph.id)) } returns
+                mapOf(graph.id to PipelineBindings(triggerCount = 1))
+            val bundle = PipelineBundleJsonSerializer.serialize(listOf(graph), exportedAt = 0L)
+
+            viewModel.importJson(bundle)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val collision = viewModel.uiState.value.pendingBundleImport!!.collisions.single()
+            assertEquals("In the library", collision.existingName)
+            assertEquals(1, collision.bindings.triggerCount)
+            coVerify(exactly = 0) { pipelineRepository.savePipelines(any()) }
+
+            viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 1) { pipelineRepository.savePipelines(any()) }
         }
 
     @Test
