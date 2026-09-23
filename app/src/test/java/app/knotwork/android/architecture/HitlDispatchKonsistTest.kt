@@ -212,7 +212,6 @@ class HitlDispatchKonsistTest {
          * [code] with every comment replaced by spaces (newlines kept), string
          * and character literals left intact. Block comments nest, as in Kotlin.
          */
-        @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "LoopWithTooManyJumpStatements")
         fun stripComments(code: String): String {
             val out = StringBuilder(code.length)
             var i = 0

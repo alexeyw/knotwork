@@ -19,6 +19,8 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -200,6 +202,31 @@ class ToolInvocationGateTest {
     }
 
     @Test
+    fun `given an answer that claims the request as the live wait runs out then that answer is applied`() = runTest {
+        // The answer was accepted — resumeWithApproval returned true, and the
+        // surface was told the request is settled — so the timeout firing in
+        // the same moment must not park the run and drop it.
+        val timeoutRead = CompletableDeferred<Long>()
+        val fixture = Fixture(
+            policy = ToolApprovalPolicy.SensitiveOrDestructive,
+            risk = ToolRisk.SENSITIVE,
+            record = null,
+            liveWindowMs = flow { emit(timeoutRead.await()) },
+        )
+        val outputs = mutableListOf<NodeOutput>()
+        val job = launch { outputs += fixture.dispatch() }
+        runCurrent()
+
+        assertTrue(fixture.gate.resumeWithApproval(SESSION_ID, fixture.liveRequestId(), isApproved = true))
+        timeoutRead.complete(0L) // the window has already run out when the gate starts waiting
+        job.join()
+
+        assertEquals(1, fixture.executions)
+        coVerify(exactly = 0) { fixture.pendingInteractionRepository.save(any()) }
+        assertTrue(outputs.filterStates<AgentOrchestratorState.SuspendedInBackground>().isEmpty())
+    }
+
+    @Test
     fun `given two gates raised in turn when each is raised then each carries an identity of its own`() = runTest {
         val fixture =
             Fixture(policy = ToolApprovalPolicy.SensitiveOrDestructive, risk = ToolRisk.SENSITIVE, record = null)
@@ -269,6 +296,7 @@ class ToolInvocationGateTest {
      * @param record the parked approval record the resumed run finds.
      * @param blockDestructive state of the destructive-tools hard block.
      * @param runId the run the call belongs to; `null` for a non-persisted (editor test) run, which cannot park.
+     * @param liveWindowMs the live approval window setting, read once per raised gate.
      */
     private class Fixture(
         policy: ToolApprovalPolicy,
@@ -276,6 +304,7 @@ class ToolInvocationGateTest {
         record: PendingInteraction?,
         blockDestructive: Boolean = false,
         private val runId: String? = RUN_ID,
+        liveWindowMs: Flow<Long> = flowOf(100L),
     ) {
         val toolRepository: ToolRepository = mockk(relaxed = true)
         val pendingInteractionRepository: PendingInteractionRepository = mockk(relaxed = true)
@@ -297,7 +326,7 @@ class ToolInvocationGateTest {
             }
             every { settingsRepository.toolApprovalPolicy } returns flowOf(policy)
             every { settingsRepository.blockDestructiveTools } returns flowOf(blockDestructive)
-            every { settingsRepository.toolCallTimeoutMs } returns flowOf(100L)
+            every { settingsRepository.toolCallTimeoutMs } returns liveWindowMs
             coEvery { pendingInteractionRepository.getForRun(RUN_ID) } returns record
             coEvery { pendingInteractionRepository.save(any()) } returns true
             gate = ToolInvocationGate(
