@@ -5,23 +5,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * WCAG 2.1 AA contrast audit for the on-surface text pairs the Knotwork
- * design system depends on in both themes.
+ * Contrast checks for a few colour pairs of the Knotwork design system, in both
+ * themes, measured with the WCAG 2.1 formula.
  *
- * Reference: <https://www.w3.org/TR/WCAG21/#contrast-minimum>.
+ * Reference: <https://www.w3.org/TR/WCAG21/#contrast-minimum>. AA asks 4.5:1 of
+ * normal text and 3:1 of large text — at least 18 pt, or 14 pt bold (about
+ * 24 sp, or 18.7 sp bold).
  *
- * - Normal text (≤ 18pt or ≤ 14pt bold): minimum 4.5:1.
- * - Large text (≥ 18pt or ≥ 14pt bold) and "incidental" UI surfaces such
- *   as risk pills (label is paired with a glyph + word, so the colour
- *   is decorative-with-text, not the sole signal): minimum 3.0:1.
- *
- * Every pair below was hand-picked from the surfaces called out in
- * `decisions.md §14`:
- * - Console foreground vs console background (mono log text — primary
- *   readability surface, AA normal).
- * - Risk pill labels vs their pill background (large pill text — AA
- *   large bar).
- * - `onSurface` vs `surface1` (primary screen text, AA normal).
+ * What the checks below claim, and what they do not:
+ * - The console foreground on the console background is held to 4.5:1, the AA
+ *   bar for normal text, which the monospace log is.
+ * - The risk pill labels are 11 sp, so under WCAG they are normal text, and AA
+ *   would ask 4.5:1 of them. In the light theme the risk hues do not reach that
+ *   (destructive 3.7:1, sensitive 2.2:1 on `surface1`); they are kept as they
+ *   are as a design choice. The 3:1 used below is a floor that stops them from
+ *   getting any fainter, not a claim that they pass AA.
+ * - Each pill shows its risk as a word beside a coloured dot, so colour is not
+ *   the only thing that tells the risks apart (WCAG 1.4.1). That is a separate
+ *   requirement from the label's own contrast (1.4.3), and it does not lower it.
  */
 class WcagContrastTest {
     @Test
@@ -49,11 +50,9 @@ class WcagContrastTest {
     @Test
     fun `risk destructive label meets AA large on surface1 — light theme`() {
         val light = knotworkExtendedColorsLight()
-        // Risk-pill text is uppercased, semibold, and ~12sp — qualifies as
-        // "large" under WCAG once paired with the glyph. The pill background
-        // itself is the destructive hue, so we assert the *label-on-surface*
-        // pair that appears when the pill renders inline next to the chat
-        // bubble background (`surface1`).
+        // Measured against `surface1`, the card background the pill sits on in
+        // chat. 3:1 is a floor for the accent, not an AA pass: an 11 sp label is
+        // normal text and would need 4.5:1 (see the class KDoc).
         assertContrastAtLeast(
             foreground = light.riskDestructive,
             background = light.surface1,
@@ -73,11 +72,9 @@ class WcagContrastTest {
         )
     }
 
-    // `riskSensitive` (warn-amber) is deliberately a low-contrast accent on
-    // light surfaces — the design pairs it with a glyph + uppercase label so
-    // colour is never the sole signal (`decisions.md §14`). We therefore do
-    // *not* assert AA contrast for amber-on-surface; we still gate the dark
-    // theme below where the warn accent is brighter and meets AA.
+    // No light-theme check for `riskSensitive`: the amber is 2.2:1 on
+    // `surface1`, below even the 3:1 floor used here, and is kept as it is by
+    // design. The dark theme's amber is brighter and is gated below.
 
     @Test
     fun `risk sensitive label meets AA large on surface1 — dark theme`() {
