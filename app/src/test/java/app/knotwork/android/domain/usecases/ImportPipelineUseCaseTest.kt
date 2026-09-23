@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.ImportCollisionResolution
+import app.knotwork.android.domain.models.PipelineBindings
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
 import app.knotwork.android.domain.pipelineio.PipelineJsonSerializer
@@ -33,6 +34,7 @@ class ImportPipelineUseCaseTest {
 
     private lateinit var savePipelineUseCase: SavePipelineUseCase
     private lateinit var pipelineRepository: PipelineRepository
+    private lateinit var findPipelineBindings: FindPipelineBindingsUseCase
     private lateinit var useCase: ImportPipelineUseCase
 
     @Before
@@ -41,7 +43,9 @@ class ImportPipelineUseCaseTest {
         pipelineRepository = mockk()
         // Default: no collision — the imported id is free.
         coEvery { pipelineRepository.getPipelineById(any()) } returns null
-        useCase = ImportPipelineUseCase(savePipelineUseCase, pipelineRepository)
+        findPipelineBindings = mockk()
+        coEvery { findPipelineBindings.of(any()) } returns PipelineBindings()
+        useCase = ImportPipelineUseCase(savePipelineUseCase, pipelineRepository, findPipelineBindings)
     }
 
     /** Minimal valid v1 document covering the happy path. */
@@ -185,8 +189,57 @@ class ImportPipelineUseCaseTest {
 
             val invocation = useCase(jsonWithSamplePrompts(wiredTool = "delete_file", "read_file"))
 
-            assertNull(invocation.pendingCollision!!.samplePrompts.single().toolsHint)
+            assertNull(invocation.pendingCollision!!.incoming.samplePrompts.single().toolsHint)
         }
+
+    @Test
+    fun `given an import colliding with a bound pipeline then the collision names the existing row and its bindings`() =
+        runTest {
+            // The file calls itself "demo"; the library's pipeline under the same
+            // id is something else entirely, and it is what Replace overwrites.
+            val bindings = PipelineBindings(isDefault = true, callerNames = listOf("Full agent"))
+            coEvery { pipelineRepository.getPipelineById("p") } returns
+                PipelineGraph(id = "p", name = "Act on the task")
+            coEvery { findPipelineBindings.of("p") } returns bindings
+
+            val collision = useCase(validJson).pendingCollision!!
+
+            assertEquals("Act on the task", collision.existingName)
+            assertEquals(bindings, collision.bindings)
+            assertEquals("demo", collision.incoming.name)
+        }
+
+    @Test
+    fun `given a clean import when saved then the result is the graph as written, freshened ids included`() = runTest {
+        val saved = slot<PipelineGraph>()
+        coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
+
+        val invocation = useCase(validJson)
+
+        assertEquals(saved.captured, invocation.saveResult?.getOrNull())
+    }
+
+    @Test
+    fun `given a collision resolved by Replace then the result is the graph as written`() = runTest {
+        val saved = slot<PipelineGraph>()
+        coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
+        val graph = (PipelineJsonSerializer.parse(validJson) as PipelineImportOutcome.Success).graph
+
+        val result = useCase.persistWithResolution(graph, ImportCollisionResolution.REPLACE)
+
+        assertEquals(saved.captured, result.getOrNull())
+        assertEquals("p", result.getOrNull()?.id)
+    }
+
+    @Test
+    fun `given a confirmed mismatch colliding then the collision names the existing row`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("p") } returns PipelineGraph(id = "p", name = "Existing")
+        val mismatch = useCase(mismatchJson).outcome as PipelineImportOutcome.SchemaMismatch
+
+        val confirmed = useCase.persistConfirmed(mismatch) as ConfirmedImport.Collision
+
+        assertEquals("Existing", confirmed.collision.existingName)
+    }
 
     @Test
     fun `given schema mismatch when invoke then save is not called`() = runTest {
@@ -257,7 +310,7 @@ class ImportPipelineUseCaseTest {
         assertTrue(invocation.outcome is PipelineImportOutcome.Success)
         assertNull("no save is attempted on collision", invocation.saveResult)
         assertNotNull("pendingCollision carries the parsed graph", invocation.pendingCollision)
-        assertEquals("p", invocation.pendingCollision?.id)
+        assertEquals("p", invocation.pendingCollision?.incoming?.id)
         coVerify(exactly = 0) { savePipelineUseCase(any()) }
     }
 

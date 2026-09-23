@@ -6,6 +6,7 @@ import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
+import app.knotwork.android.domain.models.PipelineCollision
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
 import app.knotwork.android.domain.models.PipelineValidationError
@@ -32,9 +33,10 @@ import app.knotwork.android.presentation.ui.common.UiText
  * @property previewState Current state of the prompt-preview bottom sheet.
  * @property pendingImport A schema-mismatch outcome awaiting user
  * confirmation before being persisted. `null` when no import is pending.
- * @property pendingCollision A cleanly-parsed single-import graph whose id
- * already names a saved pipeline, awaiting the user's collision choice
- * (replace / import as copy). `null` when no single-import collision is pending.
+ * @property pendingCollision A cleanly-parsed single import whose id already
+ * names a saved pipeline — with that pipeline's name and what is bound to it —
+ * awaiting the user's collision choice (replace / import as copy). `null` when
+ * no single-import collision is pending.
  * @property pendingBundleImport A prepared bundle awaiting the user's collision
  * / schema-mismatch decision before the closure is written atomically. `null`
  * when no bundle import is pending.
@@ -79,7 +81,7 @@ data class OrchestratorUiState(
     val availableVariables: List<String> = emptyList(),
     val previewState: PromptPreviewState = PromptPreviewState.Hidden,
     val pendingImport: PipelineImportOutcome.SchemaMismatch? = null,
-    val pendingCollision: PipelineGraph? = null,
+    val pendingCollision: PipelineCollision? = null,
     val pendingBundleImport: PendingBundleImport? = null,
     val pendingBundleExport: PendingBundleExport? = null,
     val feedbackMessage: UiText? = null,
@@ -136,14 +138,15 @@ data class OrchestratorUiState(
  * collision / schema-mismatch decision first.
  *
  * @property pipelines The closure of pipelines to persist, in file order.
- * @property collidingIds The subset of [pipelines] ids that already exist in
- * the library. Empty means no collision dialog is required.
+ * @property collisions The [pipelines] whose ids already exist in the library,
+ * each with the existing pipeline's name and bindings. Empty means no collision
+ * dialog is required.
  * @property schemaMismatches Per-pipeline schema-version divergences to warn
  * about, if any.
  */
 data class PendingBundleImport(
     val pipelines: List<PipelineGraph>,
-    val collidingIds: List<String>,
+    val collisions: List<PipelineCollision>,
     val schemaMismatches: List<PipelineBundleImportOutcome.SchemaMismatch>,
 )
 

@@ -1534,8 +1534,15 @@ dangling references. A **bundle** solves this: it packs the pipeline
   the same identity as one already in your library, the app asks what to
   do: **Replace** it (update in place, keeping anything bound to it) or
   **import as a copy** (leave the existing one untouched and add a fresh
-  duplicate). This choice now appears for ordinary single-pipeline
-  imports too, so an import never silently overwrites your work.
+  duplicate). This choice appears for ordinary single-pipeline imports too,
+  so an import never silently overwrites your work.
+
+  The question names the pipeline **already in your library**, not the name
+  written in the file, and lists what runs it: the default pipeline for
+  chats, the share target, the Quick Settings tile, requests from other apps,
+  automation triggers, chats, and other pipelines that call it. Replace keeps
+  all of these pointed at it, so from then on they run the file's steps. When
+  in doubt, import as a copy — it changes nothing that already works.
 
 Bundles carry pipelines only — not triggers, tool/MCP settings, prompt
 presets, or chat history. Those stay on the device they were set up on.

@@ -133,7 +133,7 @@ data class OutcomeNamedList(val heading: String, val items: List<String>, val mo
  * @param modifier Layout modifier applied to the dialog.
  */
 @Composable
-@Suppress("LongParameterList") // Documented public API; one dialog family, five call sites.
+@Suppress("LongParameterList") // Documented public API; one dialog family, shared by the importers.
 fun OutcomeDialog(
     tone: OutcomeTone,
     headline: String,

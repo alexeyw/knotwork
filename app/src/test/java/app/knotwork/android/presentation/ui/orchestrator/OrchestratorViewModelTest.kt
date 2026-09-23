@@ -3,9 +3,11 @@ package app.knotwork.android.presentation.ui.orchestrator
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
+import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.domain.models.PipelineBindings
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineTargetAvailability
 import app.knotwork.android.domain.models.PipelineValidationError
@@ -27,6 +29,7 @@ import app.knotwork.android.domain.usecases.CreatePipelineUseCase
 import app.knotwork.android.domain.usecases.DeletePipelineUseCase
 import app.knotwork.android.domain.usecases.DuplicatePipelineUseCase
 import app.knotwork.android.domain.usecases.ExportPipelineBundleUseCase
+import app.knotwork.android.domain.usecases.FindPipelineBindingsUseCase
 import app.knotwork.android.domain.usecases.GetPromptTemplatesUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineBundleUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineUseCase
@@ -44,6 +47,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +56,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -69,6 +74,7 @@ class OrchestratorViewModelTest {
     private lateinit var importPipelineBundleUseCase: ImportPipelineBundleUseCase
     private lateinit var exportPipelineBundleUseCase: ExportPipelineBundleUseCase
     private lateinit var pipelineRepository: PipelineRepository
+    private lateinit var findPipelineBindings: FindPipelineBindingsUseCase
     private lateinit var loadPipelineFromPresetUseCase: LoadPipelineFromPresetUseCase
     private lateinit var renamePipelineUseCase: RenamePipelineUseCase
     private lateinit var duplicatePipelineUseCase: DuplicatePipelineUseCase
@@ -110,9 +116,15 @@ class OrchestratorViewModelTest {
         pipelineRepository = mockk()
         coEvery { pipelineRepository.getPipelineById(any()) } returns null
         coEvery { pipelineRepository.savePipelines(any()) } returns Unit
-        importPipelineUseCase = ImportPipelineUseCase(savePipelineUseCase, pipelineRepository)
+        findPipelineBindings = mockk()
+        coEvery { findPipelineBindings.of(any()) } returns PipelineBindings()
+        coEvery { findPipelineBindings(any()) } answers {
+            firstArg<Collection<String>>().associateWith { PipelineBindings() }
+        }
+        importPipelineUseCase = ImportPipelineUseCase(savePipelineUseCase, pipelineRepository, findPipelineBindings)
         compositionValidator = mockk()
-        importPipelineBundleUseCase = ImportPipelineBundleUseCase(pipelineRepository, compositionValidator)
+        importPipelineBundleUseCase =
+            ImportPipelineBundleUseCase(pipelineRepository, compositionValidator, findPipelineBindings)
         exportPipelineBundleUseCase = mockk()
         loadPipelineFromPresetUseCase = mockk()
         renamePipelineUseCase = mockk()
@@ -582,6 +594,70 @@ class OrchestratorViewModelTest {
         assertEquals(12, state.currentPipeline.connections.size)
         assertEquals(null, state.errorMessage)
     }
+
+    @Test
+    fun `given a clean import when it lands then the editor holds the graph as saved, freshened ids included`() =
+        runTest {
+            // The importer freshens node and connection ids before saving (they
+            // are global primary keys). If the editor kept the file's ids, the
+            // next Save from the editor would write `node-1` again and could take
+            // over another pipeline's row under REPLACE.
+            val saved = slot<PipelineGraph>()
+            coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
+            viewModel.applyBasePreset()
+            val json = viewModel.exportPipelineToJson()
+
+            viewModel.importPipelineFromJson(json)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals(saved.captured.nodes.map { it.id }, state.currentPipeline.nodes.map { it.id })
+            assertEquals(saved.captured.connections.map { it.id }, state.currentPipeline.connections.map { it.id })
+            assertEquals(saved.captured, state.persistedPipeline)
+        }
+
+    @Test
+    fun `given a colliding import resolved by Replace then the editor holds the graph as saved`() = runTest {
+        val saved = slot<PipelineGraph>()
+        coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
+        viewModel.applyBasePreset()
+        val json = viewModel.exportPipelineToJson()
+        val id = viewModel.uiState.value.currentPipeline.id
+        coEvery { pipelineRepository.getPipelineById(id) } returns PipelineGraph(id = id, name = "Existing")
+
+        viewModel.importPipelineFromJson(json)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.resolveCollision(ImportCollisionResolution.REPLACE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(saved.captured.nodes.map { it.id }, state.currentPipeline.nodes.map { it.id })
+        assertEquals(saved.captured, state.persistedPipeline)
+    }
+
+    @Test
+    fun `given an import colliding with a bound pipeline when the dialog opens then it names the existing row`() =
+        runTest {
+            // The report's case: a file squatting a sub-pipeline id every install
+            // has, under a name of its own choosing.
+            coEvery { pipelineRepository.getPipelineById("subtask_act") } returns
+                PipelineGraph(id = "subtask_act", name = "Act on the task")
+            coEvery { findPipelineBindings.of("subtask_act") } returns
+                PipelineBindings(callerNames = listOf("Full agent"))
+            viewModel.applyBasePreset()
+            val json = JSONObject(viewModel.exportPipelineToJson())
+                .put("id", "subtask_act")
+                .put("name", "Daily digest")
+                .toString()
+
+            viewModel.importPipelineFromJson(json)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val collision = viewModel.uiState.value.pendingCollision!!
+            assertEquals("Act on the task", collision.existingName)
+            assertEquals(listOf("Full agent"), collision.bindings.callerNames)
+            coVerify(exactly = 0) { savePipelineUseCase(any()) }
+        }
 
     @Test
     fun `importPipelineFromJson sets error on invalid json`() = runTest {

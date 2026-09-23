@@ -227,7 +227,13 @@ new risk surface, and the design constrains it deliberately:
   tile all do **nothing** until the user explicitly points them at a pipeline —
   the privacy-first default. An unbound trigger never fires, and a bound trigger
   is **auto-disabled** if its pipeline is later deleted, so a dangling automation
-  can never wake and run an unintended graph.
+  can never wake and run an unintended graph. A binding is to a pipeline's
+  identity, not to its steps: **importing a file with Replace** keeps the
+  identity, and with it every binding — the trigger, the share target, the tile,
+  the default pipeline, the chats and the pipelines that call it all run the
+  imported steps afterwards. That is by design (it is how an updated pipeline
+  keeps working), so the Replace confirmation names the pipeline already in the
+  library and lists each of those bindings before anything is written.
 - **The external-automation contract is off by default and cannot be opened by
   accident.** It is the only entry surface reachable by code the user did not
   write, so it carries more than the shared defaults above:

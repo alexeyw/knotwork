@@ -143,17 +143,38 @@
     <string name="orchestrator_library_import_anyway">Import anyway</string>
 
     <!-- Pipeline id-collision resolution (single import) -->
-    <string name="orchestrator_library_import_collision_title">Pipeline already exists</string>
-    <string name="orchestrator_library_import_collision_single_body">A pipeline named \"%1$s\" already exists in your library. Replace it, or import it as a new copy?</string>
+    <!-- Headline names the pipeline already in the library, never the file's own name. -->
+    <string name="orchestrator_library_import_collision_title_format">“%1$s” is already in your library</string>
+    <string name="orchestrator_library_import_collision_single_body">Replace swaps its steps for the ones in this file. Import as copy keeps both.</string>
+    <string name="orchestrator_library_import_collision_bindings_heading">Replace keeps everything that runs it. After Replace, these run the file\'s steps:</string>
     <string name="orchestrator_library_import_collision_replace">Replace</string>
     <string name="orchestrator_library_import_collision_copy">Import as copy</string>
 
     <!-- Pipeline bundle import (library) -->
     <string name="orchestrator_library_import_bundle_title">Import bundle</string>
-    <plurals name="orchestrator_library_import_bundle_collision_body">
-        <item quantity="one">%1$d of %2$d pipelines in this bundle already exist in your library. Replace them, or import the bundle as new copies?</item>
-        <item quantity="other">%1$d of %2$d pipelines in this bundle already exist in your library. Replace them, or import the bundle as new copies?</item>
+    <plurals name="orchestrator_library_import_bundle_collision_title">
+        <item quantity="one">%1$d of %2$d pipelines is already in your library</item>
+        <item quantity="other">%1$d of %2$d pipelines are already in your library</item>
     </plurals>
+    <string name="orchestrator_library_import_bundle_collision_body">Replace swaps their steps for the ones in this file. Import as copies keeps both.</string>
+    <string name="orchestrator_library_import_bundle_collision_heading">Replace keeps everything that runs them. Already in your library:</string>
+    <!-- One colliding pipeline in the bundle list: its name, then what runs it. -->
+    <string name="orchestrator_library_import_bundle_collision_item">“%1$s”</string>
+
+    <!-- What is bound to a pipeline id (the Replace confirmation lists these). -->
+    <string name="orchestrator_library_binding_default">The default pipeline for chats</string>
+    <string name="orchestrator_library_binding_share">The share target</string>
+    <string name="orchestrator_library_binding_tile">The Quick Settings tile</string>
+    <string name="orchestrator_library_binding_external">Requests from other apps</string>
+    <plurals name="orchestrator_library_binding_triggers">
+        <item quantity="one">%1$d automation trigger</item>
+        <item quantity="other">%1$d automation triggers</item>
+    </plurals>
+    <plurals name="orchestrator_library_binding_chats">
+        <item quantity="one">%1$d chat</item>
+        <item quantity="other">%1$d chats</item>
+    </plurals>
+    <string name="orchestrator_library_binding_caller">Called by “%1$s”</string>
     <string name="orchestrator_library_import_bundle_schema_body">Some pipelines in this bundle were written for a different schema version. Some configuration may not import cleanly.</string>
     <string name="orchestrator_library_import_bundle_replace">Replace</string>
     <string name="orchestrator_library_import_bundle_copies">Import as copies</string>
