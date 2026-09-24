@@ -33,6 +33,14 @@ import javax.xml.parsers.DocumentBuilderFactory
  * an expectation that churned on every internal service a library adds would be
  * approved without being read.
  *
+ * An expectation can also forbid a text outright — `absent TEXT` — which no
+ * attribute of any element may contain, exported or not. That is how the `foss`
+ * build states the one thing it promises about Google code: no Firebase, Play
+ * services or data-transport component is *declared*, so nothing can discover or
+ * schedule the collector whose classes still ship in the dex. The three
+ * data-transport components it removes are not exported, so the entry list above
+ * would never see them come back.
+ *
  * Pure `String -> List<String>` transforms, unit-tested in isolation.
  */
 object MergedManifestInventory {
@@ -41,6 +49,9 @@ object MergedManifestInventory {
 
     /** The manifest elements that declare a component. */
     private val COMPONENT_TAGS = listOf("activity", "activity-alias", "service", "receiver", "provider")
+
+    /** Prefix of an expectation line that forbids a text instead of listing an entry. */
+    private const val ABSENT = "absent "
 
     /** The top-level elements that request a permission. */
     private val PERMISSION_REQUEST_TAGS = listOf("uses-permission", "uses-permission-sdk-23")
@@ -65,13 +76,7 @@ object MergedManifestInventory {
      * @return One line per entry, sorted and without duplicates.
      */
     fun of(manifestXml: String): List<String> {
-        val factory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-            // A merged manifest never declares a document type; refusing one keeps
-            // the parser from resolving entities for whatever file is the input.
-            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-        }
-        val root = factory.newDocumentBuilder().parse(InputSource(StringReader(manifestXml))).documentElement
+        val root = parse(manifestXml)
         val lines = mutableSetOf<String>()
 
         root.children().forEach { element ->
@@ -97,10 +102,41 @@ object MergedManifestInventory {
      * (on its own line or after an entry), blank lines ignored.
      *
      * @param text Content of the expectation file.
-     * @return The entries in file order, duplicates kept so [compare] can report them.
+     * @return The entries in file order, duplicates kept so [compare] can report them;
+     *   `absent` lines are not entries and are left to [parseAbsences].
      */
-    fun parseExpectation(text: String): List<String> =
-        text.lines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
+    fun parseExpectation(text: String): List<String> = expectationLines(text).filterNot { it.startsWith(ABSENT) }
+
+    /**
+     * Reads the texts a committed expectation forbids: the `absent TEXT` lines.
+     *
+     * @param text Content of the expectation file.
+     * @return Each forbidden text, in file order.
+     */
+    fun parseAbsences(text: String): List<String> =
+        expectationLines(text).filter { it.startsWith(ABSENT) }.map { it.removePrefix(ABSENT).trim() }
+
+    /**
+     * Finds every element of [manifestXml] that carries a [forbidden] text in any
+     * of its attributes, whatever the element and whether or not it is exported.
+     *
+     * @param manifestXml Content of a merged `AndroidManifest.xml`.
+     * @param forbidden Texts from [parseAbsences].
+     * @return One line per text and element, `TEXT in TAG NAME`; empty when none occurs.
+     */
+    fun occurrences(manifestXml: String, forbidden: List<String>): List<String> {
+        if (forbidden.isEmpty()) return emptyList()
+        val found = mutableListOf<String>()
+        fun visit(element: Element) {
+            val values = (0 until element.attributes.length).map { element.attributes.item(it).nodeValue }
+            forbidden.filter { text -> values.any { it.contains(text) } }.forEach { text ->
+                found += "$text in ${element.tagName} ${element.android("name") ?: "(unnamed)"}"
+            }
+            element.children().forEach(::visit)
+        }
+        visit(parse(manifestXml))
+        return found
+    }
 
     /**
      * Compares an expectation with the entries a manifest actually has.
@@ -118,6 +154,21 @@ object MergedManifestInventory {
             duplicated = expected.groupingBy { it }.eachCount().filterValues { it > 1 }.keys.sorted(),
         )
     }
+
+    /** Parses [manifestXml] and returns its root element. */
+    private fun parse(manifestXml: String): Element {
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            // A merged manifest never declares a document type; refusing one keeps
+            // the parser from resolving entities for whatever file is the input.
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
+        return factory.newDocumentBuilder().parse(InputSource(StringReader(manifestXml))).documentElement
+    }
+
+    /** The non-comment, non-blank lines of an expectation, trimmed. */
+    private fun expectationLines(text: String): List<String> =
+        text.lines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
 
     /**
      * Whether another app can reach [this] component. Anything but a literal

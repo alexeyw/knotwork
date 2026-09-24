@@ -39,17 +39,14 @@
         ships with package visibility on by default; without an explicit `<queries>`
         entry the system filters cross-package metadata out.
 
-        Both shapes are declared:
-          - `<intent>` with the system AppFunctionService action makes the agent visible
-            to every package that publishes an `@AppFunction`, future-proofing the
-            visibility surface for production peers (the agent does not know their
-            applicationIds at compile time).
-          - The explicit `<package>` for `app.knotwork.android.toolsprobe` is the e2e test's
-            target and is kept as a belt-and-suspenders fallback in case the system
-            indexer evaluates the explicit form before the intent-filter form.
+        The `<intent>` with the system AppFunctionService action makes the agent
+        visible to every package that publishes an `@AppFunction` (the agent does not
+        know their applicationIds at compile time). The end-to-end test's target,
+        `app.knotwork.android.toolsprobe`, is also named explicitly — in the debug
+        overlay, since the test runs on debug builds and a release build has no
+        business seeing a package that exists only on a test device.
     -->
     <queries>
-        <package android:name="app.knotwork.android.toolsprobe" />
         <intent>
             <action android:name="android.app.appfunctions.AppFunctionService" />
         </intent>

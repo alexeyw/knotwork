@@ -86,6 +86,22 @@ jobs:
           # package 'tools'") — it broke the release job twice in a row.
           packages: 'platform-tools'
 
+      - name: Install the pinned NDK
+        # The NDK's `llvm-strip` strips the prebuilt native libraries. AGP never
+        # downloads an NDK for that — without the pinned one it would ship them
+        # unstripped — so `verify<Variant>PinnedNdk` fails the build instead, and
+        # the release must not depend on which NDKs this runner image happens to
+        # carry. The version is read from the catalog, the one place it is bumped.
+        run: |
+          set -euo pipefail
+          ndk="$(sed -n 's/^ndk = "\(.*\)"$/\1/p' gradle/libs.versions.toml)"
+          if [[ -z "$ndk" ]]; then
+            echo "::error::gradle/libs.versions.toml declares no \`ndk\` version."
+            exit 1
+          fi
+          sdkmanager --install "ndk;$ndk"
+          echo "NDK $ndk installed."
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
@@ -312,11 +328,23 @@ jobs:
             local apk="$1"
             echo "── $apk"
             local out
-            out="$("$apksigner" verify --print-certs --verbose "$apk")"
+            # `--min-sdk-version 24` (the first release that reads v2) makes
+            # apksigner verify the v2 block as well: at the app's own minSdk it
+            # checks v3 alone and reports v2 as not verified even when present.
+            out="$("$apksigner" verify --print-certs --verbose --min-sdk-version 24 "$apk")"
             if grep -qi 'CN=Android Debug' <<< "$out"; then
               echo "::error::$apk is signed with the ANDROID DEBUG key — release signing fell back. Check the RELEASE_* secrets."
               exit 1
             fi
+            # Both schemes, explicitly: v3 is the one a signing-key rotation is
+            # expressed in, and v2 is what every earlier release carried — AGP
+            # drops it at this minSdk once v3 is on unless asked to keep it.
+            for scheme in 'v2 scheme (APK Signature Scheme v2)' 'v3 scheme (APK Signature Scheme v3)'; do
+              if ! grep -qxF "Verified using $scheme: true" <<< "$out"; then
+                echo "::error::$apk is not signed with APK Signature Scheme ${scheme%% *} — check enableV2Signing / enableV3Signing in app/build.gradle.kts."
+                exit 1
+              fi
+            done
             local actual
             actual="$(grep -m1 -i 'certificate SHA-256 digest' <<< "$out" | awk '{print $NF}' | tr 'A-F' 'a-f')"
             if [[ "$actual" != "$expected" ]]; then

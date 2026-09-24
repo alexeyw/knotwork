@@ -56,7 +56,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
 | `:app:verifyVersionSources`                   | Fails if any hand-written copy of the version — README badge and prose, the CHANGELOG heading and links, `SECURITY.md`, the roadmap's release line — disagrees with the declared `versionName` (see below). |
 | `:app:verifySupplyChainPins`                  | Fails if a GitHub Action is referenced by anything but a full commit SHA with a version comment, the Gradle wrapper loses its distribution checksum, or dependency verification is switched off, holds an ignored key, or trusts a non-organisation key across a namespace (see below). |
-| `:app:verifyFullReleaseMergedManifest` + `:app:verifyFossReleaseMergedManifest` | Fails if a shipping variant's merged manifest gains or loses a permission, an exported component or a `queries` entry its committed expectation does not list (see below). |
+| `:app:verifyFullReleaseMergedManifest` + `:app:verifyFossReleaseMergedManifest` | Fails if a shipping variant's merged manifest gains or loses a permission, an exported component or a `queries` entry its committed expectation does not list, or declares anything the expectation forbids with an `absent` line — for `foss`, any Firebase, Play-services or data-transport element (see below). |
 | `:app:testFullDebugUnitTest` (`CookbookRuntimeReachTest`, `CookbookRecipeValidationTest`) | Fails if the cookbook's run-time verdicts disagree with `NodeConfigCodec`, or a published recipe no longer imports (see below). |
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
 | `:app:verifyLintBaselineOverrides`            | Custom rule: fail if a lint baseline suppresses a check demoted to informational severity (see below). |
@@ -1798,6 +1798,45 @@ that must not be misparsed as a class. Protected packages are listed in
 `r8ProtectedPackages` in `app/build.gradle.kts`; add to that list whenever a
 new keep rule exists to satisfy a stack-walking or name-reflecting library.
 
+### Keep-rule names (`verify<Variant>KeepRuleTargets`)
+
+The mapping guard proves a rule that matched kept doing so. It cannot see a rule
+that never matched anything, and R8 does not report one — no warning, no info
+line. `:app:verify<Variant>KeepRuleTargets` runs **before** R8 on every release
+build and resolves each class, annotation and package named in a class
+specification of `app/proguard-rules.pro` against the classes R8 is about to read:
+the variant's `ScopedArtifact.CLASSES` over every scope, plus the SDK boot
+classpath. `*` and `?` stay within a package segment and `**` crosses them, as in
+ProGuard's syntax; names without a package (`*`, `**$$serializer`) match by
+construction. `-dontwarn` / `-dontnote` are not checked — naming absent classes is
+what they are for. The parser and matcher are
+[`KeepRuleTargets`](../buildSrc/src/main/kotlin/app/knotwork/android/buildtools/KeepRuleTargets.kt),
+unit-tested in `buildSrc`; the task refuses to pass when it finds no names or no
+classes.
+
+**Observed failing.** On the tree it was written for, five names: four
+AppFunctions rules naming `androidx.appfunctions.AppFunctionInventory`,
+`…AppFunctionInvoker` and `@androidx.appfunctions.AppFunction` (the library ships
+them under `…internal`, `…service.internal` and `…service`), and
+`org.tensorflow.lite.**`, a package no dependency has. Every other name in the
+file resolved.
+
+### Pinned NDK (`verify<Variant>PinnedNdk`)
+
+The app packages five prebuilt native libraries, and AGP strips them with the
+NDK of `android.ndkVersion`. When that NDK is not installed, AGP neither
+downloads it nor fails — it logs *"Unable to strip the following libraries,
+packaging them as they are"* and ships them unstripped, so the artefact follows
+the host. The version is pinned in `gradle/libs.versions.toml`, and
+`:app:verify<Variant>PinnedNdk` runs before the strip step of every release build
+and fails unless `ndk/<version>` holds that revision with an `llvm-strip`
+([`PinnedNdk`](../buildSrc/src/main/kotlin/app/knotwork/android/buildtools/PinnedNdk.kt)).
+`release.yml` installs the same version before building.
+
+**Observed failing** on a host carrying three other NDKs but not the pinned one —
+the host whose release build had shipped the libraries unstripped. With the
+pinned NDK installed, the same build stripped them to the bytes CI publishes.
+
 ## Supply chain
 
 Every gate above checks the code in this repository. Of the four below, three
@@ -1883,7 +1922,19 @@ reflect, and a generator would turn each of those decisions into a keystroke.
 
 Non-exported components are left out — they are no entry surface, and an
 expectation that churned on every internal service a library adds would be
-approved without being read. Only release variants are checked, because only
+approved without being read.
+
+An expectation can also say what must **not** be there: `absent TEXT` fails the
+build if any attribute of any element — exported or not — contains `TEXT`. The
+`foss` expectation uses it for the one thing that flavour promises about Google
+code: no `com.google.android.datatransport`, `com.google.firebase` or
+`com.google.android.gms` element. The data-transport classes and their endpoint
+still ship in the `foss` dex (MediaPipe pulls them in); what keeps them inert is
+that `src/foss/AndroidManifest.xml` removes the three components that would let
+them find a backend or schedule an upload. None of the three is exported, so the
+entry list alone would not notice one coming back. Observed failing with one of
+the three removals deleted: the build named the returned `JobInfoSchedulerService`,
+which the entry list did not. Only release variants are checked, because only
 they ship; the debug overlay's receiver is covered by the source-manifest census
 `ExportedComponentInventoryTest`. The two layers are distinct: that test pins what
 this repository *writes*, this guard what the build *ships*. Merging both release
@@ -2162,13 +2213,14 @@ The same workflow is also exposed as a reusable one (`workflow_call`) and is
 called as the first job of `.github/workflows/release.yml`, so a release cannot
 be built against a definition of "green" that has drifted from the one pull
 requests are measured by. `release.yml` adds the checks that only make sense on
-a release build — the tag ↔ `versionName` agreement, `verify<Variant>KeepRules`
-on both flavours, a check that the `foss` APK carries no Firebase configuration,
+a release build — the tag ↔ `versionName` agreement, the pinned NDK installed and
+checked, `verify<Variant>KeepRuleTargets` and `verify<Variant>KeepRules` on both
+flavours, a check that the `foss` APK carries no Firebase configuration,
 a check that both APKs ship the native libraries the app loads (LiteRT-LM and
 MediaPipe Tasks) and not the MediaPipe text-generation library the build
 excludes, and a signature check of every published artefact against the
-expected certificate fingerprint. The release procedure itself is documented in
-[`release.md`](release.md) §9.
+expected certificate fingerprint and for both APK signature schemes, v2 and v3.
+The release procedure itself is documented in [`release.md`](release.md) §9.
 
 ---
 
@@ -2179,8 +2231,9 @@ expected certificate fingerprint. The release procedure itself is documented in
   instrumented tests themselves do run in CI, in their own workflow; their
   results simply do not feed the coverage number.
 - It does not run the `release` variant — lint and tests target `debug`. R8
-  regressions are therefore invisible here; the release-only guard above
-  (`verify<Variant>KeepRules`) runs as part of the release assemble instead,
+  regressions are therefore invisible here; the release-only guards above
+  (`verify<Variant>KeepRuleTargets`, `verify<Variant>KeepRules`,
+  `verify<Variant>PinnedNdk`) run as part of the release build instead,
   which on CI means `release.yml` rather than this workflow.
 - It does not perform dependency-vulnerability scanning — that is a
   separate workstream. Dependency *verification* (above) answers a different

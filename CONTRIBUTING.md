@@ -63,7 +63,10 @@ Required toolchain:
   AGP 9.3.x and Kotlin 2.4.x).
 - **Android SDK** — install platform **API 37** (`compileSdk` +
   `targetSdk`). Minimum runtime is API 34 (Android 14).
-- **NDK** is not required.
+- **NDK** — not needed for debug builds or `./gradlew check`. A **release**
+  build needs the version named by `ndk` in `gradle/libs.versions.toml`, whose
+  `llvm-strip` strips the prebuilt native libraries; it fails without it
+  (`sdkmanager "ndk;<version>"`, see [`docs/release.md`](docs/release.md) §2).
 
 Debug and release install side by side:
 

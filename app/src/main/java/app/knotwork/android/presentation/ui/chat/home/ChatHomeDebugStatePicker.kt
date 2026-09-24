@@ -15,8 +15,11 @@ import app.knotwork.design.theme.KnotworkTheme
 /**
  * Triple-tap state picker rendered as a `DropdownMenu` anchored to the
  * `ChatHomeScreen` TopAppBar title. Visible only in debug builds — the
- * `BuildConfig.DEBUG` guard short-circuits the menu before it mounts so
- * the production binary carries no developer surface.
+ * `BuildConfig.DEBUG` guard returns before the menu mounts, so a release
+ * build never shows it. The guard does not remove the code, though: the
+ * release R8 mapping still lists this function's body and its lambdas, even
+ * though `DEBUG` is a compile-time `false` there. What a release build lacks
+ * is the picker's label strings — resource shrinking drops them.
  *
  * Selecting an item calls [onPick] with the corresponding stable id
  * (`DebugStateIds.*`), which the screen forwards to the VM via

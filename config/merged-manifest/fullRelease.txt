@@ -7,13 +7,15 @@
 # SECURITY.md § Automation triggers and entry surfaces. When the build fails, find
 # where an added line comes from in app/build/outputs/logs/manifest-merger-*-report.txt.
 # fossRelease.txt lists the same entries today; the flavours are checked separately
-# because they ship separately.
+# because they ship separately. Firebase and data transport belong to this flavour,
+# so the `absent` lines of fossRelease.txt have no counterpart here.
 #
 # Format — one entry per line, `#` starts a comment:
 #   uses-permission NAME [maxSdkVersion=N]
 #   permission NAME protectionLevel=LEVEL
 #   exported TAG NAME permission=PERMISSION|none
 #   queries package|intent|provider ...
+#   absent TEXT        — no attribute of any element, exported or not, contains TEXT
 
 # ── Permissions the app requests ─────────────────────────────────────────────
 uses-permission android.permission.ACCESS_COARSE_LOCATION
@@ -49,4 +51,3 @@ exported service androidx.work.impl.background.systemjob.SystemJobService permis
 # ── Package visibility ───────────────────────────────────────────────────────
 queries intent action=android.app.appfunctions.AppFunctionService
 queries intent action=app.knotwork.android.action.RUN_RESULT
-queries package app.knotwork.android.toolsprobe  # the end-to-end test target; ships in release today
