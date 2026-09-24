@@ -23,6 +23,7 @@ import app.knotwork.android.buildtools.VerifyDocsHygieneTask
 import app.knotwork.android.buildtools.VerifyDocumentationLinksTask
 import app.knotwork.android.buildtools.VerifyFileMapTask
 import app.knotwork.android.buildtools.VerifyForbiddenVocabularyTask
+import app.knotwork.android.buildtools.VerifyMergedManifestTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
 import app.knotwork.android.buildtools.VerifySupplyChainPinsTask
@@ -2147,6 +2148,30 @@ androidComponents {
         // The dex guard needs a packaged APK, so it rides `assemble` only;
         // the AAB carries the same dex from the same R8 run.
         tasks.matching { it.name == "assemble$variantName" }.configureEach { finalizedBy(verifyInstantiable) }
+    }
+}
+
+// ─── Merged-manifest guard ───────────────────────────────────────────────────
+// The source manifests are not what ships: the merger folds in every library's
+// own manifest, so a dependency bump can add a permission, an exported component
+// or a `queries` entry without a line of this repository changing — and the
+// privacy policy's permission table and the threat model's list of entry surfaces
+// would both be wrong. Each shipping variant's merged manifest is compared with a
+// hand-edited expectation in `config/merged-manifest/`. Release variants only,
+// because those are what ship; the merge costs seconds and needs no signing or R8.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val variantName = variant.name.replaceFirstChar { it.uppercaseChar() }
+        val verifyMergedManifest = tasks.register<VerifyMergedManifestTask>("verify${variantName}MergedManifest") {
+            group = "verification"
+            description = "Fails the build if the merged `${variant.name}` manifest disagrees with its expectation."
+            mergedManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
+            expectation.set(rootProject.layout.projectDirectory.file("config/merged-manifest/${variant.name}.txt"))
+            checkedVariant.set(variant.name)
+            repositoryRoot.set(rootProject.layout.projectDirectory)
+            stampFile.set(layout.buildDirectory.file("reports/merged-manifest/${variant.name}.txt"))
+        }
+        tasks.named("check") { dependsOn(verifyMergedManifest) }
     }
 }
 
