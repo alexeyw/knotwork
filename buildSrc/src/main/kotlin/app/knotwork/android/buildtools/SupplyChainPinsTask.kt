@@ -34,6 +34,8 @@ import org.gradle.api.tasks.VerificationException
  * @property namespaceKeys Fingerprint → owner of every key allowed namespace-wide
  *   (`regex="true"`) trust: an organisation's own release keys. The owner is an
  *   input, so the reason for each entry is part of what a change has to touch.
+ * @property allowedTrust `<trust>` entry (attributes sorted, `name=value`) → why
+ *   the artifacts it matches may skip verification.
  * @property stampFile Written on success, so the task can be skipped while
  *   nothing it reads has changed.
  */
@@ -57,6 +59,9 @@ abstract class VerifySupplyChainPinsTask : DefaultTask() {
 
     @get:Input
     abstract val namespaceKeys: MapProperty<String, String>
+
+    @get:Input
+    abstract val allowedTrust: MapProperty<String, String>
 
     @get:OutputFile
     abstract val stampFile: RegularFileProperty
@@ -89,6 +94,7 @@ abstract class VerifySupplyChainPinsTask : DefaultTask() {
                     path = metadata.relativeTo(root).invariantSeparatorsPath,
                     text = metadata.takeIf { it.isFile }?.readText(),
                     namespaceKeys = namespaceKeys.get().keys,
+                    allowedTrust = allowedTrust.get().keys,
                 )
             }
         if (violations.isNotEmpty()) {

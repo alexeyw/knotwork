@@ -8,6 +8,7 @@
       <trusted-artifacts>
          <trust file=".*-javadoc[.]jar" regex="true"/>
          <trust file=".*-sources[.]jar" regex="true"/>
+         <trust group="gradle" name="gradle" file="gradle-.*-src[.]zip" regex="true"/>
       </trusted-artifacts>
       <trusted-keys>
          <trusted-key id="03C123038C20AAE9E286C857479D601F3A7B5C1A" group="com.github.ajalt.clikt"/>

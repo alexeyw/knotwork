@@ -140,6 +140,9 @@ class SupplyChainPinsCheckerTest {
             <verify-signatures>true</verify-signatures>
             <keyring-format>armored</keyring-format>
             <key-servers enabled="false"/>
+            <trusted-artifacts>
+               <trust file=".*-sources[.]jar" regex="true"/>
+            </trusted-artifacts>
         """,
         trustedKeys: String = """
             <trusted-key id="$orgKey">
@@ -163,6 +166,7 @@ class SupplyChainPinsCheckerTest {
         path = "gradle/verification-metadata.xml",
         text = text,
         namespaceKeys = setOf(orgKey),
+        allowedTrust = setOf("file=.*-sources[.]jar regex=true"),
     )
 
     @Test
@@ -222,6 +226,28 @@ class SupplyChainPinsCheckerTest {
     }
 
     @Test
+    fun `given an artifact trusted without verification beyond the allowed list then it is reported`() {
+        // One `<trust>` entry can switch verification off for anything it matches:
+        // `group=".*"` would trust every artifact there is.
+        val violations = checkMetadata(
+            metadata(
+                configuration = """
+                    <verify-metadata>true</verify-metadata>
+                    <verify-signatures>true</verify-signatures>
+                    <key-servers enabled="false"/>
+                    <trusted-artifacts>
+                       <trust file=".*-sources[.]jar" regex="true"/>
+                       <trust group=".*" regex="true"/>
+                    </trusted-artifacts>
+                """,
+            ),
+        )
+
+        assertEquals(1, violations.size)
+        assertTrue(violations.single().message.contains("group=.*"))
+    }
+
+    @Test
     fun `given an ignored key then it is reported`() {
         // Written by the generator when a key server does not answer; everything
         // that key signs silently falls back to a first-use checksum.
@@ -262,6 +288,7 @@ class SupplyChainPinsCheckerTest {
             path = "gradle/verification-metadata.xml",
             text = null,
             namespaceKeys = emptySet(),
+            allowedTrust = emptySet(),
         )
 
         assertEquals(1, violations.size)

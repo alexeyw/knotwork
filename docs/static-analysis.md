@@ -1915,12 +1915,17 @@ is not.**
   published without a signature.
 - **The keys are committed** (`gradle/verification-keyring.keys`, armored) **and
   key servers are disabled**, so a build never contacts one.
-- **`-sources` and `-javadoc` jars are trusted without verification.** The IDE
-  downloads them; the build never executes them.
+- **Three kinds of file are trusted without verification**: `-sources` and
+  `-javadoc` jars, and Gradle's own source distribution (`gradle-<v>-src.zip`),
+  which Android Studio's sync fetches so build scripts can be navigated. The IDE
+  downloads them; the build never executes them. The first sync after this file
+  landed failed on exactly that zip — no command-line build ever asks for it.
 
 **The policy is enforced, not only written down.** `:app:verifySupplyChainPins`
 fails when `verify-metadata` or `verify-signatures` is off, when key servers are
-on, when the file holds an `<ignored-key>`, and when a key outside the list of
+on, when the file holds an `<ignored-key>`, when `<trusted-artifacts>` holds an
+entry outside `dependencyVerificationTrustedArtifacts` (one `group=".*"` entry
+would switch verification off for everything), and when a key outside the list of
 organisation release keys in `app/build.gradle.kts`
 (`dependencyVerificationNamespaceKeys`, each with its owner) is trusted by
 `regex="true"` — or when any key is trusted wider than a namespace of two parts

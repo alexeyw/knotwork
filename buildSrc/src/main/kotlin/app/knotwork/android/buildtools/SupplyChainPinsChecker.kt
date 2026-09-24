@@ -131,6 +131,8 @@ object SupplyChainPinsChecker {
      *
      * - `verify-metadata` and `verify-signatures` are on, and key servers are off,
      *   so the verdict depends on the committed keyring alone;
+     * - `<trusted-artifacts>` holds only entries in [allowedTrust] — files the IDE
+     *   downloads for reading and the build never executes;
      * - there is no `<ignored-key>`: Gradle writes one when a key server does not
      *   answer during generation, and everything that key signs then silently
      *   falls back to a first-use checksum;
@@ -143,9 +145,19 @@ object SupplyChainPinsChecker {
      * @param path Repository-relative path, used in the report only.
      * @param text File content, or `null` when the file does not exist.
      * @param namespaceKeys Full fingerprints of the keys allowed namespace-wide trust.
+     * @param allowedTrust The `<trust>` entries allowed under `<trusted-artifacts>`,
+     *   each as its attributes sorted by name and joined as `name=value` with single
+     *   spaces (`file=.*-sources[.]jar regex=true`). A `<trust>` entry skips
+     *   verification for everything it matches, so one written too wide — `group=".*"`
+     *   — switches the whole mechanism off.
      * @return Every violation, in document order.
      */
-    fun checkVerificationMetadata(path: String, text: String?, namespaceKeys: Set<String>): List<Violation> {
+    fun checkVerificationMetadata(
+        path: String,
+        text: String?,
+        namespaceKeys: Set<String>,
+        allowedTrust: Set<String>,
+    ): List<Violation> {
         if (text == null) {
             return listOf(Violation(path, 0, "is missing; every build verifies its dependencies against it"))
         }
@@ -165,6 +177,20 @@ object SupplyChainPinsChecker {
         flag("verify-signatures", "true", root.firstByTag("verify-signatures")?.textContent)
         flag("key-servers enabled", "false", root.firstByTag("key-servers")?.getAttribute("enabled"))
 
+        root.allByTag("trust").forEach { trust ->
+            val attributes = (0 until trust.attributes.length)
+                .map { trust.attributes.item(it) }
+                .sortedBy { it.nodeName }
+                .joinToString(" ") { "${it.nodeName}=${it.nodeValue}" }
+            if (attributes !in allowedTrust) {
+                violations += Violation(
+                    path,
+                    0,
+                    "`<trust $attributes>` skips verification but is not in the allowed list; artifacts " +
+                        "the build executes must be verified",
+                )
+            }
+        }
         root.allByTag("ignored-key").forEach {
             violations += Violation(
                 path,

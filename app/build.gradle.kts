@@ -2436,6 +2436,16 @@ val dependencyVerificationNamespaceKeys: Map<String, String> = mapOf(
     "E7DC75FC24FB3C8DFE8086AD3D5839A2262CBBFB" to "Kotlin Libraries Release <kt-libraries@jetbrains.com>",
 )
 
+// The only artifacts dependency verification may skip (`<trusted-artifacts>`): files
+// an IDE downloads so a reader can navigate, and the build never executes. Keyed by
+// the `<trust>` entry's attributes, sorted by name and joined as `name=value`.
+val dependencyVerificationTrustedArtifacts: Map<String, String> = mapOf(
+    "file=.*-javadoc[.]jar regex=true" to "API docs the IDE attaches; never on a classpath",
+    "file=.*-sources[.]jar regex=true" to "Sources the IDE attaches; never on a classpath",
+    "file=gradle-.*-src[.]zip group=gradle name=gradle regex=true" to
+        "Gradle's source distribution, fetched by Android Studio's sync for build-script navigation",
+)
+
 val verifySupplyChainPins by tasks.registering(VerifySupplyChainPinsTask::class) {
     group = "verification"
     description = "Fails the build if an Action or the Gradle distribution is unpinned, or dependency trust widened."
@@ -2444,6 +2454,7 @@ val verifySupplyChainPins by tasks.registering(VerifySupplyChainPinsTask::class)
     wrapperProperties.set(file("$rootDir/gradle/wrapper/gradle-wrapper.properties"))
     verificationMetadata.from("$rootDir/gradle/verification-metadata.xml")
     namespaceKeys.set(dependencyVerificationNamespaceKeys)
+    allowedTrust.set(dependencyVerificationTrustedArtifacts)
     stampFile.set(layout.buildDirectory.file("reports/supply-chain/pins-verified.txt"))
 }
 tasks.named("check") { dependsOn(verifySupplyChainPins) }
