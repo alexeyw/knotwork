@@ -1,0 +1,15 @@
+# Secret scanning of the commits under review — the "Secret scan" step of
+# .github/workflows/check.yml runs a pinned gitleaks over them and fails the
+# required check on any hit. See docs/static-analysis.md § Secret scan.
+#
+# The rules are gitleaks' own defaults, fixed by the pinned binary version.
+#
+# There is deliberately no allowlist here — no paths, no regexes. A real key
+# pasted into a test file is still a leaked key, so "test fixtures are exempt"
+# would exempt exactly the place one is most likely to be pasted. The one waiver
+# is an inline `gitleaks:allow` on the line itself: it travels with that line,
+# shows up in the diff that introduces it, and exempts nothing else. Prefer a
+# fixture that does not look like a key at all (too short, or plainly marked
+# fake); reach for the waiver only when the test needs a realistic shape.
+[extend]
+useDefault = true
