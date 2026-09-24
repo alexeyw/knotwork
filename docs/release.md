@@ -42,6 +42,20 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew :app:bundleFullRelease
 ```
 
+A release build needs the Android NDK named by `ndk` in
+`gradle/libs.versions.toml` (today `28.2.13676358`). The app compiles no native
+code, but that NDK's `llvm-strip` strips the prebuilt native libraries it
+packages. Without it, AGP would ship them unstripped and say so only in an
+informational line — a different artefact from the one CI publishes. So
+`verify<Variant>PinnedNdk` fails the release build instead, and its message
+names the command that installs the pinned version:
+
+```bash
+sdkmanager "ndk;<version>"
+```
+
+Debug builds and `./gradlew check` do not need it.
+
 Outputs (the flavour name is part of the path):
 
 - `app/build/outputs/apk/full/release/app-full-release.apk`
@@ -85,6 +99,15 @@ release artefact — configuration never fails for the lack of a key. The
 credential values are never committed: `.gitignore` blocks every keystore
 extension (`*.jks` / `*.keystore` / `*.p12` …) plus `local.properties`,
 `keystore.properties`, and `secrets.properties`.
+
+The `release` signing config signs every APK with **APK Signature Scheme v2
+and v3** (v1 is unnecessary at this `minSdk`). Both are set explicitly: with
+v3 on, AGP drops v2 at `minSdk` 28 and above unless asked to keep it, and every
+earlier release was signed with v2 alone. v3 is the scheme a signing-key
+rotation is expressed in. What it does not do is make a key recoverable: a
+rotation is signed by the old key, so a **lost** key still cannot be replaced
+without every user uninstalling. Keeping the key safe is the only protection
+against that.
 
 ### Current distribution state
 
@@ -231,9 +254,13 @@ artefact or for auditing something already downloaded.
 For an APK, use `apksigner` from the Android SDK build-tools:
 
 ```bash
-apksigner verify --print-certs --verbose \
+apksigner verify --print-certs --verbose --min-sdk-version 24 \
     app/build/outputs/apk/full/release/app-full-release.apk
 ```
+
+Expect `Verified using v2 scheme … true` and `Verified using v3 scheme … true`.
+Keep `--min-sdk-version 24`: at the app's own `minSdk`, `apksigner` verifies the
+v3 signature alone and reports v2 as not verified even when it is there.
 
 An AAB carries only a v1 (JAR) signature, which `apksigner` does not read;
 `keytool` prints the signer certificate of a signed JAR directly:
@@ -263,14 +290,16 @@ short version:
 | SQLCipher                | `net.zetetic:sqlcipher-android` loads its `.so` by reflection. |
 | Koog                     | Heavy reflection over node / tool / pipeline graph definitions.|
 | Ktor                     | Transitive HTTP layer underneath every Koog cloud client.     |
-| AppFunctions             | `*_AppFunctionInventory` / `*_AppFunctionInvoker` KSP outputs are loaded by `androidx.appfunctions` via reflection. |
+| AppFunctions             | The library's package is kept whole. What the platform loads by name is the pair of aggregated KSP classes, which the library's own rules keep too; the per-function inventory and invoker are reached by ordinary calls and may be renamed. |
 | Hilt                     | Aggregated component classes occasionally over-shrunk on full mode. |
 | Room                     | `*_Impl` DAOs / database instantiated reflectively.           |
 | OpenTelemetry incubator  | Optional symbols referenced from Koog's OTel logging plumbing — kept under `-dontwarn` since the runtime path is never hit. |
 
 If R8 starts stripping something at runtime, drop a new section into
 `proguard-rules.pro` rather than scattering rules across the file, and
-include a one-line comment on the symptom that triggered the keep.
+include a one-line comment on the symptom that triggered the keep. Every name
+in a rule must exist: R8 matches a wrong name with nothing and says nothing,
+so `verify<Variant>KeepRuleTargets` (§7) fails the build on one.
 
 ## 5. APK size breakdown
 
@@ -380,12 +409,24 @@ lint through `lintVital<Variant>Release`, which AGP wires into every release
 assemble. That is the fatal-severity subset of `lintFullRelease`, so running the
 command above before tagging still buys something the release pipeline does not.
 
-### Two guards on the minified artefact
+### Guards on the minified artefact
 
 `./gradlew check` never runs R8's output, so a release-only defect has exactly
-one place left to be caught: the artefact itself. Two tasks run after release
-packaging, and they check different properties — the second exists because the
-first was green while the app was broken.
+one place left to be caught: the release build itself. Two tasks run before R8
+and the strip step, two after packaging, and each checks a property the others
+cannot see. Before R8 and the strip step:
+
+- **`verify<Variant>KeepRuleTargets`** runs before R8 and resolves every class,
+  annotation and package named in `app/proguard-rules.pro` against the classes R8
+  is about to read (the variant's classes over every scope, plus the SDK boot
+  classpath). R8 matches a wrong name with nothing and prints nothing: four
+  AppFunctions rules and one LiteRT rule protected nothing for as long as they
+  existed. `-dontwarn` is not checked — naming absent classes is its purpose.
+- **`verify<Variant>PinnedNdk`** runs before the native libraries are stripped
+  and fails when the NDK pinned in the version catalog is not installed (§2).
+
+After packaging — the second of these exists because the first was green while
+the app was broken:
 
 - **`verify<Variant>KeepRules`** reads the R8 mapping and asserts that protected
   packages stayed identity-mapped. It catches a keep rule that stopped pinning
@@ -393,18 +434,23 @@ first was green while the app was broken.
   stack walk.
 - **`verify<Variant>Instantiable`** opens the packaged APK, parses the dex
   `class_defs` table and asserts that classes the app instantiates reflectively
-  are present and carry neither `ACC_ABSTRACT` nor `ACC_INTERFACE`.
+  are present and carry neither `ACC_ABSTRACT` nor `ACC_INTERFACE`. Besides
+  protobuf, the list holds the two aggregated AppFunctions classes the platform
+  loads by name — kept today by the library's own rules, which its `proguard.txt`
+  plans to replace.
 
-The second was added after long-term memory turned out to have never worked in
-any released build. R8 in full mode left `com.google.protobuf.Any` with its own
-name — so the mapping check passed — and made the class **abstract**, because
-protobuf-javalite instantiates through `Unsafe.allocateInstance`, which R8
-cannot see. MediaPipe parses its task graph as a protobuf, so every
+The instantiability check was added after long-term memory turned out to have
+never worked in any released build. R8 in full mode left
+`com.google.protobuf.Any` with its own name — so the mapping check passed — and
+made the class **abstract**, because protobuf-javalite instantiates through
+`Unsafe.allocateInstance`, which R8 cannot see. MediaPipe parses its task graph
+as a protobuf, so every
 `TextEmbedder.createFromOptions` threw `InstantiationException`. The exception
 was caught and shown as a snackbar, so nothing reached logcat or Crashlytics.
 
 The lists live in `app/build.gradle.kts` (`r8ProtectedPackages`,
-`r8RequiredInstantiableClasses`); the checkers are unit-tested in `buildSrc`
+`r8RequiredInstantiableClasses`); the checkers — `KeepRuleTargets` and
+`PinnedNdk` included — are unit-tested in `buildSrc`
 (`./gradlew -p buildSrc test`). Both published versions, `0.7.1` and `0.7.2`,
 fail the instantiability check — it was verified against them before being
 trusted.
@@ -476,11 +522,18 @@ are inherent to the product, not to crash reporting, and are tracked separately:
   The same chain used to put three of Google's data-transport **components**
   into the FOSS manifest — an alarm receiver, a job service and a
   backend-discovery service, the only `com.google.*` entries in a manifest whose
-  build is described as carrying no Google dependency. Nothing could be sent
-  through them (R8 strips the transport implementation; no CCT endpoint survives
-  into the dex), but a manifest that advertises a collector invites exactly the
-  question the FOSS build exists to answer. They are removed in
-  `app/src/foss/AndroidManifest.xml` with `tools:node="remove"`.
+  build is described as carrying no Google dependency. They are removed in
+  `app/src/foss/AndroidManifest.xml` with `tools:node="remove"`, and those three
+  lines are the whole guarantee. The transport classes and the CCT endpoint
+  constant (`firebaselogging-pa.googleapis.com`) **do** remain in the `foss`
+  dex: `CctBackendFactory` carries `@androidx.annotation.Keep`, and it references
+  the destination that holds the endpoint. What keeps that code inert is the
+  manifest: without the discovery service no backend is found, and without the
+  scheduler components no upload can be scheduled. Because none of the three is
+  exported, the merged-manifest guard's entry list would not notice one coming
+  back; the `absent` lines in `config/merged-manifest/fossRelease.txt` do — they
+  fail `check` if any `com.google.android.datatransport`, `com.google.firebase`
+  or `com.google.android.gms` element appears in the `foss` merged manifest.
 
   **Removing the components rather than the dependency is deliberate.**
   Excluding `com.google.android.datatransport` from the `foss` configurations
@@ -527,8 +580,8 @@ user ever receives a copy of.
 
 ### Reproducible builds
 
-F-Droid prefers builds it can reproduce bit-for-bit from source. Both
-`BuildConfig` stamps are now deterministic for a given checkout:
+F-Droid prefers builds it can reproduce bit-for-bit from source. Three inputs
+of the build are properties of the commit rather than of the host:
 
 - `BuildConfig.GIT_COMMIT_DATE_EPOCH_MS` resolves, in order, from the
   `SOURCE_DATE_EPOCH` environment variable (the cross-ecosystem convention,
@@ -540,13 +593,26 @@ F-Droid prefers builds it can reproduce bit-for-bit from source. Both
   SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) ./gradlew :app:assembleFossRelease
   ```
 
-- `BuildConfig.GIT_SHA` resolves the short commit SHA, which is deterministic
-  for a given checkout.
+- `BuildConfig.GIT_SHA` is the first eight characters of the full commit hash
+  (`GitCommitId` in `buildSrc`). It used to be `git rev-parse --short`, whose
+  length follows the clone rather than the commit: CI's depth-1 checkout printed
+  seven characters, a full clone of the same commit eight, and a `core.abbrev`
+  setting in someone's git configuration yet another length. The string is
+  compiled into `classes.dex`, so the dex differed with it.
+- The native libraries are stripped by the NDK pinned in
+  `gradle/libs.versions.toml` (§2). Left to AGP's default, a host without that
+  NDK packaged them unstripped — three of the five libraries then differed
+  between a local build and CI's of one commit. A release build now fails
+  instead, and an F-Droid recipe has to provide the same NDK.
+
+Measured on one commit: the `foss` APK that `release.yml` built from a depth-1
+checkout on Linux and one built from a full clone on macOS, with a different
+JDK vendor, have all 277 entries CRC-identical. Before these changes, the
+published 0.10.1 APK and a local build of its commit differed in 5 of 278
+entries (`classes.dex`, the baseline profile and three native libraries).
 
 What this does *not* establish is that the whole artefact reproduces
-bit-for-bit: that can only be confirmed against a build produced by F-Droid's
-own server, which does not exist yet. The claim here is narrow and true — the
-one identified source of non-determinism is gone.
+bit-for-bit on F-Droid's own server, which has not built it yet.
 
 The `foss` release is otherwise a standard R8-minified arm64-v8a build (§4); the
 F-Droid build recipe should disable any signing config so F-Droid applies its

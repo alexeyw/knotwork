@@ -8,9 +8,17 @@
   background-reliability soak protocol (project_docs/metrics.md). It is exported
   so `adb shell am broadcast` (shell uid) can reach it; this is acceptable only
   because the receiver exists exclusively in debuggable builds.
+
+  It also makes the end-to-end AppFunctions test's target package visible by
+  name, next to the capability-shaped `<intent>` in the main manifest, in case
+  the system indexer evaluates the explicit form first.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <queries>
+        <package android:name="app.knotwork.android.toolsprobe" />
+    </queries>
 
     <application>
         <!--

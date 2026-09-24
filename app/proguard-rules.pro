@@ -6,9 +6,13 @@
 #  - reflection-driven code paths (Koog agents, kotlinx.serialization).
 #  - native interop layers that R8 has no AST visibility into
 #    (MediaPipe / LiteRT / SQLCipher).
-#  - AppFunctions KSP-generated wrappers that the platform calls via
-#    reflection at install time.
+#  - the `androidx.appfunctions` library surface (see its section).
 #  - Stack-trace fidelity for Crashlytics.
+#
+# Every class, annotation and package named in a class specification below must
+# exist on the release classpath: R8 matches a wrong name with nothing and says
+# nothing, so `verify<Variant>KeepRuleTargets` checks the names before R8 runs.
+# A rule that is not needed any more is deleted, not left behind as a comment.
 
 # ─── Stack traces ────────────────────────────────────────────────────────────
 # Preserve file + line info so Crashlytics-mapped stacks resolve to the right
@@ -93,9 +97,10 @@
 
 # ─── MediaPipe + LiteRT (native + reflection) ────────────────────────────────
 # JNI bindings reach into Java classes by name; R8 cannot follow native frame.
+# LiteRT-LM ships under `com.google.ai.edge`; no dependency has
+# `org.tensorflow.lite` classes, so no keep rule names that package.
 -keep class com.google.mediapipe.** { *; }
 -keep class com.google.ai.edge.** { *; }
--keep class org.tensorflow.lite.** { *; }
 -dontwarn com.google.mediapipe.**
 -dontwarn com.google.ai.edge.**
 -dontwarn org.tensorflow.lite.**
@@ -117,17 +122,17 @@
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
 
-# ─── AppFunctions (KSP-generated callee + caller wrappers) ───────────────────
-# `androidx.appfunctions` discovers `*_AppFunctionInventory` and
-# `*_AppFunctionInvoker` classes by reflection at runtime; any `@AppFunction`-
-# annotated method is invoked through the generated invoker. Stripping or
-# renaming either side breaks the system AppFunctions dispatch path.
--keep class * implements androidx.appfunctions.AppFunctionInventory { *; }
--keep class * implements androidx.appfunctions.AppFunctionInvoker { *; }
--keep @androidx.appfunctions.AppFunction class *
--keepclassmembers class * {
-    @androidx.appfunctions.AppFunction <methods>;
-}
+# ─── AppFunctions ────────────────────────────────────────────────────────────
+# What the platform loads BY NAME is the pair of aggregated classes KSP generates
+# into this app — `androidx.appfunctions.service.internal.$AggregatedAppFunctionInvoker_Impl`
+# and `androidx.appfunctions.internal.$AggregatedAppFunctionInventory_Impl`. The
+# library's own consumer rules keep them; they reach the per-function
+# `$<Class>_AppFunctionInventory` / `_AppFunctionInvoker` and the `@AppFunction`
+# methods by ordinary calls, so R8 may rename those (the release mapping does).
+# The rule below additionally keeps the library's whole package, the two
+# aggregated classes included. `verify<Variant>Instantiable` checks both are in
+# the dex under their own name. (Four rules here once named the interfaces and
+# the annotation in packages the library does not use, and matched nothing.)
 -keep class androidx.appfunctions.** { *; }
 -dontwarn androidx.appfunctions.**
 

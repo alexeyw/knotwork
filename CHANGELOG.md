@@ -181,6 +181,13 @@ details.
   release with a recorded list and fails on any difference.
 - **Changes are scanned for secrets.** Every commit under review is checked for
   keys and tokens before it can merge.
+- **The release build checks more of what it ships.** Every class a code-shrinking
+  keep rule names must now exist; five did not, and protected nothing. The F-Droid
+  build fails if a Firebase, Play-services or Google data-transport component
+  returns to its manifest, and release builds no longer see the package the
+  end-to-end test installs.
+- **Release APKs are signed with APK Signature Scheme v3 as well as v2.** v3 is
+  the scheme a change of signing key is expressed in.
 - **The protobuf library MediaPipe brings in is raised to 4.27.5**, past a
   denial-of-service flaw (CVE-2024-7254). Nothing in the app passed it untrusted
   data; the update closes the exposure regardless.
@@ -194,6 +201,13 @@ details.
 
 ### Fixed
 
+- **One commit builds the same app on any machine.** The commit identifier in
+  About now always has eight characters, whatever the clone, and native libraries
+  are stripped by a pinned NDK: a release build without it fails instead of
+  shipping them unstripped.
+- **The privacy policy no longer presents "Execute app functions" as in use.**
+  Android grants that permission only to system apps, so on a normal install
+  nothing uses it.
 - **The privacy indicator counts every connection the app opens.** The More
   tab's footer read "no network calls" while a Wikipedia search, an
   `http_request`, a delegated task, a network embedding model, or Hugging Face

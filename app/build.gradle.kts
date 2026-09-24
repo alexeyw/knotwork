@@ -9,7 +9,9 @@ import app.knotwork.android.buildtools.ExternalAutomationDocsGenerator
 import app.knotwork.android.buildtools.FileMapSpec
 import app.knotwork.android.buildtools.GenerateDocumentationLinksTask
 import app.knotwork.android.buildtools.GenerateFileMapTask
+import app.knotwork.android.buildtools.GitCommitId
 import app.knotwork.android.buildtools.LintBaselineGuard
+import app.knotwork.android.buildtools.PinnedNdk
 import app.knotwork.android.buildtools.R8MappingChecker
 import app.knotwork.android.buildtools.ReleaseVersionChecker
 import app.knotwork.android.buildtools.ReportExternalDocLinksTask
@@ -23,31 +25,36 @@ import app.knotwork.android.buildtools.VerifyDocsHygieneTask
 import app.knotwork.android.buildtools.VerifyDocumentationLinksTask
 import app.knotwork.android.buildtools.VerifyFileMapTask
 import app.knotwork.android.buildtools.VerifyForbiddenVocabularyTask
+import app.knotwork.android.buildtools.VerifyKeepRuleTargetsTask
 import app.knotwork.android.buildtools.VerifyMergedManifestTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
 import app.knotwork.android.buildtools.VerifySupplyChainPinsTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
+import com.android.build.api.artifact.ScopedArtifact
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.ScopedArtifacts
 import dev.detekt.gradle.Detekt
 import java.util.Properties
 import java.util.zip.ZipFile
 
 /**
- * Resolves the current short git SHA (e.g. `19b9c8f`) via
- * `providers.exec("git", "rev-parse", "--short", "HEAD")`. Returns
- * `"unknown"` when git is absent, the working tree is not a repository,
- * or the command otherwise fails (e.g. a tarball-based release build on a
- * CI runner that lacks git history).
+ * Resolves the commit identifier baked into `BuildConfig.GIT_SHA`: the first
+ * eight characters of the full hash of `HEAD` (e.g. `19b9c8f0`), via
+ * [GitCommitId]. Not `git rev-parse --short`, whose length follows the clone's
+ * depth and the host's `core.abbrev` — one commit then compiled to two different
+ * dex files on CI and on a full clone. Returns `"unknown"` when git is absent,
+ * the working tree is not a repository, or the command otherwise fails (e.g. a
+ * tarball-based build with no git history).
  */
 fun Project.resolveGitSha(): String = runCatching {
     val output = providers.exec {
-        commandLine("git", "rev-parse", "--short", "HEAD")
+        commandLine(GitCommitId.COMMAND)
         isIgnoreExitValue = true
     }
     val exitCode = output.result.get().exitValue
     if (exitCode == 0) {
-        output.standardOutput.asText.get().trim().ifEmpty { "unknown" }
+        GitCommitId.of(output.standardOutput.asText.get()) ?: "unknown"
     } else {
         "unknown"
     }
@@ -185,6 +192,13 @@ android {
     compileSdk {
         version = release(37)
     }
+    // The NDK whose `llvm-strip` strips the prebuilt native libraries. The app
+    // compiles no native code, but left to its default AGP silently packages the
+    // libraries unstripped on a host that lacks its default NDK — the same commit
+    // then shipped different `.so` bytes from CI and from a laptop. Pinned in the
+    // version catalog; `verify<Variant>PinnedNdk` below fails a release build
+    // without it.
+    ndkVersion = libs.versions.ndk.get()
 
     defaultConfig {
         applicationId = "app.knotwork.android"
@@ -237,6 +251,17 @@ android {
                 storePassword = releaseSigning.storePassword
                 keyAlias = releaseSigning.keyAlias
                 keyPassword = releaseSigning.keyPassword
+                // APK Signature Scheme v3 next to v2 (v1 is off at this minSdk).
+                // v3 is the scheme a signing-key rotation is expressed in; with a
+                // single key it changes nothing a device can observe, and it does
+                // not make a LOST key recoverable — a rotation is signed by the
+                // old key. v2 has to be asked for explicitly: at minSdk >= 28 AGP
+                // drops it as soon as v3 is on (measured: a v3-only APK), while
+                // every artefact published so far is v2 — keeping it makes the
+                // change purely additive. `release.yml` checks each published APK
+                // carries both.
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }
@@ -2053,9 +2078,19 @@ val r8ProtectedPackages: List<String> = listOf("com.google.common.flogger.")
 // cannot see. MediaPipe parses its task graph as a protobuf on every
 // `TextEmbedder.createFromOptions`, so an abstractified message class breaks
 // the on-device embedding path — and therefore all of long-term memory.
+//
+// The two AppFunctions classes are KSP output of this app that
+// `androidx.appfunctions` loads BY NAME: the aggregated invoker and inventory
+// the platform dispatches every `@AppFunction` call through. The library's own
+// consumer rules keep them today (its `proguard.txt` carries a TODO to replace
+// those rules with a mapping, on an alpha); if that ever stops matching, the
+// indexer would find no function and the device would look unsupported. Being
+// in the dex under their own name, concrete, is exactly what this check asserts.
 val r8RequiredInstantiableClasses: List<String> = listOf(
     "com.google.protobuf.Any",
     "com.google.protobuf.UnknownFieldSetLite",
+    "androidx.appfunctions.service.internal.\$AggregatedAppFunctionInvoker_Impl",
+    "androidx.appfunctions.internal.\$AggregatedAppFunctionInventory_Impl",
 )
 androidComponents {
     onVariants { variant ->
@@ -2136,6 +2171,53 @@ androidComponents {
                 }
             }
         }
+
+        // Third guard, and the only one that runs BEFORE R8: every name in
+        // `proguard-rules.pro` must exist on the classpath R8 is about to read.
+        // R8 matches a misspelt or moved name with nothing and says nothing —
+        // four AppFunctions rules and a LiteRT one protected nothing for as long
+        // as they existed. The classes are the variant's own view of what R8
+        // consumes (every scope) plus the SDK boot classpath.
+        val verifyKeepRuleTargets = tasks.register<VerifyKeepRuleTargetsTask>("verify${variantName}KeepRuleTargets") {
+            group = "verification"
+            description = "Fails the release build if a keep rule names a class that is not on the classpath."
+            rulesFile.set(layout.projectDirectory.file("proguard-rules.pro"))
+            bootClasspath.from(androidComponents.sdkComponents.bootClasspath)
+            checkedVariant.set(variant.name)
+            stampFile.set(layout.buildDirectory.file("reports/keep-rule-targets/${variant.name}.txt"))
+        }
+        variant.artifacts.forScope(ScopedArtifacts.Scope.ALL)
+            .use(verifyKeepRuleTargets)
+            .toGet(
+                ScopedArtifact.CLASSES,
+                VerifyKeepRuleTargetsTask::classJars,
+                VerifyKeepRuleTargetsTask::classDirectories,
+            )
+        tasks.matching { it.name == "minify${variantName}WithR8" }.configureEach { dependsOn(verifyKeepRuleTargets) }
+
+        // Stripping with the pinned NDK, or not at all. AGP never downloads an
+        // NDK to strip with: without the pinned one it prints "Unable to strip
+        // the following libraries, packaging them as they are" and succeeds, and
+        // the release then differs from CI's in its native libraries (measured:
+        // 3 of 5). So the release build refuses to start stripping instead.
+        val pinnedNdkVersion = libs.versions.ndk.get()
+        val sdkDirectory = androidComponents.sdkComponents.sdkDirectory
+        val verifyPinnedNdk = tasks.register("verify${variantName}PinnedNdk") {
+            group = "verification"
+            description = "Fails the release build if the pinned NDK that strips native libraries is not installed."
+            val checkedVariant = variant.name
+            doLast {
+                PinnedNdk.problem(sdkDirectory.get().asFile, pinnedNdkVersion)?.let { problem ->
+                    throw GradleException(
+                        "`$checkedVariant` strips its native libraries with NDK $pinnedNdkVersion " +
+                            "(`ndk` in gradle/libs.versions.toml). $problem\n" +
+                            "Install it with: sdkmanager \"ndk;$pinnedNdkVersion\" " +
+                            "(Android Studio: SDK Manager → SDK Tools → Show Package Details → NDK (Side by side)).",
+                    )
+                }
+            }
+        }
+        tasks.matching { it.name == "strip${variantName}DebugSymbols" }.configureEach { dependsOn(verifyPinnedNdk) }
 
         // Both packaging paths, not just the APK: the distribution artefact for
         // Play is the AAB, and a guard that only watches `assemble` would wave

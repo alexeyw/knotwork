@@ -11,9 +11,16 @@
     Google dependency — visible to anyone who unzips the APK, and to the
     scanners F-Droid-compatible indexes run.
 
-    Nothing was ever sent through them: R8 strips the transport implementation,
-    and no CCT endpoint survives into the dex. The components are removed here
-    so the manifest stops advertising a collector that does not exist.
+    The transport classes themselves stay in the dex, and so does the CCT
+    endpoint constant: `CctBackendFactory` is annotated `@androidx.annotation.Keep`
+    (so androidx.annotation's own rule keeps it — R8's `-whyareyoukeeping` names
+    that rule), and its `create()` references the destination that carries the
+    endpoint. What makes them inert is these three removals — without the
+    discovery service the backend registry resolves no backend, and without the
+    scheduler components nothing can schedule an upload. So the guarantee lives
+    here, not in R8, and it is checked: the `absent` lines of
+    `config/merged-manifest/fossRelease.txt` fail the build if any
+    `com.google.android.datatransport` component comes back.
 
     Why remove the components rather than exclude the dependency: excluding
     `com.google.android.datatransport` from the `foss` configurations builds,

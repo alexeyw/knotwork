@@ -16,7 +16,8 @@ import org.gradle.api.tasks.VerificationException
 
 /**
  * Fails the build when the merged manifest of a shipping variant has an entry
- * surface its committed expectation does not list, or has lost one it does.
+ * surface its committed expectation does not list, or has lost one it does — or
+ * declares anything carrying a text the expectation forbids with an `absent` line.
  *
  * The expectation is edited by hand, and there is deliberately no task that
  * rewrites it: every line is a decision — a permission the privacy policy has to
@@ -56,9 +57,15 @@ abstract class VerifyMergedManifestTask : DefaultTask() {
     /** Compares the merged manifest's entry surfaces with the expectation. */
     @TaskAction
     fun verify() {
-        val actual = MergedManifestInventory.of(mergedManifest.get().asFile.readText())
+        val manifestXml = mergedManifest.get().asFile.readText()
+        val actual = MergedManifestInventory.of(manifestXml)
         val expectationFile = expectation.get().asFile
-        val expected = MergedManifestInventory.parseExpectation(expectationFile.readText())
+        val expectationText = expectationFile.readText()
+        val expected = MergedManifestInventory.parseExpectation(expectationText)
+        val forbidden = MergedManifestInventory.occurrences(
+            manifestXml,
+            MergedManifestInventory.parseAbsences(expectationText),
+        )
         if (actual.isEmpty()) {
             // A manifest with no permission and no export at all is not this app:
             // the parser, not the manifest, has changed.
@@ -68,9 +75,26 @@ abstract class VerifyMergedManifestTask : DefaultTask() {
             )
         }
 
+        val path = expectationFile.relativeTo(repositoryRoot.get().asFile).invariantSeparatorsPath
+        if (forbidden.isNotEmpty()) {
+            // Checked before the entry list: a forbidden declaration is the more
+            // serious of the two, and it is usually not exported, so the drift
+            // below would say nothing about it.
+            throw VerificationException(
+                buildString {
+                    appendLine("The merged manifest of `${checkedVariant.get()}` declares what $path forbids:")
+                    forbidden.forEach { appendLine("  ! $it") }
+                    appendLine()
+                    append(
+                        "Find the contributing library in `app/build/outputs/logs/manifest-merger-*-report.txt` " +
+                            "and remove the element in the variant's source manifest with `tools:node=\"remove\"`.",
+                    )
+                },
+            )
+        }
+
         val drift = MergedManifestInventory.compare(expected, actual)
         if (!drift.isEmpty) {
-            val path = expectationFile.relativeTo(repositoryRoot.get().asFile).invariantSeparatorsPath
             throw VerificationException(
                 buildString {
                     appendLine("The merged manifest of `${checkedVariant.get()}` disagrees with $path:")

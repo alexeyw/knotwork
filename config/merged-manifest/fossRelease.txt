@@ -7,13 +7,14 @@
 # SECURITY.md § Automation triggers and entry surfaces. When the build fails, find
 # where an added line comes from in app/build/outputs/logs/manifest-merger-*-report.txt.
 # fullRelease.txt lists the same entries today; the flavours are checked separately
-# because they ship separately.
+# because they ship separately — and only this one carries `absent` lines.
 #
 # Format — one entry per line, `#` starts a comment:
 #   uses-permission NAME [maxSdkVersion=N]
 #   permission NAME protectionLevel=LEVEL
 #   exported TAG NAME permission=PERMISSION|none
 #   queries package|intent|provider ...
+#   absent TEXT        — no attribute of any element, exported or not, contains TEXT
 
 # ── Permissions the app requests ─────────────────────────────────────────────
 uses-permission android.permission.ACCESS_COARSE_LOCATION
@@ -49,4 +50,13 @@ exported service androidx.work.impl.background.systemjob.SystemJobService permis
 # ── Package visibility ───────────────────────────────────────────────────────
 queries intent action=android.app.appfunctions.AppFunctionService
 queries intent action=app.knotwork.android.action.RUN_RESULT
-queries package app.knotwork.android.toolsprobe  # the end-to-end test target; ships in release today
+
+# ── What this flavour promises not to declare ────────────────────────────────
+# The classes of Google's data-transport library (and its CCT endpoint) still ship
+# in the dex, pulled in by MediaPipe; what keeps them inert is that no component
+# lets them find a backend or schedule an upload. src/foss/AndroidManifest.xml
+# removes the three that MediaPipe's dependency declares. None is exported, so the
+# entries above would not see one come back — these lines do.
+absent com.google.android.datatransport
+absent com.google.firebase
+absent com.google.android.gms

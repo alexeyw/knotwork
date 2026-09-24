@@ -230,4 +230,60 @@ class MergedManifestInventoryTest {
         assertEquals(listOf(lines.first()), drift.duplicated)
         assertTrue(!drift.isEmpty)
     }
+
+    @Test
+    fun `given a release manifest that still declares the data-transport components then each is an occurrence`() {
+        // The state the foss overlay removes: three components, none of them
+        // exported, so the entry inventory lists none of them.
+        val manifest = checkNotNull(javaClass.getResource("/merged-manifest/release-with-workmanager.xml")).readText()
+
+        val found = MergedManifestInventory.occurrences(manifest, listOf("com.google.android.datatransport"))
+
+        assertEquals(
+            listOf(
+                "com.google.android.datatransport in service " +
+                    "com.google.android.datatransport.runtime.backends.TransportBackendDiscovery",
+                "com.google.android.datatransport in meta-data " +
+                    "backend:com.google.android.datatransport.cct.CctBackendFactory",
+                "com.google.android.datatransport in service " +
+                    "com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService",
+                "com.google.android.datatransport in receiver " +
+                    "com.google.android.datatransport.runtime.scheduling.jobscheduling." +
+                    "AlarmManagerSchedulerBroadcastReceiver",
+            ),
+            found,
+        )
+        assertTrue(MergedManifestInventory.of(manifest).none { it.contains("datatransport") })
+    }
+
+    @Test
+    fun `given a forbidden text in no attribute then there is no occurrence`() {
+        assertEquals(emptyList<String>(), MergedManifestInventory.occurrences(manifest, listOf("com.google.firebase")))
+    }
+
+    @Test
+    fun `given a forbidden text in a queries entry then it is an occurrence too`() {
+        val found = MergedManifestInventory.occurrences(manifest, listOf("com.example.companion"))
+
+        assertEquals(listOf("com.example.companion in package com.example.companion"), found)
+    }
+
+    @Test
+    fun `given an expectation with absent lines then they are absences and not entries`() {
+        val text = """
+            # header
+            uses-permission android.permission.INTERNET
+            absent com.google.firebase   # no Firebase component in this flavour
+            absent com.google.android.gms
+        """.trimIndent()
+
+        assertEquals(
+            listOf("uses-permission android.permission.INTERNET"),
+            MergedManifestInventory.parseExpectation(text),
+        )
+        assertEquals(
+            listOf("com.google.firebase", "com.google.android.gms"),
+            MergedManifestInventory.parseAbsences(text),
+        )
+    }
 }
