@@ -27,6 +27,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -117,6 +118,26 @@ class CloudLlmNodeExecutorTest {
         val result = outputs.filterIsInstance<NodeOutput.Result>().single().result
         assertEquals(3, result.tokenCount)
     }
+
+    @Test
+    fun `given a streamed answer when execute then the privacy indicator is told for as long as it streams`() =
+        runTest {
+            // Once before the call and once per frame: recorded at the start alone, a
+            // three-minute answer would read "no network calls in last 2 m" mid-stream.
+            val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "anthropic")
+            val client: LLMClient = mockk(relaxed = true)
+            coEvery { client.executeStreaming(any(), any<LLModel>()) } returns flowOf(
+                StreamFrame.TextDelta("a"),
+                StreamFrame.TextDelta("b"),
+                StreamFrame.TextDelta("c"),
+            )
+            coEvery { clientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns client
+            coEvery { modelResolver.resolveModel(CloudProvider.ANTHROPIC) } returns AnthropicModels.Sonnet_4_5
+
+            executor.execute(node, "input", "s1", "Q").toList()
+
+            verify(exactly = 4) { networkActivityTracker.recordOutbound() }
+        }
 
     @Test
     fun `given no credentials when execute then the node fails instead of answering`() = runTest {

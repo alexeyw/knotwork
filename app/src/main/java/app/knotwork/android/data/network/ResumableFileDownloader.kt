@@ -3,6 +3,7 @@ package app.knotwork.android.data.network
 import android.content.Context
 import app.knotwork.android.data.local.PathContainment
 import app.knotwork.android.domain.constants.ModelDiscoveryConstants
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -43,10 +44,14 @@ import javax.inject.Inject
  *
  * @property context Application context, used to resolve the models directory.
  * @property client Shared OkHttp client.
+ * @property networkActivityTracker Told when a request is sent and again as bytes arrive,
+ *   so the More tab's privacy indicator reads "online" for the whole of a transfer that
+ *   can run for many minutes, not only for its first one.
  */
 class ResumableFileDownloader @Inject constructor(
     @ApplicationContext private val context: Context,
     private val client: OkHttpClient,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) {
 
     /** Terminal result of one download attempt. */
@@ -142,6 +147,7 @@ class ResumableFileDownloader @Inject constructor(
             }
             .build()
 
+        networkActivityTracker.recordOutbound()
         client.newCall(request).execute().use { response ->
             when {
                 response.code == HTTP_RANGE_NOT_SATISFIABLE && allowResume -> {
@@ -217,6 +223,7 @@ class ResumableFileDownloader @Inject constructor(
                 sink.write(buffer, read)
                 written += read
                 transferred.bytes += read
+                networkActivityTracker.recordOutbound()
                 lastPercent = reportProgress(written, totalBytes, lastPercent, onProgress)
             }
             sink.flush()

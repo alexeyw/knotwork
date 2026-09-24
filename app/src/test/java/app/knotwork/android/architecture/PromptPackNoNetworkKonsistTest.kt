@@ -48,7 +48,9 @@ class PromptPackNoNetworkKonsistTest {
         assertTrue(EMPTY_SCOPE_FAILURE, files.size >= MINIMUM_GUARDED_FILES)
 
         files.assertFalse(additionalMessage = NETWORK_IMPORT_FAILURE) { file ->
-            file.imports.any { import -> FORBIDDEN_PREFIXES.any { prefix -> import.name.startsWith(prefix) } }
+            file.imports.any { import ->
+                NetworkClientImports.PREFIXES.any { prefix -> import.name.startsWith(prefix) }
+            }
         }
     }
 
@@ -87,15 +89,6 @@ class PromptPackNoNetworkKonsistTest {
         }
 
     private companion object {
-        /** Network clients the prompt-pack path must not reach for. */
-        val FORBIDDEN_PREFIXES = listOf(
-            "okhttp3.",
-            "retrofit2.",
-            "ai.koog.",
-            "io.ktor.",
-            "java.net.",
-        )
-
         /**
          * Importing anything from these packages puts a file on the prompt-pack
          * path.
@@ -125,7 +118,7 @@ class PromptPackNoNetworkKonsistTest {
 
         const val NETWORK_IMPORT_FAILURE =
             "a prompt pack is imported from a local file the user picked, never fetched: no file on the " +
-                "prompt-pack path may import a network client (OkHttp / Retrofit / Koog / Ktor / java.net). " +
+                "prompt-pack path may import a network client (NetworkClientImports). " +
                 "A pack downloaded over a link would be an executable artefact from an untrusted source " +
                 "landing in the system prompt of an agent that holds tools."
     }

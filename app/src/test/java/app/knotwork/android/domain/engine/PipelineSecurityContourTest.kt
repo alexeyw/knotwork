@@ -159,7 +159,8 @@ class PipelineSecurityContourTest {
         every { settingsRepository.httpToolMaxResponseBytes } returns flowOf(100_000L)
         // Allowlist contains a different domain so the test target is rejected as off-list.
         every { settingsRepository.allowedHttpDomains } returns flowOf(listOf("example.org"))
-        httpRequestExecutor = HttpRequestExecutor(OkHttpClient(), settingsRepository, apiKeyRepository)
+        httpRequestExecutor =
+            HttpRequestExecutor(OkHttpClient(), settingsRepository, apiKeyRepository, networkActivityTracker)
 
         val toolNodeExecutor = ToolNodeExecutor(
             llmEngine,

@@ -66,7 +66,7 @@ class MoreViewModel @Inject constructor(
         taskQueueManager.activeSessionsState,
         networkActivityTracker.lastOutboundAt,
         // Independent wall-clock ticker so the footer privacy pill
-        // transitions (`online · cloud enabled` → `on-device · no
+        // transitions (`online · network call just now` → `on-device · no
         // network calls in last N m` → minute-increment) fire even
         // when no upstream data flow emits. Without this tick the
         // status text would stay stuck on whatever it was at the last
@@ -163,7 +163,7 @@ class MoreViewModel @Inject constructor(
     private companion object {
         /**
          * Outbound-call timestamps younger than this window flip the footer
-         * indicator from `on-device` (green) to `online · cloud enabled`
+         * indicator from `on-device` (green) to `online · network call just now`
          * (warn). 60 s ≈ "in this session".
          */
         const val FRESH_NETWORK_WINDOW_MS: Long = 60_000L
@@ -250,7 +250,7 @@ internal fun formatWorkspaceStats(result: WorkspaceResult<WorkspaceListing>): St
  *
  * - `null` → `on-device · no network calls yet`
  * - older than 60 s → `on-device · no network calls in last N m`
- * - newer than 60 s → `online · cloud enabled`
+ * - newer than 60 s → `online · network call just now`
  *
  * @param now epoch milliseconds at which the message is computed.
  * @param lastOutboundAt epoch milliseconds of the most recent outbound
@@ -262,7 +262,7 @@ internal fun formatNetworkStatus(now: Long, lastOutboundAt: Long?): String {
     }
     val elapsedMs = (now - lastOutboundAt).coerceAtLeast(minimumValue = 0L)
     return if (elapsedMs < FRESH_WINDOW_MS) {
-        "online · cloud enabled"
+        "online · network call just now"
     } else {
         val minutes = elapsedMs / MS_PER_MINUTE
         "on-device · no network calls in last $minutes m"

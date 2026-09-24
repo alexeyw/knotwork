@@ -24,7 +24,9 @@ Only Kotlin files appear inside the generated blocks.
   - `ImageAttachmentEntryCensusTest.kt` - Census of the production files that start runs through `AgentOrchestratorUseCase`, with whether each can attach an image — and, if it can, proof that it asks the multimodal pre-flight (`CheckImageAttachmentUseCase`) first.
   - `InstrumentedTestExclusionGuardTest.kt` - Guard over the **instrumented-test exclusion list** — the set of instrumented tests the automated emulator runs deliberately do not execute.
   - `JournalExportNoNetworkKonsistTest.kt` - Konsist guard on the journal exports: **the journal leaves the device only in the user's own hands.**
+  - `KoogClientTimeoutKonsistTest.kt` - Census of every place production code constructs a Koog model client, requiring each to pass the shared deadlines, `CloudClientTimeouts.CONFIG`.
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
+  - `NetworkClientImports.kt` - The import prefixes that mean "this file can speak to the network", shared by every guard that asks the question: the allow-list `NetworkEgressInventoryKonsistTest` and the three deny-lists (`JournalExportNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest`, `UsageTelemetryNoNetworkKonsistTest`).
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
   - `OutboundBroadcastCensusTest.kt` - Census of the places the app sends a broadcast.
   - `PathContainmentGuardTest.kt` - A path prefix test lives in exactly one production file: `PathContainment`.
@@ -47,6 +49,7 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogClientFactoryTest.kt` - Tests for KoogClientFactory.
     - `KoogClientFactoryTimeoutTest.kt` - Guards the network deadlines applied to cloud clients.
     - `KoogStructuredInferenceClientFactoryTest.kt` - Unit tests for `KoogStructuredInferenceClientFactory` — the cloud-backed `app.knotwork.android.domain.engine.structured.StructuredInferenceClient` seam for the structured-output gate.
+    - `KoogTimeoutReflection.kt` - Reads the `ConnectionTimeoutConfig` a Koog provider client was built with.
     - `LiteRTLlmEngineTest.kt` - Tests for LiteRTLlmEngine.
     - `LocalOnlyPolicyParserAgreementTest.kt` - Checks `LocalOnlyPolicy` against the parser that actually opens the connection.
     - `MediaPipeTextEmbeddingEngineTest.kt` - Tests for MediaPipeTextEmbeddingEngine.
@@ -93,6 +96,8 @@ Only Kotlin files appear inside the generated blocks.
     - `McpConnectionPoolTest.kt` - Unit tests for `McpConnectionPool` — the single owner of live MCP connections.
   - `network/` - Tests for the OkHttp guards, the download path and the Hugging Face client.
     - `AndroidModelDownloadManagerTest.kt` - Tests for AndroidModelDownloadManager.
+    - `huggingface/` - Tests for the Hugging Face Hub client.
+      - `HuggingFaceModelApiTest.kt` - Unit tests for `HuggingFaceModelApi`'s part in the More tab's privacy indicator.
     - `ResumableFileDownloaderTest.kt` - Covers the streaming downloader, with the weight on the paths that only matter once a transfer can be interrupted: resuming a partial file, refusing to resume when that would corrupt the result, and never letting an unfinished transfer sit at the final file name where it would pass for an installed model.
   - `prompt/` - Tests for the built-in `PromptVariableProvider` implementations.
     - `DateVariableProviderTest.kt` - Unit tests for `DateVariableProvider`.
@@ -118,6 +123,7 @@ Only Kotlin files appear inside the generated blocks.
     - `MetricsRepositoryImplTest.kt` - Tests for `MetricsRepositoryImpl`: per-node aggregation and live-inference updates.
     - `ModelDiscoveryRepositoryImplTest.kt` - Unit tests for `ModelDiscoveryRepositoryImpl` backed by a `MockWebServer` instance standing in for the Hugging Face Hub.
     - `ModelPerformanceRepositoryImplTest.kt` - Unit tests for `ModelPerformanceRepositoryImpl`.
+    - `NetworkActivityTrackerImplTest.kt` - Unit tests for `NetworkActivityTrackerImpl`.
     - `NetworkStateRepositoryImplTest.kt` - Tests for NetworkStateRepositoryImpl.
     - `PendingInteractionRepositoryImplTest.kt` - Unit tests for `PendingInteractionRepositoryImpl`.
     - `PipelineRunRepositoryImplTest.kt` - Unit tests for `PipelineRunRepositoryImpl`: entity↔domain mapping, the terminal-guard plumbing (every mutating call must pass the terminal status list to the DAO), the ownership-filtered orphan query, and the best-effort contract (storage failures are absorbed, never propagated).
@@ -138,6 +144,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ChargingTriggerSweepWorkerTest.kt` - Robolectric coverage for `ChargingTriggerSweepWorker` — the one-shot worker `PowerConnectionReceiver` enqueues on a power edge to fire charging triggers immediately.
     - `embedding/` - Tests for the embedding service layer.
       - `CloudEmbeddingProviderTest.kt` - Unit tests for `CloudEmbeddingProvider`.
+      - `DefaultKoogEmbedderFactoryTest.kt` - Unit tests for `DefaultKoogEmbedderFactory`.
       - `OllamaEmbeddingProviderTest.kt` - Unit tests for `OllamaEmbeddingProvider`.
       - `UseEmbeddingProviderTest.kt` - Unit tests for `UseEmbeddingProvider`.
     - `ExternalAutomationCallbackSenderTest.kt` - Robolectric coverage for `ExternalAutomationCallbackSender` — the outbound half of the contract.

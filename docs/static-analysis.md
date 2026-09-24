@@ -391,7 +391,8 @@ flag them with spurious, environment-dependent violations.
 | `UsageTelemetryNoNetworkKonsistTest` | No file on the local usage-telemetry path imports a network client. The statistics stay on-device. |
 | `PromptPackNoNetworkKonsistTest`   | No file on the prompt-pack path imports a network client — a pack is imported from a file the user picked, never fetched (see below). |
 | `JournalExportNoNetworkKonsistTest` | No file on the journal-export path imports a network client — the trigger and external-request journals leave the device only through the share sheet or a file the user picked (see below). |
-| `NetworkEgressInventoryKonsistTest` | Every file that imports a network client is named in an inventory, with either the `PRIVACY.md` section describing what leaves the device along it or the reason it opens nothing (see below). |
+| `NetworkEgressInventoryKonsistTest` | Every shipping file (every production source set of `app` and `:catalog`) that imports a network client is named in an inventory, with either the `PRIVACY.md` section describing what leaves the device along it or the reason it opens nothing — and, for an egress, what the More tab's privacy indicator sees of it (see below). |
+| `KoogClientTimeoutKonsistTest`     | Every construction of a Koog model client passes the shared deadlines (`CloudClientTimeouts.CONFIG`); without them Koog's 900 s request and socket defaults apply, which the embedding clients once did. |
 | `ContentUriReadInventoryTest`      | Every file that opens a URI through `ContentResolver` is inventoried with where the URI comes from; one another app can supply must pass `ForeignContentUri` (another app's `content://` only), since the read runs with this app's identity. |
 | `ImageAttachmentEntryCensusTest`   | Every file that starts runs says whether it can attach an image; one that can must call the multimodal pre-flight (`CheckImageAttachmentUseCase`), and one listed as text-only may not handle an attachment. |
 | `TransientCacheDirectoryGuardTest` | Every directory the app creates under its cache, and every `<cache-path>` the `FileProvider` serves, is an entry of `TransientCacheDirectory` — so the daily sweep removes what its owner misses. |
@@ -450,15 +451,32 @@ third round was the built-in `search_tool`, reaching `wikipedia.org` since
 before the first public release while four documents said the paths were five
 and each one user-configured.
 
-`NetworkEgressInventoryKonsistTest` inverts the shape. Any file in `app/src/main`
-whose **imports** include a network client (the same five prefixes the deny-lists
-use) must appear in a hand-written inventory carrying a verdict: `Opens`, naming
-the `PRIVACY.md` subsection that describes what goes out along it, or `None`,
-with the reason it starts no request — a URL builder, a model descriptor, an
-interceptor on somebody else's client. A named section has to exist, and an entry
-naming no such file fails too, so the inventory cannot rot in either direction.
-Selection is by import rather than by name, which is what keeps it clear of the
-trap the three deny-lists share.
+`NetworkEgressInventoryKonsistTest` inverts the shape. Any shipping file — every
+production source set of `app` (`main`, the flavours, `debug`) and of `:catalog` —
+whose **imports** include a network client must appear in a hand-written inventory
+carrying a verdict: `Opens`, naming the `PRIVACY.md` subsection that describes what
+goes out along it, or `None`, with the reason it starts no request — a URL builder,
+a model descriptor, an interceptor on somebody else's client. A named section has
+to exist, and an entry naming no such file fails too, so the inventory cannot rot
+in either direction. Selection is by import rather than by name, which is what
+keeps it clear of the trap the three deny-lists share.
+
+The import prefixes live in one list, `NetworkClientImports`, which all four rules
+read. They used to be four copies of five prefixes, and a namespace missing from one
+was missing from all: the image loader (`coil3.`), the Firebase SDK and
+`android.webkit.` were. So was a whole source set — scoped to `app/src/main`, the
+inventory had no entry for the Crashlytics upload in `app/src/full`. Coil in
+`:catalog` is inventoried as opening nothing, and that verdict rests on a fact the
+rule checks rather than assumes: Coil 3 fetches over the network only through a
+fetcher a `coil-network-*` artifact registers with `ServiceLoader`, and the rule
+asserts that registry is empty.
+
+Each egress entry also says what the More tab's privacy indicator
+(`NetworkActivityTracker`) learns of it: the file records the call itself, named
+callers record it, or it is not shown and the entry says why. The first two are
+checked against the code (`recordOutbound(` outside comments). The indicator reads
+"no network calls", and it once heard of three of the ten paths it counts now; a new egress
+now fails here until somebody decides what the indicator says about it.
 
 What it does **not** do is check that the named section describes the path
 *truthfully*; no assertion can, because the truth of that prose is a claim about
@@ -466,7 +484,10 @@ code somewhere else. It removes the failure mode that actually occurred — a pa
 reaching the network with no entry anywhere, which nobody had to notice. It was
 observed red twice before it was believed: once with `SearchTool.kt` dropped from
 the inventory (the message names the file), and once against the privacy policy
-as it shipped in `0.10.0`, which the rule refuses. The privacy policy is already
+as it shipped in `0.10.0`, which the rule refuses. The wider scope and the
+indicator column were observed red the same way: with the Crashlytics entry
+removed, with every added `recordOutbound()` call removed, and with a bogus
+fetcher registered for Coil. The privacy policy is already
 a declared `Test` input of the module, so an edit to it re-runs the rule instead
 of answering from cache — checked by running twice for `UP-TO-DATE`, editing, and
 watching the task execute.

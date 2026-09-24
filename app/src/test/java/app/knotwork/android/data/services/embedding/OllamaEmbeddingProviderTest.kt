@@ -2,6 +2,7 @@ package app.knotwork.android.data.services.embedding
 
 import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
 import app.knotwork.android.data.engine.ModelNetworkGate
+import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingException
@@ -16,6 +17,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -40,11 +43,18 @@ class OllamaEmbeddingProviderTest {
         every { approvedCleartextOrigins } returns flowOf(setOf(LAN_URL))
     }
 
+    private val networkActivity = NetworkActivityTrackerImpl()
+
     private lateinit var provider: OllamaEmbeddingProvider
 
     @Before
     fun setup() {
-        provider = OllamaEmbeddingProvider(embedderFactory, apiKeyRepository, ModelNetworkGate(settingsRepository))
+        provider = OllamaEmbeddingProvider(
+            embedderFactory = embedderFactory,
+            apiKeyRepository = apiKeyRepository,
+            modelNetworkGate = ModelNetworkGate(settingsRepository),
+            networkActivityTracker = networkActivity,
+        )
     }
 
     @Test
@@ -79,6 +89,26 @@ class OllamaEmbeddingProviderTest {
 
         assertArrayEquals(floatArrayOf(0.5f, 0.25f), result, 1e-6f)
         coVerify(exactly = 1) { client.embed(listOf("hi"), any()) }
+    }
+
+    @Test
+    fun `given the gate admits the call when embed then the privacy indicator records it`() = runTest {
+        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(LAN_URL)
+        coEvery { embedderFactory.ollamaClient(LAN_URL) } returns client
+        coEvery { client.embed(any<List<String>>(), any()) } returns listOf(listOf(0.5))
+
+        provider.embed("hi")
+
+        assertNotNull("memory text left without being recorded", networkActivity.lastOutboundAt.value)
+    }
+
+    @Test
+    fun `given the gate refuses the call when embed then nothing is recorded`() = runTest {
+        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("http://203.0.113.7:11434")
+
+        runCatching { provider.embed("private memory text") }
+
+        assertNull(networkActivity.lastOutboundAt.value)
     }
 
     @Test

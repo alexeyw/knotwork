@@ -1,9 +1,11 @@
 package app.knotwork.android.data.network
 
 import android.content.Context
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -39,6 +41,7 @@ class ResumableFileDownloaderTest {
     private lateinit var client: OkHttpClient
     private lateinit var tempDir: File
     private lateinit var downloader: ResumableFileDownloader
+    private lateinit var networkActivity: NetworkActivityTracker
 
     /** Captures the request handed to OkHttp so header assertions can read it. */
     private val sentRequest = slot<Request>()
@@ -50,7 +53,8 @@ class ResumableFileDownloaderTest {
         tempDir = File(System.getProperty("java.io.tmpdir"), "resumable_download_test_${System.nanoTime()}")
         tempDir.mkdirs()
         every { context.getExternalFilesDir(null) } returns tempDir
-        downloader = ResumableFileDownloader(context, client)
+        networkActivity = mockk(relaxed = true)
+        downloader = ResumableFileDownloader(context, client, networkActivity)
     }
 
     @After
@@ -73,6 +77,19 @@ class ResumableFileDownloaderTest {
         // Nothing partial is left behind once the rename happened.
         assertTrue(tempDir.listFiles()!!.none { it.name.endsWith(".part") })
     }
+
+    @Test
+    fun `given a transfer spanning several reads when downloading then the privacy indicator hears of each`() =
+        runTest {
+            // A model is gigabytes and takes minutes. Recorded only when the request went
+            // out, the More tab would read "no network calls in last 3 m" in the middle of
+            // the download — so the tracker is told again as bytes arrive.
+            respondWith(response(code = 200, body = "x".repeat(3 * 65_536)))
+
+            downloader.download(url, "model.bin", authToken = null) {}
+
+            verify(atLeast = 4) { networkActivity.recordOutbound() }
+        }
 
     @Test
     fun `given an interrupted transfer when it resumes then the range is requested and bytes are appended`() = runTest {
@@ -292,7 +309,7 @@ class ResumableFileDownloaderTest {
                 chain.proceed(request.newBuilder().url(local).build())
             }
             .build()
-        return ResumableFileDownloader(context, routed)
+        return ResumableFileDownloader(context, routed, networkActivity)
     }
 
     /** Mirrors the downloader's own part-file naming so tests can seed one. */

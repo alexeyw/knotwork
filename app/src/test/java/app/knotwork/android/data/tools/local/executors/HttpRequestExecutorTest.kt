@@ -1,5 +1,6 @@
 package app.knotwork.android.data.tools.local.executors
 
+import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.repositories.ApiKeyRepository
@@ -14,6 +15,8 @@ import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -32,6 +35,7 @@ class HttpRequestExecutorTest {
     private val settings = mockk<SettingsRepository>()
     private val apiKeys = mockk<ApiKeyRepository>(relaxed = true)
     private val client = OkHttpClient()
+    private val networkActivity = NetworkActivityTrackerImpl()
 
     private lateinit var executor: HttpRequestExecutor
 
@@ -46,7 +50,7 @@ class HttpRequestExecutorTest {
         every { apiKeys.getDeepSeekKey() } returns flowOf(null)
         every { settings.httpToolMaxResponseBytes } returns
             flowOf(SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT)
-        executor = HttpRequestExecutor(client, settings, apiKeys)
+        executor = HttpRequestExecutor(client, settings, apiKeys, networkActivity)
     }
 
     @After
@@ -102,6 +106,26 @@ class HttpRequestExecutorTest {
         assertTrue(result.contains("HTTP 200"))
         assertTrue(result.contains("hello world"))
         assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `given an allowlisted request when execute then the privacy indicator records it`() = runTest {
+        allow(server.hostName)
+        server.enqueue(MockResponse.Builder().code(200).body("hello world").build())
+
+        run("""{"method":"GET","url":"${server.url("/ok")}"}""")
+
+        assertNotNull("the request left without being recorded", networkActivity.lastOutboundAt.value)
+    }
+
+    @Test
+    fun `given a request refused before sending when execute then nothing is recorded`() = runTest {
+        allow("example.com")
+
+        run("""{"method":"GET","url":"${server.url("/data")}"}""")
+
+        assertEquals(0, server.requestCount)
+        assertNull(networkActivity.lastOutboundAt.value)
     }
 
     @Test

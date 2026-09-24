@@ -88,6 +88,19 @@ class KoogStructuredInferenceClientFactoryTest {
         verify { networkTracker.recordOutbound() }
     }
 
+    @Test
+    fun `given a streamed answer when infer then the privacy indicator is told for as long as it streams`() = runTest {
+        // Once before the call and once per frame, as on the free-form CLOUD path.
+        coEvery { clientFactory.createClient(CloudProvider.OPENAI, any()) } returns
+            FakeStreamingClient(flowOf(StreamFrame.TextDelta("{"), StreamFrame.TextDelta("}")))
+        coEvery { modelResolver.resolveModel(CloudProvider.OPENAI) } returns
+            LLModel(LLMProvider.OpenAI, "gpt", emptyList())
+
+        factory.create(CloudProvider.OPENAI) {}!!.inference.infer("prompt", temperature = null)
+
+        verify(exactly = 3) { networkTracker.recordOutbound() }
+    }
+
     /** [LLMClient] returning a scripted streaming flow; other members are unused. */
     private class FakeStreamingClient(private val frames: Flow<StreamFrame>) : LLMClient() {
         override fun llmProvider(): LLMProvider = LLMProvider.OpenAI

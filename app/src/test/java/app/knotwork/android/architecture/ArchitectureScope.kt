@@ -2,6 +2,7 @@ package app.knotwork.android.architecture
 
 import com.lemonappdev.konsist.api.Konsist
 import com.lemonappdev.konsist.api.container.KoScope
+import java.io.File
 
 /**
  * Shared Konsist scope for the architecture guard suite.
@@ -32,4 +33,43 @@ internal object ArchitectureScope {
      * test in the suite to avoid re-parsing the source tree per test.
      */
     val production: KoScope = Konsist.scopeFromDirectory(PRODUCTION_SOURCE_PATH)
+
+    /**
+     * Konsist scope over **every** production source set that ships: the `app` module's
+     * `main`, flavour (`full`, `foss`) and build-type (`debug`) sets, and the `:catalog`
+     * module's production sets.
+     *
+     * For the guards whose question is "what can the shipped app do", where [production]
+     * is too narrow: the Crashlytics upload lives in `app/src/full`, and the image loader
+     * the chat screen renders with lives in `:catalog`. Source sets are listed from disk
+     * rather than named, so a new flavour or build type is in scope the day it appears;
+     * test source sets are left out by name.
+     */
+    val allProductionSourceSets: KoScope by lazy {
+        SHIPPING_MODULES
+            .flatMap { module -> productionSourceSetsOf(module) }
+            .map(Konsist::scopeFromDirectory)
+            .reduce(KoScope::plus)
+    }
+
+    /** Modules whose code ships in the app. */
+    private val SHIPPING_MODULES = listOf("app", "catalog")
+
+    /**
+     * Root-relative paths of [module]'s production source sets, e.g. `app/src/full`.
+     *
+     * Resolved against the repository root found from the working directory: Gradle runs
+     * the unit tests from the module directory, Konsist resolves paths from the root.
+     */
+    private fun productionSourceSetsOf(module: String): List<String> {
+        val working = File("").absoluteFile
+        val root = if (File(working, "settings.gradle.kts").isFile) working else working.parentFile
+        val sources = File(root, "$module/src")
+        val sets = sources.listFiles().orEmpty()
+            .filter { it.isDirectory && !it.name.startsWith("test") && !it.name.startsWith("androidTest") }
+            .map { "$module/src/${it.name}" }
+            .sorted()
+        check(sets.isNotEmpty()) { "no production source sets under ${sources.path}" }
+        return sets
+    }
 }

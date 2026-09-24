@@ -163,7 +163,7 @@
     <string name="chat_report_dialog_title">Report this response</string>
     <string name="chat_report_dialog_body">Tell me what is wrong with what the model produced. This helps improve the pipelines and prompts that ship with the app.</string>
     <string name="chat_report_dialog_note_placeholder">What is wrong with this response? (optional)</string>
-    <string name="chat_report_dialog_disclosure">Nothing is sent automatically. Copy the report, or open a prefilled issue — the issue tracker is public, so review the text and remove anything private before you submit it.</string>
+    <string name="chat_report_dialog_disclosure">Nothing is sent automatically. Open issue puts this report in a GitHub link, so GitHub receives it when the page opens; it goes public only if you submit it. To edit it first, copy it instead.</string>
     <string name="chat_report_dialog_copy">Copy report</string>
     <string name="chat_report_dialog_cancel">Cancel</string>
     <string name="chat_report_dialog_open_issue">Open issue</string>

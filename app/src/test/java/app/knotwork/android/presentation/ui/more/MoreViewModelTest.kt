@@ -272,7 +272,7 @@ class MoreViewModelTest {
         testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertEquals("online · cloud enabled", state.networkStatusText)
+        assertEquals("online · network call just now", state.networkStatusText)
         assertFalse(state.networkStatusOk)
 
         job.cancel()

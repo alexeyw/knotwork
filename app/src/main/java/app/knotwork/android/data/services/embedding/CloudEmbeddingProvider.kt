@@ -4,6 +4,7 @@ import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.services.EmbeddingException
 import app.knotwork.android.domain.services.EmbeddingProvider
 import kotlinx.coroutines.flow.firstOrNull
@@ -17,7 +18,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * called through Koog's `OpenAILLMClient`.
  *
  * Reusing the Koog client (the same transport `KoogClientFactory` uses for chat
- * completions) means no bespoke HTTP code and consistent auth/timeout handling.
+ * completions) means no bespoke HTTP code; the deadlines are the chat clients' own
+ * ([app.knotwork.android.data.engine.CloudClientTimeouts]), applied by the factory.
  *
  * This provider never silently falls back to another backend: doing so would
  * break its [dimension] contract (a caller sizing buffers on `dimension = 1536`
@@ -35,12 +37,15 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property embedderFactory Builds the underlying Koog embedding client.
  * @property apiKeyRepository Source of the OpenAI API key.
  * @property modelNetworkGate Decides whether a cloud provider may be reached right now.
+ * @property networkActivityTracker Told about each embedding request before it is sent, so
+ *   the More tab's privacy indicator counts memory traffic too.
  */
 @Singleton
 class CloudEmbeddingProvider @Inject constructor(
     private val embedderFactory: KoogEmbedderFactory,
     private val apiKeyRepository: ApiKeyRepository,
     private val modelNetworkGate: ModelNetworkGate,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) : EmbeddingProvider {
 
     override val id: String = EmbeddingProvider.ID_OPENAI_3_SMALL
@@ -77,6 +82,7 @@ class CloudEmbeddingProvider @Inject constructor(
         }
 
         val client = embedderFactory.openAiClient(key)
+        networkActivityTracker.recordOutbound()
         return try {
             client.embed(texts, OpenAIModels.Embeddings.TextEmbedding3Small)
                 .map { it.toFloatVector() }

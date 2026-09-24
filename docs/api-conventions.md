@@ -196,8 +196,10 @@ interface Tool {
   equality — never from "a token is saved": the Hub's CDN redirect needs no token
   (OkHttp drops `Authorization` on a host change), and a pasted URL for any other
   host never gets it. Discovery browsing and metadata calls are anonymous.
-- **Every cloud client carries an explicit `ConnectionTimeoutConfig`**, applied in
-  `KoogClientFactory`: 60 s socket, 30 s connect, 900 s request. The socket value
+- **Every cloud client carries an explicit `ConnectionTimeoutConfig`** — one shared
+  value, `CloudClientTimeouts.CONFIG`, passed by `KoogClientFactory` (chat) and
+  `DefaultKoogEmbedderFactory` (embeddings), and required at every construction site
+  by `KoogClientTimeoutKonsistTest`: 60 s socket, 30 s connect, 900 s request. The socket value
   is the load-bearing one because Ktor applies it *per read* — it bounds how long
   the provider may stay **silent**, not how long a healthy answer may take, so a
   long streaming reply is never cut short for being long. Do not "simplify" this

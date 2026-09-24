@@ -1,8 +1,11 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Unit tests for [contentReportIssueUrl].
@@ -60,6 +63,41 @@ class ContentReportIssueUrlTest {
         val url = contentReportIssueUrl(subject = "Content report: other", body = "😀".repeat(MULTIBYTE_CHARS))
 
         assertTrue("url is ${url.length} characters, over the browser-safe bound", url.length <= MAX_URL_CHARS)
+    }
+
+    @Test
+    fun `given a report when the url is built then the report travels in the link itself`() {
+        // Opening this URL is a GET, so everything in it reaches github.com the moment the
+        // browser loads the page — whether or not the user then files the issue. This pins
+        // the shape the privacy wording below has to describe.
+        val url = contentReportIssueUrl(subject = "Content report: other", body = "the flagged reply")
+
+        assertEquals("the flagged reply", url.toHttpUrl().queryParameter("body"))
+    }
+
+    @Test
+    fun `given the report travels in the link when the privacy policy describes it then it does not wait for a send`() {
+        // PRIVACY 4 said the report "travels only if you send it". With the report in the
+        // query string that was false: GitHub has the text once the page opens.
+        val privacy = File(repositoryRoot(), "PRIVACY.md").readText().replace(Regex("""\s+"""), " ")
+
+        assertFalse(
+            "PRIVACY.md still says the flagged-response report waits for a send",
+            privacy.contains("travels only if you send it"),
+        )
+        assertTrue(
+            "PRIVACY.md must say that opening the prefilled issue hands the report to GitHub",
+            privacy.contains("opening it hands that text to GitHub"),
+        )
+    }
+
+    /**
+     * Gradle runs unit tests from the module directory; `PRIVACY.md` sits one level up
+     * and is a declared input of the test task, so an edit to it re-runs this class.
+     */
+    private fun repositoryRoot(): File {
+        val working = File("").absoluteFile
+        return if (File(working, "PRIVACY.md").isFile) working else working.parentFile
     }
 
     private companion object {

@@ -1,8 +1,11 @@
 package app.knotwork.android.data.tools.local
 
+import app.knotwork.android.BuildConfig
 import app.knotwork.android.data.engine.ModelNetworkGate
+import app.knotwork.android.domain.constants.RepositoryLinks
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentTool
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,12 +37,16 @@ import javax.inject.Singleton
  * @property connectionOpener Opens the connection for a request both checks above have
  *   already passed. [ConnectionOpener.SYSTEM] in the app; a test substitutes one that
  *   answers from a local server.
+ * @property networkActivityTracker Told about every lookup that gets as far as opening a
+ *   connection, so the More tab's privacy indicator does not report "no network calls"
+ *   while this tool — on by default — is reaching Wikipedia.
  */
 @Singleton
 class SearchTool @Inject constructor(
     private val llmEngine: LlmInferenceEngine,
     private val networkGate: ModelNetworkGate,
     private val connectionOpener: ConnectionOpener,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) {
 
     /**
@@ -50,11 +57,10 @@ class SearchTool @Inject constructor(
      * builds and validates the URL, and asks the network gate, before an opener ever
      * sees it — so no substitute can widen what the tool is allowed to reach.
      *
-     * The transport stays `HttpURLConnection` on purpose. Measured against the live API
-     * (22.09.2026): Wikimedia answers `403` to OkHttp's default `User-Agent`
-     * (`okhttp/5.5.0`), to the JVM's (`Java/…`) and to an empty one, and `200` to the
-     * Android platform's `Dalvik/…` — moving this request onto the shared OkHttp client
-     * would break the tool on the device.
+     * The transport stays `HttpURLConnection`, and [executeSearch] sets [USER_AGENT] on
+     * whatever connection it is handed. Measured against the live API (22.09.2026):
+     * Wikimedia answers `403` to OkHttp's default `User-Agent` (`okhttp/5.5.0`), to the
+     * JVM's (`Java/…`) and to an empty one — so the header is never left to the stack.
      */
     fun interface ConnectionOpener {
 
@@ -110,6 +116,19 @@ class SearchTool @Inject constructor(
          * English is `simple`, and `zh-min-nan` / `be-tarask` are real editions.
          */
         private val WIKIPEDIA_SUBDOMAIN = Regex("^[a-z0-9-]{1,63}$")
+
+        /**
+         * The `User-Agent` every lookup sends: the app, its version and where to reach
+         * its maintainer — the `<client>/<version> (<contact>)` form Wikimedia's
+         * user-agent policy asks for.
+         *
+         * Set explicitly because the platform's default names the device: on a phone,
+         * `HttpURLConnection` sends `Dalvik/2.1.0 (Linux; U; Android <version>; <model>
+         * Build/<id>)`, so every lookup told Wikimedia the phone model and the exact
+         * Android build. Measured against the live API on 24.09.2026: this value is
+         * answered `200`, the same as `Dalvik/…`, while `okhttp/…` gets `403`.
+         */
+        val USER_AGENT: String = "Knotwork/${BuildConfig.VERSION_NAME} (${RepositoryLinks.REPOSITORY_URL})"
 
         /** The tool result for a `lang` that is not a Wikipedia subdomain. */
         const val INVALID_LANG_ERROR =
@@ -198,6 +217,10 @@ class SearchTool @Inject constructor(
         val url = searchUrl(query, lang) ?: return@withContext INVALID_LANG_ERROR
         try {
             val connection = connectionOpener.open(url)
+            // Recorded as the connection is set up rather than once it answers: a lookup
+            // that fails half-way has still sent the search term.
+            networkActivityTracker.recordOutbound()
+            connection.setRequestProperty("User-Agent", USER_AGENT)
             connection.requestMethod = "GET"
             connection.connectTimeout = HTTP_CONNECT_TIMEOUT_MS
             connection.readTimeout = HTTP_READ_TIMEOUT_MS

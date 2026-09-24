@@ -33,6 +33,7 @@ class ModelDiscoveryRepositoryImplTest {
         val api = HuggingFaceModelApi(
             baseUrl = server.url("/").toString().trimEnd('/'),
             client = OkHttpClient(),
+            networkActivityTracker = NetworkActivityTrackerImpl(),
         )
         repository = ModelDiscoveryRepositoryImpl(api = api, localModelRepository = localModelRepository)
     }

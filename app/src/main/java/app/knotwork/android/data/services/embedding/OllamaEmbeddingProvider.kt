@@ -4,6 +4,7 @@ import ai.koog.prompt.executor.ollama.client.OllamaModels
 import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.services.EmbeddingException
 import app.knotwork.android.domain.services.EmbeddingProvider
 import kotlinx.coroutines.flow.firstOrNull
@@ -36,12 +37,15 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property embedderFactory Builds the underlying Koog Ollama client.
  * @property apiKeyRepository Source of the Ollama base URL.
  * @property modelNetworkGate Decides whether the configured address may be reached.
+ * @property networkActivityTracker Told about each embedding request before it is sent, so
+ *   the More tab's privacy indicator counts memory traffic too.
  */
 @Singleton
 class OllamaEmbeddingProvider @Inject constructor(
     private val embedderFactory: KoogEmbedderFactory,
     private val apiKeyRepository: ApiKeyRepository,
     private val modelNetworkGate: ModelNetworkGate,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) : EmbeddingProvider {
 
     override val id: String = EmbeddingProvider.ID_OLLAMA
@@ -77,6 +81,7 @@ class OllamaEmbeddingProvider @Inject constructor(
         }
 
         val client = embedderFactory.ollamaClient(baseUrl)
+        networkActivityTracker.recordOutbound()
         return try {
             client.embed(texts, OllamaModels.Embeddings.NOMIC_EMBED_TEXT)
                 .map { it.toFloatVector() }
