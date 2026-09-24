@@ -183,7 +183,9 @@ screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
 differs from its committed baseline beyond anti-aliasing fails the build; capture
 with `KnotworkRoborazziOptions`, which `SnapshotComparisonOptionsGuardTest`
 requires of every capture), the documentation, version and store-listing gates,
-and `koverVerifyFullDebug`. Lint must pass with no new warnings. The full list,
+the supply-chain gates (pinned actions and Gradle distribution, the release
+manifests' entry surfaces), and `koverVerifyFullDebug`. Every build also verifies
+each dependency against `gradle/verification-metadata.xml`. Lint must pass with no new warnings. The full list,
 with what each gate guards, is in [`static-analysis.md`](static-analysis.md).
 
 `check` does not compile the instrumented source set, so CI compiles it in

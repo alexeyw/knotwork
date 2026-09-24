@@ -171,6 +171,19 @@ details.
   longer value is refused as `VALUE_TOO_LONG`. The request journal keeps at most
   256 characters of any value, so refused requests cannot fill the device's
   storage.
+- **The release build runs only what it has pinned.** Every GitHub Action the
+  workflows use is pinned to an exact commit, the Gradle download to its
+  checksum, and every dependency is checked against its publisher's signature or
+  a recorded checksum before it is used. The build also stopped running on a JDK
+  that Gradle downloaded without a checksum.
+- **A library can no longer add a permission unnoticed.** The build compares the
+  permissions, exported components and package-visibility entries of each
+  release with a recorded list and fails on any difference.
+- **Changes are scanned for secrets.** Every commit under review is checked for
+  keys and tokens before it can merge.
+- **The protobuf library MediaPipe brings in is raised to 4.27.5**, past a
+  denial-of-service flaw (CVE-2024-7254). Nothing in the app passed it untrusted
+  data; the update closes the exposure regardless.
 
 ### Fixed
 

@@ -282,6 +282,17 @@ jobs:
               print("No informational findings in %d lint report(s)." % len(reports))
           PY
 
+      # Gradle writes one HTML report per failed dependency-verification run, naming
+      # every artifact it could not verify and why (missing entry, wrong checksum,
+      # untrusted or missing key). The console says only that verification failed.
+      - name: Upload dependency-verification report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-verification-report
+          path: build/reports/dependency-verification/
+          if-no-files-found: ignore
+
       - name: Upload detekt report
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

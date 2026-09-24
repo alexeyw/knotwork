@@ -53,10 +53,14 @@ Required toolchain:
   Robolectric 4.16 needs JDK 21 for that. Production code still compiles to
   `JavaVersion.VERSION_17` / `JvmTarget.JVM_17` — building the APK works
   on JDK 17 — but `./gradlew check` (the merge gate) needs JDK 21. The
-  Android Studio bundled JBR ships JDK 21 already, so installing
-  Android Studio satisfies the requirement out of the box.
+  Gradle daemon asks for JDK 21 of any vendor
+  (`gradle/gradle-daemon-jvm.properties`): Gradle uses one it finds on the
+  machine and downloads one on first use otherwise. CI installs Temurin 21,
+  so no JDK is downloaded there — Gradle has no checksum for that download,
+  which is why the build no longer names a vendor that only a download could
+  supply.
 - **Android Studio** — current stable channel (or any IDE that supports
-  AGP 9.2.x and Kotlin 2.3.x).
+  AGP 9.3.x and Kotlin 2.4.x).
 - **Android SDK** — install platform **API 37** (`compileSdk` +
   `targetSdk`). Minimum runtime is API 34 (Android 14).
 - **NDK** is not required.
@@ -144,6 +148,35 @@ If you have a device or emulator attached,
 [`docs/testing.md`](docs/testing.md) § *The instrumented gate* for the
 matrix, the exclusion list, and how a failure is classified as a test
 failure or as infrastructure trouble.
+
+## Dependencies, pins and the shipped manifest
+
+Four gates look at what the build pulls in rather than at the code; each is
+described in [`docs/static-analysis.md`](docs/static-analysis.md)
+§ *Supply chain*. What they ask of a change:
+
+- **Adding or bumping a dependency.** Every artifact is verified against
+  `gradle/verification-metadata.xml`. A bump signed by a publisher already
+  trusted there needs nothing; otherwise the build names what it cannot verify.
+  Record it with
+  `./gradlew --write-verification-metadata pgp,sha256 --export-keys <the failing tasks>`
+  and **read the diff**: a new trusted key is a decision to trust a publisher,
+  and a new checksum is trusted on first download. Never regenerate to silence a
+  checksum *mismatch* on an existing entry — that is the substitution the file
+  exists to catch.
+- **Changing what the release manifest declares** — a permission, an exported
+  component, a `queries` entry, including one a library brings in — fails
+  `verify<Variant>MergedManifest` until you edit `config/merged-manifest/` by
+  hand. A new permission also needs its row in `PRIVACY.md` §5.
+- **Adding a GitHub Action** means pinning it to a full commit SHA with the
+  version in a trailing comment: `uses: owner/action@<sha> # v1.2.3`. Dependabot
+  keeps existing pins current.
+- **Upgrading Gradle** needs the distribution checksum:
+  `./gradlew wrapper --gradle-version <v> --gradle-distribution-sha256-sum <sum>`,
+  with the sum from [gradle.org/release-checksums](https://gradle.org/release-checksums/).
+- **Secrets.** Every commit under review is scanned. A test fixture that must
+  look like a real key carries `gitleaks:allow` on its line; better, make it
+  obviously fake.
 
 ## Branch model
 

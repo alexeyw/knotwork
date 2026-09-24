@@ -354,8 +354,14 @@ bundletool get-size total --apks=app.apks
   screenshot comparison (`:catalog:verifyRoborazziDebug`),
   `koverVerifyFullDebug` (coverage is measured on the representative `full`
   variant; the flavours share every measured source), and the documentation,
-  version and store-listing gates. The full list, with what each one guards, is
-  in [`static-analysis.md`](static-analysis.md).
+  version and store-listing gates, and the supply-chain gates — the actions and
+  the Gradle distribution pinned, and each release variant's merged manifest
+  matching its recorded entry surfaces. The full list, with what each one guards,
+  is in [`static-analysis.md`](static-analysis.md).
+- Every build, the release build included, verifies each dependency against
+  `gradle/verification-metadata.xml` before using it
+  ([`static-analysis.md`](static-analysis.md) § *Dependency verification*); a
+  release that bumps a dependency has to carry the metadata update with it.
 - `:buildSrc:test` runs the tests of the build logic behind those gates. It is a
   separate build, so `check` cannot reach it.
 - `lintFullRelease` re-runs lint on the release configuration (catches issues
