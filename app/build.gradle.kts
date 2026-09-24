@@ -1,5 +1,6 @@
 import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator
 import app.knotwork.android.buildtools.BrowserEditorFlatExportGuard
+import app.knotwork.android.buildtools.BrowserEditorImportParityGuard
 import app.knotwork.android.buildtools.BrowserEditorInertControlGuard
 import app.knotwork.android.buildtools.BrowserEditorRuntimeFieldGuard
 import app.knotwork.android.buildtools.CookbookDocsGenerator
@@ -1139,6 +1140,11 @@ val browserEditorTemplateFiles: Set<File> =
     fileTree("$projectDir/src/main/assets/presets/prompts") { include("*.json") }.files
 val browserEditorPresetCatalogFile =
     file("$projectDir/src/main/java/app/knotwork/android/domain/constants/BundledPresetCatalog.kt")
+// The app's own reading rules the editor's import is checked against (not generated from).
+val browserEditorSerializerFile =
+    file("$projectDir/src/main/java/app/knotwork/android/domain/pipelineio/PipelineJsonSerializer.kt")
+val browserEditorCloudProviderFile =
+    file("$projectDir/src/main/java/app/knotwork/android/domain/models/CloudProvider.kt")
 // Every file whose content feeds the generated blocks; drives up-to-date checks.
 val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + browserEditorPresetFiles +
     browserEditorTemplateFiles + setOf(
@@ -1268,6 +1274,7 @@ val verifyBrowserEditorConstants by tasks.registering {
         "Fails the build if pipeline-editor.html AUTO-GEN constant blocks have drifted from the Android domain sources."
     inputs.files(browserEditorInputFiles)
     inputs.file(browserEditorHtmlFile)
+    inputs.files(browserEditorSerializerFile, browserEditorCloudProviderFile)
     doLast {
         val drifted = BrowserEditorConstantsGenerator.drift(
             html = browserEditorHtmlFile.readText(),
@@ -1323,6 +1330,20 @@ val verifyBrowserEditorConstants by tasks.registering {
                     "Each field in CookbookDocsGenerator.FIELD_REACH with a Runtime verdict must pass " +
                     "importFromJson → deriveRichFromFlat → renderFormFields → encodeRichEnvelope / " +
                     "richToFlat → exportToJson, and decodeRichEnvelope must not read it from the envelope.",
+            )
+        }
+        // And the editor must read a file by the app's rules: the same config keys, the
+        // same Input-data flags, the same provider ids — checked against the app's source.
+        val parity = BrowserEditorImportParityGuard.mismatches(
+            html = browserEditorHtmlFile.readText(),
+            serializerSource = browserEditorSerializerFile.readText(),
+            cloudProviderSource = browserEditorCloudProviderFile.readText(),
+        )
+        if (parity.isNotEmpty()) {
+            throw GradleException(
+                "pipeline-editor.html reads a pipeline file differently from the app:\n" +
+                    parity.joinToString("\n") { "  - $it" } + "\n" +
+                    "People inspect a file in the browser before importing it; it must show what the app runs.",
             )
         }
     }
