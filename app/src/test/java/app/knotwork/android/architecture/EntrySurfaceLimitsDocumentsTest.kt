@@ -52,6 +52,11 @@ class EntrySurfaceLimitsDocumentsTest {
     }
 
     @Test
+    fun `given the privacy policy then it quotes how many share times are kept`() {
+        assertQuotes(folded("PRIVACY.md"), "the times of your most recent shares (at most $shareLimit, no content)")
+    }
+
+    @Test
     fun `given the user guide and the in-app key help then they quote the code's limits`() {
         assertQuotes(folded("docs/user-guide.md"), "At most **$shareLimit shares an hour** start a run")
 

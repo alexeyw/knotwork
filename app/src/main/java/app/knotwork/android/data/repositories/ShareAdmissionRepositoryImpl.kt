@@ -20,10 +20,11 @@ import javax.inject.Singleton
  * entry below cannot interleave with a concurrent share — which is exactly the
  * property a burst of share starts would otherwise defeat.
  *
- * **What is stored, and for how long.** Epoch-millis of the admissions still inside
- * the window, comma-separated — never more than the ceiling can count, never the
- * content of a share or anything about its sender. Each admission rewrites the list
- * from scratch, dropping every time older than the window.
+ * **What is stored, and for how long.** Epoch-millis of recent admissions,
+ * comma-separated — never more than the ceiling can count, never the content of a
+ * share or anything about its sender. Each admission rewrites the list from
+ * scratch, dropping every time older than the window; nothing prunes it between
+ * shares, so the times of the last shares stay on disk until the next one.
  *
  * **A time ahead of now still counts, up to one window ahead.** Concurrent shares
  * read the clock before they queue for the store, so the one recorded first may

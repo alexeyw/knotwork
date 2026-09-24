@@ -61,8 +61,8 @@ backup or in a transfer to a new device
 - Triggers, scheduled tasks, and the trigger journal.
 - The journal of requests other apps sent (section 3.6).
 - Settings, including the list of cloud providers, MCP servers, and allowed
-  domains you configured — and the times of your shares in the last hour, kept
-  only to enforce the share limit.
+  domains you configured — and the times of your most recent shares (at most 30,
+  no content), kept only to enforce the share limit and replaced as you share.
 - Local usage statistics (section 4).
 - API keys, the Hugging Face access token, and MCP credentials and custom
   headers you entered.
