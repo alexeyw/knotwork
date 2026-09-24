@@ -23,8 +23,10 @@ import app.knotwork.android.buildtools.VerifyDocsHygieneTask
 import app.knotwork.android.buildtools.VerifyDocumentationLinksTask
 import app.knotwork.android.buildtools.VerifyFileMapTask
 import app.knotwork.android.buildtools.VerifyForbiddenVocabularyTask
+import app.knotwork.android.buildtools.VerifyMergedManifestTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
+import app.knotwork.android.buildtools.VerifySupplyChainPinsTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
 import com.android.build.api.artifact.SingleArtifact
 import dev.detekt.gradle.Detekt
@@ -1906,6 +1908,19 @@ dependencies {
     // longer there. See `docs/release.md` § FOSS / F-Droid build.
     implementation(libs.mediapipe.tasks.text)
 
+    // MediaPipe brings protobuf-javalite 4.26.1, inside the range of
+    // CVE-2024-7254 (unbounded recursion on nested groups, fixed in 4.27.5). The
+    // app parses no protobuf of its own — MediaPipe reads the task graph it builds
+    // itself — but raising the runtime costs one constraint: protobuf supports
+    // gencode of 4.26 on any 4.x or 5.x runtime. Its failure modes are release- and
+    // device-only (protobuf instantiates reflectively), which is what the R8 keep
+    // rules and `verify<Variant>Instantiable` below exist for.
+    constraints {
+        implementation(libs.protobuf.javalite) {
+            because("CVE-2024-7254: MediaPipe 1.0.0 resolves protobuf-javalite 4.26.1; the fix is 4.27.5")
+        }
+    }
+
     // Koog Framework
     implementation(libs.koog.agents)
     implementation(libs.koog.mcp)
@@ -2133,6 +2148,30 @@ androidComponents {
         // The dex guard needs a packaged APK, so it rides `assemble` only;
         // the AAB carries the same dex from the same R8 run.
         tasks.matching { it.name == "assemble$variantName" }.configureEach { finalizedBy(verifyInstantiable) }
+    }
+}
+
+// ─── Merged-manifest guard ───────────────────────────────────────────────────
+// The source manifests are not what ships: the merger folds in every library's
+// own manifest, so a dependency bump can add a permission, an exported component
+// or a `queries` entry without a line of this repository changing — and the
+// privacy policy's permission table and the threat model's list of entry surfaces
+// would both be wrong. Each shipping variant's merged manifest is compared with a
+// hand-edited expectation in `config/merged-manifest/`. Release variants only,
+// because those are what ship; the merge costs seconds and needs no signing or R8.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val variantName = variant.name.replaceFirstChar { it.uppercaseChar() }
+        val verifyMergedManifest = tasks.register<VerifyMergedManifestTask>("verify${variantName}MergedManifest") {
+            group = "verification"
+            description = "Fails the build if the merged `${variant.name}` manifest disagrees with its expectation."
+            mergedManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
+            expectation.set(rootProject.layout.projectDirectory.file("config/merged-manifest/${variant.name}.txt"))
+            checkedVariant.set(variant.name)
+            repositoryRoot.set(rootProject.layout.projectDirectory)
+            stampFile.set(layout.buildDirectory.file("reports/merged-manifest/${variant.name}.txt"))
+        }
+        tasks.named("check") { dependsOn(verifyMergedManifest) }
     }
 }
 
@@ -2376,3 +2415,46 @@ val verifyVersionSources by tasks.registering(VerifyVersionSourcesTask::class) {
     stampFile.set(layout.buildDirectory.file("reports/docs-links/version-sources-verified.txt"))
 }
 tasks.named("check") { dependsOn(verifyVersionSources) }
+
+// What the build executes before any code of this repository runs: the GitHub
+// Actions every workflow calls, and the Gradle distribution the wrapper fetches.
+// Both were referenced by something that can move — a tag, a URL with no checksum
+// — in the same job that holds the release signing key. The guard fails when a pin
+// disappears (a step copied from a README, a `wrapper` run without a checksum); see
+// docs/static-analysis.md § Supply-chain pin guard.
+// The keys dependency verification may trust across a namespace (`regex="true"`):
+// an organisation's own release keys, for that organisation's groups. Any other key
+// is trusted for exactly the groups it signs. Gradle's metadata generator does not
+// draw this line — it folded two Google engineers' personal keys into all of
+// `com.google.*` — so a key added here is a decision, and its owner is written down.
+val dependencyVerificationNamespaceKeys: Map<String, String> = mapOf(
+    "0E225917414670F4442C250DFD533C07C264648F" to "Google Maven signing key (Linux Packages Signing Authority)",
+    "0F06FF86BEEAF4E71866EE5232EE5355A6BC6E42" to "Google Maven signing key (Linux Packages Signing Authority)",
+    "20723A6399BC060154283B37CFAE163B64AC9189" to "JetBrains Compose Team <compose@jetbrains.com>",
+    "33FD4BFD33554634053D73C0C2148900BCD3C2AF" to "JetBrains <download@jetbrains.com>",
+    "6F538074CCEBF35F28AF9B066A0975F8B1127B83" to "Kotlin Release <kt-a@jetbrains.com>",
+    "E7DC75FC24FB3C8DFE8086AD3D5839A2262CBBFB" to "Kotlin Libraries Release <kt-libraries@jetbrains.com>",
+)
+
+// The only artifacts dependency verification may skip (`<trusted-artifacts>`): files
+// an IDE downloads so a reader can navigate, and the build never executes. Keyed by
+// the `<trust>` entry's attributes, sorted by name and joined as `name=value`.
+val dependencyVerificationTrustedArtifacts: Map<String, String> = mapOf(
+    "file=.*-javadoc[.]jar regex=true" to "API docs the IDE attaches; never on a classpath",
+    "file=.*-sources[.]jar regex=true" to "Sources the IDE attaches; never on a classpath",
+    "file=gradle-.*-src[.]zip group=gradle name=gradle regex=true" to
+        "Gradle's source distribution, fetched by Android Studio's sync for build-script navigation",
+)
+
+val verifySupplyChainPins by tasks.registering(VerifySupplyChainPinsTask::class) {
+    group = "verification"
+    description = "Fails the build if an Action or the Gradle distribution is unpinned, or dependency trust widened."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    workflowFiles.from(fileTree("$rootDir/.github") { include("**/*.yml", "**/*.yaml") })
+    wrapperProperties.set(file("$rootDir/gradle/wrapper/gradle-wrapper.properties"))
+    verificationMetadata.from("$rootDir/gradle/verification-metadata.xml")
+    namespaceKeys.set(dependencyVerificationNamespaceKeys)
+    allowedTrust.set(dependencyVerificationTrustedArtifacts)
+    stampFile.set(layout.buildDirectory.file("reports/supply-chain/pins-verified.txt"))
+}
+tasks.named("check") { dependsOn(verifySupplyChainPins) }

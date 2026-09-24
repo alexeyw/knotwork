@@ -697,6 +697,20 @@ that an explicit, reviewable decision rather than a silent capability, which
 is the design goal; they do not (and cannot) override a user who chooses to
 trust a destination. The Files screen warns about this when adding a domain.
 
+### Build and release integrity
+
+Published APKs are built and signed by the release workflow, in the same job
+that decodes the signing key. What that job executes is pinned: every GitHub
+Action by commit SHA, the Gradle distribution by checksum, and every dependency
+by its publisher's signing key or, where there is no signature, by checksum
+(`gradle/verification-metadata.xml`). The build runs on the JDK the workflow
+installs rather than one Gradle downloads. A change to what the shipped manifest
+declares — a permission, an exported component, a package-visibility entry —
+fails the build until someone records it, so a library cannot add one unnoticed.
+Every commit under review is scanned for secrets. How each guard works, and what
+it does not cover: [`docs/static-analysis.md`](docs/static-analysis.md)
+§ *Supply chain*.
+
 ### Out of scope
 
 The threat model does not attempt to defend against:

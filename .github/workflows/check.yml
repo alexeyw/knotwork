@@ -68,10 +68,65 @@ jobs:
     timeout-minutes: 75
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          # The whole history, not the default single commit: the secret scan
+          # below reads every commit under review, and a pull request's base is
+          # not in a shallow clone.
+          fetch-depth: 0
+
+      # Secret scan of the commits under review — every commit, not the final
+      # tree, because a key added in one commit and deleted in the next is still
+      # published the moment the branch is pushed.
+      #
+      # A step inside this job rather than a job of its own: branch protection
+      # requires this job by name, and a job that fails *before* it would make
+      # this one skipped — which reports to branch protection as success.
+      #
+      # gitleaks is fetched as a release binary and checked against a SHA-256
+      # written here, not through its GitHub Action: the Action downloads its
+      # binary with no checksum and defaults to an older release than the rules
+      # below assume. Bumping the version means taking the new sum from the
+      # release's `checksums.txt` and updating both lines together.
+      #
+      # `--redact` keeps a hit out of this public log. The rules and the two
+      # waivers (`gitleaks:allow` on the line; a commit-bound fingerprint in
+      # `.gitleaksignore` once the commit is pushed) are described in `.gitleaks.toml`.
+      #
+      # Range: a pull request's own commits; a push's new commits. Anything else —
+      # a manual run, or the release workflow calling this one for a tag — scans
+      # what the ref has that `main` does not, which for a release tag is nothing:
+      # those commits were scanned on their way into `main`.
+      - name: Secret scan
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            range="$PR_BASE..$PR_HEAD"
+          elif [[ "$EVENT_NAME" == "push" && "$GIT_REF" == refs/heads/* && ! "$PUSH_BEFORE" =~ ^0+$ ]]; then
+            range="$PUSH_BEFORE..$PUSH_AFTER"
+          else
+            range="$(git merge-base origin/main HEAD)..HEAD"
+          fi
+          echo "Scanning $(git rev-list --count "$range") commit(s): $range"
+          "$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml --log-opts="$range" .
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '21'
@@ -82,7 +137,7 @@ jobs:
         # build-tools are then fetched automatically by AGP during the build
         # (`android.builder.sdkDownload` is on by default), so the exact
         # package coordinates do not have to be hand-maintained here.
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           # Only platform-tools. The action's default also asks for the legacy
           # `tools` package (SDK Tools 26), which nothing in this build uses and
@@ -91,7 +146,7 @@ jobs:
           packages: 'platform-tools'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -228,9 +283,20 @@ jobs:
               print("No informational findings in %d lint report(s)." % len(reports))
           PY
 
+      # Gradle writes one HTML report per failed dependency-verification run, naming
+      # every artifact it could not verify and why (missing entry, wrong checksum,
+      # untrusted or missing key). The console says only that verification failed.
+      - name: Upload dependency-verification report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-verification-report
+          path: build/reports/dependency-verification/
+          if-no-files-found: ignore
+
       - name: Upload detekt report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: detekt-report
           path: app/build/reports/detekt/
@@ -238,7 +304,7 @@ jobs:
 
       - name: Upload ktlint report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ktlint-report
           path: app/build/reports/ktlint/
@@ -252,7 +318,7 @@ jobs:
       # preserve. `:catalog` is included because the root `check` lints it too.
       - name: Upload lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lint-report
           path: |
@@ -266,7 +332,7 @@ jobs:
 
       - name: Upload Kover coverage report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kover-report
           path: app/build/reports/kover/
@@ -274,7 +340,7 @@ jobs:
 
       - name: Upload Roborazzi diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: roborazzi-report
           path: |
@@ -284,7 +350,7 @@ jobs:
 
       - name: Upload unit-test report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-report
           path: app/build/reports/tests/

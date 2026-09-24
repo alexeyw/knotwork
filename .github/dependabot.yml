@@ -1,0 +1,30 @@
+# Dependabot keeps the GitHub Actions pins current — and nothing else.
+#
+# Every `uses:` in `.github/workflows/` is pinned to a full commit SHA with the
+# release in a trailing comment (`@<sha> # v6.1.0`); `:app:verifySupplyChainPins`
+# fails the build on any other form. Dependabot rewrites the SHA and the comment
+# together, so keeping the pins fresh costs a review rather than a manual lookup.
+#
+# Gradle dependencies are deliberately NOT listed. They are updated in
+# deliberate sweeps, and a bump has to update
+# `gradle/verification-metadata.xml` in the same change, which Dependabot does not
+# do — its pull requests would fail dependency verification by construction.
+#
+# Pull requests go to `main` (the default branch), where `check.yml` runs on them.
+# `cooldown` holds a new release back for a week before it is proposed: an action
+# release that turns out to be compromised is usually caught and pulled within
+# days, and a pin taken in that window is exactly the failure the pins exist to
+# prevent. See docs/static-analysis.md § Supply-chain pin guard.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ['*']
+    commit-message:
+      prefix: build

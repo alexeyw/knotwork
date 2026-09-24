@@ -1,0 +1,22 @@
+# Secret scanning of the commits under review — the "Secret scan" step of
+# .github/workflows/check.yml runs a pinned gitleaks over them and fails the
+# required check on any hit. See docs/static-analysis.md § Secret scan.
+#
+# The rules are gitleaks' own defaults, fixed by the pinned binary version.
+#
+# There is deliberately no allowlist here — no paths, no regexes. A real key
+# pasted into a test file is still a leaked key, so "test fixtures are exempt"
+# would exempt exactly the place one is most likely to be pasted. Two waivers,
+# both for one line only:
+#
+# - an inline `gitleaks:allow` on the line itself, before the commit is pushed:
+#   it travels with that line and shows up in the diff that introduces it;
+# - a fingerprint in `.gitleaksignore` (commit:file:rule:line) for a false
+#   positive that already sits in a pushed commit. The scan reads every commit's
+#   own diff, so a later commit adding the inline waiver leaves the original
+#   flagged; the fingerprint names that commit and exempts nothing written later.
+#
+# Prefer a fixture that does not look like a key at all (too short, or plainly
+# marked fake); reach for a waiver only when the test needs a realistic shape.
+[extend]
+useDefault = true

@@ -1,0 +1,52 @@
+# Entry surfaces of the `foss` release build, as the MERGED manifest declares them —
+# what ships, after every library's own manifest has been folded in.
+# `:app:verifyFossReleaseMergedManifest` (part of `check`) fails on any difference.
+#
+# Edited by hand, on purpose: every line is a decision. A new permission has to be
+# explained in PRIVACY.md §5; an export without a permission has to be named in
+# SECURITY.md § Automation triggers and entry surfaces. When the build fails, find
+# where an added line comes from in app/build/outputs/logs/manifest-merger-*-report.txt.
+# fullRelease.txt lists the same entries today; the flavours are checked separately
+# because they ship separately.
+#
+# Format — one entry per line, `#` starts a comment:
+#   uses-permission NAME [maxSdkVersion=N]
+#   permission NAME protectionLevel=LEVEL
+#   exported TAG NAME permission=PERMISSION|none
+#   queries package|intent|provider ...
+
+# ── Permissions the app requests ─────────────────────────────────────────────
+uses-permission android.permission.ACCESS_COARSE_LOCATION
+uses-permission android.permission.ACCESS_FINE_LOCATION
+uses-permission android.permission.ACCESS_NETWORK_STATE
+uses-permission android.permission.EXECUTE_APP_FUNCTIONS
+uses-permission android.permission.FOREGROUND_SERVICE
+uses-permission android.permission.FOREGROUND_SERVICE_DATA_SYNC
+uses-permission android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+uses-permission android.permission.INTERNET
+uses-permission android.permission.POST_NOTIFICATIONS
+uses-permission android.permission.RECEIVE_BOOT_COMPLETED  # added by androidx.work, not by the app's manifest
+uses-permission android.permission.RECORD_AUDIO
+uses-permission android.permission.WAKE_LOCK
+
+# ── Declared by androidx.core for its non-exported dynamic receivers ─────────
+permission app.knotwork.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION protectionLevel=signature
+uses-permission app.knotwork.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+
+# ── Exported by the app — reachable by any installed app when permission=none ─
+exported activity app.knotwork.android.presentation.share.ShareReceiverActivity permission=none
+exported activity app.knotwork.android.presentation.ui.MainActivity permission=none
+exported receiver app.knotwork.android.presentation.receivers.ExternalAutomationReceiver permission=none
+exported service app.knotwork.android.presentation.tile.DutyPipelineTileService permission=android.permission.BIND_QUICK_SETTINGS_TILE
+
+# ── Exported by libraries — each behind a permission only the system holds ───
+exported receiver androidx.profileinstaller.ProfileInstallReceiver permission=android.permission.DUMP
+exported receiver androidx.work.impl.diagnostics.DiagnosticsReceiver permission=android.permission.DUMP
+exported service androidx.appfunctions.service.ExtensionAppFunctionService permission=android.permission.BIND_APP_FUNCTION_SERVICE
+exported service androidx.appfunctions.service.PlatformAppFunctionService permission=android.permission.BIND_APP_FUNCTION_SERVICE
+exported service androidx.work.impl.background.systemjob.SystemJobService permission=android.permission.BIND_JOB_SERVICE
+
+# ── Package visibility ───────────────────────────────────────────────────────
+queries intent action=android.app.appfunctions.AppFunctionService
+queries intent action=app.knotwork.android.action.RUN_RESULT
+queries package app.knotwork.android.toolsprobe  # the end-to-end test target; ships in release today

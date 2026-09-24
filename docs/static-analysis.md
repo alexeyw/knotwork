@@ -55,6 +55,8 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
 | `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
 | `:app:verifyVersionSources`                   | Fails if any hand-written copy of the version — README badge and prose, the CHANGELOG heading and links, `SECURITY.md`, the roadmap's release line — disagrees with the declared `versionName` (see below). |
+| `:app:verifySupplyChainPins`                  | Fails if a GitHub Action is referenced by anything but a full commit SHA with a version comment, the Gradle wrapper loses its distribution checksum, or dependency verification is switched off, holds an ignored key, or trusts a non-organisation key across a namespace (see below). |
+| `:app:verifyFullReleaseMergedManifest` + `:app:verifyFossReleaseMergedManifest` | Fails if a shipping variant's merged manifest gains or loses a permission, an exported component or a `queries` entry its committed expectation does not list (see below). |
 | `:app:testFullDebugUnitTest` (`CookbookRuntimeReachTest`, `CookbookRecipeValidationTest`) | Fails if the cookbook's run-time verdicts disagree with `NodeConfigCodec`, or a published recipe no longer imports (see below). |
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
 | `:app:verifyLintBaselineOverrides`            | Custom rule: fail if a lint baseline suppresses a check demoted to informational severity (see below). |
@@ -1775,6 +1777,275 @@ that must not be misparsed as a class. Protected packages are listed in
 `r8ProtectedPackages` in `app/build.gradle.kts`; add to that list whenever a
 new keep rule exists to satisfy a stack-walking or name-reflecting library.
 
+## Supply chain
+
+Every gate above checks the code in this repository. Of the four below, three
+check what the build *pulls in* or *ships* — the GitHub Actions and the Gradle
+distribution, every dependency, the manifests libraries merge in — and the
+fourth checks what a commit might carry *out*. They share one question: **can the same commit of this
+repository run different bytes tomorrow, or ship something nobody here wrote?**
+
+The release job is why that question is not academic. It decodes the signing
+keystore and exports its passwords in the same job that runs `setup-gradle`,
+downloads the Gradle distribution and resolves every dependency; code planted
+by any of those runs inside the build JVM that holds the key.
+
+### Supply-chain pin guard (`verifySupplyChainPins`)
+
+`:app:verifySupplyChainPins` fails the build when:
+
+- a `uses:` anywhere under `.github/` names a third-party action by anything
+  but a **full 40-character commit SHA followed by a version comment**
+  (`actions/checkout@<sha> # v6.1.0`). A tag or a branch is a pointer its owner
+  can move; an abbreviated SHA is a prefix, and a prefix can collide. Local
+  references (`./…`) pass, since their contents are part of the commit, and a
+  `docker://` image passes only with a `@sha256:` digest;
+- `gradle/wrapper/gradle-wrapper.properties` has no `distributionSha256Sum`.
+  `validateDistributionUrl` checks that the URL is well formed, not the bytes
+  behind it.
+
+The version comment is required, not decorative: a bare SHA is unreadable in
+review, and Dependabot rewrites the version only where the comment sits on the
+same line. Dependabot (`.github/dependabot.yml`) proposes new pins monthly, one
+grouped pull request, holding each new release back for seven days; Gradle
+dependencies are deliberately not in its scope (see *Dependency verification*).
+
+**What it does not check.** That a SHA is the commit its comment names, or that
+the checksum is Gradle's. Both are one lookup away when reviewing the change that
+introduced them, and neither can be answered without the network. What the guard
+catches is a pin *disappearing* — a step copied from a README, a
+`./gradlew wrapper` run without `--gradle-distribution-sha256-sum`. The wrapper
+itself compares the checksum only when it downloads the distribution, so a
+machine with it already cached never re-checks. The wrapper **JAR** is checked by
+`setup-gradle`, which validates it against Gradle's published checksums on every
+CI run by default.
+
+**Observed failing.** On the tree before the pins: 28 references in the four
+workflows (`checkout`, `setup-java`, `setup-android`, `setup-gradle`,
+`upload-artifact`), plus the missing distribution checksum — one failure listing
+all 29. The wrapper's own check was observed separately: with one digit of the
+sum changed and an empty Gradle home, the wrapper refused the download, and the
+checksum it reported as actual was the committed one. The rules are unit-tested
+in `buildSrc` (`SupplyChainPinsCheckerTest`) — tag, branch, abbreviated SHA, no
+ref, no version comment, quoted values, local and `docker://` references, a
+commented-out `uses:`. The task refuses a tree in which it found no reference at
+all, so a pattern that silently stopped matching cannot pass every workflow.
+
+### Merged-manifest guard (`verify<Variant>MergedManifest`)
+
+The source manifests are not what ships. The merger folds in every library's
+own manifest, so a dependency bump can add a permission, an exported component
+or a `queries` entry without a line of this repository changing — and
+[`PRIVACY.md`](../PRIVACY.md) §5 enumerates the permissions, while
+[`SECURITY.md`](../SECURITY.md) names every export any installed app can reach.
+
+`:app:verifyFullReleaseMergedManifest` and `:app:verifyFossReleaseMergedManifest`
+reduce the merged manifest that is packaged into each release APK and AAB
+(`SingleArtifact.MERGED_MANIFEST`) to its entry surfaces and compare them with
+[`config/merged-manifest/<variant>.txt`](../config/merged-manifest/fullRelease.txt):
+
+- `uses-permission NAME [maxSdkVersion=N]` — what the app asks for;
+- `permission NAME protectionLevel=LEVEL` — what it declares for others to request;
+- `exported TAG NAME permission=PERMISSION|none` — every component another app can
+  start or bind, **with the permission it demands** (for a provider, also its
+  `readPermission` / `writePermission`): an export that loses its permission is a
+  new surface under an old name, and the line changes. Anything but a literal
+  `android:exported="false"` counts as exported, so a value resolved from a
+  resource at runtime is listed rather than assumed closed;
+- `queries package|intent|provider …` — the package visibility the app claims.
+
+The failure prints the exact lines to add (`+`) or remove (`-`) and where to look
+up an entry's origin (`app/build/outputs/logs/manifest-merger-*-report.txt`). The
+expectation is **edited by hand, and there is deliberately no task that rewrites
+it**: each line is a decision the privacy policy or the threat model has to
+reflect, and a generator would turn each of those decisions into a keystroke.
+
+Non-exported components are left out — they are no entry surface, and an
+expectation that churned on every internal service a library adds would be
+approved without being read. Only release variants are checked, because only
+they ship; the debug overlay's receiver is covered by the source-manifest census
+`ExportedComponentInventoryTest`. The two layers are distinct: that test pins what
+this repository *writes*, this guard what the build *ships*. Merging both release
+manifests costs seconds and needs neither signing nor R8.
+
+**Observed failing — on a genuine divergence.** The merged release manifests
+either side of the commit that added WorkManager differ by four entries, none of
+them from the app's own manifest: `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`, an
+exported `DiagnosticsReceiver` and an exported `SystemJobService`. Nothing in the
+repository recorded that they had arrived. Those two build outputs are now the
+fixture of `MergedManifestInventoryTest`, next to cases for each entry kind, a
+non-exported component, an export that lost its permission, and an expectation
+that lists an entry twice (a duplicate would hide the removal of one copy).
+
+### Dependency verification (`gradle/verification-metadata.xml`)
+
+Every artifact Gradle resolves — plugins, `buildSrc`'s dependencies, the app's
+libraries, and the tools the build runs (lint, detekt, ktlint, the Kover agent,
+AGP's own tool jars such as `aapt2`) — is verified before it is used, in every
+build, locally and in CI. There is no task to wire: Gradle refuses a build that
+resolves an artifact the file does not vouch for, and the verdict depends on
+nothing but the repository.
+
+**The policy: trust a publisher where there is a signature, the bytes where there
+is not.**
+
+- **Signed artifacts are verified against the publisher's key**, trusted for a
+  group rather than a version (`<trusted-keys>`, 116 keys). A version bump of a
+  dependency whose publisher is already trusted needs no change here. That is
+  deliberate: a review of a short list of publisher keys is one a person can
+  actually do, whereas thousands of checksums nobody can check by eye would be
+  approved without being read.
+- **Only an organisation's release key is trusted across a namespace** — Google's
+  Maven signing key for its `androidx.*` / `com.android.*` / `com.google.*`
+  groups, JetBrains' release keys for `org.jetbrains.*`. **Every other key is
+  trusted for exactly the groups it was seen signing.** Gradle's generator does
+  not draw that line: it folded the personal keys of a Guava maintainer and an
+  Error Prone maintainer into all of `com.google.*`, and the long-dead Bintray
+  signing key into all of `org.jetbrains.*`, because each had signed a few groups
+  under that prefix — so any one of those keys, leaked, would have vouched for
+  Firebase. Eleven such entries were narrowed to the groups the key actually
+  signed, read from the signatures of every artifact this build resolves. That
+  census has to include configurations no local build resolves: the first one
+  came from running every CI task list, missed the connected-test runner's
+  plugins, and the instrumented suite failed verification on CI. The census now
+  comes from a bootstrap dry run, which resolves every resolvable configuration,
+  and each configuration was then resolved in strict mode.
+- **Unsigned artifacts are pinned by SHA-256**, per version (138 files) — part of
+  Firebase's transitive graph and older `androidx` releases, for example, are
+  published without a signature.
+- **The keys are committed** (`gradle/verification-keyring.keys`, armored) **and
+  key servers are disabled**, so a build never contacts one.
+- **Three kinds of file are trusted without verification**: `-sources` and
+  `-javadoc` jars, and Gradle's own source distribution (`gradle-<v>-src.zip`),
+  which Android Studio's sync fetches so build scripts can be navigated. The IDE
+  downloads them; the build never executes them. The first sync after this file
+  landed failed on exactly that zip — no command-line build ever asks for it —
+  and the second on the metadata of the Groovy bundled with Gradle, which the IDE
+  resolves for sources: signed by the Groovy release manager's key, which the file
+  had trusted only for Groovy's older `org.codehaus.groovy` coordinates. Both were
+  reproduced without the IDE, by an init script adding the repository it uses and
+  resolving the same coordinates, before and after the fix.
+
+**The policy is enforced, not only written down.** `:app:verifySupplyChainPins`
+fails when `verify-metadata` or `verify-signatures` is off, when key servers are
+on, when the file holds an `<ignored-key>`, when `<trusted-artifacts>` holds an
+entry outside `dependencyVerificationTrustedArtifacts` (one `group=".*"` entry
+would switch verification off for everything), and when a key outside the list of
+organisation release keys in `app/build.gradle.kts`
+(`dependencyVerificationNamespaceKeys`, each with its owner) is trusted by
+`regex="true"` — or when any key is trusted wider than a namespace of two parts
+(`^com[.]google…` passes, `^com…` and `.*` do not). Both of the generator's own
+outputs fail it: the file before
+narrowing on its 11 widened personal keys, and the first attempt additionally on
+its 14 ignored keys and its key servers.
+
+**Bumping a dependency.** If the new version is signed by a trusted key, nothing
+changes. Otherwise the build fails naming what it cannot verify; record it with
+
+```bash
+./gradlew --write-verification-metadata pgp,sha256 --export-keys <the failing tasks>
+```
+
+and read the diff. A new trusted key is a decision to trust a publisher: check its
+fingerprint against one the project publishes itself before accepting it. A new
+checksum is trust on first use — nothing but that download vouches for it.
+**A checksum mismatch on an existing entry is never fixed by regenerating**: it is
+the substitution the file exists to catch. Gradle never removes an entry that is
+no longer used; to prune, move the file aside, regenerate, and compare.
+
+**Generating it.** `--write-verification-metadata` records only what the build
+actually resolves, and a task that is up to date or restored from the build cache
+resolves nothing. So the file was generated with `--rerun-tasks` over every task
+list CI runs — `check :buildSrc:test`, the instrumented-source compile, the
+generators, both release flavours and the App Bundle. For this build the rerun
+added no entry, because every tool jar a cached task would have resolved is
+signed by an already-trusted key — but only the rerun makes that a measurement
+rather than an assumption. Keys the key servers failed to return were fetched by
+hand, and Google's was checked against a second channel
+(`dl.google.com/linux/linux_signing_key.pub`), since a key Gradle cannot download
+is written down as *ignored* and its artifacts silently fall back to first-use
+checksums.
+
+**What it does not cover.** Robolectric downloads its `android-all` jars itself at
+test time, checking only a SHA-512 fetched from the same repository. Android SDK
+packages come from `sdkmanager` and AGP's auto-download; the JDK comes from
+`setup-java` in CI — the daemon's criteria no longer name a vendor, so CI never
+needs Gradle's toolchain download, which carries no checksum at all. None of these
+goes through Gradle's resolution. And verification is not vulnerability scanning:
+a verified artifact can still be a vulnerable one.
+
+**Observed failing.** Two ways, both on this repository. Adding a dependency
+from a publisher not yet trusted (`org.jsoup:jsoup:1.18.1`) failed the build on
+its `.pom`, with Gradle's note that key servers are disabled and the keyring
+lacks the key. One changed digit in the recorded checksum of an unsigned artifact
+(`firebase-encoders-17.0.0.jar`) — indistinguishable from the artifact itself
+having changed — failed on that jar. A Firebase BOM bump (`34.18.0` → `34.19.0`)
+passed without touching the file, as it should: its artifacts are signed by the
+trusted Google key.
+
+The generation had a failure of its own worth knowing. On the first attempt the
+key servers did not return 14 keys — Google's Maven signing subkey among them —
+and Gradle wrote each down as *ignored* and fell back to first-use checksums for
+everything it signs, reporting only that "some problems were discovered". The
+keys were fetched explicitly and the file generated again. With the final file,
+every task list CI runs passed in an empty Gradle home with every task executed,
+and CI's Linux runners passed `check` and the instrumented suite — which resolve
+the Linux `aapt2` jar and the connected-test runner, neither of which a macOS
+build ever downloads.
+
+### Secret scan (CI)
+
+A step in the required `check` job runs [gitleaks](https://github.com/gitleaks/gitleaks)
+over every commit under review: a pull request's own commits, or a push's new
+ones. Every commit, not the final tree — a key added in one commit and deleted in
+the next is still published the moment the branch is pushed. gitleaks reads each
+commit's own diff and skips merge commits, so it reports fewer commits than the
+range holds — and a line that exists only in a merge's conflict resolution is not
+scanned. A manual run, or the
+release workflow calling this one for a tag, scans what the ref has that `main`
+does not; for a release tag that is nothing, since its commits were scanned on
+their way into `main`.
+
+It is a step rather than a job of its own because branch protection requires the
+`check` job by name, and a job that fails before it makes it *skipped* — which
+branch protection counts as success.
+
+- **The scanner is pinned by bytes.** The workflow downloads the gitleaks release
+  archive and checks it against a SHA-256 written next to the version; bumping
+  the version means updating both. The gitleaks GitHub Action is not used: it
+  downloads its binary with no checksum and defaults to an older release. The
+  rules are gitleaks' defaults, fixed by that version.
+- **A hit fails the job, and the log shows no secret** (`--redact`).
+- **A waiver covers one line, never a path or a pattern.** Before the commit is
+  pushed, it is an inline `gitleaks:allow` on the offending line: it travels with
+  that line and is visible in the diff that introduces it. Once the commit is
+  pushed, that no longer helps — the scan reads every commit's own diff, so a later
+  commit adding the waiver leaves the original flagged — and the waiver is the
+  finding's fingerprint in [`.gitleaksignore`](../.gitleaksignore)
+  (`commit:file:rule:line`), which names that one commit and exempts nothing
+  written later. [`.gitleaks.toml`](../.gitleaks.toml) has no path or regex
+  allowlist on purpose: a real key pasted into a test is still a leaked key, so
+  "fixtures are exempt" would exempt exactly where one is most likely to be
+  pasted. Prefer a fixture that does not look like a key at all — too short, or
+  plainly fake; the sanitizer tests' `key=AIzaSyREALSECRET123` matches no rule.
+
+**What it does not do.** Scan history before the change under review — the
+whole-history pass is a separate, one-off audit. Know whether a hit is live: that
+would mean calling the provider's API from CI, which makes the verdict a
+function of the network. And it does not replace GitHub's own secret scanning or
+push protection, which are repository settings rather than files and which see
+provider-verified patterns this scan does not.
+
+**Observed failing.** A commit adding a random `ghp_`-shaped token failed the
+exact command the workflow runs (rule `github-pat`, exit 1); the same line with
+`gitleaks:allow` passed. Then the scan stopped the change that introduced it: a
+test fixture holding a public PGP key fingerprint tripped `generic-api-key` on
+CI. It is not a secret, but it was already pushed, which is how the second
+waiver — the commit-bound `.gitleaksignore` entry — came to exist. Before
+wiring, the default rules were run over the whole tree and all of history: one
+hit, a short preview fixture (`sk-live-…`) in `:catalog`, outside the range any
+future change scans unless that line is edited.
+
 ---
 
 ## Kover — coverage measurement & threshold
@@ -1862,6 +2133,10 @@ merging. It must never be added to branch protection's required checks — and
 note that a scheduled workflow only runs from the default branch, and only once
 its definition has reached it.
 
+Before any Gradle step, the job scans the commits under review for secrets (see
+*Secret scan* above), and a dependency-verification failure uploads Gradle's
+report (`build/reports/dependency-verification/`) as an artifact.
+
 The same workflow is also exposed as a reusable one (`workflow_call`) and is
 called as the first job of `.github/workflows/release.yml`, so a release cannot
 be built against a definition of "green" that has drifted from the one pull
@@ -1887,4 +2162,6 @@ expected certificate fingerprint. The release procedure itself is documented in
   (`verify<Variant>KeepRules`) runs as part of the release assemble instead,
   which on CI means `release.yml` rather than this workflow.
 - It does not perform dependency-vulnerability scanning — that is a
-  separate workstream.
+  separate workstream. Dependency *verification* (above) answers a different
+  question: whether an artifact is the one its publisher signed, not whether it
+  is safe.

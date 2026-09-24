@@ -1,0 +1,8 @@
+# Findings of the secret scan (.gitleaks.toml) that are not secrets and already
+# sit in a pushed commit, where an inline `gitleaks:allow` can no longer reach them:
+# the scan reads every commit's own diff, so a later commit that adds the waiver
+# leaves the original commit flagged. Each entry names one commit, file, rule and
+# line, so it exempts exactly that line of that commit and nothing written later.
+#
+# A public PGP key fingerprint used as a test fixture (Google's Maven signing key).
+96c2449d050e428fdf54150aae61b240521d7453:buildSrc/src/test/kotlin/app/knotwork/android/buildtools/SupplyChainPinsCheckerTest.kt:generic-api-key:134
