@@ -68,10 +68,10 @@ jobs:
     timeout-minutes: 75
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '21'
@@ -82,7 +82,7 @@ jobs:
         # build-tools are then fetched automatically by AGP during the build
         # (`android.builder.sdkDownload` is on by default), so the exact
         # package coordinates do not have to be hand-maintained here.
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           # Only platform-tools. The action's default also asks for the legacy
           # `tools` package (SDK Tools 26), which nothing in this build uses and
@@ -91,7 +91,7 @@ jobs:
           packages: 'platform-tools'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -230,7 +230,7 @@ jobs:
 
       - name: Upload detekt report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: detekt-report
           path: app/build/reports/detekt/
@@ -238,7 +238,7 @@ jobs:
 
       - name: Upload ktlint report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ktlint-report
           path: app/build/reports/ktlint/
@@ -252,7 +252,7 @@ jobs:
       # preserve. `:catalog` is included because the root `check` lints it too.
       - name: Upload lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lint-report
           path: |
@@ -266,7 +266,7 @@ jobs:
 
       - name: Upload Kover coverage report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kover-report
           path: app/build/reports/kover/
@@ -274,7 +274,7 @@ jobs:
 
       - name: Upload Roborazzi diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: roborazzi-report
           path: |
@@ -284,7 +284,7 @@ jobs:
 
       - name: Upload unit-test report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-report
           path: app/build/reports/tests/

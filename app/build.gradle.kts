@@ -25,6 +25,7 @@ import app.knotwork.android.buildtools.VerifyFileMapTask
 import app.knotwork.android.buildtools.VerifyForbiddenVocabularyTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
+import app.knotwork.android.buildtools.VerifySupplyChainPinsTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
 import com.android.build.api.artifact.SingleArtifact
 import dev.detekt.gradle.Detekt
@@ -2376,3 +2377,19 @@ val verifyVersionSources by tasks.registering(VerifyVersionSourcesTask::class) {
     stampFile.set(layout.buildDirectory.file("reports/docs-links/version-sources-verified.txt"))
 }
 tasks.named("check") { dependsOn(verifyVersionSources) }
+
+// What the build executes before any code of this repository runs: the GitHub
+// Actions every workflow calls, and the Gradle distribution the wrapper fetches.
+// Both were referenced by something that can move — a tag, a URL with no checksum
+// — in the same job that holds the release signing key. The guard fails when a pin
+// disappears (a step copied from a README, a `wrapper` run without a checksum); see
+// docs/static-analysis.md § Supply-chain pin guard.
+val verifySupplyChainPins by tasks.registering(VerifySupplyChainPinsTask::class) {
+    group = "verification"
+    description = "Fails the build if a GitHub Action or the Gradle distribution is referenced by a mutable pin."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    workflowFiles.from(fileTree("$rootDir/.github") { include("**/*.yml", "**/*.yaml") })
+    wrapperProperties.set(file("$rootDir/gradle/wrapper/gradle-wrapper.properties"))
+    stampFile.set(layout.buildDirectory.file("reports/supply-chain/pins-verified.txt"))
+}
+tasks.named("check") { dependsOn(verifySupplyChainPins) }
