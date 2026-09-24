@@ -131,6 +131,123 @@ class SupplyChainPinsCheckerTest {
         assertEquals(2, SupplyChainPinsChecker.countReferences(text))
     }
 
+    private val orgKey = "0E225917414670F4442C250DFD533C07C264648F"
+    private val personalKey = "D364ABAA39A47320AAAAAAAAAAAAAAAAAAAAAAAA"
+
+    private fun metadata(
+        configuration: String = """
+            <verify-metadata>true</verify-metadata>
+            <verify-signatures>true</verify-signatures>
+            <keyring-format>armored</keyring-format>
+            <key-servers enabled="false"/>
+        """,
+        trustedKeys: String = """
+            <trusted-key id="$orgKey">
+               <trusting group="androidx.core"/>
+               <trusting group="^com[.]android($|([.].*))" regex="true"/>
+            </trusted-key>
+            <trusted-key id="$personalKey" group="com.google.errorprone"/>
+        """,
+    ) = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <verification-metadata xmlns="https://schema.gradle.org/dependency-verification">
+           <configuration>
+              $configuration
+              <trusted-keys>$trustedKeys</trusted-keys>
+           </configuration>
+           <components/>
+        </verification-metadata>
+    """.trimIndent()
+
+    private fun checkMetadata(text: String) = SupplyChainPinsChecker.checkVerificationMetadata(
+        path = "gradle/verification-metadata.xml",
+        text = text,
+        namespaceKeys = setOf(orgKey),
+    )
+
+    @Test
+    fun `given the committed policy then the verification metadata passes`() {
+        assertEquals(emptyList<SupplyChainPinsChecker.Violation>(), checkMetadata(metadata()))
+    }
+
+    @Test
+    fun `given a personal key trusted across a namespace then it is reported`() {
+        // What Gradle's generator does on its own: a maintainer's key that signed
+        // two groups under `com.google` ends up trusted for all of it.
+        val violations = checkMetadata(
+            metadata(
+                trustedKeys = """
+                    <trusted-key id="$personalKey" group="^com[.]google($|([.].*))" regex="true"/>
+                """,
+            ),
+        )
+
+        assertEquals(1, violations.size)
+        assertTrue(violations.single().message.contains(personalKey))
+    }
+
+    @Test
+    fun `given a personal key trusted across a namespace through a nested entry then it is reported`() {
+        val violations = checkMetadata(
+            metadata(
+                trustedKeys = """
+                    <trusted-key id="$personalKey">
+                       <trusting group="com.google.errorprone"/>
+                       <trusting group="^com[.]google($|([.].*))" regex="true"/>
+                    </trusted-key>
+                """,
+            ),
+        )
+
+        assertEquals(1, violations.size)
+    }
+
+    @Test
+    fun `given an ignored key then it is reported`() {
+        // Written by the generator when a key server does not answer; everything
+        // that key signs silently falls back to a first-use checksum.
+        val violations = checkMetadata(
+            metadata(
+                configuration = """
+                    <verify-metadata>true</verify-metadata>
+                    <verify-signatures>true</verify-signatures>
+                    <key-servers enabled="false"/>
+                    <ignored-keys>
+                       <ignored-key id="FD533C07C264648F" reason="Key couldn't be downloaded from any key server"/>
+                    </ignored-keys>
+                """,
+            ),
+        )
+
+        assertEquals(1, violations.size)
+        assertTrue(violations.single().message.contains("FD533C07C264648F"))
+    }
+
+    @Test
+    fun `given verification or signatures switched off or key servers on then each is reported`() {
+        val violations = checkMetadata(
+            metadata(
+                configuration = """
+                    <verify-metadata>false</verify-metadata>
+                    <verify-signatures>false</verify-signatures>
+                """,
+            ),
+        )
+
+        assertEquals(3, violations.size)
+    }
+
+    @Test
+    fun `given no verification metadata file then it is reported`() {
+        val violations = SupplyChainPinsChecker.checkVerificationMetadata(
+            path = "gradle/verification-metadata.xml",
+            text = null,
+            namespaceKeys = emptySet(),
+        )
+
+        assertEquals(1, violations.size)
+    }
+
     @Test
     fun `given wrapper properties without a distribution checksum then it is reported`() {
         val violations = SupplyChainPinsChecker.checkWrapperProperties(

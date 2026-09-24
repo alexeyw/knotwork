@@ -24,8 +24,9 @@ import javax.xml.parsers.DocumentBuilderFactory
  * - `permission NAME protectionLevel=LEVEL` — permissions the app *declares*,
  *   which other apps may then request;
  * - `exported TAG NAME permission=PERMISSION|none` — every component another app
- *   can start or bind, with what it must hold to do so. The permission is part of
- *   the line on purpose: an export that loses it is a new surface under an old name;
+ *   can start or bind, with what it must hold to do so (for a provider, also its
+ *   `readPermission` / `writePermission`). The permission is part of the line on
+ *   purpose: an export that loses it is a new surface under an old name;
  * - `queries package|intent|provider …` — package visibility the app claims.
  *
  * Components that are not exported are left out: they are no entry surface, and
@@ -64,7 +65,12 @@ object MergedManifestInventory {
      * @return One line per entry, sorted and without duplicates.
      */
     fun of(manifestXml: String): List<String> {
-        val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            // A merged manifest never declares a document type; refusing one keeps
+            // the parser from resolving entities for whatever file is the input.
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
         val root = factory.newDocumentBuilder().parse(InputSource(StringReader(manifestXml))).documentElement
         val lines = mutableSetOf<String>()
 
@@ -79,11 +85,8 @@ object MergedManifestInventory {
                         "protectionLevel=${element.android("protectionLevel") ?: "normal"}"
                 "queries" -> element.children().forEach { lines += queryLine(it) }
                 "application" -> element.children()
-                    .filter { it.tagName in COMPONENT_TAGS && it.android("exported") == "true" }
-                    .forEach {
-                        lines += "exported ${it.tagName} ${it.android("name")} " +
-                            "permission=${it.android("permission") ?: "none"}"
-                    }
+                    .filter { it.tagName in COMPONENT_TAGS && it.isExported() }
+                    .forEach { lines += exportLine(it) }
             }
         }
         return lines.sorted()
@@ -114,6 +117,29 @@ object MergedManifestInventory {
             removed = (expectedSet - actualSet).sorted(),
             duplicated = expected.groupingBy { it }.eachCount().filterValues { it > 1 }.keys.sorted(),
         )
+    }
+
+    /**
+     * Whether another app can reach [this] component. Anything but a literal
+     * `"false"` counts, so an `android:exported="@bool/…"` resolved at runtime is
+     * listed rather than assumed closed. An absent attribute means not exported:
+     * the merger refuses a component with an intent filter and no explicit value
+     * at this target SDK.
+     */
+    private fun Element.isExported(): Boolean = android("exported")?.let { it != "false" } ?: false
+
+    /**
+     * One exported component as a line, with every permission that guards it: a
+     * provider can be guarded by `readPermission` / `writePermission` alone, and
+     * losing one of them opens it without `android:permission` changing.
+     */
+    private fun exportLine(component: Element): String = buildString {
+        append("exported ${component.tagName} ${component.android("name")} ")
+        append("permission=${component.android("permission") ?: "none"}")
+        if (component.tagName == "provider") {
+            component.android("readPermission")?.let { append(" readPermission=$it") }
+            component.android("writePermission")?.let { append(" writePermission=$it") }
+        }
     }
 
     /** One `queries` child as a line: a package, a provider authority, or an intent's filter. */

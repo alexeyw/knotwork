@@ -55,7 +55,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
 | `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
 | `:app:verifyVersionSources`                   | Fails if any hand-written copy of the version — README badge and prose, the CHANGELOG heading and links, `SECURITY.md`, the roadmap's release line — disagrees with the declared `versionName` (see below). |
-| `:app:verifySupplyChainPins`                  | Fails if a GitHub Action is referenced by anything but a full commit SHA with a version comment, or the Gradle wrapper loses its distribution checksum (see below). |
+| `:app:verifySupplyChainPins`                  | Fails if a GitHub Action is referenced by anything but a full commit SHA with a version comment, the Gradle wrapper loses its distribution checksum, or dependency verification is switched off, holds an ignored key, or trusts a non-organisation key across a namespace (see below). |
 | `:app:verifyFullReleaseMergedManifest` + `:app:verifyFossReleaseMergedManifest` | Fails if a shipping variant's merged manifest gains or loses a permission, an exported component or a `queries` entry its committed expectation does not list (see below). |
 | `:app:testFullDebugUnitTest` (`CookbookRuntimeReachTest`, `CookbookRecipeValidationTest`) | Fails if the cookbook's run-time verdicts disagree with `NodeConfigCodec`, or a published recipe no longer imports (see below). |
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
@@ -1847,8 +1847,11 @@ reduce the merged manifest that is packaged into each release APK and AAB
 - `uses-permission NAME [maxSdkVersion=N]` — what the app asks for;
 - `permission NAME protectionLevel=LEVEL` — what it declares for others to request;
 - `exported TAG NAME permission=PERMISSION|none` — every component another app can
-  start or bind, **with the permission it demands**: an export that loses its
-  permission is a new surface under an old name, and the line changes;
+  start or bind, **with the permission it demands** (for a provider, also its
+  `readPermission` / `writePermission`): an export that loses its permission is a
+  new surface under an old name, and the line changes. Anything but a literal
+  `android:exported="false"` counts as exported, so a value resolved from a
+  resource at runtime is listed rather than assumed closed;
 - `queries package|intent|provider …` — the package visibility the app claims.
 
 The failure prints the exact lines to add (`+`) or remove (`-`) and where to look
@@ -1887,12 +1890,21 @@ nothing but the repository.
 is not.**
 
 - **Signed artifacts are verified against the publisher's key**, trusted for a
-  group rather than a version (`<trusted-keys>`, 116 keys): Google's Maven
-  signing key for `androidx.*`, `com.android.*` and `com.google.*`, JetBrains' for
-  `org.jetbrains.*`, and so on. A version bump of a dependency whose publisher is
-  already trusted needs no change here. That is deliberate: a review of a short
-  list of publisher keys is one a person can actually do, whereas thousands of
-  checksums nobody can check by eye would be approved without being read.
+  group rather than a version (`<trusted-keys>`, 116 keys). A version bump of a
+  dependency whose publisher is already trusted needs no change here. That is
+  deliberate: a review of a short list of publisher keys is one a person can
+  actually do, whereas thousands of checksums nobody can check by eye would be
+  approved without being read.
+- **Only an organisation's release key is trusted across a namespace** — Google's
+  Maven signing key for its `androidx.*` / `com.android.*` / `com.google.*`
+  groups, JetBrains' release keys for `org.jetbrains.*`. **Every other key is
+  trusted for exactly the groups it was seen signing.** Gradle's generator does
+  not draw that line: it folded the personal keys of a Guava maintainer and an
+  Error Prone maintainer into all of `com.google.*`, and the long-dead Bintray
+  signing key into all of `org.jetbrains.*`, because each had signed a few groups
+  under that prefix — so any one of those keys, leaked, would have vouched for
+  Firebase. Eleven such entries were narrowed to the groups the key actually
+  signed, read from the signatures of every artifact this build resolves.
 - **Unsigned artifacts are pinned by SHA-256**, per version (138 files) — part of
   Firebase's transitive graph and older `androidx` releases, for example, are
   published without a signature.
@@ -1900,6 +1912,15 @@ is not.**
   key servers are disabled**, so a build never contacts one.
 - **`-sources` and `-javadoc` jars are trusted without verification.** The IDE
   downloads them; the build never executes them.
+
+**The policy is enforced, not only written down.** `:app:verifySupplyChainPins`
+fails when `verify-metadata` or `verify-signatures` is off, when key servers are
+on, when the file holds an `<ignored-key>`, and when a key outside the list of
+organisation release keys in `app/build.gradle.kts`
+(`dependencyVerificationNamespaceKeys`, each with its owner) is trusted by
+`regex="true"`. Both of the generator's own outputs fail it: the file before
+narrowing on its 11 widened personal keys, and the first attempt additionally on
+its 14 ignored keys and its key servers.
 
 **Bumping a dependency.** If the new version is signed by a trusted key, nothing
 changes. Otherwise the build fails naming what it cannot verify; record it with
@@ -1960,8 +1981,10 @@ build ever downloads.
 A step in the required `check` job runs [gitleaks](https://github.com/gitleaks/gitleaks)
 over every commit under review: a pull request's own commits, or a push's new
 ones. Every commit, not the final tree — a key added in one commit and deleted in
-the next is still published the moment the branch is pushed. Merge commits carry no
-diff of their own, so gitleaks counts fewer commits than the range holds. A manual run, or the
+the next is still published the moment the branch is pushed. gitleaks reads each
+commit's own diff and skips merge commits, so it reports fewer commits than the
+range holds — and a line that exists only in a merge's conflict resolution is not
+scanned. A manual run, or the
 release workflow calling this one for a tag, scans what the ref has that `main`
 does not; for a release tag that is nothing, since its commits were scanned on
 their way into `main`.

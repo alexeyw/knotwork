@@ -1,10 +1,15 @@
 package app.knotwork.android.buildtools
 
+import org.w3c.dom.Element
+import org.xml.sax.InputSource
+import java.io.StringReader
+import javax.xml.parsers.DocumentBuilderFactory
+
 /**
  * Guards the pins that decide what code the build executes before any of this
  * repository's own code runs.
  *
- * Two rules, one question — *can the same commit of this repository run
+ * Three rules, one question — *can the same commit of this repository run
  * different bytes tomorrow?*
  *
  * - **Every third-party action is pinned to a full commit SHA.** A tag is a
@@ -17,14 +22,16 @@ package app.knotwork.android.buildtools
  * - **The Gradle distribution carries its SHA-256.** `validateDistributionUrl`
  *   checks that the URL is well formed, not the bytes behind it, and every job —
  *   the release job included — downloads and executes that distribution.
+ * - **Dependency verification stays on, and its trust stays narrow** — see
+ *   [checkVerificationMetadata].
  *
- * Neither rule can check that a SHA is the commit its comment names, or that a
+ * Neither pin rule can check that a SHA is the commit its comment names, or that a
  * checksum is Gradle's: both are one lookup away when reviewing the change that
  * introduced them, and neither can be answered without the network. What these
  * rules catch is the pin *disappearing* — a new step copied from a README, a
  * `./gradlew wrapper` run without `--gradle-distribution-sha256-sum`.
  *
- * Pure `String -> List<Violation>` transforms: no file-system access.
+ * Pure transforms of file content to violations: no file-system access.
  */
 object SupplyChainPinsChecker {
 
@@ -110,6 +117,75 @@ object SupplyChainPinsChecker {
                 ),
             )
         }
+
+    /**
+     * Checks that dependency verification is on and that its trust has not been
+     * widened past the policy in `docs/static-analysis.md` § Dependency verification.
+     *
+     * - `verify-metadata` and `verify-signatures` are on, and key servers are off,
+     *   so the verdict depends on the committed keyring alone;
+     * - there is no `<ignored-key>`: Gradle writes one when a key server does not
+     *   answer during generation, and everything that key signs then silently
+     *   falls back to a first-use checksum;
+     * - only a key in [namespaceKeys] — an organisation's release key — may be
+     *   trusted by `regex="true"`. Gradle's generator folds any key that signed a
+     *   few groups under a prefix into the whole prefix, personal keys included.
+     *
+     * @param path Repository-relative path, used in the report only.
+     * @param text File content, or `null` when the file does not exist.
+     * @param namespaceKeys Full fingerprints of the keys allowed namespace-wide trust.
+     * @return Every violation, in document order.
+     */
+    fun checkVerificationMetadata(path: String, text: String?, namespaceKeys: Set<String>): List<Violation> {
+        if (text == null) {
+            return listOf(Violation(path, 0, "is missing; every build verifies its dependencies against it"))
+        }
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
+        val root = factory.newDocumentBuilder().parse(InputSource(StringReader(text))).documentElement
+        val violations = mutableListOf<Violation>()
+
+        fun flag(element: String, expected: String, actual: String?) {
+            if (actual?.trim() != expected) {
+                violations += Violation(path, 0, "`<$element>` must be `$expected`, is `${actual ?: "absent"}`")
+            }
+        }
+        flag("verify-metadata", "true", root.firstByTag("verify-metadata")?.textContent)
+        flag("verify-signatures", "true", root.firstByTag("verify-signatures")?.textContent)
+        flag("key-servers enabled", "false", root.firstByTag("key-servers")?.getAttribute("enabled"))
+
+        root.allByTag("ignored-key").forEach {
+            violations += Violation(
+                path,
+                0,
+                "ignored key `${it.getAttribute("id")}`: fetch it into the keyring and regenerate, or its " +
+                    "artifacts stay verified by first-use checksums only",
+            )
+        }
+        root.allByTag("trusted-key").forEach { key ->
+            val id = key.getAttribute("id")
+            val widened = key.getAttribute("regex") == "true" ||
+                key.allByTag("trusting").any { it.getAttribute("regex") == "true" }
+            if (widened && id !in namespaceKeys) {
+                violations += Violation(
+                    path,
+                    0,
+                    "key `$id` is trusted across a namespace (`regex=\"true\"`) but is not an organisation's " +
+                        "release key; trust it for the groups it signs",
+                )
+            }
+        }
+        return violations
+    }
+
+    private fun Element.allByTag(tag: String): List<Element> {
+        val nodes = getElementsByTagNameNS("*", tag)
+        return (0 until nodes.length).map { nodes.item(it) as Element }
+    }
+
+    private fun Element.firstByTag(tag: String): Element? = allByTag(tag).firstOrNull()
 
     /** Why [reference] does not pin what it names, or `null` when it does. */
     private fun problemWith(reference: String, comment: String): String? = when {

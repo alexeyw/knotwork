@@ -2422,12 +2422,28 @@ tasks.named("check") { dependsOn(verifyVersionSources) }
 // — in the same job that holds the release signing key. The guard fails when a pin
 // disappears (a step copied from a README, a `wrapper` run without a checksum); see
 // docs/static-analysis.md § Supply-chain pin guard.
+// The keys dependency verification may trust across a namespace (`regex="true"`):
+// an organisation's own release keys, for that organisation's groups. Any other key
+// is trusted for exactly the groups it signs. Gradle's metadata generator does not
+// draw this line — it folded two Google engineers' personal keys into all of
+// `com.google.*` — so a key added here is a decision, and its owner is written down.
+val dependencyVerificationNamespaceKeys: Map<String, String> = mapOf(
+    "0E225917414670F4442C250DFD533C07C264648F" to "Google Maven signing key (Linux Packages Signing Authority)",
+    "0F06FF86BEEAF4E71866EE5232EE5355A6BC6E42" to "Google Maven signing key (Linux Packages Signing Authority)",
+    "20723A6399BC060154283B37CFAE163B64AC9189" to "JetBrains Compose Team <compose@jetbrains.com>",
+    "33FD4BFD33554634053D73C0C2148900BCD3C2AF" to "JetBrains <download@jetbrains.com>",
+    "6F538074CCEBF35F28AF9B066A0975F8B1127B83" to "Kotlin Release <kt-a@jetbrains.com>",
+    "E7DC75FC24FB3C8DFE8086AD3D5839A2262CBBFB" to "Kotlin Libraries Release <kt-libraries@jetbrains.com>",
+)
+
 val verifySupplyChainPins by tasks.registering(VerifySupplyChainPinsTask::class) {
     group = "verification"
-    description = "Fails the build if a GitHub Action or the Gradle distribution is referenced by a mutable pin."
+    description = "Fails the build if an Action or the Gradle distribution is unpinned, or dependency trust widened."
     repositoryRoot.set(rootProject.layout.projectDirectory)
     workflowFiles.from(fileTree("$rootDir/.github") { include("**/*.yml", "**/*.yaml") })
     wrapperProperties.set(file("$rootDir/gradle/wrapper/gradle-wrapper.properties"))
+    verificationMetadata.from("$rootDir/gradle/verification-metadata.xml")
+    namespaceKeys.set(dependencyVerificationNamespaceKeys)
     stampFile.set(layout.buildDirectory.file("reports/supply-chain/pins-verified.txt"))
 }
 tasks.named("check") { dependsOn(verifySupplyChainPins) }

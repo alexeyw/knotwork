@@ -151,8 +151,8 @@ failure or as infrastructure trouble.
 
 ## Dependencies, pins and the shipped manifest
 
-Four gates look at what the build pulls in rather than at the code; each is
-described in [`docs/static-analysis.md`](docs/static-analysis.md)
+Four gates look at what the build pulls in, what it ships and what a commit
+carries out, rather than at the code; each is described in [`docs/static-analysis.md`](docs/static-analysis.md)
 § *Supply chain*. What they ask of a change:
 
 - **Adding or bumping a dependency.** Every artifact is verified against
@@ -161,7 +161,9 @@ described in [`docs/static-analysis.md`](docs/static-analysis.md)
   Record it with
   `./gradlew --write-verification-metadata pgp,sha256 --export-keys <the failing tasks>`
   and **read the diff**: a new trusted key is a decision to trust a publisher,
-  and a new checksum is trusted on first download. Never regenerate to silence a
+  and a new checksum is trusted on first download. Gradle may widen a key's
+  trust to a whole namespace (`regex="true"`); unless the key is that
+  organisation's own release key, narrow it to the groups it signs. Never regenerate to silence a
   checksum *mismatch* on an existing entry — that is the substitution the file
   exists to catch.
 - **Changing what the release manifest declares** — a permission, an exported

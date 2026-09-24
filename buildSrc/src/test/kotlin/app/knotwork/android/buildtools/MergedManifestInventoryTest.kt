@@ -72,6 +72,51 @@ class MergedManifestInventoryTest {
     }
 
     @Test
+    fun `given an export decided by a resource then it is listed rather than assumed closed`() {
+        // `android:exported="@bool/…"` is resolved at runtime, per configuration.
+        // Reading only the literal "true" would drop the component from the census
+        // and let it change unnoticed, so anything that is not literally "false"
+        // counts as exported.
+        val lines = MergedManifestInventory.of(
+            manifest.replace(
+                "<receiver android:name=\"app.example.InternalReceiver\" />",
+                "<receiver android:name=\"lib.FlagReceiver\" android:exported=\"@bool/lib_exported\" />",
+            ),
+        )
+
+        assertTrue(lines.contains("exported receiver lib.FlagReceiver permission=none"))
+    }
+
+    @Test
+    fun `given an exported provider then its read and write permissions are part of its line`() {
+        // A provider can be guarded by readPermission / writePermission alone;
+        // dropping one of them opens it while `android:permission` stays absent.
+        val lines = MergedManifestInventory.of(
+            manifest.replace(
+                "</application>",
+                "<provider android:name=\"lib.Files\" android:authorities=\"lib.files\" android:exported=\"true\" " +
+                    "android:readPermission=\"lib.READ\" android:writePermission=\"lib.WRITE\" /></application>",
+            ),
+        )
+
+        assertTrue(
+            lines.contains("exported provider lib.Files permission=none readPermission=lib.READ writePermission=lib.WRITE"),
+        )
+    }
+
+    @Test(expected = Exception::class)
+    fun `given a manifest with a document type declaration then it is refused`() {
+        // A merged manifest never carries one; refusing it keeps the parser from
+        // resolving external entities for whatever file ends up as the input.
+        MergedManifestInventory.of(
+            manifest.replace(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>",
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE manifest [<!ENTITY x \"y\">]>",
+            ),
+        )
+    }
+
+    @Test
     fun `given an expectation file then comments and blank lines are not entries`() {
         val expectation = """
             # Requested by WorkManager.
