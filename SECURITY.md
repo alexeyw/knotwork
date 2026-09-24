@@ -70,12 +70,18 @@ storage and credentials:
   or malformed entry, or a key/file mismatch after the database was restored
   from another install — raises a typed error that routes to a dedicated
   startup recovery screen. That screen offers **Retry** (keystore failures
-  are often transient) and an explicit **Erase all data** action behind a
+  are often transient) and an explicit **Erase data** action behind a
   typed confirmation; the app never wipes, re-keys, or silently recreates
   the passphrase store on its own while user data could be orphaned by it.
   The passphrase is read lazily at the first real database open — never
   during dependency injection — so a failure always surfaces where the UI
   can handle it.
+- **What Erase data erases.** The database and its passphrase first; then,
+  only once the database is gone, the agent workspace, the stored image
+  attachments and every temporary copy in the app cache. It keeps settings,
+  saved cloud API keys, the Hugging Face token and MCP credentials: they still
+  work on the device where the database failed, and the dialog says they are
+  kept. If the database cannot be deleted, nothing else is touched.
 - The store holding **cloud API keys** intentionally keeps the opposite,
   availability-first recovery: a key value that can no longer be decrypted is
   treated as unset and dropped. Unlike the database passphrase, keys can
@@ -107,6 +113,21 @@ storage and credentials:
   anything you want to keep first: chats and long-term memory through their
   in-app export actions, and any custom pipelines / saved presets via the
   pipeline-library and preset JSON-export actions.
+
+### Backup and device transfer
+
+Nothing the app stores leaves the device through Android's cloud backup or a
+device-to-device transfer: `android:allowBackup` is off, and the data
+extraction rules exclude every storage domain from both. The transfer rules
+matter on their own, because on some devices `allowBackup="false"` does not
+stop a transfer.
+
+None of it would be usable elsewhere anyway. The database and the secret
+stores are sealed under Keystore keys that never leave the device, so a copy
+only lands the new install on the recovery screen, and the model files are
+found through the database. What is readable as is — attachments, the agent
+workspace, settings — is what must stay on the device; those three
+directories are also excluded by name. A new device starts empty.
 
 ### Agent file workspace (at-rest)
 
@@ -155,6 +176,9 @@ the database's**, and this is the honest statement of that trade-off:
   characters with `_`; a file named before this rule can still be read and
   deleted, and the file listings the agent reads show its control characters
   escaped, so a name cannot add a line of its own to a listing.
+- The workspace is **not** in Android backup or device transfer (see
+  *Backup and device transfer*), and **Erase data** on the recovery screen
+  deletes it.
 
 ### Workspace quotas (availability control)
 
@@ -398,7 +422,9 @@ their handling is constrained more tightly than text — and the constraints are
   composer is never swept out from under the user. The same pass removes every
   temporary handoff file in the app cache that is more than an hour old — a
   camera capture whose result never came back, a voice clip left by a crash,
-  share copies and journal exports.
+  share copies and journal exports. Stored images are **not** in Android backup
+  or device transfer (see *Backup and device transfer*), and **Erase data** on
+  the recovery screen deletes all of them with the temporary copies.
 - **Audio clips are ephemeral and deleted after transcription.** A recorded or
   picked clip is written as a temporary file in the app cache
   (`cacheDir/audio/`, FBE + sandbox, and subject to OS cache eviction). It is
@@ -446,13 +472,16 @@ only for gated repositories) is handled exactly like a cloud-provider key:
 ### MCP server credentials
 
 - Credentials for a configured MCP server (a Bearer token, Basic password, or
-  API-key value) are stored in the **same Keystore-backed encrypted store**,
-  keyed per server by a hash of its URL.
+  API-key value) **and its custom headers** are stored in the **same
+  Keystore-backed encrypted store**, keyed per server by a hash of its URL.
+  Headers are stored whole: the form invites an `Authorization` row, so any
+  value in it may be a credential.
 - The plain `mcp_servers_json` DataStore entry holds only **non-secret**
-  metadata (URL, transport, display name, custom headers) — never the auth
-  payload. An earlier build embedded auth inline in that entry; a **one-time
-  migration moves any inline auth into the encrypted store and strips it from
-  the JSON**.
+  metadata (URL, transport, display name) — never the auth payload or a
+  header. Earlier builds kept auth, and later custom headers, inline in that
+  entry; a **one-time migration moves them into the encrypted store and strips
+  them from the JSON**. The encrypted copy is committed before the plain one is
+  removed, so an interrupted migration leaves both, never neither.
 
 ### On-device processing by default
 

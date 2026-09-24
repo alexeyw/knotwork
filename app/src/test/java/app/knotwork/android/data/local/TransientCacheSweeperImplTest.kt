@@ -78,6 +78,33 @@ class TransientCacheSweeperImplTest {
         assertTrue(foreign.exists())
     }
 
+    @Test
+    fun `given fresh entries in every registered directory when swept whole then all are removed`() = runTest {
+        val fresh = TransientCacheDirectory.entries.map { fileAt("${it.dirName}/new", FRESH) }
+        val slotCopy = fileAt("shared/key-slot/report.md", FRESH)
+
+        assertTrue(sweeper.sweepAll())
+
+        (fresh + slotCopy).forEach { assertFalse("${it.path} survived the wipe", it.exists()) }
+        TransientCacheDirectory.entries.forEach { directory ->
+            assertTrue(File(cacheFolder.root, directory.dirName).listFiles().isNullOrEmpty())
+        }
+    }
+
+    @Test
+    fun `given no registered directory exists when swept whole then it reports nothing left`() = runTest {
+        assertTrue(sweeper.sweepAll())
+    }
+
+    @Test
+    fun `given a file outside the registry when swept whole then it is left alone`() = runTest {
+        val foreign = fileAt("litert-compile-cache/model.bin", FRESH)
+
+        sweeper.sweepAll()
+
+        assertTrue(foreign.exists())
+    }
+
     private companion object {
         val EXPIRED = TransientCacheDirectory.RETENTION_MILLIS + 1_000L
         val FRESH = TransientCacheDirectory.RETENTION_MILLIS - 60_000L

@@ -204,6 +204,16 @@ class AgentWorkspaceImpl internal constructor(
             }
         }
 
+    override suspend fun eraseAll(): Boolean = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            // Not rootDir(): that would recreate the directory it is asked to remove.
+            val root = File(context.filesDir, WORKSPACE_DIR_NAME)
+            val erased = root.deleteRecursively()
+            cachedTally = null
+            erased
+        }
+    }
+
     override suspend fun stageForShare(relativePath: String): WorkspaceResult<String> = withContext(Dispatchers.IO) {
         when (val resolved = canonicalResolve(relativePath)) {
             is WorkspaceResult.Failure -> resolved
@@ -621,7 +631,7 @@ class AgentWorkspaceImpl internal constructor(
         }
     }
 
-    private companion object {
+    internal companion object {
         /**
          * How many entries — files and directories together — the workspace may
          * hold. The byte quotas cannot see an entry's own cost: a directory counts
@@ -630,28 +640,31 @@ class AgentWorkspaceImpl internal constructor(
          * unbounded. At a 4 KB block this bounds what the byte quota does not see
          * to about 40 MB.
          */
-        const val DEFAULT_MAX_ENTRIES: Int = 10_000
+        private const val DEFAULT_MAX_ENTRIES: Int = 10_000
 
-        /** Name of the workspace directory inside [Context.filesDir]. */
-        const val WORKSPACE_DIR_NAME = "agent_workspace"
+        /**
+         * Name of the workspace directory inside [Context.filesDir]. Internal so the
+         * storage-inventory guard can check the backup rules exclude it by this name.
+         */
+        internal const val WORKSPACE_DIR_NAME = "agent_workspace"
 
         /** The NUL character, which no filesystem name can hold. */
-        val NUL: Char = Char(0)
+        private val NUL: Char = Char(0)
 
         /**
          * Suffix of the sibling scratch file used to stage an atomic write before
          * the rename. Reserved: files ending in it are hidden from listings and
          * quota accounting, so the agent is never expected to create one itself.
          */
-        const val RESERVED_TMP_SUFFIX = ".knotwork-tmp"
+        private const val RESERVED_TMP_SUFFIX = ".knotwork-tmp"
 
         /** Number of leading bytes sampled to classify a file as text or binary. */
-        const val TEXT_SNIFF_BYTES = 8 * 1024
+        private const val TEXT_SNIFF_BYTES = 8 * 1024
 
         /**
          * Maximum length of a UTF-8 code point. Dropped from the tail of a filled
          * sniff buffer so a sequence split across the boundary is not misjudged.
          */
-        const val MAX_UTF8_TAIL_BYTES = 3
+        private const val MAX_UTF8_TAIL_BYTES = 3
     }
 }

@@ -30,7 +30,7 @@ import javax.inject.Inject
  *
  * For the `DB_PASSPHRASE_UNAVAILABLE` failure kind it additionally drives the
  * data-locked recovery surface: a typed-confirm dialog gating
- * [ResetLockedDatabaseUseCase] (full wipe), followed by an automatic restart
+ * [ResetLockedDatabaseUseCase] (the recovery wipe), followed by an automatic restart
  * of the initialization pipeline against the now-empty data set.
  */
 @HiltViewModel

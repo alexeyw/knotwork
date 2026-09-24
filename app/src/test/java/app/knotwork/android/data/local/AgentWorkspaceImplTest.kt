@@ -672,6 +672,33 @@ class AgentWorkspaceImplTest {
 
     // endregion
 
+    // region eraseAll
+
+    @Test
+    fun `given files when eraseAll then the workspace is gone and usage restarts at zero`() = runTest {
+        val workspace = workspaceWith()
+        assertSuccess(workspace.writeText("a.txt", "12345"))
+        assertSuccess(workspace.writeText("dir/nested/b.txt", "678"))
+        assertEquals(8L, assertSuccess(workspace.usage()).usedBytes) // primes the cached tally
+
+        assertTrue(workspace.eraseAll())
+
+        assertFalse(workspaceRoot().exists())
+        // The cached tally went with the files: the quota does not count what is gone.
+        assertEquals(0L, assertSuccess(workspace.usage()).usedBytes)
+        assertEquals(emptyList<Any>(), assertSuccess(workspace.list()))
+        // The workspace is usable again straight away.
+        assertSuccess(workspace.writeText("fresh.txt", "ok"))
+    }
+
+    @Test
+    fun `given no workspace directory yet when eraseAll then it reports nothing left`() = runTest {
+        assertTrue(workspaceWith().eraseAll())
+        assertFalse(workspaceRoot().exists())
+    }
+
+    // endregion
+
     // region readTextPreview
 
     @Test

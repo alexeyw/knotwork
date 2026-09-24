@@ -202,6 +202,17 @@ class SettingsManager @Inject constructor(
          */
         fun mcpAuthKey(url: String): String = "mcp_auth_" + sha256Hex(url)
 
+        /**
+         * Encrypted-store key for a single MCP server's custom request headers, namespaced by
+         * the same URL hash as [mcpAuthKey]. A slot of its own rather than a field of the auth
+         * payload, so auth entries written before headers moved here stay byte-identical and
+         * each of the two is rewritten only when it changes.
+         *
+         * @param url The MCP server URL the headers belong to.
+         * @return The per-server secret-store entry name.
+         */
+        fun mcpHeadersKey(url: String): String = "mcp_headers_" + sha256Hex(url)
+
         private fun sha256Hex(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
@@ -418,9 +429,9 @@ class SettingsManager @Inject constructor(
     }
 
     override val mcpServers: Flow<List<McpServerConfig>> = flow {
-        // Move any inline auth left in plain DataStore by earlier releases into
-        // the encrypted store before exposing the list (one-time, idempotent).
-        migrateLegacyMcpAuth()
+        // Move any inline auth or headers left in plain DataStore by earlier releases
+        // into the encrypted store before exposing the list (one-time, idempotent).
+        migrateLegacyMcpSecrets()
         emitAll(
             dataStore.data
                 .catch { exception ->
@@ -498,10 +509,13 @@ class SettingsManager @Inject constructor(
      * is run on every `mcpServers` emission by every consumer (cold flow), so
      * without this cache each emission would perform one Keystore AES-GCM decrypt
      * per configured server. The encrypted store stays the source of truth;
-     * [writeMcpAuth] / [removeMcpAuth] keep the cache coherent, and an
+     * [writeMcpAuth] / [removeMcpSecrets] keep the cache coherent, and an
      * undecryptable read is deliberately NOT cached so it retries.
      */
     private val mcpAuthCache = ConcurrentHashMap<String, McpAuth>()
+
+    /** The same cache as [mcpAuthCache], for each server's custom headers; same coherence rules. */
+    private val mcpHeadersCache = ConcurrentHashMap<String, Map<String, String>>()
 
     /**
      * Serialises the read-modify-write of the server list and its secret
@@ -513,20 +527,25 @@ class SettingsManager @Inject constructor(
     private val mcpMutex = Mutex()
 
     /**
-     * Reconciles the per-server MCP auth secrets against a settings change:
-     * removes the encrypted entry of every server dropped (or whose URL changed),
-     * and (re)writes a secret **only for a server whose auth actually changed** —
-     * so editing one server never rewrites (and cannot clobber) another's secret.
+     * Reconciles the per-server MCP secrets — auth and custom headers — against a
+     * settings change: removes both encrypted entries of every server dropped (or
+     * whose URL changed), and (re)writes each secret **only for a server where that
+     * secret actually changed** — so editing one server never rewrites (and cannot
+     * clobber) another's.
      */
     private fun reconcileMcpSecrets(previous: List<McpServerConfig>, next: List<McpServerConfig>) {
         val nextUrls = next.mapTo(mutableSetOf()) { it.url }
         previous.forEach { config ->
-            if (config.url !in nextUrls) removeMcpAuth(config.url)
+            if (config.url !in nextUrls) removeMcpSecrets(config.url)
         }
         val previousByUrl = previous.associateBy { it.url }
         next.forEach { config ->
-            if (previousByUrl[config.url]?.auth != config.auth) {
+            val before = previousByUrl[config.url]
+            if (before?.auth != config.auth) {
                 writeMcpAuth(config.url, config.auth)
+            }
+            if (before?.headers != config.headers) {
+                writeMcpHeaders(config.url, config.headers)
             }
         }
     }
@@ -543,10 +562,27 @@ class SettingsManager @Inject constructor(
         mcpAuthCache[url] = auth
     }
 
-    /** Removes a server's auth from both the encrypted store and the cache. */
-    private fun removeMcpAuth(url: String) {
+    /**
+     * Persists (or clears, when empty) a single server's custom headers in the encrypted
+     * store and the cache. Headers are stored encrypted as a whole: the form invites an
+     * `Authorization` row, so any value in it may be a credential.
+     */
+    private fun writeMcpHeaders(url: String, headers: Map<String, String>) {
+        val key = SecretKeys.mcpHeadersKey(url)
+        if (headers.isEmpty()) {
+            secretsStore.remove(key)
+        } else {
+            secretsStore.putString(key, JSONObject(headers).toString(), synchronous = true)
+        }
+        mcpHeadersCache[url] = headers
+    }
+
+    /** Removes a server's auth and headers from both the encrypted store and the caches. */
+    private fun removeMcpSecrets(url: String) {
         secretsStore.remove(SecretKeys.mcpAuthKey(url))
+        secretsStore.remove(SecretKeys.mcpHeadersKey(url))
         mcpAuthCache.remove(url)
+        mcpHeadersCache.remove(url)
     }
 
     /**
@@ -558,87 +594,149 @@ class SettingsManager @Inject constructor(
      */
     private fun readMcpAuth(url: String): McpAuth {
         mcpAuthCache[url]?.let { return it }
-        val key = SecretKeys.mcpAuthKey(url)
-        val raw = try {
-            secretsStore.getString(key)
-        } catch (e: SecureValueUnreadableException) {
-            Timber.e(e, "Stored MCP auth for a server is unreadable; treating it as no-auth for now.")
-            return McpAuth.None
-        }
-        val auth = if (raw == null) {
-            McpAuth.None
-        } else {
-            try {
-                decodeAuth(JSONObject(raw))
-            } catch (e: JSONException) {
-                Timber.e(e, "Stored MCP auth JSON is corrupt; treating it as no-auth.")
-                McpAuth.None
-            }
-        }
+        val stored = readMcpSecret(SecretKeys.mcpAuthKey(url), "auth") ?: return McpAuth.None
+        val auth = stored.plaintext?.let { parseStoredMcpSecret(it, "auth") }?.let(::decodeAuth) ?: McpAuth.None
         mcpAuthCache[url] = auth
         return auth
     }
 
-    /** Serializes the legacy-DataStore MCP-auth migration so concurrent collectors run it once. */
-    private val mcpAuthMigrationMutex = Mutex()
-    private var mcpAuthMigrationDone = false
+    /**
+     * Reads a server's custom headers from the cache or the encrypted store, with the
+     * recovery policy of [readMcpAuth]: a corrupt entry reads as no headers and is cached,
+     * an undecryptable one reads as no headers for now and is left in place.
+     */
+    private fun readMcpHeaders(url: String): Map<String, String> {
+        mcpHeadersCache[url]?.let { return it }
+        val stored = readMcpSecret(SecretKeys.mcpHeadersKey(url), "headers") ?: return emptyMap()
+        val headers = stored.plaintext?.let { parseStoredMcpSecret(it, "headers") }?.let(::decodeHeaders).orEmpty()
+        mcpHeadersCache[url] = headers
+        return headers
+    }
 
     /**
-     * One-time move of MCP auth that earlier releases embedded inline in the plain
-     * `mcp_servers_json` DataStore entry into the encrypted store. The encrypted
-     * copy is written **before** the inline copy is stripped, so a crash in
-     * between leaves both rather than neither; an entry already present in the
-     * encrypted store is not overwritten. An [IOException] reading DataStore
-     * defers the migration to the next collection.
+     * Reads one MCP secret entry.
+     *
+     * @return The stored entry — its [StoredMcpSecret.plaintext] is `null` when nothing is
+     *   stored — or `null` when the entry cannot be decrypted (logged; the caller must not
+     *   cache that answer, so a transient Keystore failure recovers on a later read).
      */
-    private suspend fun migrateLegacyMcpAuth() {
-        if (mcpAuthMigrationDone) return
-        mcpAuthMigrationMutex.withLock {
-            if (mcpAuthMigrationDone) return
+    private fun readMcpSecret(key: String, what: String): StoredMcpSecret? = try {
+        StoredMcpSecret(secretsStore.getString(key))
+    } catch (e: SecureValueUnreadableException) {
+        Timber.e(e, "Stored MCP %s for a server is unreadable; treating it as absent for now.", what)
+        null
+    }
+
+    /**
+     * A readable MCP secret entry, told apart from an undecryptable one by [readMcpSecret]
+     * returning `null` for the latter.
+     *
+     * @property plaintext The decrypted value, or `null` when nothing is stored.
+     */
+    @JvmInline
+    private value class StoredMcpSecret(val plaintext: String?)
+
+    /**
+     * Parses a decrypted MCP secret, or returns `null` when it is corrupt.
+     *
+     * The exception itself is never logged: on Android a `JSONException`'s message ends with
+     * the whole parsed input (AOSP `JSONTokener.toString`), which here is the credential, and
+     * every WARN+ record — throwable included — reaches crash reports after opt-in.
+     */
+    private fun parseStoredMcpSecret(raw: String, what: String): JSONObject? = try {
+        JSONObject(raw)
+    } catch (e: JSONException) {
+        Timber.e("Stored MCP %s JSON is corrupt (%s); treating it as absent.", what, e.javaClass.simpleName)
+        null
+    }
+
+    /** Serializes the legacy-DataStore MCP-secrets migration so concurrent collectors run it once. */
+    private val mcpSecretsMigrationMutex = Mutex()
+    private var mcpSecretsMigrationDone = false
+
+    /**
+     * One-time move of the MCP secrets that earlier releases kept inline in the plain
+     * `mcp_servers_json` DataStore entry — the typed `auth` object and the custom `headers`
+     * — into the encrypted store. Every encrypted copy is committed synchronously
+     * **before** the JSON is rewritten without the inline copies, so an interruption
+     * leaves both copies rather than neither, and the next collection finishes the job.
+     * An [IOException] reading or rewriting DataStore defers the migration the same way.
+     */
+    private suspend fun migrateLegacyMcpSecrets() {
+        if (mcpSecretsMigrationDone) return
+        mcpSecretsMigrationMutex.withLock {
+            if (mcpSecretsMigrationDone) return
             val json = try {
                 dataStore.data.first()[PreferencesKeys.MCP_SERVERS_JSON]
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                Timber.e(e, "Cannot read preferences for the MCP-auth migration; retrying later.")
+                Timber.e(e, "Cannot read preferences for the MCP-secrets migration; retrying later.")
                 return
             }
-            val rewritten = if (json.isNullOrBlank()) null else extractInlineMcpAuthToSecrets(json)
+            val rewritten = if (json.isNullOrBlank()) null else extractInlineMcpSecrets(json)
             if (rewritten != null) {
-                dataStore.edit { it[PreferencesKeys.MCP_SERVERS_JSON] = rewritten }
+                try {
+                    dataStore.edit { it[PreferencesKeys.MCP_SERVERS_JSON] = rewritten }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: IOException) {
+                    // The encrypted copies are already committed; the inline ones stay
+                    // until a later collection rewrites the JSON.
+                    Timber.e(e, "Cannot rewrite preferences for the MCP-secrets migration; retrying later.")
+                    return
+                }
             }
-            mcpAuthMigrationDone = true
+            mcpSecretsMigrationDone = true
         }
     }
 
     /**
-     * Pure (non-suspend) half of [migrateLegacyMcpAuth]: moves every server's
-     * inline `auth` object into the encrypted store (unless one is already there)
-     * and returns the JSON rewritten with the inline auth stripped, or `null`
-     * when nothing changed or the JSON is malformed.
+     * Pure (non-suspend) half of [migrateLegacyMcpSecrets]: moves every server's inline
+     * `auth` and `headers` objects into the encrypted store and returns the JSON rewritten
+     * with both stripped, or `null` when nothing changed or the JSON is malformed.
+     *
+     * The two differ on an entry that already exists. Auth keeps the stored one (the
+     * behaviour of the original auth migration). Headers take the inline copy: this build
+     * never writes headers inline, so an inline copy next to an encrypted one is either the
+     * same value (an interrupted migration) or a newer one (written by an older build after
+     * a downgrade) — never an older one.
      */
-    private fun extractInlineMcpAuthToSecrets(json: String): String? = try {
+    private fun extractInlineMcpSecrets(json: String): String? = try {
         val array = JSONArray(json)
         var changed = false
         for (i in 0 until array.length()) {
             val obj = array.getJSONObject(i)
             val url = obj.optString("url").takeIf { it.isNotBlank() } ?: continue
-            val inlineAuth = obj.optJSONObject("auth") ?: continue
-            val key = SecretKeys.mcpAuthKey(url)
-            val existing = try {
-                secretsStore.getString(key)
-            } catch (e: SecureValueUnreadableException) {
-                null
+            obj.optJSONObject("auth")?.let { inlineAuth ->
+                val key = SecretKeys.mcpAuthKey(url)
+                val existing = try {
+                    secretsStore.getString(key)
+                } catch (e: SecureValueUnreadableException) {
+                    null
+                }
+                if (existing == null) {
+                    secretsStore.putString(key, inlineAuth.toString(), synchronous = true)
+                }
+                obj.remove("auth")
+                changed = true
             }
-            if (existing == null) {
-                secretsStore.putString(key, inlineAuth.toString(), synchronous = true)
+            obj.optJSONObject("headers")?.let { inlineHeaders ->
+                val key = SecretKeys.mcpHeadersKey(url)
+                if (inlineHeaders.length() > 0) {
+                    secretsStore.putString(key, inlineHeaders.toString(), synchronous = true)
+                } else {
+                    secretsStore.remove(key)
+                }
+                mcpHeadersCache.remove(url)
+                obj.remove("headers")
+                changed = true
             }
-            obj.remove("auth")
-            changed = true
         }
         if (changed) array.toString() else null
     } catch (e: JSONException) {
-        Timber.e(e, "MCP servers JSON is malformed; skipping the auth migration.")
+        // Not the exception: its message would carry the whole JSON (see parseStoredMcpSecret).
+        Timber.e("MCP servers JSON is malformed (%s); skipping the secrets migration.", e.javaClass.simpleName)
         null
     }
 
@@ -649,13 +747,9 @@ class SettingsManager @Inject constructor(
                 .put("url", config.url)
                 .put("transport", config.transport.wireId)
             if (!config.name.isNullOrBlank()) obj.put("name", config.name)
-            // Auth is NOT written here: credentials live in the encrypted store
-            // (see [writeMcpAuth] / [reconcileMcpSecrets]), keyed by server URL.
-            if (config.headers.isNotEmpty()) {
-                val headers = JSONObject()
-                config.headers.forEach { (k, v) -> headers.put(k, v) }
-                obj.put("headers", headers)
-            }
+            // Neither auth nor custom headers are written here: both live in the
+            // encrypted store (see [writeMcpAuth] / [writeMcpHeaders] /
+            // [reconcileMcpSecrets]), keyed by server URL.
             array.put(obj)
         }
         return array.toString()
@@ -690,6 +784,15 @@ class SettingsManager @Inject constructor(
         }
     }
 
+    /** Decodes a stored headers object; a non-string value reads as its string form. */
+    private fun decodeHeaders(obj: JSONObject): Map<String, String> = buildMap {
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            put(key, obj.optString(key))
+        }
+    }
+
     private fun decodeMcpServers(json: String): List<McpServerConfig> = try {
         val array = JSONArray(json)
         buildList(capacity = array.length()) {
@@ -698,22 +801,15 @@ class SettingsManager @Inject constructor(
                 val url = obj.optString("url").takeIf { it.isNotBlank() } ?: continue
                 val name = obj.optString("name").takeIf { it.isNotBlank() }
                 val transport = McpTransport.fromWireId(obj.optString("transport").takeIf { it.isNotBlank() })
-                // Auth normally comes from the encrypted store; a still-inline
-                // `auth` object is honoured too, covering the window before the
-                // one-time migration ([migrateLegacyMcpAuth]) has rewritten the
-                // JSON. Post-migration the JSON carries no auth and this reads
-                // the encrypted store.
+                // Auth and headers normally come from the encrypted store; a
+                // still-inline `auth` / `headers` object is honoured too, covering
+                // the window before the one-time migration
+                // ([migrateLegacyMcpSecrets]) has rewritten the JSON — or after an
+                // interrupted rewrite. Post-migration the JSON carries neither.
                 val inlineAuth = obj.optJSONObject("auth")
                 val auth = if (inlineAuth != null) decodeAuth(inlineAuth) else readMcpAuth(url)
-                val headers = obj.optJSONObject("headers")?.let { headerObj ->
-                    buildMap<String, String> {
-                        val keys = headerObj.keys()
-                        while (keys.hasNext()) {
-                            val key = keys.next()
-                            put(key, headerObj.optString(key))
-                        }
-                    }
-                } ?: emptyMap()
+                val inlineHeaders = obj.optJSONObject("headers")
+                val headers = if (inlineHeaders != null) decodeHeaders(inlineHeaders) else readMcpHeaders(url)
                 add(
                     McpServerConfig(
                         url = url,
@@ -726,7 +822,8 @@ class SettingsManager @Inject constructor(
             }
         }
     } catch (e: JSONException) {
-        Timber.w(e, "Failed to decode MCP servers JSON; falling back to empty list")
+        // Not the exception: its message would carry the whole JSON (see parseStoredMcpSecret).
+        Timber.w("Failed to decode MCP servers JSON (%s); falling back to empty list", e.javaClass.simpleName)
         emptyList()
     }
 

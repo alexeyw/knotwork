@@ -18,4 +18,14 @@ interface TransientCacheSweeper {
      * @return How many top-level entries (files or share slots) were removed.
      */
     suspend fun sweepExpired(): Int
+
+    /**
+     * Removes every entry from every registered directory, whatever its age, for the
+     * user-confirmed recovery wipe (*Erase data*): share copies of workspace files,
+     * staged journal exports, camera captures and voice clips go with the data they
+     * were made from.
+     *
+     * @return `true` when every registered directory is empty afterwards.
+     */
+    suspend fun sweepAll(): Boolean
 }

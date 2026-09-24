@@ -157,6 +157,12 @@ class AttachmentStoreImpl @Inject constructor(@ApplicationContext private val co
         if (target != null && target.isFile) target.length() else 0L
     }
 
+    override suspend fun deleteAll(): Boolean = withContext(dispatcher) {
+        // Not rootDir(): that would recreate the directory it is asked to remove.
+        val dir = File(context.filesDir, ATTACHMENTS_DIR)
+        dir.deleteRecursively()
+    }
+
     /**
      * Returns the attachment directory, creating it lazily on first access.
      */

@@ -40,4 +40,12 @@ class TransientCacheSweeperImpl internal constructor(private val context: Contex
             TransientCacheFiles.pruneOlderThan(File(context.cacheDir, directory.dirName), cutoff)
         }
     }
+
+    override suspend fun sweepAll(): Boolean = withContext(dispatcher) {
+        TransientCacheDirectory.entries.map { directory ->
+            val dir = File(context.cacheDir, directory.dirName)
+            TransientCacheFiles.pruneOlderThan(dir, cutoffMillis = Long.MAX_VALUE)
+            dir.listFiles().isNullOrEmpty()
+        }.all { it }
+    }
 }

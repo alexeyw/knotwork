@@ -140,6 +140,22 @@ details.
 - **Temporary files are cleared daily.** The daily maintenance pass also removes
   leftover temporary files older than an hour: camera captures, voice clips left
   by a crash, share copies and journal exports.
+- **MCP custom headers are stored encrypted.** The header rows of an MCP server
+  — whose hints suggest `Authorization: Bearer …` — were saved in plain
+  settings, unlike the server's auth. They are now kept encrypted with it, and
+  headers saved by earlier versions are moved on first start.
+- **Nothing the app stores goes into Android backup or to a new device.**
+  Attachments and workspace files were included in cloud backup and in
+  device-to-device transfer. Nothing is now: the rest of the app's data only
+  works on the device it was created on, so a new phone starts empty instead of
+  on the "data can't be unlocked" screen.
+- **Erase data on the recovery screen also deletes workspace files and
+  attachments.** It used to delete only the database while its button said
+  *Erase everything*. The dialog now lists what it deletes and says that
+  settings and saved keys are kept.
+- **A damaged MCP setting can no longer put a credential in a crash report.**
+  Reading a corrupted MCP entry logged the parser's error, whose text on Android
+  includes the whole entry. The log now names only the kind of error.
 
 ### Fixed
 

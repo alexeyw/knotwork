@@ -99,6 +99,25 @@ class AttachmentStoreImplTest {
     }
 
     @Test
+    fun `given stored attachments when deleteAll then no attachment file is left`() = runTest {
+        val first = store.ingest(jpegBytes(64, 64)).getOrThrow()
+        val second = store.ingest(jpegBytes(32, 32)).getOrThrow()
+
+        assertTrue(store.deleteAll())
+
+        assertFalse(store.exists(first.path))
+        assertFalse(store.exists(second.path))
+        assertEquals(emptyList<String>(), store.listStoredPaths().getOrThrow())
+        // The store keeps working: the directory is recreated on the next ingest.
+        assertTrue(store.exists(store.ingest(jpegBytes(16, 16)).getOrThrow().path))
+    }
+
+    @Test
+    fun `given no attachment directory yet when deleteAll then it reports nothing left`() = runTest {
+        assertTrue(store.deleteAll())
+    }
+
+    @Test
     fun `given missing path when deleted then success (idempotent)`() = runTest {
         assertTrue(store.delete("does-not-exist.jpg").isSuccess)
     }
