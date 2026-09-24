@@ -281,9 +281,37 @@ new risk surface, and the design constrains it deliberately:
   imported steps afterwards. That is by design (it is how an updated pipeline
   keeps working), so the Replace confirmation names the pipeline already in the
   library and lists each of those bindings before anything is written.
+- **What another app can reach without asking.** Three components are exported
+  without a permission. The launcher activity (`MainActivity`) only navigates: a
+  caller can open a chat by its id, and nothing runs. The other two take content
+  from any app on the device, and from `adb`: the share target
+  (`ShareReceiverActivity`) and the external-automation receiver
+  (`ExternalAutomationReceiver`), both below. The Quick Settings tile is
+  exported too, but only the system can bind it. A build-time test holds this
+  list to the manifests, so a new export fails the build until it is added — and,
+  if it asks for no permission, named here.
+- **The share target is reachable without the share sheet.** It has to be
+  exported for the share sheet to start it on the sending app's behalf, so an app
+  can also start it directly and put text of its choosing where the user's own
+  message goes — a stronger position than the tool-content injection accepted
+  below. What bounds it:
+  - it is inert until you bind a share pipeline, and the run is visible: the app
+    opens into the chat the run is in, and Android generally lets only an app you
+    are looking at start it;
+  - **at most 30 shares an hour start a run.** It is one budget for every sender,
+    because the sender is not known — so an app that uses it up holds your own
+    shares back until the hour moves. A refused share stores nothing and says why;
+  - a shared image passes the same pre-flight as a composer attachment, and only
+    another app's `content://` address is read;
+  - the run is an ordinary chat run, so the approval policy applies unchanged.
+
+  It has no switch of its own (the binding is the switch), no journal, and no
+  sender identity. Bind a pipeline you are comfortable running on text you did
+  not write.
 - **The external-automation contract is off by default and cannot be opened by
-  accident.** It is the only entry surface reachable by code the user did not
-  write, so it carries more than the shared defaults above:
+  accident.** Any app can broadcast to it without a permission, and a broadcast
+  needs no screen: a request can arrive from an app in the background and run
+  with nothing shown. So it carries more than the shared defaults above:
   - The switch raises a **consent dialog** naming what is being agreed to, and
     only moves once the user confirms. Turning it back off is immediate.
   - Even switched on it stays **inert until bound** to exactly one pipeline, and
@@ -301,6 +329,15 @@ new risk surface, and the design constrains it deliberately:
   - **Accepted requests are rate-limited** per hour, and **every request is
     journalled** — admitted or refused, with its typed reason — so a profile that
     silently does nothing can be diagnosed, and a looping one is visible.
+  - **While it is off, nothing is sent back.** A request is still journalled,
+    whatever it says, but no callback leaves the app: not the refusal, and not the
+    final report of a run admitted before the switch was turned off. Otherwise any
+    app could make this one broadcast an action and a string of its choosing, from
+    this app's identity, to a package of its choosing — with the feature off.
+  - **Caller text is bounded.** The request id is at most 128 characters and the
+    callback's action and package at most 256; a longer value is refused, not cut.
+    The journal keeps at most 256 characters of any value a refused request
+    carried, so a loop of refusals cannot fill the database.
   - The receiver declares `intentMatchingFlags="enforceIntentFilter"`, which
     **Android 16 and above enforce** and Android 14–15 ignore. The gap is
     narrower than it looks, and deliberately so: that flag is not what validates
@@ -309,12 +346,12 @@ new risk surface, and the design constrains it deliberately:
     explicit intent carrying a foreign action is refused identically on 14 as on
     16. Every other defence above lives in app code and is unaffected by the
     platform version.
-- **No new execution path, no relaxed gate.** A fired trigger (or an entry
-  surface, or an admitted external request) runs through the **exact same
-  background path** as a scheduled task — the same persisted-run lifecycle, the
-  same foreground-service promotion, and the same engine — attributed with a
-  distinct run origin (`TRIGGER` / `SHARE` / `QUICK_TILE` / `EXTERNAL`) only for
-  accounting. **An external call asks for a run; it does not approve what the run
+- **No new execution path, no relaxed gate.** A fired trigger, a tile tap or an
+  admitted external request runs through the **exact same background path** as a
+  scheduled task — the same persisted-run lifecycle, the same foreground-service
+  promotion, and the same engine — attributed with a distinct run origin
+  (`TRIGGER` / `QUICK_TILE` / `EXTERNAL`) only for accounting. A share runs as an
+  ordinary chat run (`SHARE`), in the foreground, since the app opens into it. **An external call asks for a run; it does not approve what the run
   then wants to do.** Crucially, the
   **human-in-the-loop gate stays fully in force**: a tool call the approval
   policy would stop in a chat stops these unattended runs too, and the run

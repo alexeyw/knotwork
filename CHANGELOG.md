@@ -156,9 +156,26 @@ details.
 - **A damaged MCP setting can no longer put a credential in a crash report.**
   Reading a corrupted MCP entry logged the parser's error, whose text on Android
   includes the whole entry. The log now names only the kind of error.
+- **Other apps can no longer start share runs without limit.** Any app can start
+  the share target directly, not only from the share sheet. At most 30 shares an
+  hour now start a run; past that a share is refused with a notice and nothing
+  is stored. The security documentation now names every surface another app can
+  reach without a permission.
+- **External automation sends nothing while it is switched off.** A malformed
+  request sent while the feature was off — its default — was still answered,
+  with a broadcast to the package and action the request named. Nothing is sent
+  now while it is off, including the final report of a run accepted before it
+  was switched off.
+- **External automation bounds the caller's text.** The request id may be at
+  most 128 characters and the callback's action and package at most 256; a
+  longer value is refused as `VALUE_TOO_LONG`. The request journal keeps at most
+  256 characters of any value, so refused requests cannot fill the device's
+  storage.
 
 ### Fixed
 
+- **The in-app FAQ no longer says the automation callback carries a run's
+  output.** It carries the status only, as it always has.
 - **Rotating the phone with the camera open no longer loses the photo.** The
   chat forgot which photo it was waiting for when the screen was recreated.
 - **A Skill step's "Always ask before this call" works.** A pipeline could carry

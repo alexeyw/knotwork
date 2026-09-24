@@ -1715,7 +1715,11 @@ surfaces enqueue work into the same background path:
   tile** — start a run from outside the app. Each is **inert until the
   user binds a pipeline** (the privacy default) and enqueues with an
   explicit `pipelineId` so it runs the user's choice regardless of the
-  app default. A third surface, **external automation**, lets another app
+  app default. The share activity is exported without a permission, so any
+  installed app can start it directly: `LaunchSharePipelineUseCase` admits a
+  share against `RunRateCeiling.SHARE` through `ShareAdmissionRepository`
+  (count and record in one DataStore `edit`) before it stores or runs
+  anything. A third surface, **external automation**, lets another app
   on the device ask for a run. Its binding is deliberately stricter than
   the other two — an **allowlist** rather than a default, so a request
   naming any other pipeline is refused rather than redirected. The request
@@ -1728,14 +1732,19 @@ surfaces enqueue work into the same background path:
   its request journal is a screen of its own
   (`presentation/ui/automation/`), reading the same `domain` dictionaries so
   the user-facing sentences and the persisted discriminators cannot drift.
+  Its callbacks leave through one seam, `ExternalAutomationCallbackSender`
+  (the app's only `sendBroadcast`), which sends nothing while the contract
+  is off and nothing over the contract's length ceilings.
   See [external-automation.md](external-automation.md).
 
-Neither is a new execution path. Both land on
-`TaskScheduler.scheduleOneTime(...)` (the `WorkManagerTaskScheduler`
-impl), which drives `AgentWorker` → the **same** `TaskQueueManager` →
-`GraphExecutionEngine` chain as a `schedule_task` run — only the
-`RunOrigin` differs (`TRIGGER` / `SHARE` / `QUICK_TILE` / `EXTERNAL`),
-recorded on the persistent `pipeline_runs` record for accounting. Everything in §6.1–§6.3
+Neither is a new execution path. A trigger, a tile tap and an admitted
+external request land on `TaskScheduler.scheduleOneTime(...)` (the
+`WorkManagerTaskScheduler` impl), which drives `AgentWorker` → the **same**
+`TaskQueueManager` → `GraphExecutionEngine` chain as a `schedule_task`
+run — only the `RunOrigin` differs (`TRIGGER` / `QUICK_TILE` /
+`EXTERNAL`), recorded on the persistent `pipeline_runs` record for
+accounting. A share (`SHARE`) enters the same `TaskQueueManager` directly,
+as an interactive run, because the app opens into it. Everything in §6.1–§6.3
 therefore applies unchanged: the persisted run lifecycle, foreground-service
 promotion, headless engine unload, the two-phase HITL gate (a `SENSITIVE`
 / `DESTRUCTIVE` tool inside an **unattended** trigger run **parks** on a

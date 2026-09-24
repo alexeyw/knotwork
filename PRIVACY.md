@@ -59,8 +59,10 @@ backup or in a transfer to a new device
 - Pipelines, presets, prompt templates, and their run traces.
 - Files in the agent workspace — what the agent wrote and what you imported.
 - Triggers, scheduled tasks, and the trigger journal.
+- The journal of requests other apps sent (section 3.6).
 - Settings, including the list of cloud providers, MCP servers, and allowed
-  domains you configured.
+  domains you configured — and the times of your shares in the last hour, kept
+  only to enforce the share limit.
 - Local usage statistics (section 4).
 - API keys, the Hugging Face access token, and MCP credentials and custom
   headers you entered.
@@ -211,15 +213,18 @@ While it is on, data moves in two directions and neither leaves the device:
   That text is another app's to send, so what it contains is governed by that
   app, not by this one; here it is treated like any other input.
 - **Outbound (optional).** If the request asked to be answered, Knotwork sends
-  one broadcast to **the package that request named** — an explicit intent, never
-  a general broadcast — carrying the request id, the admission status and, when
-  refused, the reason. It never carries the prompt, the model's reply, or
+  one broadcast addressed to **the package that request named** — delivered to
+  that package only, never a general broadcast — carrying the request id, the
+  admission status and, when refused, the reason. It never carries the prompt, the model's reply, or
   anything the run produced. Note the precision: Android does not tell the app
   who sent a broadcast unless the sender opts in, so the address is a claim made
   *in* the request rather than a verified identity. That is exactly why the
   payload is this thin — an unverified address must not be able to have anything
   of yours read back to it. A request that names no package gets no callback at
   all, which is the normal shape for a shell script.
+
+While it is off, nothing is sent back at all — not to a request refused because
+it is off, and not the final report of a run accepted before you switched it off.
 
 Every inbound request, accepted or refused, is written to a local journal on
 the device. The vocabulary of the contract is documented in

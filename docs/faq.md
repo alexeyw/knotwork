@@ -331,8 +331,9 @@ it on](external-automation.md#switching-it-on).
 
 ### How do I get the result back?
 
-The request can name a callback broadcast, which carries the run's status and
-output. Statuses and refusal reasons are enumerated. See [Receiving the
+The request can name a callback broadcast, which carries the run's status —
+never its output: have the pipeline put the result somewhere you can read.
+Statuses and refusal reasons are enumerated. See [Receiving the
 callback](external-automation.md#receiving-the-callback).
 
 ### Does calling from outside skip the confirmations?
