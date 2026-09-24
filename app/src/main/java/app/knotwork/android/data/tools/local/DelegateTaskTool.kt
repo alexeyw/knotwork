@@ -15,11 +15,13 @@ import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -45,12 +47,15 @@ import javax.inject.Inject
  *   chunk shares the same embedding space as every other memory write — otherwise retrieval, which
  *   embeds the query with that same active provider, could never match a delegated result.
  * @property apiKeyRepository The repository responsible for persisting selected model configurations.
+ * @property networkActivityTracker Told about the delegated call before it is sent, so the
+ *   More tab's privacy indicator counts it.
  */
 class DelegateTaskTool @Inject constructor(
     private val koogClientFactory: KoogClientFactory,
     private val memoryRepository: MemoryRepository,
     private val embeddingProviderResolver: EmbeddingProviderResolver,
     private val apiKeyRepository: ApiKeyRepository,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) {
 
     /**
@@ -122,10 +127,16 @@ class DelegateTaskTool @Inject constructor(
                     )
                 }
 
+                networkActivityTracker.recordOutbound()
                 // Apply a 60-second timeout for the external API call
                 val result = withTimeoutOrNull(LLM_CALL_TIMEOUT_MS) {
                     val stream = client.executeStreaming(prompt("default") { user(taskDescription) }, model)
-                    stream.mapNotNull { frame -> (frame as? StreamFrame.TextDelta)?.text }.toList().joinToString("")
+                    stream
+                        // Told again per frame, so a long answer keeps the indicator "online".
+                        .onEach { networkActivityTracker.recordOutbound() }
+                        .mapNotNull { frame -> (frame as? StreamFrame.TextDelta)?.text }
+                        .toList()
+                        .joinToString("")
                 }
 
                 if (result.isNullOrBlank()) {

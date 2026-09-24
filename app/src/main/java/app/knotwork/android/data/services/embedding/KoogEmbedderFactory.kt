@@ -2,8 +2,10 @@ package app.knotwork.android.data.services.embedding
 
 import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
+import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.ollama.client.OllamaClient
+import app.knotwork.android.data.engine.CloudClientTimeouts
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
 import app.knotwork.android.domain.models.CloudProvider
 import javax.inject.Inject
@@ -66,6 +68,11 @@ interface KoogEmbedderFactory {
  * omits the `KoogHttpClient.Factory` service-loader registration, so the SPI
  * auto-discovery path throws at runtime — passing the factory explicitly
  * bypasses the lookup.
+ *
+ * Both clients carry [CloudClientTimeouts.CONFIG], the chat clients' own deadlines. Built
+ * without it, as they once were, they fell back to Koog's 900 s request and socket
+ * timeouts — every memory write and search could wait fifteen minutes on a silent
+ * provider.
  */
 @Singleton
 class DefaultKoogEmbedderFactory @Inject constructor(private val retryWrapper: CloudRetryWrapper) :
@@ -74,12 +81,20 @@ class DefaultKoogEmbedderFactory @Inject constructor(private val retryWrapper: C
     private val httpClientFactory = KtorKoogHttpClient.Factory()
 
     override suspend fun openAiClient(apiKey: String): LLMEmbeddingProviderAPI = retryWrapper.wrap(
-        client = OpenAILLMClient(apiKey = apiKey, httpClientFactory = httpClientFactory),
+        client = OpenAILLMClient(
+            apiKey = apiKey,
+            settings = OpenAIClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
+            httpClientFactory = httpClientFactory,
+        ),
         provider = CloudProvider.OPENAI.id,
     )
 
     override suspend fun ollamaClient(baseUrl: String): LLMEmbeddingProviderAPI = retryWrapper.wrap(
-        client = OllamaClient(httpClientFactory = httpClientFactory, baseUrl = baseUrl),
+        client = OllamaClient(
+            httpClientFactory = httpClientFactory,
+            baseUrl = baseUrl,
+            timeoutConfig = CloudClientTimeouts.CONFIG,
+        ),
         provider = CloudProvider.OLLAMA.id,
     )
 }

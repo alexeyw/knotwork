@@ -168,6 +168,9 @@ class CloudLlmNodeExecutor @Inject constructor(
 
         try {
             responseStream.collect { frame ->
+                // Told again on every frame: an answer can stream for minutes, and the
+                // indicator must not read "no network calls in last 2 m" while it does.
+                networkActivityTracker.recordOutbound()
                 if (frame is StreamFrame.End) {
                     finishReason = frame.finishReason
                     val meta = frame.metaInfo

@@ -1126,11 +1126,16 @@ Settings → Providers. Koog exposes no per-attempt hook, so a thin
 invocations; a retried `CLOUD` node surfaces each retry on the console as a
 muted `RUNTIME` warning (`Cloud retry 1/2 for openai`).
 
-**Deadlines.** `KoogClientFactory` applies an explicit `ConnectionTimeoutConfig`
-to every client it builds: **60 s socket**, **30 s connect**, **900 s request**.
+**Deadlines.** Every Koog model client — the chat clients `KoogClientFactory`
+builds and the embedding clients `DefaultKoogEmbedderFactory` builds — carries one
+shared `ConnectionTimeoutConfig`, `CloudClientTimeouts.CONFIG`: **60 s socket**,
+**30 s connect**, **900 s request**. `KoogClientTimeoutKonsistTest` refuses a
+construction that does not pass it; the embedding clients were once built without.
 The socket value is the load-bearing one, because Ktor applies it *per read* —
 it bounds how long a provider may stay **silent**, not how long a healthy
-answer may take, the same rule the task queue's silence valve uses. Passing
+answer may take, the same rule the task queue's silence valve uses. An
+embedding request is not streamed, so there the socket value bounds the wait
+for the whole answer (a batch is at most 64 texts). Passing
 no config is not a neutral choice: Koog's own default is 900 s for both request
 and socket, measured at 900 033 ms against a stalled provider. Unlike the MCP
 SSE path above, `HttpTimeout` *does* apply here.

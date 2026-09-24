@@ -2,6 +2,7 @@ package app.knotwork.android.data.services.embedding
 
 import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
 import app.knotwork.android.data.engine.ModelNetworkGate
+import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingException
@@ -16,6 +17,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -38,11 +41,18 @@ class CloudEmbeddingProviderTest {
         every { blockNetworkFromLocalModel } returns localOnlyMode
     }
 
+    private val networkActivity = NetworkActivityTrackerImpl()
+
     private lateinit var provider: CloudEmbeddingProvider
 
     @Before
     fun setup() {
-        provider = CloudEmbeddingProvider(embedderFactory, apiKeyRepository, ModelNetworkGate(settingsRepository))
+        provider = CloudEmbeddingProvider(
+            embedderFactory = embedderFactory,
+            apiKeyRepository = apiKeyRepository,
+            modelNetworkGate = ModelNetworkGate(settingsRepository),
+            networkActivityTracker = networkActivity,
+        )
     }
 
     @Test
@@ -101,6 +111,29 @@ class CloudEmbeddingProviderTest {
 
         assertArrayEquals(floatArrayOf(0.1f, 0.2f, 0.3f), result, 1e-6f)
         coVerify(exactly = 1) { client.embed(listOf("hello"), any()) }
+    }
+
+    @Test
+    fun `given the gate admits the call when embed then the privacy indicator records it`() = runTest {
+        // Every memory write and memory search goes through here while the embedding model
+        // is OpenAI — traffic the More tab's "no network calls" pill never heard of.
+        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        coEvery { embedderFactory.openAiClient("sk-test") } returns client
+        coEvery { client.embed(any<List<String>>(), any()) } returns listOf(listOf(0.1))
+
+        provider.embed("hello")
+
+        assertNotNull("memory text left without being recorded", networkActivity.lastOutboundAt.value)
+    }
+
+    @Test
+    fun `given the gate refuses the call when embed then nothing is recorded`() = runTest {
+        localOnlyMode.value = true
+        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+
+        runCatching { provider.embed("private memory text") }
+
+        assertNull(networkActivity.lastOutboundAt.value)
     }
 
     @Test

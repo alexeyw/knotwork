@@ -13,6 +13,7 @@ import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 import javax.inject.Singleton
 import ai.koog.prompt.dsl.prompt as buildPrompt
@@ -85,6 +86,8 @@ private class KoogStructuredInferenceClient(
         val builtPrompt = buildPrompt(id = "structured", params = params) { user(prompt) }
         val accumulated = StringBuilder()
         client.executeStreaming(builtPrompt, model)
+            // Told again per frame, so a long answer keeps the indicator "online".
+            .onEach { networkActivityTracker.recordOutbound() }
             .mapNotNull { (it as? StreamFrame.TextDelta)?.text }
             .collect { token ->
                 accumulated.append(token)

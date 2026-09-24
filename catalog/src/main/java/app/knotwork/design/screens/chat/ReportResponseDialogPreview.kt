@@ -12,7 +12,8 @@ object ReportResponseDialogPreview {
     /** The dialog as it opens, with the neutral category selected. */
     fun dialog(): ReportResponseDialogUi = ReportResponseDialogUi(
         title = "Report this response",
-        body = "Tell us what was wrong with it. The report is written here and goes nowhere until you send it.",
+        body = "Tell me what is wrong with what the model produced. This helps improve the pipelines and " +
+            "prompts that ship with the app.",
         reasons = listOf(
             ReportReasonOptionUi(id = "HARMFUL_OR_UNSAFE", label = "Harmful or unsafe"),
             ReportReasonOptionUi(id = "SEXUALLY_EXPLICIT", label = "Sexually explicit"),
@@ -21,7 +22,8 @@ object ReportResponseDialogPreview {
             ReportReasonOptionUi(id = "OTHER", label = "Something else"),
         ),
         notePlaceholder = "What happened? (optional)",
-        disclosure = "Nothing is sent from this screen. You choose whether to copy the report or open an issue.",
+        disclosure = "Nothing is sent automatically. Open issue puts this report in a GitHub link, so GitHub " +
+            "receives it when the page opens; it goes public only if you submit it. To edit it first, copy it instead.",
         copyLabel = "Copy report",
         openIssueLabel = "Open an issue",
         cancelLabel = "Cancel",

@@ -31,9 +31,9 @@ import org.robolectric.annotation.GraphicsMode
  * all while it lived in `:app`.
  *
  * Two selections are captured rather than one. The disclosure line is captured
- * with them deliberately: "nothing is sent from this screen" is the claim that
- * makes this dialog consistent with the app's privacy story, and a claim that
- * can silently disappear from a layout is worth photographing.
+ * with them deliberately: it is where the dialog says what **Open issue** hands to
+ * GitHub — the report rides in the link, so it arrives when the page opens — and a
+ * claim that can silently disappear from a layout is worth photographing.
  *
  * The body rather than the dialog, for the reason `SaveAsPresetDialogBody`
  * records: a text area inside an `AlertDialog` never lets the harness idle.

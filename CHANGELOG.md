@@ -184,8 +184,27 @@ details.
 - **The protobuf library MediaPipe brings in is raised to 4.27.5**, past a
   denial-of-service flaw (CVE-2024-7254). Nothing in the app passed it untrusted
   data; the update closes the exposure regardless.
+- **Wikipedia lookups no longer name your phone.** The search tool sent
+  Android's default user agent, which carries the phone model and the exact
+  Android build. It now sends the app's name and version.
+- **The report dialog says when a report reaches GitHub.** **Open issue** puts
+  the report in the link, so GitHub receives it as soon as the page opens, not
+  when the issue is submitted. The dialog, the guide and the privacy policy now
+  say so; **Copy report** still sends nothing.
 
 ### Fixed
+
+- **The privacy indicator counts every connection the app opens.** The More
+  tab's footer read "no network calls" while a Wikipedia search, an
+  `http_request`, a delegated task, a network embedding model, or Hugging Face
+  browsing and downloads were running — and showed a long cloud answer or
+  download as finished a minute after it started. All of them count now, for as
+  long as they run, and the indicator reads "network call just now" rather than
+  "cloud enabled".
+- **Memory no longer waits fifteen minutes on a silent embedding provider.**
+  With OpenAI or Ollama as the embedding model, memory writes and searches used
+  the client library's 900-second defaults; they now use the chat clients'
+  deadlines.
 
 - **The in-app FAQ no longer says the automation callback carries a run's
   output.** It carries the status only, as it always has.

@@ -1,6 +1,5 @@
 package app.knotwork.android.data.engine
 
-import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
 import ai.koog.prompt.executor.clients.retry.RetryConfig
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
 import app.knotwork.android.domain.models.CloudProvider
@@ -52,30 +51,6 @@ class KoogClientFactoryTimeoutTest {
         )
     }
 
-    /**
-     * Walks the class hierarchy for the client's `settings` property and reads its
-     * `timeoutConfig`. Reflection is the only route — Koog keeps `settings` private — but
-     * it fails loudly rather than silently if Koog renames the field on an upgrade.
-     */
-    private fun timeoutsOf(client: Any): ConnectionTimeoutConfig {
-        var type: Class<*>? = client.javaClass
-        while (type != null) {
-            val field = type.declaredFields.firstOrNull { it.name == "settings" }
-            if (field != null) {
-                field.isAccessible = true
-                val settings = requireNotNull(field.get(client)) { "settings was null on $type" }
-                val timeoutField = generateSequence(settings.javaClass as Class<*>?) { it.superclass }
-                    .mapNotNull { klass -> klass.declaredFields.firstOrNull { it.name == "timeoutConfig" } }
-                    .firstOrNull()
-                    ?: error("no timeoutConfig on ${settings.javaClass} — did Koog rename it?")
-                timeoutField.isAccessible = true
-                return timeoutField.get(settings) as ConnectionTimeoutConfig
-            }
-            type = type.superclass
-        }
-        error("no settings field on ${client.javaClass} — did Koog rename it?")
-    }
-
     @Test
     fun `given any BYOK provider when a client is built then our deadlines replace Koog defaults`() = runTest {
         val providers = listOf(
@@ -89,7 +64,7 @@ class KoogClientFactoryTimeoutTest {
             val client = factory.createClient(provider)
             assertNotNull("no client built for $provider", client)
 
-            val timeouts = timeoutsOf(client!!)
+            val timeouts = koogTimeoutsOf(client!!)
             assertEquals(
                 "$provider must bound provider silence at 60s, not Koog's 900s default",
                 60_000L,
@@ -148,7 +123,7 @@ class KoogClientFactoryTimeoutTest {
         // The semantic that matters: a long healthy stream keeps resetting the per-read
         // socket timeout, so it must be the tighter of the two. If the request timeout were
         // the smaller one, a slow-but-alive generation would be cut for being long.
-        val timeouts = timeoutsOf(factory.createClient(CloudProvider.DEEPSEEK)!!)
+        val timeouts = koogTimeoutsOf(factory.createClient(CloudProvider.DEEPSEEK)!!)
 
         assertTrue(
             "socket (${timeouts.socketTimeoutMillis}) must be tighter than request " +

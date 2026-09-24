@@ -47,11 +47,11 @@ class MoreFormattersTest {
     }
 
     @Test
-    fun `formatNetworkStatus fresh timestamp renders cloud enabled`() {
+    fun `formatNetworkStatus fresh timestamp renders a call just now`() {
         val now = 1_000_000_000L
         val lastAt = now - 30_000L
         val result = formatNetworkStatus(now = now, lastOutboundAt = lastAt)
-        assertEquals("online · cloud enabled", result)
+        assertEquals("online · network call just now", result)
     }
 
     @Test

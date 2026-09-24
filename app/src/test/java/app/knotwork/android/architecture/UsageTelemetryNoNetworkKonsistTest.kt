@@ -30,22 +30,16 @@ class UsageTelemetryNoNetworkKonsistTest {
                 name.contains("Usage") || name.contains("Telemetry") || file.path.contains("/settings/usage/")
             }
             .assertFalse(additionalMessage = NETWORK_IMPORT_FAILURE) { file ->
-                file.imports.any { import -> FORBIDDEN_PREFIXES.any { prefix -> import.name.startsWith(prefix) } }
+                file.imports.any { import ->
+                    NetworkClientImports.PREFIXES.any { prefix -> import.name.startsWith(prefix) }
+                }
             }
     }
 
     private companion object {
-        val FORBIDDEN_PREFIXES = listOf(
-            "okhttp3.",
-            "retrofit2.",
-            "ai.koog.",
-            "io.ktor.",
-            "java.net.",
-        )
-
         const val NETWORK_IMPORT_FAILURE =
             "the local usage-telemetry path must never touch the network: no usage-telemetry file may import a " +
-                "network client (OkHttp / Retrofit / Koog / Ktor / java.net). The statistics stay on-device; the " +
+                "network client (NetworkClientImports). The statistics stay on-device; the " +
                 "voluntary export goes only to a user-chosen file or the share sheet."
     }
 }

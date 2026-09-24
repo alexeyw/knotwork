@@ -4,6 +4,7 @@ import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalToolExecutor
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.HttpRequestPolicy
 import kotlinx.coroutines.CancellationException
@@ -59,11 +60,14 @@ import kotlin.math.min
  *   redirect following so each hop can be validated.
  * @property settingsRepository Source of the allowlist and the response-size cap.
  * @property apiKeyRepository Source of the stored provider keys scanned for leaks.
+ * @property networkActivityTracker Told about every hop sent, so the More tab's privacy
+ *   indicator counts this tool's requests.
  */
 class HttpRequestExecutor @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val settingsRepository: SettingsRepository,
     private val apiKeyRepository: ApiKeyRepository,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) : LocalToolExecutor {
 
     override val toolName: String = TOOL_NAME
@@ -151,6 +155,8 @@ class HttpRequestExecutor @Inject constructor(
         var currentHeaders = headers
         var hop = 0
         while (true) {
+            // Every hop is a request of its own, and a redirect can lead to another host.
+            networkActivityTracker.recordOutbound()
             val response = client.newCall(buildRequest(url, method, body, currentHeaders)).execute()
             val code = response.code
             if (response.isRedirect && hop < SettingsDefaults.HTTP_TOOL_MAX_REDIRECTS) {

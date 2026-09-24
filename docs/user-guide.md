@@ -360,13 +360,15 @@ the app assembles a report: your note, the category, the reported text, and
 the app version, device and currently selected model. That last one is the model
 selected now, which is the one that answered unless you have switched since.
 
-Nothing is transmitted. There is no reporting server behind this app, and
-adding one would contradict everything else on this page. Instead you get
-two ways to hand the report over yourself: **Copy report** puts it on the
-clipboard, and **Open issue** opens the public issue tracker with the report
-prefilled. The tracker is public, so read the text and remove anything
-private before you submit it — the reported response is quoted in full (up
-to a length cap, which the report states when it applies).
+The app sends nothing on its own — there is no reporting server behind it,
+and adding one would contradict everything else on this page. You hand the
+report over yourself, one of two ways: **Copy report** puts it on the
+clipboard, and **Open issue** opens the public issue tracker in your browser
+with the report prefilled. The prefilled text rides in the link, so GitHub
+receives it as soon as the page opens, even if you never submit; the issue
+becomes public only when you do. The reported response is quoted in full (up
+to a length cap, which the report states when it applies) — if it holds
+something private, copy the report and edit it before you post.
 
 ### Attaching an image
 
@@ -2816,11 +2818,16 @@ workspace and their size, the app version and build. **Tasks** reads
 another run, and it is the only row with a numeric badge: the running
 count. That is what keeps a badge meaning "something is running right
 now" — a stored quantity like the archived-chat count lives in the row's
-subtitle instead. A footer pill summarises the privacy state — when the
-agent has not made any outbound LLM or MCP call for a minute, the
-pill reads `on-device · no network calls in last N m`; an in-flight
-cloud call flips the indicator to `online · cloud enabled`. The
-window resets when the process is recreated.
+subtitle instead. A footer pill summarises the privacy state. It counts
+every connection the app opens itself — a cloud model or `delegate_task`,
+a network embedding model, an MCP server, `search_tool`, `http_request`,
+and Hugging Face browsing and model downloads. While one is running, and
+for a minute after, it reads `online · network call just now`; after that,
+`on-device · no network calls in last N m`, and before the first one,
+`on-device · no network calls yet`. Crash reports (the standard build,
+after you opt in) are not counted: the crash-reporting SDK sends them on
+its own, out of the app's sight. The count resets when the process is
+recreated.
 
 ## Managing local models
 

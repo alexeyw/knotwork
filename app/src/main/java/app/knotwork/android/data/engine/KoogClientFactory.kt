@@ -1,7 +1,6 @@
 package app.knotwork.android.data.engine
 
 import ai.koog.http.client.ktor.KtorKoogHttpClient
-import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
 import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicClientSettings
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
@@ -35,6 +34,9 @@ import javax.inject.Singleton
  * reports the refusal the gate (or a missing credential) produced — the two share one
  * decision per provider, so a `null` client and its stated cause cannot disagree.
  *
+ * Every client carries [CloudClientTimeouts.CONFIG] — Koog's defaults would let a silent
+ * provider hold a node for fifteen minutes (see [CloudClientTimeouts]).
+ *
  * @property apiKeyRepository Source of the provider keys and the Ollama base URL.
  * @property modelNetworkGate Decides whether model traffic may leave the device right now.
  * @property retryWrapper Decorates each client with the transient-failure retry policy.
@@ -63,29 +65,6 @@ class KoogClientFactory @Inject constructor(
      * services file restored.
      */
     private val httpClientFactory = KtorKoogHttpClient.Factory()
-
-    /**
-     * Network deadlines applied to every cloud client.
-     *
-     * Koog's own default is 900 s for both the request and the socket, and the factory
-     * never overrode it — so a provider that accepted the request and then went quiet
-     * held the node for fifteen minutes. Measured, not assumed: a stalled stub was still
-     * connected after 120 s under the shipped configuration, while an explicit config on
-     * the same SSE path cut at its stated value.
-     *
-     * The load-bearing value is [SOCKET_TIMEOUT_MS], because it is applied **per read**:
-     * it bounds how long the provider may stay *silent*, not how long a healthy answer
-     * may take. That is deliberately the same rule the task queue's silence valve
-     * uses — a long, steadily-streaming generation must never be cut for being long,
-     * while a dead connection must not survive. [REQUEST_TIMEOUT_MS] is left at Koog's
-     * generous value as a backstop for the pathological case of a provider that dribbles
-     * bytes forever.
-     */
-    private val timeoutConfig = ConnectionTimeoutConfig(
-        requestTimeoutMillis = REQUEST_TIMEOUT_MS,
-        connectTimeoutMillis = CONNECT_TIMEOUT_MS,
-        socketTimeoutMillis = SOCKET_TIMEOUT_MS,
-    )
 
     /**
      * Provider-keyed dispatch used by domain-side consumers. Exhaustive on
@@ -184,7 +163,7 @@ class KoogClientFactory @Inject constructor(
         val key = admittedApiKey(CloudProvider.OPENAI) ?: return null
         return OpenAILLMClient(
             apiKey = key,
-            settings = OpenAIClientSettings(timeoutConfig = timeoutConfig),
+            settings = OpenAIClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
             httpClientFactory = httpClientFactory,
         )
     }
@@ -193,7 +172,7 @@ class KoogClientFactory @Inject constructor(
         val key = admittedApiKey(CloudProvider.ANTHROPIC) ?: return null
         return AnthropicLLMClient(
             apiKey = key,
-            settings = AnthropicClientSettings(timeoutConfig = timeoutConfig),
+            settings = AnthropicClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
             httpClientFactory = httpClientFactory,
         )
     }
@@ -202,7 +181,7 @@ class KoogClientFactory @Inject constructor(
         val key = admittedApiKey(CloudProvider.GOOGLE) ?: return null
         return GoogleLLMClient(
             apiKey = key,
-            settings = GoogleClientSettings(timeoutConfig = timeoutConfig),
+            settings = GoogleClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
             httpClientFactory = httpClientFactory,
         )
     }
@@ -211,7 +190,7 @@ class KoogClientFactory @Inject constructor(
         val key = admittedApiKey(CloudProvider.DEEPSEEK) ?: return null
         return DeepSeekLLMClient(
             apiKey = key,
-            settings = DeepSeekClientSettings(timeoutConfig = timeoutConfig),
+            settings = DeepSeekClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
             httpClientFactory = httpClientFactory,
         )
     }
@@ -225,7 +204,7 @@ class KoogClientFactory @Inject constructor(
         return OllamaClient(
             httpClientFactory = httpClientFactory,
             baseUrl = url,
-            timeoutConfig = timeoutConfig,
+            timeoutConfig = CloudClientTimeouts.CONFIG,
         )
     }
 
@@ -245,18 +224,4 @@ class KoogClientFactory @Inject constructor(
     /** The trimmed, non-blank Ollama base URL, or `null` when none is configured. */
     private suspend fun ollamaBaseUrl(): String? =
         apiKeyRepository.getOllamaBaseUrl().firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
-
-    private companion object {
-        /**
-         * Longest the provider may stay silent between bytes. Applied per read, so a
-         * healthy long generation is untouched and a dead stream is not.
-         */
-        const val SOCKET_TIMEOUT_MS: Long = 60_000
-
-        /** Connection establishment budget — a person is usually waiting on this. */
-        const val CONNECT_TIMEOUT_MS: Long = 30_000
-
-        /** Outer backstop for a request that never ends despite continuous bytes. */
-        const val REQUEST_TIMEOUT_MS: Long = 900_000
-    }
 }

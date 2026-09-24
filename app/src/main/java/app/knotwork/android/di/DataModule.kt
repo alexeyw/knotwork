@@ -320,8 +320,8 @@ abstract class DataModule {
 
     /**
      * Binds [NetworkActivityTrackerImpl] to [NetworkActivityTracker]. Records every outbound
-     * cloud-LLM and MCP call so the More tab can render the "no network calls in last N m"
-     * privacy indicator.
+     * call the app opens itself — cloud models, embeddings, MCP, network tools, Hugging Face —
+     * so the More tab can render the "no network calls in last N m" privacy indicator.
      */
     @Binds
     @Singleton

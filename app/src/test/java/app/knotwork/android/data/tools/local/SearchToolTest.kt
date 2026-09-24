@@ -1,6 +1,7 @@
 package app.knotwork.android.data.tools.local
 
 import app.knotwork.android.data.engine.ModelNetworkGate
+import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -47,7 +48,9 @@ class SearchToolTest {
         server.url(url.file).toUrl().openConnection() as HttpURLConnection
     }
 
-    private val searchTool = SearchTool(llmEngine, networkGate, localWikipedia)
+    private val networkActivity = NetworkActivityTrackerImpl()
+
+    private val searchTool = SearchTool(llmEngine, networkGate, localWikipedia, networkActivity)
 
     @Before
     fun setUp() {
@@ -191,6 +194,48 @@ class SearchToolTest {
             }
             assertTrue("a connection was opened: $opened", opened.isEmpty())
         }
+
+    @Test
+    fun `given the gate admits the call when executeSearch then the privacy indicator records it`() = runTest {
+        // The More tab's "no network calls" pill reads this tracker. `search_tool` is on
+        // by default and was the one path it never heard of.
+        coEvery { networkGate.networkToolRefusal(any()) } returns null
+        serve(NO_MATCH_BODY)
+
+        searchTool.executeSearch("Ada Lovelace", "en")
+
+        assertNotNull("the lookup reached the network without being recorded", networkActivity.lastOutboundAt.value)
+    }
+
+    @Test
+    fun `given the call is refused before a connection when executeSearch then nothing is recorded`() = runTest {
+        coEvery { networkGate.networkToolRefusal(any()) } returns REFUSAL
+        searchTool.executeSearch("Ada Lovelace", "en")
+
+        coEvery { networkGate.networkToolRefusal(any()) } returns null
+        searchTool.executeSearch("Ada Lovelace", "evil.example/")
+
+        assertNull(networkActivity.lastOutboundAt.value)
+    }
+
+    @Test
+    fun `given a lookup when executeSearch then it names the app and not the device in its user agent`() = runTest {
+        // Left to the platform, the header is `Dalvik/2.1.0 (Linux; U; Android 16; <model>
+        // Build/<id>)` — the phone model and the exact Android build go to Wikimedia with
+        // every lookup. Wikimedia's user-agent policy asks for `<client>/<version>
+        // (<contact>)` instead, and its API answers that with 200 (measured 24.09.2026).
+        coEvery { networkGate.networkToolRefusal(any()) } returns null
+        serve(NO_MATCH_BODY)
+
+        searchTool.executeSearch("Ada Lovelace", "en")
+
+        val userAgent = server.takeRequest().headers["User-Agent"].orEmpty()
+        assertEquals(SearchTool.USER_AGENT, userAgent)
+        assertTrue("not the app's own agent: $userAgent", userAgent.startsWith("Knotwork/"))
+        for (deviceDetail in listOf("Dalvik", "Android", "Linux", "Java/")) {
+            assertTrue("'$deviceDetail' in $userAgent", deviceDetail !in userAgent)
+        }
+    }
 
     @Test
     fun `given a real Wikipedia edition when the search URL is built then the host is that edition`() {

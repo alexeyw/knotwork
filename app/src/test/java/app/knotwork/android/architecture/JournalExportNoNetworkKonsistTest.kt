@@ -47,7 +47,9 @@ class JournalExportNoNetworkKonsistTest {
         assertTrue(EMPTY_SCOPE_FAILURE, files.size >= MINIMUM_GUARDED_FILES)
 
         files.assertFalse(additionalMessage = NETWORK_IMPORT_FAILURE) { file ->
-            file.imports.any { import -> FORBIDDEN_PREFIXES.any { prefix -> import.name.startsWith(prefix) } }
+            file.imports.any { import ->
+                NetworkClientImports.PREFIXES.any { prefix -> import.name.startsWith(prefix) }
+            }
         }
     }
 
@@ -103,15 +105,6 @@ class JournalExportNoNetworkKonsistTest {
         }
 
     private companion object {
-        /** Network clients the journal-export path must not reach for. */
-        val FORBIDDEN_PREFIXES = listOf(
-            "okhttp3.",
-            "retrofit2.",
-            "ai.koog.",
-            "io.ktor.",
-            "java.net.",
-        )
-
         /**
          * The token shared by every export type's name — the one the filter and
          * the coverage test both key off. Pinned to the real declarations by the
@@ -137,7 +130,7 @@ class JournalExportNoNetworkKonsistTest {
 
         const val NETWORK_IMPORT_FAILURE =
             "the journals leave the device only in the user's own hands: no file on the journal-export path " +
-                "may import a network client (OkHttp / Retrofit / Koog / Ktor / java.net). The export goes to " +
+                "may import a network client (NetworkClientImports). The export goes to " +
                 "the system share sheet or to a file the user picked, on an explicit action — never to a " +
                 "server, and never as a side effect of something else."
     }

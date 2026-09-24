@@ -162,8 +162,9 @@ on by default.** When a pipeline step calls it, the app requests
 code is checked first, so the request can only go to a Wikipedia address. The model
 writes that term from what it is working on, so it can carry wording from your
 conversation. Nothing else of yours goes with it — no account, no device
-identifier, no credentials — though, like any web request, it shows your IP
-address to the Wikimedia Foundation, whose servers answer it.
+identifier, no credentials; the request names the app and its version, not
+your phone's model — though, like any web request, it shows your IP address
+to the Wikimedia Foundation, whose servers answer it.
 
 Being on by default is the part worth stating plainly: the pipeline the app
 creates for you on first launch calls this tool for questions it judges
@@ -259,9 +260,11 @@ that app's own policy applies from that point on.
   model unless a cloud node in your pipeline consumes them (section 3.1).
 - **Nothing is sent to the developer on its own.** The only two paths that can
   reach the developer at all are the optional crash reports of section 3.5 and
-  a report you compose yourself: flagging a model response opens a prefilled
-  message you can edit, and it travels only if you send it. Neither happens in
-  the background.
+  a report you compose yourself. When you flag a model response, **Open issue**
+  opens GitHub's new-issue page in your browser with the report — your note
+  and up to 3,000 characters of the flagged reply — already in the link, so
+  opening it hands that text to GitHub; it becomes a public issue only if you
+  submit it. **Copy report** sends nothing. Neither happens in the background.
 
 ---
 

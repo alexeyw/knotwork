@@ -1,6 +1,7 @@
 package app.knotwork.android.data.network.huggingface
 
 import app.knotwork.android.domain.constants.ModelDiscoveryConstants
+import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
@@ -26,10 +27,13 @@ import javax.inject.Inject
  * @property baseUrl Hub host (no trailing slash); injected so tests can point
  *   the client at a local mock server.
  * @property client shared OkHttp client.
+ * @property networkActivityTracker Told about each Hub request, so the More tab's privacy
+ *   indicator counts Discover browsing as the network use it is.
  */
 class HuggingFaceModelApi @Inject constructor(
     @HuggingFaceBaseUrl private val baseUrl: String,
     private val client: OkHttpClient,
+    private val networkActivityTracker: NetworkActivityTracker,
 ) {
 
     /** Lenient decoder; the endpoints carry many fields the DTO ignores. */
@@ -84,6 +88,7 @@ class HuggingFaceModelApi @Inject constructor(
      */
     private fun executeForBody(url: HttpUrl): String {
         val request = Request.Builder().url(url).get().build()
+        networkActivityTracker.recordOutbound()
         client.newCall(request).execute().use { response ->
             val bodyText = response.body.string()
             if (!response.isSuccessful) {
