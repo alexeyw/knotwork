@@ -16,7 +16,8 @@ package app.knotwork.android.buildtools
  *
  * The chain has one more rule. The import takes a run-time field from the flat
  * copy only, never from the `nodeConfig` envelope — as the app's node sheet does —
- * so a file whose two copies disagree is shown the way the app will run it.
+ * so a file whose two copies disagree is shown the way the app will run it. The
+ * one exception is [LEGACY_ENVELOPE_FALLBACK].
  *
  * Which fields count is not listed here or in the editor: it is every
  * [CookbookDocsGenerator.Reach.Runtime] verdict in [CookbookDocsGenerator.FIELD_REACH],
@@ -25,6 +26,25 @@ package app.knotwork.android.buildtools
  * guards.
  */
 object BrowserEditorRuntimeFieldGuard {
+
+    /**
+     * Run-time fields the import may still take from the envelope: only when the file
+     * lacks the flat key altogether, and only on a line that goes through the editor's
+     * `legacyEnvelopeOnly('<field>')` check.
+     *
+     * The published editor exported these four into the envelope alone, so its own
+     * files and saved "Mine" presets carry them nowhere else; strictly flat-first, they
+     * would open at their defaults and the next save would lose them. The list is
+     * closed. The app's exports write every key, so they are never read this way, and
+     * a field that decides a tool, a prompt, a provider or a confirmation must not
+     * join it: a crafted file could then show that field one way and run another.
+     */
+    val LEGACY_ENVELOPE_FALLBACK: Set<String> = setOf(
+        "CLARIFICATION.quickReplies",
+        "DECOMPOSITION.maxSubtasks",
+        "INTENT_ROUTER.fallbackClass",
+        "QUEUE_PROCESSOR.stopOnError",
+    )
 
     /** One step of the chain, named for the report. */
     enum class Link(val description: String) {
@@ -46,7 +66,10 @@ object BrowserEditorRuntimeFieldGuard {
         /** `exportToJson` writes the flat key into the file's `config` block. */
         EXPORT("exportToJson does not write config.%s"),
 
-        /** `decodeRichEnvelope` reads the field from the envelope instead of the flat copy. */
+        /**
+         * `decodeRichEnvelope` reads the field from the envelope instead of the flat
+         * copy — outside the [LEGACY_ENVELOPE_FALLBACK] check, or for a field not on it.
+         */
         ENVELOPE_READ("decodeRichEnvelope reads env.%s — the run reads the flat copy"),
     }
 
@@ -92,10 +115,11 @@ object BrowserEditorRuntimeFieldGuard {
                     add(Link.FLAT to flatKey)
                 }
                 if (flatKey !in exported) add(Link.EXPORT to flatKey)
-                val envelopeRead = """\benv\.${Regex.escape(field)}\b"""
-                if (mentions(decodeShared, envelopeRead) || mentions(caseOf(decode, nodeType), envelopeRead)) {
-                    add(Link.ENVELOPE_READ to field)
-                }
+                val envelopeRead = Regex("""\benv\.${Regex.escape(field)}\b""")
+                val fallback = "$nodeType.$field" in LEGACY_ENVELOPE_FALLBACK
+                val reads = (decodeShared + "\n" + caseOf(decode, nodeType)).lines()
+                    .filter(envelopeRead::containsMatchIn)
+                if (reads.any { !fallback || "legacyEnvelopeOnly('$field')" !in it }) add(Link.ENVELOPE_READ to field)
             }
             broken.map { (link, name) -> "$nodeType.$field ($flatKey): ${link.description.format(name)}" }
         }.sorted()

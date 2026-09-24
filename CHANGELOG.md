@@ -247,7 +247,9 @@ details.
   on an attached image lost the setting when its file went through the browser,
   which had no control for it; now it has one. The browser also shows each node
   from the part of the file the app runs, as the app does, so a file reads the
-  same in both.
+  same in both. Files saved by earlier versions of the browser editor keep their
+  queue, router-fallback, sub-task-limit and quick-reply settings: the editor
+  reads them from where those versions stored them and saves them to both parts.
 - **Saving right after an import no longer reuses the file's node ids.** An
   import stores the pipeline under fresh node ids, but the editor kept the
   file's ones, so the next Save wrote them back — and two imported files that

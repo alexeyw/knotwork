@@ -22,7 +22,8 @@ class BrowserEditorRuntimeFieldGuardTest {
     private fun editor(
         import: String = "stopOnError: jn.config?.stopOnError ?? null,",
         derive: String = "case 'QUEUE_PROCESSOR': cfg.stopOnError = flat.stopOnError !== false; break;",
-        form: String = "case 'QUEUE_PROCESSOR':\n fields.push(cfgCheckbox('stopOnError', 'Stop', cfg.stopOnError)); break;",
+        form: String =
+            "case 'QUEUE_PROCESSOR':\n fields.push(cfgCheckbox('stopOnError', 'Stop', cfg.stopOnError)); break;",
         encode: String = "case 'QUEUE_PROCESSOR':\n env.stopOnError = cfg.stopOnError !== false; break;",
         decodeShared: String = "cfg.description = env.description;",
         decode: String = "case 'LITE_RT':\n cfg.temperature = env.temperature; break;",
@@ -121,6 +122,56 @@ class BrowserEditorRuntimeFieldGuardTest {
             broken(editor(decode = "case 'QUEUE_PROCESSOR':\n cfg.stopOnError = env.stopOnError !== false; break;")),
         )
         assertEquals(expected, broken(editor(decodeShared = "cfg.stopOnError = env.stopOnError;")))
+    }
+
+    @Test
+    fun `given a legacy-fallback field read only behind its absent-key check when checked then nothing is reported`() {
+        val html = editor(
+            decode = "case 'QUEUE_PROCESSOR':\n" +
+                " if (legacyEnvelopeOnly('stopOnError')) cfg.stopOnError = env.stopOnError !== false; break;",
+        )
+
+        assertTrue(broken(html).isEmpty())
+    }
+
+    @Test
+    fun `given a field outside the legacy list read behind the absent-key check when checked then it is reported`() {
+        val reach = mapOf("ToolConfig.alwaysConfirm" to Reach.Runtime("alwaysConfirm"))
+        val html = editor(
+            import = "alwaysConfirm: jn.config?.alwaysConfirm === true,",
+            derive = "case 'TOOL': cfg.alwaysConfirm = flat.alwaysConfirm === true; break;",
+            form = "case 'TOOL':\n fields.push(cfgCheckbox('alwaysConfirm', 'Ask', cfg.alwaysConfirm)); break;",
+            encode = "case 'TOOL':\n env.alwaysConfirm = cfg.alwaysConfirm === true; break;",
+            decode = "case 'TOOL':\n" +
+                " if (legacyEnvelopeOnly('alwaysConfirm')) cfg.alwaysConfirm = env.alwaysConfirm; break;",
+            flat = "case 'TOOL': flat.alwaysConfirm = cfg.alwaysConfirm === true ? true : null; break;",
+            export = "alwaysConfirm: flat.alwaysConfirm === true ? true : null,",
+        )
+
+        assertEquals(
+            listOf(
+                "TOOL.alwaysConfirm (alwaysConfirm): decodeRichEnvelope reads env.alwaysConfirm — " +
+                    "the run reads the flat copy",
+            ),
+            BrowserEditorRuntimeFieldGuard.brokenLinks(html, reach),
+        )
+    }
+
+    @Test
+    fun `given a legacy-fallback field also read without the check when checked then it is reported`() {
+        val html = editor(
+            decode = "case 'QUEUE_PROCESSOR':\n" +
+                " if (legacyEnvelopeOnly('stopOnError')) cfg.stopOnError = env.stopOnError !== false;\n" +
+                " cfg.stopOnError = env.stopOnError; break;",
+        )
+
+        assertEquals(
+            listOf(
+                "QUEUE_PROCESSOR.stopOnError (stopOnError): decodeRichEnvelope reads env.stopOnError — " +
+                    "the run reads the flat copy",
+            ),
+            broken(html),
+        )
     }
 
     @Test

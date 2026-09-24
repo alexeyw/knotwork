@@ -5977,6 +5977,14 @@
      * description, the intent classes and the evaluation retry count (they decide
      * the node's ports), and the per-node sampling and cloud-client values that
      * have no control here but still round-trip.
+     *
+     * One exception, for files and "Mine" presets this editor wrote before its
+     * export carried four keys in the flat block — stopOnError, fallbackClass,
+     * maxSubtasks, quickReplies: when the key is absent from the flat block
+     * altogether (not null — absent), the envelope holds the author's value and
+     * is used. The app's exports, and this editor's since, always write the
+     * key, so they are read flat-first; no field that decides a tool, prompt,
+     * provider or confirmation is among the four.
      */
     function decodeRichEnvelope(typeId, env, flat) {
         const cfg = deriveRichFromFlat(typeId, flat || {}, false);
@@ -5987,6 +5995,7 @@
         cfg.description = env.description != null ? String(env.description) : null;
         const num = (v, d) => (v == null || Number.isNaN(Number(v)) ? d : Number(v));
         const strArr = v => Array.isArray(v) ? v.map(String) : [];
+        const legacyEnvelopeOnly = key => !!flat && flat[key] === undefined && env[key] != null;
         switch (typeId) {
             case 'LITE_RT':
                 cfg.temperature = num(env.temperature, 0.7);
@@ -6005,6 +6014,16 @@
                     name: String(c.name ?? ''), description: String(c.description ?? ''),
                     examples: strArr(c.examples),
                 }));
+                if (legacyEnvelopeOnly('fallbackClass')) cfg.fallbackClass = String(env.fallbackClass);
+                break;
+            case 'CLARIFICATION':
+                if (legacyEnvelopeOnly('quickReplies')) cfg.quickReplies = strArr(env.quickReplies);
+                break;
+            case 'DECOMPOSITION':
+                if (legacyEnvelopeOnly('maxSubtasks')) cfg.maxSubtasks = num(env.maxSubtasks, 5);
+                break;
+            case 'QUEUE_PROCESSOR':
+                if (legacyEnvelopeOnly('stopOnError')) cfg.stopOnError = env.stopOnError !== false;
                 break;
             case 'EVALUATION':
                 cfg.maxRetries = num(env.maxRetries, 2);
@@ -8265,10 +8284,13 @@
                     conditionKeywords: jn.config?.conditionKeywords || '',
                     conditionComplexity: jn.config?.conditionComplexity ?? null,
                     conditionHasImage: jn.config?.conditionHasImage ?? null,
-                    fallbackClass: jn.config?.fallbackClass ?? null,
-                    maxSubtasks: jn.config?.maxSubtasks ?? null,
-                    quickReplies: jn.config?.quickReplies ?? null,
-                    stopOnError: jn.config?.stopOnError ?? null,
+                    // Left undefined when the key is absent, not null: that is how
+                    // decodeRichEnvelope recognises a file from an editor that kept
+                    // these four only in the envelope.
+                    fallbackClass: jn.config?.fallbackClass,
+                    maxSubtasks: jn.config?.maxSubtasks,
+                    quickReplies: jn.config?.quickReplies,
+                    stopOnError: jn.config?.stopOnError,
                 };
                 // Legacy intentRouterPrompt → folded into the flat systemPrompt.
                 if (jn.config?.intentRouterPrompt && !flatIn.systemPrompt) {
