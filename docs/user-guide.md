@@ -783,6 +783,13 @@ can't read images, or no on-device step would see the picture, the app
 says so and runs nothing. If you have not bound a share pipeline yet, the
 app opens with a reminder instead of running anything.
 
+**Other apps can hand content to it directly**, not only through the share
+sheet. So pick a share pipeline you are comfortable running on text you did
+not write. At most **30 shares an hour** start a run; past that the app says
+so and runs nothing until the hour moves on. The limit is one for every app,
+since the app cannot tell who sent a share. Details are in
+[SECURITY.md](../SECURITY.md#automation-triggers-and-entry-surfaces-background-execution).
+
 By default every share lands in one running **Shared** chat, so
 everything you send accumulates in one place — new shares are appended to
 it rather than starting a fresh chat each time. Turn this off with
@@ -814,8 +821,9 @@ Another app on the device can ask Knotwork to run a pipeline for it — a
 Tasker or MacroDroid profile, or a shell script over `adb`. The other app
 decides *when*; Knotwork does the language-model part of *what*.
 
-This one is different from the three above, because it opens the app to
-code you did not write. So it is switched on deliberately, in two steps:
+This one is different from the three above: a request needs no screen, so it
+can arrive from an app in the background and run with nothing shown. So it is
+switched on deliberately, in two steps:
 
 1. **Settings → Background & triggers → External automation** — the switch
    raises a dialog spelling out what you are agreeing to: any app on the
@@ -2319,7 +2327,7 @@ repeated here.
 | **Pipeline for sharing** | Which pipeline runs when you share text or a link into the app from somewhere else. |
 | **Keep shares in one chat** | On, every share lands in one Shared chat. Off, each share opens its own, so the chat list grows with each one. |
 | **Quick Settings pipeline** | Which pipeline the Quick Settings tile runs when you tap it from the notification shade. |
-| **External automation** | Other apps on this device can start a run — Tasker, MacroDroid, adb. Off, those requests are refused. |
+| **External automation** | Other apps on this device can start a run — Tasker, MacroDroid, adb. Off, those requests are refused and nothing is sent back. |
 | **Pipeline other apps may run** | The only pipeline an outside app may start. Nothing else can be named in the request, whatever it asks for. |
 | **External request journal** | *(no explanation — opens a screen that explains itself)* |
 | **Resume max age** | How stale a parked run may be and still resume. Past it the run is dropped, because its gathered context no longer holds. |

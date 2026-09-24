@@ -414,4 +414,97 @@ class ParseExternalAutomationRequestUseCaseTest {
 
         assertEquals(ExternalAutomationRejectionReason.TARGET_MISSING, reasonOf(result))
     }
+
+    /* ---------------- Value ceilings ---------------- */
+
+    private val maxId = ExternalAutomationContract.MAX_REQUEST_ID_LENGTH
+    private val maxAddress = ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH
+
+    private fun callbackRequest(
+        requestId: String = "req-1",
+        returnPackage: String = "net.dinglisch.android.taskerm",
+        returnAction: String = "net.dinglisch.android.taskerm.RESULT",
+    ) = useCase(
+        invocation(
+            ExternalAutomationContract.EXTRA_REQUEST_ID to requestId,
+            ExternalAutomationContract.EXTRA_PIPELINE_ID to "pipe-1",
+            ExternalAutomationContract.EXTRA_PROMPT to "go",
+            ExternalAutomationContract.EXTRA_RETURN_PACKAGE to returnPackage,
+            ExternalAutomationContract.EXTRA_RETURN_ACTION to returnAction,
+        ),
+    )
+
+    @Test
+    fun `given every callback value exactly at its ceiling when parsing then the request is accepted`() {
+        val request = parsed(
+            callbackRequest(
+                requestId = "r".repeat(maxId),
+                returnPackage = "p".repeat(maxAddress),
+                returnAction = "a".repeat(maxAddress),
+            ),
+        ).request
+
+        assertEquals(maxId, request.requestId.length)
+    }
+
+    @Test
+    fun `given a request id one past its ceiling when parsing then it is refused rather than cut`() {
+        val result = callbackRequest(requestId = "r".repeat(maxId + 1))
+
+        assertEquals(ExternalAutomationRejectionReason.VALUE_TOO_LONG, reasonOf(result))
+    }
+
+    @Test
+    fun `given a return package one past its ceiling when parsing then it is refused`() {
+        val result = callbackRequest(returnPackage = "p".repeat(maxAddress + 1))
+
+        assertEquals(ExternalAutomationRejectionReason.VALUE_TOO_LONG, reasonOf(result))
+    }
+
+    @Test
+    fun `given a return action one past its ceiling when parsing then it is refused`() {
+        val result = callbackRequest(returnAction = "a".repeat(maxAddress + 1))
+
+        assertEquals(ExternalAutomationRejectionReason.VALUE_TOO_LONG, reasonOf(result))
+    }
+
+    @Test
+    fun `given a fire-and-forget call with an over-long id when parsing then it is still refused`() {
+        // The id is also what the journal shows; a call that asks for no answer does
+        // not get to put more of its text there than one that does.
+        val result = useCase(
+            invocation(
+                ExternalAutomationContract.EXTRA_REQUEST_ID to "r".repeat(maxId + 1),
+                ExternalAutomationContract.EXTRA_PIPELINE_ID to "pipe-1",
+                ExternalAutomationContract.EXTRA_PROMPT to "go",
+            ),
+        )
+
+        assertEquals(ExternalAutomationRejectionReason.VALUE_TOO_LONG, reasonOf(result))
+    }
+
+    @Test
+    fun `given an over-long address and no request id when parsing then the length is reported first`() {
+        val result = useCase(
+            invocation(
+                ExternalAutomationContract.EXTRA_PIPELINE_ID to "pipe-1",
+                ExternalAutomationContract.EXTRA_PROMPT to "go",
+                ExternalAutomationContract.EXTRA_RETURN_PACKAGE to "p".repeat(maxAddress + 1),
+            ),
+        )
+
+        assertEquals(ExternalAutomationRejectionReason.VALUE_TOO_LONG, reasonOf(result))
+    }
+
+    @Test
+    fun `given an unknown action and an over-long id when parsing then the action is still reported first`() {
+        val result = useCase(
+            invocation(
+                ExternalAutomationContract.EXTRA_REQUEST_ID to "r".repeat(maxId + 1),
+                action = "app.knotwork.android.action.SOMETHING_ELSE",
+            ),
+        )
+
+        assertEquals(ExternalAutomationRejectionReason.UNKNOWN_ACTION, reasonOf(result))
+    }
 }

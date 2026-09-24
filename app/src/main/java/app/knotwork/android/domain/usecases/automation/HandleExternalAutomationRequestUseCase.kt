@@ -233,6 +233,9 @@ class HandleExternalAutomationRequestUseCase @Inject constructor(
      * Detail is taken from the parsed request when there is one and from the raw
      * invocation otherwise, so a call refused for being unparseable still records
      * what it actually said — which is the only way its author can find the typo.
+     * Every caller-chosen value is bounded to [MAX_JOURNALED_VALUE_LENGTH] on the
+     * way in; a parsed request's values are within the contract's ceilings already,
+     * so only a refused call's raw text is ever cut.
      *
      * @param invocation The raw call.
      * @param request The parsed request, when parsing succeeded.
@@ -251,17 +254,43 @@ class HandleExternalAutomationRequestUseCase @Inject constructor(
         runId: String?,
     ): ExternalAutomationJournalEntry = ExternalAutomationJournalEntry(
         id = UUID.randomUUID().toString(),
-        requestId = request?.requestId ?: rawRequestId(invocation),
+        requestId = bounded(request?.requestId ?: rawRequestId(invocation)),
         receivedAt = nowMillis,
-        action = invocation.action,
-        target = request?.target ?: rawTarget(invocation),
-        declaredReturnPackage = request?.returnPackage
-            ?: invocation.value(ExternalAutomationContract.EXTRA_RETURN_PACKAGE),
-        returnAction = request?.returnAction ?: rawReturnAction(invocation),
+        action = bounded(invocation.action),
+        target = (request?.target ?: rawTarget(invocation))?.let(::bounded),
+        declaredReturnPackage = (
+            request?.returnPackage
+                ?: invocation.value(ExternalAutomationContract.EXTRA_RETURN_PACKAGE)
+            )?.let(::bounded),
+        returnAction = bounded(request?.returnAction ?: rawReturnAction(invocation)),
         attestedSenderPackage = attestedSenderPackage,
         status = status,
         runId = runId,
     )
+
+    /**
+     * Cuts a caller-chosen value to [MAX_JOURNALED_VALUE_LENGTH], marking the cut.
+     *
+     * @param value The value as the caller sent it.
+     * @return [value] unchanged when it fits, otherwise its head followed by `…`,
+     *   [MAX_JOURNALED_VALUE_LENGTH] characters in all.
+     */
+    private fun bounded(value: String): String = if (value.length <= MAX_JOURNALED_VALUE_LENGTH) {
+        value
+    } else {
+        value.take(MAX_JOURNALED_VALUE_LENGTH - CUT_MARKER.length) + CUT_MARKER
+    }
+
+    /**
+     * [bounded], applied to the one value a target carries.
+     *
+     * @param target The target as the caller named it.
+     * @return The same kind of target, its value bounded.
+     */
+    private fun bounded(target: ExternalAutomationTarget): ExternalAutomationTarget = when (target) {
+        is ExternalAutomationTarget.ById -> ExternalAutomationTarget.ById(bounded(target.pipelineId))
+        is ExternalAutomationTarget.ByName -> ExternalAutomationTarget.ByName(bounded(target.pipelineName))
+    }
 
     /**
      * The correlation id an unparseable call carried, if any.
@@ -333,5 +362,22 @@ class HandleExternalAutomationRequestUseCase @Inject constructor(
          * this reads as what it is: the caller sent none.
          */
         private const val ABSENT_REQUEST_ID = "(absent)"
+
+        /**
+         * Longest caller-chosen value a journal row keeps, in characters, marker
+         * included.
+         *
+         * Every value on a row came from another app, and refusals are journalled
+         * even while the contract is off — the default state, reachable by any app on
+         * the device. An intent extra can carry the better part of a megabyte, so
+         * without this bound a loop could fill the database one row at a time (the
+         * row count is capped; the row size was not). Not below the contract's own
+         * ceilings, so an admitted request — whose row is where the final callback
+         * reads its address and id back from — is never cut.
+         */
+        const val MAX_JOURNALED_VALUE_LENGTH: Int = 256
+
+        /** Appended to a value [bounded] had to cut, so the row does not pass for what was sent. */
+        private const val CUT_MARKER = "…"
     }
 }

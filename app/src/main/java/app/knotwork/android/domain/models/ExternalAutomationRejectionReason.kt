@@ -61,6 +61,19 @@ enum class ExternalAutomationRejectionReason {
      */
     REQUEST_ID_MISSING,
 
+    /**
+     * A value the callback would carry back is longer than the contract allows: the
+     * request id beyond 128 characters, or the callback action or package beyond
+     * 256. Such a request gets no callback, because the callback would have to
+     * repeat the value.
+     *
+     * The numbers are [app.knotwork.android.domain.constants.ExternalAutomationContract.MAX_REQUEST_ID_LENGTH]
+     * and [app.knotwork.android.domain.constants.ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH],
+     * written out above because the first paragraph is what the published contract
+     * table shows; `EntrySurfaceLimitsDocumentsTest` keeps the two equal.
+     */
+    VALUE_TOO_LONG,
+
     /** Too many external requests were accepted within the rate window. */
     RATE_LIMITED,
 

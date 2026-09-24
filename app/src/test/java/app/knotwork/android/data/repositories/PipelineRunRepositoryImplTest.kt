@@ -23,7 +23,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -803,7 +802,7 @@ class PipelineRunRepositoryImplTest {
         coVerify(exactly = 1) {
             externalAutomationJournal.recordOutcome("run-1", ExternalAutomationStatus.Completed)
         }
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             externalAutomationCallback.notifyOutcome(
                 returnPackage = "com.example.caller",
                 returnAction = ExternalAutomationContract.ACTION_RUN_RESULT,
@@ -823,7 +822,7 @@ class PipelineRunRepositoryImplTest {
         // process can act on exactly one bit: did the thing I asked for happen.
         repository.finishRun("run-1", PipelineRunStatus.CANCELLED)
 
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             externalAutomationCallback.notifyOutcome(any(), any(), any(), ExternalAutomationStatus.Failed)
         }
     }
@@ -842,7 +841,7 @@ class PipelineRunRepositoryImplTest {
             coVerify(exactly = 1) {
                 externalAutomationJournal.recordOutcome("run-1", ExternalAutomationStatus.Completed)
             }
-            verify(exactly = 0) { externalAutomationCallback.notifyOutcome(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { externalAutomationCallback.notifyOutcome(any(), any(), any(), any()) }
         }
 
     @Test
@@ -855,7 +854,7 @@ class PipelineRunRepositoryImplTest {
         repository.finishRun("child-run", PipelineRunStatus.COMPLETED)
 
         coVerify(exactly = 0) { externalAutomationJournal.recordOutcome(any(), any()) }
-        verify(exactly = 0) { externalAutomationCallback.notifyOutcome(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { externalAutomationCallback.notifyOutcome(any(), any(), any(), any()) }
     }
 
     @Test
@@ -889,10 +888,10 @@ class PipelineRunRepositoryImplTest {
             repository.finishRun("run-1", PipelineRunStatus.COMPLETED)
 
             // Exactly one callback, and it is the one the caller already acted on.
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 externalAutomationCallback.notifyOutcome(any(), any(), any(), any())
             }
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 externalAutomationCallback.notifyOutcome(any(), any(), any(), ExternalAutomationStatus.Failed)
             }
         }
@@ -907,7 +906,7 @@ class PipelineRunRepositoryImplTest {
 
         repository.finishRun("run-1", PipelineRunStatus.COMPLETED)
 
-        verify(exactly = 0) { externalAutomationCallback.notifyOutcome(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { externalAutomationCallback.notifyOutcome(any(), any(), any(), any()) }
     }
 
     @Test

@@ -147,10 +147,15 @@ class ExternalAutomationReceiver : BroadcastReceiver() {
      * later, from the run-termination hook, because the run may park on a
      * human-in-the-loop gate for hours and this receiver is long gone by then.
      *
+     * Whether anything is actually sent is decided by the notifier, not here:
+     * nothing while the contract is switched off (this reply runs for a request
+     * refused before the switch is read, too) and nothing over the contract's
+     * length ceilings.
+     *
      * @param invocation The raw call, the source of the callback address.
      * @param status The decision to report.
      */
-    private fun replyIfRequested(invocation: ExternalAutomationInvocation, status: ExternalAutomationStatus) {
+    private suspend fun replyIfRequested(invocation: ExternalAutomationInvocation, status: ExternalAutomationStatus) {
         // The one refusal that must not be answered. Its whole purpose is that the
         // caller named someone else's package for the callback, so sending the
         // refusal to that address would perform the exact broadcast the refusal

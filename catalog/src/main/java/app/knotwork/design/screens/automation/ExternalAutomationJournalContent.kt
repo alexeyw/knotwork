@@ -858,6 +858,7 @@ private fun ExternalRequestReasonUi?.sentence(strings: ExternalAutomationJournal
     ExternalRequestReasonUi.PromptAmbiguous -> strings.reasonPromptAmbiguous
     ExternalRequestReasonUi.PromptUndecodable -> strings.reasonPromptUndecodable
     ExternalRequestReasonUi.RequestIdMissing -> strings.reasonRequestIdMissing
+    ExternalRequestReasonUi.ValueTooLong -> strings.reasonValueTooLong
     ExternalRequestReasonUi.RateLimited -> strings.reasonRateLimited
     ExternalRequestReasonUi.ReturnPackageMismatch -> strings.reasonReturnPackageMismatch
     // A refusal row always carries a reason; an absent one would be a mapper bug,

@@ -66,6 +66,7 @@
     <string name="external_automation_reason_prompt_ambiguous">It sent the message twice, as plain text and as base64.</string>
     <string name="external_automation_reason_prompt_undecodable">The base64 message couldn’t be decoded.</string>
     <string name="external_automation_reason_request_id_missing">It didn’t include a request id to answer with.</string>
+    <string name="external_automation_reason_value_too_long">It sent an id or an answer address longer than the contract allows.</string>
     <string name="external_automation_reason_rate_limited">Too many requests in the last hour.</string>
     <string name="external_automation_reason_return_package_mismatch">It asked for the answer to be sent to a different app than the one that called.</string>
     <string name="external_automation_reason_return_package_mismatch_note">Nothing was run, and nothing was sent to that app.</string>
@@ -98,9 +99,9 @@
     <string name="external_automation_key_pipeline_name">Name of the pipeline to run, matched exactly.</string>
     <string name="external_automation_key_prompt">The message the pipeline runs on.</string>
     <string name="external_automation_key_prompt_b64">The same message, base64-encoded, for shells that mangle quoting.</string>
-    <string name="external_automation_key_request_id">Your own id. It comes back with the answer, so you can match them up. Needed only if you ask for an answer.</string>
-    <string name="external_automation_key_return_action">Action to send the answer with. Defaults to the contract’s own.</string>
-    <string name="external_automation_key_return_package">Package to deliver the answer to. Leave it out for fire-and-forget.</string>
+    <string name="external_automation_key_request_id">Your own id, up to 128 characters. It comes back with the answer, so you can match them up. Needed only if you ask for an answer.</string>
+    <string name="external_automation_key_return_action">Action to send the answer with, up to 256 characters. Defaults to the contract’s own.</string>
+    <string name="external_automation_key_return_package">Package to deliver the answer to, up to 256 characters. Leave it out for fire-and-forget.</string>
 
     <!-- Consent dialog. -->
     <string name="external_automation_consent_title">Let other apps run a pipeline?</string>

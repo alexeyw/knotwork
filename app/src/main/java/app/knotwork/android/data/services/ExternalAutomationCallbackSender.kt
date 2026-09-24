@@ -5,8 +5,10 @@ import android.content.Intent
 import app.knotwork.android.domain.constants.ExternalAutomationContract
 import app.knotwork.android.domain.models.ExternalAutomationRejectionReason
 import app.knotwork.android.domain.models.ExternalAutomationStatus
+import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.ExternalAutomationCallbackNotifier
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,18 +29,53 @@ import javax.inject.Singleton
  * manifest declares visibility by capability rather than trying to enumerate every
  * automation app that might call.
  *
+ * **The one place a callback leaves the app, so the place that says no.** Every
+ * callback — the receiver's immediate answer and the run-termination hook's final
+ * report — goes through [notifyOutcome], and it withholds two kinds:
+ * - **anything while the contract is switched off.** The switch is read here, at
+ *   send time, because the request is parsed (and may be refused, and answered)
+ *   before the use case ever reads it: a rule keyed on the `CONTRACT_DISABLED`
+ *   reason would still answer every *malformed* request sent to a user who never
+ *   turned the feature on — a broadcast of the caller's choosing, from this app's
+ *   uid, on demand. It also silences the final report of a run admitted before the
+ *   user switched it off: off means nothing leaves.
+ * - **any callback whose caller-chosen parts exceed the contract's ceilings**
+ *   ([ExternalAutomationContract.MAX_REQUEST_ID_LENGTH],
+ *   [ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH]). The parser refuses such
+ *   a request, but a refusal decided *before* those checks (an unknown action)
+ *   still carries the raw values, and this seam is what bounds them all.
+ *
+ * `app/src/main` has no other `sendBroadcast`; `OutboundBroadcastCensusTest` keeps it
+ * that way, so a second path cannot skip these two rules unnoticed.
+ *
  * @property context Application context the broadcast is sent from.
+ * @property settingsRepository Source of the contract's master switch.
  */
 @Singleton
-class ExternalAutomationCallbackSender @Inject constructor(@ApplicationContext private val context: Context) :
-    ExternalAutomationCallbackNotifier {
+class ExternalAutomationCallbackSender @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository,
+) : ExternalAutomationCallbackNotifier {
 
-    override fun notifyOutcome(
+    override suspend fun notifyOutcome(
         returnPackage: String,
         returnAction: String,
         requestId: String,
         status: ExternalAutomationStatus,
     ) {
+        if (!settingsRepository.externalAutomationEnabled.first()) {
+            Timber.tag(TAG).d("External automation is switched off; callback withheld")
+            return
+        }
+        if (requestId.length > ExternalAutomationContract.MAX_REQUEST_ID_LENGTH ||
+            returnPackage.length > ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH ||
+            returnAction.length > ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH
+        ) {
+            // Nothing of the values themselves is logged: they are the caller's
+            // text, and the point is not to repeat it anywhere.
+            Timber.tag(TAG).w("External-automation callback withheld: a caller-chosen value is over its ceiling")
+            return
+        }
         val intent = Intent(returnAction)
             .setPackage(returnPackage)
             .putExtra(ExternalAutomationContract.EXTRA_REQUEST_ID, requestId)

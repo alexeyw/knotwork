@@ -641,7 +641,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
         /** Every notification sent so far, in order. */
         val calls: List<Call> get() = recorded
 
-        override fun notifyOutcome(
+        override suspend fun notifyOutcome(
             returnPackage: String,
             returnAction: String,
             requestId: String,

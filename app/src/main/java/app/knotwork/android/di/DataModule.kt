@@ -44,6 +44,7 @@ import app.knotwork.android.data.repositories.PipelineRunRepositoryImpl
 import app.knotwork.android.data.repositories.PowerStateRepositoryImpl
 import app.knotwork.android.data.repositories.PromptRepositoryImpl
 import app.knotwork.android.data.repositories.RunTraceRepositoryImpl
+import app.knotwork.android.data.repositories.ShareAdmissionRepositoryImpl
 import app.knotwork.android.data.repositories.SkillRepositoryImpl
 import app.knotwork.android.data.repositories.ToolRepositoryImpl
 import app.knotwork.android.data.repositories.TriggerJournalRepositoryImpl
@@ -79,6 +80,7 @@ import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.repositories.PromptRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ShareAdmissionRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.repositories.TriggerJournalRepository
@@ -401,6 +403,17 @@ abstract class DataModule {
     abstract fun bindExternalAutomationJournalRepository(
         repository: ExternalAutomationJournalRepositoryImpl,
     ): ExternalAutomationJournalRepository
+
+    /**
+     * Binds [ShareAdmissionRepositoryImpl] to [ShareAdmissionRepository] — the
+     * ledger the share target's rate ceiling counts, kept in the preferences store.
+     *
+     * @param repository The DataStore-backed implementation.
+     * @return The bound repository interface.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindShareAdmissionRepository(repository: ShareAdmissionRepositoryImpl): ShareAdmissionRepository
 
     /**
      * Binds the `WorkManager`-backed [WorkManagerTriggerScheduler] to the

@@ -29,18 +29,16 @@ class ParseExternalAutomationRequestUseCase @Inject constructor() {
     /**
      * Validates and interprets [invocation].
      *
-     * Checks run in a fixed order — action, request id, target, prompt — so a
-     * call that is wrong in several ways always reports the same reason, and a
-     * caller fixing one problem at a time makes visible progress.
+     * Checks run in a fixed order — action, value ceilings, request id, target,
+     * prompt — so a call that is wrong in several ways always reports the same
+     * reason, and a caller fixing one problem at a time makes visible progress.
      *
      * @param invocation The raw call as received at the entry point.
      * @return [ExternalAutomationParseResult.Parsed] with the validated request,
      *   or [ExternalAutomationParseResult.Invalid] with the reason it was refused.
      */
     operator fun invoke(invocation: ExternalAutomationInvocation): ExternalAutomationParseResult {
-        if (invocation.action != ExternalAutomationContract.ACTION_RUN_PIPELINE) {
-            return invalid(ExternalAutomationRejectionReason.UNKNOWN_ACTION)
-        }
+        envelopeRefusal(invocation)?.let { return invalid(it) }
         val returnPackage = invocation.value(ExternalAutomationContract.EXTRA_RETURN_PACKAGE)
         val requestId = when (val resolved = resolveRequestId(invocation, returnPackage)) {
             is Resolved.Failure -> return invalid(resolved.reason)
@@ -66,6 +64,48 @@ class ParseExternalAutomationRequestUseCase @Inject constructor() {
                 returnPackage = returnPackage,
             ),
         )
+    }
+
+    /**
+     * The checks that come before any value is read for its meaning: the action,
+     * then the value ceilings.
+     *
+     * @param invocation The raw call.
+     * @return `UNKNOWN_ACTION` or `VALUE_TOO_LONG`, or `null` when the call passes
+     *   both.
+     */
+    private fun envelopeRefusal(invocation: ExternalAutomationInvocation): ExternalAutomationRejectionReason? = when {
+        invocation.action != ExternalAutomationContract.ACTION_RUN_PIPELINE ->
+            ExternalAutomationRejectionReason.UNKNOWN_ACTION
+        exceedsCeilings(invocation) -> ExternalAutomationRejectionReason.VALUE_TOO_LONG
+        else -> null
+    }
+
+    /**
+     * Whether a value the callback would carry back is longer than the contract
+     * allows.
+     *
+     * **Refused, never cut.** A shortened id no longer correlates with anything the
+     * caller holds, and a shortened action or package addresses someone else — both
+     * are the "nearest plausible reading" this parser exists not to produce. The
+     * ceilings bound how much caller text the app will broadcast (the callback
+     * carries the id back verbatim) and store in the journal of an admitted
+     * request, whose row is where the final callback's address is read from.
+     *
+     * Checked for a fire-and-forget call too: the id is also what the journal shows.
+     *
+     * @param invocation The raw call.
+     * @return `true` when the request id, callback action or callback package is
+     *   over its ceiling.
+     */
+    private fun exceedsCeilings(invocation: ExternalAutomationInvocation): Boolean {
+        fun lengthOf(key: String): Int = invocation.value(key)?.length ?: 0
+        return lengthOf(ExternalAutomationContract.EXTRA_REQUEST_ID) >
+            ExternalAutomationContract.MAX_REQUEST_ID_LENGTH ||
+            lengthOf(ExternalAutomationContract.EXTRA_RETURN_ACTION) >
+            ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH ||
+            lengthOf(ExternalAutomationContract.EXTRA_RETURN_PACKAGE) >
+            ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH
     }
 
     /**

@@ -152,6 +152,17 @@
             apps and routes it through the user's bound share pipeline. The
             activity is invisible (translucent theme) — it only resolves the
             share and deep-links into the resulting chat session.
+
+            Exported without a permission, and it has to be: the share sheet
+            starts it on the sending app's behalf. The same means any installed
+            app (and adb) can start it directly, without the share sheet, and put
+            text where the user's own message goes. So LaunchSharePipelineUseCase
+            gates it rather than this declaration: inert until a share pipeline is
+            bound, at most RunRateCeiling.SHARE runs an hour (one budget for every
+            sender — the sender is not known), the image pre-flight, and only
+            another app's content:// URI is read. The run is visible: the app opens
+            into its chat. SECURITY.md names this surface; ExportedComponentInventoryTest
+            fails when an export is added or loses its permission.
         -->
         <activity
             android:name=".presentation.share.ShareReceiverActivity"
@@ -245,7 +256,8 @@
             the callers it is for, so the gate is placed where the user can see it
             instead: the contract is off by default, inert until the user binds one
             pipeline to it, rate-ceilinged, and every request — admitted or refused
-            — is journalled. Human-in-the-loop confirmation and the destructive-tool
+            — is journalled. While it is off nothing is sent back to any caller
+            (ExternalAutomationCallbackSender, the app's only broadcast). Human-in-the-loop confirmation and the destructive-tool
             block apply unchanged, because an admitted request goes through the very
             same scheduler path as the app's own background work.
 

@@ -8,6 +8,7 @@ import app.knotwork.android.domain.models.SharedPayload
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ShareAdmissionRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.text.toSingleLineTitle
 import kotlinx.coroutines.flow.first
@@ -42,6 +43,15 @@ import javax.inject.Inject
  *
  * When no pipeline is bound the surface is inert ([ShareLaunchResult.NotConfigured]);
  * an empty share is dropped ([ShareLaunchResult.NothingShared]).
+ *
+ * **Rate ceiling.** The share activity is exported without a permission — the
+ * system share sheet starts it on the sending app's behalf, so any installed app
+ * can also start it directly, and `adb` always can. A share that is about to start
+ * a run is therefore admitted against [RunRateCeiling.SHARE] first, through
+ * [ShareAdmissionRepository], whose count and record are one atomic step; past the
+ * ceiling the share is refused ([ShareLaunchResult.RateLimited]) before anything is
+ * stored. Only a share that would run counts: an empty, unbound or image-blocked
+ * one does not use up the hour.
  */
 class LaunchSharePipelineUseCase @Inject constructor(
     private val resolveSurfacePipeline: ResolveSurfacePipelineUseCase,
@@ -51,6 +61,7 @@ class LaunchSharePipelineUseCase @Inject constructor(
     private val agentOrchestrator: AgentOrchestratorUseCase,
     private val settingsRepository: SettingsRepository,
     private val pendingInteractionRepository: PendingInteractionRepository,
+    private val shareAdmissions: ShareAdmissionRepository,
 ) {
 
     /**
@@ -65,24 +76,25 @@ class LaunchSharePipelineUseCase @Inject constructor(
      *   (used only in per-share mode).
      * @param contentSessionName Localised name fallback when no readable text or
      *   image is present (used only in per-share mode).
+     * @param nowMillis Current time, epoch-millis (injectable for tests); the
+     *   moment the rate ceiling counts from.
      * @return [ShareLaunchResult.Launched] with the session id,
      *   [ShareLaunchResult.NotConfigured] when nothing is bound,
      *   [ShareLaunchResult.Blocked] when the pipeline may not start with the
-     *   shared image, or [ShareLaunchResult.NothingShared] when the payload had
-     *   no content.
+     *   shared image, [ShareLaunchResult.RateLimited] when the hour's share
+     *   ceiling is reached, or [ShareLaunchResult.NothingShared] when the payload
+     *   had no content.
      */
     suspend operator fun invoke(
         payload: SharedPayload,
         reusedSessionName: String,
         imageSessionName: String,
         contentSessionName: String,
+        nowMillis: Long = System.currentTimeMillis(),
     ): ShareLaunchResult {
         if (payload.isEmpty) return ShareLaunchResult.NothingShared
         val pipelineId = resolveSurfacePipeline(EntrySurface.SHARE) ?: return ShareLaunchResult.NotConfigured
-        if (payload.imageUri != null) {
-            // Asked before the ingest, so a refused image never reaches the store.
-            checkImageAttachment(pipelineId)?.let { return ShareLaunchResult.Blocked(it) }
-        }
+        refusalBeforeWork(payload, pipelineId, nowMillis)?.let { return it }
 
         val attachment = payload.imageUri?.let { ingestImage(it) }
         val hasText = !payload.text.isNullOrBlank()
@@ -111,6 +123,36 @@ class LaunchSharePipelineUseCase @Inject constructor(
             origin = RunOrigin.SHARE,
         )
         return ShareLaunchResult.Launched(session.id)
+    }
+
+    /**
+     * The checks a bound share passes before anything is stored or run: the
+     * multimodal pre-flight for an image, then the rate ceiling.
+     *
+     * Both come before the ingest — a refused image never reaches the store, and a
+     * flood is refused before it decodes a single image or creates a single chat —
+     * and in this order, so a share the pre-flight blocks never uses up the hour.
+     *
+     * @param payload The shared content.
+     * @param pipelineId The bound share pipeline.
+     * @param nowMillis The moment the ceiling counts from.
+     * @return The refusal to report, or `null` when the share may run (and has
+     *   been counted against the ceiling).
+     */
+    private suspend fun refusalBeforeWork(
+        payload: SharedPayload,
+        pipelineId: String,
+        nowMillis: Long,
+    ): ShareLaunchResult? {
+        if (payload.imageUri != null) {
+            checkImageAttachment(pipelineId)?.let { return ShareLaunchResult.Blocked(it) }
+        }
+        val admitted = shareAdmissions.admitWithinCeiling(
+            nowMillis = nowMillis,
+            windowStartEpochMs = CEILING.windowStart(nowMillis),
+            limitPerWindow = CEILING.limitPerWindow,
+        )
+        return if (admitted) null else ShareLaunchResult.RateLimited
     }
 
     /**
@@ -187,6 +229,9 @@ class LaunchSharePipelineUseCase @Inject constructor(
          */
         const val SHARED_INBOX_SESSION_ID = "shared-inbox"
 
+        /** The rate ceiling this surface enforces — its instance of [RunRateCeiling]. */
+        val CEILING: RunRateCeiling = RunRateCeiling.SHARE
+
         /** Max characters of shared text used for the auto-generated session name. */
         private const val SESSION_NAME_MAX_LENGTH = 60
 
@@ -209,6 +254,13 @@ sealed interface ShareLaunchResult {
 
     /** The share carried nothing actionable (no text and no ingestable image). */
     data object NothingShared : ShareLaunchResult
+
+    /**
+     * Too many shares started a run within the last hour
+     * ([RunRateCeiling.SHARE]); nothing was stored and no run started. The caller
+     * tells the user to try again later.
+     */
+    data object RateLimited : ShareLaunchResult
 
     /**
      * The share carried an image the bound pipeline may not start with; nothing

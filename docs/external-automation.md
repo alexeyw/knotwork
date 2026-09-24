@@ -19,7 +19,8 @@ The contract is off out of the box. To open it:
 
 1. **Settings → Background & triggers → External automation** — the switch raises
    a consent dialog naming what you are agreeing to; it only moves once you
-   confirm. Switching it back off is immediate and asks nothing.
+   confirm. Switching it back off is immediate and asks nothing; from then on no
+   callback is sent, even for a run that is still going.
 2. **Pipeline other apps may run** — pick the one pipeline. Until you do, the
    surface is on but inert: every request is refused, and the row says so.
 3. **Request journal** — every inbound request, accepted or refused, with the
@@ -74,6 +75,12 @@ so renaming the pipeline breaks every profile that named it — if you expect to
 rename it, use the id, which you can copy from the pipeline's entry in the
 library.
 
+**The values the callback carries back have a length limit.** `request_id` may be
+at most 128 characters, `return_action` and `return_package` at most 256. A longer
+one is refused as `VALUE_TOO_LONG` rather than shortened — a shortened id matches
+nothing on your side — and gets no callback, since the callback would have to
+repeat it.
+
 <!-- AUTO-GEN:CONTRACT_KEYS -->
 
 | Constant | Wire key | Meaning |
@@ -86,7 +93,7 @@ library.
 | `EXTRA_PROMPT_B64` | `prompt_b64` | Request key: the prompt as a base64-encoded UTF-8 string, for callers whose shell quoting cannot carry the text intact. Mutually exclusive with `EXTRA_PROMPT`. |
 | `EXTRA_REQUEST_ID` | `request_id` | Request key: caller-minted correlation id. Required only of a caller that asked to be answered (`EXTRA_RETURN_PACKAGE`); a fire-and-forget call may omit it. The callback carries it back under this same key, so a caller reads back the id it wrote. |
 | `EXTRA_RETURN_ACTION` | `return_action` | Request key: broadcast action to send the callback with. Optional; defaults to `ACTION_RUN_RESULT`. |
-| `EXTRA_RETURN_PACKAGE` | `return_package` | Request key: package to deliver the callback to as an explicit intent. Optional — omitting it is a valid fire-and-forget call. |
+| `EXTRA_RETURN_PACKAGE` | `return_package` | Request key: package to deliver the callback to, as a broadcast directed at that package (not at a component of it). Optional — omitting it is a valid fire-and-forget call. |
 | `EXTRA_STATUS` | `status` | Callback key: the status discriminator (`Accepted` / `Completed` / `Failed` / `Rejected` / `Blocked`). |
 | `EXTRA_STATUS_REASON` | `reason` | Callback key: the refusal reason, present only for the `Rejected` and `Blocked` statuses. |
 
@@ -107,6 +114,11 @@ The callback is an ordinary broadcast carrying your `return_action` (or
 - **Omitting `return_package` is normal.** A shell script over `adb` has nowhere
   to be called back, and asking for no callback is a supported call rather than a
   degraded one.
+- **Nothing is answered while the contract is switched off.** The request is
+  still recorded in the journal, whatever it says, but no callback is sent — not
+  the refusal, and not the final report of a run that was accepted before the
+  switch was turned off. If a profile gets no answer at all, check the switch
+  first; the journal shows what arrived.
 
 **The app cannot verify who sent a request.** Android tells a broadcast receiver
 the sender's identity only when the *sender* opts in, which automation apps and
@@ -224,9 +236,9 @@ A shell script has nowhere to be called back, so both examples omit
 
 A request is answered with one of the statuses below. `Rejected` and `Blocked`
 carry a reason; the other three do not. The callback is delivered only when the
-request asked for one, and it never carries the content of the run — only the
-request id (under the same `request_id` key the request used), the status, and
-the reason where there is one.
+request asked for one and the contract is switched on, and it never carries the
+content of the run — only the request id (under the same `request_id` key the
+request used), the status, and the reason where there is one.
 
 <!-- AUTO-GEN:STATUSES -->
 
@@ -256,6 +268,7 @@ the reason where there is one.
 | `PROMPT_AMBIGUOUS` | The request carried the prompt twice, in plain and base64 form. |
 | `PROMPT_UNDECODABLE` | The base64 prompt could not be decoded. |
 | `REQUEST_ID_MISSING` | The request asked to be answered but carried no request id to correlate the answer with. A call that asks for no callback may omit the id. |
+| `VALUE_TOO_LONG` | A value the callback would carry back is longer than the contract allows: the request id beyond 128 characters, or the callback action or package beyond 256. Such a request gets no callback, because the callback would have to repeat the value. |
 | `RATE_LIMITED` | Too many external requests were accepted within the rate window. |
 | `RETURN_PACKAGE_MISMATCH` | The request asked for its callback to be delivered to a package other than the one the system reported as the sender. |
 

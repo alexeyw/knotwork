@@ -25,6 +25,7 @@
     <string name="shortcut_pipelines_long">Open pipeline library</string>
     <string name="share_not_configured">Pick a pipeline for sharing in Settings → Background.</string>
     <string name="share_nothing_to_share">Nothing to share.</string>
+    <string name="share_rate_limited">Too many shares in the last hour. Try again later.</string>
     <!-- A toast holds two lines on Android 12+, so these are shorter than the chat's
          wording for the same three pre-flight refusals (ImageAttachmentBlockCopy). -->
     <string name="share_image_blocked_cloud">The share pipeline starts in the cloud, and images stay on your device.</string>
