@@ -50,25 +50,32 @@ only if you switch them on.
 ## 2. What the app stores on your device
 
 All of the following is created by your use of the app and stays in the app's
-private storage on your device:
+private storage on your device. None of it is included in Android's cloud
+backup or in a transfer to a new device
+([details](SECURITY.md#backup-and-device-transfer)):
 
 - Chat sessions and messages, including image and audio attachments you add.
 - Long-term memory entries derived from your conversations.
 - Pipelines, presets, prompt templates, and their run traces.
+- Files in the agent workspace — what the agent wrote and what you imported.
 - Triggers, scheduled tasks, and the trigger journal.
 - Settings, including the list of cloud providers, MCP servers, and allowed
   domains you configured.
 - Local usage statistics (section 4).
-- API keys, the Hugging Face access token, and MCP credentials you entered.
+- API keys, the Hugging Face access token, and MCP credentials and custom
+  headers you entered.
 
 **Encryption at rest.** The local database — chats, memory, run traces — is
 encrypted with SQLCipher. API keys, the Hugging Face token, and MCP credentials
-are sealed with AES-GCM under a dedicated Android Keystore key. Details and
-limits are in [SECURITY.md](SECURITY.md#threat-model).
+and headers are sealed with AES-GCM under a dedicated Android Keystore key.
+Details and limits are in [SECURITY.md](SECURITY.md#threat-model).
 
 **Deletion.** Uninstalling the app removes all of it. Individual chats,
 memories, pipelines, and run history can be deleted from inside the app, and
 run history is also pruned automatically according to the retention setting.
+If the database can no longer be unlocked, **Erase data** on the recovery
+screen deletes chats, memory, pipelines, workspace files and attachments, and
+keeps your settings and saved keys.
 
 ---
 

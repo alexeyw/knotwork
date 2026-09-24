@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.knotwork.android.data.local.crypto.FakeAeadCipher
 import app.knotwork.android.data.local.crypto.InMemorySharedPreferences
 import app.knotwork.android.data.local.crypto.KeystoreBackedPrefsStore
+import app.knotwork.android.data.local.crypto.SecretStore
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.McpAuth
@@ -38,6 +39,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import timber.log.Timber
 import java.io.IOException
 
 /**
@@ -1015,34 +1017,6 @@ class SettingsManagerTest {
     }
 
     @Test
-    fun `mcpServers decodes JSON-encoded list with headers and transport`() = runTest {
-        val legacyKey = stringSetPreferencesKey("mcp_server_urls")
-        val newJsonKey = stringPreferencesKey("mcp_servers_json")
-        val prefs = mockk<Preferences>()
-        every { prefs[legacyKey] } returns null
-        every {
-            prefs[newJsonKey]
-        } returns """
-            [
-              {
-                "url":"https://hf.example/mcp",
-                "name":"HuggingFace",
-                "transport":"streamable_http",
-                "headers":{"Authorization":"Bearer secret"}
-              }
-            ]
-        """.trimIndent()
-        every { dataStore.data } returns flowOf(prefs)
-
-        val result = SettingsManager(dataStore, secretStore).mcpServers.first()
-
-        assertEquals(1, result.size)
-        assertEquals("HuggingFace", result[0].name)
-        assertEquals(McpTransport.STREAMABLE_HTTP, result[0].transport)
-        assertEquals("Bearer secret", result[0].headers["Authorization"])
-    }
-
-    @Test
     fun `mcpServers decodes typed Bearer auth payload`() = runTest {
         val newJsonKey = stringPreferencesKey("mcp_servers_json")
         val prefs = mockk<Preferences>()
@@ -1429,13 +1403,286 @@ class SettingsManagerTest {
         }
     }
 
-    /** Mirrors `SettingsManager.SecretKeys.mcpAuthKey` for asserting the encrypted-store entry name. */
-    private fun mcpAuthSecretKey(url: String): String {
-        val hex = java.security.MessageDigest.getInstance("SHA-256")
-            .digest(url.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it) }
-        return "mcp_auth_$hex"
+    @Test
+    fun `addMcpServer keeps a custom header value out of the plain DataStore JSON`() = runTest {
+        val (manager, ds, scope) = freshManagerWithExposedDataStore()
+        try {
+            manager.addMcpServer(
+                McpServerConfig(url = "https://mcp.example", headers = mapOf("Authorization" to "Bearer tok_secret")),
+            )
+
+            // Read-back still surfaces the header…
+            assertEquals(
+                mapOf("Authorization" to "Bearer tok_secret"),
+                manager.mcpServers.first().single().headers,
+            )
+            // …but the plain DataStore JSON carries neither its value nor a headers object.
+            val json = ds.data.first()[stringPreferencesKey("mcp_servers_json")] ?: ""
+            assertTrue("JSON must not contain the header value: $json", !json.contains("tok_secret"))
+            assertTrue("JSON must carry no headers object: $json", !json.contains("\"headers\""))
+            // The encrypted store holds it, and not as plaintext.
+            val raw = securePrefs.values[mcpHeadersSecretKey("https://mcp.example")] as String
+            assertTrue("encrypted entry must not be plaintext", !raw.contains("tok_secret"))
+        } finally {
+            scope.cancel()
+        }
     }
+
+    @Test
+    fun `removeMcpServer clears the server's encrypted headers entry`() = runTest {
+        val (manager, _, scope) = freshManagerWithExposedDataStore()
+        try {
+            manager.addMcpServer(McpServerConfig(url = "https://mcp.example", headers = mapOf("X-Key" to "v")))
+            assertTrue(securePrefs.values.containsKey(mcpHeadersSecretKey("https://mcp.example")))
+
+            manager.removeMcpServer("https://mcp.example")
+
+            assertFalse(
+                "headers secret must be cleared on remove",
+                securePrefs.values.containsKey(mcpHeadersSecretKey("https://mcp.example")),
+            )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `updateMcpServer moves the headers secret when the url changes and clears it when emptied`() = runTest {
+        val (manager, _, scope) = freshManagerWithExposedDataStore()
+        try {
+            manager.addMcpServer(McpServerConfig(url = "https://old.example", headers = mapOf("X-Key" to "v")))
+
+            manager.updateMcpServer(
+                originalUrl = "https://old.example",
+                updated = McpServerConfig(url = "https://new.example", headers = mapOf("X-Key" to "v")),
+            )
+
+            assertFalse(securePrefs.values.containsKey(mcpHeadersSecretKey("https://old.example")))
+            assertTrue(securePrefs.values.containsKey(mcpHeadersSecretKey("https://new.example")))
+            assertEquals(mapOf("X-Key" to "v"), manager.mcpServers.first().single().headers)
+
+            manager.updateMcpServer(
+                originalUrl = "https://new.example",
+                updated = McpServerConfig(url = "https://new.example"),
+            )
+
+            assertFalse(securePrefs.values.containsKey(mcpHeadersSecretKey("https://new.example")))
+            assertTrue(manager.mcpServers.first().single().headers.isEmpty())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `editing one server's headers leaves another server's headers secret untouched`() = runTest {
+        val (_, ds, scope) = freshManagerWithExposedDataStore()
+        try {
+            val recording = RecordingSecretStore(secretStore)
+            val manager = SettingsManager(ds, recording)
+            manager.addMcpServer(McpServerConfig(url = "https://a.example", headers = mapOf("X-A" to "a")))
+            manager.addMcpServer(McpServerConfig(url = "https://b.example", headers = mapOf("X-B" to "b")))
+            recording.puts.clear()
+
+            manager.updateMcpServer(
+                originalUrl = "https://a.example",
+                updated = McpServerConfig(url = "https://a.example", headers = mapOf("X-A" to "a2")),
+            )
+
+            assertEquals(listOf(mcpHeadersSecretKey("https://a.example")), recording.puts)
+            assertEquals(
+                listOf(mapOf("X-A" to "a2"), mapOf("X-B" to "b")),
+                manager.mcpServers.first().map { it.headers },
+            )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `legacy inline MCP headers migrate to the encrypted store and are stripped from JSON`() = runTest {
+        val (manager, ds, scope) = freshManagerWithExposedDataStore()
+        try {
+            val url = "https://hf.example/mcp"
+            ds.edit {
+                it[stringPreferencesKey("mcp_servers_json")] =
+                    """[{"url":"$url","name":"HuggingFace","transport":"streamable_http",""" +
+                    """"headers":{"Authorization":"Bearer legacy_tok"}}]"""
+            }
+
+            // First read triggers the migration and still surfaces the header.
+            val server = manager.mcpServers.first().single()
+            assertEquals("HuggingFace", server.name)
+            assertEquals(McpTransport.STREAMABLE_HTTP, server.transport)
+            assertEquals(mapOf("Authorization" to "Bearer legacy_tok"), server.headers)
+
+            // The inline copy is gone from the persisted JSON…
+            val json = ds.data.first()[stringPreferencesKey("mcp_servers_json")] ?: ""
+            assertTrue("inline header value must be stripped: $json", !json.contains("legacy_tok"))
+            assertTrue("headers object must be stripped: $json", !json.contains("\"headers\""))
+            // …and lives encrypted in the secret store, surviving a fresh instance.
+            val raw = securePrefs.values[mcpHeadersSecretKey(url)] as String
+            assertTrue("migrated entry must not be plaintext", !raw.contains("legacy_tok"))
+            assertEquals(
+                mapOf("Authorization" to "Bearer legacy_tok"),
+                SettingsManager(ds, secretStore).mcpServers.first().single().headers,
+            )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `an inline headers copy wins over an encrypted one, an empty one included`() = runTest {
+        val (_, ds, scope) = freshManagerWithExposedDataStore()
+        try {
+            val url = "https://mcp.example"
+            // An encrypted copy left behind, next to the inline copy an older build wrote after a downgrade.
+            secretStore.putString(mcpHeadersSecretKey(url), """{"X-Key":"stale"}""", true)
+            ds.edit {
+                it[stringPreferencesKey("mcp_servers_json")] =
+                    """[{"url":"$url","transport":"sse","headers":{}}]"""
+            }
+
+            assertTrue(SettingsManager(ds, secretStore).mcpServers.first().single().headers.isEmpty())
+            assertFalse(securePrefs.values.containsKey(mcpHeadersSecretKey(url)))
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `an interrupted headers migration leaves both copies and the next read finishes it`() = runTest {
+        val file = tempFolder.newFile("settings-manager-interrupt-${System.nanoTime()}.preferences_pb")
+        file.delete()
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        try {
+            val url = "https://mcp.example"
+            val real = PreferenceDataStoreFactory.create(scope = scope, produceFile = { file })
+            real.edit {
+                it[stringPreferencesKey("mcp_servers_json")] =
+                    """[{"url":"$url","transport":"sse","headers":{"X-Key":"legacy_value"}}]"""
+            }
+            val recording = RecordingSecretStore(secretStore)
+            var secretCommittedBeforeStrip: Boolean? = null
+            // The rewrite that strips the inline copy fails, as a process death at that point would.
+            val failingOnce = object : DataStore<Preferences> by real {
+                override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+                    secretCommittedBeforeStrip = recording.synchronousPuts.contains(mcpHeadersSecretKey(url))
+                    throw IOException("disk full")
+                }
+            }
+
+            // The read still answers from the inline copy.
+            assertEquals(
+                mapOf("X-Key" to "legacy_value"),
+                SettingsManager(failingOnce, recording).mcpServers.first().single().headers,
+            )
+            assertEquals(
+                "encrypted copy must be committed synchronously before the strip",
+                true,
+                secretCommittedBeforeStrip,
+            )
+            // Both copies exist: the encrypted one, and the inline one the failed rewrite left.
+            assertTrue(securePrefs.values.containsKey(mcpHeadersSecretKey(url)))
+            val interruptedJson = real.data.first()[stringPreferencesKey("mcp_servers_json")] ?: ""
+            assertTrue(
+                "inline copy must survive the failed rewrite: $interruptedJson",
+                interruptedJson.contains("legacy_value"),
+            )
+
+            // A later start on a healthy store completes the migration.
+            val resumed = SettingsManager(real, secretStore)
+            assertEquals(mapOf("X-Key" to "legacy_value"), resumed.mcpServers.first().single().headers)
+            val json = real.data.first()[stringPreferencesKey("mcp_servers_json")] ?: ""
+            assertTrue(
+                "inline copy must be stripped after the resumed migration: $json",
+                !json.contains("legacy_value"),
+            )
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `a corrupt stored MCP payload never hands a JSON exception to the log`() = runTest {
+        val tree = RecordingTree()
+        Timber.plant(tree)
+        val (manager, ds, scope) = freshManagerWithExposedDataStore()
+        try {
+            val url = "https://mcp.example"
+            ds.edit {
+                it[stringPreferencesKey("mcp_servers_json")] = """[{"url":"$url","transport":"sse"}]"""
+            }
+            // Authenticated plaintext that no longer parses — the shape a corrupted entry would have.
+            secretStore.putString(mcpAuthSecretKey(url), """{"type":"basic","password":"pw_secret"""", true)
+            secretStore.putString(mcpHeadersSecretKey(url), """{"X-Key":"hdr_secret"""", true)
+
+            val server = manager.mcpServers.first().single()
+
+            assertEquals(McpAuth.None, server.auth)
+            assertTrue(server.headers.isEmpty())
+            assertTrue("the corruption must still be reported", tree.records.isNotEmpty())
+            // On Android a JSONException's message ends with the whole parsed input — here the
+            // credential itself — and every WARN+ throwable reaches crash reports after opt-in.
+            assertEquals(emptyList<Throwable>(), tree.records.mapNotNull { it.second })
+            assertTrue(tree.records.none { it.first.contains("pw_secret") || it.first.contains("hdr_secret") })
+        } finally {
+            Timber.uproot(tree)
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `a malformed MCP servers JSON never hands a JSON exception to the log`() = runTest {
+        val tree = RecordingTree()
+        Timber.plant(tree)
+        val (manager, ds, scope) = freshManagerWithExposedDataStore()
+        try {
+            ds.edit {
+                it[stringPreferencesKey("mcp_servers_json")] =
+                    """[{"url":"https://mcp.example","headers":{"X-Key":"hdr_secret"}"""
+            }
+
+            assertTrue(manager.mcpServers.first().isEmpty())
+
+            assertTrue("the malformed JSON must still be reported", tree.records.isNotEmpty())
+            assertEquals(emptyList<Throwable>(), tree.records.mapNotNull { it.second })
+        } finally {
+            Timber.uproot(tree)
+            scope.cancel()
+        }
+    }
+
+    /** Captures every WARN+ record as `(message, throwable)`, like the crash-report tree would. */
+    private class RecordingTree : Timber.Tree() {
+        val records = mutableListOf<Pair<String, Throwable?>>()
+
+        override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+            if (priority >= android.util.Log.WARN) records += message to t
+        }
+    }
+
+    /** Delegating [SecretStore] that remembers every write, and which were committed synchronously. */
+    private class RecordingSecretStore(private val delegate: SecretStore) : SecretStore by delegate {
+        val puts = mutableListOf<String>()
+        val synchronousPuts = mutableSetOf<String>()
+
+        override fun putString(key: String, value: String, synchronous: Boolean) {
+            delegate.putString(key, value, synchronous)
+            puts += key
+            if (synchronous) synchronousPuts += key
+        }
+    }
+
+    /** Mirrors `SettingsManager.SecretKeys.mcpAuthKey` for asserting the encrypted-store entry name. */
+    private fun mcpAuthSecretKey(url: String): String = "mcp_auth_" + sha256Hex(url)
+
+    /** Mirrors `SettingsManager.SecretKeys.mcpHeadersKey` for asserting the encrypted-store entry name. */
+    private fun mcpHeadersSecretKey(url: String): String = "mcp_headers_" + sha256Hex(url)
+
+    private fun sha256Hex(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
 
     @Test
     fun `activeEmbeddingProviderId returns on-device default when nothing stored`() = runTest {

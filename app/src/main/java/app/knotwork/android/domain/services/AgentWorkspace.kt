@@ -283,4 +283,15 @@ interface AgentWorkspace {
      *   [WorkspaceError.NotFound].
      */
     suspend fun stageForShare(relativePath: String): WorkspaceResult<String>
+
+    /**
+     * Deletes the whole workspace — every file and directory in it — for the
+     * user-confirmed recovery wipe (*Erase data*), and nothing else. The workspace
+     * is recreated empty on its next use. Share copies live in the transient cache and
+     * go with it ([TransientCacheSweeper.sweepAll]).
+     *
+     * @return `true` when nothing of the workspace is left on disk, `false` when
+     *   something could not be deleted.
+     */
+    suspend fun eraseAll(): Boolean
 }

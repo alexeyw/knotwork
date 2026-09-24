@@ -394,6 +394,7 @@ flag them with spurious, environment-dependent violations.
 | `ImageAttachmentEntryCensusTest`   | Every file that starts runs says whether it can attach an image; one that can must call the multimodal pre-flight (`CheckImageAttachmentUseCase`), and one listed as text-only may not handle an attachment. |
 | `TransientCacheDirectoryGuardTest` | Every directory the app creates under its cache, and every `<cache-path>` the `FileProvider` serves, is an entry of `TransientCacheDirectory` — so the daily sweep removes what its owner misses. |
 | `PathContainmentGuardTest`         | No production file outside `PathContainment` prefix-tests a path string: `absolutePath.startsWith(root)` passes `root/../elsewhere`, so containment is always canonicalise-then-compare. |
+| `PersistentStorageInventoryGuardTest` | Every storage root the production code reaches is inventoried with two decisions — kept out of Android backup and device transfer, and erased or kept by the recovery wipe. Backup is off, both extraction sections exclude every domain, the plain-text directories are also excluded by the names production code uses, and the wipe calls the owner of every root recorded as erased. |
 | `TabRootEntryGuardTest`            | A bottom-nav tab root is entered as a tab switch, never pushed onto another subtree's back stack. |
 | `InstrumentedTestExclusionGuardTest` | The roster of device-only instrumented tests, and the annotation the emulator workflow excludes by, stay in step. |
 

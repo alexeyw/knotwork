@@ -152,12 +152,15 @@ interface Tool {
   error message sent instead) is cut at the user's `httpToolMaxResponseBytes`
   budget with a marker. Read MCP content
   through the client, never around it.
-- **MCP credentials** (Bearer tokens, Basic passwords, API-key values) are
-  stored in the **Keystore-backed encrypted store**, keyed per server by a hash
-  of its URL — never in the plain `mcp_servers_json` DataStore entry, which
-  holds only non-secret metadata (URL, transport, name, custom headers). Auth
-  embedded inline by earlier releases is migrated into the encrypted store on
-  first read and stripped from the JSON.
+- **MCP credentials** (Bearer tokens, Basic passwords, API-key values) **and
+  custom headers** are stored in the **Keystore-backed encrypted store**, keyed
+  per server by a hash of its URL — never in the plain `mcp_servers_json`
+  DataStore entry, which holds only non-secret metadata (URL, transport, name).
+  Headers count as secret whole: the form invites an `Authorization` row. Auth
+  and headers kept inline by earlier releases are migrated into the encrypted
+  store on first read — the encrypted copy committed before the inline one is
+  stripped — and a stored secret's parse error is logged by type only (on
+  Android a `JSONException` message carries the whole input).
 
 ---
 

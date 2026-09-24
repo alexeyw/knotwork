@@ -25,6 +25,7 @@ Only Kotlin files appear inside the generated blocks.
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
   - `PathContainmentGuardTest.kt` - A path prefix test lives in exactly one production file: `PathContainment`.
+  - `PersistentStorageInventoryGuardTest.kt` - Every place the app keeps data between runs is in `StorageRoot`, with two decisions written down: nothing of it leaves the device through Android backup or device transfer, and whether the recovery wipe (*Erase data*) erases it.
   - `PipelineBindingCensusTest.kt` - Census of every place the domain stores a pipeline id, each with a decision: is it a binding the Replace confirmation must list, or not, and why.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
@@ -361,6 +362,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ReembedAllMemoriesUseCaseTest.kt` - Unit tests for `ReembedAllMemoriesUseCase`.
     - `RegisterDownloadedModelUseCaseTest.kt` - Covers the upsert semantics of registering a downloaded file: the write runs on every completed download, including re-downloads of a file the user already has, so "insert once, refresh afterwards" is the whole contract.
     - `RenamePipelineUseCaseTest.kt` - Unit tests for `RenamePipelineUseCase`.
+    - `ResetLockedDatabaseUseCaseTest.kt` - Unit tests for `ResetLockedDatabaseUseCase`: the recovery wipe erases the database first, then the plain-text content that belongs to it — workspace, attachments, transient copies — and touches no file when the database survives.
     - `ResetSamplingDefaultsUseCaseTest.kt` - Unit tests for `ResetSamplingDefaultsUseCase`.
     - `ResetToRecommendedDefaultsUseCaseTest.kt` - Unit tests for `ResetToRecommendedDefaultsUseCase`.
     - `ResolveDocumentationLinkUseCaseTest.kt` - Unit tests for `ResolveDocumentationLinkUseCase`.

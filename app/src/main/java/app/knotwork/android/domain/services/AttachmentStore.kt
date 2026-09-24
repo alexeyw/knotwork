@@ -102,4 +102,14 @@ interface AttachmentStore {
      * @return The file size in bytes, or `0` if missing.
      */
     suspend fun sizeBytes(path: String): Long
+
+    /**
+     * Deletes every stored attachment file for the user-confirmed recovery wipe
+     * (*Erase data*), which removes the messages referencing them in the same
+     * operation. Not for retention: that goes file by file through [delete].
+     *
+     * @return `true` when no attachment file is left on disk, `false` when something
+     *   could not be deleted.
+     */
+    suspend fun deleteAll(): Boolean
 }

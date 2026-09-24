@@ -4,10 +4,10 @@
 
     <!-- Data-locked recovery surface (database passphrase unavailable). -->
     <string name="splash_data_locked_title">Your data can’t be unlocked</string>
-    <string name="splash_data_locked_body">The encryption key protecting your local data could not be read. This is often temporary — for example right after restoring a backup or updating Android. Try again first. If the problem persists, the only way to keep using the app is to erase all local data and start fresh.</string>
-    <string name="splash_data_locked_reset">Erase all data</string>
-    <string name="splash_reset_dialog_title">Erase all data?</string>
-    <string name="splash_reset_dialog_body">This permanently deletes all chats, long-term memory, pipelines and presets stored on this device. This cannot be undone. Type %1$s to confirm.</string>
+    <string name="splash_data_locked_body">The encryption key protecting your local data could not be read. This is often temporary — for example right after restoring a backup or updating Android. Try again first. If the problem persists, the only way to keep using the app is to erase your data and start fresh.</string>
+    <string name="splash_data_locked_reset">Erase data</string>
+    <string name="splash_reset_dialog_title">Erase your data?</string>
+    <string name="splash_reset_dialog_body">This permanently deletes your chats, long-term memory, pipelines, presets, workspace files and attachments on this device. Your settings and saved keys are kept. This cannot be undone. Type %1$s to confirm.</string>
     <string name="splash_reset_dialog_hint">Type %1$s to confirm</string>
-    <string name="splash_reset_dialog_confirm">Erase everything</string>
+    <string name="splash_reset_dialog_confirm">Erase data</string>
 </resources>

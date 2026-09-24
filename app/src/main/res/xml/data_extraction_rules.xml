@@ -1,18 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Data extraction rules (applied via android:dataExtractionRules on API >= 31).
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   Data extraction rules (android:dataExtractionRules, API >= 31 — every device this
+   app supports). See https://developer.android.com/identity/data/autobackup
 
-   The DataStore preferences (files/datastore/) are excluded from BOTH cloud
-   backup and device-to-device transfer: they may carry settings the app treats
-   as on-device-only. The SQLCipher database and the Keystore-backed secret store
-   are left in because their key material is device-bound and non-exportable — a
-   restored copy is undecryptable — whereas the plain DataStore is not protected.
+   Nothing the app stores leaves the device through cloud backup or device-to-device
+   transfer. Nothing it stores is usable on another device either:
+   - the SQLCipher database and the three secret stores are sealed under Android
+     Keystore keys that never leave the device, so a restored copy only lands the
+     new install on the "data can't be unlocked" screen;
+   - the model files are found through the database, so without it they are
+     gigabytes the new install cannot see;
+   - what is readable as is — attachments (user photos), the agent workspace, the
+     settings in DataStore — is exactly what must not be copied off the device.
+
+   android:allowBackup="false" in the manifest turns cloud backup off, but on some
+   devices it does not stop a device-to-device transfer, so both sections exclude
+   every domain from its root. The three plain-text directories are also excluded by
+   name, so they stay out whatever a platform makes of the root rule.
+   PersistentStorageInventoryGuardTest pins all of this against the storage the code
+   actually uses.
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
         <exclude domain="file" path="datastore/" />
+        <exclude domain="file" path="attachments/" />
+        <exclude domain="file" path="agent_workspace/" />
     </cloud-backup>
     <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
         <exclude domain="file" path="datastore/" />
+        <exclude domain="file" path="attachments/" />
+        <exclude domain="file" path="agent_workspace/" />
     </device-transfer>
 </data-extraction-rules>

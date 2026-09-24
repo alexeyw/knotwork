@@ -1346,8 +1346,8 @@ Encryption applies to every table that may hold user-derived content:
   tool name and arguments awaiting approval, or the clarification
   question awaiting an answer.
 
-Secrets — the SQLCipher passphrase, per-provider cloud API keys, and
-the HuggingFace access token —
+Secrets — the SQLCipher passphrase, per-provider cloud API keys, the
+HuggingFace access token, and MCP credentials and custom headers —
 live in **`KeystoreBackedPrefsStore`** instances (`data/local/crypto/`):
 plain `SharedPreferences` files whose values are encrypted with
 **AES-256-GCM under a dedicated, non-exportable Android Keystore key**
@@ -1384,6 +1384,17 @@ The passphrase lifecycle is asymmetric by design
 - The API-key store applies the opposite, availability-first policy: a
   value that no longer decrypts is dropped and reported as unset — keys
   are user re-enterable, so availability wins there.
+- The confirmed wipe (`ResetLockedDatabaseUseCase`) deletes the database
+  and its passphrase through `DatabaseResetService`, then — only if that
+  succeeded — asks `AgentWorkspace`, `AttachmentStore` and
+  `TransientCacheSweeper` to erase their content. Settings and the other
+  secret stores are kept.
+
+None of these stores enters Android backup or device transfer
+([SECURITY.md § Backup and device transfer](../SECURITY.md#backup-and-device-transfer)).
+`PersistentStorageInventoryGuardTest` inventories every storage root the
+code uses, with its backup and wipe decision, and checks the backup rules
+and the wipe against it.
 
 Inside the encrypted database, `memory_chunks.embedding` is stored as a
 **BLOB of little-endian IEEE-754 float32 values** (4 bytes per

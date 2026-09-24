@@ -48,7 +48,7 @@ class SplashViewModelTest {
         every { appContext.getString(any()) } returns RESET_KEYWORD
         appInitializationUseCase = mockk()
         resetLockedDatabaseUseCase = mockk()
-        coEvery { resetLockedDatabaseUseCase() } returns Unit
+        coEvery { resetLockedDatabaseUseCase() } returns true
     }
 
     @After
@@ -291,7 +291,7 @@ class SplashViewModelTest {
             }
         }
         // Hold the wipe open so retry() can race it.
-        val wipeGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val wipeGate = kotlinx.coroutines.CompletableDeferred<Boolean>()
         coEvery { resetLockedDatabaseUseCase() } coAnswers { wipeGate.await() }
 
         val viewModel = createViewModel()
@@ -306,7 +306,7 @@ class SplashViewModelTest {
         viewModel.retry()
         testScheduler.runCurrent()
 
-        wipeGate.complete(Unit)
+        wipeGate.complete(true)
         advanceUntilIdle()
 
         // Exactly two runs: the implicit init + the post-wipe restart. No third from retry().

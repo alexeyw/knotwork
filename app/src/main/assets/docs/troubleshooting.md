@@ -235,11 +235,12 @@ and the app shows a dedicated recovery screen instead of starting:
   often transient; if the key becomes readable again, the app opens your
   existing data untouched. Rebooting the device before another retry
   helps in some cases.
-- **Erase all data is the last resort.** If retrying never gets past the
+- **Erase data is the last resort.** If retrying never gets past the
   screen, the key is gone for good and the encrypted database can no
-  longer be opened by anyone — including the app itself. **Erase all
-  data** deletes the database and generates a fresh key so you can start
-  over. The action is irreversible and guarded by a typed confirmation.
+  longer be opened by anyone — including the app itself. **Erase data**
+  deletes the database, your agent workspace files and attachments, and
+  generates a fresh key so you can start over. Settings and saved keys are
+  kept. The action is irreversible and guarded by a typed confirmation.
 
 The app never deletes or re-keys your data automatically in this state:
 without the original key the database contents cannot be recovered, so
