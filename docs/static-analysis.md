@@ -1919,7 +1919,12 @@ is not.**
   `-javadoc` jars, and Gradle's own source distribution (`gradle-<v>-src.zip`),
   which Android Studio's sync fetches so build scripts can be navigated. The IDE
   downloads them; the build never executes them. The first sync after this file
-  landed failed on exactly that zip — no command-line build ever asks for it.
+  landed failed on exactly that zip — no command-line build ever asks for it —
+  and the second on the metadata of the Groovy bundled with Gradle, which the IDE
+  resolves for sources: signed by the Groovy release manager's key, which the file
+  had trusted only for Groovy's older `org.codehaus.groovy` coordinates. Both were
+  reproduced without the IDE, by an init script adding the repository it uses and
+  resolving the same coordinates, before and after the fix.
 
 **The policy is enforced, not only written down.** `:app:verifySupplyChainPins`
 fails when `verify-metadata` or `verify-signatures` is off, when key servers are
