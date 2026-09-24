@@ -18,9 +18,9 @@
     endpoint. What makes them inert is these three removals — without the
     discovery service the backend registry resolves no backend, and without the
     scheduler components nothing can schedule an upload. So the guarantee lives
-    here, not in R8, and it is checked: the
-    `absent` lines of `config/merged-manifest/fossRelease.txt` fail the build if
-    any `com.google.android.datatransport` component comes back.
+    here, not in R8, and it is checked: the `absent` lines of
+    `config/merged-manifest/fossRelease.txt` fail the build if any
+    `com.google.android.datatransport` component comes back.
 
     Why remove the components rather than exclude the dependency: excluding
     `com.google.android.datatransport` from the `foss` configurations builds,

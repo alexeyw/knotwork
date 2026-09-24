@@ -47,10 +47,11 @@ A release build needs the Android NDK named by `ndk` in
 code, but that NDK's `llvm-strip` strips the prebuilt native libraries it
 packages. Without it, AGP would ship them unstripped and say so only in an
 informational line — a different artefact from the one CI publishes. So
-`verify<Variant>PinnedNdk` fails the release build instead:
+`verify<Variant>PinnedNdk` fails the release build instead, and its message
+names the command that installs the pinned version:
 
 ```bash
-sdkmanager "ndk;28.2.13676358"
+sdkmanager "ndk;<version>"
 ```
 
 Debug builds and `./gradlew check` do not need it.
@@ -100,12 +101,13 @@ extension (`*.jks` / `*.keystore` / `*.p12` …) plus `local.properties`,
 `keystore.properties`, and `secrets.properties`.
 
 The `release` signing config signs every APK with **APK Signature Scheme v2
-and v3** (v1 is unnecessary at this `minSdk`). Both are set explicitly: with v3
-on, AGP drops v2 at `minSdk` 28 and above unless asked to keep it, and every
-earlier release was signed with v2 alone. v3 is the scheme a signing-key rotation is
-expressed in. What it does not do is make a key recoverable: a rotation is
-signed by the old key, so a **lost** key still cannot be replaced without every
-user uninstalling. Keeping the key safe is the only protection against that.
+and v3** (v1 is unnecessary at this `minSdk`). Both are set explicitly: with
+v3 on, AGP drops v2 at `minSdk` 28 and above unless asked to keep it, and every
+earlier release was signed with v2 alone. v3 is the scheme a signing-key
+rotation is expressed in. What it does not do is make a key recoverable: a
+rotation is signed by the old key, so a **lost** key still cannot be replaced
+without every user uninstalling. Keeping the key safe is the only protection
+against that.
 
 ### Current distribution state
 
@@ -438,10 +440,11 @@ the app was broken:
   plans to replace.
 
 The instantiability check was added after long-term memory turned out to have
-never worked in any released build. R8 in full mode left `com.google.protobuf.Any` with its own
-name — so the mapping check passed — and made the class **abstract**, because
-protobuf-javalite instantiates through `Unsafe.allocateInstance`, which R8
-cannot see. MediaPipe parses its task graph as a protobuf, so every
+never worked in any released build. R8 in full mode left
+`com.google.protobuf.Any` with its own name — so the mapping check passed — and
+made the class **abstract**, because protobuf-javalite instantiates through
+`Unsafe.allocateInstance`, which R8 cannot see. MediaPipe parses its task graph
+as a protobuf, so every
 `TextEmbedder.createFromOptions` threw `InstantiationException`. The exception
 was caught and shown as a snackbar, so nothing reached logcat or Crashlytics.
 
@@ -578,7 +581,7 @@ user ever receives a copy of.
 ### Reproducible builds
 
 F-Droid prefers builds it can reproduce bit-for-bit from source. Three inputs
-that used to follow the build host are now properties of the commit:
+of the build are properties of the commit rather than of the host:
 
 - `BuildConfig.GIT_COMMIT_DATE_EPOCH_MS` resolves, in order, from the
   `SOURCE_DATE_EPOCH` environment variable (the cross-ecosystem convention,
@@ -602,9 +605,14 @@ that used to follow the build host are now properties of the commit:
   between a local build and CI's of one commit. A release build now fails
   instead, and an F-Droid recipe has to provide the same NDK.
 
+Measured on one commit: the `foss` APK that `release.yml` built from a depth-1
+checkout on Linux and one built from a full clone on macOS, with a different
+JDK vendor, have all 277 entries CRC-identical. Before these changes, the
+published 0.10.1 APK and a local build of its commit differed in 5 of 278
+entries (`classes.dex`, the baseline profile and three native libraries).
+
 What this does *not* establish is that the whole artefact reproduces
-bit-for-bit on F-Droid's own server, which has not built it yet. The claim is
-the narrower one that was measured: two builds of one commit on different hosts.
+bit-for-bit on F-Droid's own server, which has not built it yet.
 
 The `foss` release is otherwise a standard R8-minified arm64-v8a build (§4); the
 F-Droid build recipe should disable any signing config so F-Droid applies its

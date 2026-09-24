@@ -1922,7 +1922,11 @@ reflect, and a generator would turn each of those decisions into a keystroke.
 
 Non-exported components are left out — they are no entry surface, and an
 expectation that churned on every internal service a library adds would be
-approved without being read.
+approved without being read. Only release variants are checked, because only
+they ship; the debug overlay's receiver is covered by the source-manifest census
+`ExportedComponentInventoryTest`. The two layers are distinct: that test pins what
+this repository *writes*, this guard what the build *ships*. Merging both release
+manifests costs seconds and needs neither signing nor R8.
 
 An expectation can also say what must **not** be there: `absent TEXT` fails the
 build if any attribute of any element — exported or not — contains `TEXT`. The
@@ -1934,11 +1938,7 @@ that `src/foss/AndroidManifest.xml` removes the three components that would let
 them find a backend or schedule an upload. None of the three is exported, so the
 entry list alone would not notice one coming back. Observed failing with one of
 the three removals deleted: the build named the returned `JobInfoSchedulerService`,
-which the entry list did not. Only release variants are checked, because only
-they ship; the debug overlay's receiver is covered by the source-manifest census
-`ExportedComponentInventoryTest`. The two layers are distinct: that test pins what
-this repository *writes*, this guard what the build *ships*. Merging both release
-manifests costs seconds and needs neither signing nor R8.
+which the entry list did not.
 
 **Observed failing — on a genuine divergence.** The merged release manifests
 either side of the commit that added WorkManager differ by four entries, none of
