@@ -1,7 +1,6 @@
 package app.knotwork.android.architecture
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -48,20 +47,43 @@ class KoogClientTimeoutKonsistTest {
         val byFile = constructions().groupBy { it.file.substringAfterLast('/') }
 
         assertEquals("chat clients seen: ${byFile["KoogClientFactory.kt"]}", 5, byFile["KoogClientFactory.kt"]?.size)
-        assertTrue("embedding clients seen: ${byFile.keys}", (byFile["KoogEmbedderFactory.kt"]?.size ?: 0) == 2)
+        val embedding = byFile["KoogEmbedderFactory.kt"]
+        assertEquals("embedding clients seen: $embedding", 2, embedding?.size)
     }
 
     /** One `SomeClient(…)` call in production code. */
     private data class Construction(val file: String, val clientName: String, val arguments: String)
 
-    /** Every construction of an imported Koog provider client across the production sources. */
-    private fun constructions(): List<Construction> = ProductionSources.code.flatMap { (file, code) ->
-        PROVIDER_CLIENT_IMPORT.findAll(code).map { it.groupValues[1] }.distinct().flatMap { name ->
-            Regex("""\b${Regex.escape(name)}\s*\(""").findAll(code).map { call ->
-                Construction(file, name, argumentsFrom(code, call.range.last))
-            }
-        }
+    @Test
+    fun `given a client imported under another name when censused then its construction is still seen`() {
+        // An aliased import names the class differently at the call site; matched by the
+        // class name alone, the construction below would pass unexamined.
+        val source = """
+            import ai.koog.prompt.executor.ollama.client.OllamaClient as Local
+
+            val client = Local(httpClientFactory = factory, baseUrl = url)
+        """.trimIndent()
+
+        val seen = constructions(mapOf("Aliased.kt" to source))
+
+        assertEquals(listOf("Local"), seen.map { it.clientName })
+        assertEquals(false, seen.single().arguments.contains(SHARED_CONFIG))
     }
+
+    /**
+     * Every construction of an imported Koog provider client in [sources].
+     *
+     * @param sources Comment-free code keyed by path; the production sources by default.
+     */
+    private fun constructions(sources: Map<String, String> = ProductionSources.code): List<Construction> =
+        sources.flatMap { (file, code) ->
+            PROVIDER_CLIENT_IMPORT.findAll(code).map { it.groupValues[2].ifEmpty { it.groupValues[1] } }.distinct()
+                .flatMap { name ->
+                    Regex("""\b${Regex.escape(name)}\s*\(""").findAll(code).map { call ->
+                        Construction(file, name, argumentsFrom(code, call.range.last))
+                    }
+                }
+        }
 
     /**
      * The text between the parenthesis at [open] and the one that closes it.
@@ -86,11 +108,13 @@ class KoogClientTimeoutKonsistTest {
 
         /**
          * An import of a Koog provider client — `clients.<provider>.XxxClient` (not the
-         * `retry` decorators) or `ollama.client.OllamaClient`; group 1 is the simple name.
+         * `retry` decorators) or `ollama.client.OllamaClient`; group 1 is the simple name,
+         * group 2 the alias when the import renames it (`… as Chat`), which is then the
+         * name the file constructs it by.
          */
         val PROVIDER_CLIENT_IMPORT = Regex(
             """(?m)^import ai\.koog\.prompt\.executor\.(?:clients\.(?!retry\.)[a-z0-9]+|ollama\.client)\.""" +
-                """([A-Z]\w*Client)\s*$""",
+                """([A-Z]\w*Client)(?:\s+as\s+(\w+))?\s*$""",
         )
     }
 }

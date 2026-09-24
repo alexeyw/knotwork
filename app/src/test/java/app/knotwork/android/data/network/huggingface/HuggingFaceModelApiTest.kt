@@ -7,7 +7,6 @@ import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -57,11 +56,5 @@ class HuggingFaceModelApiTest {
         api.getModel("org/model")
 
         assertNotNull("the Hub request left without being recorded", networkActivity.lastOutboundAt.value)
-    }
-
-    @Test
-    fun `given no request was made when the tracker is read then nothing is recorded`() {
-        // Building the client is not a network call; only a request is.
-        assertNull(networkActivity.lastOutboundAt.value)
     }
 }

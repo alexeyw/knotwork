@@ -58,12 +58,11 @@ internal object ArchitectureScope {
     /**
      * Root-relative paths of [module]'s production source sets, e.g. `app/src/full`.
      *
-     * Resolved against the repository root found from the working directory: Gradle runs
-     * the unit tests from the module directory, Konsist resolves paths from the root.
+     * Resolved against the repository root, the parent of the `app` module directory
+     * [ProductionSources] finds: Konsist resolves these paths from the root.
      */
     private fun productionSourceSetsOf(module: String): List<String> {
-        val working = File("").absoluteFile
-        val root = if (File(working, "settings.gradle.kts").isFile) working else working.parentFile
+        val root = ProductionSources.moduleDirectory().absoluteFile.parentFile
         val sources = File(root, "$module/src")
         val sets = sources.listFiles().orEmpty()
             .filter { it.isDirectory && !it.name.startsWith("test") && !it.name.startsWith("androidTest") }

@@ -97,8 +97,12 @@ class NetworkEgressInventoryKonsistTest {
          * The file builds or decorates a client, and the files that send with it record.
          *
          * @property callers Inventory keys of those files; each must record itself.
+         * @property reachedThrough Type names a caller uses to get at the client — the class
+         *   itself and any interface it is bound to. Every production file naming one of
+         *   them in code must be in [callers], be DI wiring, or itself be an entry of this
+         *   kind (a factory wrapping a factory), so the list cannot silently be incomplete.
          */
-        data class RecordedBy(val callers: List<String>) : Indicator
+        data class RecordedBy(val callers: List<String>, val reachedThrough: List<String>) : Indicator
 
         /**
          * The indicator does not see this path.
@@ -221,6 +225,27 @@ class NetworkEgressInventoryKonsistTest {
     }
 
     @Test
+    fun `every file that sends through a client factory is one of the callers that record`() {
+        // Without this half, RecordedBy is a list somebody wrote once: a fourth caller of a
+        // factory that sends without recording would leave the three listed ones green.
+        val incomplete = INVENTORY.flatMap { (path, egress) ->
+            val indicator = (egress as? Egress.Opens)?.indicator as? Indicator.RecordedBy ?: return@flatMap emptyList()
+            val names = indicator.reachedThrough.map { name -> Regex("""\b${Regex.escape(name)}\b""") }
+            shippingFiles.keys
+                .filter { other -> other != path && isOutsideWiring(other, indicator.reachedThrough) }
+                .filter { other -> names.any { it.containsMatchIn(codeOf(other)) } }
+                .filterNot { it in indicator.callers }
+                .map { user -> "$user uses ${indicator.reachedThrough} ($path) but is not a listed caller" }
+        }
+
+        assertTrue(
+            "these files reach a client whose traffic the inventory says its callers record, and are not " +
+                "among those callers: $incomplete. Make the file record the call and list it, or reclassify.",
+            incomplete.isEmpty(),
+        )
+    }
+
+    @Test
     fun `every egress the privacy indicator does not see says why`() {
         val unexplained = INVENTORY
             .filterValues { egress ->
@@ -294,8 +319,21 @@ class NetworkEgressInventoryKonsistTest {
      * Whether the file at [path] calls `recordOutbound()` in code — comments removed, so
      * a KDoc naming the method does not count.
      */
-    private fun records(path: String): Boolean =
-        shippingFiles[path]?.let { file -> RECORD_CALL in ProductionSources.stripComments(file.text) } == true
+    private fun records(path: String): Boolean = RECORD_CALL in codeOf(path)
+
+    /** Code of the shipping file at [path] with comments removed; empty for an unknown path. */
+    private fun codeOf(path: String): String =
+        shippingFiles[path]?.let { file -> ProductionSources.stripComments(file.text) }.orEmpty()
+
+    /**
+     * Whether [path] can use a client without sending with it: not DI wiring, not the file
+     * declaring one of [names], and not itself a factory whose own callers record.
+     */
+    private fun isOutsideWiring(path: String, names: List<String>): Boolean {
+        val stem = path.substringAfterLast('/').removeSuffix(".kt")
+        val wrapsAFactory = (INVENTORY[path] as? Egress.Opens)?.indicator is Indicator.RecordedBy
+        return "/di/" !in path && stem !in names && !wrapsAFactory
+    }
 
     /** Every shipping production file, keyed by its repository-relative path. */
     private val shippingFiles: Map<String, KoFileDeclaration> by lazy {
@@ -341,6 +379,12 @@ class NetworkEgressInventoryKonsistTest {
         /** The call that tells the privacy indicator about a request. */
         const val RECORD_CALL = "recordOutbound("
 
+        /** How a caller reaches a chat client: the factory, or the domain interface it is bound to. */
+        val CHAT_FACTORY = listOf("KoogClientFactory", "CloudLlmClientFactory")
+
+        /** How a caller reaches an embedding client. */
+        val EMBEDDING_FACTORY = listOf("KoogEmbedderFactory")
+
         /** The files that send model traffic through a client built by a factory below. */
         val CHAT_CALLERS = listOf(
             "$MAIN/domain/engine/executors/CloudLlmNodeExecutor.kt",
@@ -377,13 +421,19 @@ class NetworkEgressInventoryKonsistTest {
         val INVENTORY: Map<String, Egress> = mapOf(
             // --- Cloud model providers (PRIVACY 3.1) -------------------------------
             "$MAIN/data/engine/KoogClientFactory.kt" to
-                Egress.Opens("3.1", Indicator.RecordedBy(CHAT_CALLERS)),
+                Egress.Opens("3.1", Indicator.RecordedBy(CHAT_CALLERS, CHAT_FACTORY)),
             "$MAIN/data/engine/KoogStructuredInferenceClientFactory.kt" to
                 Egress.Opens("3.1", Indicator.RecordsItself),
             "$MAIN/data/engine/retry/CloudRetryWrapper.kt" to
-                Egress.Opens("3.1", Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS)),
+                Egress.Opens(
+                    "3.1",
+                    Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("CloudRetryWrapper")),
+                ),
             "$MAIN/data/engine/retry/RetryObservingLLMClient.kt" to
-                Egress.Opens("3.1", Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS)),
+                Egress.Opens(
+                    "3.1",
+                    Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("RetryObservingLLMClient")),
+                ),
             "$MAIN/domain/engine/executors/CloudLlmNodeExecutor.kt" to
                 Egress.Opens("3.1", Indicator.RecordsItself),
             "$MAIN/data/tools/local/DelegateTaskTool.kt" to
@@ -393,7 +443,7 @@ class NetworkEgressInventoryKonsistTest {
             "$MAIN/data/services/embedding/OllamaEmbeddingProvider.kt" to
                 Egress.Opens("3.1", Indicator.RecordsItself),
             "$MAIN/data/services/embedding/KoogEmbedderFactory.kt" to
-                Egress.Opens("3.1", Indicator.RecordedBy(EMBEDDING_CALLERS)),
+                Egress.Opens("3.1", Indicator.RecordedBy(EMBEDDING_CALLERS, EMBEDDING_FACTORY)),
 
             // --- MCP servers (PRIVACY 3.2) ----------------------------------------
             "$MAIN/data/mcp/KoogMcpClient.kt" to
