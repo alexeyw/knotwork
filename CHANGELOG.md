@@ -146,7 +146,7 @@ details.
   headers saved by earlier versions are moved on first start.
 - **Nothing the app stores goes into Android backup or to a new device.**
   Attachments and workspace files were included in cloud backup and in
-  device-to-device transfer. Nothing is now: the rest of the app's data only
+  device-to-device transfer. Now nothing is: the rest of the app's data only
   works on the device it was created on, so a new phone starts empty instead of
   on the "data can't be unlocked" screen.
 - **Erase data on the recovery screen also deletes workspace files and

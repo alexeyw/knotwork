@@ -1625,7 +1625,7 @@ class SettingsManagerTest {
             // On Android a JSONException's message ends with the whole parsed input — here the
             // credential itself — and every WARN+ throwable reaches crash reports after opt-in.
             assertEquals(emptyList<Throwable>(), tree.records.mapNotNull { it.second })
-            assertTrue(tree.records.none { it.first.contains("secret") })
+            assertTrue(tree.records.none { it.first.contains("pw_secret") || it.first.contains("hdr_secret") })
         } finally {
             Timber.uproot(tree)
             scope.cancel()

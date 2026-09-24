@@ -144,6 +144,11 @@ class PersistentStorageInventoryGuardTest {
             .single { it.key.endsWith(WIPE_USE_CASE) }
             .value
 
+        assertEquals(
+            "every root needs exactly one wipe decision: erasedBy or kept",
+            emptyList<StorageRoot>(),
+            StorageRoot.entries.filter { (it.erasedBy == null) == (it.kept == null) },
+        )
         StorageRoot.entries.filter { it.erasedBy != null }.forEach { root ->
             assertTrue(
                 "${root.name} is recorded as erased by the recovery wipe, but $WIPE_USE_CASE never calls " +
