@@ -22,21 +22,35 @@ import app.knotwork.android.domain.models.ExternalAutomationStatus
  * not send the request. That is why the payload is deliberately this thin: a
  * misdirected callback tells the wrong app only an id it did not choose and a
  * status about work it did not ask for.
+ *
+ * **Nothing is sent while the contract is switched off**, and nothing whose
+ * caller-chosen parts exceed the contract's length ceilings. Both rules belong to
+ * the implementation rather than to its callers: a request is parsed — and can be
+ * refused, and answered — before the switch is ever read, so a rule keyed on the
+ * refusal reason would leave every malformed request answered while the user has
+ * the contract off. Enforced at the one place a callback leaves the app, the rules
+ * hold for the immediate answer and for a run's final report alike.
  */
 interface ExternalAutomationCallbackNotifier {
 
     /**
-     * Sends one status callback.
+     * Sends one status callback, unless the contract forbids it.
      *
      * Best-effort by contract: a callback that cannot be delivered — an
      * uninstalled target, a package with no matching receiver — must not disturb
      * the run it reports on, so implementations absorb and log delivery failures
-     * rather than propagating them.
+     * rather than propagating them. A callback withheld because the contract is
+     * off, or because a value is over its ceiling, is dropped the same way.
      *
      * @param returnPackage Package to deliver to, as named by the caller.
      * @param returnAction Broadcast action to send it with.
      * @param requestId The caller's correlation id, echoed back unchanged.
      * @param status The status to report.
      */
-    fun notifyOutcome(returnPackage: String, returnAction: String, requestId: String, status: ExternalAutomationStatus)
+    suspend fun notifyOutcome(
+        returnPackage: String,
+        returnAction: String,
+        requestId: String,
+        status: ExternalAutomationStatus,
+    )
 }

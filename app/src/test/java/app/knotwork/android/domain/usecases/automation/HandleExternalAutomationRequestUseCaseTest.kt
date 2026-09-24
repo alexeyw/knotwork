@@ -456,6 +456,63 @@ class HandleExternalAutomationRequestUseCaseTest {
         coVerify(exactly = 0) { journal.recordRefusal(any()) }
     }
 
+    // --- What the journal keeps of a caller's text ---------------------------
+
+    @Test
+    fun `given a refused call carrying huge values when journalled then every caller-chosen field is clamped`() =
+        runTest {
+            // Refusals are journalled while the contract is off, and each one is a
+            // row: without a bound per value, any app on the device could fill the
+            // encrypted database a megabyte at a time. The action is refused first,
+            // so every other value reaches the row raw, before any parse check.
+            val huge = "x".repeat(100_000)
+            useCase(
+                invocation(
+                    action = huge,
+                    pipelineId = null,
+                    pipelineName = huge,
+                    requestId = huge,
+                    returnPackage = huge,
+                    returnAction = huge,
+                ),
+            )
+
+            val row = capturedRefusal()
+            val max = HandleExternalAutomationRequestUseCase.MAX_JOURNALED_VALUE_LENGTH
+            val target = row.target as ExternalAutomationTarget.ByName
+            listOf(row.action, row.requestId, target.pipelineName, row.declaredReturnPackage!!, row.returnAction)
+                .forEach { value ->
+                    assertEquals(max, value.length)
+                    // Marked as cut, so the row does not pass for what was sent.
+                    assertTrue(value.endsWith("…"))
+                    assertTrue(value.startsWith("xxxx"))
+                }
+        }
+
+    @Test
+    fun `given an admitted request at every ceiling when journalled then its values are recorded unchanged`() =
+        runTest {
+            // The final callback reads its address and id back from this row, so an
+            // admitted request must never be cut on the way in.
+            val id = "r".repeat(ExternalAutomationContract.MAX_REQUEST_ID_LENGTH)
+            val address = "p".repeat(ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH)
+            val slot = slot<ExternalAutomationJournalEntry>()
+            coEvery { journal.admitAcceptedWithinCeiling(capture(slot), any(), any()) } returns true
+
+            useCase(invocation(requestId = id, returnPackage = address, returnAction = address))
+
+            assertEquals(id, slot.captured.requestId)
+            assertEquals(address, slot.captured.declaredReturnPackage)
+            assertEquals(address, slot.captured.returnAction)
+        }
+
+    @Test
+    fun `given the contract ceilings then the journal ceiling is not below any of them`() {
+        val max = HandleExternalAutomationRequestUseCase.MAX_JOURNALED_VALUE_LENGTH
+        assertTrue(max >= ExternalAutomationContract.MAX_REQUEST_ID_LENGTH)
+        assertTrue(max >= ExternalAutomationContract.MAX_RETURN_ADDRESS_LENGTH)
+    }
+
     private companion object {
         const val BOUND_ID = "pipe-bound"
         const val BOUND_NAME = "Daily digest"

@@ -246,6 +246,7 @@ private fun ExternalAutomationRejectionReason.toReasonUi(): ExternalRequestReaso
     ExternalAutomationRejectionReason.PROMPT_AMBIGUOUS -> ExternalRequestReasonUi.PromptAmbiguous
     ExternalAutomationRejectionReason.PROMPT_UNDECODABLE -> ExternalRequestReasonUi.PromptUndecodable
     ExternalAutomationRejectionReason.REQUEST_ID_MISSING -> ExternalRequestReasonUi.RequestIdMissing
+    ExternalAutomationRejectionReason.VALUE_TOO_LONG -> ExternalRequestReasonUi.ValueTooLong
     ExternalAutomationRejectionReason.RATE_LIMITED -> ExternalRequestReasonUi.RateLimited
     ExternalAutomationRejectionReason.RETURN_PACKAGE_MISMATCH -> ExternalRequestReasonUi.ReturnPackageMismatch
 }
@@ -369,6 +370,7 @@ private fun journalStrings(): ExternalAutomationJournalStrings = ExternalAutomat
     reasonPromptAmbiguous = stringResource(R.string.external_automation_reason_prompt_ambiguous),
     reasonPromptUndecodable = stringResource(R.string.external_automation_reason_prompt_undecodable),
     reasonRequestIdMissing = stringResource(R.string.external_automation_reason_request_id_missing),
+    reasonValueTooLong = stringResource(R.string.external_automation_reason_value_too_long),
     reasonRateLimited = stringResource(R.string.external_automation_reason_rate_limited),
     reasonReturnPackageMismatch = stringResource(R.string.external_automation_reason_return_package_mismatch),
     reasonReturnPackageMismatchNote =

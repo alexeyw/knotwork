@@ -6,13 +6,13 @@ import app.knotwork.android.domain.models.RunOrigin
  * A ceiling on how many runs of one [RunOrigin] may start within a rolling
  * window, and the arithmetic that decides whether the ceiling is crossed.
  *
- * Extracted so the two runaway guards in the app share one mechanism instead of
- * one implementation. The mechanism — *rate*, not queue depth, and refuse rather
+ * Extracted so the runaway guards in the app share one mechanism instead of one
+ * implementation each. The mechanism — *rate*, not queue depth, and refuse rather
  * than silently defer — is what the scheduler guard learned the hard way: a task
  * that re-schedules itself keeps exactly one item queued at any moment, so
  * nothing about the queue ever looks wrong while the agent runs forever.
  *
- * What the two guards do **not** share is where the count comes from, and the
+ * What the guards do **not** share is where the count comes from, and the
  * difference is load-bearing rather than incidental:
  * - the scheduler counts rows in the run history, because its runs are created
  *   by the app itself and a row exists by the time it matters;
@@ -21,7 +21,11 @@ import app.knotwork.android.domain.models.RunOrigin
  *   execution in-process, while a receiver has to answer immediately — a burst
  *   of broadcasts would every one of them read a count of zero and every one of
  *   them be admitted, and a unit test against a mocked repository would look
- *   perfectly green while doing it.
+ *   perfectly green while doing it;
+ * - the share target has the same burst problem for the same reason (the run's
+ *   row is written off the enqueue path, after the share activity has moved on),
+ *   so it too counts admissions at the moment of admission, in a ledger of its
+ *   own.
  *
  * So this type carries the ceiling and the window; the counter stays with the
  * caller that knows what it is counting.
@@ -53,7 +57,7 @@ data class RunRateCeiling(val origin: RunOrigin, val limitPerWindow: Int, val wi
 
     /** The ceilings the app actually ships, and the window they share. */
     companion object {
-        /** One hour in milliseconds — the window both ceilings use. */
+        /** One hour in milliseconds — the window every ceiling uses. */
         const val ONE_HOUR_MILLIS: Long = 3_600_000L
 
         /**
@@ -78,6 +82,22 @@ data class RunRateCeiling(val origin: RunOrigin, val limitPerWindow: Int, val wi
         val EXTERNAL: RunRateCeiling = RunRateCeiling(
             origin = RunOrigin.EXTERNAL,
             limitPerWindow = 12,
+            windowMillis = ONE_HOUR_MILLIS,
+        )
+
+        /**
+         * Ceiling for the share target. Higher than the other two on purpose: a
+         * share is normally a person's hand action — each one opens the app into
+         * the run it started — and sharing a handful of links in a row is ordinary
+         * use. The ceiling is aimed at a script, not at a person: the activity is
+         * exported without a permission (it has to be, for the system share sheet
+         * to start it on another app's behalf), so any installed app can start it
+         * directly, and a loop of such starts is what thirty an hour bounds. It is
+         * one budget for every sender, because the sender is not known.
+         */
+        val SHARE: RunRateCeiling = RunRateCeiling(
+            origin = RunOrigin.SHARE,
+            limitPerWindow = 30,
             windowMillis = ONE_HOUR_MILLIS,
         )
     }

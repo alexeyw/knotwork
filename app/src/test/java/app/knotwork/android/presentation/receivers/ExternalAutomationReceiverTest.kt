@@ -10,6 +10,7 @@ import app.knotwork.android.domain.models.ExternalAutomationStatus
 import app.knotwork.android.domain.services.ExternalAutomationCallbackNotifier
 import app.knotwork.android.domain.usecases.automation.HandleExternalAutomationRequestUseCase
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -157,7 +158,7 @@ class ExternalAutomationReceiverTest {
 
         runReceiver(requestIntent(), CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
 
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             callbackNotifier.notifyOutcome(
                 returnPackage = "com.example.caller",
                 returnAction = ExternalAutomationContract.ACTION_RUN_RESULT,
@@ -180,7 +181,7 @@ class ExternalAutomationReceiverTest {
             CoroutineScope(UnconfinedTestDispatcher(testScheduler)),
         )
 
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             callbackNotifier.notifyOutcome(any(), "com.example.MY_RESULT", any(), any())
         }
     }
@@ -202,7 +203,7 @@ class ExternalAutomationReceiverTest {
 
         // Answering this refusal would send the victim exactly the broadcast the
         // refusal exists to prevent, and leave a journal row claiming otherwise.
-        verify(exactly = 0) { callbackNotifier.notifyOutcome(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { callbackNotifier.notifyOutcome(any(), any(), any(), any()) }
     }
 
     @Test
@@ -217,7 +218,7 @@ class ExternalAutomationReceiverTest {
             CoroutineScope(UnconfinedTestDispatcher(testScheduler)),
         )
 
-        verify(exactly = 0) { callbackNotifier.notifyOutcome(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { callbackNotifier.notifyOutcome(any(), any(), any(), any()) }
     }
 
     @Test

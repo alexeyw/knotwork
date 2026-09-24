@@ -87,6 +87,7 @@ class ShareReceiverActivity : ComponentActivity() {
             ShareLaunchResult.NothingShared ->
                 toast(getString(R.string.share_nothing_to_share))
             is ShareLaunchResult.Blocked -> toast(getString(blockedMessage(result.reason)))
+            ShareLaunchResult.RateLimited -> toast(getString(R.string.share_rate_limited))
         }
     }
 

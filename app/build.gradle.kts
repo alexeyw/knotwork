@@ -1817,6 +1817,18 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/extending.md"))
         .withPropertyName("extendingGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `ExportedComponentInventoryTest` reads every source set's manifest. A variant's
+    // test task sees only its own overlays, so an export added to `src/full` left
+    // `testFossDebugUnitTest` UP-TO-DATE and green — measured, with the guard wrong
+    // on disk. The pattern takes in `src/main`'s manifest as well.
+    inputs.files(fileTree("src") { include("*/AndroidManifest.xml") })
+        .withPropertyName("sourceManifests")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `EntrySurfaceLimitsDocumentsTest` pins the published contract's numbers to the
+    // code (SECURITY.md and the user guide are declared above).
+    inputs.file(rootProject.file("docs/external-automation.md"))
+        .withPropertyName("externalAutomationContract")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // Hilt/Dagger reads Kotlin metadata via `kotlin-metadata-jvm`, which is unshaded

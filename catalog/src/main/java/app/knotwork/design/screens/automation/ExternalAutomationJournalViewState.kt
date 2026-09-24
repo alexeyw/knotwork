@@ -69,6 +69,9 @@ enum class ExternalRequestReasonUi {
     /** The caller sent no request id to correlate the answer with. */
     RequestIdMissing,
 
+    /** The caller's request id or answer address is longer than the contract allows. */
+    ValueTooLong,
+
     /** Over the hourly ceiling on accepted external requests. */
     RateLimited,
 
@@ -271,6 +274,7 @@ data class ExternalAutomationJournalStrings(
     val reasonPromptAmbiguous: String = "It sent the message twice, as plain text and as base64.",
     val reasonPromptUndecodable: String = "The base64 message couldn’t be decoded.",
     val reasonRequestIdMissing: String = "It didn’t include a request id to answer with.",
+    val reasonValueTooLong: String = "It sent an id or an answer address longer than the contract allows.",
     val reasonRateLimited: String = "Too many requests in the last hour.",
     val reasonReturnPackageMismatch: String =
         "It asked for the answer to be sent to a different app than the one that called.",

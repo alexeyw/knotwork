@@ -62,8 +62,9 @@ object ExternalAutomationContract {
     const val EXTRA_RETURN_ACTION: String = "return_action"
 
     /**
-     * Request key: package to deliver the callback to as an explicit intent.
-     * Optional — omitting it is a valid fire-and-forget call.
+     * Request key: package to deliver the callback to, as a broadcast directed at
+     * that package (not at a component of it). Optional — omitting it is a valid
+     * fire-and-forget call.
      */
     const val EXTRA_RETURN_PACKAGE: String = "return_package"
 
@@ -72,4 +73,22 @@ object ExternalAutomationContract {
 
     /** Callback key: the refusal reason, present only for the `Rejected` and `Blocked` statuses. */
     const val EXTRA_STATUS_REASON: String = "reason"
+
+    /**
+     * Longest [EXTRA_REQUEST_ID] the contract accepts, in characters.
+     *
+     * The id is the one piece of caller text the callback carries back, so its
+     * length is how much of a caller's choosing this app will broadcast on the
+     * caller's behalf. A correlation id needs a few dozen characters at most (a
+     * UUID is 36); anything past this is refused rather than cut, because a cut id
+     * no longer correlates with anything.
+     */
+    const val MAX_REQUEST_ID_LENGTH: Int = 128
+
+    /**
+     * Longest [EXTRA_RETURN_ACTION] and [EXTRA_RETURN_PACKAGE] the contract accepts,
+     * in characters — the callback's address, which is also caller text the app
+     * puts on a broadcast. Generous for any real action string or package name.
+     */
+    const val MAX_RETURN_ADDRESS_LENGTH: Int = 256
 }
