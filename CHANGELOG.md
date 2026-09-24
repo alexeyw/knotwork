@@ -241,6 +241,13 @@ details.
   fallback class, a planner's sub-task limit and a clarification step's quick
   replies were kept only in the editor's own copy of the node, not in the part of
   the file the app runs. They now travel in both.
+- **The browser editor keeps a queue's "Stop on first error" and a condition's
+  image check.** Unticking "Stop on first error" in the browser did not reach the
+  app, which still stopped at the first failed item. A condition set to branch
+  on an attached image lost the setting when its file went through the browser,
+  which had no control for it; now it has one. The browser also shows each node
+  from the part of the file the app runs, as the app does, so a file reads the
+  same in both.
 - **Saving right after an import no longer reuses the file's node ids.** An
   import stores the pipeline under fresh node ids, but the editor kept the
   file's ones, so the next Save wrote them back — and two imported files that

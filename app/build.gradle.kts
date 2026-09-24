@@ -1,6 +1,7 @@
 import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator
 import app.knotwork.android.buildtools.BrowserEditorFlatExportGuard
 import app.knotwork.android.buildtools.BrowserEditorInertControlGuard
+import app.knotwork.android.buildtools.BrowserEditorRuntimeFieldGuard
 import app.knotwork.android.buildtools.CookbookDocsGenerator
 import app.knotwork.android.buildtools.DetektAnalysisModeGuard
 import app.knotwork.android.buildtools.DexInstantiabilityChecker
@@ -1306,6 +1307,22 @@ val verifyBrowserEditorConstants by tasks.registering {
             throw GradleException(
                 "pipeline-editor.html derives run-time fields it never exports: ${unexported.joinToString(", ")}.\n" +
                     "Add them to the `config` block in exportToJson — the app runs, and shows, only that copy.",
+            )
+        }
+        // Every field the app runs on must survive the editor end to end: read from the
+        // file's flat copy, offered as a control, written back into both copies and
+        // exported. The fields are the cookbook's Runtime verdicts, not the editor's lists.
+        val broken = BrowserEditorRuntimeFieldGuard.brokenLinks(
+            html = browserEditorHtmlFile.readText(),
+            reach = CookbookDocsGenerator.FIELD_REACH,
+        )
+        if (broken.isNotEmpty()) {
+            throw GradleException(
+                "pipeline-editor.html loses run-time fields between import and export:\n" +
+                    broken.joinToString("\n") { "  - $it" } + "\n" +
+                    "Each field in CookbookDocsGenerator.FIELD_REACH with a Runtime verdict must pass " +
+                    "importFromJson → deriveRichFromFlat → renderFormFields → encodeRichEnvelope / " +
+                    "richToFlat → exportToJson, and decodeRichEnvelope must not read it from the envelope.",
             )
         }
     }
