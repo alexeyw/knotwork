@@ -34,7 +34,11 @@ import javax.inject.Inject
  * Shared images are ingested through [AttachmentStore] exactly like a composer
  * attachment; per the multimodal contract only the text travels the graph while
  * the image rides the user message. An image-only share runs the same
- * image-only default instruction the composer uses.
+ * image-only default instruction the composer uses. Before anything is stored,
+ * an image share passes the composer's multimodal pre-flight
+ * ([CheckImageAttachmentUseCase]) for the bound pipeline: a refusal blocks the
+ * whole share ([ShareLaunchResult.Blocked]) rather than running the text while
+ * the image is quietly dropped.
  *
  * When no pipeline is bound the surface is inert ([ShareLaunchResult.NotConfigured]);
  * an empty share is dropped ([ShareLaunchResult.NothingShared]).
@@ -43,6 +47,7 @@ class LaunchSharePipelineUseCase @Inject constructor(
     private val resolveSurfacePipeline: ResolveSurfacePipelineUseCase,
     private val chatRepository: ChatRepository,
     private val attachmentStore: AttachmentStore,
+    private val checkImageAttachment: CheckImageAttachmentUseCase,
     private val agentOrchestrator: AgentOrchestratorUseCase,
     private val settingsRepository: SettingsRepository,
     private val pendingInteractionRepository: PendingInteractionRepository,
@@ -61,8 +66,10 @@ class LaunchSharePipelineUseCase @Inject constructor(
      * @param contentSessionName Localised name fallback when no readable text or
      *   image is present (used only in per-share mode).
      * @return [ShareLaunchResult.Launched] with the session id,
-     *   [ShareLaunchResult.NotConfigured] when nothing is bound, or
-     *   [ShareLaunchResult.NothingShared] when the payload had no content.
+     *   [ShareLaunchResult.NotConfigured] when nothing is bound,
+     *   [ShareLaunchResult.Blocked] when the pipeline may not start with the
+     *   shared image, or [ShareLaunchResult.NothingShared] when the payload had
+     *   no content.
      */
     suspend operator fun invoke(
         payload: SharedPayload,
@@ -72,6 +79,10 @@ class LaunchSharePipelineUseCase @Inject constructor(
     ): ShareLaunchResult {
         if (payload.isEmpty) return ShareLaunchResult.NothingShared
         val pipelineId = resolveSurfacePipeline(EntrySurface.SHARE) ?: return ShareLaunchResult.NotConfigured
+        if (payload.imageUri != null) {
+            // Asked before the ingest, so a refused image never reaches the store.
+            checkImageAttachment(pipelineId)?.let { return ShareLaunchResult.Blocked(it) }
+        }
 
         val attachment = payload.imageUri?.let { ingestImage(it) }
         val hasText = !payload.text.isNullOrBlank()
@@ -137,10 +148,14 @@ class LaunchSharePipelineUseCase @Inject constructor(
         )
     }
 
-    /** Best-effort image ingest; a failure degrades to a text-only (or empty) share. */
+    /**
+     * Best-effort image ingest; a failure degrades to a text-only (or empty)
+     * share. Only the failure's type is logged: its message may quote the URI,
+     * which the sending app chose.
+     */
     private suspend fun ingestImage(uri: String): MessageAttachment? =
         attachmentStore.ingestUri(uri).getOrElse { error ->
-            Timber.w(error, "Failed to ingest shared image; continuing without it.")
+            Timber.w("Failed to ingest shared image (%s); continuing without it.", error.javaClass.simpleName)
             null
         }
 
@@ -194,4 +209,12 @@ sealed interface ShareLaunchResult {
 
     /** The share carried nothing actionable (no text and no ingestable image). */
     data object NothingShared : ShareLaunchResult
+
+    /**
+     * The share carried an image the bound pipeline may not start with; nothing
+     * was stored and no run started. The caller tells the user why.
+     *
+     * @property reason What the multimodal pre-flight objected to.
+     */
+    data class Blocked(val reason: ImageAttachmentBlock) : ShareLaunchResult
 }

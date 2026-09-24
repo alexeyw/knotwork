@@ -119,9 +119,32 @@ details.
 - **Unusable file paths get an error instead of an exception.** A path with a
   NUL byte or a name too long for the filesystem is now refused with a clear
   message to the agent.
+- **A photo taken in a chat no longer stays in the app's cache.** The camera
+  saves the full-size original — the only copy that keeps the photo's location
+  data — to a temporary file, and nothing deleted it. It is now deleted as soon
+  as the smaller copy is attached, or when the capture is cancelled.
+- **A shared image is read only from the app that shares it.** The share target
+  opened whatever location a share named with the app's own access, including
+  files inside the app's private storage. It now opens only content another app
+  provides.
+- **A shared image gets the same check as one sent from the chat.** Shared into
+  a pipeline that starts with a cloud step, or whose model cannot read images,
+  the picture was dropped without a word and the run went ahead, sometimes
+  answering about an image it never received. Such a share now runs nothing and
+  says why.
+- **A shared workspace file leaves no copy behind.** Sharing from the Files
+  screen makes a temporary copy for the receiving app. Deleting the file now
+  deletes its copies; any other copy is removed once it is more than an hour
+  old, by the next share or the daily clean-up. Sharing another file no longer
+  deletes a copy the receiving app may still be reading.
+- **Temporary files are cleared daily.** The daily maintenance pass also removes
+  leftover temporary files older than an hour: camera captures, voice clips left
+  by a crash, share copies and journal exports.
 
 ### Fixed
 
+- **Rotating the phone with the camera open no longer loses the photo.** The
+  chat forgot which photo it was waiting for when the screen was recreated.
 - **A Skill step's "Always ask before this call" works.** A pipeline could carry
   the switch on a Skill step, but only Tool steps honoured it. Skill steps now
   ask before every tool call the skill makes, and the switch is on their

@@ -32,6 +32,7 @@ class LaunchSharePipelineUseCaseTest {
     private val resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>()
     private val chatRepository = mockk<ChatRepository>(relaxed = true)
     private val attachmentStore = mockk<AttachmentStore>()
+    private val checkImageAttachment = mockk<CheckImageAttachmentUseCase>()
     private val orchestrator = mockk<AgentOrchestratorUseCase>(relaxed = true)
     private val settingsRepository = mockk<SettingsRepository>()
     private val pendingInteractionRepository = mockk<PendingInteractionRepository>()
@@ -39,6 +40,7 @@ class LaunchSharePipelineUseCaseTest {
         resolveSurfacePipeline,
         chatRepository,
         attachmentStore,
+        checkImageAttachment,
         orchestrator,
         settingsRepository,
         pendingInteractionRepository,
@@ -50,6 +52,8 @@ class LaunchSharePipelineUseCaseTest {
         coEvery { chatRepository.getSessionById(any()) } returns null
         // Default: the Shared chat is not mid-approval.
         coEvery { pendingInteractionRepository.getForSession(any()) } returns null
+        // Default: the multimodal pre-flight lets an image through.
+        coEvery { checkImageAttachment(any()) } returns null
     }
 
     private suspend fun launch(payload: SharedPayload): ShareLaunchResult = useCase(
@@ -58,6 +62,44 @@ class LaunchSharePipelineUseCaseTest {
         imageSessionName = "Shared image",
         contentSessionName = "Shared content",
     )
+
+    @Test
+    fun `given the share pipeline starts on a CLOUD node when an image is shared then nothing is ingested`() = runTest {
+        coEvery { resolveSurfacePipeline(any()) } returns "cloud-pipe"
+        coEvery { checkImageAttachment("cloud-pipe") } returns ImageAttachmentBlock.CLOUD_ENTRY
+        coEvery { attachmentStore.ingestUri(any()) } returns Result.success(
+            MessageAttachment(path = "a.jpg", mimeType = "image/jpeg", width = 1, height = 1),
+        )
+
+        val result = launch(SharedPayload(text = "what is this", imageUri = "content://photos/1"))
+
+        assertEquals(ShareLaunchResult.Blocked(ImageAttachmentBlock.CLOUD_ENTRY), result)
+        coVerify(exactly = 0) { attachmentStore.ingestUri(any()) }
+        coVerify(exactly = 0) { chatRepository.saveSession(any()) }
+        coVerify(exactly = 0) { orchestrator(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given a text-only model when an image is shared then the share is blocked with that reason`() = runTest {
+        coEvery { resolveSurfacePipeline(any()) } returns "local-pipe"
+        coEvery { checkImageAttachment("local-pipe") } returns ImageAttachmentBlock.MODEL_NO_VISION
+
+        val result = launch(SharedPayload(text = null, imageUri = "content://photos/2"))
+
+        assertEquals(ShareLaunchResult.Blocked(ImageAttachmentBlock.MODEL_NO_VISION), result)
+    }
+
+    @Test
+    fun `given a text-only share into a cloud-first pipeline when invoked then the pre-flight is not consulted`() =
+        runTest {
+            coEvery { resolveSurfacePipeline(any()) } returns "cloud-pipe"
+            coEvery { checkImageAttachment(any()) } returns ImageAttachmentBlock.CLOUD_ENTRY
+
+            val result = launch(SharedPayload(text = "summarise", imageUri = null))
+
+            assertTrue(result is ShareLaunchResult.Launched)
+            coVerify(exactly = 0) { checkImageAttachment(any()) }
+        }
 
     @Test
     fun `given empty payload when invoked then reports NothingShared`() = runTest {

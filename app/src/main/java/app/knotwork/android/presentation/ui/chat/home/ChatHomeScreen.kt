@@ -1,7 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -47,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -56,7 +56,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,7 +92,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.File
 
 /**
  * Redesigned Knotwork chat home — the user-facing surface that wires up:
@@ -323,15 +321,18 @@ fun ChatHomeScreen(
     ) { uri ->
         if (uri != null) viewModel.attachments.onImagePicked(uri.toString())
     }
-    // Camera capture into a FileProvider URI, ingested on success. The capture
-    // URI is created when the camera is chosen and remembered until the result.
-    var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
+    // Camera capture into a FileProvider URI the attachment delegate mints. The
+    // URI is kept across recreation (the camera app is in front, so a rotation or
+    // a process restore is likely): losing it lost the photo and left its
+    // full-resolution original behind. The delegate ingests or discards it — the
+    // original is deleted either way.
+    var pendingCaptureUri by rememberSaveable { mutableStateOf<String?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         val uri = pendingCaptureUri
-        if (success && uri != null) viewModel.attachments.onImagePicked(uri.toString())
         pendingCaptureUri = null
+        if (uri != null) viewModel.attachments.onCaptureResult(uri, success)
     }
 
     // Voice input: a RECORD_AUDIO permission gate before capture, and an
@@ -749,9 +750,9 @@ fun ChatHomeScreen(
                 },
                 onPickCamera = {
                     viewModel.attachments.dismissSourceChooser()
-                    val uri = createImageCaptureUri(context)
+                    val uri = viewModel.attachments.newCaptureUri()
                     pendingCaptureUri = uri
-                    cameraLauncher.launch(uri)
+                    cameraLauncher.launch(uri.toUri())
                 },
             )
         }
@@ -779,17 +780,6 @@ fun ChatHomeScreen(
             )
         }
     }
-}
-
-/**
- * Creates a `FileProvider` content URI backing a camera capture, under
- * `cacheDir/images/`. The captured file is transient: the attachment store
- * keeps only the downscaled JPEG, and the OS evicts the cache file in time.
- */
-private fun createImageCaptureUri(context: Context): Uri {
-    val dir = File(context.cacheDir, "images").apply { mkdirs() }
-    val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
 /**

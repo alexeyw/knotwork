@@ -141,6 +141,13 @@ the database's**, and this is the honest statement of that trade-off:
   directory is refused with a typed `WorkspaceError.PathOutsideWorkspace`
   before any file is touched. A tool can therefore only ever read or write
   **inside** the workspace, never the rest of the app's private storage.
+- **Sharing hands over a copy, never the workspace.** The Files screen's
+  **Share** stages a copy of the file in the app cache and grants the receiving
+  app read access to that copy only. Deleting the file deletes its copies; any
+  other copy is removed after it is an hour old, by the next share or the daily
+  maintenance pass (whichever comes first, so possibly up to a day later) —
+  never earlier, so one share cannot take another share's file away from an app
+  that is still reading it.
 - A path the filesystem cannot take — a NUL byte, or one it rejects — is
   refused with `WorkspaceError.InvalidPath` instead of an exception. A write that
   would **create** a file also needs a name without control characters or line
@@ -355,17 +362,22 @@ their handling is constrained more tightly than text — and the constraints are
   central invariant of the multimodal feature: an image is delivered to **at
   most one on-device `LITE_RT` node** and `CloudLlmNodeExecutor` *structurally*
   ignores the image-delivery channel, so no code path can hand an attachment to
-  a cloud provider. A pre-flight check (`ResolveEntryInferenceUseCase`) runs
-  **before** the run is enqueued and blocks an image message whenever the bound
-  pipeline would start on — or only reach — a cloud step, with a clear message
-  that the draft and attachment are preserved. Audio never travels the graph at
-  all (see below). The honest framing: this is a guarantee of the **current
+  a cloud provider. A pre-flight check (`CheckImageAttachmentUseCase`) runs
+  **before** the run is enqueued — for an image attached in the chat and for one
+  shared into the app alike — and blocks it whenever the bound pipeline would
+  start on a cloud step or has no on-device step that could read it. The chat
+  keeps the draft and attachment; a blocked share stores nothing, starts no run
+  and says why. Audio never travels the graph at all (see below). The honest framing: this is a guarantee of the **current
   release**, enforced by the delivery code and the pre-flight gate, not a
   property the user has to configure.
 - **Image storage is FBE-protected, not SQLCipher-encrypted.** The picked or
   captured image is decoded, EXIF-rotated, downscaled (aspect ratio preserved,
   longest side ≤ 1536 px) and re-encoded to JPEG into the app-private
-  `files/attachments/` directory; the **original is never copied in**. That
+  `files/attachments/` directory; the **original is never copied in**. A photo
+  taken with the camera passes through the app cache first: the camera app
+  writes the full-resolution original — EXIF metadata, GPS included — to a
+  temporary capture file, which the app deletes as soon as the downscaled copy
+  exists, or when the capture is cancelled. That
   directory has the **same weaker-than-the-database at-rest posture as the agent
   workspace** (*Agent file workspace*, above): it is covered by the device's
   **file-based encryption (FBE)** and the app sandbox, but **not** additionally
@@ -373,12 +385,20 @@ their handling is constrained more tightly than text — and the constraints are
   attacker who can already read app-private storage on an unlocked,
   post-authentication device is out of scope (see *Out of scope*), but the
   difference is called out here so it is not a surprise.
+- **A shared image is read only from another app's content.** The share target
+  accepts an image from any app, and the app reads it with its own identity. It
+  therefore opens only a `content://` URI that another app's provider serves: a
+  `file://` path, or a URI of Knotwork's own file provider, is refused without
+  being read, so a share cannot pull the app's private files into a chat.
 - **Image retention and cleanup.** A stored image is deleted together with its
   owning message and session. Independently, a daily
   `AttachmentOrphanCleanupWorker` (the same charging + idle maintenance window
   as run retention) reclaims any attachment file that no message references,
   with a **24-hour grace window** so a freshly-picked image that is still in the
-  composer is never swept out from under the user.
+  composer is never swept out from under the user. The same pass removes every
+  temporary handoff file in the app cache that is more than an hour old — a
+  camera capture whose result never came back, a voice clip left by a crash,
+  share copies and journal exports.
 - **Audio clips are ephemeral and deleted after transcription.** A recorded or
   picked clip is written as a temporary file in the app cache
   (`cacheDir/audio/`, FBE + sandbox, and subject to OS cache eviction). It is

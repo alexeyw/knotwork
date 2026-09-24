@@ -25,6 +25,11 @@
     <string name="shortcut_pipelines_long">Open pipeline library</string>
     <string name="share_not_configured">Pick a pipeline for sharing in Settings → Background.</string>
     <string name="share_nothing_to_share">Nothing to share.</string>
+    <!-- A toast holds two lines on Android 12+, so these are shorter than the chat's
+         wording for the same three pre-flight refusals (ImageAttachmentBlockCopy). -->
+    <string name="share_image_blocked_cloud">The share pipeline starts in the cloud, and images stay on your device.</string>
+    <string name="share_image_blocked_model_no_vision">This model can\'t read images. Turn on image support in Models.</string>
+    <string name="share_image_blocked_no_vision_step">The share pipeline has no on-device step that can read images.</string>
     <string name="share_session_image_name">Shared image</string>
     <string name="share_session_content_name">Shared content</string>
     <string name="share_session_reused_name">Shared</string>

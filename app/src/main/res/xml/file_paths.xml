@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    FileProvider path map. Only the dedicated share-staging directory under the
-    app cache (cacheDir/shared/) is exposed; a workspace file is copied there per
-    share so the agent workspace itself is never shared directly.
+    FileProvider path map: three narrow handoff directories under the app cache,
+    never the cache or files root, so the agent workspace and the attachment
+    store are unreachable through the provider by construction.
+
+    Every cache-path here is an entry of TransientCacheDirectory (its `path` is
+    the entry's dirName) and is therefore swept by the daily maintenance pass;
+    TransientCacheDirectoryGuardTest fails on a cache-path that is not.
 -->
 <paths>
+    <!-- Copies of workspace files staged for the share sheet, one slot per file
+         and share. The workspace deletes a file's copies with the file; a share
+         never removes another share's copy younger than the retention. -->
     <cache-path
         name="shared"
         path="shared/" />
-    <!-- Transient camera-capture files staged here for the TakePicture
-         FileProvider URI; the attachment store keeps only the downscaled JPEG. -->
+    <!-- Camera captures for the TakePicture FileProvider URI: the full-resolution
+         original, deleted once it is ingested (or the capture is cancelled). -->
     <cache-path
         name="images"
         path="images/" />
-    <!-- Journal exports staged for the share sheet. Deliberately a sibling of
-         `shared/` rather than a directory inside it: the Files screen clears the
-         whole of `shared/` on every workspace share, which would delete a journal
-         export still waiting to be read by the app the user picked. -->
+    <!-- Journal exports staged for the share sheet; each export replaces the
+         last. A sibling of `shared/` so workspace shares never touch it. -->
     <cache-path
         name="journal"
         path="journal/" />

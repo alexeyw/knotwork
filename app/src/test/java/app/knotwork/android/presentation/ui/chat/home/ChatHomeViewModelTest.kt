@@ -37,9 +37,11 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
+import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.RecordingState
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
 import app.knotwork.android.domain.usecases.ArchiveChatUseCase
+import app.knotwork.android.domain.usecases.CheckImageAttachmentUseCase
 import app.knotwork.android.domain.usecases.EntryInferenceKind
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.GetContextWindowUseCase
@@ -57,6 +59,7 @@ import app.knotwork.android.domain.usecases.TranscribeAudioUseCase
 import app.knotwork.android.domain.usecases.TranscriptionOutcome
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
 import app.knotwork.android.presentation.state.ActiveSessionTracker
+import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessageStatus
 import app.knotwork.design.components.chat.ChatRole
@@ -140,6 +143,7 @@ class ChatHomeViewModelTest {
     private lateinit var submitCeilingDecisionUseCase: SubmitCeilingDecisionUseCase
     private lateinit var submitClarificationAnswerUseCase: SubmitClarificationAnswerUseCase
     private lateinit var attachmentStore: AttachmentStore
+    private lateinit var imageCaptureStore: ImageCaptureStore
     private lateinit var resolveEntryInferenceUseCase: ResolveEntryInferenceUseCase
     private lateinit var audioRecorder: AudioRecorder
     private lateinit var audioCaptureStore: AudioCaptureStore
@@ -188,6 +192,7 @@ class ChatHomeViewModelTest {
         submitApprovalDecisionUseCase = mockk(relaxed = true)
         submitCeilingDecisionUseCase = mockk(relaxed = true)
         attachmentStore = mockk(relaxed = true)
+        imageCaptureStore = mockk(relaxed = true)
         resolveEntryInferenceUseCase = mockk()
         audioRecorder = mockk(relaxed = true)
         every { audioRecorder.state } returns MutableStateFlow(RecordingState.Idle)
@@ -224,6 +229,11 @@ class ChatHomeViewModelTest {
 
         every { llmInferenceEngine.isInitialized } returns true
         every { localModelRepository.getAllModels() } returns localModelsFlow
+        // The pre-flight reads the active model from the repository, not from the
+        // screen state; both answer from the same list here.
+        coEvery { localModelRepository.getActiveModel() } coAnswers {
+            localModelsFlow.value.firstOrNull { it.isActive }
+        }
         coEvery { loadModelUseCase(any()) } returns Result.Success(Unit)
         coEvery { chatRepository.renameSession(any(), any()) } answers {
             val id = firstArg<String>()
@@ -285,7 +295,8 @@ class ChatHomeViewModelTest {
         submitClarificationAnswerUseCase,
         submitCeilingDecisionUseCase,
         attachmentStore,
-        resolveEntryInferenceUseCase,
+        imageCaptureStore,
+        CheckImageAttachmentUseCase(resolveEntryInferenceUseCase, localModelRepository),
         audioRecorder,
         audioCaptureStore,
         transcribeAudioUseCase,
@@ -792,6 +803,57 @@ class ChatHomeViewModelTest {
     }
 
     @Test
+    fun `a successful camera capture is consumed from the capture store and never read as a uri`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val photo = byteArrayOf(1, 2, 3)
+            val stored = MessageAttachment(path = "c.jpg", mimeType = "image/jpeg", width = 10, height = 10)
+            coEvery { imageCaptureStore.consume("content://own/images/c1") } returns kotlin.Result.success(photo)
+            coEvery { attachmentStore.ingest(photo) } returns kotlin.Result.success(stored)
+            every { attachmentStore.absolutePathFor(any()) } returns "/tmp/c.jpg"
+
+            viewModel.attachments.onCaptureResult("content://own/images/c1", success = true)
+            advanceUntilIdle()
+
+            val draft = viewModel.state.value.composer.attachment as ComposerAttachmentDraft.Ready
+            assertEquals(stored, draft.attachment)
+            // The app's own capture URI never goes through the foreign-URI sink.
+            coVerify(exactly = 0) { attachmentStore.ingestUri(any()) }
+        }
+
+    @Test
+    fun `a cancelled camera capture is discarded and leaves the composer untouched`() = runTest(testDispatcher) {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.attachments.onCaptureResult("content://own/images/c2", success = false)
+        advanceUntilIdle()
+
+        coVerify { imageCaptureStore.discard("content://own/images/c2") }
+        coVerify(exactly = 0) { imageCaptureStore.consume(any()) }
+        assertNull(viewModel.state.value.composer.attachment)
+    }
+
+    @Test
+    fun `a capture the camera wrote nothing for surfaces the attachment error`() = runTest(testDispatcher) {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        coEvery { imageCaptureStore.consume(any()) } returns kotlin.Result.failure(java.io.IOException("empty"))
+        val errors = mutableListOf<Unit>()
+        val collector = launch { viewModel.attachments.attachmentErrorEvents.collect { errors += it } }
+        advanceUntilIdle()
+
+        viewModel.attachments.onCaptureResult("content://own/images/c3", success = true)
+        advanceUntilIdle()
+
+        assertEquals(1, errors.size)
+        assertNull(viewModel.state.value.composer.attachment)
+        coVerify(exactly = 0) { attachmentStore.ingest(any()) }
+        collector.cancel()
+    }
+
+    @Test
     fun `onImagePicked ingests and settles composer attachment to Ready`() = runTest(testDispatcher) {
         viewModel = createViewModel()
         advanceUntilIdle()
@@ -1049,7 +1111,7 @@ class ChatHomeViewModelTest {
 
             val visual = viewModel.state.value.visual
             assertTrue(visual is ChatHomeUiState.Error)
-            assertEquals(ChatHomeAttachmentDelegate.MODEL_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
+            assertEquals(ImageAttachmentBlockCopy.MODEL_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
             // The run never starts and the draft attachment is preserved.
             coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
             assertNotNull(viewModel.state.value.composer.attachment)
@@ -1074,7 +1136,7 @@ class ChatHomeViewModelTest {
 
         val visual = viewModel.state.value.visual
         assertTrue(visual is ChatHomeUiState.Error)
-        assertEquals(ChatHomeAttachmentDelegate.PIPELINE_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
+        assertEquals(ImageAttachmentBlockCopy.PIPELINE_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
         coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
     }
 
@@ -1125,7 +1187,7 @@ class ChatHomeViewModelTest {
             val visual = viewModel.state.value.visual
             assertTrue(visual is ChatHomeUiState.Error)
             assertEquals(
-                ChatHomeAttachmentDelegate.CLOUD_ATTACHMENT_BLOCKED_MESSAGE,
+                ImageAttachmentBlockCopy.CLOUD_ATTACHMENT_BLOCKED_MESSAGE,
                 (visual as ChatHomeUiState.Error).message,
             )
             coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }

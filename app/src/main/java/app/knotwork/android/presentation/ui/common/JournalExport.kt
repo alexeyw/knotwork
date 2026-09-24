@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import app.knotwork.android.domain.constants.TransientCacheDirectory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -26,16 +27,6 @@ const val TRIGGER_JOURNAL_EXPORT_STEM: String = "trigger-journal"
 
 /** Filename stem of the external-automation request journal export. */
 const val EXTERNAL_REQUESTS_EXPORT_STEM: String = "external-requests"
-
-/**
- * Cache sub-directory the exported document is staged in.
- *
- * A sibling of the Files screen's `shared/` rather than a directory inside it:
- * that screen clears the whole of `shared/` on every workspace share, which would
- * delete a journal export still waiting to be read by the app the user picked.
- * Declared separately in `res/xml/file_paths.xml`.
- */
-private const val JOURNAL_SHARE_DIR = "journal"
 
 /**
  * Filesystem-safe timestamp for the export filename.
@@ -115,7 +106,7 @@ fun journalExportFileName(stem: String, at: Date = Date()): String = "$stem-${fo
 suspend fun shareJournalDocument(context: Context, json: String, fileName: String, chooserTitle: String): Boolean {
     val uri = withContext(Dispatchers.IO) {
         try {
-            val shareDir = File(context.cacheDir, JOURNAL_SHARE_DIR)
+            val shareDir = File(context.cacheDir, TransientCacheDirectory.JOURNAL_EXPORT.dirName)
             shareDir.deleteRecursively()
             shareDir.mkdirs()
             val staged = File(shareDir, fileName)

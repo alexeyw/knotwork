@@ -34,12 +34,17 @@ class AgentWorkspaceImplTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
+    /** Stands in for the app's cache directory, where share copies are staged. */
+    @get:Rule
+    val cacheFolder = TemporaryFolder()
+
     private lateinit var context: Context
 
     @Before
     fun setup() {
         context = mockk()
         every { context.filesDir } returns tempFolder.root
+        every { context.cacheDir } returns cacheFolder.root
     }
 
     // region helpers
@@ -817,6 +822,89 @@ class AgentWorkspaceImplTest {
 
     // endregion
 
+    // region share copies
+
+    /** The share staging directory the workspace copies into. */
+    private fun shareDir() = File(cacheFolder.root, "shared")
+
+    @Test
+    fun `given a file when staged for share then an identical copy lands in the share cache`() = runTest {
+        val workspace = workspaceWith()
+        assertSuccess(workspace.writeText("reports/salary.md", "the figures"))
+
+        val staged = File(assertSuccess(workspace.stageForShare("reports/salary.md")))
+
+        assertEquals("salary.md", staged.name)
+        assertEquals("the figures", staged.readText())
+        assertTrue("the copy lives under the share cache", staged.canonicalPath.startsWith(shareDir().canonicalPath))
+    }
+
+    @Test
+    fun `given a staged copy when its file is deleted then the copy is deleted too`() = runTest {
+        val workspace = workspaceWith()
+        assertSuccess(workspace.writeText("reports/salary.md", "the figures"))
+        assertSuccess(workspace.writeText("notes.md", "keep me"))
+        val salaryCopy = File(assertSuccess(workspace.stageForShare("reports/salary.md")))
+        val notesCopy = File(assertSuccess(workspace.stageForShare("notes.md")))
+
+        assertSuccess(workspace.delete("reports/salary.md"))
+
+        // Before: "delete" on the Files screen left this byte-identical copy behind.
+        assertFalse("a deleted file must leave no share copy", salaryCopy.exists())
+        assertTrue("another file's copy is untouched", notesCopy.exists())
+    }
+
+    @Test
+    fun `given a file deleted by a path spelled differently then its copy is still found`() = runTest {
+        val workspace = workspaceWith()
+        assertSuccess(workspace.writeText("a/b.md", "x"))
+        val copy = File(assertSuccess(workspace.stageForShare("a/b.md")))
+
+        assertSuccess(workspace.delete("a/./../a/b.md"))
+
+        assertFalse(copy.exists())
+    }
+
+    @Test
+    fun `given a fresh share when another file is shared then the first copy survives`() = runTest {
+        val workspace = workspaceWith()
+        assertSuccess(workspace.writeText("a.md", "first"))
+        assertSuccess(workspace.writeText("b.md", "second"))
+        val first = File(assertSuccess(workspace.stageForShare("a.md")))
+
+        assertSuccess(workspace.stageForShare("b.md"))
+
+        // Before: every share wiped the whole directory, pulling this copy away from
+        // an app that may not have read it yet.
+        assertTrue("a share still being read must not be removed by the next", first.exists())
+    }
+
+    @Test
+    fun `given a copy older than the retention when another file is shared then the old copy is pruned`() = runTest {
+        val workspace = workspaceWith()
+        assertSuccess(workspace.writeText("a.md", "first"))
+        assertSuccess(workspace.writeText("b.md", "second"))
+        val old = File(assertSuccess(workspace.stageForShare("a.md")))
+        val longAgo = System.currentTimeMillis() - 2 * ONE_HOUR_MS
+        old.setLastModified(longAgo)
+        old.parentFile!!.setLastModified(longAgo)
+
+        assertSuccess(workspace.stageForShare("b.md"))
+
+        assertFalse(old.parentFile!!.exists())
+    }
+
+    @Test
+    fun `given a missing or escaping path when staged for share then it fails without a copy`() = runTest {
+        val workspace = workspaceWith()
+
+        assertFailure(workspace.stageForShare("nope.md"), WorkspaceError.NotFound)
+        assertFailure(workspace.stageForShare("../escape.md"), WorkspaceError.PathOutsideWorkspace)
+        assertTrue(shareDir().listFiles().orEmpty().isEmpty())
+    }
+
+    // endregion
+
     // region directories and the entry ceiling
 
     @Test
@@ -1073,5 +1161,7 @@ class AgentWorkspaceImplTest {
 
         /** Mirrors `AgentWorkspaceImpl.TEXT_SNIFF_BYTES`. */
         const val SNIFF_BYTES = 8 * 1024
+
+        const val ONE_HOUR_MS = 60L * 60L * 1000L
     }
 }
