@@ -203,6 +203,25 @@ class SupplyChainPinsCheckerTest {
     }
 
     @Test
+    fun `given an organisation key trusted wider than a two-part namespace then it is reported`() {
+        // Being an organisation's key licenses a namespace, not everything:
+        // `^com(...)` or `.*` would let it vouch for any publisher at all.
+        val violations = checkMetadata(
+            metadata(
+                trustedKeys = """
+                    <trusted-key id="$orgKey">
+                       <trusting group="^com($|([.].*))" regex="true"/>
+                       <trusting group=".*" regex="true"/>
+                       <trusting group="^com[.]android($|([.].*))" regex="true"/>
+                    </trusted-key>
+                """,
+            ),
+        )
+
+        assertEquals(2, violations.size)
+    }
+
+    @Test
     fun `given an ignored key then it is reported`() {
         // Written by the generator when a key server does not answer; everything
         // that key signs silently falls back to a first-use checksum.

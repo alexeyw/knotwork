@@ -64,6 +64,13 @@ object SupplyChainPinsChecker {
     /** A container image by content digest — the only immutable form a `docker://` reference has. */
     private val DOCKER_DIGEST = Regex("""docker://[^@\s]+@sha256:[0-9a-f]{64}""")
 
+    /**
+     * The one shape of regex trust the policy allows: an anchored namespace of at
+     * least two parts and everything below it, as Gradle's generator writes it
+     * (`^com[.]google($|([.].*))`).
+     */
+    private val NAMESPACE_REGEX = Regex("""\^[a-z0-9_-]+(?:\[\.\][a-z0-9_-]+)+\(\$\|\(\[\.\]\.\*\)\)""")
+
     /** The wrapper property, with a value that is at least shaped like a SHA-256. */
     private val DISTRIBUTION_SHA = Regex("""(?m)^distributionSha256Sum=([0-9a-f]{64})\s*$""")
 
@@ -129,7 +136,9 @@ object SupplyChainPinsChecker {
      *   falls back to a first-use checksum;
      * - only a key in [namespaceKeys] — an organisation's release key — may be
      *   trusted by `regex="true"`. Gradle's generator folds any key that signed a
-     *   few groups under a prefix into the whole prefix, personal keys included.
+     *   few groups under a prefix into the whole prefix, personal keys included;
+     * - and even such a key only for a namespace of at least two parts
+     *   (`^com[.]google($|([.].*))`), never `^com(...)` or `.*`.
      *
      * @param path Repository-relative path, used in the report only.
      * @param text File content, or `null` when the file does not exist.
@@ -166,8 +175,18 @@ object SupplyChainPinsChecker {
         }
         root.allByTag("trusted-key").forEach { key ->
             val id = key.getAttribute("id")
-            val widened = key.getAttribute("regex") == "true" ||
-                key.allByTag("trusting").any { it.getAttribute("regex") == "true" }
+            val regexGroups = (listOf(key) + key.allByTag("trusting"))
+                .filter { it.getAttribute("regex") == "true" }
+                .map { it.getAttribute("group") }
+            regexGroups.filterNot { NAMESPACE_REGEX.matches(it) }.forEach {
+                violations += Violation(
+                    path,
+                    0,
+                    "key `$id` is trusted for `$it`, which is not a namespace of at least two parts " +
+                        "(`^org[.]example(\$|([.].*))`); no key may vouch wider than one organisation",
+                )
+            }
+            val widened = regexGroups.isNotEmpty()
             if (widened && id !in namespaceKeys) {
                 violations += Violation(
                     path,

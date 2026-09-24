@@ -1918,7 +1918,9 @@ fails when `verify-metadata` or `verify-signatures` is off, when key servers are
 on, when the file holds an `<ignored-key>`, and when a key outside the list of
 organisation release keys in `app/build.gradle.kts`
 (`dependencyVerificationNamespaceKeys`, each with its owner) is trusted by
-`regex="true"`. Both of the generator's own outputs fail it: the file before
+`regex="true"` — or when any key is trusted wider than a namespace of two parts
+(`^com[.]google…` passes, `^com…` and `.*` do not). Both of the generator's own
+outputs fail it: the file before
 narrowing on its 11 widened personal keys, and the first attempt additionally on
 its 14 ignored keys and its key servers.
 
