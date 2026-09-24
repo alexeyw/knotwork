@@ -1907,6 +1907,19 @@ dependencies {
     // longer there. See `docs/release.md` § FOSS / F-Droid build.
     implementation(libs.mediapipe.tasks.text)
 
+    // MediaPipe brings protobuf-javalite 4.26.1, inside the range of
+    // CVE-2024-7254 (unbounded recursion on nested groups, fixed in 4.27.5). The
+    // app parses no protobuf of its own — MediaPipe reads the task graph it builds
+    // itself — but raising the runtime costs one constraint: protobuf supports
+    // gencode of 4.26 on any 4.x or 5.x runtime. Its failure modes are release- and
+    // device-only (protobuf instantiates reflectively), which is what the R8 keep
+    // rules and `verify<Variant>Instantiable` below exist for.
+    constraints {
+        implementation(libs.protobuf.javalite) {
+            because("CVE-2024-7254: MediaPipe 1.0.0 resolves protobuf-javalite 4.26.1; the fix is 4.27.5")
+        }
+    }
+
     // Koog Framework
     implementation(libs.koog.agents)
     implementation(libs.koog.mcp)

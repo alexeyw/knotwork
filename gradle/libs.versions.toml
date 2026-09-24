@@ -18,6 +18,10 @@ datastore = "1.2.1"
 mockk = "1.14.11"
 litertlm = "0.16.1"
 mediapipe = "1.0.0"
+# Not a direct dependency: a floor under MediaPipe's own protobuf-javalite (4.26.1
+# in tasks-core 1.0.0), which sits inside CVE-2024-7254. Applied as a constraint in
+# app/build.gradle.kts; drop it once MediaPipe itself requires >= 4.27.5.
+protobufJavalite = "4.27.5"
 navigationCompose = "2.9.8"
 hiltNavigationCompose = "1.4.0"
 okhttp = "5.5.0"
@@ -59,6 +63,7 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 litertlm = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
 mediapipe-tasks-text = { group = "com.google.mediapipe", name = "tasks-text", version.ref = "mediapipe" }
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobufJavalite" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
