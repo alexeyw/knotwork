@@ -35,7 +35,8 @@
 - `gradle/` - Gradle wrapper and global dependency versions configuration.
 - `.editorconfig` - Cross-IDE Kotlin coding-style rules consumed by ktlint.
 - `.gitignore` - Specifies intentionally untracked files to ignore for Git.
-- `.gitleaks.toml` - Configuration of the CI secret scan: gitleaks' default rules, no allowlist; the one waiver is an inline `gitleaks:allow` (see `docs/static-analysis.md`).
+- `.gitleaks.toml` - Configuration of the CI secret scan: gitleaks' default rules, no allowlist; a waiver covers one line — an inline `gitleaks:allow`, or a `.gitleaksignore` fingerprint once the commit is pushed (see `docs/static-analysis.md`).
+- `.gitleaksignore` - Commit-bound fingerprints (`commit:file:rule:line`) of secret-scan findings that are not secrets and already sit in a pushed commit.
 - `build.gradle.kts` - The root build script for the Android project.
 - `gradle.properties` - Global properties for the Gradle build system.
 - `gradlew` - Gradle wrapper executable script for Unix/Linux systems.

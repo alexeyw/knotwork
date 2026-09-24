@@ -178,7 +178,9 @@ carries out, rather than at the code; each is described in [`docs/static-analysi
   with the sum from [gradle.org/release-checksums](https://gradle.org/release-checksums/).
 - **Secrets.** Every commit under review is scanned. A test fixture that must
   look like a real key carries `gitleaks:allow` on its line; better, make it
-  obviously fake.
+  obviously fake. A false positive already pushed is waived by its fingerprint
+  in `.gitleaksignore`, since a later inline waiver cannot reach the earlier
+  commit.
 
 ## Branch model
 

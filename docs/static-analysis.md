@@ -1904,7 +1904,12 @@ is not.**
   signing key into all of `org.jetbrains.*`, because each had signed a few groups
   under that prefix — so any one of those keys, leaked, would have vouched for
   Firebase. Eleven such entries were narrowed to the groups the key actually
-  signed, read from the signatures of every artifact this build resolves.
+  signed, read from the signatures of every artifact this build resolves. That
+  census has to include configurations no local build resolves: the first one
+  came from running every CI task list, missed the connected-test runner's
+  plugins, and the instrumented suite failed verification on CI. The census now
+  comes from a bootstrap dry run, which resolves every resolvable configuration,
+  and each configuration was then resolved in strict mode.
 - **Unsigned artifacts are pinned by SHA-256**, per version (138 files) — part of
   Firebase's transitive graph and older `androidx` releases, for example, are
   published without a signature.
@@ -2001,9 +2006,14 @@ branch protection counts as success.
   downloads its binary with no checksum and defaults to an older release. The
   rules are gitleaks' defaults, fixed by that version.
 - **A hit fails the job, and the log shows no secret** (`--redact`).
-- **The one waiver is an inline `gitleaks:allow` on the offending line.** It
-  travels with that line, is visible in the diff that introduces it, and exempts
-  nothing else. [`.gitleaks.toml`](../.gitleaks.toml) has no path or regex
+- **A waiver covers one line, never a path or a pattern.** Before the commit is
+  pushed, it is an inline `gitleaks:allow` on the offending line: it travels with
+  that line and is visible in the diff that introduces it. Once the commit is
+  pushed, that no longer helps — the scan reads every commit's own diff, so a later
+  commit adding the waiver leaves the original flagged — and the waiver is the
+  finding's fingerprint in [`.gitleaksignore`](../.gitleaksignore)
+  (`commit:file:rule:line`), which names that one commit and exempts nothing
+  written later. [`.gitleaks.toml`](../.gitleaks.toml) has no path or regex
   allowlist on purpose: a real key pasted into a test is still a leaked key, so
   "fixtures are exempt" would exempt exactly where one is most likely to be
   pasted. Prefer a fixture that does not look like a key at all — too short, or
@@ -2018,7 +2028,10 @@ provider-verified patterns this scan does not.
 
 **Observed failing.** A commit adding a random `ghp_`-shaped token failed the
 exact command the workflow runs (rule `github-pat`, exit 1); the same line with
-`gitleaks:allow` passed; the commits this change adds over `main` passed. Before
+`gitleaks:allow` passed. Then the scan stopped the change that introduced it: a
+test fixture holding a public PGP key fingerprint tripped `generic-api-key` on
+CI. It is not a secret, but it was already pushed, which is how the second
+waiver — the commit-bound `.gitleaksignore` entry — came to exist. Before
 wiring, the default rules were run over the whole tree and all of history: one
 hit, a short preview fixture (`sk-live-…`) in `:catalog`, outside the range any
 future change scans unless that line is edited.

@@ -220,6 +220,7 @@
          <trusted-key id="C6F7D1C804C821F49AF3BFC13AD93C3C677A106E" group="io.perfmark" name="perfmark-api"/>
          <trusted-key id="C7BE5BCC9FEC15518CFDA882B0F3710FA64900E7">
             <trusting group="com.google.auto"/>
+            <trusting group="com.google.auto.service"/>
             <trusting group="com.google.auto.value"/>
             <trusting group="com.google.code.gson"/>
          </trusted-key>

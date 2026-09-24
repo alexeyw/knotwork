@@ -89,8 +89,9 @@ jobs:
       # below assume. Bumping the version means taking the new sum from the
       # release's `checksums.txt` and updating both lines together.
       #
-      # `--redact` keeps a hit out of this public log. The rules and the one waiver
-      # (`gitleaks:allow` on the offending line) are described in `.gitleaks.toml`.
+      # `--redact` keeps a hit out of this public log. The rules and the two
+      # waivers (`gitleaks:allow` on the line; a commit-bound fingerprint in
+      # `.gitleaksignore` once the commit is pushed) are described in `.gitleaks.toml`.
       #
       # Range: a pull request's own commits; a push's new commits. Anything else —
       # a manual run, or the release workflow calling this one for a tag — scans
