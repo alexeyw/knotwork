@@ -22,6 +22,11 @@ package app.knotwork.android.domain.models
  *   right model even after the user switches the active model. Only AGENT
  *   answers carry it; `null` for user/system messages and for legacy AGENT rows
  *   saved before this was recorded.
+ * @property imported Whether the message came from a chat file (*Import chat*) rather
+ *   than being written on this device. A file decides a row's role and text, so an
+ *   imported USER row is not something this device's user said: long-term memory
+ *   extraction never reads imported rows, Retry never re-runs one, and an imported
+ *   AGENT row is not attributed to the active model. See [writtenOnThisDevice].
  */
 data class ChatMessage(
     val id: Long? = null,
@@ -33,4 +38,12 @@ data class ChatMessage(
     val isStarred: Boolean = false,
     val attachment: MessageAttachment? = null,
     val modelName: String? = null,
-)
+    val imported: Boolean = false,
+) {
+    /**
+     * `true` for a message this app wrote on this device — typed by the user, produced
+     * by a run, or recorded by the app — and `false` for one taken from a chat file.
+     * The one predicate consumers use to tell the two apart.
+     */
+    val writtenOnThisDevice: Boolean get() = !imported
+}

@@ -35,6 +35,30 @@ interface ChatDao {
     suspend fun insertMessage(message: ChatMessageEntity)
 
     /**
+     * Inserts [messages] in one statement batch.
+     *
+     * @param messages The [ChatMessageEntity] rows to insert.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessages(messages: List<ChatMessageEntity>)
+
+    /**
+     * Writes an imported chat — its session row and every message — in one
+     * transaction, so a failure part-way leaves nothing behind. The import used to
+     * write the session first and then each message on its own, and a bad element
+     * in the file aborted after the earlier rows were stored while the user was told
+     * nothing had been imported.
+     *
+     * @param session The new session the chat is imported into.
+     * @param messages The session's messages, already validated by the caller.
+     */
+    @Transaction
+    suspend fun insertImportedChat(session: ChatSessionEntity, messages: List<ChatMessageEntity>) {
+        upsertSession(session)
+        insertMessages(messages)
+    }
+
+    /**
      * Retrieves all chat messages for a specific session as a stream.
      * Messages are ordered by timestamp in ascending order.
      *

@@ -7,6 +7,7 @@ import app.knotwork.android.data.local.models.ChatSessionEntity
 import app.knotwork.android.data.mappers.toDomain
 import app.knotwork.android.data.mappers.toEntity
 import app.knotwork.android.domain.models.ChatHistorySummary
+import app.knotwork.android.domain.models.ChatImportException
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.Role
@@ -141,39 +142,66 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun importChat(json: String): String {
-        val trimmed = json.trim()
-        var sessionName = DEFAULT_IMPORTED_CHAT_NAME
-        val messagesArray: JSONArray = when {
-            trimmed.startsWith("{") -> {
-                val root = JSONObject(trimmed)
-                sessionName = root.optString("sessionName").takeIf { it.isNotBlank() } ?: sessionName
-                root.optJSONArray("messages") ?: throw JSONException("Missing 'messages' array")
-            }
-            trimmed.startsWith("[") -> JSONArray(trimmed)
-            else -> throw JSONException("Unsupported JSON root")
-        }
-
-        val newId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
-        chatDao.upsertSession(
-            ChatSessionEntity(id = newId, name = sessionName, updatedAt = now),
-        )
-        for (i in 0 until messagesArray.length()) {
-            val item = messagesArray.getJSONObject(i)
-            val roleStr = item.optString("role").ifBlank { Role.USER.name }
-            val role = runCatching { Role.valueOf(roleStr) }.getOrDefault(Role.USER)
-            val text = item.optString("text")
-            val timestamp = item.optLong("timestamp", now)
-            chatDao.insertMessage(
+        val (sessionName, rows) = parseChatFile(json, now)
+        val newId = UUID.randomUUID().toString()
+        // A future date would keep a file's row the chat's latest for good — what
+        // Retry re-runs and what every history window keeps. The whole file is moved
+        // back so its last row lands on the import time; the order and gaps between
+        // rows are kept, and a file dated in the past is left as it is.
+        val shift = maxOf(0L, (rows.maxOfOrNull { it.timestamp } ?: now) - now)
+        chatDao.insertImportedChat(
+            session = ChatSessionEntity(id = newId, name = sessionName, updatedAt = now),
+            messages = rows.map { row ->
                 ChatMessage(
                     sessionId = newId,
-                    role = role,
-                    content = text,
-                    timestamp = timestamp,
-                ).toEntity(),
-            )
-        }
+                    role = row.role,
+                    content = row.text,
+                    timestamp = row.timestamp - shift,
+                    imported = true,
+                ).toEntity()
+            },
+        )
         return newId
+    }
+
+    /** One message of a chat file, as read — before it is given a session and a shifted time. */
+    private data class ImportedRow(val role: Role, val text: String, val timestamp: Long)
+
+    /**
+     * Reads the whole file before anything is written, so a file that fails part-way
+     * stores nothing. Only the conversation is kept: `SYSTEM` rows are the source
+     * device's own notices and tool observations, which this app would never write for
+     * a conversation it did not run.
+     *
+     * @throws ChatImportException with an app-written reason; the file's text is never
+     *   part of it.
+     */
+    private fun parseChatFile(json: String, now: Long): Pair<String, List<ImportedRow>> {
+        val trimmed = json.trim()
+        var sessionName = DEFAULT_IMPORTED_CHAT_NAME
+        val messagesArray: JSONArray = try {
+            when {
+                trimmed.startsWith("{") -> {
+                    val root = JSONObject(trimmed)
+                    sessionName = root.optString("sessionName").takeIf { it.isNotBlank() } ?: sessionName
+                    root.optJSONArray("messages") ?: throw ChatImportException(NO_MESSAGES)
+                }
+                trimmed.startsWith("[") -> JSONArray(trimmed)
+                else -> throw ChatImportException(NOT_A_CHAT_EXPORT)
+            }
+        } catch (e: JSONException) {
+            throw ChatImportException(NOT_VALID_JSON, e)
+        }
+        val rows = (0 until messagesArray.length()).mapNotNull { i ->
+            val item = messagesArray.optJSONObject(i)
+                ?: throw ChatImportException("message ${i + 1} of the file is not a message")
+            val roleStr = item.optString("role").ifBlank { Role.USER.name }
+            val role = Role.entries.firstOrNull { it.name == roleStr } ?: Role.USER
+            if (role !in IMPORTED_ROLES) return@mapNotNull null
+            ImportedRow(role = role, text = item.optString("text"), timestamp = item.optLong("timestamp", now))
+        }
+        return sessionName to rows
     }
 
     override fun getSessionsFlow(includeArchived: Boolean): Flow<List<ChatSession>> =
@@ -226,5 +254,15 @@ class ChatRepositoryImpl @Inject constructor(
          * `ChatViewModel.DEFAULT_IMPORTED_CHAT_NAME` so behaviour is preserved.
          */
         const val DEFAULT_IMPORTED_CHAT_NAME: String = "Imported Chat"
+
+        /**
+         * The roles a chat file may contribute. `SYSTEM` rows — the source device's
+         * notices and tool observations — are left out.
+         */
+        val IMPORTED_ROLES: Set<Role> = setOf(Role.USER, Role.AGENT)
+
+        private const val NOT_VALID_JSON = "the file is not valid JSON"
+        private const val NOT_A_CHAT_EXPORT = "the file is not a chat export"
+        private const val NO_MESSAGES = "the file has no list of messages"
     }
 }

@@ -775,8 +775,10 @@ constructor(
             return
         }
         viewModelScope.launch {
+            // Never a row imported from a chat file: that is not a turn the user sent,
+            // whatever its date says.
             val lastUserMessage = chatRepository.getMessagesForSession(sessionId).first()
-                .lastOrNull { it.role == Role.USER }
+                .lastOrNull { it.role == Role.USER && it.writtenOnThisDevice }
             if (lastUserMessage == null) {
                 _state.update { it.copy(visual = it.restingVisual()) }
                 return@launch
@@ -1281,7 +1283,12 @@ constructor(
                 // Attribute the answer to the model that actually generated it
                 // (snapshotted on the message), not the currently-active one;
                 // legacy rows without a recorded model fall back to the active name.
-                model = if (role == ChatRole.Assistant) message.modelName ?: activeModelName else null,
+                // An imported answer came from some other model; the active one did not write it.
+                model = if (role == ChatRole.Assistant && message.writtenOnThisDevice) {
+                    message.modelName ?: activeModelName
+                } else {
+                    null
+                },
                 status = ChatMessageStatus.Sent,
             )
             val idPrefix = when (role) {

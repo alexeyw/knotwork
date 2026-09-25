@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.pipelineio
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
@@ -465,18 +466,23 @@ object PipelineJsonSerializer {
 
         val config = json.optJSONObject("config") ?: JSONObject()
         val contextConfigJson = json.optJSONObject("contextConfig")
+        // Legacy / minimal documents fall back to the per-type recommended defaults so
+        // the imported graph behaves sensibly out of the box — and so does a flag a
+        // block leaves out. It used to read as "on": a cloud node whose file named
+        // three of the five flags sent long-term memory and tool results to its
+        // provider, while the browser editor showed both off.
+        val defaults = NodeContextConfig.defaultForType(type)
         val contextConfig = if (contextConfigJson != null) {
+            val flag = { key: String, default: Boolean -> contextConfigJson.contextFlag(key, default, id) }
             NodeContextConfig(
-                chatHistory = contextConfigJson.optBoolean("chatHistory", true),
-                originalTask = contextConfigJson.optBoolean("originalTask", true),
-                nodeInput = contextConfigJson.optBoolean("nodeInput", true),
-                longTermMemory = contextConfigJson.optBoolean("longTermMemory", true),
-                toolResults = contextConfigJson.optBoolean("toolResults", true),
+                chatHistory = flag("chatHistory", defaults.chatHistory),
+                originalTask = flag("originalTask", defaults.originalTask),
+                nodeInput = flag("nodeInput", defaults.nodeInput),
+                longTermMemory = flag("longTermMemory", defaults.longTermMemory),
+                toolResults = flag("toolResults", defaults.toolResults),
             )
         } else {
-            // Legacy / minimal documents fall back to the per-type recommended
-            // defaults so the imported graph behaves sensibly out of the box.
-            NodeContextConfig.defaultForType(type)
+            defaults
         }
 
         // Round-trip the opaque rich-config blob when present. Stored verbatim
@@ -505,7 +511,7 @@ object PipelineJsonSerializer {
             conditionPrompt = config.optStringOrNull("conditionPrompt"),
             conditionHasImage = config.optBooleanOrNull("conditionHasImage"),
             systemPrompt = config.optStringOrNull("systemPrompt"),
-            cloudProvider = config.optStringOrNull("cloudProvider"),
+            cloudProvider = config.optStringOrNull("cloudProvider")?.also { requireKnownProvider(it, id) },
             clarificationTimeoutMs = config.optLongOrNull("clarificationTimeoutMs"),
             contextConfig = contextConfig,
             configJson = nodeConfigJson,
@@ -543,6 +549,41 @@ object PipelineJsonSerializer {
     private fun firstDuplicate(ids: List<String>): String? {
         val seen = HashSet<String>(ids.size)
         return ids.firstOrNull { !seen.add(it) }
+    }
+
+    /**
+     * One `contextConfig` flag of node [nodeId]: [default] when the key is absent or
+     * `null`, the value for a JSON boolean or the string "true" / "false" (any case), and
+     * a refused import for anything else — a flag nobody can read as on or off decides
+     * what reaches the node's model, so it is not guessed.
+     */
+    private fun JSONObject.contextFlag(name: String, default: Boolean, nodeId: String): Boolean {
+        if (!has(name) || isNull(name)) return default
+        return when (val value = get(name)) {
+            is Boolean -> value
+            is String -> value.lowercase().toBooleanStrictOrNull()
+            else -> null
+        } ?: throw PipelineParseException(
+            "Node \"${nodeId.toDisplaySafe()}\": contextConfig.$name must be true or false",
+        )
+    }
+
+    /**
+     * Refuses a node whose `cloudProvider` names no provider this app knows. Blank and the
+     * `auto` sentinel (any case) are accepted, as is every id [CloudProvider.fromId]
+     * resolves. An unknown id used to import silently: the node sheet showed it as OpenAI,
+     * the cloud node then failed at run time, and a structured node ran on-device.
+     */
+    private fun requireKnownProvider(providerId: String, nodeId: String) {
+        val known = providerId.isBlank() ||
+            providerId.equals(CloudProvider.AUTO_KEY, ignoreCase = true) ||
+            CloudProvider.fromId(providerId) != null
+        if (!known) {
+            throw PipelineParseException(
+                "Node \"${nodeId.toDisplaySafe()}\" names an unknown cloud provider " +
+                    "\"${providerId.toDisplaySafe()}\"",
+            )
+        }
     }
 
     private class PipelineParseException(message: String) : RuntimeException(message)

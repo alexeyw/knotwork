@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.domain.models.ChatImportException
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
@@ -129,10 +130,13 @@ class ChatHomeTransferDelegate(
                 selectThread(newId)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: ChatImportException) {
+                // App-written reason; it never quotes the file.
+                _importErrorEvents.tryEmit(e.message ?: IMPORT_GENERIC_FAILURE_MESSAGE)
             } catch (e: Throwable) {
-                _importErrorEvents.tryEmit(
-                    e.localizedMessage ?: IMPORT_GENERIC_FAILURE_MESSAGE,
-                )
+                // Anything else carries text this app did not write (a parser or
+                // storage message can quote the file), so it is not shown.
+                _importErrorEvents.tryEmit(IMPORT_GENERIC_FAILURE_MESSAGE)
             }
         }
     }
@@ -169,7 +173,11 @@ class ChatHomeTransferDelegate(
     }
 
     companion object {
-        /** Fallback localised-error string used when the import path throws without a message. */
-        const val IMPORT_GENERIC_FAILURE_MESSAGE: String = "Could not import the chat."
+        /**
+         * The reason shown when an import fails for anything but a
+         * [app.knotwork.android.domain.models.ChatImportException] — whose text this app
+         * did not write. It completes "Could not import chat: …".
+         */
+        const val IMPORT_GENERIC_FAILURE_MESSAGE: String = "the file could not be read"
     }
 }

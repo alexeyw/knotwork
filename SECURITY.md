@@ -583,9 +583,16 @@ oversight — and it works as follows:
   threshold and compaction, and a future date would keep a chunk first in
   `$MEMORY_SUMMARY` — and the import dialog says how many pins the file
   carried.
+- An **imported chat** is untrusted the same way: its messages become the
+  chat's history, which later turns replay to their nodes. The file decides
+  each message's role and date, so the import keeps only user and assistant
+  turns (a file's system rows would pass for the app's own notices), dates
+  none later than the import, marks every message imported, and writes the
+  whole file in one transaction or nothing.
 - **Tool output does not reach long-term memory through auto-extract.** The
   extraction pass reads the user's messages and the assistant's replies only —
-  never a tool result, a refusal note or a run-outcome line. The transcripts
+  never a tool result, a refusal note, a run-outcome line or a message
+  imported from a chat file. The transcripts
   and lists the app assembles for a model — the extraction and history
   compression transcripts, and a node's chat history, memory and tool-result
   lists — indent each continuation line of an entry, so an entry cannot open a

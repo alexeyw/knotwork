@@ -309,6 +309,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AppError.kt` - App error model.
     - `BundledDocument.kt` - One document that ships inside the APK, as the reader needs it.
     - `ChatHistorySummary.kt` - Domain model of a session's cached compressed-history summary (`sessionId`, `summary`, incremental `coveredMessageCount` cursor, `updatedAt`).
+    - `ChatImportException.kt` - Why a chat file could not be imported, in words this app wrote.
     - `ChatMessage.kt` - Chat message model.
     - `ChatSession.kt` - Chat session model.
     - `ClarificationOutcome.kt` - Typed result of the live clarification wait (`Answered` / `TimedOut`) — moves the timeout policy to the clarification executor.

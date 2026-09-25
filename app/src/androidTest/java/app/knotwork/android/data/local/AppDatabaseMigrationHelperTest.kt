@@ -736,4 +736,26 @@ class AppDatabaseMigrationHelperTest {
             }
         }
     }
+
+    /**
+     * v62 → v63 adds `chat_messages.imported`. Every row that existed before was written
+     * on this device, so it must come out `0` — and the schema must match the exported
+     * `63.json`, which `runMigrationsAndValidate` checks.
+     */
+    @Test
+    fun migrate62to63_marksExistingMessagesAsWrittenOnThisDevice() {
+        helper.createDatabase(TEST_DB, 62).use { db ->
+            db.execSQL(
+                "INSERT INTO chat_messages(sessionId, role, content, timestamp) " +
+                    "VALUES('sess-1', 'USER', 'hello', 100)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 63, true, AppDatabase.MIGRATION_62_63).use { db ->
+            db.query("SELECT imported FROM chat_messages WHERE content = 'hello'").use { c ->
+                assertTrue("the pre-existing message must survive the migration", c.moveToFirst())
+                assertEquals("a pre-existing message was written on this device", 0, c.getInt(0))
+            }
+        }
+    }
 }

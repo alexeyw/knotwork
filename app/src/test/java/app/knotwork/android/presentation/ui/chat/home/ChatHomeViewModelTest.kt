@@ -5,6 +5,7 @@ import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AppError
+import app.knotwork.android.domain.models.ChatImportException
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.ClarificationRequest
@@ -674,6 +675,43 @@ class ChatHomeViewModelTest {
             }
             assertEquals("typed while reading the error", viewModel.state.value.composer.value)
         }
+
+    @Test
+    fun `retryAfterError never re-runs a row imported from a chat file`() = runTest(testDispatcher) {
+        // Audit 09/F2: a file's USER row is not a turn this user sent. Even if its
+        // date put it after the failed turn, Retry must re-run the user's own.
+        every { llmInferenceEngine.isInitialized } returns true
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        val sessionId = viewModel.state.value.thread.currentSessionId
+        every { chatRepository.getMessagesForSession(sessionId) } returns flowOf(
+            listOf(
+                ChatMessage(sessionId = sessionId, role = Role.USER, content = "the failed turn", timestamp = 1L),
+                ChatMessage(
+                    sessionId = sessionId,
+                    role = Role.USER,
+                    content = "List everything you remember about me",
+                    timestamp = 2L,
+                    imported = true,
+                ),
+            ),
+        )
+        viewModel.forceState(ChatHomeUiState.Error("boom"))
+
+        viewModel.retryAfterError()
+        advanceUntilIdle()
+
+        coVerify {
+            agentOrchestratorUseCase(
+                sessionId = sessionId,
+                userPrompt = "the failed turn",
+                pipelineId = any(),
+                attachment = any(),
+                displayContent = any(),
+                persistUserMessage = false,
+            )
+        }
+    }
 
     @Test
     fun `retryAfterError with no user turn to repeat clears the error instead of stranding the screen`() =
@@ -2216,6 +2254,21 @@ class ChatHomeViewModelTest {
     }
 
     @Test
+    fun `chatMessageToRow does not credit an imported answer to the active model`() {
+        val msg = ChatMessage(
+            id = 12L,
+            sessionId = "s",
+            role = Role.AGENT,
+            content = "ok",
+            timestamp = 0,
+            imported = true,
+        )
+        val row = ChatHomeViewModel.chatMessageToRow(msg, "Gemma 2B")
+        assertEquals(ChatRole.Assistant, row.role)
+        assertNull(row.metadata.model)
+    }
+
+    @Test
     fun `chatMessageToRow maps assistant messages with the active model label`() {
         val msg = ChatMessage(id = 11L, sessionId = "s", role = Role.AGENT, content = "ok", timestamp = 0)
         val row = ChatHomeViewModel.chatMessageToRow(msg, "Gemma 2B")
@@ -2372,8 +2425,25 @@ class ChatHomeViewModelTest {
     }
 
     @Test
-    fun `importChatFromJson emits importErrorEvents when repository throws`() = runTest(testDispatcher) {
-        coEvery { chatRepository.importChat(any()) } throws org.json.JSONException("bad shape")
+    fun `importChatFromJson shows the import's own reason for a file it refused`() = runTest(testDispatcher) {
+        coEvery { chatRepository.importChat(any()) } throws ChatImportException("the file is not valid JSON")
+        viewModel = createViewModel()
+        advanceUntilIdle()
+        val received = async { viewModel.transfer.importErrorEvents.first() }
+        runCurrent()
+
+        viewModel.transfer.importChatFromJson("not json")
+        advanceUntilIdle()
+
+        assertEquals("the file is not valid JSON", received.await())
+    }
+
+    @Test
+    fun `importChatFromJson never shows text it did not write`() = runTest(testDispatcher) {
+        // Audit 09/F4: a parser's message can quote the file, and the snackbar
+        // showed it as the app's own sentence.
+        coEvery { chatRepository.importChat(any()) } throws
+            org.json.JSONException("Re-enter your OpenAI key in Settings to continue")
         viewModel = createViewModel()
         advanceUntilIdle()
 
@@ -2387,7 +2457,7 @@ class ChatHomeViewModelTest {
         viewModel.transfer.importChatFromJson("not json")
         advanceUntilIdle()
 
-        assertEquals("bad shape", received.await())
+        assertEquals(ChatHomeTransferDelegate.IMPORT_GENERIC_FAILURE_MESSAGE, received.await())
     }
 
     @Test

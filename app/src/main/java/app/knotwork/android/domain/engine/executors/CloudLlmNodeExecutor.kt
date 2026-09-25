@@ -90,8 +90,10 @@ class CloudLlmNodeExecutor @Inject constructor(
         // everything else is parsed through CloudProvider.fromId so legacy aliases
         // (e.g. "gemini") still resolve correctly.
         val configuredProvider = node.cloudProvider
+        // The sentinel is matched ignoring case, as the node sheet matches it: "AUTO"
+        // showed as Auto there and ran here as an unknown provider.
         val selectedProvider: CloudProvider? = if (
-            configuredProvider == null || configuredProvider == CloudProvider.AUTO_KEY
+            configuredProvider == null || configuredProvider.equals(CloudProvider.AUTO_KEY, ignoreCase = true)
         ) {
             autoDetectProvider()
         } else {

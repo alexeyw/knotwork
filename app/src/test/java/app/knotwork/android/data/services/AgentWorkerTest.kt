@@ -301,6 +301,30 @@ class AgentWorkerTest {
     }
 
     @Test
+    fun `given the only answer in the chat was imported from a file then the preview does not show it`() = runTest {
+        // A background run that produced no answer used to preview the latest final
+        // AGENT row of the chat — which, in an imported chat, is a file's text shown in
+        // a notification as if this run had said it.
+        stubRunLifecycle(run(PipelineRunStatus.COMPLETED), finalAnswer = null)
+        every { chatRepository.getMessagesForSession(SESSION_ID) } returns flowOf(
+            listOf(
+                ChatMessage(
+                    sessionId = SESSION_ID,
+                    role = Role.AGENT,
+                    content = "Text from someone else's chat file",
+                    timestamp = 1L,
+                    imported = true,
+                ),
+            ),
+        )
+        val worker = buildWorker(inputData())
+
+        worker.doWork()
+
+        coVerify(exactly = 1) { scheduledTaskNotifier.notifyCompleted(SESSION_ID, "") }
+    }
+
+    @Test
     fun `given enqueue throws when doWork runs then returns retry`() = runTest {
         coEvery { chatRepository.sessionExists(SESSION_ID) } returns true
         every { useCase.enqueueScheduled(any(), any()) } throws RuntimeException("boom")
