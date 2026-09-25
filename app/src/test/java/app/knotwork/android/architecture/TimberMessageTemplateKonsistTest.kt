@@ -21,10 +21,11 @@ import org.junit.Test
  * **What it reads.** Production sources, comments removed; the calls
  * `Timber.w/e/wtf(…)` and `Timber.tag(…).w/e/wtf(…)`. The message is the first
  * argument, or the second after a throwable; it must be one or more string
- * literals joined by `+`, none with a `$` template. A call without a message
- * (`Timber.w(e)`) fails too: nothing tells a throwable from a string variable
- * here, and a message costs one literal. Lower levels are not read — they never
- * reach the crash tree.
+ * literals joined by `+`, none with a `$` template, and with words of its own
+ * besides the placeholders — `"%s (%s)"` would arrive in the report as exactly
+ * that. A call without a message (`Timber.w(e)`) fails too: nothing tells a
+ * throwable from a string variable here, and a message costs one literal. Lower
+ * levels are not read — they never reach the crash tree.
  */
 class TimberMessageTemplateKonsistTest {
 
@@ -57,6 +58,7 @@ class TimberMessageTemplateKonsistTest {
         assertEquals(1, offendersIn("Timber.tag(\n    \"T\",\n).w(e, message)").size)
         assertEquals(1, offendersIn("Timber.w(e)").size)
         assertEquals(1, offendersIn("Timber.wtf(\"a\" + reason)").size)
+        assertEquals(1, offendersIn("Timber.e(\"%s (%s)\", message, type)").size)
         assertEquals(0, offendersIn("Timber.w(\"failed for %s\", path)").size)
         assertEquals(0, offendersIn("Timber.tag(\"T\").e(e, \"a %s \" + \"b %s\", x, y)").size)
         assertEquals(0, offendersIn("Timber.e(e, \"cost \\\$5\")").size)
@@ -76,14 +78,17 @@ class TimberMessageTemplateKonsistTest {
         return if (index in 0..1) call.arguments[index] else null
     }
 
-    /** Whether [expression] is string literals joined by `+`, none of them with a `$` template. */
+    /**
+     * Whether [expression] is string literals joined by `+`, none of them with a `$`
+     * template, saying something besides its placeholders.
+     */
     private fun isTemplateFree(expression: String?): Boolean {
         if (expression == null) return false
-        val literals = splitTopLevel(expression, '+')
-        return literals.all { part ->
-            val literal = part.trim()
+        val literals = splitTopLevel(expression, '+').map { it.trim() }
+        val literalOnly = literals.all { literal ->
             literal.startsWith("\"") && literal.endsWith("\"") && !TEMPLATE.containsMatchIn(literal)
         }
+        return literalOnly && literals.any { PLACEHOLDER.replace(it, "").any(Char::isLetter) }
     }
 
     private fun callsIn(code: String): List<Call> = CALL.findAll(code).mapNotNull { match ->
@@ -163,6 +168,9 @@ class TimberMessageTemplateKonsistTest {
 
         /** A string template: `$name` or `${…}` not preceded by a backslash. */
         val TEMPLATE = Regex("""(?<!\\)\$(\{|[A-Za-z_])""")
+
+        /** A `String.format` placeholder such as `%s`, `%d` or `%1$s`. */
+        val PLACEHOLDER = Regex("""%(\d+\$)?[-#+ 0,(]*\d*(\.\d+)?[a-zA-Z%]""")
 
         /** WARN+ calls the census must at least find; the tree had well over 300 at the time of writing. */
         const val MIN_KNOWN_CALLS = 250
