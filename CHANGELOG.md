@@ -198,6 +198,10 @@ details.
   the report in the link, so GitHub receives it as soon as the page opens, not
   when the issue is submitted. The dialog, the guide and the privacy policy now
   say so; **Copy report** still sends nothing.
+- **The app no longer contains a library's telemetry exporters.** Koog, the
+  library behind the cloud providers, ships exporters for Langfuse, W&B and
+  Datadog. The app never switched them on; they are now left out of the build
+  entirely, which also makes the APK about 0.4 MB smaller.
 
 ### Fixed
 

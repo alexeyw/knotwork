@@ -1907,6 +1907,18 @@ configurations.configureEach {
     resolutionStrategy {
         force("org.jetbrains.kotlin:kotlin-metadata-jvm:${libs.versions.kotlin.get()}")
     }
+    // Koog's telemetry feature and the OpenTelemetry SDK it brings in: exporters for
+    // Langfuse, W&B Weave, Datadog and any OTLP endpoint. The app never installs the
+    // feature — it builds no Koog `AIAgent` — so the code only ever sat in the APK
+    // unreachable. Excluded in every configuration, so it is absent rather than
+    // unused: a later Koog version that calls it from a client the app does use fails
+    // at the call instead of sending traces past `ModelNetworkGate` and the privacy
+    // indicator. Nothing else on the classpath references it (measured on the
+    // release classpath; docs/release.md §5).
+    exclude(group = "ai.koog", module = "agents-features-opentelemetry")
+    exclude(group = "ai.koog", module = "agents-features-opentelemetry-android")
+    exclude(group = "io.opentelemetry")
+    exclude(group = "io.opentelemetry.kotlin")
 }
 
 dependencies {

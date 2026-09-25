@@ -144,15 +144,6 @@
 -keep class javax.inject.** { *; }
 -dontwarn dagger.hilt.**
 
-# ─── OpenTelemetry + AutoValue (transitive, optional symbols) ───────────────
-# `io.opentelemetry-api-incubator` and the `auto-value` annotation are
-# compile-time-only optional dependencies referenced by OpenTelemetry SDK
-# internals reachable through Koog. R8 only needs to know it can safely
-# omit warnings — the runtime path that would use them is never executed
-# because the incubator module is not on the runtime classpath.
--dontwarn com.google.auto.value.AutoValue$CopyAnnotations
--dontwarn io.opentelemetry.api.incubator.**
-
 # ─── Room ────────────────────────────────────────────────────────────────────
 # Room's annotation processor generates `*_Impl` classes that subclass our
 # DAOs and the database; consumer rules cover this, but we keep an explicit
