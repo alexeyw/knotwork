@@ -783,6 +783,10 @@ class AppFunctionsEndToEndTest {
             override fun cancelApprovalNotification(requestId: String) {
                 // No notification was posted, nothing to cancel.
             }
+
+            override fun cancelPreUpdateNotification(sessionId: String) {
+                // No earlier release posted anything on the test device either.
+            }
         }
 
         return ToolNodeExecutor(

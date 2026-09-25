@@ -84,4 +84,18 @@ interface ApprovalNotifier {
      * @param requestId The request whose notification to remove.
      */
     fun cancelApprovalNotification(requestId: String)
+
+    /**
+     * Removes the approval notification a release before request addressing posted
+     * for [sessionId], if one is still showing.
+     *
+     * Such a release keyed the notification by session, in a slot no current request
+     * maps to, so [cancelApprovalNotification] cannot reach it. It matters only for a
+     * request that was already waiting when the app was updated: its record survives
+     * the update, and so does its ongoing notification. Called when such a request
+     * is answered or settled; a no-op when nothing of the kind is showing.
+     *
+     * @param sessionId The session the earlier release keyed the notification by.
+     */
+    fun cancelPreUpdateNotification(sessionId: String)
 }

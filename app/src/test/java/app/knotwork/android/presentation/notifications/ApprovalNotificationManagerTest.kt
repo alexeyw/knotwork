@@ -7,7 +7,7 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
-import app.knotwork.android.domain.constants.TimeAndIdConstants
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
 import app.knotwork.android.presentation.receivers.ApprovalAction
@@ -52,8 +52,7 @@ class ApprovalNotificationManagerTest {
     private fun notificationManager(): NotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    private fun expectedNotificationId(requestId: String): Int = ApprovalNotificationManager.NOTIFICATION_ID +
-        requestId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
+    private fun expectedNotificationId(requestId: String): Int = NotificationIds.Family.APPROVAL.idFor(requestId)
 
     @Test
     fun `given DESTRUCTIVE risk when sendApprovalRequest then posts on destructive channel with destructive title`() {
@@ -278,11 +277,11 @@ class ApprovalNotificationManagerTest {
 
     @Test
     fun `given two requests of one session when sendApprovalRequest then each gets a notification of its own`() {
-        // Use ids whose hashes land in different buckets of NOTIFICATION_ID_RANGE.
+        // Use ids whose hashes land in different slots of the approval family.
         val requestA = "alpha"
         val requestB = "beta"
         // Sanity-check the precondition for the assertion below — if hashes collide
-        // mod NOTIFICATION_ID_RANGE the test would assert nothing useful.
+        // into one slot the test would assert nothing useful.
         assertNotEquals(
             "Precondition: chosen request ids must hash to distinct slots",
             expectedNotificationId(requestA),

@@ -133,12 +133,10 @@ class AgentApprovalReceiverTest {
         runReceiverTest {
             // Posted by a release that keyed notifications by session and named
             // only the run; the store back-filled that run id as the request id.
-            postPlaceholder(ApprovalNotificationManager.legacySessionNotificationId("s1"))
-
             receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1", runId = "run-1"))
 
             coVerify(exactly = 1) { submitDecision("s1", "run-1", true) }
-            assertEquals(0, Shadows.shadowOf(notificationManager()).size())
+            verify(exactly = 1) { approvalNotifier.cancelPreUpdateNotification("s1") }
         }
 
     @Test
@@ -147,12 +145,24 @@ class AgentApprovalReceiverTest {
             // It names neither a request nor a run: whatever it asked about died
             // with the process the update replaced. Answering "the session"
             // instead is exactly what the request address exists to rule out.
-            postPlaceholder(ApprovalNotificationManager.legacySessionNotificationId("s1"))
-
             receiver.onReceive(context, intent(ApprovalAction.APPROVE.action, "s1"))
 
             coVerify(exactly = 0) { submitDecision(any(), any(), any()) }
-            assertEquals(0, Shadows.shadowOf(notificationManager()).size())
+            verify(exactly = 1) { approvalNotifier.cancelPreUpdateNotification("s1") }
+        }
+
+    @Test
+    fun `given a notification that names its request when onReceive then no pre-update slot is touched`() =
+        runReceiverTest {
+            // Only a release before request addressing posted without a request id;
+            // a current notification's session slot is not the receiver's to clear.
+            receiver.onReceive(
+                context,
+                intent(ApprovalAction.DENY.action, "s1", runId = "run-1", requestId = "request-1"),
+            )
+
+            verify(exactly = 0) { approvalNotifier.cancelPreUpdateNotification(any()) }
+            verify(exactly = 1) { approvalNotifier.cancelApprovalNotification("request-1") }
         }
 
     @Test

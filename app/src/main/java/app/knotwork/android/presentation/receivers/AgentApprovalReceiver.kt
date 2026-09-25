@@ -1,6 +1,5 @@
 package app.knotwork.android.presentation.receivers
 
-import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -13,7 +12,6 @@ import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
-import app.knotwork.android.presentation.notifications.ApprovalNotificationManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -98,10 +96,7 @@ class AgentApprovalReceiver : BroadcastReceiver() {
                 // identity. A live one names nothing — its run died with the
                 // process the update killed — so it answers nothing.
                 val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
-                if (requestId == null) {
-                    notificationManager(context)
-                        .cancel(ApprovalNotificationManager.legacySessionNotificationId(sessionId))
-                }
+                if (requestId == null) approvalNotifier.cancelPreUpdateNotification(sessionId)
                 val answered = requestId ?: runId ?: return
                 // Remove the notification immediately for responsive UX; the
                 // submission below settles the request itself.
@@ -156,10 +151,6 @@ class AgentApprovalReceiver : BroadcastReceiver() {
             }
         }
     }
-
-    /** The platform notification service, for the one slot the notifier no longer knows. */
-    private fun notificationManager(context: Context): NotificationManager =
-        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     /**
      * Bridges suspending work out of `onReceive` via [goAsync]: the pending

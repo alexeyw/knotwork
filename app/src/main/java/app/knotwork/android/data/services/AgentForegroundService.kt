@@ -14,6 +14,7 @@ import android.os.PowerManager
 import androidx.annotation.VisibleForTesting
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.repositories.PowerStateRepository
@@ -102,7 +103,6 @@ class AgentForegroundService : Service() {
     }
 
     companion object {
-        private const val NOTIFICATION_ID = 101
         private const val WAKE_LOCK_TAG = "Knotwork:InferenceLock"
         private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
 
@@ -327,12 +327,16 @@ class AgentForegroundService : Service() {
             // changed, so a long stream of identical states does not flood the
             // NotificationManager with no visible difference.
             if (status == lastNotifiedStatus) return
-            notificationManager.notify(NOTIFICATION_ID, buildNotification(status))
+            notificationManager.notify(NotificationIds.AGENT_FOREGROUND, buildNotification(status))
             lastNotifiedStatus = status
             return
         }
         try {
-            startForeground(NOTIFICATION_ID, buildNotification(status), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(
+                NotificationIds.AGENT_FOREGROUND,
+                buildNotification(status),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
             isForeground = true
             lastNotifiedStatus = status
         } catch (e: ForegroundServiceStartNotAllowedException) {

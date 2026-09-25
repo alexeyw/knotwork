@@ -10,7 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
-import app.knotwork.android.domain.constants.TimeAndIdConstants
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
 import app.knotwork.android.presentation.receivers.ApprovalAction
@@ -56,9 +56,21 @@ class ClarificationNotificationManager @Inject constructor(@ApplicationContext p
         notificationManager.notify(notificationId(sessionId), notification)
     }
 
+    /**
+     * Removes the notification of [sessionId] — and the one a release before the id
+     * registry posted for it in its old slot, which a run parked across the update
+     * still has in the shade (see [PreUpdateSlot]).
+     *
+     * @param sessionId Id of the session whose notification to remove.
+     */
     override fun cancelClarificationNotification(sessionId: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(notificationId(sessionId))
+        PreUpdateSlot.cancel(
+            notificationManager,
+            NotificationIds.PreUpdate.slot(NotificationIds.PreUpdate.CLARIFICATION_BASE, sessionId),
+            setOf(NotificationChannels.AGENT_CLARIFICATION),
+        )
     }
 
     /**
@@ -128,13 +140,9 @@ class ClarificationNotificationManager @Inject constructor(@ApplicationContext p
      *
      * @param sessionId Id of the chat session owning the slot.
      */
-    private fun notificationId(sessionId: String): Int =
-        NOTIFICATION_ID + sessionId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
+    private fun notificationId(sessionId: String): Int = NotificationIds.Family.CLARIFICATION.idFor(sessionId)
 
     companion object {
-        /** Base notification id; keeps clarification slots clear of the approval family (201). */
-        const val NOTIFICATION_ID = 301
-
         /**
          * Request-code offset of the repost delete-intent. Distinct from the
          * approval family's offsets so one run's clarification and approval

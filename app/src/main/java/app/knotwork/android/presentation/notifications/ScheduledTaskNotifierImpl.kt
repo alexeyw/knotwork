@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.models.RunTerminationKind
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
@@ -155,13 +156,5 @@ class ScheduledTaskNotifierImpl @Inject constructor(
         Manifest.permission.POST_NOTIFICATIONS,
     ) == PackageManager.PERMISSION_GRANTED
 
-    private fun notificationId(sessionId: String): Int = BASE_ID + (sessionId.hashCode() and ID_MASK)
-
-    private companion object {
-        /** Base notification id; keeps task-result ids clear of other notification families. */
-        const val BASE_ID = 23_900
-
-        /** Mask folding the session hash into a bounded id range. */
-        const val ID_MASK = 0x0FFF
-    }
+    private fun notificationId(sessionId: String): Int = NotificationIds.Family.TASK_RESULT.idFor(sessionId)
 }
