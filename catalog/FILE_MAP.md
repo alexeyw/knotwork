@@ -109,6 +109,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `KnotworkMiscPreview.kt` - Harness rendering the loose components — loader, snackbar, empty state, striped placeholder, section action, stat cell — for the preview pane and the Roborazzi baseline.
     - `KnotworkSectionAction.kt` - Right-aligned action link sitting next to a section header (e.g. "Reset to defaults", "Manage", "+ Add provider").
     - `KnotworkSnackbar.kt` - Knotwork snackbar — thin wrapper over Material3 `Snackbar` that recolours by `variant` and pushes the action label through `KnotworkTextStyles`.
+    - `KnotworkSnackbarHost.kt` - The one snackbar host of the app: Material3's `SnackbarHost` rendering every message as a `KnotworkSnackbar` with Material's outer margin.
     - `KnotworkStatCell.kt` - Single stat-grid cell used by the Settings → Memory card's 4-up counter row (CHUNKS / SIZE / THREADS / AVG SCORE).
     - `KnotworkWarningBanner.kt` - A persistent, warning-toned notice with one inline action.
     - `StripedPlaceholder.kt` - Knotwork striped placeholder — the canonical "missing asset" stand-in for any product surface that ships before its real illustration / hero image is available.

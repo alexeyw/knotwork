@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +52,7 @@ import app.knotwork.design.components.dialogs.OutcomeNamedList
 import app.knotwork.design.components.dialogs.OutcomeTone
 import app.knotwork.design.components.dialogs.SingleFieldDialog
 import app.knotwork.design.components.dialogs.SingleFieldDialogUi
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.screens.pipelines.PipelineLibraryCallbacks
 import app.knotwork.design.screens.pipelines.PipelineLibraryContent
@@ -310,20 +308,22 @@ fun PipelineLibraryScreen(
     )
 
     Box(modifier = Modifier.fillMaxSize().testTag(tag = LIBRARY_ROOT_TEST_TAG)) {
-        PipelineLibraryContent(state = viewState, callbacks = callbacks)
-        if (!viewState.isFabHidden) {
-            PipelineLibrarySpeedDial(
-                onNewPipeline = callbacks.onNewPipeline,
-                onFromPreset = { showPresetPicker = true },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        end = KnotworkTheme.spacing.sp4,
-                        bottom = KnotworkTheme.spacing.sp4,
-                    ),
-            )
-        }
-        SnackbarHost(hostState = snackbarHostState)
+        // Speed dial and snackbar both in the content's Scaffold: it places the
+        // dial at the bottom end and lifts a snackbar above it. The snackbar used
+        // to sit unaligned in this Box — at the top-left, over the top bar.
+        PipelineLibraryContent(
+            state = viewState,
+            callbacks = callbacks,
+            snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
+            floatingActionButton = {
+                if (!viewState.isFabHidden) {
+                    PipelineLibrarySpeedDial(
+                        onNewPipeline = callbacks.onNewPipeline,
+                        onFromPreset = { showPresetPicker = true },
+                    )
+                }
+            },
+        )
     }
 
     if (showPresetPicker) {

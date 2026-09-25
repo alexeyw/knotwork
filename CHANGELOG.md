@@ -234,6 +234,14 @@ details.
 
 ### Fixed
 
+- **Messages at the bottom of the screen look the same everywhere and stay out
+  of the way.** They came in three styles and four positions: on every settings
+  screen and in the pipeline library they appeared at the top-left, over the
+  title bar; elsewhere they covered the create button, the pipeline editor's
+  status bar or the chat's input, or sat under the system navigation bar. They
+  now share one style and sit above whatever is at the bottom of the screen.
+- **The Models screen shows download and benchmark errors.** It prepared those
+  messages but had nowhere to show them, so they never appeared.
 - **Tapping the message field no longer opens a link in the chat behind it.**
   The field took taps only across one line of text, and the bar around it —
   the console strip's margin, a run notice — took none; a tap there fell

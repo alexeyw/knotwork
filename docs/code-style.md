@@ -57,6 +57,12 @@ For the broader layering rationale, see
   Composables.
 - Mark preview-only Composables with `@Preview` and keep them in dedicated
   `*Preview.kt` files, separate from the production Composables they render.
+- Snackbars render through the design system's `KnotworkSnackbarHost` only:
+  in a `Scaffold`'s `snackbarHost` slot, which lifts it above the bottom bar
+  and the floating action button, or bottom-centre of a container already
+  clear of the system bars. A `SnackbarHostState` a screen shows messages
+  into is rendered by a host in the same file. `SnackbarHostGuardTest` fails
+  a raw Material3 host, an unrendered state and an unplaced host.
 
 ## Coroutines & Flow
 

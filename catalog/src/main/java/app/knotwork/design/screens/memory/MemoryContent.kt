@@ -103,6 +103,9 @@ private val CARD_BODY_GAP = 8.dp
  * semantic-search field, the detail bottom sheet, the Compact / Add dialogs,
  * and the "Add memory" FAB. All state is supplied by [state]; every
  * interaction is forwarded through [callbacks].
+ *
+ * @param snackbarHost Where the screen's snackbars render: the Scaffold places it above its
+ *   bottom bar and floating action button. The app passes a `KnotworkSnackbarHost`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,9 +113,11 @@ fun MemoryContent(
     state: MemoryViewState,
     modifier: Modifier = Modifier,
     callbacks: MemoryCallbacks = noopMemoryCallbacks(),
+    snackbarHost: @Composable () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
+            snackbarHost = snackbarHost,
             containerColor = MaterialTheme.colorScheme.surface,
             // System-bar insets are owned by the app shell (matches every other
             // catalog screen); without this the Scaffold double-pads the bottom

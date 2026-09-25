@@ -1838,6 +1838,13 @@ tasks.withType<Test>().configureEach {
     inputs.dir(rootProject.file("fastlane/metadata"))
         .withPropertyName("storeMetadata")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `TopBarInsetGuardTest` and `SnackbarHostGuardTest` read the design system's
+    // sources as text. A `:catalog` edit usually re-runs this task through the
+    // compiled classpath anyway, but an edit that leaves the bytecode as it was (a
+    // modifier reordered into the same calls) would not — declared, not assumed.
+    inputs.dir(rootProject.file("catalog/src/main/java"))
+        .withPropertyName("catalogSources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(layout.projectDirectory.dir("src/androidTest"))
         .withPropertyName("instrumentedSources")
         .withPathSensitivity(PathSensitivity.RELATIVE)

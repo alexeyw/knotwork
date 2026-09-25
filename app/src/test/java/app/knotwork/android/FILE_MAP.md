@@ -37,6 +37,7 @@ Only Kotlin files appear inside the generated blocks.
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
   - `RegexConstructionKonsistTest.kt` - Census of how production code builds a regular expression: every pattern must be a **string literal in the source**, and anything spliced into it at runtime must pass through `Regex.escape` (or `Pattern.quote`).
   - `RepositoryPlacementKonsistTest.kt` - Konsist guard enforcing the repository placement convention from the api-conventions rule: the abstraction (`<Noun>Repository` interface) is owned by the `domain` layer, and its implementation (`<Noun>RepositoryImpl`) lives in the `data` layer.
+  - `SnackbarHostGuardTest.kt` - Every snackbar in the app renders through `KnotworkSnackbarHost`, and every host has a place.
   - `TabRootEntryGuardTest.kt` - Structural guard over the one navigation invariant the closed test bought us:
   - `TimberMessageTemplateKonsistTest.kt` - Census of the message every `WARN`-and-above Timber call writes: it must be a **string literal without templates**, with anything dynamic passed as a format argument.
   - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**

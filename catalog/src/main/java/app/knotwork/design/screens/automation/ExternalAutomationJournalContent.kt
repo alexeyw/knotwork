@@ -117,6 +117,8 @@ private const val SKELETON_ROWS = 5
  * @param modifier optional layout modifier applied to the root scaffold.
  * @param strings localised display strings.
  * @param callbacks one-shot callback bundle.
+ * @param snackbarHost Where the screen's snackbars render: the Scaffold places it above its
+ *   bottom bar and floating action button. The app passes a `KnotworkSnackbarHost`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,8 +127,10 @@ fun ExternalAutomationJournalContent(
     modifier: Modifier = Modifier,
     strings: ExternalAutomationJournalStrings = ExternalAutomationJournalStrings(),
     callbacks: ExternalAutomationJournalCallbacks = noopExternalAutomationJournalCallbacks(),
+    snackbarHost: @Composable () -> Unit = {},
 ) {
     Scaffold(
+        snackbarHost = snackbarHost,
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets(left = 0, top = 0, right = 0, bottom = 0),

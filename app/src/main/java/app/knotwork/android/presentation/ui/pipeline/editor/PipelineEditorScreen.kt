@@ -12,7 +12,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +64,7 @@ import app.knotwork.design.components.dialogs.ConfirmDialog
 import app.knotwork.design.components.dialogs.ConfirmDialogUi
 import app.knotwork.design.components.dialogs.SingleFieldDialog
 import app.knotwork.design.components.dialogs.SingleFieldDialogUi
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.components.pipelineeditor.LocalModelOption
 import app.knotwork.design.components.pipelineeditor.PipelineTargetDisabledReason
 import app.knotwork.design.components.pipelineeditor.PipelineTargetOption
@@ -409,6 +409,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 editor.multiSelectMode = false
             },
             subtitleForNode = subtitleForNode,
+            snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -758,11 +759,6 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 )
             }
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
 
         val libraryRequest = pendingLibrary
         if (libraryRequest != null) {

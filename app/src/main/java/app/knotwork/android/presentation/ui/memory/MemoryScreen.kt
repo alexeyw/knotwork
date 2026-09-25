@@ -5,19 +5,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.R
@@ -25,6 +21,7 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.usecases.CompactionEstimate
 import app.knotwork.android.presentation.common.DisplayFormat
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.memory.CompactionEstimateView
 import app.knotwork.design.screens.memory.MemoryBreakdownSegment
 import app.knotwork.design.screens.memory.MemoryCallbacks
@@ -137,11 +134,11 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
     )
 
     Box(modifier = Modifier.fillMaxSize().testTag(tag = MEMORY_ROOT_TEST_TAG)) {
-        MemoryContent(state = viewState, callbacks = callbacks)
-        // Above the "Add memory" FAB so the two don't overlap.
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = SNACKBAR_BOTTOM_INSET),
+        // In the content's Scaffold, which lifts it above the "Add memory" FAB.
+        MemoryContent(
+            state = viewState,
+            callbacks = callbacks,
+            snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
         )
     }
 }
@@ -386,9 +383,6 @@ internal const val MEMORY_ROOT_TEST_TAG = "memory_screen_root"
 private const val MEMORY_TITLE_MAX_CHARS = 60
 private const val MIME_JSON = "application/json"
 private const val EXPORT_FILENAME = "memory-base.json"
-
-/** Bottom inset that lifts the snackbar clear of the "Add memory" FAB. */
-private val SNACKBAR_BOTTOM_INSET = 88.dp
 
 private const val MINUTE_MS = 60_000L
 private const val MINUTES_PER_HOUR = 60L

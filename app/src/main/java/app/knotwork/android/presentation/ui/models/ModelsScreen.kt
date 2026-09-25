@@ -17,6 +17,7 @@ import app.knotwork.android.data.network.AndroidModelDownloadManager.DownloadErr
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.usecases.BenchmarkRunPhase
 import app.knotwork.android.presentation.ui.common.readPlainClipboardText
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.models.ActiveModelRow
 import app.knotwork.design.screens.models.BenchmarkPhase
 import app.knotwork.design.screens.models.ModelsCallbacks
@@ -128,6 +129,9 @@ fun ModelsScreen(
             onShareBenchmark = viewModel::onShareBenchmark,
             onDismissBenchmark = viewModel::onDismissBenchmark,
         ),
+        // The screen showed download and benchmark failures through this state
+        // without ever rendering a host, so they never appeared.
+        snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
     )
 }
 
