@@ -11,6 +11,11 @@ import app.knotwork.android.domain.constants.NotificationIds
  * notification in it is on one of the calling family's channels — which, since no
  * current id falls into the old ranges, can only be the notification that family
  * posted before the update.
+ *
+ * What the channel cannot tell apart is two keys of one family whose old slots
+ * coincide: settling one clears the other's leftover. The release that posted them
+ * already let such a pair replace each other, and a leftover lasts only until its
+ * own run is settled.
  */
 internal object PreUpdateSlot {
 
