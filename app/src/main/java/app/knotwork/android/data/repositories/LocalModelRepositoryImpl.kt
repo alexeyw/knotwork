@@ -95,6 +95,10 @@ class LocalModelRepositoryImpl @Inject constructor(
         localModelDao.findByName(fileName)?.toDomain()
     }
 
+    override suspend fun findByPath(path: String): LocalModel? = withContext(Dispatchers.IO) {
+        localModelDao.findByPath(path)?.toDomain()
+    }
+
     override fun observeActiveModelMeta(): Flow<ActiveModelMeta?> = localModelDao.observeActiveModel()
         .map { entity ->
             if (entity == null) {

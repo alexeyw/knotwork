@@ -33,7 +33,9 @@ interface DownloadedModelFiles {
 /**
  * One model file on disk.
  *
- * @property name The file's name, as the registry records it.
+ * @property name The file's name on disk — the name a rediscovered model is registered
+ *   under. A model downloaded from a repository sub-folder was registered under its
+ *   repository name instead (`q4/model.litertlm` for `q4_model.litertlm`).
  * @property path The file's absolute path, in the form the downloader records.
  * @property sizeBytes The file's length.
  */

@@ -136,4 +136,13 @@ interface LocalModelDao {
      */
     @Query("SELECT * FROM local_models WHERE name = :fileName LIMIT 1")
     suspend fun findByName(fileName: String): LocalModelEntity?
+
+    /**
+     * Returns the first row whose [LocalModelEntity.path] is [path] exactly.
+     *
+     * @param path Absolute path of the model file.
+     * @return the matching entity, or `null` when no row exists.
+     */
+    @Query("SELECT * FROM local_models WHERE path = :path LIMIT 1")
+    suspend fun findByPath(path: String): LocalModelEntity?
 }

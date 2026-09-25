@@ -45,9 +45,13 @@ class DownloadedModelFilesImplTest {
 
         assertEquals(
             listOf(
-                DownloadedModelFile("custom-model.task", File(directory, "custom-model.task").path, 3),
-                DownloadedModelFile("experimental.GGUF", File(directory, "experimental.GGUF").path, 2),
-                DownloadedModelFile("gemma-4-E2B-it.litertlm", File(directory, "gemma-4-E2B-it.litertlm").path, 5),
+                DownloadedModelFile("custom-model.task", File(directory, "custom-model.task").absolutePath, 3),
+                DownloadedModelFile("experimental.GGUF", File(directory, "experimental.GGUF").absolutePath, 2),
+                DownloadedModelFile(
+                    "gemma-4-E2B-it.litertlm",
+                    File(directory, "gemma-4-E2B-it.litertlm").absolutePath,
+                    5,
+                ),
             ),
             listed,
         )
@@ -55,7 +59,7 @@ class DownloadedModelFilesImplTest {
 
     @Test
     fun `given the path form the downloader records when listed then the paths match it`() = runTest {
-        // The downloader stores `File(getExternalFilesDir(null), name).path`; a
+        // The downloader stores `File(getExternalFilesDir(null), name).absolutePath`; a
         // different form would make every registered model look unregistered.
         file("gemma.litertlm", bytes = 1)
 
@@ -63,7 +67,7 @@ class DownloadedModelFilesImplTest {
             dispatcher = StandardTestDispatcher(testScheduler)
         }.list()
 
-        assertEquals(File(context.getExternalFilesDir(null), "gemma.litertlm").path, listed.single().path)
+        assertEquals(File(context.getExternalFilesDir(null), "gemma.litertlm").absolutePath, listed.single().path)
     }
 
     private fun file(name: String, bytes: Int) = File(directory, name).writeBytes(ByteArray(bytes))

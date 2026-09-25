@@ -26,6 +26,7 @@ class RegisterDownloadedModelUseCaseTest {
     @Test
     fun `given no existing row when registering then a fresh inactive model is inserted`() = runTest {
         coEvery { localModelRepository.findByFileName("gemma.litertlm") } returns null
+        coEvery { localModelRepository.findByPath("/data/gemma.litertlm") } returns null
         val inserted = slot<LocalModel>()
         coEvery { localModelRepository.insertModel(capture(inserted)) } returns 7L
 
@@ -73,6 +74,7 @@ class RegisterDownloadedModelUseCaseTest {
             rows += firstArg<LocalModel>()
             rows.size.toLong()
         }
+        coEvery { localModelRepository.findByPath(any()) } returns null
         coEvery { localModelRepository.updateModel(any()) } returns Unit
 
         listOf(
@@ -82,4 +84,30 @@ class RegisterDownloadedModelUseCaseTest {
 
         assertEquals(1, rows.size)
     }
+
+    @Test
+    fun `given a row for the same file under its on-disk name when registering then it is renamed, not duplicated`() =
+        runTest {
+            // The start-up pass registered a sub-folder download under its flattened
+            // on-disk name; a later download of the same file names it by repository path.
+            val rediscovered =
+                LocalModel(
+                    id = 4L,
+                    name = "q4_model.litertlm",
+                    path = "/ext/q4_model.litertlm",
+                    size = 1L,
+                    isActive = false,
+                )
+            coEvery { localModelRepository.findByFileName("q4/model.litertlm") } returns null
+            coEvery { localModelRepository.findByPath("/ext/q4_model.litertlm") } returns rediscovered
+            val updated = slot<LocalModel>()
+            coEvery { localModelRepository.updateModel(capture(updated)) } returns Unit
+
+            val id = useCase("q4/model.litertlm", "/ext/q4_model.litertlm", sizeBytes = 2_048L)
+
+            coVerify(exactly = 0) { localModelRepository.insertModel(any()) }
+            assertEquals(4L, id)
+            assertEquals("q4/model.litertlm", updated.captured.name)
+            assertEquals(2_048L, updated.captured.size)
+        }
 }

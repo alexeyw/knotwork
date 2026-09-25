@@ -17,10 +17,10 @@ import javax.inject.Singleton
  * multi-gigabyte file on disk that the app knows nothing about — the worst of
  * both worlds.
  *
- * The write is idempotent on the on-disk file name (`local_models` has no
- * unique index on `name`, so a blind insert would duplicate the row on a
- * re-download) and never touches the active flag: installing a model is not
- * choosing it. Idempotent under concurrency too: the lookup and the insert run
+ * The write is idempotent on the file — found by name, or by path when the
+ * name differs (`local_models` has no unique index, so a blind insert would
+ * duplicate the row on a re-download) — and never touches the active flag:
+ * installing a model is not choosing it. Idempotent under concurrency too: the lookup and the insert run
  * under one lock, because a download finishing while the start-up pass
  * ([RediscoverDownloadedModelsUseCase]) registers the same file would otherwise
  * insert it twice — both would find no row, then both would insert.
@@ -43,9 +43,12 @@ class RegisterDownloadedModelUseCase @Inject constructor(private val localModelR
      * @return The row id of the registered model.
      */
     suspend operator fun invoke(fileName: String, path: String, sizeBytes: Long): Long = registration.withLock {
-        val existing = localModelRepository.findByFileName(fileName)
+        // By name first; then by path, which catches the row the start-up pass
+        // registered under the flattened on-disk name of a file this download
+        // names by its repository path — the row takes the download's name back.
+        val existing = localModelRepository.findByFileName(fileName) ?: localModelRepository.findByPath(path)
         if (existing != null) {
-            localModelRepository.updateModel(existing.copy(path = path, size = sizeBytes))
+            localModelRepository.updateModel(existing.copy(name = fileName, path = path, size = sizeBytes))
             return@withLock existing.id
         }
         localModelRepository.insertModel(

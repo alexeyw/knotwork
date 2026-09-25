@@ -31,7 +31,8 @@ class DownloadedModelFilesImpl @Inject constructor(@ApplicationContext private v
         val directory = context.getExternalFilesDir(null) ?: return@withContext emptyList()
         directory.listFiles().orEmpty()
             .filter { it.isFile && it.isModelFile() }
-            .map { DownloadedModelFile(name = it.name, path = it.path, sizeBytes = it.length()) }
+            // `absolutePath`, the form `ResumableFileDownloader` returns and the registry stores.
+            .map { DownloadedModelFile(name = it.name, path = it.absolutePath, sizeBytes = it.length()) }
     }
 
     private fun File.isModelFile(): Boolean =
