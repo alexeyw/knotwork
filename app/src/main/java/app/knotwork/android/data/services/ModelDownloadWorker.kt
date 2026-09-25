@@ -15,6 +15,7 @@ import androidx.work.workDataOf
 import app.knotwork.android.R
 import app.knotwork.android.data.network.ResumableFileDownloader
 import app.knotwork.android.domain.constants.NotificationChannels
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.RegisterDownloadedModelUseCase
 import dagger.assisted.Assisted
@@ -186,7 +187,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             )
             .build()
         return ForegroundInfo(
-            NOTIFICATION_ID,
+            NotificationIds.MODEL_DOWNLOAD,
             notification,
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
         )
@@ -230,9 +231,6 @@ class ModelDownloadWorker @AssistedInject constructor(
 
         /** Sentinel for "the failure carried no HTTP status" (a transport error). */
         const val NO_HTTP_CODE = -1
-
-        /** Notification id of the ongoing download status. */
-        private const val NOTIFICATION_ID = 4711
 
         /**
          * Attempts (including the first) before a transport failure that moved

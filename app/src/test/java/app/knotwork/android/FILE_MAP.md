@@ -28,6 +28,7 @@ Only Kotlin files appear inside the generated blocks.
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
   - `NetworkClientImports.kt` - The import prefixes that mean "this file can speak to the network", shared by every guard that asks the question: the allow-list `NetworkEgressInventoryKonsistTest` and the three deny-lists (`JournalExportNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest`, `UsageTelemetryNoNetworkKonsistTest`).
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
+  - `NotificationIdSourceGuardTest.kt` - Keeps `app.knotwork.android.domain.constants.NotificationIds` the only place a notification id is decided.
   - `OutboundBroadcastCensusTest.kt` - Census of the places the app sends a broadcast.
   - `PathContainmentGuardTest.kt` - A path prefix test lives in exactly one production file: `PathContainment`.
   - `PersistentStorageInventoryGuardTest.kt` - Every place the app keeps data between runs is in `StorageRoot`, with two decisions written down: nothing of it leaves the device through Android backup or device transfer, and whether the recovery wipe (*Erase data*) erases it.
@@ -183,6 +184,7 @@ Only Kotlin files appear inside the generated blocks.
   - `constants/` - Tests for the domain-level constants.
     - `DefaultPromptsTest.kt` - Smoke + contract coverage for `DefaultPrompts`.
     - `DocumentationLinksTest.kt` - Drift guard for the generated `DocumentationLinks` registry as the app reads it.
+    - `NotificationIdsTest.kt` - Pins the property `NotificationIds` exists for: no two notification families, and no family and fixed id, can ever produce the same notification id.
     - `OnboardingModelCatalogTest.kt` - Unit tests for `OnboardingModelCatalog`.
     - `OnboardingScenarioCatalogTest.kt` - Pins the onboarding scenario wiring: the set of scenarios, their preset / model / surface mapping, gallery order, and the `OnboardingScenarioCatalog.byId` lookup.
     - `PipelineExecutionDefaultsTest.kt` - Pins the engine-side timing/log constants exposed by `PipelineExecutionDefaults`.
@@ -425,6 +427,7 @@ Only Kotlin files appear inside the generated blocks.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
+    - `NotificationFamilyIsolationTest.kt` - The notification families are posted by three managers that know nothing of each other; these tests pin what they share — the id space — against the real `NotificationManager`.
     - `ScheduledTaskNotifierImplTest.kt` - Robolectric coverage for `ScheduledTaskNotifierImpl` — the notifier that announces scheduled-run outcomes ("Task completed" / "Task failed") with a deep-link into the bound chat session.
   - `receivers/` - Tests for the broadcast receivers, including the external-automation entry point.
     - `AgentApprovalReceiverTest.kt` - Robolectric coverage for `AgentApprovalReceiver` — the broadcast receiver that routes the Approve / Deny notification actions through `SubmitApprovalDecisionUseCase` (live gate or parked record) and re-posts persistent notifications on `ApprovalAction.REPOST`.

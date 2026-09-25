@@ -108,6 +108,8 @@ class ParkedRunResumerTest {
         assertEquals(PendingSubmissionOutcome.Resumed, outcome)
         coVerify { resumePipelineRunUseCase("run-1") }
         verify { approvalNotifier.cancelApprovalNotification("request-1") }
+        // A request with its own identity was posted by this release: no old slot to clear.
+        verify(exactly = 0) { approvalNotifier.cancelPreUpdateNotification(any()) }
     }
 
     @Test
@@ -117,6 +119,16 @@ class ParkedRunResumerTest {
         resumer.submit(parkedApproval().copy(requestId = null)) { true }
 
         verify { approvalNotifier.cancelApprovalNotification("run-1") }
+    }
+
+    @Test
+    fun `given a park back-filled with its run id when submitted then the old session slot is cleared`() = runTest {
+        // The migration gave such a record requestId = runId; its notification is
+        // still where the release that posted it put it — the session's slot.
+        resumer.submit(parkedApproval().copy(requestId = "run-1")) { true }
+
+        verify { approvalNotifier.cancelApprovalNotification("run-1") }
+        verify { approvalNotifier.cancelPreUpdateNotification("session-1") }
     }
 
     @Test

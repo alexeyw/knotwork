@@ -218,6 +218,12 @@ details.
 
 ### Fixed
 
+- **One waiting notification no longer replaces or clears another.** An
+  approval, a question and a paused run could land on the same notification
+  slot: a new approval replaced the notification of a paused run, and answering
+  one removed the other — the paused run's only way back. Each kind now has
+  slots of its own. A notification left in the shade by an earlier version is
+  removed when its run is answered.
 - **One commit builds the same app on any machine.** The commit identifier in
   About now always has eight characters, whatever the clone, and native libraries
   are stripped by a pinned NDK: a release build without it fails instead of

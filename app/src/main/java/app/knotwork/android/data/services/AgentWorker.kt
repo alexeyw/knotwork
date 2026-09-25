@@ -12,6 +12,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.PipelineRun
@@ -102,9 +103,6 @@ class AgentWorker @AssistedInject constructor(
         /** Progress key exposing the node currently executing (or the run status). */
         const val KEY_CURRENT_STAGE = "current_stage"
 
-        /** Notification id of the worker's own foreground promotion (distinct from `AgentForegroundService`). */
-        private const val FOREGROUND_NOTIFICATION_ID = 102
-
         /** Maximum number of prompt characters used for the auto-generated session name. */
         private const val SESSION_NAME_PROMPT_LENGTH = 40
     }
@@ -174,7 +172,7 @@ class AgentWorker @AssistedInject constructor(
             contentIntent = AgentForegroundNotification.launchContentIntent(applicationContext),
         )
         return ForegroundInfo(
-            FOREGROUND_NOTIFICATION_ID,
+            NotificationIds.AGENT_WORKER_FOREGROUND,
             notification,
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )

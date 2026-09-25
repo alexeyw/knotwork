@@ -1,13 +1,13 @@
 package app.knotwork.android.domain.constants
 
 /**
- * Cross-module numeric constants for time-unit conversion and notification-id
- * partitioning.
+ * Cross-module numeric constants for time-unit conversion.
  *
- * Grouped together because each of the three values is a "shared math constant"
- * referenced by multiple unrelated callers (metrics, UI countdown formatting,
- * approval notification routing). Centralising them prevents the same literal
- * from drifting across files.
+ * Grouped together because each value is a "shared math constant" referenced by
+ * multiple unrelated callers (metrics, UI countdown formatting, memory
+ * compaction). Centralising them prevents the same literal from drifting across
+ * files. Notification ids, once partitioned here too, are decided by
+ * [NotificationIds].
  */
 object TimeAndIdConstants {
     /** Number of milliseconds in one second. */
@@ -22,15 +22,4 @@ object TimeAndIdConstants {
      * age window into an absolute timestamp cutoff.
      */
     const val MS_PER_DAY: Long = 86_400_000L
-
-    /**
-     * Size of the int-range used to derive an Android notification id from an
-     * agent-internal hash. Both the publishing side
-     * ([app.knotwork.android.presentation.notifications.ApprovalNotificationManager])
-     * and the receiving side
-     * ([app.knotwork.android.presentation.receivers.AgentApprovalReceiver]) must
-     * agree on this value, otherwise the receiver cannot recover the id that
-     * the manager emitted.
-     */
-    const val NOTIFICATION_ID_RANGE: Int = 1_000
 }

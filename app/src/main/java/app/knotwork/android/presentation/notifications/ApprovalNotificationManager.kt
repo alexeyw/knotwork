@@ -10,7 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
-import app.knotwork.android.domain.constants.TimeAndIdConstants
+import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
@@ -49,9 +49,6 @@ class ApprovalNotificationManager @Inject constructor(
 ) : ApprovalNotifier {
 
     companion object {
-        /** Base of the approval notification id range. */
-        const val NOTIFICATION_ID = 201
-
         /** Request-code offset of the Approve action within one request's intent family. */
         private const val APPROVE_OFFSET = 0
 
@@ -70,20 +67,11 @@ class ApprovalNotificationManager @Inject constructor(
          * @param requestId Identity of the request owning the slot.
          * @return The notification id.
          */
-        fun notificationId(requestId: String): Int =
-            NOTIFICATION_ID + requestId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
+        fun notificationId(requestId: String): Int = NotificationIds.Family.APPROVAL.idFor(requestId)
 
-        /**
-         * Slot an approval notification of [sessionId] occupied when releases
-         * before request addressing keyed notifications by session. Only the
-         * receiver needs it: a notification posted by such a release can still
-         * be in the shade after the update, and answering it must remove it.
-         *
-         * @param sessionId Id of the session the old notification was posted for.
-         * @return The notification id that release used.
-         */
-        fun legacySessionNotificationId(sessionId: String): Int =
-            NOTIFICATION_ID + sessionId.hashCode() % TimeAndIdConstants.NOTIFICATION_ID_RANGE
+        /** The channels approval notifications are posted on, whatever the risk. */
+        private val CHANNELS =
+            setOf(NotificationChannels.AGENT_APPROVAL, NotificationChannels.AGENT_APPROVAL_DESTRUCTIVE)
     }
 
     /**
@@ -230,6 +218,22 @@ class ApprovalNotificationManager @Inject constructor(
     override fun cancelApprovalNotification(requestId: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(notificationId(requestId))
+    }
+
+    /**
+     * Removes the approval notification a release before request addressing posted
+     * for [sessionId] in the slot it keyed by session — only if the notification
+     * showing there is an approval's (see [PreUpdateSlot]).
+     *
+     * @param sessionId The session the earlier release keyed the notification by.
+     */
+    override fun cancelPreUpdateNotification(sessionId: String) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        PreUpdateSlot.cancel(
+            notificationManager,
+            NotificationIds.PreUpdate.slot(NotificationIds.PreUpdate.APPROVAL_BASE, sessionId),
+            CHANNELS,
+        )
     }
 
     /**
