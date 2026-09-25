@@ -19,6 +19,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,10 +50,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -227,11 +232,27 @@ fun ChatComposer(
     onChangeModel: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
 ) {
+    // The chat lays its message list out under the composer, so a tap the composer
+    // does not take lands on whatever message is scrolled behind it — a link opened
+    // on a tap meant for the input. Every tap on the composer is therefore its own:
+    // one its controls do not consume focuses the text field, which on its own takes
+    // touches only across the height of one line.
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val inputShown = state !is ComposerState.Recording && state !is ComposerState.Transcribing
     Column(
         verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
         modifier = modifier
             .fillMaxWidth()
             .background(color = MaterialTheme.colorScheme.surface)
+            .pointerInput(inputShown) {
+                detectTapGestures {
+                    if (inputShown) {
+                        focusRequester.requestFocus()
+                        keyboard?.show()
+                    }
+                }
+            }
             .padding(KnotworkTheme.spacing.sp3),
     ) {
         if (state is ComposerState.Error) {
@@ -281,7 +302,7 @@ fun ChatComposer(
                     ComposerInput(
                         value = value,
                         onValueChange = onValueChange,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).focusRequester(focusRequester),
                     )
                 }
                 ActionButton(

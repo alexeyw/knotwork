@@ -18,6 +18,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +39,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Menu
@@ -347,14 +351,25 @@ private const val TOKEN_FORMAT_THRESHOLD = 1000
  * strip is rendered above the composer — `console │ [NODE]  idle · ready ⌃`.
  * When the console is open the same strip renders as the sheet's header
  * instead, never both at once.
+ *
+ * The whole bar owns the taps that land on it. The message list is laid out
+ * under it, so a tap on the strip's margin or on a run notice — neither of
+ * which takes touches — used to reach the message scrolled behind, and open a
+ * link in it. `internal` for [ChatHomeBottomBarTapTest].
+ *
+ * @param state The screen state: status strip, run notices and composer.
+ * @param callbacks Where the bar's controls report.
  */
 @Composable
-private fun ChatHomeBottomBar(state: ChatHomeViewState, callbacks: ChatHomeCallbacks) {
+internal fun ChatHomeBottomBar(state: ChatHomeViewState, callbacks: ChatHomeCallbacks) {
+    // Any pointer handler makes the bar a hit, which stops the tap from being
+    // offered to the list beneath; its own controls still consume first.
+    val ownsItsTaps = Modifier.pointerInput(Unit) { detectTapGestures {} }
     if (state.archivedReadOnly) {
-        ChatHomeArchivedBar(onRestore = callbacks.onRestoreArchivedThread)
+        Box(modifier = ownsItsTaps) { ChatHomeArchivedBar(onRestore = callbacks.onRestoreArchivedThread) }
         return
     }
-    Column {
+    Column(modifier = ownsItsTaps) {
         if (state.agentStatusLine != null) {
             AgentStatusStrip(
                 text = state.agentStatusLine,
@@ -530,58 +545,65 @@ private fun ChatHomeLoadingBody(padding: PaddingValues) {
  */
 @Composable
 private fun ChatHomeEmptyBody(state: ChatHomeViewState, callbacks: ChatHomeCallbacks, padding: PaddingValues) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(horizontal = ChatHorizontalPadding),
-    ) {
-        Spacer(modifier = Modifier.weight(EMPTY_BODY_TOP_WEIGHT))
-        BrandGlyphTile()
-        Text(
-            text = stringResource(R.string.knotwork_chat_home_empty_title),
-            style = KnotworkTextStyles.TitleLg.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(
-                R.string.knotwork_chat_home_empty_caption,
-                state.pipelineName,
-                state.modelName,
-            ),
-            style = KnotworkTextStyles.BodyBase,
-            color = KnotworkTheme.extended.onSurfaceMuted,
-        )
-        Spacer(modifier = Modifier.height(KnotworkTheme.spacing.sp2))
+    // Scrolls, and is at least as tall as the space it gets: while everything fits,
+    // the weighted spacers centre it as before; once it does not — a short screen,
+    // the keyboard, landscape, a large font, six two-line cards — the spacers shrink
+    // to nothing and the column scrolls instead of cutting off its last cards.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(padding)) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
-            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight)
+                .padding(horizontal = ChatHorizontalPadding),
         ) {
-            state.samplePromptCards.forEach { card ->
-                SamplePromptCard(card = card, onClick = { callbacks.onSamplePromptCard(card) })
-            }
-            // Legacy chip row remains usable when the host hasn't migrated
-            // to the rich-card list yet. Drops once `samplePromptCards`
-            // is populated.
-            if (state.samplePromptCards.isEmpty() && state.samplePrompts.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
-                    verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
-                ) {
-                    state.samplePrompts.forEach { prompt ->
-                        KnotworkSuggestionChip(
-                            label = prompt,
-                            onClick = { callbacks.onSamplePrompt(prompt) },
-                        )
+            Spacer(modifier = Modifier.weight(EMPTY_BODY_TOP_WEIGHT))
+            BrandGlyphTile()
+            Text(
+                text = stringResource(R.string.knotwork_chat_home_empty_title),
+                style = KnotworkTextStyles.TitleLg.copy(
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(
+                    R.string.knotwork_chat_home_empty_caption,
+                    state.pipelineName,
+                    state.modelName,
+                ),
+                style = KnotworkTextStyles.BodyBase,
+                color = KnotworkTheme.extended.onSurfaceMuted,
+            )
+            Spacer(modifier = Modifier.height(KnotworkTheme.spacing.sp2))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                state.samplePromptCards.forEach { card ->
+                    SamplePromptCard(card = card, onClick = { callbacks.onSamplePromptCard(card) })
+                }
+                // Legacy chip row remains usable when the host hasn't migrated
+                // to the rich-card list yet. Drops once `samplePromptCards`
+                // is populated.
+                if (state.samplePromptCards.isEmpty() && state.samplePrompts.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+                        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+                    ) {
+                        state.samplePrompts.forEach { prompt ->
+                            KnotworkSuggestionChip(
+                                label = prompt,
+                                onClick = { callbacks.onSamplePrompt(prompt) },
+                            )
+                        }
                     }
                 }
             }
+            Spacer(modifier = Modifier.weight(EMPTY_BODY_BOTTOM_WEIGHT))
         }
-        Spacer(modifier = Modifier.weight(EMPTY_BODY_BOTTOM_WEIGHT))
     }
 }
 

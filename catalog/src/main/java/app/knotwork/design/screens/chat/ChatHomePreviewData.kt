@@ -174,6 +174,24 @@ internal object ChatHomePreview {
         samplePrompts = samplePrompts(),
     )
 
+    /**
+     * Empty state as the app shows it: the rich suggestion cards (six, the most a
+     * pipeline can carry, two of them with two-line titles) and the status strip the
+     * app always shows above the composer on a new chat.
+     */
+    fun emptyWithCards(): ChatHomeViewState = empty().copy(
+        samplePrompts = emptyList(),
+        samplePromptCards = listOf(
+            ChatHomeSamplePromptCard("c1", "Summarise the last meeting notes", "memory · summary"),
+            ChatHomeSamplePromptCard("c2", "Plan my afternoon around the two calls I still have", "calendar"),
+            ChatHomeSamplePromptCard("c3", "Search recent emails about the deploy", "search_tool"),
+            ChatHomeSamplePromptCard("c4", "Draft a reply to the landlord about the broken heater", "write_file"),
+            ChatHomeSamplePromptCard("c5", "What is on my list for tomorrow?", "memory"),
+            ChatHomeSamplePromptCard("c6", "Translate this paragraph into Spanish", "on-device"),
+        ),
+        agentStatusLine = "idle · on-device",
+    )
+
     /** Idle state — populated conversation, composer ready. */
     fun idle(): ChatHomeViewState = ChatHomeViewState(
         visualState = ChatHomeVisualState.Idle,
