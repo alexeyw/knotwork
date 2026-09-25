@@ -50,7 +50,7 @@ Required toolchain:
   Robolectric backend in `:catalog` renders the snapshot suites against
   SDK 36 — the newest release the project supports, pinned as a fixed
   reference so committed baselines survive a `minSdk` change — and
-  Robolectric 4.16 needs JDK 21 for that. Production code still compiles to
+  Robolectric 4.17 needs JDK 21 for that. Production code still compiles to
   `JavaVersion.VERSION_17` / `JvmTarget.JVM_17` — building the APK works
   on JDK 17 — but `./gradlew check` (the merge gate) needs JDK 21. The
   Gradle daemon asks for JDK 21 of any vendor
@@ -60,7 +60,7 @@ Required toolchain:
   which is why the build no longer names a vendor that only a download could
   supply.
 - **Android Studio** — current stable channel (or any IDE that supports
-  AGP 9.3.x and Kotlin 2.4.x).
+  AGP 9.4.x and Kotlin 2.4.x).
 - **Android SDK** — install platform **API 37** (`compileSdk` +
   `targetSdk`). Minimum runtime is API 34 (Android 14).
 - **NDK** — not needed for debug builds or `./gradlew check`. A **release**

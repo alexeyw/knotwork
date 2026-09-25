@@ -1,61 +1,67 @@
 [versions]
-agp = "9.3.1"
+agp = "9.4.1"
 # Not a dependency: the NDK whose `llvm-strip` strips the prebuilt native libraries
 # of a release build (`android.ndkVersion`). Pinned so the stripped bytes are a
 # property of the repository, not of the host; a release build fails without it
 # installed. `.github/workflows/release.yml` installs the version read from here.
-# 28.2.13676358 is AGP 9.3.1's own default, i.e. what 0.10.1 was stripped with.
+# 28.2.13676358 is AGP 9.3.1's own default, i.e. what 0.10.1 was stripped with,
+# and still AGP 9.4.1's (read from the plugin jar).
 ndk = "28.2.13676358"
-coreKtx = "1.19.0"
+coreKtx = "1.19.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
-kotlin = "2.4.10"
-composeBom = "2026.08.00"
+kotlin = "2.4.20"
+composeBom = "2026.09.00"
 hilt = "2.60.1"
-ksp = "2.3.9"
+ksp = "2.3.12"
 coroutines = "1.11.0"
 serialization = "1.11.0"
 timber = "5.0.1"
-room = "2.8.4"
+room = "2.8.5"
 datastore = "1.2.1"
 mockk = "1.14.11"
-litertlm = "0.16.1"
+litertlm = "0.17.1"
 mediapipe = "1.0.0"
 # Not a direct dependency: a floor under MediaPipe's own protobuf-javalite (4.26.1
 # in tasks-core 1.0.0), which sits inside CVE-2024-7254. Applied as a constraint in
 # app/build.gradle.kts; drop it once MediaPipe itself requires >= 4.27.5.
 protobufJavalite = "4.27.5"
-navigationCompose = "2.9.8"
+navigationCompose = "2.10.2"
 hiltNavigationCompose = "1.4.0"
 okhttp = "5.5.0"
-koog = "1.1.1"
-# Google / DeepSeek prompt-executor clients and the MCP server module have
-# not promoted past `1.1.1-beta` on Maven Central yet (the rest of
-# Koog 1.1.1 is stable). Pin them separately so a single `koog` bump doesn't
-# fail to resolve. Re-collapse onto `koog` once these three artifacts ship
-# their stable release.
-koog-preview = "1.1.1-beta"
+koog = "1.3.0"
+# Google / DeepSeek prompt-executor clients and the MCP client module have
+# not promoted past `1.3.0-beta` on Maven Central yet (the rest of
+# Koog 1.3.0 is stable; checked 25.09.2026). Pin them separately so a single
+# `koog` bump doesn't fail to resolve. Re-collapse onto `koog` once these three
+# artifacts ship their stable release.
+koog-preview = "1.3.0-beta"
+# Held at alpha09 on purpose. alpha10 dropped `appfunctions-service`: its classes
+# moved into `appfunctions` (package `androidx.appfunctions`) and every function must
+# sit inside a service annotated `@AppFunctionServiceEntryPoint` (alpha12 also removes
+# `AppFunctionContext`). Moving is a code migration, not a version bump — the service
+# index stopping at alpha09 means the artifact ended, not that it lags.
 appfunctions = "1.0.0-alpha09"
 markdown-renderer = "0.45.0"
-work = "2.11.2"
+work = "2.12.0"
 hiltWork = "1.4.0"
 gson = "2.14.0"
 json = "20260814"
-sqlcipher = "4.18.0"
+sqlcipher = "4.19.0"
 detekt = "2.0.0-alpha.6"
 ktlint = "14.2.0"
 kover = "0.9.9"
-firebaseBom = "34.18.0"
+firebaseBom = "34.19.0"
 googleServices = "4.5.0"
 crashlyticsPlugin = "3.0.8"
 coreSplashscreen = "1.2.0"
-roborazzi = "1.72.0"
-robolectric = "4.16.1"
+roborazzi = "1.75.0"
+robolectric = "4.17"
 processPhoenix = "3.0.0"
-coil = "3.5.0"
+coil = "3.6.3"
 exifinterface = "1.4.2"
 konsist = "0.17.3"
 
