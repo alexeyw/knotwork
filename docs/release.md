@@ -263,6 +263,11 @@ signing setup changes:
   working on that channel and nothing else says so. Debug builds use the
   committed placeholder file and are not affected.
 - **Enabled products.** Nothing beyond Crashlytics.
+- **No other keys.** Firebase creates a *Browser key* with the project, for web
+  apps; this project has none, so the key is unused and has been deleted. The
+  key in the APK is the Android key (compare its first characters with the one
+  in `google-services.json`). A deleted key can be restored from the Credentials
+  page for 30 days.
 - **Verify after any change.** With crash reporting on, both a Play install and a
   GitHub APK produce successful (2xx) requests on the Firebase Installations
   API's metrics page in the Cloud console; a 403 means a pair is missing.
