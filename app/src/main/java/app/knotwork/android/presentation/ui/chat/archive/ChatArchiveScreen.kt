@@ -2,14 +2,12 @@ package app.knotwork.android.presentation.ui.chat.archive
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -18,7 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
 import app.knotwork.android.presentation.ui.chat.toShareChooser
-import app.knotwork.design.components.misc.KnotworkSnackbar
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chatarchive.ChatArchiveCallbacks
 import app.knotwork.design.screens.chatarchive.ChatArchiveContent
 import app.knotwork.design.screens.chatarchive.ChatArchiveRowUi
@@ -90,11 +88,8 @@ fun ChatArchiveScreen(
                 onDeleteDismiss = viewModel::dismissDelete,
                 onRetry = viewModel::retry,
             ),
+            snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
         )
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) { data -> KnotworkSnackbar(data = data) }
     }
 }
 

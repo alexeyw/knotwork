@@ -8,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -30,6 +29,7 @@ import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.usecases.promptpack.ExportedPromptPack
 import app.knotwork.android.presentation.ui.common.asString
 import app.knotwork.android.presentation.ui.components.PromptPreviewBottomSheet
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.prompts.PromptEditorSheetBody
 import app.knotwork.design.screens.prompts.PromptEditorState
 import app.knotwork.design.screens.prompts.PromptEditorStrings
@@ -130,7 +130,7 @@ fun PromptLibraryScreen(
         modifier = modifier,
         strings = strings.content,
         callbacks = callbacks,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
     )
 
     PromptExportLauncher(uiState = uiState, viewModel = viewModel, resolver = context.contentResolver)

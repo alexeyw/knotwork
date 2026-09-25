@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -81,7 +80,7 @@ import app.knotwork.design.components.dialogs.ConfirmDialog
 import app.knotwork.design.components.dialogs.ConfirmDialogUi
 import app.knotwork.design.components.knotworkMarkdownColor
 import app.knotwork.design.components.knotworkMarkdownTypography
-import app.knotwork.design.components.misc.KnotworkSnackbar
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chat.ChatHomeCallbacks
 import app.knotwork.design.screens.chat.ChatHomeContent
 import app.knotwork.design.theme.KnotworkTheme
@@ -553,18 +552,10 @@ fun ChatHomeScreen(
                 )
             },
             messageListState = chatListState,
+            // In the chat's own Scaffold, which lifts it above the bottom bar —
+            // composer, console strip and run notices, whatever their height.
+            snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
         )
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                // sp16 (bottom-nav) + sp8 (composer breathing room) = 96 dp.
-                // No dedicated catalog "snackbar inset" token yet — composed
-                // from the spacing scale so the value stays grounded.
-                .padding(bottom = KnotworkTheme.spacing.sp16 + KnotworkTheme.spacing.sp8),
-        ) { data ->
-            KnotworkSnackbar(data = data)
-        }
         ChatHomeDebugStatePicker(
             expanded = debugPickerExpanded,
             onDismiss = { debugPickerExpanded = false },

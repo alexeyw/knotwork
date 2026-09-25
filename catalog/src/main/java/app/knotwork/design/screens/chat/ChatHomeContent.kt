@@ -148,6 +148,8 @@ private const val CONSOLE_DRAG_HANDLE_ALPHA = 0.30f
  *   library — the app supplies the renderer (typically
  *   `com.mikepenz.markdown.m3.Markdown { source -> Markdown(content = source) }`).
  *   When `null` the body falls back to plain text.
+ * @param snackbarHost Where the screen's snackbars render: the Scaffold places it above its
+ *   bottom bar and floating action button. The app passes a `KnotworkSnackbarHost`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,9 +159,11 @@ fun ChatHomeContent(
     callbacks: ChatHomeCallbacks = noopChatHomeCallbacks(),
     markdownRenderer: (@Composable (String) -> Unit)? = null,
     messageListState: LazyListState = rememberLazyListState(),
+    snackbarHost: @Composable () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
+            snackbarHost = snackbarHost,
             containerColor = MaterialTheme.colorScheme.surface,
             topBar = {
                 app.knotwork.design.components.topbar.KnotworkTopAppBarShell {

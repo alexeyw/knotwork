@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
@@ -25,7 +26,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,8 +44,7 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.get
 import app.knotwork.android.presentation.state.TransientMessageRelay
-import app.knotwork.design.components.misc.KnotworkSnackbar
-import app.knotwork.design.components.misc.SnackbarVariant
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkIconSizes
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -161,13 +160,14 @@ fun AppShellScaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState) { data ->
-                // Render every transient message through the Knotwork-toned
-                // surface so the onboarding skip-flow hint (and every other
-                // activity-level snackbar) sits on `extended.surface3`
-                // instead of the raw Material3 chrome.
-                KnotworkSnackbar(data = data, variant = SnackbarVariant.Default)
-            }
+            // The Scaffold lifts it above the bottom nav; with the nav hidden
+            // (splash, onboarding, editor, sheets) nothing below it absorbs the
+            // system navigation bar — this Scaffold's content insets are zero —
+            // so the host clears it itself.
+            KnotworkSnackbarHost(
+                hostState = snackbarHostState,
+                modifier = if (showBottomNav) Modifier else Modifier.navigationBarsPadding(),
+            )
         },
         bottomBar = {
             // Bind the bottom-nav slide to `KnotworkTheme.motion.dur3` (`easeStd`)

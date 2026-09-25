@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -17,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -33,6 +33,7 @@ import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.components.dialogs.SingleChoiceDialog
 import app.knotwork.design.components.dialogs.SingleChoiceDialogUi
 import app.knotwork.design.components.dialogs.SingleChoiceOptionUi
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.automation.ExternalAutomationConsentContent
 import app.knotwork.design.screens.automation.ExternalAutomationConsentStrings
 import app.knotwork.design.screens.settings.AboutSettingsContent
@@ -414,7 +415,8 @@ private fun SettingsSurface(viewModel: SettingsViewModel, content: @Composable (
     CompositionLocalProvider(LocalSettingsHints provides hints) {
         Box(modifier = Modifier.fillMaxSize()) {
             content()
-            SnackbarHost(hostState = snackbarHostState)
+            // Bottom centre: unaligned, a Box child sits at the top-left, over the top bar.
+            KnotworkSnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
         }
     }
 }

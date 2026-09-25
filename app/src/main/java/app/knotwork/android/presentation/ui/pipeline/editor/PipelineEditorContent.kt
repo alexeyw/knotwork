@@ -1,8 +1,10 @@
 package app.knotwork.android.presentation.ui.pipeline.editor
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
@@ -53,6 +55,8 @@ import app.knotwork.design.components.pipelineeditor.NodeError
  * @param onFocusNode forwarded from a `ValidationBar` row tap.
  * @param onMultiSelectCancel exits multi-select without acting.
  * @param onMultiSelectDelete removes every multi-selected node + their connections.
+ * @param snackbarHost the screen's snackbar host, drawn at the bottom of the canvas area —
+ *   above the [ValidationBar], which a host at the bottom of the screen used to cover.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -83,6 +87,7 @@ internal fun PipelineEditorContent(
     onMultiSelectDelete: () -> Unit,
     modifier: Modifier = Modifier,
     subtitleForNode: (NodeModel) -> String? = { null },
+    snackbarHost: @Composable () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         if (editor.multiSelectMode && editor.selection.isNotEmpty()) {
@@ -103,22 +108,25 @@ internal fun PipelineEditorContent(
             )
         }
 
-        EditorCanvas(
-            graph = graph,
-            editor = editor,
-            errorsByNodeId = errorsByNodeId,
-            reducedMotion = reducedMotion,
-            onMoveNode = onMoveNode,
-            onAddNode = onAddNode,
-            onAddConnection = onAddConnection,
-            onConnectionDropped = onConnectionDropped,
-            onOpenNodeConfig = onOpenNodeConfig,
-            onLongPressEdge = onLongPressEdge,
-            onStartWithInput = onStartWithInput,
-            onFromTemplate = onFromTemplate,
-            subtitleForNode = subtitleForNode,
-            modifier = Modifier.weight(1f),
-        )
+        Box(modifier = Modifier.weight(1f)) {
+            EditorCanvas(
+                graph = graph,
+                editor = editor,
+                errorsByNodeId = errorsByNodeId,
+                reducedMotion = reducedMotion,
+                onMoveNode = onMoveNode,
+                onAddNode = onAddNode,
+                onAddConnection = onAddConnection,
+                onConnectionDropped = onConnectionDropped,
+                onOpenNodeConfig = onOpenNodeConfig,
+                onLongPressEdge = onLongPressEdge,
+                onStartWithInput = onStartWithInput,
+                onFromTemplate = onFromTemplate,
+                subtitleForNode = subtitleForNode,
+                modifier = Modifier.fillMaxSize(),
+            )
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) { snackbarHost() }
+        }
 
         // ValidationBar at the bottom reports validation state so the user
         // always sees the save gate.

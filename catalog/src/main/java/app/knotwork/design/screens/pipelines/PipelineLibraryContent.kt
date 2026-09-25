@@ -85,10 +85,13 @@ private val DefaultBadgeHeight = 22.dp
  *    / Delete`. Visibility is driven by [PipelineLibraryViewState.openOverflowRowId]
  *    so the host owns the open/close transitions.
  *
- * The pill FAB (`+ New pipeline`) is **not** rendered here. It is
- * placed half-overlapping the bottom-nav, which only the host
- * `AppShellScaffold` can position cleanly — `:app` overlays the catalog
- * `PipelineLibraryFab` composable above the bottom nav.
+ * The create action is the host's: `:app` passes its speed dial through
+ * [floatingActionButton], so the Scaffold keeps a snackbar clear of it.
+ *
+ * @param snackbarHost Where the screen's snackbars render: the Scaffold places it above its
+ *   bottom bar and floating action button. The app passes a `KnotworkSnackbarHost`.
+ * @param floatingActionButton The create action; in the Scaffold's slot so a snackbar is
+ *   lifted above it rather than drawn over it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,8 +99,12 @@ fun PipelineLibraryContent(
     state: PipelineLibraryViewState,
     modifier: Modifier = Modifier,
     callbacks: PipelineLibraryCallbacks = noopPipelineLibraryCallbacks(),
+    snackbarHost: @Composable () -> Unit = {},
+    floatingActionButton: @Composable () -> Unit = {},
 ) {
     Scaffold(
+        snackbarHost = snackbarHost,
+        floatingActionButton = floatingActionButton,
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {

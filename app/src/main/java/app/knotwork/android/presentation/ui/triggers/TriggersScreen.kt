@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,7 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +42,7 @@ import app.knotwork.android.presentation.ui.common.JournalExportActionHandlers
 import app.knotwork.android.presentation.ui.common.asString
 import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.android.presentation.ui.common.rememberJournalExportHandlers
+import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.triggers.TriggerConditionType
 import app.knotwork.design.screens.triggers.TriggerDeleteDialogContent
 import app.knotwork.design.screens.triggers.TriggerDeleteStrings
@@ -143,6 +142,9 @@ fun TriggersScreen(
     Box(modifier = modifier.fillMaxSize()) {
         val editor = uiState.editor
         val detailTrigger = uiState.detailTrigger
+        // One host, handed to whichever surface is up: each has its own Scaffold,
+        // and the list's lifts it above the new-trigger button.
+        val snackbarHost: @Composable () -> Unit = { KnotworkSnackbarHost(hostState = snackbarHostState) }
         when {
             editor != null -> TriggerEditorContent(
                 state = uiState.toEditorUi(editor),
@@ -165,14 +167,17 @@ fun TriggersScreen(
                     onEnabledToggle = viewModel::onEnabledToggle,
                     onDelete = { editor.id?.let(viewModel::requestDelete) },
                 ),
+                snackbarHost = snackbarHost,
             )
             detailTrigger != null -> TriggerDetailSurface(
+                snackbarHost = snackbarHost,
                 uiState = uiState,
                 trigger = detailTrigger,
                 viewModel = viewModel,
                 nowMillis = nowMillis,
             )
             else -> TriggersList(
+                snackbarHost = snackbarHost,
                 uiState = uiState,
                 viewModel = viewModel,
                 onBack = onBack,
@@ -194,16 +199,13 @@ fun TriggersScreen(
                 )
             }
         }
-        // Bottom-centre, matching the request-journal screen: the two surfaces
-        // report the same journal-export outcomes, and a message that appears in a
-        // different corner on each reads as two different features.
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }
 
 /** The list surface + its delete dialog, shown when the editor is closed. */
 @Composable
 private fun TriggersList(
+    snackbarHost: @Composable () -> Unit,
     uiState: TriggersUiState,
     viewModel: TriggersViewModel,
     onBack: () -> Unit,
@@ -241,6 +243,7 @@ private fun TriggersList(
             onSaveJournal = journalExport.onSave,
             onOpenDocumentation = { openDocumentation(context, DocumentationLinks.ID_TRIGGERS) },
         ),
+        snackbarHost = snackbarHost,
     )
 }
 
@@ -390,6 +393,7 @@ private fun rememberTickingNowMillis(): Long {
  */
 @Composable
 private fun TriggerDetailSurface(
+    snackbarHost: @Composable () -> Unit,
     uiState: TriggersUiState,
     trigger: Trigger,
     viewModel: TriggersViewModel,
@@ -405,6 +409,7 @@ private fun TriggerDetailSurface(
             onToggleEnabled = { viewModel.toggleEnabled(trigger.id) },
             onBindPipeline = viewModel::editFromDetail,
         ),
+        snackbarHost = snackbarHost,
     )
 }
 
