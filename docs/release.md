@@ -245,6 +245,36 @@ rather than discovering the wrong signer at the end of it.
 The `check.yml` gate does **not** build release artefacts and needs none of
 these secrets.
 
+### The Firebase project behind the `full` build
+
+The published `full` APK carries the Firebase project's API key and project id.
+That is how Firebase works — the key identifies the project and is not a secret —
+but it makes the key's restrictions and the products enabled on the project part
+of what the app exposes, and neither lives in this repository. They are checked
+in the Google Cloud and Firebase consoles before a release (§9) and whenever the
+signing setup changes:
+
+- **API restrictions.** The Android key allows only the APIs the app calls. Crash
+  reporting needs the *Firebase Installations API* alone.
+- **Application restrictions.** *Android apps*, with the package paired with
+  **both** signing certificates' SHA-1: the Play App Signing key (Play Console →
+  *Setup* → *App signing*) and the release key that signs the GitHub APK (step 2
+  above, SHA-1 rather than SHA-256). With one pair missing, crash reporting stops
+  working on that channel and nothing else says so. Debug builds use the
+  committed placeholder file and are not affected.
+- **Enabled products.** Nothing beyond Crashlytics.
+- **No other keys.** Firebase creates a *Browser key* with the project, for web
+  apps; this project has none, so the key is unused and has been deleted. The
+  key in the APK is the Android key (compare its first characters with the one
+  in `google-services.json`). A deleted key can be restored from the Credentials
+  page for 30 days.
+- **Verify after any change.** With crash reporting on, both a Play install and a
+  GitHub APK produce successful (2xx) requests on the Firebase Installations
+  API's metrics page in the Cloud console; a 403 means a pair is missing.
+
+The values themselves — the key, the certificates' fingerprints, the project id —
+are not recorded here.
+
 ### Verifying the signature
 
 `release.yml` verifies every artefact it publishes and fails the release on a
@@ -293,7 +323,6 @@ short version:
 | AppFunctions             | The library's package is kept whole. What the platform loads by name is the pair of aggregated KSP classes, which the library's own rules keep too; the per-function inventory and invoker are reached by ordinary calls and may be renamed. |
 | Hilt                     | Aggregated component classes occasionally over-shrunk on full mode. |
 | Room                     | `*_Impl` DAOs / database instantiated reflectively.           |
-| OpenTelemetry incubator  | Optional symbols referenced from Koog's OTel logging plumbing — kept under `-dontwarn` since the runtime path is never hit. |
 
 If R8 starts stripping something at runtime, drop a new section into
 `proguard-rules.pro` rather than scattering rules across the file, and
@@ -341,6 +370,15 @@ What we already did to keep this in check:
 - **arm64-v8a only.** Other ABIs would more than double the artefact.
 - **R8 full mode + resource shrinking.** Saves ~2 MB on DEX vs. unminified.
 - **Strip Jansi non-Android natives.** `org/fusesource/jansi/internal/native/{Windows,Mac,Linux,FreeBSD}/**` and `META-INF/native-image/jansi/**` are dropped via the `android.packaging.resources` exclude list — Jansi ships through Koog's logger and only its ANSI-escape rendering runs on JVM hosts.
+- **Leave Koog's telemetry out.** The `koog-agents` umbrella brings Koog's OpenTelemetry feature
+  and the OpenTelemetry SDK — exporters for Langfuse, W&B Weave, Datadog and any OTLP endpoint.
+  The app builds no Koog agent, so none of it was reachable, and every configuration now excludes
+  it (`configurations.configureEach` in `app/build.gradle.kts`). Measured on 25 September 2026 on
+  local release builds: 445,652 bytes off the `full` APK and 429,272 off `foss`, no
+  OpenTelemetry class left in the R8 mapping, and no exporter endpoint in the dex. Before the
+  exclusion, a scan of every class on both release runtime classpaths (88,988 classes in 487 jars)
+  found no reference to OpenTelemetry or to that Koog module outside the module itself, so nothing
+  that stays can reach for what left.
 - **Drop MediaPipe's text-generation library.** `**/libmediapipe_tasks_textgenai_jni.so` is excluded via `android.packaging.jniLibs`. Only `TextSummarizer` and `TextProofreader` load it — the app uses `TextEmbedder`, which loads `libmediapipe_tasks_jni.so` — and text generation belongs to LiteRT-LM. An exclude is a file-name pattern that stops matching silently if the library is renamed, so the release workflow asserts it on the artefact (§9): the library absent, and the LiteRT-LM and MediaPipe Tasks libraries present.
 
 Future wins (left out of scope for now):
@@ -732,7 +770,10 @@ same way merging a pull request is. Before pressing publish:
 
    A link that 404s here means the tag was not pushed, not that the registry is
    wrong.
-4. Publish.
+4. **Check the Firebase project behind the `full` build** (§3): key restrictions,
+   enabled products, and — after any change — successful requests from both
+   channels.
+5. Publish.
 
 **Dry-running the workflow.** *Actions* → *Release* → *Run workflow* takes a tag
 as input and performs every step except creating the release, so the pipeline
