@@ -315,7 +315,10 @@ class AgentWorker @AssistedInject constructor(
         val upperBound = run.finishedAt
         val finalMessage = chatRepository.getMessagesForSession(run.sessionId).first()
             .lastOrNull {
-                it.role == Role.AGENT && it.isFinal && (upperBound == null || it.timestamp <= upperBound)
+                it.role == Role.AGENT &&
+                    it.isFinal &&
+                    it.writtenOnThisDevice &&
+                    (upperBound == null || it.timestamp <= upperBound)
             }
         return finalMessage?.content
             ?.lineSequence()

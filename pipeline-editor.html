@@ -5679,25 +5679,23 @@
 
     /**
      * Reads a node's `contextConfig` from a file the way the app's importer does
-     * (`PipelineJsonSerializer`): no block at all takes the node type's defaults;
-     * inside a block, each flag is `optBoolean(key, true)` — a JSON boolean, or
-     * the string "true" / "false" in any case, and **on** for anything else,
-     * a missing key, `0` and `null` included. The browser used to fill a missing
-     * key from the type's defaults and read `0` / `null` as off, so it showed
-     * long-term memory and tool results off on a node the app sent them to.
+     * (`PipelineJsonSerializer`): no block at all, and any flag a block leaves out
+     * or sets to `null`, takes the node type's default; a flag is read through
+     * wireBool — a JSON boolean, or "true" / "false" in any case. Any other value
+     * makes the app refuse the whole file; here it shows the type's default. The
+     * browser once filled a missing flag from the defaults while the app read it
+     * as on, and showed memory and tool results off on a node that sent them.
      * `nodeInput` stays locked on, as the form shows it.
      */
     function readContextConfig(typeId, raw) {
-        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-            return Object.assign(defaultContextConfig(typeId), { nodeInput: true });
-        }
-        const flag = v => wireBool(v) ?? true;
+        const defaults = Object.assign(defaultContextConfig(typeId), { nodeInput: true });
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
         return {
-            chatHistory: flag(raw.chatHistory),
-            originalTask: flag(raw.originalTask),
+            chatHistory: wireBool(raw.chatHistory) ?? defaults.chatHistory,
+            originalTask: wireBool(raw.originalTask) ?? defaults.originalTask,
             nodeInput: true,
-            longTermMemory: flag(raw.longTermMemory),
-            toolResults: flag(raw.toolResults),
+            longTermMemory: wireBool(raw.longTermMemory) ?? defaults.longTermMemory,
+            toolResults: wireBool(raw.toolResults) ?? defaults.toolResults,
         };
     }
 
@@ -5822,13 +5820,13 @@
 
     /**
      * Maps a flat `cloudProvider` to the CLOUD node's provider as the run
-     * resolves it (`CloudLlmNodeExecutor`): `null` and the exact `auto`
-     * sentinel pick a provider at run time (the import turns a blank id into
-     * `auto`); a known id names its tile; any other id names no provider — the
-     * node fails — and is kept as an unknown value rather than shown as Auto.
+     * resolves it (`CloudLlmNodeExecutor`): `null` and the `auto` sentinel in any
+     * case pick a provider at run time (the import turns a blank id into `auto`);
+     * a known id names its tile; any other id names no provider — the app refuses
+     * such a file — and is kept as an unknown value rather than shown as Auto.
      */
     function flatToRichCloud(flatId) {
-        if (flatId == null || flatId === '' || flatId === 'auto') return 'AUTO';
+        if (flatId == null || flatId === '' || String(flatId).toLowerCase() === 'auto') return 'AUTO';
         return wireToTile(flatId) ?? UNKNOWN_WIRE_PREFIX + flatId;
     }
 
@@ -6369,7 +6367,7 @@
                 break;
             case 'CLOUD':
                 fields.push(cfgSelect('provider', 'Provider', CLOUD_PROVIDER_OPTIONS, cfg.provider || 'AUTO',
-                    v => `${String(v).slice(UNKNOWN_WIRE_PREFIX.length)} (no provider has this id — the node fails)`));
+                    v => `${String(v).slice(UNKNOWN_WIRE_PREFIX.length)} (no provider has this id — the app will not import this file)`));
                 fields.push(prompt('systemPrompt', 'System prompt', typeId, true));
                 break;
             case 'INTENT_ROUTER':

@@ -12,9 +12,9 @@ package app.knotwork.android.buildtools
  * each measured on a crafted file:
  * - the import read `config` keys the app never reads (a legacy prompt key shown as
  *   any node's prompt);
- * - the node's *Input data* flags were filled from the node type's defaults, and `0` /
- *   `null` read as off, while the app reads a missing key, `0` and `null` as **on** —
- *   long-term memory and tool results shown off on a cloud node the app sent them to;
+ * - the node's *Input data* flags were read by two different rules — `0` / `null` shown
+ *   as off while the app read them as **on** — so long-term memory and tool results
+ *   showed off on a cloud node the app sent them to;
  * - provider ids were matched case-sensitively, so `"Anthropic"` showed as on-device
  *   while the app called Anthropic.
  *

@@ -237,6 +237,19 @@ class CloudLlmNodeExecutorTest {
     }
 
     @Test
+    fun `given the auto sentinel in upper case when execute then a provider is picked from the keys`() = runTest {
+        // The node sheet shows "AUTO" as Auto (it compares ignoring case); the run
+        // must treat it the same way instead of as an unknown provider.
+        val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "AUTO")
+        every { apiKeyRepository.getAnthropicKey() } returns flowOf(null)
+
+        executor.execute(node, "input", "s1", "Q").toList()
+
+        // Auto-detection is the only path that reads the saved keys.
+        verify { apiKeyRepository.getGoogleKey() }
+    }
+
+    @Test
     fun `given a stream that ends without a finish reason then the answer is not passed off as complete`() = runTest {
         // Measured shape of a dropped connection on the OpenAI-compatible clients: the
         // frames are identical to a healthy stream except that End carries no finish

@@ -151,12 +151,23 @@ interface ChatRepository {
      *  - the document produced by an export (`{"sessionName": ..., "messages": [...]}`);
      *  - a bare top-level array of message objects (`[{...}, ...]`).
      *
-     * Each message must carry `role`, `text`, and `timestamp`. Unknown roles
-     * default to `USER`; missing timestamps default to "now".
+     * Each message carries `role`, `text` and `timestamp`. The file is someone
+     * else's text, so the import does not take it at its word:
+     *  - only `USER` and `AGENT` rows are imported (an unknown or blank role reads as
+     *    `USER`); `SYSTEM` rows — the source device's notices and tool observations —
+     *    are left out;
+     *  - every row is marked [app.knotwork.android.domain.models.ChatMessage.imported],
+     *    so long-term memory extraction, Retry and model attribution skip it;
+     *  - no row is dated after the import: a later file is moved back as a whole,
+     *    keeping its order; a missing timestamp reads as the import time;
+     *  - the file is read in full before anything is written, and written in one
+     *    transaction, so a file that fails stores nothing.
      *
      * @param json The JSON content to import.
      * @return The id of the newly created session.
-     * @throws org.json.JSONException If the document cannot be parsed.
+     * @throws app.knotwork.android.domain.models.ChatImportException If the file is not
+     *   a chat this app can read; its message is app-written and quotes nothing from
+     *   the file.
      */
     suspend fun importChat(json: String): String
 

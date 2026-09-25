@@ -202,6 +202,19 @@ details.
   library behind the cloud providers, ships exporters for Langfuse, W&B and
   Datadog. The app never switched them on; they are now left out of the build
   entirely, which also makes the APK about 0.4 MB smaller.
+- **An imported chat is treated as someone else's words.** A chat file decides
+  who said what and when. Its messages were read for long-term memory as things
+  you had said, one dated in the future was what **Retry** re-ran, and its
+  system rows looked like the app's own notices, including on the Monitoring
+  screen. The import now keeps only the conversation, marks it as imported,
+  never dates it after the import, and writes the whole file or nothing;
+  imported messages are never read for memory or re-run.
+- **A pipeline file cannot leave a node's inputs to chance.** An *Input data*
+  switch a file left out was read as on, so a cloud node could receive memory
+  and tool results the editors showed as off. It now takes the node type's
+  usual setting, and a switch that is neither on nor off, or a provider name
+  the app does not know, refuses the file. "AUTO" now counts as automatic
+  provider choice in any letter case, as the node sheet already showed it.
 
 ### Fixed
 

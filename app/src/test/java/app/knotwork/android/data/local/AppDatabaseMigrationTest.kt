@@ -1077,4 +1077,28 @@ class AppDatabaseMigrationTest {
         assertTrue(backfill, backfill.contains("UPDATE `pending_interactions` SET `requestId` = `runId`"))
         assertTrue(backfill, backfill.contains("WHERE `kind` = 'APPROVAL'"))
     }
+
+    @Test
+    fun `MIGRATION_62_63 targets versions 62 to 63`() {
+        val migration = AppDatabase.MIGRATION_62_63
+
+        assertEquals(62, migration.startVersion)
+        assertEquals(63, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_62_63 adds the imported flag NOT NULL defaulting to written-on-this-device`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statement = slot<String>()
+
+        AppDatabase.MIGRATION_62_63.migrate(db)
+
+        verify(exactly = 1) { db.execSQL(capture(statement)) }
+        // NOT NULL with DEFAULT 0 must match the entity's `@ColumnInfo(defaultValue = "0")`
+        // or Room's schema validation rejects the migrated database.
+        assertEquals(
+            "ALTER TABLE `chat_messages` ADD COLUMN `imported` INTEGER NOT NULL DEFAULT 0",
+            statement.captured,
+        )
+    }
 }

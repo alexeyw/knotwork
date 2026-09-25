@@ -334,8 +334,13 @@ history is portable to any app that handles JSON or plain text.
 - **Import** — open the drawer and tap **Import chat**. The system
   file picker opens, filtered to `application/json`. Selecting a
   previously exported file creates a new chat session with the
-  imported messages and switches to it immediately. Malformed files
-  surface an inline error via the chat snackbar.
+  imported messages and switches to it immediately. A chat file can
+  come from anyone, so the import keeps only the conversation — your
+  turns and the assistant's — and leaves out the app notices and tool
+  observations of the device it came from. Imported messages are never
+  read for long-term memory, never re-run by **Retry**, and never dated
+  later than the moment you imported them. A file the app cannot read is
+  refused whole, with a short reason and nothing imported.
 - **Delete chat** — from the same overflow menu choose **Delete chat**.
   A destructive confirmation dialog appears; once confirmed the
   conversation (and every message in it) is removed. The next
@@ -1518,7 +1523,11 @@ in rather than taken as written:
   app or in the browser editor, shows the copy the run uses, whatever the editor
   copy says. The browser editor reads the file the way the app does, including
   a node's *Input data* switches and provider names in any letter case; a tool
-  or provider it has no entry for is shown by name and kept when you save.
+  it has no entry for is shown by name and kept when you save.
+- **Unclear settings are refused, not guessed.** An *Input data* switch a file
+  leaves out takes that node type's usual setting; one set to anything but on
+  or off (`true` / `false`) refuses the file, and so does a provider name the
+  app does not know.
   Files saved by an earlier browser editor kept four settings only in the
   editor copy; the browser editor still reads those from there and saves them
   into both.
@@ -2015,11 +2024,12 @@ ignored, and a fact that closely matches one you already have is
 skipped rather than duplicated.
 
 It reads your messages and the assistant's replies — never tool results
-(a web lookup, a file the agent read, an MCP server's answer) — and no
-message can pass for a turn of yours, so text a tool fetched is not put
-before the extractor as something you said. Text you share into the app
-from another app is recorded as your message, though, so it is read as
-yours.
+(a web lookup, a file the agent read, an MCP server's answer), and never
+the messages of an imported chat, which are someone else's words whatever
+the file calls them — and no message can pass for a turn of yours, so text
+a tool fetched is not put before the extractor as something you said. Text
+you share into the app from another app is recorded as your message,
+though, so it is read as yours.
 
 Each new chunk is tagged with the fact type it represents (`fact`,
 `preference`, `project`, …) and the chat it came from, so you can tell

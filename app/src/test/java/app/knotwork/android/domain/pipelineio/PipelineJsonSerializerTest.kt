@@ -398,6 +398,106 @@ class PipelineJsonSerializerTest {
         assertTrue((outcome as PipelineImportOutcome.Failure).message.contains("ghost"))
     }
 
+    /** A one-node document: a CLOUD node with the given `contextConfig` block and provider id. */
+    private fun cloudNodeDocument(contextConfig: String, cloudProvider: String = "anthropic") = """
+        {
+          "schemaVersion": 1, "id":"p", "name":"x", "updatedAt": 0,
+          "nodes":[{"id":"n1","type":"CLOUD","position":{"x":0,"y":0},
+                   "label":"Answer","config":{"cloudProvider":"$cloudProvider"},
+                   "contextConfig":$contextConfig}],
+          "connections":[]
+        }
+    """.trimIndent()
+
+    private fun parsedNode(json: String): NodeModel {
+        val outcome = PipelineJsonSerializer.parse(json)
+        assertTrue("Expected Success but was $outcome", outcome is PipelineImportOutcome.Success)
+        return (outcome as PipelineImportOutcome.Success).graph.nodes.single()
+    }
+
+    @Test
+    fun `given a contextConfig block that leaves flags out when parse then they take the node type's defaults`() {
+        // A cloud node whose file names only three of the five flags. The browser editor
+        // shows the missing ones from the node type's defaults (memory and tool results
+        // off for CLOUD); the run must read them the same way, not as "on".
+        val node = parsedNode(cloudNodeDocument("""{"chatHistory":true,"originalTask":true,"nodeInput":true}"""))
+
+        val defaults = NodeContextConfig.defaultForType(NodeType.CLOUD)
+        assertEquals(defaults.longTermMemory, node.contextConfig.longTermMemory)
+        assertEquals(defaults.toolResults, node.contextConfig.toolResults)
+    }
+
+    @Test
+    fun `given a contextConfig flag that is not a boolean when parse then the import is refused`() {
+        val outcome = PipelineJsonSerializer.parse(
+            cloudNodeDocument("""{"chatHistory":true,"originalTask":true,"nodeInput":true,"longTermMemory":0}"""),
+        )
+
+        assertTrue("Expected Failure but was $outcome", outcome is PipelineImportOutcome.Failure)
+        assertTrue((outcome as PipelineImportOutcome.Failure).message.contains("longTermMemory"))
+    }
+
+    @Test
+    fun `given every node type, flag and value shape when parse then the flag follows the app's reading rule`() {
+        // One rule for every node type: a flag left out or null takes the type's default,
+        // a boolean or "true"/"false" string is read as such, anything else refuses the
+        // file. The browser editor's readContextConfig mirrors this rule.
+        val flags = listOf("chatHistory", "originalTask", "nodeInput", "longTermMemory", "toolResults")
+        val read = mapOf("true" to true, "false" to false, "\"TRUE\"" to true, "\"false\"" to false)
+        val refused = listOf("0", "1", "\"yes\"", "[]")
+        NodeType.entries.forEach { type ->
+            val defaults = NodeContextConfig.defaultForType(type)
+            val defaultOf = mapOf(
+                "chatHistory" to defaults.chatHistory,
+                "originalTask" to defaults.originalTask,
+                "nodeInput" to defaults.nodeInput,
+                "longTermMemory" to defaults.longTermMemory,
+                "toolResults" to defaults.toolResults,
+            )
+            flags.forEach { flag ->
+                fun document(value: String?) = """
+                    {"schemaVersion": 1, "id":"p", "name":"x", "updatedAt": 0,
+                     "nodes":[{"id":"n1","type":"${type.name}","position":{"x":0,"y":0},"label":"n","config":{},
+                               "contextConfig":{${value?.let { "\"$flag\":$it" }.orEmpty()}}}],
+                     "connections":[]}
+                """.trimIndent()
+                fun flagOf(node: NodeModel) = mapOf(
+                    "chatHistory" to node.contextConfig.chatHistory,
+                    "originalTask" to node.contextConfig.originalTask,
+                    "nodeInput" to node.contextConfig.nodeInput,
+                    "longTermMemory" to node.contextConfig.longTermMemory,
+                    "toolResults" to node.contextConfig.toolResults,
+                ).getValue(flag)
+
+                assertEquals("$type.$flag absent", defaultOf.getValue(flag), flagOf(parsedNode(document(null))))
+                assertEquals("$type.$flag null", defaultOf.getValue(flag), flagOf(parsedNode(document("null"))))
+                read.forEach { (value, expected) ->
+                    assertEquals("$type.$flag = $value", expected, flagOf(parsedNode(document(value))))
+                }
+                refused.forEach { value ->
+                    val outcome = PipelineJsonSerializer.parse(document(value))
+                    assertTrue("$type.$flag = $value must be refused", outcome is PipelineImportOutcome.Failure)
+                    assertTrue((outcome as PipelineImportOutcome.Failure).message.contains(flag))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `given a provider id the app knows no provider by when parse then the import is refused`() {
+        val outcome = PipelineJsonSerializer.parse(cloudNodeDocument("{}", cloudProvider = "mistral"))
+
+        assertTrue("Expected Failure but was $outcome", outcome is PipelineImportOutcome.Failure)
+        assertTrue((outcome as PipelineImportOutcome.Failure).message.contains("mistral"))
+    }
+
+    @Test
+    fun `given known provider ids in any letter case when parse then the import succeeds and keeps them`() {
+        listOf("Anthropic", "GEMINI", "auto", "AUTO", "ollama").forEach { id ->
+            assertEquals(id, parsedNode(cloudNodeDocument("{}", cloudProvider = id)).cloudProvider)
+        }
+    }
+
     @Test
     fun `parse falls back to per-type defaults when contextConfig is missing`() {
         val json = """
