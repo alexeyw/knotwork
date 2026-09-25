@@ -26,6 +26,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PipelineRunDaoTest.kt` - Instrumented coverage for the retention queries of `PipelineRunDao` — the per-session window delete and the max-age delete.
       - `PromptTemplateDaoTest.kt` - Tests for `PromptTemplateDao`.
       - `TraceStepDaoTest.kt` - Tests for `TraceStepDao` — per-session ordering + FK cascade from `chat_sessions`.
+    - `SqlCipherWrongKeyTest.kt` - The recovery screen's "wrong key" route, against the real SQLCipher library.
 - `domain/` - Instrumented tests for the domain layer.
   - `usecases/` - Instrumented use-case coverage wired to real repositories.
     - `MemoryExtractionIntegrationTest.kt` - End-to-end integration coverage for `MemoryExtractionUseCase` wired to the real `MemoryRepositoryImpl` + `Converters` over an in-memory Room database.
