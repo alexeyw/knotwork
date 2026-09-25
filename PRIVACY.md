@@ -77,7 +77,8 @@ memories, pipelines, and run history can be deleted from inside the app, and
 run history is also pruned automatically according to the retention setting.
 If the database can no longer be unlocked, **Erase data** on the recovery
 screen deletes chats, memory, pipelines, workspace files and attachments, and
-keeps your settings and saved keys.
+keeps your settings and saved keys. Downloaded models stay on the device too:
+the app lists them again under Models the next time it starts.
 
 ---
 

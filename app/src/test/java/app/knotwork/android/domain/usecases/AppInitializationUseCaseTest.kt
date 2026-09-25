@@ -1,12 +1,10 @@
 package app.knotwork.android.domain.usecases
 
-import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.DbPassphraseUnavailableException
 import app.knotwork.android.domain.models.InitFailureKind
 import app.knotwork.android.domain.models.InitStage
 import app.knotwork.android.domain.models.MemorySummary
 import app.knotwork.android.domain.models.PipelineGraph
-import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
@@ -24,13 +22,13 @@ import org.junit.Test
 
 /**
  * Unit tests for [AppInitializationUseCase]. Verifies the strict stage order,
- * the non-fatal handling of model-load failures, the fatal handling of every
+ * the non-fatal handling of the model rediscovery pass, the fatal handling of every
  * Room-backed prefetch, and the determinate progress fractions.
  */
 class AppInitializationUseCaseTest {
 
     private lateinit var initializeAppUseCase: InitializeAppUseCase
-    private lateinit var loadModelUseCase: LoadModelUseCase
+    private lateinit var rediscoverDownloadedModels: RediscoverDownloadedModelsUseCase
     private lateinit var pipelineRepository: PipelineRepository
     private lateinit var chatRepository: ChatRepository
     private lateinit var memoryRepository: MemoryRepository
@@ -39,19 +37,19 @@ class AppInitializationUseCaseTest {
     @Before
     fun setUp() {
         initializeAppUseCase = mockk(relaxed = true)
-        loadModelUseCase = mockk()
+        rediscoverDownloadedModels = mockk()
         pipelineRepository = mockk()
         chatRepository = mockk()
         memoryRepository = mockk()
 
-        coEvery { loadModelUseCase() } returns Result.Success(Unit)
+        coEvery { rediscoverDownloadedModels() } returns 0
         coEvery { pipelineRepository.getAllPipelines() } returns flowOf(emptyList())
         coEvery { chatRepository.getSessionsFlow(includeArchived = false) } returns flowOf(emptyList())
         coEvery { memoryRepository.getRecentMemorySummaries(any()) } returns emptyList()
 
         useCase = AppInitializationUseCase(
             initializeAppUseCase = initializeAppUseCase,
-            loadModelUseCase = loadModelUseCase,
+            rediscoverDownloadedModels = rediscoverDownloadedModels,
             pipelineRepository = pipelineRepository,
             chatRepository = chatRepository,
             memoryRepository = memoryRepository,
@@ -66,7 +64,7 @@ class AppInitializationUseCaseTest {
         assertEquals(
             listOf(
                 InitStage.Initializing,
-                InitStage.LoadingModel,
+                InitStage.FindingModels,
                 InitStage.LoadingPipelines,
                 InitStage.LoadingChats,
                 InitStage.LoadingMemory,
@@ -88,22 +86,19 @@ class AppInitializationUseCaseTest {
         }
 
         coVerify(exactly = 1) { initializeAppUseCase() }
-        coVerify(exactly = 1) { loadModelUseCase() }
+        coVerify(exactly = 1) { rediscoverDownloadedModels() }
         coVerify(exactly = 1) { pipelineRepository.getAllPipelines() }
         coVerify(exactly = 1) { chatRepository.getSessionsFlow(includeArchived = false) }
         coVerify(exactly = 1) { memoryRepository.getRecentMemorySummaries(any()) }
     }
 
     @Test
-    fun `given LoadModelUseCase returns Error when invoked then continues to next stage`() = runTest {
-        coEvery { loadModelUseCase() } returns Result.Error(
-            error = object : AppError.System {},
-            message = "No active model found",
-        )
+    fun `given the model rediscovery throws when invoked then continues to next stage`() = runTest {
+        coEvery { rediscoverDownloadedModels() } throws IllegalStateException("external storage unavailable")
 
         val emissions = useCase().toList()
 
-        // Model failure must NOT be fatal: subsequent stages still run and
+        // Rediscovery failure must NOT be fatal: subsequent stages still run and
         // the flow terminates in Done.
         assertEquals(InitStage.Done, emissions.last().stage)
         assertTrue(emissions.any { it.stage == InitStage.LoadingPipelines })
@@ -122,7 +117,7 @@ class AppInitializationUseCaseTest {
         assertEquals("seed prompts failed", failed.cause)
 
         // Downstream stages must NOT run.
-        coVerify(exactly = 0) { loadModelUseCase() }
+        coVerify(exactly = 0) { rediscoverDownloadedModels() }
         coVerify(exactly = 0) { pipelineRepository.getAllPipelines() }
     }
 
@@ -141,7 +136,7 @@ class AppInitializationUseCaseTest {
 
         // Earlier stages emitted; later stages did not run.
         coVerify(exactly = 1) { initializeAppUseCase() }
-        coVerify(exactly = 1) { loadModelUseCase() }
+        coVerify(exactly = 1) { rediscoverDownloadedModels() }
         coVerify(exactly = 0) { chatRepository.getSessionsFlow(includeArchived = false) }
         coVerify(exactly = 0) { memoryRepository.getRecentMemorySummaries(any()) }
     }

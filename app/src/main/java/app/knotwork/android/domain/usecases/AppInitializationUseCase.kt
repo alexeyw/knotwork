@@ -4,7 +4,6 @@ import app.knotwork.android.domain.models.DbPassphraseUnavailableException
 import app.knotwork.android.domain.models.InitFailureKind
 import app.knotwork.android.domain.models.InitProgress
 import app.knotwork.android.domain.models.InitStage
-import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
@@ -23,7 +22,8 @@ import javax.inject.Inject
  *
  * Order of work (also reflected in [TOTAL_STEPS]):
  *  1. [InitStage.Initializing] — first-launch defaults via [InitializeAppUseCase].
- *  2. [InitStage.LoadingModel] — LiteRT model weights into memory.
+ *  2. [InitStage.FindingModels] — register again the downloaded model files the
+ *     registry lost (see [RediscoverDownloadedModelsUseCase]).
  *  3. [InitStage.LoadingPipelines] — pre-warm Room cache for pipelines.
  *  4. [InitStage.LoadingChats] — pre-warm Room cache for chat sessions.
  *  5. [InitStage.LoadingMemory] — pre-warm Room cache for memory chunks.
@@ -33,14 +33,19 @@ import javax.inject.Inject
  *    Room prefetches) are treated as fatal. If any throws, the use case emits
  *    [InitStage.Failed] with the failed stage and the throwable's message;
  *    the splash screen surfaces the error and offers a retry.
- *  - [InitStage.LoadingModel] is **non-fatal** — a missing or broken model is
- *    a recoverable user-facing condition handled by `ChatScreen` (inline error
- *    + Settings entry-point). Logging the failure is enough for the splash to
- *    proceed.
+ *  - [InitStage.FindingModels] is **non-fatal** — a model the pass could not
+ *    register is still one download away, and the rest of the app works
+ *    without it. Logging the failure is enough for the splash to proceed.
+ *
+ * **The model is not loaded here.** Every path that runs the model loads it on
+ * demand — the chat's send, and each pipeline step through `LoadModelUseCase` —
+ * because the engine is unloaded when the agent sits idle and under memory
+ * pressure anyway. Loading it on the splash only kept the user waiting, and held
+ * the weights in memory until the idle unload whether or not a message was sent.
  */
 class AppInitializationUseCase @Inject constructor(
     private val initializeAppUseCase: InitializeAppUseCase,
-    private val loadModelUseCase: LoadModelUseCase,
+    private val rediscoverDownloadedModels: RediscoverDownloadedModelsUseCase,
     private val pipelineRepository: PipelineRepository,
     private val chatRepository: ChatRepository,
     private val memoryRepository: MemoryRepository,
@@ -65,15 +70,14 @@ class AppInitializationUseCase @Inject constructor(
             return@flow
         }
 
-        emit(progress(InitStage.LoadingModel, "Loading on-device model…", completed = 1))
-        when (val result = loadModelUseCase()) {
-            is Result.Success -> Unit
-            is Result.Error -> {
-                // Non-fatal: ChatScreen surfaces an inline error and routes the
-                // user to Settings. Continuing here lets the rest of the app
-                // initialise so the user can fix the model from inside the UI.
-                Timber.tag(TAG).w("Model load skipped: %s", result.message)
-            }
+        emit(progress(InitStage.FindingModels, "Checking downloaded models…", completed = 1))
+        try {
+            rediscoverDownloadedModels()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Non-fatal: an unregistered model stays one download away.
+            Timber.tag(TAG).w(e, "Downloaded-model rediscovery failed; continuing")
         }
 
         emit(progress(InitStage.LoadingPipelines, "Reading pipelines…", completed = 2))

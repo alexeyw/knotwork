@@ -13,6 +13,7 @@ import app.knotwork.android.data.local.ApiKeyManager
 import app.knotwork.android.data.local.AttachmentStoreImpl
 import app.knotwork.android.data.local.AudioCaptureStoreImpl
 import app.knotwork.android.data.local.DatabaseResetServiceImpl
+import app.knotwork.android.data.local.DownloadedModelFilesImpl
 import app.knotwork.android.data.local.ImageCaptureStoreImpl
 import app.knotwork.android.data.local.SettingsManager
 import app.knotwork.android.data.local.TransientCacheSweeperImpl
@@ -91,6 +92,7 @@ import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
 import app.knotwork.android.domain.services.DatabaseResetService
+import app.knotwork.android.domain.services.DownloadedModelFiles
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.MemoryReembedScheduler
 import app.knotwork.android.domain.services.NativeMemorySampler
@@ -472,6 +474,14 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindAttachmentStore(store: AttachmentStoreImpl): AttachmentStore
+
+    /**
+     * Binds [DownloadedModelFilesImpl] to [DownloadedModelFiles] — the read-only
+     * listing of model files in the downloads directory, used to register again
+     * the models a database reset forgot.
+     */
+    @Binds
+    abstract fun bindDownloadedModelFiles(files: DownloadedModelFilesImpl): DownloadedModelFiles
 
     /**
      * Binds [AudioCaptureStoreImpl] to [AudioCaptureStore] — the ephemeral

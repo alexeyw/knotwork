@@ -6,7 +6,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -53,5 +56,30 @@ class RegisterDownloadedModelUseCaseTest {
         assertEquals(2_048L, updated.captured.size)
         // An active model that gets re-downloaded stays active.
         assertEquals(true, updated.captured.isActive)
+    }
+
+    @Test
+    fun `given two registrations of one file at once when both run then one row is inserted`() = runTest {
+        // A download finishing while the start-up rediscovery registers the same
+        // file: each looked up, found nothing, and inserted.
+        val rows = mutableListOf<LocalModel>()
+        coEvery { localModelRepository.findByFileName(any()) } coAnswers {
+            // Read, then suspend as a database call does before its result is used.
+            val found = rows.firstOrNull { it.name == firstArg<String>() }
+            yield()
+            found
+        }
+        coEvery { localModelRepository.insertModel(any()) } coAnswers {
+            rows += firstArg<LocalModel>()
+            rows.size.toLong()
+        }
+        coEvery { localModelRepository.updateModel(any()) } returns Unit
+
+        listOf(
+            async { useCase("gemma.litertlm", "/data/gemma.litertlm", sizeBytes = 2_048L) },
+            async { useCase("gemma.litertlm", "/data/gemma.litertlm", sizeBytes = 2_048L) },
+        ).awaitAll()
+
+        assertEquals(1, rows.size)
     }
 }

@@ -77,6 +77,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PipelineRunDaoRateCountTest.kt` - The count behind the scheduling tool's hourly ceiling, against a real (in-memory) Room database — its correctness is the SQL itself.
     - `DatabaseResetServiceImplTest.kt` - Verifies that `DatabaseResetServiceImpl` deletes both halves of the encrypted-database state — the database file and the stored passphrase — in a single quiesced wipe operation, and refuses to destroy the passphrase while the database file survives.
     - `DeferredPassphraseOpenHelperFactoryTest.kt` - Verifies the deferral contract of `DeferredPassphraseOpenHelperFactory`: no passphrase access during factory/helper construction (i.e. during Hilt provision), lazy delegate creation on first database access, no caching of failed construction (Retry support), and WAL-flag replay.
+    - `DownloadedModelFilesImplTest.kt` - `DownloadedModelFilesImpl` against the real external-files directory: what it lists is exactly the model files the downloader writes there, and none of the directory's other occupants.
     - `EmbeddingBlobCodecTest.kt` - Unit tests for `EmbeddingBlobCodec` — the binary wire format of the `memory_chunks.embedding` BLOB column.
     - `EncryptedDbPassphraseProviderTest.kt` - Verifies the loss-protection invariant of `EncryptedDbPassphraseProvider`: the passphrase is generated only when no database file exists, and any failure to read it back while the database is present surfaces as `DbPassphraseUnavailableException` instead of a silent regeneration that would destroy the user's encrypted data.
     - `ImageCaptureStoreImplTest.kt` - Verifies `ImageCaptureStoreImpl`: the camera's full-resolution original — the only copy that keeps its EXIF — is deleted on every way out of the store, and a URI that is not one of its captures can reach no file.
@@ -374,6 +375,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RecordTriggerEvaluationUseCaseTest.kt` - Unit tests for `RecordTriggerEvaluationUseCase`: it stamps the record's id and timestamp, persists exactly one evaluation, and normalises the run id so only a fired verdict retains it.
     - `RecordTriggerHitlEventUseCaseTest.kt` - Unit tests for `RecordTriggerHitlEventUseCase`: it normalises the reporting run to the root of its run tree — the id a journal row actually carries — and forwards the event unchanged.
     - `RecordTriggerRunOutcomeUseCaseTest.kt` - Unit tests for `RecordTriggerRunOutcomeUseCase`: it forwards the run outcome to the journal keyed by run id.
+    - `RediscoverDownloadedModelsUseCaseTest.kt` - Covers which model files on disk the start-up pass registers again: exactly the ones no registry row names by path or by name.
     - `ReembedAllMemoriesUseCaseTest.kt` - Unit tests for `ReembedAllMemoriesUseCase`.
     - `RegisterDownloadedModelUseCaseTest.kt` - Covers the upsert semantics of registering a downloaded file: the write runs on every completed download, including re-downloads of a file the user already has, so "insert once, refresh afterwards" is the whole contract.
     - `RenamePipelineUseCaseTest.kt` - Unit tests for `RenamePipelineUseCase`.

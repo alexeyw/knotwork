@@ -1394,7 +1394,11 @@ The passphrase lifecycle is asymmetric by design
   and its passphrase through `DatabaseResetService`, then — only if that
   succeeded — asks `AgentWorkspace`, `AttachmentStore` and
   `TransientCacheSweeper` to erase their content. Settings and the other
-  secret stores are kept.
+  secret stores are kept, and so are downloaded model files: the next
+  start's `RediscoverDownloadedModelsUseCase` (a stage of
+  `AppInitializationUseCase`) registers every model file in the downloads
+  directory that no registry row names. The start never loads the model
+  itself — the first run that needs it does, through `LoadModelUseCase`.
 
 None of these stores enters Android backup or device transfer
 ([SECURITY.md § Backup and device transfer](../SECURITY.md#backup-and-device-transfer)).

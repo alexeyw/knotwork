@@ -225,8 +225,19 @@ details.
   the app does not know, refuses the file. "AUTO" now counts as automatic
   provider choice in any letter case, as the node sheet already showed it.
 
+### Changed
+
+- **The app opens without loading the on-device model.** The start screen no
+  longer waits for the model; the first message loads it, as it already did
+  whenever the model had been unloaded after idling. Until a message is sent,
+  the model's memory stays free.
+
 ### Fixed
 
+- **Downloaded models come back after Erase data.** Erasing a database that can
+  no longer be unlocked keeps the downloaded models on the device, but the app
+  forgot them and listed none. They are listed again under Models the next time
+  the app starts, so re-downloading gigabytes is never the price of recovering.
 - **A scheduled pipeline that runs other pipelines no longer uses up the hourly
   limit early.** The agent may schedule at most 12 runs an hour, and each
   pipeline step inside a scheduled run counted as another run of its own.

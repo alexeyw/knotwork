@@ -14,8 +14,12 @@ sealed interface InitStage {
     /** Application-level setup — first-launch defaults, prompt seeding. */
     data object Initializing : InitStage
 
-    /** LiteRT-LM weights are being loaded into memory. */
-    data object LoadingModel : InitStage
+    /**
+     * Downloaded model files the registry does not list are being registered
+     * again. The model itself is not loaded here: the first run that needs it
+     * loads it.
+     */
+    data object FindingModels : InitStage
 
     /** Pipelines are being prefetched from Room into the in-memory cache. */
     data object LoadingPipelines : InitStage
@@ -69,7 +73,7 @@ enum class InitFailureKind {
  *
  * @property stage Current [InitStage].
  * @property message Human-readable label rendered under the progress bar
- *   (e.g. "Loading on-device model…").
+ *   (e.g. "Reading pipelines…").
  * @property completedSteps Number of stages already finished — `0` when
  *   the very first stage is in flight, `totalSteps` once [InitStage.Done]
  *   is emitted.

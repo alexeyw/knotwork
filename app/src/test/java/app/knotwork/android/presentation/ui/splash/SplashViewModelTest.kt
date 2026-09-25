@@ -74,7 +74,7 @@ class SplashViewModelTest {
     fun `given full successful run when collected then ends in done state`() = runTest {
         every { appInitializationUseCase() } returns flowOf(
             InitProgress(InitStage.Initializing, "Preparing…", 0, 5),
-            InitProgress(InitStage.LoadingModel, "Loading model…", 1, 5),
+            InitProgress(InitStage.FindingModels, "Checking downloaded models…", 1, 5),
             InitProgress(InitStage.LoadingPipelines, "Reading pipelines…", 2, 5),
             InitProgress(InitStage.LoadingChats, "Reading chats…", 3, 5),
             InitProgress(InitStage.LoadingMemory, "Reading memory…", 4, 5),
