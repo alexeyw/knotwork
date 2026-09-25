@@ -2858,9 +2858,9 @@ LLMs.
   keys) so gated repositories can be downloaded. The `+ Paste` button
   reads the system clipboard. The token is sent only to
   `huggingface.co`.
-- The **Custom model URL** field accepts a direct link to any
-  `.litertlm`, `.task`, or `.gguf` file. Tap `Get` to start
-  downloading. A link to any other host is downloaded without your
+- The **Custom model URL** field accepts a direct link to a
+  `.litertlm` file — the only format the on-device engine loads.
+  Tap `Get` to start downloading. A link to any other host is downloaded without your
   token.
 - The **Available presets** list shows curated models, each row in
   one of three states: `Get` (not downloaded), progress bar with

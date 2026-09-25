@@ -1386,7 +1386,11 @@ The passphrase lifecycle is asymmetric by design
   (`DeferredPassphraseOpenHelperFactory`), not during dependency injection,
   so a keystore failure surfaces where the UI can handle it; best-effort
   background maintenance skips its work instead of crashing while the
-  recovery screen is up.
+  recovery screen is up. The upkeep a cold start arms from `MainActivity`
+  runs through `StartupMaintenance`, one isolated step at a time: it reads
+  the database while the splash is still finding out whether it opens, and
+  an uncaught throw there once killed the process before the recovery
+  screen could appear.
 - The API-key store applies the opposite, availability-first policy: a
   value that no longer decrypts is dropped and reported as unset — keys
   are user re-enterable, so availability wins there.
@@ -1394,7 +1398,11 @@ The passphrase lifecycle is asymmetric by design
   and its passphrase through `DatabaseResetService`, then — only if that
   succeeded — asks `AgentWorkspace`, `AttachmentStore` and
   `TransientCacheSweeper` to erase their content. Settings and the other
-  secret stores are kept.
+  secret stores are kept, and so are downloaded model files: the next
+  start's `RediscoverDownloadedModelsUseCase` (a stage of
+  `AppInitializationUseCase`) registers every model file in the downloads
+  directory that no registry row names. The start never loads the model
+  itself — the first run that needs it does, through `LoadModelUseCase`.
 
 None of these stores enters Android backup or device transfer
 ([SECURITY.md § Backup and device transfer](../SECURITY.md#backup-and-device-transfer)).

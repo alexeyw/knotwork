@@ -77,6 +77,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PipelineRunDaoRateCountTest.kt` - The count behind the scheduling tool's hourly ceiling, against a real (in-memory) Room database — its correctness is the SQL itself.
     - `DatabaseResetServiceImplTest.kt` - Verifies that `DatabaseResetServiceImpl` deletes both halves of the encrypted-database state — the database file and the stored passphrase — in a single quiesced wipe operation, and refuses to destroy the passphrase while the database file survives.
     - `DeferredPassphraseOpenHelperFactoryTest.kt` - Verifies the deferral contract of `DeferredPassphraseOpenHelperFactory`: no passphrase access during factory/helper construction (i.e. during Hilt provision), lazy delegate creation on first database access, no caching of failed construction (Retry support), and WAL-flag replay.
+    - `DownloadedModelFilesImplTest.kt` - `DownloadedModelFilesImpl` against the real external-files directory: what it lists is exactly the model files the downloader writes there, and none of the directory's other occupants.
     - `EmbeddingBlobCodecTest.kt` - Unit tests for `EmbeddingBlobCodec` — the binary wire format of the `memory_chunks.embedding` BLOB column.
     - `EncryptedDbPassphraseProviderTest.kt` - Verifies the loss-protection invariant of `EncryptedDbPassphraseProvider`: the passphrase is generated only when no database file exists, and any failure to read it back while the database is present surfaces as `DbPassphraseUnavailableException` instead of a silent regeneration that would destroy the user's encrypted data.
     - `ImageCaptureStoreImplTest.kt` - Verifies `ImageCaptureStoreImpl`: the camera's full-resolution original — the only copy that keeps its EXIF — is deleted on every way out of the store, and a URI that is not one of its captures can reach no file.
@@ -374,6 +375,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RecordTriggerEvaluationUseCaseTest.kt` - Unit tests for `RecordTriggerEvaluationUseCase`: it stamps the record's id and timestamp, persists exactly one evaluation, and normalises the run id so only a fired verdict retains it.
     - `RecordTriggerHitlEventUseCaseTest.kt` - Unit tests for `RecordTriggerHitlEventUseCase`: it normalises the reporting run to the root of its run tree — the id a journal row actually carries — and forwards the event unchanged.
     - `RecordTriggerRunOutcomeUseCaseTest.kt` - Unit tests for `RecordTriggerRunOutcomeUseCase`: it forwards the run outcome to the journal keyed by run id.
+    - `RediscoverDownloadedModelsUseCaseTest.kt` - Covers which model files on disk the start-up pass registers again: exactly the ones no registry row names by path or by name.
     - `ReembedAllMemoriesUseCaseTest.kt` - Unit tests for `ReembedAllMemoriesUseCase`.
     - `RegisterDownloadedModelUseCaseTest.kt` - Covers the upsert semantics of registering a downloaded file: the write runs on every completed download, including re-downloads of a file the user already has, so "insert once, refresh afterwards" is the whole contract.
     - `RenamePipelineUseCaseTest.kt` - Unit tests for `RenamePipelineUseCase`.
@@ -437,6 +439,8 @@ Only Kotlin files appear inside the generated blocks.
     - `ExternalAutomationReceiverTest.kt` - Robolectric coverage for `ExternalAutomationReceiver` — the exported entry point a third-party automation app broadcasts to.
   - `run/` - Tests for the run-lifecycle collaborators in `presentation/run/`.
     - `RunOutcomeAnnouncerImplTest.kt` - Coverage for `RunOutcomeAnnouncerImpl` — the line a stopped run leaves in the chat it ran in.
+  - `startup/` - Tests for the cold-start upkeep: every step failing in turn leaves the others running.
+    - `StartupMaintenanceTest.kt` - `StartupMaintenance` must survive every one of its steps failing — the case it was written for is a database whose key is lost, where the trigger sync threw `DbPassphraseUnavailableException` out of `MainActivity` and killed the process before the splash could show *Erase data*, on every launch.
   - `ui/` - Tests for the screens and their ViewModels.
     - `about/` - Tests for the About surface.
       - `AboutAcknowledgmentsTest.kt` - Drift guard for the hand-maintained `AboutAcknowledgments` list surfaced on the About screen.

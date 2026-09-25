@@ -256,7 +256,7 @@ class PersistentStorageInventoryGuardTest {
             domain = "external",
             plaintextPath = null,
             erasedBy = null,
-            kept = "public downloads of gigabytes, not user data",
+            kept = "public downloads of gigabytes, not user data; registered again at start after the wipe",
         ),
 
         /** Trigger-journal soak dumps of the debug build type only — never in a release. */
@@ -301,6 +301,7 @@ class PersistentStorageInventoryGuardTest {
             "/data/local/DatabaseResetServiceImpl.kt" to "DATABASE, deleted by the wipe",
             "/data/local/crypto/KeystoreBackedPrefsStore.kt" to "SECRET_STORES",
             "/data/network/ResumableFileDownloader.kt" to "DOWNLOADED_MODELS",
+            "/data/local/DownloadedModelFilesImpl.kt" to "DOWNLOADED_MODELS (read-only listing)",
             "/data/engine/MediaPipeTextEmbeddingEngine.kt" to "DOWNLOADED_MODELS (the embedding model)",
             "/debug/TriggerJournalDumpReceiver.kt" to "DEBUG_SOAK_DUMPS",
         )

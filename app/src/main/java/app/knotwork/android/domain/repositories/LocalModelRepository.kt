@@ -103,4 +103,14 @@ interface LocalModelRepository {
      * the user *picked*, not the row currently selected as active.
      */
     suspend fun findByFileName(fileName: String): LocalModel?
+
+    /**
+     * Returns the [LocalModel] whose file is [path], or `null` when no row points
+     * at it. A file downloaded from a repository sub-folder is registered under
+     * its repository name but stored under a flattened one, so the path is what
+     * names the file.
+     *
+     * @param path Absolute path of the model file.
+     */
+    suspend fun findByPath(path: String): LocalModel?
 }

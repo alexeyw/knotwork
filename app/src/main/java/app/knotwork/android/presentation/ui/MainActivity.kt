@@ -20,14 +20,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import app.knotwork.android.data.services.AgentForegroundService
-import app.knotwork.android.data.services.AttachmentOrphanCleanupScheduler
-import app.knotwork.android.data.services.MemoryCompactionScheduler
-import app.knotwork.android.data.services.PendingInteractionMaintenanceScheduler
-import app.knotwork.android.data.services.RunRetentionScheduler
 import app.knotwork.android.domain.repositories.SettingsRepository
-import app.knotwork.android.domain.services.MemoryReembedScheduler
-import app.knotwork.android.domain.usecases.SyncTriggersUseCase
-import app.knotwork.android.presentation.shortcuts.AppShortcutPublisher
+import app.knotwork.android.presentation.startup.StartupMaintenance
 import app.knotwork.android.presentation.state.ChatEntryRequestRelay
 import app.knotwork.android.presentation.state.TransientMessageRelay
 import app.knotwork.android.presentation.theme.KnotworkAppTheme
@@ -53,19 +47,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var transientMessageRelay: TransientMessageRelay
 
-    @Inject lateinit var memoryCompactionScheduler: MemoryCompactionScheduler
-
-    @Inject lateinit var memoryReembedScheduler: MemoryReembedScheduler
-
-    @Inject lateinit var pendingInteractionMaintenanceScheduler: PendingInteractionMaintenanceScheduler
-
-    @Inject lateinit var runRetentionScheduler: RunRetentionScheduler
-
-    @Inject lateinit var attachmentOrphanCleanupScheduler: AttachmentOrphanCleanupScheduler
-
-    @Inject lateinit var appShortcutPublisher: AppShortcutPublisher
-
-    @Inject lateinit var syncTriggersUseCase: SyncTriggersUseCase
+    @Inject lateinit var startupMaintenance: StartupMaintenance
 
     @Inject lateinit var chatEntryRequestRelay: ChatEntryRequestRelay
 
@@ -135,39 +117,14 @@ class MainActivity : ComponentActivity() {
             startForegroundService(serviceIntent)
         }
 
-        // Schedule background long-term-memory maintenance off the main thread:
-        // a daily charging + idle compaction pass plus an out-of-schedule watch
-        // that drains the table when it grows past the configured hard limit.
-        // Both calls are idempotent, so re-running them on activity recreation
-        // is harmless.
+        // Arm the background upkeep off the main thread: memory compaction and its
+        // hard-limit watch, the expiry, retention and orphan sweeps, the re-embed
+        // re-arm, the trigger watches and (fresh start only) the launcher shortcuts.
+        // Each step is isolated inside StartupMaintenance: they read the database
+        // while the splash is still finding out whether it opens, and a throw here
+        // would kill the process before the recovery screen could appear.
         lifecycleScope.launch(Dispatchers.Default) {
-            memoryCompactionScheduler.schedulePeriodic()
-            memoryCompactionScheduler.startHardLimitWatch()
-            // Expiry pass for runs parked on an unanswered background HITL
-            // request — fails them once the approval window elapses.
-            pendingInteractionMaintenanceScheduler.schedulePeriodic()
-            // Retention pass over persisted pipeline runs and their traces —
-            // same daily charging + idle window as memory compaction.
-            runRetentionScheduler.schedulePeriodic()
-            // Backstop sweep for orphaned image-attachment files (eager
-            // delete-with-message handles the common case) — same window.
-            attachmentOrphanCleanupScheduler.schedulePeriodic()
-            // Self-heal: re-arm the import re-embed pass if a prior one-off was
-            // lost or exhausted its retries. The check lives in the scheduler so
-            // recovery isn't tied to this one entry point (the foreground service
-            // re-arms too).
-            memoryReembedScheduler.rearmIfPending()
-            // Register the background watches for every enabled, pipeline-bound
-            // automation trigger. Idempotent (replace/cancel keyed by trigger
-            // id), so re-running on activity recreation is harmless; WorkManager
-            // persists the watches across reboot, so this cold-start sync is the
-            // only re-registration entry point needed.
-            syncTriggersUseCase()
-            // Refresh the dynamic launcher shortcuts (recent sessions) off the
-            // main thread, as ShortcutManagerCompat requires. Only on a fresh
-            // start (not a config-change recreation, which keeps savedInstanceState)
-            // so rotation/theme changes don't re-query + re-publish needlessly.
-            if (savedInstanceState == null) appShortcutPublisher.refresh()
+            startupMaintenance.run(refreshShortcuts = savedInstanceState == null)
         }
 
         // Pin transparent status- and navigation-bar

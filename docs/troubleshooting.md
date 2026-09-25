@@ -240,7 +240,9 @@ and the app shows a dedicated recovery screen instead of starting:
   longer be opened by anyone — including the app itself. **Erase data**
   deletes the database, your agent workspace files and attachments, and
   generates a fresh key so you can start over. Settings and saved keys are
-  kept. The action is irreversible and guarded by a typed confirmation.
+  kept, and so are downloaded models — they are listed again under Models,
+  inactive, so pick one before chatting. The action is irreversible and
+  guarded by a typed confirmation.
 
 The app never deletes or re-keys your data automatically in this state:
 without the original key the database contents cannot be recovered, so

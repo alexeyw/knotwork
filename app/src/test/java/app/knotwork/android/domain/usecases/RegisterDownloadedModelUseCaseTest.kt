@@ -6,7 +6,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -23,6 +26,7 @@ class RegisterDownloadedModelUseCaseTest {
     @Test
     fun `given no existing row when registering then a fresh inactive model is inserted`() = runTest {
         coEvery { localModelRepository.findByFileName("gemma.litertlm") } returns null
+        coEvery { localModelRepository.findByPath("/data/gemma.litertlm") } returns null
         val inserted = slot<LocalModel>()
         coEvery { localModelRepository.insertModel(capture(inserted)) } returns 7L
 
@@ -54,4 +58,56 @@ class RegisterDownloadedModelUseCaseTest {
         // An active model that gets re-downloaded stays active.
         assertEquals(true, updated.captured.isActive)
     }
+
+    @Test
+    fun `given two registrations of one file at once when both run then one row is inserted`() = runTest {
+        // A download finishing while the start-up rediscovery registers the same
+        // file: each looked up, found nothing, and inserted.
+        val rows = mutableListOf<LocalModel>()
+        coEvery { localModelRepository.findByFileName(any()) } coAnswers {
+            // Read, then suspend as a database call does before its result is used.
+            val found = rows.firstOrNull { it.name == firstArg<String>() }
+            yield()
+            found
+        }
+        coEvery { localModelRepository.insertModel(any()) } coAnswers {
+            rows += firstArg<LocalModel>()
+            rows.size.toLong()
+        }
+        coEvery { localModelRepository.findByPath(any()) } returns null
+        coEvery { localModelRepository.updateModel(any()) } returns Unit
+
+        listOf(
+            async { useCase("gemma.litertlm", "/data/gemma.litertlm", sizeBytes = 2_048L) },
+            async { useCase("gemma.litertlm", "/data/gemma.litertlm", sizeBytes = 2_048L) },
+        ).awaitAll()
+
+        assertEquals(1, rows.size)
+    }
+
+    @Test
+    fun `given a row for the same file under its on-disk name when registering then it is renamed, not duplicated`() =
+        runTest {
+            // The start-up pass registered a sub-folder download under its flattened
+            // on-disk name; a later download of the same file names it by repository path.
+            val rediscovered =
+                LocalModel(
+                    id = 4L,
+                    name = "q4_model.litertlm",
+                    path = "/ext/q4_model.litertlm",
+                    size = 1L,
+                    isActive = false,
+                )
+            coEvery { localModelRepository.findByFileName("q4/model.litertlm") } returns null
+            coEvery { localModelRepository.findByPath("/ext/q4_model.litertlm") } returns rediscovered
+            val updated = slot<LocalModel>()
+            coEvery { localModelRepository.updateModel(capture(updated)) } returns Unit
+
+            val id = useCase("q4/model.litertlm", "/ext/q4_model.litertlm", sizeBytes = 2_048L)
+
+            coVerify(exactly = 0) { localModelRepository.insertModel(any()) }
+            assertEquals(4L, id)
+            assertEquals("q4/model.litertlm", updated.captured.name)
+            assertEquals(2_048L, updated.captured.size)
+        }
 }
