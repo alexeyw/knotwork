@@ -237,6 +237,7 @@ Only Kotlin files appear inside the generated blocks.
   - `models/` - Tests for the domain entity models.
     - `AppErrorTest.kt` - Tests for AppError.
     - `CloudProviderTest.kt` - Unit tests for `CloudProvider` — the canonical typed identifier for cloud LLM providers.
+    - `CustomModelLinkTest.kt` - Unit tests for `CustomModelLink.parse` — the one check a pasted model link passes before anything downloads, and the one place its file name comes from.
     - `ExternalAutomationOutcomeMapperTest.kt` - Verifies `externalAutomationStatusForTerminal` — the deliberately coarse mapping from the app's four terminal statuses onto the two settled statuses the third-party contract publishes.
     - `LocalBackendTest.kt` - Unit tests for `LocalBackend` — the typed identifier for the on-device LiteRT backend.
     - `ModelPerformanceSampleTest.kt` - Unit tests for `ModelPerformanceSample`.

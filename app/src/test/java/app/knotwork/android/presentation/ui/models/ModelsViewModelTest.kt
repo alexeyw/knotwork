@@ -23,7 +23,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -104,6 +107,55 @@ class ModelsViewModelTest {
 
         assertEquals(newUrl, viewModel.uiState.value.customUrlInput)
         assertEquals(null, viewModel.uiState.value.downloadError)
+    }
+
+    @Test
+    fun `given a Hugging Face link when submitted then it downloads under the name without the query`() = runTest {
+        val url = "https://huggingface.co/org/repo/resolve/main/model.litertlm?download=true"
+        every { downloadManager.downloadModel(any(), any(), any()) } returns flowOf()
+        val refusals = collectRefusals()
+        viewModel.onCustomUrlChanged(url)
+
+        viewModel.submitCustomUrl()
+        advanceUntilIdle()
+
+        verify(exactly = 1) { downloadManager.downloadModel(url, "model.litertlm", any()) }
+        assertEquals(0, refusals.size)
+    }
+
+    @Test
+    fun `given a link to another model format when submitted then nothing downloads and the screen is told`() =
+        runTest {
+            val refusals = collectRefusals()
+            viewModel.onCustomUrlChanged("https://example.com/models/gemma.task")
+
+            viewModel.submitCustomUrl()
+            advanceUntilIdle()
+
+            verify(exactly = 0) { downloadManager.downloadModel(any(), any(), any()) }
+            assertEquals(false, viewModel.uiState.value.isDownloading)
+            assertEquals(1, refusals.size)
+        }
+
+    @Test
+    fun `given an empty field when submitted then nothing happens`() = runTest {
+        val refusals = collectRefusals()
+        viewModel.onCustomUrlChanged("   ")
+
+        viewModel.submitCustomUrl()
+        advanceUntilIdle()
+
+        verify(exactly = 0) { downloadManager.downloadModel(any(), any(), any()) }
+        assertEquals(0, refusals.size)
+    }
+
+    /** Records every refusal the ViewModel emits for the rest of the test. */
+    private fun TestScope.collectRefusals(): List<Unit> {
+        val refusals = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.customUrlRefusedEvents.collect { refusals += it }
+        }
+        return refusals
     }
 
     @Test

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.data.network.AndroidModelDownloadManager
 import app.knotwork.android.domain.engine.TaskQueueManager
+import app.knotwork.android.domain.models.CustomModelLink
 import app.knotwork.android.domain.models.DownloadState
 import app.knotwork.android.domain.models.isBusy
 import app.knotwork.android.domain.repositories.LocalModelRepository
@@ -82,6 +83,14 @@ class ModelsViewModel @Inject constructor(
      * show a transient error snackbar.
      */
     val benchmarkErrorEvents: SharedFlow<Unit> = _benchmarkErrorEvents.asSharedFlow()
+
+    private val _customUrlRefusedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * One-shot stream signalling that [submitCustomUrl] refused the link in the field
+     * because its file is not `.litertlm`, so the screen can say why nothing started.
+     */
+    val customUrlRefusedEvents: SharedFlow<Unit> = _customUrlRefusedEvents.asSharedFlow()
 
     /**
      * Reference to the currently in-flight download collection job. Held so
@@ -177,6 +186,22 @@ class ModelsViewModel @Inject constructor(
         _uiState.update { it.copy(authTokenInput = token) }
         viewModelScope.launch {
             settingsRepository.setHuggingFaceAuthToken(token.takeIf { it.isNotBlank() })
+        }
+    }
+
+    /**
+     * Downloads the link in the custom URL field, if it names a `.litertlm` file.
+     *
+     * The link is checked by [CustomModelLink.parse] before anything downloads, and
+     * its file is saved under the name that check derives (the path's last segment,
+     * query string dropped). A link to any other file is refused through
+     * [customUrlRefusedEvents]; an empty field does nothing (the `Get` button is off).
+     */
+    fun submitCustomUrl() {
+        when (val link = CustomModelLink.parse(_uiState.value.customUrlInput)) {
+            is CustomModelLink.Accepted -> startDownload(link.url, link.fileName)
+            CustomModelLink.Blank -> Unit
+            CustomModelLink.NotLitertlm -> _customUrlRefusedEvents.tryEmit(Unit)
         }
     }
 

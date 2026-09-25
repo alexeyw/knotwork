@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.knotwork.android.data.network.AndroidModelDownloadManager
 import app.knotwork.android.domain.constants.OnboardingModelCatalog
 import app.knotwork.android.domain.models.AppError
+import app.knotwork.android.domain.models.CustomModelLink
 import app.knotwork.android.domain.models.DownloadState
 import app.knotwork.android.domain.models.OnboardingMilestone
 import app.knotwork.android.domain.repositories.LocalModelRepository
@@ -495,15 +496,13 @@ class OnboardingViewModel @Inject constructor(
         if (preset != null) {
             return ResolvedDownloadTarget(url = preset.downloadUrl, fileName = preset.fileName)
         }
-        val customUrl = _state.value.customDownloadUrl.trim()
-        if (customUrl.isEmpty()) {
-            _state.update { it.copy(downloadError = CUSTOM_URL_REQUIRED_MESSAGE) }
-            return null
+        val refusal = when (val link = CustomModelLink.parse(_state.value.customDownloadUrl)) {
+            is CustomModelLink.Accepted -> return ResolvedDownloadTarget(url = link.url, fileName = link.fileName)
+            CustomModelLink.Blank -> CUSTOM_URL_REQUIRED_MESSAGE
+            CustomModelLink.NotLitertlm -> CUSTOM_URL_NOT_LITERTLM_MESSAGE
         }
-        return ResolvedDownloadTarget(
-            url = customUrl,
-            fileName = OnboardingModelCatalog.fileNameForCustomUrl(customUrl),
-        )
+        _state.update { it.copy(downloadError = refusal) }
+        return null
     }
 
     /**
@@ -543,6 +542,10 @@ class OnboardingViewModel @Inject constructor(
 
         /** Surfaced when the user taps the CTA on the Custom URL row with an empty input. */
         private const val CUSTOM_URL_REQUIRED_MESSAGE: String = "Enter a model URL to download."
+
+        /** Surfaced, before anything downloads, for a custom URL whose file is not `.litertlm`. */
+        private const val CUSTOM_URL_NOT_LITERTLM_MESSAGE: String =
+            "This link isn't a .litertlm file. Only .litertlm models run on the phone."
 
         /** Divisor turning a 0..100 Int progress into a 0f..1f float for `OnboardingViewState`. */
         private const val PERCENT_DIVISOR: Float = 100f

@@ -76,9 +76,10 @@ is not something the app will do quietly on your behalf.
 
 It downloads a `.litertlm` **file** onto the phone from a direct link — it is not
 a way to point the app at a remote model that stays on a server. It can
-authenticate, but only with a bearer token: fill the Hugging Face access-token
-field on the Models screen and the download carries it as an `Authorization`
-header. There is no OAuth flow, and no other auth scheme. See
+authenticate, but only with a bearer token and only on `huggingface.co`: fill
+the Hugging Face access-token field on the Models screen and a download from
+that host carries it as an `Authorization` header; a link to any other host
+downloads without it. There is no OAuth flow, and no other auth scheme. See
 [Download a model](user-guide.md#2-download-a-model).
 
 ### Can I browse and install models from Hugging Face?

@@ -94,8 +94,8 @@ Open the **More** tab and tap **Models**. The screen has two areas:
 - A list of **presets** — curated LiteRT models that are known to work
   with the agent. Each preset shows the model name and a **Download**
   button (or a **Downloaded** label if it is already on the device).
-- A **Custom Model URL** field for paste-in downloads (for example, a
-  direct file URL from Hugging Face).
+- A **Custom Model URL** field for paste-in downloads (a direct link to a
+  `.litertlm` file, for example from Hugging Face).
 
 If the source you are downloading from requires authentication, paste
 your token into the **HuggingFace Auth Token** field above the URL
@@ -110,8 +110,9 @@ input. The field is masked and is used only for the download request.
 ### 2. Download a model
 
 - To use a preset, tap **Download** next to it.
-- To download a custom file, paste the URL into **Custom Model URL**
-  and tap **Download Custom Model**.
+- To download a custom file, paste its link into **Custom Model URL**
+  and tap **Get**. A link that does not end in a `.litertlm` file is
+  refused before anything downloads.
 
 A progress bar appears with a percentage, and a notification shows the
 same progress with a **Cancel** action. The transfer is a real background
@@ -2859,7 +2860,8 @@ LLMs.
   reads the system clipboard. The token is sent only to
   `huggingface.co`.
 - The **Custom model URL** field accepts a direct link to a
-  `.litertlm` file — the only format the on-device engine loads.
+  `.litertlm` file — the only format the on-device engine loads; a link
+  to any other file is refused before it downloads.
   Tap `Get` to start downloading. A link to any other host is downloaded without your
   token.
 - The **Available presets** list shows curated models, each row in
