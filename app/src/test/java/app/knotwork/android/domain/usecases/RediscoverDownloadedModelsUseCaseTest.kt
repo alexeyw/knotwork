@@ -29,14 +29,14 @@ class RediscoverDownloadedModelsUseCaseTest {
         coEvery { repository.getAllModels() } returns flowOf(emptyList())
         coEvery { files.list() } returns listOf(
             DownloadedModelFile("gemma-4-E2B-it.litertlm", "/ext/gemma-4-E2B-it.litertlm", 2_000L),
-            DownloadedModelFile("custom-model.task", "/ext/custom-model.task", 900L),
+            DownloadedModelFile("custom-model.litertlm", "/ext/custom-model.litertlm", 900L),
         )
 
         val registered = useCase()
 
         assertEquals(2, registered)
         coVerify(exactly = 1) { register("gemma-4-E2B-it.litertlm", "/ext/gemma-4-E2B-it.litertlm", 2_000L) }
-        coVerify(exactly = 1) { register("custom-model.task", "/ext/custom-model.task", 900L) }
+        coVerify(exactly = 1) { register("custom-model.litertlm", "/ext/custom-model.litertlm", 900L) }
     }
 
     @Test

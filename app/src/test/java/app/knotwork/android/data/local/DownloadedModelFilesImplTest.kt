@@ -31,9 +31,11 @@ class DownloadedModelFilesImplTest {
     @Test
     fun `given the directory's usual occupants when listed then only finished model files come back`() = runTest {
         file("gemma-4-E2B-it.litertlm", bytes = 5)
+        file("UPPER-CASE.LITERTLM", bytes = 4)
+        // Formats the engine does not load, a partial download, the embedding
+        // override and the debug soak folder.
         file("custom-model.task", bytes = 3)
-        file("experimental.GGUF", bytes = 2)
-        // A partial download, the embedding override and the debug soak folder.
+        file("experimental.gguf", bytes = 2)
         file("gemma-4-E4B-it.litertlm.3fa9c2.part", bytes = 1)
         file("universal_sentence_encoder.tflite", bytes = 1)
         File(directory, "soak").mkdirs()
@@ -45,8 +47,7 @@ class DownloadedModelFilesImplTest {
 
         assertEquals(
             listOf(
-                DownloadedModelFile("custom-model.task", File(directory, "custom-model.task").absolutePath, 3),
-                DownloadedModelFile("experimental.GGUF", File(directory, "experimental.GGUF").absolutePath, 2),
+                DownloadedModelFile("UPPER-CASE.LITERTLM", File(directory, "UPPER-CASE.LITERTLM").absolutePath, 4),
                 DownloadedModelFile(
                     "gemma-4-E2B-it.litertlm",
                     File(directory, "gemma-4-E2B-it.litertlm").absolutePath,

@@ -1,5 +1,7 @@
 package app.knotwork.android.domain.services
 
+import app.knotwork.android.domain.constants.ModelDiscoveryConstants
+
 /**
  * The model files that are on disk in the downloads directory, whatever the registry
  * says about them.
@@ -23,10 +25,13 @@ interface DownloadedModelFiles {
     /** What counts as a model file. */
     companion object {
         /**
-         * Extensions of the model files the app downloads — the formats the custom-URL
-         * download accepts (`.litertlm`, `.task`, `.gguf`), matched case-insensitively.
+         * Extensions of the model files worth registering, matched case-insensitively:
+         * the formats the engine loads. That is `.litertlm` alone — the custom-URL hint
+         * also named `.task` and `.gguf`, but a file in either downloads and then never
+         * loads (checked on a device, 25 September 2026), so registering one again would
+         * list a model that cannot run.
          */
-        val EXTENSIONS: List<String> = listOf(".litertlm", ".task", ".gguf")
+        val EXTENSIONS: List<String> = listOf(ModelDiscoveryConstants.LITERTLM_EXTENSION)
     }
 }
 
