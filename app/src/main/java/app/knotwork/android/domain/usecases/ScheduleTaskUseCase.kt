@@ -22,11 +22,11 @@ import javax.inject.Singleton
  * runs, not the depth of the queue, so scheduling is refused once
  * [MAX_SCHEDULED_RUNS_PER_HOUR] scheduled runs have already started within the
  * last hour — top-level runs only: a pipeline step that runs another pipeline is
- * part of the scheduled run, not a second one. A legitimate cadence (hourly or slower, which is also all the
- * background runtime honours for repeating work) never approaches the limit;
- * a self-re-scheduling loop crosses it within minutes. The refusal is returned
- * to the model as the tool's result, worded so that retrying is visibly not the
- * answer.
+ * part of the scheduled run, not a second one. A legitimate cadence (hourly or
+ * slower, which is also all the background runtime honours for repeating work)
+ * never approaches the limit; a self-re-scheduling loop crosses it within
+ * minutes. The refusal is returned to the model as the tool's result, worded so
+ * that retrying is visibly not the answer.
  */
 @Singleton
 class ScheduleTaskUseCase @Inject constructor(

@@ -1924,9 +1924,9 @@ configurations.configureEach {
     // wrote every `INFO`+ line logged through SLF4J to `System.err` — on Android,
     // logcat — past the redaction the app applies to its own logs, and some of
     // Koog's lines are model output: a reasoning trace at `INFO`, a whole response
-    // when a provider's reply has no parts. Without a provider, SLF4J 2
-    // falls back to its no-op logger. `verify<Variant>NoSlf4jProvider` keeps any
-    // other provider out.
+    // when a provider's reply has no parts. Without a provider, SLF4J 2 falls
+    // back to its no-op logger. `verify<Variant>NoSlf4jProvider` keeps any other
+    // provider out.
     exclude(group = "org.slf4j", module = "slf4j-simple")
 }
 
@@ -2320,14 +2320,14 @@ androidComponents {
 // Koog logs through SLF4J, and one of its modules brought `slf4j-simple` in at
 // runtime: every `INFO`+ line logged through SLF4J — among Koog's, a model's
 // reasoning trace and a whole response on one provider's warning — went to
-// logcat, past the redaction the app applies to its own logs. The module is excluded in
-// `configurations.configureEach`; this guard keeps every other provider out too.
-// It reads the Java resources of the variant's runtime classpath before R8 (the
-// variant API's `ScopedArtifact.JAVA_RES` hands a task nothing for the ALL scope,
-// measured on AGP 9.3.1), because R8 turns a resolvable
-// `ServiceLoader` lookup into a constructor call and drops the service file from
-// the APK — the packaged artefact shows no registration even while it ships the
-// provider. In `check`, so a change adding a provider fails there, and ahead of
+// logcat, past the redaction the app applies to its own logs. The module is
+// excluded in `configurations.configureEach`; this guard keeps every other
+// provider out too. It reads the Java resources of the variant's runtime
+// classpath before R8 (the variant API's `ScopedArtifact.JAVA_RES` hands a task
+// nothing for the ALL scope, measured on AGP 9.3.1), because R8 turns a
+// resolvable `ServiceLoader` lookup into a constructor call and drops the service
+// file from the APK — the packaged artefact shows no registration even while it
+// ships the provider. In `check`, so a change adding a provider fails there, and ahead of
 // R8, so a release build cannot skip it.
 androidComponents {
     onVariants(selector().withBuildType("release")) { variant ->
