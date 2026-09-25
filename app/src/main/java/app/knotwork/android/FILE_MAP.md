@@ -650,6 +650,8 @@ Only Kotlin files appear inside the generated blocks.
     - `ShareReceiverActivity.kt` - Invisible `ACTION_SEND` (text/image) receiver; parses the intent via `ParseSharedContentUseCase`, delegates to `LaunchSharePipelineUseCase`, and deep-links into the resulting session (or toasts when unbound / empty / blocked by the pre-flight — short `share_image_blocked_*` strings, since a toast holds two lines).
   - `shortcuts/` - Launcher shortcuts.
     - `AppShortcutPublisher.kt` - `@Singleton` that converts `BuildDynamicShortcutsUseCase` specs into `ShortcutInfoCompat`s and publishes them (`@WorkerThread`); refreshed from `MainActivity.onCreate`. Static shortcuts live in `res/xml/shortcuts.xml`.
+  - `startup/` - Cold-start upkeep armed from `MainActivity`, each step isolated so a locked database cannot crash the process before the recovery screen.
+    - `StartupMaintenance.kt` - The background upkeep a cold start arms, run by `MainActivity` off the main thread while the splash screen initialises the app.
   - `state/` - State management components.
     - `ActiveSessionTracker.kt` - Tracker for active chat session.
     - `ChatEntryRequestRelay.kt` - `@Singleton` one-shot bus carrying a `ChatEntryRequest` (`OpenThread{id}` / `NewChat`) from a `knotwork://chat…` / `new-chat` shortcut/share/notification to the single chat home, drained by the `CHAT_TAB` composable into `selectThread` / `createNewSessionWithPipeline`. `Channel.CONFLATED` so a cold-launch request buffers until the collector mounts and is consumed exactly once.

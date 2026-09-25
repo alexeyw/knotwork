@@ -1386,7 +1386,11 @@ The passphrase lifecycle is asymmetric by design
   (`DeferredPassphraseOpenHelperFactory`), not during dependency injection,
   so a keystore failure surfaces where the UI can handle it; best-effort
   background maintenance skips its work instead of crashing while the
-  recovery screen is up.
+  recovery screen is up. The upkeep a cold start arms from `MainActivity`
+  runs through `StartupMaintenance`, one isolated step at a time: it reads
+  the database while the splash is still finding out whether it opens, and
+  an uncaught throw there once killed the process before the recovery
+  screen could appear.
 - The API-key store applies the opposite, availability-first policy: a
   value that no longer decrypts is dropped and reported as unset — keys
   are user re-enterable, so availability wins there.

@@ -439,6 +439,8 @@ Only Kotlin files appear inside the generated blocks.
     - `ExternalAutomationReceiverTest.kt` - Robolectric coverage for `ExternalAutomationReceiver` — the exported entry point a third-party automation app broadcasts to.
   - `run/` - Tests for the run-lifecycle collaborators in `presentation/run/`.
     - `RunOutcomeAnnouncerImplTest.kt` - Coverage for `RunOutcomeAnnouncerImpl` — the line a stopped run leaves in the chat it ran in.
+  - `startup/` - Tests for the cold-start upkeep: every step failing in turn leaves the others running.
+    - `StartupMaintenanceTest.kt` - `StartupMaintenance` must survive every one of its steps failing — the case it was written for is a database whose key is lost, where the trigger sync threw `DbPassphraseUnavailableException` out of `MainActivity` and killed the process before the splash could show *Erase data*, on every launch.
   - `ui/` - Tests for the screens and their ViewModels.
     - `about/` - Tests for the About surface.
       - `AboutAcknowledgmentsTest.kt` - Drift guard for the hand-maintained `AboutAcknowledgments` list surfaced on the About screen.

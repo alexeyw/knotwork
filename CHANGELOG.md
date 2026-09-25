@@ -234,6 +234,11 @@ details.
 
 ### Fixed
 
+- **The recovery screen appears when the database cannot be unlocked.** When
+  the database's key was lost, the app closed at every start instead of
+  offering Retry and Erase data: a background step that re-registers
+  automation triggers read the locked database and crashed the app before the
+  screen could show. Each start-up step now fails on its own.
 - **Downloaded models come back after Erase data.** Erasing a database that can
   no longer be unlocked keeps the downloaded models on the device, but the app
   forgot them and listed none. They are listed again under Models the next time
