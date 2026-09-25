@@ -43,7 +43,7 @@ class FirebaseCrashReportingRepositoryImpl @Inject constructor(
         runCatching {
             crashlytics.isCrashlyticsCollectionEnabled = enabled
         }.onFailure { error ->
-            Timber.e(error, "Failed to toggle Crashlytics collection to $enabled")
+            Timber.e(error, "Failed to toggle Crashlytics collection to %s", enabled)
         }
     }
 
@@ -67,7 +67,7 @@ class FirebaseCrashReportingRepositoryImpl @Inject constructor(
         runCatching {
             crashlytics.setCustomKey(key, value)
         }.onFailure { error ->
-            Timber.e(error, "Failed to set Crashlytics custom key $key")
+            Timber.e(error, "Failed to set Crashlytics custom key %s", key)
         }
     }
 }

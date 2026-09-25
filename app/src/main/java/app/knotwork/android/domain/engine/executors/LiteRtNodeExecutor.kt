@@ -106,7 +106,7 @@ class LiteRtNodeExecutor @Inject constructor(
         } catch (e: Exception) {
             Timber.tag(
                 "PipelineDebug",
-            ).e(e, "[NODE_ERR] type=${node.type.name} id=${node.id} error in LiteRtNodeExecutor generation")
+            ).e(e, "[NODE_ERR] type=%s id=%s error in LiteRtNodeExecutor generation", node.type.name, node.id)
             emit(NodeOutput.State(AgentOrchestratorState.Error(e.message ?: "Unknown error during LLM generation")))
             emit(NodeOutput.Result(NodeExecutionResult(error = e.message)))
             return@flow

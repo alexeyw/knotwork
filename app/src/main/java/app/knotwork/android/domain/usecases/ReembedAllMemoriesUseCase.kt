@@ -63,7 +63,7 @@ class ReembedAllMemoriesUseCase @Inject constructor(
                 // grinding through the rest of the corpus.
                 throw e
             } catch (e: Throwable) {
-                Timber.w(e, "Failed to re-embed memory ${memory.id}")
+                Timber.w(e, "Failed to re-embed memory %s", memory.id)
             }
             emit((index + 1).toFloat() / memories.size)
         }

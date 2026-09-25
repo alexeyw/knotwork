@@ -919,7 +919,7 @@ class SettingsManager @Inject constructor(
                     if (risk != null) {
                         put(key, risk)
                     } else {
-                        Timber.w("Dropping AppFunction risk override for $key — unknown risk value '$value'")
+                        Timber.w("Dropping AppFunction risk override for %s — unknown risk value '%s'", key, value)
                     }
                 }
             }

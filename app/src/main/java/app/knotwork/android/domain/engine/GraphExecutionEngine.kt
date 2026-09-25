@@ -996,7 +996,7 @@ constructor(
                     val safeMessage = CloudErrorSanitizer.redactSecrets(e.message ?: "Unknown error")
                     Timber.tag(
                         "PipelineDebug",
-                    ).e(e, "[NODE_ERR] type=${currentNode.type.name} id=${currentNode.id} error=$safeMessage")
+                    ).e(e, "[NODE_ERR] type=%s id=%s error=%s", currentNode.type.name, currentNode.id, safeMessage)
                     pushConsole(
                         ConsoleEventType.Error,
                         "${currentNode.type.name}: $safeMessage",
@@ -1081,7 +1081,7 @@ constructor(
                 // produced it — or forgot to scrub it.
                 Timber.tag(
                     "PipelineDebug",
-                ).e("[NODE_ERR] type=${currentNode.type.name} id=${currentNode.id} error=$nodeError")
+                ).e("[NODE_ERR] type=%s id=%s error=%s", currentNode.type.name, currentNode.id, nodeError)
                 pushConsole(
                     ConsoleEventType.Error,
                     "${currentNode.type.name}: $nodeError",

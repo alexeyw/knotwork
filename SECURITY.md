@@ -769,7 +769,11 @@ When (and only when) a user has explicitly opted in on a release build, the
 following information may be transmitted to Firebase Crashlytics:
 
 - Stack traces for fatal crashes and non-fatal `Log.WARN` / `Log.ERROR`
-  records captured by Timber.
+  records captured by Timber. A non-fatal record carries the error's type,
+  its stack frames and the fixed text written at the logging call — not the
+  error's own message, nor any value the call fills in (a file path, a tool
+  argument): those are where user data travels, so they are dropped before
+  the record leaves the app.
 - Device model and Android OS version.
 - App version and build identifier.
 - Two custom keys set by the pipeline engine: `active_pipeline_id` and
@@ -784,7 +788,8 @@ enabled:
 - Tool inputs, tool outputs, or arguments produced by the agent.
 - API keys, passphrases, or any value stored in the Keystore-backed
   encrypted stores. A key quoted inside an error message — Google puts it in
-  the request URL — is masked in every record before the record is forwarded.
+  the request URL — cannot reach a non-fatal record, which carries no error
+  message at all.
 - Personally identifying information beyond the device/app metadata listed
   above.
 

@@ -72,7 +72,7 @@ class AppInitializationUseCase @Inject constructor(
                 // Non-fatal: ChatScreen surfaces an inline error and routes the
                 // user to Settings. Continuing here lets the rest of the app
                 // initialise so the user can fix the model from inside the UI.
-                Timber.tag(TAG).w("Model load skipped: ${result.message}")
+                Timber.tag(TAG).w("Model load skipped: %s", result.message)
             }
         }
 

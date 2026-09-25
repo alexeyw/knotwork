@@ -24,6 +24,11 @@ details.
   into a run's error, the console, chat and trigger-journal exports and crash
   reports. They are scrubbed now, and the pipeline engine and the crash-reporting
   log scrub again, so a path added later is covered too.
+- **Crash reports no longer carry file names or error text.** With crash
+  reporting on, a logged error was sent with its message and the values written
+  into it: a workspace file's path, the arguments of a failed tool call, even the
+  content of a file being written. A report now carries the error's type, where
+  in the code it happened, and the fixed text of the log line.
 - **Wikipedia search can only reach Wikipedia.** The language code chosen for a
   search is checked before the request is built, so it can no longer point the
   request at another server.

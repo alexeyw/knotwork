@@ -212,8 +212,11 @@ class CloudLlmNodeExecutor @Inject constructor(
             // carries no credential; only the throwable itself is withheld, since
             // logging it would print the unscrubbed message inside the stack trace.
             Timber.tag("PipelineDebug").e(
-                "[NODE_ERR] type=${node.type.name} id=${node.id} " +
-                    "CloudLlmNodeExecutor generation failed with ${e::class.simpleName}: $safeMessage",
+                "[NODE_ERR] type=%s id=%s CloudLlmNodeExecutor generation failed with %s: %s",
+                node.type.name,
+                node.id,
+                e::class.simpleName,
+                safeMessage,
             )
             send(NodeOutput.State(AgentOrchestratorState.Error(safeMessage)))
             send(NodeOutput.Result(NodeExecutionResult(error = safeMessage)))
@@ -297,7 +300,7 @@ class CloudLlmNodeExecutor @Inject constructor(
      * @param reason User-facing explanation of why no cloud call was attempted.
      */
     private suspend fun ProducerScope<NodeOutput>.emitFailure(reason: String) {
-        Timber.tag("PipelineDebug").e("[NODE_ERR] type=CLOUD $reason")
+        Timber.tag("PipelineDebug").e("[NODE_ERR] type=CLOUD %s", reason)
         send(NodeOutput.State(AgentOrchestratorState.Error(reason)))
         send(NodeOutput.Result(NodeExecutionResult(error = reason)))
     }

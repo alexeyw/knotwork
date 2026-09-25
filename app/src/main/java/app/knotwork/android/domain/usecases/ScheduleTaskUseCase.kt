@@ -59,7 +59,7 @@ class ScheduleTaskUseCase @Inject constructor(
             sinceEpochMs = CEILING.windowStart(nowMillis),
         )
         if (CEILING.isExceededBy(recentRuns)) {
-            Timber.w("Refusing to schedule: $recentRuns scheduled runs in the last hour")
+            Timber.w("Refusing to schedule: %d scheduled runs in the last hour", recentRuns)
             REFUSAL_MESSAGE
         } else {
             schedule(prompt, intervalHours, delayMinutes, sessionId)

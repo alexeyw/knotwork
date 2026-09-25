@@ -55,7 +55,7 @@ class ModelPerformanceRepositoryImpl @Inject constructor(private val dao: ModelP
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.e(e, "Failed to delete model performance samples for $modelPath")
+            Timber.e(e, "Failed to delete model performance samples for %s", modelPath)
         }
     }
 }

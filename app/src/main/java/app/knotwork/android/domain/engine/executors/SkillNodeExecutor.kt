@@ -138,7 +138,9 @@ class SkillNodeExecutor @Inject constructor(
         val allowlist = skill.toolAllowlist
         if (allowlist != null && toolName !in allowlist) {
             val message = "Tool '$toolName' is not in skill '${skill.name}' allowlist and was not executed."
-            Timber.tag("PipelineDebug").w(message)
+            Timber.tag(
+                "PipelineDebug",
+            ).w("Tool '%s' is not in skill '%s' allowlist and was not executed.", toolName, skill.name)
             emit(NodeOutput.State(AgentOrchestratorState.ObservationResult(toolName, message)))
             emit(
                 NodeOutput.Result(

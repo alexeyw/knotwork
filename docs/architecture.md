@@ -1161,8 +1161,9 @@ layers: each executor that calls a provider scrubs its own error; the engine
 redacts every node error, forwarded `Error` state and console line at the one
 point they all pass (so the run record, the exports, the console and the trace
 are covered even for an executor that forgets); and `CrashlyticsTimberTree`
-redacts every record — message, extras and each link of a cause chain — before
-it reaches Crashlytics.
+sends no error text at all — each link of a cause chain keeps only its type and
+stack frames, a message only its call-site template, never the values
+formatted into it — and still redacts the template as a backstop.
 
 **Cloud-backed structured output.** A structured node (§3.5) can run its
 validate-and-repair gate against a cloud provider instead of the on-device

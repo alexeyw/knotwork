@@ -80,7 +80,7 @@ class SummaryNodeExecutor @Inject constructor(
         } catch (e: Exception) {
             Timber.tag(
                 "PipelineDebug",
-            ).e(e, "[NODE_ERR] type=${node.type.name} id=${node.id} error in SummaryNodeExecutor generation")
+            ).e(e, "[NODE_ERR] type=%s id=%s error in SummaryNodeExecutor generation", node.type.name, node.id)
             emit(NodeOutput.State(AgentOrchestratorState.Error(e.message ?: "Unknown error")))
             emit(NodeOutput.Result(NodeExecutionResult(error = e.message)))
             return@flow

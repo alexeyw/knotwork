@@ -222,7 +222,7 @@ class ToolInvocationGate @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.tag("PipelineDebug").e(e, "Risk lookup failed for tool '$resolvedToolName'")
+            Timber.tag("PipelineDebug").e(e, "Risk lookup failed for tool '%s'", resolvedToolName)
             val errorMsg = "Risk lookup failed for tool $resolvedToolName: ${e.message}"
             emit(NodeOutput.State(AgentOrchestratorState.Error(errorMsg)))
             emit(NodeOutput.Result(NodeExecutionResult(error = errorMsg, resolvedToolName = resolvedToolName)))
@@ -319,7 +319,7 @@ class ToolInvocationGate @Inject constructor(
                     // would drop it. It is completed, or about to be.
                     deferred.await()
                 } else {
-                    Timber.tag("PipelineDebug").w("Live approval phase timed out for session: $sessionId")
+                    Timber.tag("PipelineDebug").w("Live approval phase timed out for session: %s", sessionId)
                     val request = ParkedApprovalRequest(requestId, resolvedToolName, resolvedToolArgs, risk)
                     if (runId != null && parkRun(runId, sessionId, request)) {
                         // Two-phase wait, second phase: the run parks on its
@@ -414,7 +414,7 @@ class ToolInvocationGate @Inject constructor(
         } catch (e: Exception) {
             Timber.tag(
                 "PipelineDebug",
-            ).e(e, "[NODE_ERR] type=$nodeType id=$nodeId error executing tool: $resolvedToolName")
+            ).e(e, "[NODE_ERR] type=%s id=%s error executing tool: %s", nodeType, nodeId, resolvedToolName)
             "Error executing $resolvedToolName: ${e.message}"
         }
 
