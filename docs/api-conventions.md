@@ -218,8 +218,10 @@ interface Tool {
   transport errors arrive carrying the API key; credentials must never reach the
   run console, the run trace or logcat. An executor that calls a provider scrubs
   its own error (`sanitize(e)`) and logs the scrubbed message, not the
-  throwable. The engine and the crash-reporting tree redact again as a backstop
-  (`redactSecrets`) — a backstop, not a licence to skip the first step.
+  throwable. The engine redacts again as a backstop (`redactSecrets`) — a
+  backstop, not a licence to skip the first step. The crash-reporting tree
+  sends no error text at all: an error's type and stack frames, and the
+  call site's message template (see `code-style.md` § Logging).
 - Use the unified `CLOUD` pipeline node with a `provider` parameter — do
   not add per-provider node types to the pipeline graph.
 

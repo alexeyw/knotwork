@@ -228,7 +228,7 @@ class LiteRTLlmEngine @Inject constructor(
         val file = File(modelPath)
         if (!file.exists()) {
             val errorMsg = "Model file does not exist at path: $modelPath"
-            Timber.e(errorMsg)
+            Timber.e("Model file does not exist at path: %s", modelPath)
             _currentModelPath = null
             _isVisionEnabled = false
             _isAudioEnabled = false

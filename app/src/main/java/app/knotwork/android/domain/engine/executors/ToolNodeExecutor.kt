@@ -136,7 +136,7 @@ class ToolNodeExecutor @Inject constructor(
             // The engine may be a cloud provider, whose error can quote its key (see
             // CloudErrorSanitizer); the throwable is kept out of the log for the same reason.
             val errorMsg = "Error generating tool arguments: ${CloudErrorSanitizer.sanitize(e)}"
-            Timber.tag("PipelineDebug").e("$errorMsg (${e::class.simpleName})")
+            Timber.tag("PipelineDebug").e("Tool argument generation failed (%s): %s", e::class.simpleName, errorMsg)
             emit(NodeOutput.State(AgentOrchestratorState.Error(errorMsg)))
             emit(NodeOutput.Result(NodeExecutionResult(error = errorMsg)))
             return@flow

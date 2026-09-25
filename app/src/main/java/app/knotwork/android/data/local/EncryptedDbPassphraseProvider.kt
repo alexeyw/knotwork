@@ -97,7 +97,7 @@ class EncryptedDbPassphraseProvider @Inject constructor(
             } else {
                 DbPassphraseUnavailableException.Reason.PASSPHRASE_MALFORMED
             }
-            Timber.e("DB passphrase unavailable ($reason) while database file exists; refusing to regenerate.")
+            Timber.e("DB passphrase unavailable (%s) while database file exists; refusing to regenerate.", reason)
             throw DbPassphraseUnavailableException(reason)
         }
 

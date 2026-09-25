@@ -25,12 +25,14 @@ import java.io.IOException
 /**
  * Unit tests for [CrashlyticsTimberTree].
  *
- * Cover: severity filtering (only `WARN` / `ERROR` reach the repository)
- * and routing semantics — explicit throwables are forwarded as-is while
- * message-only records are wrapped in a synthetic exception whose message
- * preserves the original tag/body so Crashlytics still has something to
- * group on — and redaction: no credential quoted in a message, the extras or
- * any link of a cause chain reaches the repository.
+ * Cover: severity filtering (only `WARN` / `ERROR` reach the repository) and
+ * what a report may carry — the type and stack frames of every link of a
+ * throwable's cause chain and the call site's message *template* with its tag,
+ * never the text of a throwable nor the values formatted into the template.
+ * PRIVACY §3.5 promises "the stack trace" and nothing of the user's; a
+ * throwable's message and a format argument are exactly where the user's
+ * paths, file contents and tool arguments travel (an Android `JSONException`
+ * ends with the whole document it failed to parse).
  *
  * The tree is exercised through Timber's public API because
  * `Timber.Tree.log` and `isLoggable` are protected by design.
@@ -69,134 +71,96 @@ class CrashlyticsTimberTreeTest {
     }
 
     @Test
-    fun `error with explicit throwable forwards throwable plus message and tag as extras`() = runTest {
+    fun `given a throwable and a message then the type, frames, template and tag are reported`() = runTest {
+        val reported = slot<Throwable>()
+        val extras = slot<Map<String, String>>()
+        coEvery { crashReportingRepository.recordException(capture(reported), capture(extras)) } returns Unit
         val throwable = IllegalStateException("boom")
-        coEvery { crashReportingRepository.recordException(any(), any()) } returns Unit
 
         Timber.tag("Engine").e(throwable, "node crashed")
         scope.advanceUntilIdle()
 
-        coVerify(exactly = 1) {
-            crashReportingRepository.recordException(
-                throwable,
-                mapOf("timber_message" to "node crashed", "timber_tag" to "Engine"),
-            )
-        }
+        assertEquals(IllegalStateException::class.java.name, reported.captured.message)
+        assertArrayEquals(throwable.stackTrace, reported.captured.stackTrace)
+        assertEquals(mapOf("timber_message" to "node crashed", "timber_tag" to "Engine"), extras.captured)
     }
 
     @Test
-    fun `error with throwable but no tag still forwards message extra`() = runTest {
-        val throwable = IllegalStateException("boom")
-        coEvery { crashReportingRepository.recordException(any(), any()) } returns Unit
+    fun `given a throwable whose text carries a path and file content then neither is reported`() = runTest {
+        // What `write_file` with malformed arguments throws on a device: Android's
+        // JSONException ends with the entire document, path and content included.
+        val reported = slot<Throwable>()
+        val extras = slot<Map<String, String>>()
+        coEvery { crashReportingRepository.recordException(capture(reported), capture(extras)) } returns Unit
+        val parseError = IllegalArgumentException(
+            "Unterminated string at character 58 of {\"path\":\"$USER_PATH\",\"content\":\"$USER_CONTENT",
+        )
 
-        Timber.e(throwable, "untagged failure")
+        Timber.tag(
+            "PipelineDebug",
+        ).e(parseError, "[NODE_ERR] type=%s id=%s error executing tool: %s", "TOOL", "n1", "write_file")
         scope.advanceUntilIdle()
 
-        coVerify(exactly = 1) {
-            crashReportingRepository.recordException(
-                throwable,
-                mapOf("timber_message" to "untagged failure"),
-            )
-        }
+        assertNoUserText(reported.captured, extras.captured)
     }
 
     @Test
-    fun `warn without throwable wraps message in synthetic exception with tag`() = runTest {
-        val captured = slot<Throwable>()
-        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
+    fun `given format arguments then only the template is reported`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
 
-        Timber.tag("TestTag").w("something looks off")
+        Timber.w("Workspace preview failed for %s: %s", USER_PATH, "NotFound")
         scope.advanceUntilIdle()
 
-        coVerify(exactly = 1) { crashReportingRepository.recordException(any(), emptyMap()) }
-        assertEquals("[TestTag] something looks off", captured.captured.message)
+        assertEquals("Workspace preview failed for %s: %s", reported.captured.message)
     }
 
     @Test
-    fun `error without tag still produces readable synthetic message`() = runTest {
-        val captured = slot<Throwable>()
-        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
-
-        Timber.e("untagged failure")
-        scope.advanceUntilIdle()
-
-        assertEquals("untagged failure", captured.captured.message)
-    }
-
-    @Test
-    fun `given a throwable whose message carries a credential then the report is scrubbed and keeps its stack`() =
-        runTest {
-            val captured = slot<Throwable>()
-            coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
-            val leaking = IllegalStateException(LEAKING_PROVIDER_ERROR)
-
-            Timber.tag("PipelineDebug").e(leaking, "node failed")
-            scope.advanceUntilIdle()
-
-            val reported = captured.captured
-            assertFalse("key leaked: ${reported.message}", reported.message.orEmpty().contains(LEAKED_KEY))
-            assertTrue(reported.message.orEmpty().contains("key=***"))
-            // The type and the frames are what Crashlytics groups and triages on.
-            assertTrue(reported.message.orEmpty().contains("IllegalStateException"))
-            assertArrayEquals(leaking.stackTrace, reported.stackTrace)
-        }
-
-    @Test
-    fun `given the credential sits in a cause then every link of the reported chain is scrubbed`() = runTest {
-        val captured = slot<Throwable>()
-        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
-
-        Timber.e(RuntimeException("wrapper", IOException(LEAKING_PROVIDER_ERROR)), "embedding failed")
-        scope.advanceUntilIdle()
-
-        val chain = generateSequence(captured.captured) { it.cause }.toList()
-        assertEquals(2, chain.size)
-        for (link in chain) {
-            assertFalse("key leaked: ${link.message}", link.message.orEmpty().contains(LEAKED_KEY))
-        }
-    }
-
-    @Test
-    fun `given a throwable without a credential then the original instance is reported`() = runTest {
-        val clean = IllegalStateException("plain failure", IOException("timeout"))
-        coEvery { crashReportingRepository.recordException(any(), any()) } returns Unit
-
-        Timber.e(clean, "context")
-        scope.advanceUntilIdle()
-
-        coVerify(exactly = 1) { crashReportingRepository.recordException(clean, mapOf("timber_message" to "context")) }
-    }
-
-    @Test
-    fun `given the log message carries a credential then the extras are scrubbed`() = runTest {
+    fun `given format arguments with a throwable then the extras carry the template only`() = runTest {
         val extras = slot<Map<String, String>>()
         coEvery { crashReportingRepository.recordException(any(), capture(extras)) } returns Unit
 
-        Timber.e(IllegalStateException("plain"), "failed with Authorization: Bearer sk-live-SECRET")
+        Timber.w(IOException("rename failed"), "Workspace import threw for %s", USER_PATH)
         scope.advanceUntilIdle()
 
-        val message = extras.captured.getValue("timber_message")
-        assertFalse("token leaked: $message", message.contains("sk-live-SECRET"))
-        assertTrue(message.contains("Bearer ***"))
+        assertEquals(mapOf("timber_message" to "Workspace import threw for %s"), extras.captured)
     }
 
     @Test
-    fun `given a message-only record carries a credential then the synthetic exception is scrubbed`() = runTest {
-        val captured = slot<Throwable>()
-        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
+    fun `given a throwable and no message then its text does not reach the extras either`() = runTest {
+        // Timber substitutes the stack trace — whose first line is the throwable's
+        // own text — for a missing message.
+        val reported = slot<Throwable>()
+        val extras = slot<Map<String, String>>()
+        coEvery { crashReportingRepository.recordException(capture(reported), capture(extras)) } returns Unit
 
-        Timber.tag("PipelineDebug").e("[NODE_ERR] error=$LEAKING_PROVIDER_ERROR")
+        Timber.w(IOException("$USER_PATH (No such file or directory)"))
         scope.advanceUntilIdle()
 
-        val message = captured.captured.message.orEmpty()
-        assertFalse("key leaked: $message", message.contains(LEAKED_KEY))
-        assertTrue(message.contains("key=***"))
+        assertNoUserText(reported.captured, extras.captured)
+        assertEquals(emptyMap<String, String>(), extras.captured)
     }
 
     @Test
-    fun `given the credential sits in a suppressed exception then the original is not reported`() = runTest {
-        val captured = slot<Throwable>()
-        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
+    fun `given a cause chain then every link keeps its type and frames and loses its text`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
+        val cause = IOException("$USER_PATH (Permission denied)")
+        val wrapper = RuntimeException("read failed for $USER_PATH", cause)
+
+        Timber.e(wrapper, "embedding failed")
+        scope.advanceUntilIdle()
+
+        val chain = generateSequence(reported.captured) { it.cause }.toList()
+        assertEquals(listOf(RuntimeException::class.java.name, IOException::class.java.name), chain.map { it.message })
+        assertArrayEquals(wrapper.stackTrace, chain[0].stackTrace)
+        assertArrayEquals(cause.stackTrace, chain[1].stackTrace)
+    }
+
+    @Test
+    fun `given a suppressed exception then it is not reported`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
         val leaking = IllegalStateException("close failed").apply {
             addSuppressed(IOException(LEAKING_PROVIDER_ERROR))
         }
@@ -204,19 +168,73 @@ class CrashlyticsTimberTreeTest {
         Timber.e(leaking, "download failed")
         scope.advanceUntilIdle()
 
-        val reported = captured.captured
-        assertNotSame(leaking, reported)
-        val texts = generateSequence(reported) { it.cause }
-            .flatMap { link -> sequenceOf(link) + link.suppressed.asSequence() }
-            .mapNotNull { it.message }
-            .toList()
+        assertNotSame(leaking, reported.captured)
+        assertTrue(reported.captured.suppressed.isEmpty())
+    }
+
+    @Test
+    fun `given a throwable whose message carries a credential then no part of it is reported`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
+
+        Timber.e(RuntimeException("wrapper", IOException(LEAKING_PROVIDER_ERROR)), "embedding failed")
+        scope.advanceUntilIdle()
+
+        val texts = generateSequence(reported.captured) { it.cause }.mapNotNull { it.message }.toList()
         assertTrue(texts.none { it.contains(LEAKED_KEY) })
     }
 
+    @Test
+    fun `warn without throwable wraps the template in a synthetic exception with its tag`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
+
+        Timber.tag("TestTag").w("something looks off")
+        scope.advanceUntilIdle()
+
+        coVerify(exactly = 1) { crashReportingRepository.recordException(any(), emptyMap()) }
+        assertEquals("[TestTag] something looks off", reported.captured.message)
+    }
+
+    @Test
+    fun `error without tag still produces readable synthetic message`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
+
+        Timber.e("untagged failure")
+        scope.advanceUntilIdle()
+
+        assertEquals("untagged failure", reported.captured.message)
+    }
+
+    @Test
+    fun `given a template that itself spells out a credential then the backstop still masks it`() = runTest {
+        // Templates are literals (TimberMessageTemplateKonsistTest), so this takes a
+        // credential written into the source — the redaction stays as a backstop.
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
+
+        Timber.tag("PipelineDebug").e("[NODE_ERR] error=$LEAKING_PROVIDER_ERROR")
+        scope.advanceUntilIdle()
+
+        assertFalse(reported.captured.message.orEmpty().contains(LEAKED_KEY))
+    }
+
+    @Test
+    fun `given a call-site template that spells out a credential then the extras are masked`() = runTest {
+        val extras = slot<Map<String, String>>()
+        coEvery { crashReportingRepository.recordException(any(), capture(extras)) } returns Unit
+
+        Timber.e(IllegalStateException("plain"), "failed with Authorization: Bearer sk-live-SECRET")
+        scope.advanceUntilIdle()
+
+        assertFalse(extras.captured.getValue("timber_message").contains("sk-live-SECRET"))
+    }
+
     @Test(timeout = 5_000)
-    fun `given a cause chain that loops when a leaking error is logged then the report is still produced`() = runTest {
-        val captured = slot<Throwable>()
-        coEvery { crashReportingRepository.recordException(capture(captured), any()) } returns Unit
+    fun `given a cause chain that loops when an error is logged then the report is still produced`() = runTest {
+        val reported = slot<Throwable>()
+        coEvery { crashReportingRepository.recordException(capture(reported), any()) } returns Unit
         val first = IllegalStateException(LEAKING_PROVIDER_ERROR)
         val second = RuntimeException("wrapper", first)
         first.initCause(second)
@@ -224,10 +242,21 @@ class CrashlyticsTimberTreeTest {
         Timber.e(first, "looping chain")
         scope.advanceUntilIdle()
 
-        assertFalse(captured.captured.message.orEmpty().contains(LEAKED_KEY))
+        assertEquals(IllegalStateException::class.java.name, reported.captured.message)
+    }
+
+    /** Asserts that no user path or file content appears in [reported]'s chain or in [extras]. */
+    private fun assertNoUserText(reported: Throwable, extras: Map<String, String>) {
+        val texts = generateSequence(reported) { it.cause }.mapNotNull { it.message }.toList() + extras.values
+        for (text in texts) {
+            assertFalse("path reported: $text", text.contains(USER_PATH))
+            assertFalse("content reported: $text", text.contains(USER_CONTENT))
+        }
     }
 
     private companion object {
+        const val USER_PATH = "notes/diary-2026.md"
+        const val USER_CONTENT = "Dear diary"
         const val LEAKED_KEY = "AIzaSyTESTKEY"
         const val LEAKING_PROVIDER_ERROR =
             "Socket timeout has expired [url=https://generativelanguage.googleapis.com/v1beta/models/" +

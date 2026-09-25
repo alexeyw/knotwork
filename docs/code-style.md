@@ -103,6 +103,18 @@ For the broader layering rationale, see
   does. `RegexConstructionKonsistTest` fails a `Regex(…)`, `Pattern.compile(…)`
   or `.toRegex()` built any other way.
 
+## Logging
+
+- A `WARN`-or-above Timber message is a **string literal without templates**,
+  and values go in as format arguments:
+  `Timber.w(e, "import failed for %s", name)`. With crash reporting on, those
+  records are sent as non-fatal reports, and a report carries the literal, the
+  error's type and its stack frames — never the arguments and never an error's
+  own message, which is where paths, file contents and tool arguments travel.
+  A value baked into the literal (`"… $path"`), or a message held in a
+  variable, would be sent. `TimberMessageTemplateKonsistTest` fails any other
+  shape.
+
 ## Dependency injection (Hilt)
 
 - Use `@HiltViewModel` for every `ViewModel`.

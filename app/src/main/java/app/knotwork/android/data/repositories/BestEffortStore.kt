@@ -11,8 +11,8 @@ import timber.log.Timber
  * always re-thrown from the dedicated first catch clause, per the
  * coroutine-cancellation gate.
  *
- * @param failureMessage Lazily-built log line describing the failed
- *   operation; evaluated only when the block actually fails.
+ * @param failureMessage Lazily-built description of the failed operation,
+ *   logged after a fixed prefix; evaluated only when the block actually fails.
  * @param block The storage operation to attempt.
  * @return The block's result, or `null` when the store failed.
  */
@@ -21,6 +21,8 @@ internal suspend fun <T> absorbingStoreFailure(failureMessage: () -> String, blo
 } catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {
-    Timber.e(e, "%s", failureMessage())
+    // The fixed words are what a crash report keeps (it drops the arguments);
+    // the stack frames of `e` name the store call that failed.
+    Timber.e(e, "Best-effort store operation failed: %s", failureMessage())
     null
 }

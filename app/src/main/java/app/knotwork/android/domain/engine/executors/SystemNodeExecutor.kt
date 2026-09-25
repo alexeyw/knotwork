@@ -164,8 +164,11 @@ class SystemNodeExecutor @Inject constructor(
             // rather than the throwable, whose stack trace would print the original.
             val safeMessage = CloudErrorSanitizer.sanitize(e)
             Timber.tag("PipelineDebug").e(
-                "[NODE_ERR] type=${node.type.name} id=${node.id} " +
-                    "SystemNodeExecutor generation failed with ${e::class.simpleName}: $safeMessage",
+                "[NODE_ERR] type=%s id=%s SystemNodeExecutor generation failed with %s: %s",
+                node.type.name,
+                node.id,
+                e::class.simpleName,
+                safeMessage,
             )
             emit(NodeOutput.State(AgentOrchestratorState.Error(safeMessage)))
             emit(NodeOutput.Result(NodeExecutionResult(error = safeMessage)))

@@ -223,7 +223,7 @@ class MemoryViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 // Keep the sheet open in edit mode so the draft survives.
-                Timber.w(e, "Failed to commit memory edit for $id")
+                Timber.w(e, "Failed to commit memory edit for %s", id)
                 _messageEvents.tryEmit(MemoryMessage.EditError)
             }
         }

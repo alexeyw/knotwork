@@ -128,7 +128,7 @@ class ClarificationNodeExecutor @Inject constructor(
         } catch (e: Exception) {
             Timber.tag(
                 TAG,
-            ).e(e, "[NODE_ERR] type=${node.type.name} id=${node.id} error during clarification generation")
+            ).e(e, "[NODE_ERR] type=%s id=%s error during clarification generation", node.type.name, node.id)
             emit(
                 NodeOutput.State(
                     AgentOrchestratorState.Error(
