@@ -182,7 +182,8 @@ interface PipelineRunRepository {
     suspend fun getDescendantRuns(rootRunId: String): List<PipelineRun>
 
     /**
-     * Counts the runs of [origin] that started at or after [sinceEpochMs].
+     * Counts the top-level runs of [origin] that started at or after [sinceEpochMs]
+     * — a nested pipeline's run is part of the run that started it and is not counted.
      *
      * Exists for the scheduling tool's runaway guard, which has to answer "how
      * often is this actually firing?" — a question the queue cannot answer,
@@ -193,9 +194,9 @@ interface PipelineRunRepository {
      *
      * @param origin The run origin to count.
      * @param sinceEpochMs Inclusive lower bound on the run's start, epoch-millis.
-     * @return The number of matching runs, or `0` when the read failed.
+     * @return The number of matching top-level runs, or `0` when the read failed.
      */
-    suspend fun countRunsByOriginSince(origin: RunOrigin, sinceEpochMs: Long): Int
+    suspend fun countRootRunsByOriginSince(origin: RunOrigin, sinceEpochMs: Long): Int
 
     /**
      * Walks the [PipelineRun.parentRunId] links up from [runId] to the root of

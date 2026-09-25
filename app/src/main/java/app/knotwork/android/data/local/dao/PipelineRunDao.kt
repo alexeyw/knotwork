@@ -215,19 +215,26 @@ interface PipelineRunDao {
     suspend fun getRunOrigin(runId: String): String?
 
     /**
-     * Counts the runs of one [origin] that started at or after [sinceEpochMs].
+     * Counts the top-level runs of one [origin] that started at or after [sinceEpochMs].
      *
      * Backs the scheduling tool's runaway guard: a task that keeps re-scheduling
      * itself holds only ever **one** queued item, so the queue's depth says
      * nothing — the tell is how many scheduled runs actually fired in the recent
      * past. Counted in SQL so the guard never loads run rows it does not read.
      *
+     * Only runs without a [PipelineRunEntity.parentRunId]: a nested pipeline's run
+     * inherits its parent's origin and is part of the run that started it, so
+     * counting it would spend the allowance once per nested step.
+     *
      * @param origin `RunOrigin` name to count.
      * @param sinceEpochMs Inclusive lower bound on `startedAt`, epoch-millis.
-     * @return The number of matching runs.
+     * @return The number of matching top-level runs.
      */
-    @Query("SELECT COUNT(*) FROM pipeline_runs WHERE origin = :origin AND startedAt >= :sinceEpochMs")
-    suspend fun countRunsByOriginSince(origin: String, sinceEpochMs: Long): Int
+    @Query(
+        "SELECT COUNT(*) FROM pipeline_runs " +
+            "WHERE origin = :origin AND startedAt >= :sinceEpochMs AND parentRunId IS NULL",
+    )
+    suspend fun countRootRunsByOriginSince(origin: String, sinceEpochMs: Long): Int
 
     /**
      * Returns the direct child runs of [parentRunId] (the sub-pipeline runs a

@@ -379,6 +379,11 @@ What we already did to keep this in check:
   exclusion, a scan of every class on both release runtime classpaths (88,988 classes in 487 jars)
   found no reference to OpenTelemetry or to that Koog module outside the module itself, so nothing
   that stays can reach for what left.
+- **Leave SLF4J's simple provider out.** Koog's Android client brings `slf4j-simple`
+  in at runtime, which wrote library logging — model output among Koog's lines — to
+  logcat. Every configuration excludes it; with no provider SLF4J 2 uses its no-op
+  logger, and `verify<Variant>NoSlf4jProvider` keeps any other provider out
+  ([static analysis](static-analysis.md)). Four classes fewer in the release mapping.
 - **Drop MediaPipe's text-generation library.** `**/libmediapipe_tasks_textgenai_jni.so` is excluded via `android.packaging.jniLibs`. Only `TextSummarizer` and `TextProofreader` load it — the app uses `TextEmbedder`, which loads `libmediapipe_tasks_jni.so` — and text generation belongs to LiteRT-LM. An exclude is a file-name pattern that stops matching silently if the library is renamed, so the release workflow asserts it on the artefact (§9): the library absent, and the LiteRT-LM and MediaPipe Tasks libraries present.
 
 Future wins (left out of scope for now):

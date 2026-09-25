@@ -24,6 +24,10 @@ details.
   into a run's error, the console, chat and trigger-journal exports and crash
   reports. They are scrubbed now, and the pipeline engine and the crash-reporting
   log scrub again, so a path added later is covered too.
+- **Model output no longer reaches the device log.** A logging library that
+  came with the cloud-model client wrote its messages to the system log
+  (logcat, readable over USB debugging and included in bug reports), and some
+  of them quoted a model's answer or reasoning. It is no longer part of the app.
 - **Crash reports no longer carry file names or error text.** With crash
   reporting on, a logged error was sent with its message and the values written
   into it: a workspace file's path, the arguments of a failed tool call, even the
@@ -223,6 +227,9 @@ details.
 
 ### Fixed
 
+- **A scheduled pipeline that runs other pipelines no longer uses up the hourly
+  limit early.** The agent may schedule at most 12 runs an hour, and each
+  pipeline step inside a scheduled run counted as another run of its own.
 - **One waiting notification no longer replaces or clears another.** An
   approval, a question and a paused run could land on the same notification
   slot: a new approval replaced the notification of a paused run, and answering
