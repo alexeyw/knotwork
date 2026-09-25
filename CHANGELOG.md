@@ -258,7 +258,10 @@ details.
 - **The model screens name the one format that works.** The custom model link
   and the onboarding step invited `.task` and `.gguf` files as well as
   `.litertlm`; files in those formats downloaded and then never loaded. Both
-  screens and the user guide now say `.litertlm`.
+  screens and the user guide now say `.litertlm`, and a link to any other file
+  is refused with a message before anything downloads. A link ending in
+  `?download=true` is saved under the model's own name instead of carrying the
+  query into it.
 - **Downloaded models come back after Erase data.** Erasing a database that can
   no longer be unlocked keeps the downloaded models on the device, but the app
   forgot them and listed none. They are listed again under Models the next time

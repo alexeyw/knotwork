@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="models_screen_title">Models</string>
-    <string name="models_default_custom_filename">custom_model.bin</string>
     <string name="models_error_unknown">An unknown error occurred</string>
+    <string name="models_error_link_not_litertlm">This link isn\'t a .litertlm file. Only .litertlm models run on the phone.</string>
 
     <!-- Knotwork redesign. -->
     <string name="models_subtitle_format" tools:ignore="PluralsCandidate">%1$d active · %2$d on disk · %3$s</string>

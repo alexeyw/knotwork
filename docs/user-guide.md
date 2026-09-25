@@ -92,14 +92,15 @@ device.
 Open the **More** tab and tap **Models**. The screen has two areas:
 
 - A list of **presets** — curated LiteRT models that are known to work
-  with the agent. Each preset shows the model name and a **Download**
-  button (or a **Downloaded** label if it is already on the device).
-- A **Custom Model URL** field for paste-in downloads (for example, a
-  direct file URL from Hugging Face).
+  with the agent. Each preset shows the model name and a **Get** button;
+  once it is on the device, a three-dot menu with **Activate** and
+  **Delete** takes its place (the active model is marked **ACTIVE**).
+- A **Custom Model URL** field for paste-in downloads (a direct link to a
+  `.litertlm` file, for example from Hugging Face).
 
-If the source you are downloading from requires authentication, paste
-your token into the **HuggingFace Auth Token** field above the URL
-input. The field is masked and is used only for the download request.
+If the model is gated on Hugging Face, paste your access token into the
+**HuggingFace** field above the URL input. The field is masked, and the
+token is sent only with downloads from `huggingface.co`.
 
 <!-- TODO: device capture of the Models screen. The hero shots under
      `docs/images/` cover chat / pipeline-editor / pipeline-library /
@@ -109,9 +110,10 @@ input. The field is masked and is used only for the download request.
 
 ### 2. Download a model
 
-- To use a preset, tap **Download** next to it.
-- To download a custom file, paste the URL into **Custom Model URL**
-  and tap **Download Custom Model**.
+- To use a preset, tap **Get** next to it.
+- To download a custom file, paste its link into **Custom Model URL**
+  and tap **Get**. A link that does not end in a `.litertlm` file is
+  refused before anything downloads.
 
 A progress bar appears with a percentage, and a notification shows the
 same progress with a **Cancel** action. The transfer is a real background
@@ -2859,12 +2861,14 @@ LLMs.
   reads the system clipboard. The token is sent only to
   `huggingface.co`.
 - The **Custom model URL** field accepts a direct link to a
-  `.litertlm` file — the only format the on-device engine loads.
+  `.litertlm` file — the only format the on-device engine loads; a link
+  to any other file is refused before it downloads.
   Tap `Get` to start downloading. A link to any other host is downloaded without your
   token.
 - The **Available presets** list shows curated models, each row in
-  one of three states: `Get` (not downloaded), progress bar with
-  cancel-X (downloading), or `✓ ON DISK` (ready to activate).
+  one of four states: `Get` (not downloaded), progress bar with
+  cancel-X (downloading), a three-dot menu with `Activate` and `Delete`
+  (on disk), or `ACTIVE` with a menu holding `Delete` (the active model).
 
 ### Model performance & benchmark
 

@@ -540,6 +540,39 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `given a custom link to another model format when downloading then nothing downloads and it says why`() =
+        runTest {
+            val viewModel = newViewModel()
+            advanceUntilIdle()
+            viewModel.pickLiteRtModel(OnboardingLiteRtModel.CustomUrl)
+            viewModel.onCustomDownloadUrlChanged("https://example.com/models/llama.gguf")
+            advanceUntilIdle()
+
+            viewModel.startDownload()
+            advanceUntilIdle()
+
+            verify(exactly = 0) { downloadManager.downloadModel(any(), any(), any()) }
+            val state = viewModel.state.value
+            assertNull(state.downloadProgress)
+            assertTrue(state.downloadError.orEmpty().contains(".litertlm"))
+        }
+
+    @Test
+    fun `given a custom Hugging Face link when downloading then the file name drops the query`() = runTest {
+        val url = "https://huggingface.co/org/repo/resolve/main/model.litertlm?download=true"
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+        viewModel.pickLiteRtModel(OnboardingLiteRtModel.CustomUrl)
+        viewModel.onCustomDownloadUrlChanged(url)
+        advanceUntilIdle()
+
+        viewModel.startDownload()
+        advanceUntilIdle()
+
+        verify(exactly = 1) { downloadManager.downloadModel(url, "model.litertlm", any()) }
+    }
+
+    @Test
     fun `skipOnboarding posts hint through TransientMessageRelay`() = runTest {
         val viewModel = newViewModel()
 
