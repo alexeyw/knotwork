@@ -31,6 +31,7 @@ import app.knotwork.android.buildtools.VerifyKeepRuleTargetsTask
 import app.knotwork.android.buildtools.VerifyMergedManifestTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
+import app.knotwork.android.buildtools.VerifyNoSlf4jProviderTask
 import app.knotwork.android.buildtools.VerifySupplyChainPinsTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
 import com.android.build.api.artifact.ScopedArtifact
@@ -1919,6 +1920,14 @@ configurations.configureEach {
     exclude(group = "ai.koog", module = "agents-features-opentelemetry-android")
     exclude(group = "io.opentelemetry")
     exclude(group = "io.opentelemetry.kotlin")
+    // The SLF4J provider Koog's Android client module brings in at runtime. It
+    // wrote every `INFO`+ line logged through SLF4J to `System.err` — on Android,
+    // logcat — past the redaction the app applies to its own logs, and some of
+    // Koog's lines are model output: a reasoning trace at `INFO`, a whole response
+    // when a provider's reply has no parts. Without a provider, SLF4J 2
+    // falls back to its no-op logger. `verify<Variant>NoSlf4jProvider` keeps any
+    // other provider out.
+    exclude(group = "org.slf4j", module = "slf4j-simple")
 }
 
 dependencies {
@@ -2304,6 +2313,38 @@ androidComponents {
             stampFile.set(layout.buildDirectory.file("reports/merged-manifest/${variant.name}.txt"))
         }
         tasks.named("check") { dependsOn(verifyMergedManifest) }
+    }
+}
+
+// ─── No SLF4J provider in a shipping build ──────────────────────────────────
+// Koog logs through SLF4J, and one of its modules brought `slf4j-simple` in at
+// runtime: every `INFO`+ line logged through SLF4J — among Koog's, a model's
+// reasoning trace and a whole response on one provider's warning — went to
+// logcat, past the redaction the app applies to its own logs. The module is excluded in
+// `configurations.configureEach`; this guard keeps every other provider out too.
+// It reads the Java resources of the variant's runtime classpath before R8 (the
+// variant API's `ScopedArtifact.JAVA_RES` hands a task nothing for the ALL scope,
+// measured on AGP 9.3.1), because R8 turns a resolvable
+// `ServiceLoader` lookup into a constructor call and drops the service file from
+// the APK — the packaged artefact shows no registration even while it ships the
+// provider. In `check`, so a change adding a provider fails there, and ahead of
+// R8, so a release build cannot skip it.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val variantName = variant.name.replaceFirstChar { it.uppercaseChar() }
+        val verifyNoSlf4jProvider = tasks.register<VerifyNoSlf4jProviderTask>("verify${variantName}NoSlf4jProvider") {
+            group = "verification"
+            description = "Fails the build if the `${variant.name}` resources register an SLF4J logging provider."
+            resources.from(
+                variant.runtimeConfiguration.incoming.artifactView {
+                    attributes { attribute(Attribute.of("artifactType", String::class.java), "android-java-res") }
+                }.files,
+            )
+            checkedVariant.set(variant.name)
+            stampFile.set(layout.buildDirectory.file("reports/slf4j-provider/${variant.name}.txt"))
+        }
+        tasks.named("check") { dependsOn(verifyNoSlf4jProvider) }
+        tasks.matching { it.name == "minify${variantName}WithR8" }.configureEach { dependsOn(verifyNoSlf4jProvider) }
     }
 }
 

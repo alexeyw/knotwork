@@ -1949,6 +1949,34 @@ fixture of `MergedManifestInventoryTest`, next to cases for each entry kind, a
 non-exported component, an export that lost its permission, and an expectation
 that lists an entry twice (a duplicate would hide the removal of one copy).
 
+### SLF4J provider guard (`verify<Variant>NoSlf4jProvider`)
+
+Koog and the libraries under it log through SLF4J. An SLF4J provider on the
+classpath decides where those lines go, and the one Koog's Android client brought
+in, `slf4j-simple`, wrote them to `System.err` — logcat — past the redaction the
+app applies to its own logs; some of Koog's lines are model output. The module
+is excluded in `configurations.configureEach` (`app/build.gradle.kts`), and with
+no provider SLF4J 2 uses its no-op logger.
+
+`:app:verifyFullReleaseNoSlf4jProvider` and `:app:verifyFossReleaseNoSlf4jProvider`
+keep any other provider out. They read the Java resources of each release
+variant's runtime classpath (the `android-java-res` view) and fail on a
+`META-INF/services/org.slf4j.spi.SLF4JServiceProvider` file that lists a class —
+the only way an SLF4J 2 provider registers
+([`Slf4jProviders`](../buildSrc/src/main/kotlin/app/knotwork/android/buildtools/Slf4jProviders.kt),
+unit-tested in `buildSrc`). They run in `check` and before R8 on every release
+build, and refuse to pass when they receive no resources.
+
+Why not the APK: R8 turns a `ServiceLoader` lookup it can resolve into a direct
+constructor call and drops the service file, so the packaged APK shipped the
+provider with no registration left to find. Why not the variant API's
+`ScopedArtifact.JAVA_RES`: for the `ALL` scope it hands a task no files (AGP
+9.3.1), which the guard's own refusal to pass vacuously surfaced.
+
+**Observed failing.** Before the exclusion, both variants:
+`slf4j-simple-2.0.17.jar registers org.slf4j.simple.SimpleServiceProvider`.
+After it, the full release mapping holds no `org.slf4j.simple` class.
+
 ### Dependency verification (`gradle/verification-metadata.xml`)
 
 Every artifact Gradle resolves — plugins, `buildSrc`'s dependencies, the app's

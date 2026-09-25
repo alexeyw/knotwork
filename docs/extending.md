@@ -403,7 +403,8 @@ user's expectation of agency).
 `schedule_task` additionally refuses to schedule anything once more
 than `ScheduleTaskUseCase.MAX_SCHEDULED_RUNS_PER_HOUR` scheduled runs
 have started within the last hour, and returns that refusal as the tool
-result. The guard keys on the *rate of scheduled runs*, not on the depth
+result. A pipeline step that runs another pipeline is part of the
+scheduled run that reached it and does not count as a run of its own. The guard keys on the *rate of scheduled runs*, not on the depth
 of the queue: a task whose prompt tells the agent to schedule its own
 successor keeps exactly one item queued at all times, so queue depth
 never reveals it. Every task the tool schedules is tagged

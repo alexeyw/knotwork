@@ -32,7 +32,7 @@ class ScheduleTaskUseCaseTest {
         every { taskScheduler.scheduleOneTime(any(), any(), any(), any()) } just Runs
         every { taskScheduler.schedulePeriodic(any(), any(), any(), any()) } just Runs
         // Quiet history by default; the runaway-guard tests override it.
-        coEvery { pipelineRunRepository.countRunsByOriginSince(any(), any()) } returns 0
+        coEvery { pipelineRunRepository.countRootRunsByOriginSince(any(), any()) } returns 0
         scheduleTaskUseCase = ScheduleTaskUseCase(taskScheduler, pipelineRunRepository)
     }
 
@@ -114,7 +114,7 @@ class ScheduleTaskUseCaseTest {
 
     @Test
     fun `given the hourly limit is already reached when invoked then nothing is scheduled`() = runTest {
-        coEvery { pipelineRunRepository.countRunsByOriginSince(any(), any()) } returns
+        coEvery { pipelineRunRepository.countRootRunsByOriginSince(any(), any()) } returns
             ScheduleTaskUseCase.MAX_SCHEDULED_RUNS_PER_HOUR
 
         val result = scheduleTaskUseCase("keep going forever")
@@ -128,7 +128,7 @@ class ScheduleTaskUseCaseTest {
     fun `given the limit is reached when invoked then the periodic path is refused too`() = runTest {
         // A chain can hide behind either schedule kind; refusing only one would
         // leave the loop an obvious way around the guard.
-        coEvery { pipelineRunRepository.countRunsByOriginSince(any(), any()) } returns 99
+        coEvery { pipelineRunRepository.countRootRunsByOriginSince(any(), any()) } returns 99
 
         val result = scheduleTaskUseCase("keep going forever", intervalHours = 1)
 
@@ -138,7 +138,7 @@ class ScheduleTaskUseCaseTest {
 
     @Test
     fun `given one run below the limit when invoked then it still schedules`() = runTest {
-        coEvery { pipelineRunRepository.countRunsByOriginSince(any(), any()) } returns
+        coEvery { pipelineRunRepository.countRootRunsByOriginSince(any(), any()) } returns
             ScheduleTaskUseCase.MAX_SCHEDULED_RUNS_PER_HOUR - 1
 
         scheduleTaskUseCase("legitimate follow-up")
@@ -155,7 +155,7 @@ class ScheduleTaskUseCaseTest {
         // Counting every scheduled run ever would refuse a perfectly healthy
         // schedule after a few busy days.
         coVerify(exactly = 1) {
-            pipelineRunRepository.countRunsByOriginSince(RunOrigin.SCHEDULER, now - 3_600_000L)
+            pipelineRunRepository.countRootRunsByOriginSince(RunOrigin.SCHEDULER, now - 3_600_000L)
         }
     }
 
@@ -163,7 +163,7 @@ class ScheduleTaskUseCaseTest {
     fun `given the run-history read fails when invoked then scheduling is still allowed`() = runTest {
         // The port degrades to 0 on a storage error; the guard must fail open —
         // a diagnostic count is never a reason to block a legitimate task.
-        coEvery { pipelineRunRepository.countRunsByOriginSince(any(), any()) } returns 0
+        coEvery { pipelineRunRepository.countRootRunsByOriginSince(any(), any()) } returns 0
 
         scheduleTaskUseCase("legitimate task")
 
