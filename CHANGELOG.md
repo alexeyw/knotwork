@@ -241,6 +241,27 @@ details.
   fallback class, a planner's sub-task limit and a clarification step's quick
   replies were kept only in the editor's own copy of the node, not in the part of
   the file the app runs. They now travel in both.
+- **The browser editor keeps a queue's "Stop on first error" and a condition's
+  image check.** Unticking "Stop on first error" in the browser did not reach the
+  app, which still stopped at the first failed item. A condition set to branch
+  on an attached image lost the setting when its file went through the browser,
+  which had no control for it; now it has one. The browser also shows each node
+  from the part of the file the app runs, as the app does, so a file reads the
+  same in both. Files saved by earlier versions of the browser editor keep their
+  queue, router-fallback, sub-task-limit and quick-reply settings: the editor
+  reads them from where those versions stored them and saves them to both parts.
+- **The browser editor reads a pipeline file the way the app does.**
+  - A node's *Input data* switches that a file left out, or set to `0` or
+    `null`, showed as off in the browser; the app sends that data.
+  - A provider name in another letter case, or `gemini`, showed as on-device or
+    Auto; the app calls that provider.
+  - An Ollama node saved in the browser came back as DeepSeek.
+  - A tool the browser has no entry for, such as one from an MCP server, showed
+    as Auto, and saving the node reset it.
+  - A saved preset reusing a bundled preset's id replaced that sub-pipeline in
+    later bundle exports.
+
+  Each of these now matches the app.
 - **Saving right after an import no longer reuses the file's node ids.** An
   import stores the pipeline under fresh node ids, but the editor kept the
   file's ones, so the next Save wrote them back — and two imported files that

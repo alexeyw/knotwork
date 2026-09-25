@@ -6,3 +6,6 @@
 #
 # A public PGP key fingerprint used as a test fixture (Google's Maven signing key).
 96c2449d050e428fdf54150aae61b240521d7453:buildSrc/src/test/kotlin/app/knotwork/android/buildtools/SupplyChainPinsCheckerTest.kt:generic-api-key:134
+#
+# A made-up OpenAI key in the provider-detail fixture of the Settings screenshot tests.
+f4afc1b3dade6ea07c1a0c5dbcbc19e9c0c7855f:catalog/src/test/java/app/knotwork/design/screens/settings/SettingsPreview.kt:generic-api-key:533

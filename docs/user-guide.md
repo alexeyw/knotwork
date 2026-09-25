@@ -1514,8 +1514,14 @@ A pipeline file can come from anyone, so a few things are checked on the way
 in rather than taken as written:
 
 - **The node settings you see are the ones that run.** A file keeps each node's
-  settings twice — once for the run, once for the editor. Opening a node shows
-  the copy the run uses, whatever the editor copy says.
+  settings twice — once for the run, once for the editor. Opening a node, in the
+  app or in the browser editor, shows the copy the run uses, whatever the editor
+  copy says. The browser editor reads the file the way the app does, including
+  a node's *Input data* switches and provider names in any letter case; a tool
+  or provider it has no entry for is shown by name and kept when you save.
+  Files saved by an earlier browser editor kept four settings only in the
+  editor copy; the browser editor still reads those from there and saves them
+  into both.
 - **Names stay short.** The pipeline name and each node's label are kept to one
   line of at most 60 characters; anything longer is cut.
 - **Starter prompts only name tools the pipeline calls.** The `uses · …` line

@@ -599,8 +599,8 @@ existing `*ExecutorTest` files.
 
 Cloud providers are dispatched by the single unified `CLOUD` node. You
 do **not** create a new node type for a new provider — you teach the
-existing factory and resolver about it. This keeps `pipeline-editor.html`
-and the engine untouched.
+existing factory and resolver about it. The engine stays untouched; the
+browser editor needs one line (3.1).
 
 ### 3.1. Extend the `CloudProvider` enum
 
@@ -609,6 +609,12 @@ Add a constant to
 with a stable wire-id (the lowercase string used in pipeline JSON,
 e.g. `"mistral"`). Existing values are
 `OPENAI`, `ANTHROPIC`, `GOOGLE`, `DEEPSEEK`, `OLLAMA`.
+
+Then add a `case` for the new id to `wireToTile` in `pipeline-editor.html`,
+on the tile it belongs to. The browser editor reads a pipeline file's provider
+ids through that one function, the way `CloudProvider.fromId` does, and
+`verifyBrowserEditorConstants` fails while an id the app accepts is missing
+from it — otherwise the browser would show such a node as on-device or Auto.
 
 ### 3.2. Implement client construction
 
@@ -1470,7 +1476,7 @@ double-check it for every recipe in this guide.**
 |------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | A new `NodeType`             | `domain/models/NodeType.kt` · a new `NodeExecutor` implementation · `domain/engine/executors/NodeExecutorFactory.kt` · `domain/models/NodeContextConfig.kt` (`defaultForType`) · `domain/models/PipelineGraph.kt` (`validate`, if special invariants) · `buildtools/BrowserEditorConstantsGenerator.kt` (`NODE_TYPE_META`) + run `./gradlew :app:generateBrowserEditorConstants` · `buildtools/CookbookDocsGenerator.kt` (`NODE_DOC_META` + a `FIELD_REACH` entry per config field) + run `./gradlew :app:generateCookbookDocs` · **`pipeline-editor.html`** (`defaultContextConfig`, `NODE_TYPE_TOOLTIPS`, optional `DEFAULT_SYSTEM_PROMPTS`; for typed config also `defaultRichConfig` / `richToFlat` / `encodeRichEnvelope` / `decodeRichEnvelope` / `deriveRichFromFlat` / `renderFormFields` / `validateRichConfig`) · executor unit test · `GraphExecutionEngineTest` |
 | A node type that **references another entity by id** (`PIPELINE` / `SKILL`) | the flat `NodeModel` field (`targetPipelineId` / `skillId`) · `domain/pipelineio/PipelineJsonSerializer.kt` (emit + read the id in the flat `config` block) · `domain/models/PipelineGraph.kt` (`validate` → `MissingTargetPipeline` / `MissingSkill`) · `domain/services/PipelineCompositionValidator.kt` (transitive cycle / depth) · **`pipeline-editor.html`** (flat `config` key in `exportToJson`/`importFromJson`, reference form, self-ref + unresolved-id validation, node badge) · `PipelineJsonSerializerTest` round-trip |
-| A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · `NodeConfigForms.kt` + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec · **`pipeline-editor.html`** envelope encode/decode so the field round-trips — and, if its verdict is `RoundTripOnly`, **no** control in `renderFormFields`: `verifyBrowserEditorConstants` fails on a form control for a field no run reads |
+| A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · `NodeConfigForms.kt` + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec · **`pipeline-editor.html`** envelope encode/decode so the field round-trips — and, if its verdict is `RoundTripOnly`, **no** control in `renderFormFields`: `verifyBrowserEditorConstants` fails on a form control for a field no run reads. A `Runtime` field needs the whole chain instead — read from the flat `config` in `importFromJson`, set in `deriveRichFromFlat`, a control in `renderFormFields`, written by `encodeRichEnvelope` and `richToFlat`, exported by `exportToJson`, and never read from the envelope in `decodeRichEnvelope` (the one exception is the closed `LEGACY_ENVELOPE_FALLBACK` list in `BrowserEditorRuntimeFieldGuard`, for files older editors wrote); the same task names the missing link. The browser's import may read only `config` keys the app's importer reads (`CONFIG_KEYS` in `PipelineJsonSerializer`) — `BrowserEditorImportParityGuard` |
 | A new `Tool`                 | a new `LocalToolExecutor` implementation · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · declare `ToolRisk` correctly · executor unit test · optional Compose test if new UI                                                                            |
 | A new **workspace tool**     | a new `LocalToolExecutor` that goes through `AgentWorkspace` (never raw `File`) · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · risk tier in `ToolRepositoryImpl` built-in list · `docs/user-guide.md` (built-in-tools table) · executor unit test against a `@TempDir`-backed `AgentWorkspace` (happy path + `../` traversal + quota/not-found) |
 | A new callee-side AppFunction | a new `@AppFunction`-annotated wrapper under `data/tools/local/appfunctions/` (first param `AppFunctionContext`) · `App.appFunctionConfiguration` (`addEnclosingClassFactory(...)`) · wrapper unit test with a mocked `AppFunctionContext` · scenario in `AppFunctionsEndToEndTest` |

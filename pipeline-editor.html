@@ -1526,7 +1526,7 @@
      * Internal presets are sub-pipelines another preset composes. They are
      * hidden from the "📚 Presets" list (see `renderPresetList`) exactly as
      * the app hides them from its picker, but they must stay in this array:
-     * `knownPipelineOptions` / `knownPipelineDocs` resolve PIPELINE targets
+     * `knownPipelineDocsById` resolves PIPELINE targets for the picker
      * and the bundle-export closure through it.
      *
      * Generated from `assets/presets/pipelines/` by
@@ -5666,6 +5666,42 @@
     }
 
     /**
+     * A boolean from a file, read the way the app's importer reads one
+     * (`org.json` `getBoolean` / `optBoolean`): a JSON boolean, or the string
+     * "true" / "false" in any case. Anything else is null here; for a flat
+     * field the app refuses the whole file on it.
+     */
+    function wireBool(v) {
+        if (typeof v === 'boolean') return v;
+        if (typeof v === 'string' && /^(true|false)$/i.test(v)) return v.toLowerCase() === 'true';
+        return null;
+    }
+
+    /**
+     * Reads a node's `contextConfig` from a file the way the app's importer does
+     * (`PipelineJsonSerializer`): no block at all takes the node type's defaults;
+     * inside a block, each flag is `optBoolean(key, true)` — a JSON boolean, or
+     * the string "true" / "false" in any case, and **on** for anything else,
+     * a missing key, `0` and `null` included. The browser used to fill a missing
+     * key from the type's defaults and read `0` / `null` as off, so it showed
+     * long-term memory and tool results off on a node the app sent them to.
+     * `nodeInput` stays locked on, as the form shows it.
+     */
+    function readContextConfig(typeId, raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return Object.assign(defaultContextConfig(typeId), { nodeInput: true });
+        }
+        const flag = v => wireBool(v) ?? true;
+        return {
+            chatHistory: flag(raw.chatHistory),
+            originalTask: flag(raw.originalTask),
+            nodeInput: true,
+            longTermMemory: flag(raw.longTermMemory),
+            toolResults: flag(raw.toolResults),
+        };
+    }
+
+    /**
      * Build the full data payload for a freshly-created node. All fields are
      * present (even type-irrelevant ones) so the JSON shape is stable when
      * exported.
@@ -5733,8 +5769,47 @@
         { id: 'COMPATIBLE', label: 'Compatible (DeepSeek / Ollama / OpenAI-compatible)' },
     ];
 
-    /** Maps the rich CLOUD `provider` value to the flat domain wire id. */
-    function richCloudToFlat(provider) {
+    /**
+     * Prefix of a CLOUD `provider` value that holds a flat id the app knows no
+     * provider by. The form shows it as it is and the export writes it back
+     * unchanged, so an unknown id is neither hidden behind a tile nor rewritten.
+     */
+    const UNKNOWN_WIRE_PREFIX = 'wire:';
+
+    /**
+     * The tile a flat `cloudProvider` id names, read the way the app's executors
+     * read it (`CloudProvider.fromId`): case-insensitive, `gemini` as Google,
+     * `deepseek` and `ollama` both on the Compatible tile. Anything else — the
+     * `auto` sentinel included — names no provider (null).
+     */
+    function wireToTile(flatId) {
+        switch (String(flatId ?? '').toLowerCase()) {
+            case 'openai':    return 'OPEN_AI';
+            case 'anthropic': return 'ANTHROPIC';
+            case 'google':
+            case 'gemini':    return 'GOOGLE';
+            case 'deepseek':
+            case 'ollama':    return 'COMPATIBLE';
+            default:          return null;
+        }
+    }
+
+    /**
+     * Maps the rich CLOUD `provider` value to the flat wire id, mirroring
+     * `CloudProviderMapper.toWireIdPreserving`: the id the node was loaded with
+     * (`previousWire`) is kept while it still names the selected tile. Compatible
+     * covers both DeepSeek and Ollama, so writing the tile's canonical id would
+     * move a node from a LAN Ollama server to the hosted DeepSeek on the next
+     * save. An unknown id is written back unchanged.
+     */
+    function richCloudToFlat(provider, previousWire) {
+        if (typeof provider === 'string' && provider.startsWith(UNKNOWN_WIRE_PREFIX)) {
+            return provider.slice(UNKNOWN_WIRE_PREFIX.length);
+        }
+        if (previousWire != null && previousWire !== '') {
+            const previousTile = String(previousWire).toLowerCase() === 'auto' ? 'AUTO' : wireToTile(previousWire);
+            if (previousTile != null && previousTile === provider) return previousWire;
+        }
         switch (provider) {
             case 'OPEN_AI':   return 'openai';
             case 'ANTHROPIC': return 'anthropic';
@@ -5745,17 +5820,16 @@
         }
     }
 
-    /** Maps a flat domain `cloudProvider` wire id back to the rich provider. */
+    /**
+     * Maps a flat `cloudProvider` to the CLOUD node's provider as the run
+     * resolves it (`CloudLlmNodeExecutor`): `null` and the exact `auto`
+     * sentinel pick a provider at run time (the import turns a blank id into
+     * `auto`); a known id names its tile; any other id names no provider — the
+     * node fails — and is kept as an unknown value rather than shown as Auto.
+     */
     function flatToRichCloud(flatId) {
-        switch (flatId) {
-            case 'openai':    return 'OPEN_AI';
-            case 'anthropic': return 'ANTHROPIC';
-            case 'google':    return 'GOOGLE';
-            case 'deepseek':
-            case 'ollama':    return 'COMPATIBLE';
-            case 'auto':      return 'AUTO';
-            default:          return 'AUTO';
-        }
+        if (flatId == null || flatId === '' || flatId === 'auto') return 'AUTO';
+        return wireToTile(flatId) ?? UNKNOWN_WIRE_PREFIX + flatId;
     }
 
     // Engine selector for the structured node types (INTENT_ROUTER /
@@ -5770,15 +5844,23 @@
         { id: 'COMPATIBLE', label: 'Compatible (DeepSeek / Ollama / OpenAI-compatible)' },
     ];
 
-    /** Maps a structured node's rich `engineProvider` to the flat wire id; on-device ⇒ blank. */
-    function engineProviderToFlat(provider) {
-        return provider ? richCloudToFlat(provider) : '';
+    /**
+     * Maps a structured node's rich `engineProvider` to the flat wire id;
+     * on-device ⇒ blank. Keeps the loaded id while it names the same tile, as
+     * richCloudToFlat does.
+     */
+    function engineProviderToFlat(provider, previousWire) {
+        return provider ? richCloudToFlat(provider, previousWire) : '';
     }
 
-    /** Maps a flat `cloudProvider` back to the structured engine selection; blank/auto ⇒ on-device. */
+    /**
+     * Maps a flat `cloudProvider` back to the structured engine selection, the
+     * way `SystemNodeExecutor` / `ToolNodeExecutor` resolve it: a provider
+     * `CloudProvider.fromId` knows (any case, `gemini` included) runs there;
+     * anything else — blank, `auto`, an unknown id — runs on-device.
+     */
     function flatToEngineProvider(flatId) {
-        if (!flatId || flatId === 'auto') return '';
-        return flatToRichCloud(flatId);
+        return wireToTile(flatId) ?? '';
     }
 
     /** A fresh default `cfg` for [typeId], mirroring `NodeConfigCodec.defaultFor`. */
@@ -5798,7 +5880,7 @@
                           { name: 'complex', description: '', examples: [] }],
                 classifierPrompt: D.INTENT_ROUTER || '', fallbackClass: null, engineProvider: '' };
             case 'IF_CONDITION': return { ...base, expression: '', keywords: '', complexityThreshold: null,
-                engineProvider: '' };
+                branchOnImage: false, engineProvider: '' };
             case 'CLARIFICATION': return { ...base, questionTemplate: D.CLARIFICATION || '',
                 quickReplies: [], timeoutMs: null };
             case 'TOOL':        return { ...base, toolId: '', alwaysConfirm: false, engineProvider: '' };
@@ -5835,16 +5917,16 @@
         };
         switch (typeId) {
             case 'LITE_RT': flat.systemPrompt = cfg.systemPrompt || ''; flat.modelPath = cfg.modelId || ''; break;
-            case 'CLOUD':   flat.systemPrompt = cfg.systemPrompt || ''; flat.cloudProvider = richCloudToFlat(cfg.provider); break;
+            case 'CLOUD':   flat.systemPrompt = cfg.systemPrompt || ''; flat.cloudProvider = richCloudToFlat(cfg.provider, cfg.wireProvider); break;
             case 'OUTPUT':  flat.systemPrompt = cfg.systemPrompt || ''; break;
             case 'INTENT_ROUTER': flat.systemPrompt = cfg.classifierPrompt || '';
                 flat.fallbackClass = cfg.fallbackClass || null;
-                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider); break;
+                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider, cfg.wireProvider); break;
             case 'DECOMPOSITION': flat.systemPrompt = cfg.planningPrompt || '';
                 flat.maxSubtasks = (cfg.maxSubtasks ?? null);
-                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider); break;
+                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider, cfg.wireProvider); break;
             case 'EVALUATION':    flat.systemPrompt = cfg.criteriaPrompt || '';
-                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider); break;
+                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider, cfg.wireProvider); break;
             case 'SUMMARY':       flat.systemPrompt = cfg.customPrompt || ''; break;
             case 'CLARIFICATION': flat.systemPrompt = cfg.questionTemplate || '';
                 flat.quickReplies = (cfg.quickReplies || []).map(s => String(s).trim())
@@ -5853,10 +5935,12 @@
             case 'IF_CONDITION':  flat.conditionPrompt = cfg.expression || '';
                 flat.conditionKeywords = cfg.keywords || null;
                 flat.conditionComplexity = (cfg.complexityThreshold ?? null);
-                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider); break;
+                flat.conditionHasImage = cfg.branchOnImage === true;
+                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider, cfg.wireProvider); break;
+            case 'QUEUE_PROCESSOR': flat.stopOnError = cfg.stopOnError !== false; break;
             case 'TOOL':          flat.toolName = cfg.toolId || '';
                 flat.alwaysConfirm = cfg.alwaysConfirm === true ? true : null;
-                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider); break;
+                flat.cloudProvider = engineProviderToFlat(cfg.engineProvider, cfg.wireProvider); break;
             // SKILL engine maps onto the flat cloudProvider exactly as
             // NodeConfigCodec.apply does: CLOUD → the "auto" sentinel, LITE_RT →
             // blank (decoded back via engineFromProvider on the next open).
@@ -5899,7 +5983,8 @@
                 // NodeConfigCodec maps AUTO back to the flat "auto" sentinel, so
                 // omitting it would make an auto node decode as OpenAI and lose
                 // auto-routing on the next sheet save.
-                env.provider = cfg.provider || 'AUTO';
+                env.provider = (cfg.provider && !String(cfg.provider).startsWith(UNKNOWN_WIRE_PREFIX))
+                    ? cfg.provider : 'AUTO';
                 env.model = cfg.model ?? '';
                 env.systemPrompt = cfg.systemPrompt ?? '';
                 env.temperature = Number(cfg.temperature ?? 0.7);
@@ -5918,6 +6003,7 @@
                 env.expression = cfg.expression ?? '';
                 env.keywords = cfg.keywords ?? '';
                 if (cfg.complexityThreshold != null) env.complexityThreshold = Number(cfg.complexityThreshold);
+                env.branchOnImage = cfg.branchOnImage === true;
                 if (nonBlank(cfg.engineProvider)) env.engineProvider = cfg.engineProvider;
                 break;
             case 'CLARIFICATION':
@@ -5962,36 +6048,46 @@
     }
 
     /**
-     * Builds a rich `cfg` from a `nodeConfig` envelope, filling gaps with defaults.
-     * `flat` (the document's flat `config`, optional) supplies `alwaysConfirm` when
-     * the envelope predates the key — as `NodeConfigCodec` falls back to the
-     * node's flat field — so a switch the runtime honours is not dropped here.
+     * Builds a rich `cfg` for a node that carries a `nodeConfig` envelope,
+     * mirroring `NodeConfigCodec.decodeFrom`.
+     *
+     * Every field a run reads comes from `flat` — the document's flat `config`
+     * block, the copy the app executes and its node sheet shows — through
+     * deriveRichFromFlat. A file stores each node twice, and nothing makes a file
+     * written elsewhere agree with itself: while this editor read the envelope
+     * first, such a file showed one tool, prompt or switch here and ran another in
+     * the app. The envelope supplies only what no run reads as a value — the
+     * description, the intent classes and the evaluation retry count (they decide
+     * the node's ports), and the per-node sampling and cloud-client values that
+     * have no control here but still round-trip.
+     *
+     * One exception, for files and "Mine" presets this editor wrote before its
+     * export carried four keys in the flat block — stopOnError, fallbackClass,
+     * maxSubtasks, quickReplies: when the key is absent from the flat block
+     * altogether (not null — absent), the envelope holds the author's value and
+     * is used. The app's exports, and this editor's since, always write the
+     * key, so they are read flat-first; no field that decides a tool, prompt,
+     * provider or confirmation is among the four.
      */
     function decodeRichEnvelope(typeId, env, flat) {
-        const cfg = defaultRichConfig(typeId);
+        const cfg = deriveRichFromFlat(typeId, flat || {}, false);
         if (!env || typeof env !== 'object') return cfg;
-        if (env.title != null) cfg.title = String(env.title);
+        // The title is the node's label, as on the canvas; the envelope's own
+        // title only stands in for a node without one.
+        if (!(flat && flat.label) && env.title != null) cfg.title = String(env.title);
         cfg.description = env.description != null ? String(env.description) : null;
         const num = (v, d) => (v == null || Number.isNaN(Number(v)) ? d : Number(v));
         const strArr = v => Array.isArray(v) ? v.map(String) : [];
+        const legacyEnvelopeOnly = key => !!flat && flat[key] === undefined && env[key] != null;
         switch (typeId) {
-            case 'INPUT':
-                break;
-            case 'OUTPUT':
-                cfg.systemPrompt = env.systemPrompt != null ? String(env.systemPrompt) : '';
-                break;
             case 'LITE_RT':
-                if (env.modelId != null) cfg.modelId = String(env.modelId);
-                if (env.systemPrompt != null) cfg.systemPrompt = String(env.systemPrompt);
                 cfg.temperature = num(env.temperature, 0.7);
                 cfg.topP = num(env.topP, 0.9);
                 cfg.maxNewTokens = num(env.maxNewTokens, 512);
                 cfg.stopTokens = strArr(env.stopTokens);
                 break;
             case 'CLOUD':
-                cfg.provider = env.provider ? String(env.provider) : 'AUTO';
                 if (env.model != null) cfg.model = String(env.model);
-                if (env.systemPrompt != null) cfg.systemPrompt = String(env.systemPrompt);
                 cfg.temperature = num(env.temperature, 0.7);
                 cfg.maxTokens = num(env.maxTokens, 1024);
                 cfg.timeoutMs = num(env.timeoutMs, 30000);
@@ -6001,53 +6097,19 @@
                     name: String(c.name ?? ''), description: String(c.description ?? ''),
                     examples: strArr(c.examples),
                 }));
-                if (env.classifierPrompt != null) cfg.classifierPrompt = String(env.classifierPrompt);
-                cfg.fallbackClass = env.fallbackClass != null ? String(env.fallbackClass) : null;
-                cfg.engineProvider = env.engineProvider != null ? String(env.engineProvider) : '';
-                break;
-            case 'IF_CONDITION':
-                if (env.expression != null) cfg.expression = String(env.expression);
-                if (env.keywords != null) cfg.keywords = String(env.keywords);
-                cfg.complexityThreshold = env.complexityThreshold != null
-                    ? num(env.complexityThreshold, null) : null;
-                cfg.engineProvider = env.engineProvider != null ? String(env.engineProvider) : '';
+                if (legacyEnvelopeOnly('fallbackClass')) cfg.fallbackClass = String(env.fallbackClass);
                 break;
             case 'CLARIFICATION':
-                if (env.questionTemplate != null) cfg.questionTemplate = String(env.questionTemplate);
-                cfg.quickReplies = strArr(env.quickReplies);
-                cfg.timeoutMs = env.timeoutMs != null ? num(env.timeoutMs, null) : null;
-                break;
-            case 'TOOL':
-                if (env.toolId != null) cfg.toolId = String(env.toolId);
-                cfg.alwaysConfirm = env.alwaysConfirm != null
-                    ? env.alwaysConfirm === true : flat?.alwaysConfirm === true;
-                cfg.engineProvider = env.engineProvider != null ? String(env.engineProvider) : '';
+                if (legacyEnvelopeOnly('quickReplies')) cfg.quickReplies = strArr(env.quickReplies);
                 break;
             case 'DECOMPOSITION':
-                if (env.planningPrompt != null) cfg.planningPrompt = String(env.planningPrompt);
-                cfg.maxSubtasks = num(env.maxSubtasks, 5);
-                cfg.engineProvider = env.engineProvider != null ? String(env.engineProvider) : '';
+                if (legacyEnvelopeOnly('maxSubtasks')) cfg.maxSubtasks = num(env.maxSubtasks, 5);
                 break;
             case 'QUEUE_PROCESSOR':
-                cfg.stopOnError = env.stopOnError !== false;
+                if (legacyEnvelopeOnly('stopOnError')) cfg.stopOnError = env.stopOnError !== false;
                 break;
             case 'EVALUATION':
-                if (env.criteriaPrompt != null) cfg.criteriaPrompt = String(env.criteriaPrompt);
                 cfg.maxRetries = num(env.maxRetries, 2);
-                cfg.engineProvider = env.engineProvider != null ? String(env.engineProvider) : '';
-                break;
-            case 'SUMMARY':
-                cfg.customPrompt = env.customPrompt != null ? String(env.customPrompt) : null;
-                break;
-            case 'PIPELINE':
-                if (env.targetPipelineId != null) cfg.targetPipelineId = String(env.targetPipelineId);
-                break;
-            case 'SKILL':
-                if (env.skillId != null) cfg.skillId = String(env.skillId);
-                // Engine falls back to LITE_RT for rows written before the field.
-                cfg.engine = (env.engine === 'CLOUD' || env.engine === 'LITE_RT') ? env.engine : 'LITE_RT';
-                cfg.alwaysConfirm = env.alwaysConfirm != null
-                    ? env.alwaysConfirm === true : flat?.alwaysConfirm === true;
                 break;
             default: break;
         }
@@ -6055,31 +6117,52 @@
     }
 
     /**
-     * Builds a rich `cfg` from the flat node fields, mirroring
-     * `NodeConfigCodec.deriveFromLegacy`. Used when importing a document with
-     * no `nodeConfig` (older exports / hand-written presets).
+     * Builds a rich `cfg` from the flat node fields — the copy the app runs —
+     * mirroring `NodeConfigCodec.decodeFrom`. Every field a run reads is taken
+     * from here, for a node with a `nodeConfig` envelope too (decodeRichEnvelope
+     * starts from this), so a file shows here the way the app will run it.
+     *
+     * `legacyRow` is true for a node with no envelope: an older export, a
+     * hand-written document, a canvas snapshot that predates the rich `cfg`. As
+     * in the app, only such a node shows the registered default in place of a
+     * blank prompt; a node saved with an envelope keeps the blank it was saved
+     * with.
      */
-    function deriveRichFromFlat(typeId, flat) {
+    function deriveRichFromFlat(typeId, flat, legacyRow = true) {
         const cfg = defaultRichConfig(typeId);
-        const sp = (flat.systemPrompt && String(flat.systemPrompt).trim())
-            ? String(flat.systemPrompt)
-            : (DEFAULT_SYSTEM_PROMPTS[typeId] || '');
+        const saved = flat.systemPrompt != null ? String(flat.systemPrompt) : '';
+        const sp = (legacyRow && !saved.trim()) ? (DEFAULT_SYSTEM_PROMPTS[typeId] || '') : saved;
         if (flat.label) cfg.title = flat.label;
+        // The id the node was loaded with; richToFlat keeps it while it still
+        // names the selected tile (Ollama and DeepSeek share one). Not exported.
+        cfg.wireProvider = flat.cloudProvider ?? null;
         switch (typeId) {
-            case 'OUTPUT': cfg.systemPrompt = flat.systemPrompt || ''; break;
+            // No default substitution: an empty OUTPUT prompt echoes the upstream answer verbatim.
+            case 'OUTPUT': cfg.systemPrompt = saved; break;
             case 'LITE_RT': cfg.systemPrompt = sp; cfg.modelId = flat.modelPath || ''; break;
             case 'CLOUD': cfg.systemPrompt = sp; cfg.provider = flatToRichCloud(flat.cloudProvider); break;
             case 'INTENT_ROUTER': cfg.classifierPrompt = sp;
+                cfg.fallbackClass = flat.fallbackClass ? String(flat.fallbackClass) : null;
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
-            case 'IF_CONDITION': cfg.expression = flat.conditionPrompt || '';
+            // In the order the engine checks them: image, keywords, length, then the question.
+            case 'IF_CONDITION': cfg.branchOnImage = flat.conditionHasImage === true;
+                cfg.keywords = flat.conditionKeywords || '';
+                cfg.complexityThreshold = Number(flat.conditionComplexity) > 0 ? Number(flat.conditionComplexity) : null;
+                cfg.expression = flat.conditionPrompt || '';
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
             case 'CLARIFICATION': cfg.questionTemplate = sp;
+                cfg.quickReplies = String(flat.quickReplies || '').split(',')
+                    .map(s => s.trim()).filter(s => s.length > 0);
                 cfg.timeoutMs = (flat.clarificationTimeoutMs ?? null); break;
             case 'TOOL': cfg.toolId = flat.toolName || '';
                 cfg.alwaysConfirm = flat.alwaysConfirm === true;
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
             case 'DECOMPOSITION': cfg.planningPrompt = sp;
+                if (flat.maxSubtasks != null) cfg.maxSubtasks = Number(flat.maxSubtasks);
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
+            // The engine stops on a failed item unless the flag is explicitly false,
+            // so an unset flag shows as on.
+            case 'QUEUE_PROCESSOR': cfg.stopOnError = flat.stopOnError !== false; break;
             case 'EVALUATION': cfg.criteriaPrompt = sp;
                 cfg.engineProvider = flatToEngineProvider(flat.cloudProvider); break;
             case 'SUMMARY': cfg.customPrompt = sp.trim() ? sp : null; break;
@@ -6285,7 +6368,8 @@
                 fields.push(prompt('systemPrompt', 'System prompt', typeId, true));
                 break;
             case 'CLOUD':
-                fields.push(cfgSelect('provider', 'Provider', CLOUD_PROVIDER_OPTIONS, cfg.provider || 'auto'));
+                fields.push(cfgSelect('provider', 'Provider', CLOUD_PROVIDER_OPTIONS, cfg.provider || 'AUTO',
+                    v => `${String(v).slice(UNKNOWN_WIRE_PREFIX.length)} (no provider has this id — the node fails)`));
                 fields.push(prompt('systemPrompt', 'System prompt', typeId, true));
                 break;
             case 'INTENT_ROUTER':
@@ -6298,11 +6382,12 @@
                 // EvaluateIfConditionUseCase runs the LLM on `conditionPrompt`
                 // (the rich `expression`), never `systemPrompt`; no variable
                 // chips (IF prompts bypass PromptTemplateEngine — DESCRIPTION §5).
-                // Listed in the order the engine checks them: keywords, then
-                // input length, then the question. The port labels are fixed at
-                // True / False because that is what the engine matches an
-                // outgoing edge against.
-                fields.push(cfgText('keywords', 'Keywords (comma-separated, checked first)', cfg.keywords ?? '', 'e.g. urgent, asap'));
+                // Listed in the order the engine checks them: an image in the
+                // input, keywords, input length, then the question — the first
+                // that matches decides. The port labels are fixed at True / False
+                // because that is what the engine matches an outgoing edge against.
+                fields.push(cfgCheckbox('branchOnImage', 'Branch True when input has an image (checked first, no model call)', cfg.branchOnImage === true));
+                fields.push(cfgText('keywords', 'Keywords (comma-separated)', cfg.keywords ?? '', 'e.g. urgent, asap'));
                 fields.push(cfgNumber('complexityThreshold', 'Length threshold (chars, blank = off)', cfg.complexityThreshold, { min: 1, max: 2000, step: 10, kind: 'int' }));
                 fields.push(prompt('expression', 'Question for the model (asked last)', 'IF_CONDITION', false));
                 fields.push(cfgSelect('engineProvider', 'Engine', ENGINE_PROVIDER_OPTIONS, cfg.engineProvider ?? ''));
@@ -6313,7 +6398,8 @@
                 fields.push(cfgNumber('timeoutMs', 'Timeout (ms, blank = wait indefinitely)', cfg.timeoutMs, { min: 0, step: 1000, kind: 'int' }));
                 break;
             case 'TOOL':
-                fields.push(cfgSelect('toolId', 'Tool', [{ id: '', label: 'Auto (pick at runtime)' }, ...AVAILABLE_TOOLS], cfg.toolId ?? ''));
+                fields.push(cfgSelect('toolId', 'Tool', [{ id: '', label: 'Auto (pick at runtime)' }, ...AVAILABLE_TOOLS], cfg.toolId ?? '',
+                    v => `${v} (not a built-in tool — an MCP or app function; kept as is)`));
                 fields.push(cfgCheckbox('alwaysConfirm', 'Always ask before this call', cfg.alwaysConfirm === true));
                 fields.push(cfgSelect('engineProvider', 'Engine', ENGINE_PROVIDER_OPTIONS, cfg.engineProvider ?? ''));
                 break;
@@ -6378,17 +6464,11 @@
      * Returns `[{ id, name }]`.
      */
     function knownPipelineOptions() {
-        const seen = new Set();
         const out = [];
-        const add = p => {
-            if (!p || typeof p.id !== 'string' || !p.id) return;
-            if (p.id === currentPipelineId) return; // self-reference is never a valid target
-            if (seen.has(p.id)) return;
-            seen.add(p.id);
-            out.push({ id: p.id, name: p.name || p.id });
-        };
-        BUILTIN_PIPELINE_PRESETS.forEach(add);
-        loadUserPipelinePresets().forEach(add);
+        knownPipelineDocsById().forEach((p, id) => {
+            if (id === currentPipelineId) return; // self-reference is never a valid target
+            out.push({ id, name: p.name || id });
+        });
         return out;
     }
 
@@ -6494,11 +6574,21 @@
         return wrap;
     }
 
-    function cfgSelect(key, label, options, value) {
+    /**
+     * A select bound to `cfg[key]`. A current value that is not among the
+     * options gets an option of its own (labelled by `unknownLabel`), selected:
+     * without it the browser showed the first option — "Auto", "On-device" —
+     * for a value the app runs as something else, and a save then wrote that
+     * first option over the file's value.
+     */
+    function cfgSelect(key, label, options, value, unknownLabel = v => `${v} (not in this list)`) {
         const wrap = fieldWrap(label);
         const sel = document.createElement('select');
         sel.dataset.field = key;
         sel.dataset.kind = 'string';
+        if (value != null && value !== '' && !options.some(o => o.id === value)) {
+            options = [{ id: value, label: unknownLabel(value) }, ...options];
+        }
         options.forEach(o => {
             const opt = document.createElement('option');
             opt.value = o.id;
@@ -8108,6 +8198,11 @@
                     fallbackClass: flat.fallbackClass || null,
                     maxSubtasks: flat.maxSubtasks ?? null,
                     quickReplies: flat.quickReplies || null,
+                    // Queue "stop on first error" and the condition's image check:
+                    // the app reads both from here only, so left out they came
+                    // back at their defaults however the form was set.
+                    stopOnError: flat.stopOnError ?? null,
+                    conditionHasImage: flat.conditionHasImage ?? null,
                 },
                 contextConfig: Object.assign(
                     { chatHistory: true, originalTask: true, nodeInput: true, longTermMemory: true, toolResults: true },
@@ -8264,8 +8359,9 @@
 
             rawNodes.forEach(jn => {
                 const t = NODE_TYPE_BY_ID[jn.type];
-                // Reconstruct the flat fields the legacy path used — these feed
-                // deriveRichFromFlat when the document carries no nodeConfig.
+                // The document's flat fields — the copy the app runs. Every field a
+                // run reads is shown from these, with or without a nodeConfig
+                // envelope (deriveRichFromFlat / decodeRichEnvelope).
                 const flatIn = {
                     label: jn.label || t.label,
                     systemPrompt: jn.config?.systemPrompt || '',
@@ -8274,18 +8370,30 @@
                     toolName: jn.config?.toolName || '',
                     targetPipelineId: jn.config?.targetPipelineId || '',
                     skillId: jn.config?.skillId || '',
-                    alwaysConfirm: jn.config?.alwaysConfirm === true,
+                    alwaysConfirm: wireBool(jn.config?.alwaysConfirm) === true,
                     clarificationTimeoutMs: jn.config?.clarificationTimeoutMs ?? null,
                     conditionPrompt: jn.config?.conditionPrompt || '',
                     conditionKeywords: jn.config?.conditionKeywords || '',
                     conditionComplexity: jn.config?.conditionComplexity ?? null,
+                    conditionHasImage: wireBool(jn.config?.conditionHasImage),
+                    // Left undefined when the key is absent, not null: that is how
+                    // decodeRichEnvelope recognises a file from an editor that kept
+                    // these four only in the envelope.
+                    fallbackClass: jn.config?.fallbackClass,
+                    maxSubtasks: jn.config?.maxSubtasks,
+                    quickReplies: jn.config?.quickReplies,
+                    stopOnError: jn.config?.stopOnError === undefined ? undefined : wireBool(jn.config.stopOnError),
                 };
-                // Legacy intentRouterPrompt → folded into the flat systemPrompt.
-                if (jn.config?.intentRouterPrompt && !flatIn.systemPrompt) {
+                // Legacy intentRouterPrompt: early editors stored a router's prompt
+                // under this key. Folded for INTENT_ROUTER only, like the other keys
+                // older editors kept elsewhere (decodeRichEnvelope); the app does not
+                // read it, and no other node type ever wrote it.
+                if (jn.type === 'INTENT_ROUTER' && jn.config?.intentRouterPrompt && !flatIn.systemPrompt) {
                     flatIn.systemPrompt = jn.config.intentRouterPrompt;
                 }
-                // Prefer the rich nodeConfig envelope; otherwise derive the rich
-                // config from the flat fields (older exports / hand presets).
+                // The envelope adds only what no run reads (classes, retry count,
+                // description, round-trip-only values); older exports and
+                // hand-written documents have none.
                 const cfg = (jn.nodeConfig && typeof jn.nodeConfig === 'object')
                     ? decodeRichEnvelope(jn.type, jn.nodeConfig, flatIn)
                     : deriveRichFromFlat(jn.type, flatIn);
@@ -8294,9 +8402,7 @@
                 const data = Object.assign(defaultNodeData(jn.type), richToFlat(jn.type, cfg), {
                     label: cfg.title,
                     cfg: cfg,
-                    contextConfig: Object.assign(defaultContextConfig(jn.type), jn.contextConfig || {}, {
-                        nodeInput: true, // locked-on regardless of file contents
-                    }),
+                    contextConfig: readContextConfig(jn.type, jn.contextConfig),
                 });
                 const dfId = editor.addNode(
                     t.id, t.inputs, t.outputs,
@@ -8758,9 +8864,22 @@
     const importBundleBtn = document.getElementById('btn-import-bundle');
     const fileImportBundleInput = document.getElementById('file-import-bundle');
 
-    /** Full pipeline documents reachable as PIPELINE targets: Bundled + Mine presets. */
-    function knownPipelineDocs() {
-        return BUILTIN_PIPELINE_PRESETS.concat(loadUserPipelinePresets());
+    /**
+     * The one resolver of a PIPELINE target id: Bundled + Mine presets by id,
+     * with a **bundled** preset winning over a Mine document that reuses its id.
+     * The picker and the bundle export both read this map. They used to resolve
+     * the same id two ways — the picker bundled-first, the export Mine-last-wins
+     * — so a Mine document imported under a bundled id (`subtask_act`) went
+     * into every later bundle while the picker still showed the bundled name.
+     */
+    function knownPipelineDocsById() {
+        const byId = new Map();
+        const add = d => {
+            if (d && typeof d.id === 'string' && d.id && !byId.has(d.id)) byId.set(d.id, d);
+        };
+        BUILTIN_PIPELINE_PRESETS.forEach(add);
+        loadUserPipelinePresets().forEach(add);
+        return byId;
     }
 
     /** Reduces any document to the pure single-pipeline shape used in a bundle. */
@@ -8803,8 +8922,7 @@
      */
     function collectBundleClosure() {
         const rootDoc = exportToJson();
-        const byId = new Map();
-        knownPipelineDocs().forEach(d => { if (d && typeof d.id === 'string' && d.id) byId.set(d.id, d); });
+        const byId = knownPipelineDocsById();
 
         const collected = new Map();
         const unresolved = new Set();
