@@ -409,6 +409,7 @@ matters.
   - `chat/` - the chat home, including the README hero shots.
     - `ChatBubbleShapesTest.kt` - Verifies the asymmetric corner radii on `ChatBubbleShapes`.
     - `ChatCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the long-press scale + composer morph behave deterministically.
+    - `ChatComposerTapTest.kt` - A tap anywhere on the composer belongs to the composer.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
     - `HitlConfirmationStateTest.kt` - Pure-JVM tests for `HitlConfirmationState` — the gating logic behind `HitlConfirmationCard`'s Allow CTA, Always-Allow visibility, and destructive typed-confirm row.
@@ -463,7 +464,9 @@ matters.
     - `ExternalAutomationSnapshotTest.kt` - Roborazzi baselines for the external-automation surfaces — the request journal across its documented states, and the consent dialog raised by the master switch — in both themes.
   - `chat/` - the chat home, including the README hero shots.
     - `ChatHomeAccessibilityTest.kt` - Chat-home a11y audit.
+    - `ChatHomeBottomBarTapTest.kt` - A tap on any part of the chat's bottom bar belongs to the bar, not to the message scrolled behind it.
     - `ChatHomeContentSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatHomeContent` across every documented state of `compose/screens/README.md §C1`.
+    - `ChatHomeEmptyFitTest.kt` - A new chat's suggestion cards must all be reachable, however little height the screen leaves them.
     - `HeroSnapshotTest.kt` - Roborazzi baselines for the README hero shots at the canonical pixel resolution promised in `README.md` (1080 × 2400, the de-facto-standard Pixel-class portrait viewport used by every modern Android-store marketing surface).
     - `ReportResponseDialogSnapshotTest.kt` - Roborazzi baselines for the content-report dialog.
   - `chatarchive/` - the chat archive, including the font-scale-200 % layouts where the row sheds its decoration.

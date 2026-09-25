@@ -32,6 +32,8 @@ import org.robolectric.annotation.GraphicsMode
  *    gating snapshot.
  *  - 2 dynamic-type variants at `fontScale = 2.0` (idle + destructive HITL)
  *    pinned per `decisions.md §14`.
+ *  - The empty state's suggestion cards — the path the app renders — in both
+ *    themes, on a short screen and at `fontScale = 2.0`.
  *
  * Reduced-motion is pinned via [FixedKnotworkA11y] so the `KnotworkLoader`
  * and any other looping animation collapse to a deterministic steady-state
@@ -54,6 +56,30 @@ class ChatHomeContentSnapshotTest {
     fun chat_home_empty_dark() = snapshot(name = "empty", dark = true) {
         ChatHomeContent(state = ChatHomePreview.empty())
     }
+
+    @Test
+    fun chat_home_empty_cards_light() = snapshot(name = "empty_cards", dark = false) {
+        ChatHomeContent(state = ChatHomePreview.emptyWithCards())
+    }
+
+    @Test
+    fun chat_home_empty_cards_dark() = snapshot(name = "empty_cards", dark = true) {
+        ChatHomeContent(state = ChatHomePreview.emptyWithCards())
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h560dp-xhdpi")
+    fun chat_home_empty_cards_short_screen_light() = snapshot(name = "empty_cards_short_screen", dark = false) {
+        // Too short for six cards: the column scrolls from the top rather than
+        // cutting off the last ones (ChatHomeEmptyFitTest scrolls to them).
+        ChatHomeContent(state = ChatHomePreview.emptyWithCards())
+    }
+
+    @Test
+    fun chat_home_empty_cards_font_scale_2x_light() =
+        snapshot(name = "empty_cards_font_scale_2x", dark = false, fontScale = 2f) {
+            ChatHomeContent(state = ChatHomePreview.emptyWithCards())
+        }
 
     @Test
     fun chat_home_idle_light() = snapshot(name = "idle", dark = false) {

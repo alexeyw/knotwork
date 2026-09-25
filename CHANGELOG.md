@@ -234,6 +234,14 @@ details.
 
 ### Fixed
 
+- **Tapping the message field no longer opens a link in the chat behind it.**
+  The field took taps only across one line of text, and the bar around it —
+  the console strip's margin, a run notice — took none; a tap there fell
+  through to the message scrolled underneath. A tap anywhere on the field now
+  focuses it, and the rest of the bar keeps its taps.
+- **A new chat's suggestions are no longer cut off.** On a short screen, with
+  the keyboard open, in landscape or at a large font size, the last suggestion
+  cards were clipped; the list now scrolls.
 - **The recovery screen appears when the database cannot be unlocked.** When
   the database's key was lost, the app closed at every start instead of
   offering Retry and Erase data: a background step that re-registers
