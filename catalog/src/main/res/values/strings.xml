@@ -706,7 +706,7 @@
     <!-- Step 3 headline when the Custom URL row is selected. -->
     <string name="knotwork_onboarding_download_custom_headline">Add a custom model.</string>
     <!-- Step 3 body when the Custom URL row is selected. -->
-    <string name="knotwork_onboarding_download_custom_body">Paste a direct .task / .litertlm link below to use a model of your own.</string>
+    <string name="knotwork_onboarding_download_custom_body">Paste a direct .litertlm link below to use a model of your own.</string>
     <!-- Step 3 headline when the needed model is already installed. -->
     <string name="knotwork_onboarding_download_installed_headline">%1$s is already on your device.</string>
     <!-- Step 3 body when the needed model is already installed. -->

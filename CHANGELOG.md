@@ -239,6 +239,10 @@ details.
   offering Retry and Erase data: a background step that re-registers
   automation triggers read the locked database and crashed the app before the
   screen could show. Each start-up step now fails on its own.
+- **The model screens name the one format that works.** The custom model link
+  and the onboarding step invited `.task` and `.gguf` files as well as
+  `.litertlm`; files in those formats downloaded and then never loaded. Both
+  screens and the user guide now say `.litertlm`.
 - **Downloaded models come back after Erase data.** Erasing a database that can
   no longer be unlocked keeps the downloaded models on the device, but the app
   forgot them and listed none. They are listed again under Models the next time

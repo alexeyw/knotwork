@@ -747,7 +747,7 @@ data class ModelsStrings(
     val customUrlPlaceholder: String = "https://huggingface.co/…/model",
     val customUrlGet: String = "Get",
     val customDownloadLabel: String = "Downloading custom model…",
-    val formatHint: String = ".litertlm · .task · .gguf (experimental)",
+    val formatHint: String = ".litertlm only",
     val presetsSection: String = "AVAILABLE PRESETS",
     val downloadedSection: String = "DOWNLOADED MODELS",
     val presetGet: String = "Get",

@@ -26,10 +26,9 @@ interface DownloadedModelFiles {
     companion object {
         /**
          * Extensions of the model files worth registering, matched case-insensitively:
-         * the formats the engine loads. That is `.litertlm` alone — the custom-URL hint
-         * also named `.task` and `.gguf`, but a file in either downloads and then never
-         * loads (checked on a device, 25 September 2026), so registering one again would
-         * list a model that cannot run.
+         * the formats the engine loads. That is `.litertlm` alone — a `.task` or `.gguf`
+         * file downloads and then never loads (checked on a device, 25 September 2026),
+         * so registering one again would list a model that cannot run.
          */
         val EXTENSIONS: List<String> = listOf(ModelDiscoveryConstants.LITERTLM_EXTENSION)
     }

@@ -13,7 +13,7 @@
     <string name="models_section_custom_url">CUSTOM MODEL URL</string>
     <string name="models_field_url_placeholder">https://huggingface.co/…/model.litertlm</string>
     <string name="models_action_get">Get</string>
-    <string name="models_hint_formats">.litertlm · .task · .gguf (experimental)</string>
+    <string name="models_hint_formats">.litertlm only</string>
     <string name="models_section_available_presets">AVAILABLE PRESETS</string>
     <string name="models_preset_get">Get</string>
     <string name="models_preset_activate">Activate</string>
