@@ -60,7 +60,7 @@ Required toolchain:
   which is why the build no longer names a vendor that only a download could
   supply.
 - **Android Studio** — current stable channel (or any IDE that supports
-  AGP 9.3.x and Kotlin 2.4.x).
+  AGP 9.4.x and Kotlin 2.4.x).
 - **Android SDK** — install platform **API 37** (`compileSdk` +
   `targetSdk`). Minimum runtime is API 34 (Android 14).
 - **NDK** — not needed for debug builds or `./gradlew check`. A **release**

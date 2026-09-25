@@ -1990,7 +1990,7 @@ nothing but the repository.
 is not.**
 
 - **Signed artifacts are verified against the publisher's key**, trusted for a
-  group rather than a version (`<trusted-keys>`, 116 keys). A version bump of a
+  group rather than a version (`<trusted-keys>`, 119 keys). A version bump of a
   dependency whose publisher is already trusted needs no change here. That is
   deliberate: a review of a short list of publisher keys is one a person can
   actually do, whereas thousands of checksums nobody can check by eye would be
@@ -2010,7 +2010,7 @@ is not.**
   plugins, and the instrumented suite failed verification on CI. The census now
   comes from a bootstrap dry run, which resolves every resolvable configuration,
   and each configuration was then resolved in strict mode.
-- **Unsigned artifacts are pinned by SHA-256**, per version (138 files) — part of
+- **Unsigned artifacts are pinned by SHA-256**, per version (145 files) — part of
   Firebase's transitive graph and older `androidx` releases, for example, are
   published without a signature.
 - **The keys are committed** (`gradle/verification-keyring.keys`, armored) **and

@@ -231,6 +231,15 @@ details.
   longer waits for the model; the first message loads it, as it already did
   whenever the model had been unloaded after idling. Until a message is sent,
   the model's memory stays free.
+- **Dependencies updated in one pass**, among them the on-device inference
+  engine (LiteRT-LM 0.17), the encrypted-database driver (SQLCipher 4.19), the
+  cloud-model client library (Koog 1.3) and the build tools (Gradle 9.8,
+  Android Gradle Plugin 9.4, Kotlin 2.4.20). The inference engine and the
+  database driver carry native code that only a phone exercises, so both are
+  checked on a device before this release. The app-functions libraries stay
+  where they are: their newer versions fold the service library into the main
+  one and change how an app declares its functions, which is a change to the
+  app rather than an update.
 
 ### Fixed
 

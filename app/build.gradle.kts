@@ -2578,6 +2578,17 @@ committedFileConsumers.forEach { consumer ->
 // this matrix too.
 tasks.withType<Test>().configureEach { mustRunAfter(committedFileGenerators) }
 
+// Robolectric 4.17 sets a `FileDescriptor`'s raw descriptor through
+// `jdk.internal.access.SharedSecrets` while it sets up each test's application.
+// `java.base` does not export that package, so every Robolectric test failed with
+// "Failed to interact with raw FileDescriptor internals" until it is exported to the
+// test JVM (robolectric/robolectric#11434: the maintainers' answer is to open the
+// modules Robolectric uses, not a library change). Only this one package — the
+// upstream build opens a dozen more, for its own javac-based tests.
+tasks.withType<Test>().configureEach {
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+}
+
 // The version number, in every place a human wrote it down. `versionName` below
 // is the single source of truth for the build; the README badge, the topmost
 // changelog heading and the two compare links at the foot of the changelog are
