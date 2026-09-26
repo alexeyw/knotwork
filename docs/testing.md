@@ -219,16 +219,17 @@ run at 36, so anything breaking specifically at the floor had nothing to
 surface it. The leg uses `full` because the flavour axis is already
 covered at API 36 and both flavours share every measured source.
 
-**What the floor leg does not cover, said plainly:** it does not exercise
-the AppFunctions extension path. Below API 36 the library selects the
-`com.android.extensions.appfunctions` sidecar instead of the platform
-service, and that branch genuinely cannot execute on an API 36 emulator —
-but the only test that would reach it, `AppFunctionsEndToEndTest`, is on
-the device-only exclusion list, because Android 16 declares
-`EXECUTE_APP_FUNCTIONS` at `internal|privileged` and an emulator cannot
-grant it to a developer-installed app. The AppFunctions runtime is covered
-by nothing automated at any API level; it belongs to the manual
-reference-device pass, alongside `targetSdk` 37.
+**What the floor leg does not cover, said plainly:** AppFunctions. Below
+API 36 the app publishes none — its entry point extends the platform
+service added in API 36 — and the only test that reaches the AppFunctions
+runtime at any level, `AppFunctionsEndToEndTest`, is on the device-only
+exclusion list, because Android 16 declares `EXECUTE_APP_FUNCTIONS` at
+`internal|privileged` and an emulator cannot grant it to a
+developer-installed app. The AppFunctions runtime is covered by nothing
+automated at any API level; it belongs to the manual reference-device
+pass, alongside `targetSdk` 37. What the JVM gate does hold is the wiring:
+`AppFunctionServiceManifestGuardTest` checks each entry point against the
+manifest that registers it.
 
 ### Why the second axis is the flavour, not a second API level
 

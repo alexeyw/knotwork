@@ -35,7 +35,7 @@
     <!--
         The agent must be able to see other AppFunction-providing
         packages via `PackageManager.canPackageQuery` so
-        `AppFunctionManager.observeAppFunctions` surfaces their metadata. Android 11+
+        `AppFunctionManager.searchAppFunctions` surfaces their metadata. Android 11+
         ships with package visibility on by default; without an explicit `<queries>`
         entry the system filters cross-package metadata out.
 
@@ -193,15 +193,31 @@
         </service>
 
         <!--
-            Callee-side AppFunctions surface is served by an auto-merged service
-            from `appfunctions-service`. Which one is chosen by the library's own
-            resource qualifier, not by us: `PlatformAppFunctionService` on API 36+,
-            `ExtensionAppFunctionService` below it (the AAR ships `values/` and
-            `values-v36/` toggling a boolean each way). Since `minSdk` is 34, both
-            branches are reachable in the field. Functions are discovered through
-            `@AppFunction`-annotated classes (see [SearchAppFunction]); the agent only
-            needs to publish them — no hand-rolled `AppFunctionService` subclass.
+            The AppFunctions Knotwork publishes to other apps. The class is generated
+            by the AppFunctions compiler from the entry point `AgentAppFunctionService`
+            (its `serviceName`), and `v2` names the inventory the compiler writes to
+            `assets/` (its `appFunctionXmlFileName` plus `.xml`) —
+            `AppFunctionServiceManifestGuardTest` keeps all three in step, since a
+            mismatch builds and runs and only shows as a function no one can find.
+            Only the system may bind it (`BIND_APP_FUNCTION_SERVICE`), and only a
+            privileged agent holding `EXECUTE_APP_FUNCTIONS` may call through it.
+            Android 16+ only: the service extends the platform class added in API 36.
         -->
+        <service
+            android:name=".data.tools.local.appfunctions.KnotworkAppFunctionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
+            tools:targetApi="36">
+            <property
+                android:name="android.app.appfunctions.schema"
+                android:value="app_functions_schema.xsd" />
+            <property
+                android:name="android.app.appfunctions.v2"
+                android:value="knotwork_app_functions.xml" />
+            <intent-filter>
+                <action android:name="android.app.appfunctions.AppFunctionService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".data.services.AgentForegroundService"

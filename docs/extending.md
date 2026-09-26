@@ -377,14 +377,13 @@ can never diverge. An unparsable call must fall back to the strictest risk.
 
 If you want a third-party app to be able to call your tool through the
 system [`AppFunctionManager`](https://developer.android.com/reference/android/app/appfunctions/AppFunctionManager),
-add an `@AppFunction`-annotated wrapper next to the existing
-[`SearchAppFunction`](../app/src/main/java/app/knotwork/android/data/tools/local/appfunctions/SearchAppFunction.kt).
-The library's `PlatformAppFunctionService` (from
-[`androidx.appfunctions`](https://developer.android.com/reference/androidx/appfunctions/package-summary),
-still alpha — the service class itself has no published reference page yet)
-is auto-merged from `appfunctions-service` and dispatches incoming
-requests through KSP-generated invokers — you do **not** subclass
-`AppFunctionService` or write a manual router.
+add an `@AppFunction` method to the app's one entry point,
+[`AgentAppFunctionService`](../app/src/main/java/app/knotwork/android/data/tools/local/appfunctions/AgentAppFunctionService.kt)
+— an abstract `AppFunctionService` annotated `@AppFunctionServiceEntryPoint`
+([`androidx.appfunctions`](https://developer.android.com/ai/appfunctions/add-appfunctions),
+still alpha). The AppFunctions compiler generates the concrete
+`KnotworkAppFunctionService` and its dispatch from it; you do **not** add a
+second entry point or write a manual router. Android 16 and later only.
 
 Publishing is open to any app; **being called is not**. Discovering and
 executing another app's AppFunctions requires `EXECUTE_APP_FUNCTIONS`,
@@ -411,68 +410,61 @@ never reveals it. Every task the tool schedules is tagged
 (`ScheduledTaskTag`) so the Active-tasks screen can name it and stop all
 of them at once without touching trigger or Quick-Settings work.
 
-1. **Create the wrapper.** Add a `@Singleton` class under
-   `data/tools/local/appfunctions/`. The first parameter must be
-   `androidx.appfunctions.AppFunctionContext` — the KSP compiler
-   rejects `@AppFunction` declarations whose first parameter is
-   anything else. Kotlin defaults on subsequent parameters are not
-   honoured, so normalise blank inputs inside the body if you want a
-   fallback:
+1. **Put the logic in an injectable class.** Add a `@Singleton` class
+   under `data/tools/local/appfunctions/`, next to
+   [`SearchAppFunction`](../app/src/main/java/app/knotwork/android/data/tools/local/appfunctions/SearchAppFunction.kt).
+   It needs nothing from AppFunctions, so it is unit-testable as is.
+   Kotlin defaults are not honoured at the wire level, so normalise blank
+   inputs inside the body if you want a fallback:
    ```kotlin
    @Singleton
    class MyAppFunction @Inject constructor(
        private val backingTool: BackingTool,
    ) {
-       @AppFunction
-       @Suppress("UnusedParameter")
-       suspend fun invoke(context: AppFunctionContext, arg: String): String {
+       suspend fun run(arg: String): String {
            require(arg.isNotBlank()) { "arg must be non-blank" }
            return backingTool.run(arg)
        }
    }
    ```
-2. **Register the Hilt-managed factory.** The AppFunctions runtime
-   calls a reflective no-arg constructor by default, which is
-   incompatible with `@Inject constructor(...)`. Add an entry to
-   `App.appFunctionConfiguration` so the runtime asks Hilt for an
-   instance:
+2. **Declare the function on the entry point.** Inject the class into
+   `AgentAppFunctionService` and add a one-line `@AppFunction` method that
+   delegates to it. With `isDescribedByKDoc = true` the method's KDoc
+   becomes the description the calling agent reads — write it for that
+   agent, and name parameters in plain words (a KDoc link reaches it as
+   literal brackets):
    ```kotlin
    @Inject
-   lateinit var myAppFunctionProvider: Provider<MyAppFunction>
+   internal lateinit var myAppFunction: MyAppFunction
 
-   override val appFunctionConfiguration: AppFunctionConfiguration
-       get() = AppFunctionConfiguration.Builder()
-           .addEnclosingClassFactory(SearchAppFunction::class.java) {
-               searchAppFunctionProvider.get()
-           }
-           .addEnclosingClassFactory(MyAppFunction::class.java) {
-               myAppFunctionProvider.get()
-           }
-           .build()
+   /**
+    * Does the thing, read-only.
+    *
+    * @param arg What to do it to. Must not be blank.
+    * @return The result, as plain text.
+    */
+   @AppFunction(isDescribedByKDoc = true)
+   suspend fun doThing(arg: String): String = myAppFunction.run(arg)
    ```
-3. **KSP auto-generates the rest.** The
-   `androidx.appfunctions:appfunctions-compiler` KSP processor — already
-   wired up in `app/build.gradle.kts` with
-   `appfunctions:aggregateAppFunctions=true` — emits the per-class
-   `*_AppFunctionInventory.kt` / `*_AppFunctionInvoker.kt` Kotlin
-   artefacts plus the leaf-app `app_functions.xml` and
-   `app_functions_v2.xml` under `assets/`. The platform indexer reads
-   the XML to advertise the function to other apps.
-4. **Wire id is `<ClassFQN>#<methodName>`.** Reference the KSP-generated
-   `MyAppFunctionIds` object for the canonical wire string. Caveat:
-   when any package segment is a Kotlin soft keyword (`data`, `value`,
-   …) the compiler bakes Kotlin source-level escaping into the literal
-   — see `SearchAppFunctionIds.INVOKE_ID`, whose value embeds literal
-   backticks around `data`. External callers must include the
-   backticks verbatim. Pick a package without soft-keyword collisions
-   if you can.
+3. **The compiler does the rest.** The
+   `androidx.appfunctions:appfunctions-compiler` KSP processor (wired up in
+   `app/build.gradle.kts`) regenerates `KnotworkAppFunctionService` with the
+   new branch and rewrites `assets/knotwork_app_functions.xml`, which the
+   platform indexer reads. The manifest entry does not change for a new
+   function; `AppFunctionServiceManifestGuardTest` fails if the service or
+   inventory name ever drifts from the entry point.
+4. **Wire id is `<entry point FQN>#<methodName>`.** The generated service
+   carries it as `KnotworkAppFunctionService.FUNCTION_ID_<METHOD>`. Caveat:
+   when any package segment is a Kotlin soft keyword (`data`, `value`, …)
+   the compiler bakes Kotlin source-level escaping into the literal — the
+   `search` id embeds literal backticks around `data`. External callers
+   must include the backticks verbatim.
 5. **Tests.**
-   - Unit-test the wrapper directly with a mocked `AppFunctionContext`
-     (`mockk(relaxed = true)`). Cover happy path, invalid arguments,
-     and the blank-fallback if applicable.
+   - Unit-test the logic class directly. Cover happy path, invalid
+     arguments, and the blank-fallback if applicable.
    - Add a scenario to
      [`AppFunctionsEndToEndTest`](../app/src/androidTest/java/app/knotwork/android/AppFunctionsEndToEndTest.kt)
-     that resolves the metadata via `observeAppFunctions` and invokes
+     that resolves the metadata via `searchAppFunctions` and invokes
      the function through `AppFunctionManager.executeAppFunction(...)`.
      The test currently skips on stock Android 16 because
      `EXECUTE_APP_FUNCTIONS` is declared `internal|privileged`, which a
@@ -1480,7 +1472,7 @@ double-check it for every recipe in this guide.**
 | A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · `NodeConfigForms.kt` + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec · **`pipeline-editor.html`** envelope encode/decode so the field round-trips — and, if its verdict is `RoundTripOnly`, **no** control in `renderFormFields`: `verifyBrowserEditorConstants` fails on a form control for a field no run reads. A `Runtime` field needs the whole chain instead — read from the flat `config` in `importFromJson`, set in `deriveRichFromFlat`, a control in `renderFormFields`, written by `encodeRichEnvelope` and `richToFlat`, exported by `exportToJson`, and never read from the envelope in `decodeRichEnvelope` (the one exception is the closed `LEGACY_ENVELOPE_FALLBACK` list in `BrowserEditorRuntimeFieldGuard`, for files older editors wrote); the same task names the missing link. The browser's import may read only `config` keys the app's importer reads (`CONFIG_KEYS` in `PipelineJsonSerializer`) — `BrowserEditorImportParityGuard` |
 | A new `Tool`                 | a new `LocalToolExecutor` implementation · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · declare `ToolRisk` correctly · executor unit test · optional Compose test if new UI                                                                            |
 | A new **workspace tool**     | a new `LocalToolExecutor` that goes through `AgentWorkspace` (never raw `File`) · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · risk tier in `ToolRepositoryImpl` built-in list · `docs/user-guide.md` (built-in-tools table) · executor unit test against a `@TempDir`-backed `AgentWorkspace` (happy path + `../` traversal + quota/not-found) |
-| A new callee-side AppFunction | a new `@AppFunction`-annotated wrapper under `data/tools/local/appfunctions/` (first param `AppFunctionContext`) · `App.appFunctionConfiguration` (`addEnclosingClassFactory(...)`) · wrapper unit test with a mocked `AppFunctionContext` · scenario in `AppFunctionsEndToEndTest` |
+| A new callee-side AppFunction | an injectable logic class under `data/tools/local/appfunctions/` · a one-line `@AppFunction(isDescribedByKDoc = true)` method on `AgentAppFunctionService` (KDoc written for the calling agent) · logic-class unit test · scenario in `AppFunctionsEndToEndTest` |
 | A new cloud provider         | `domain/models/CloudProvider.kt` · `data/engine/KoogClientFactory.kt` · `data/engine/KoogCloudLlmModelResolver.kt` · `data/local/ApiKeyManager.kt` · `presentation/ui/settings/SettingsScreen.kt` · **`domain/engine/executors/CloudLlmNodeExecutor.kt`** (`providerReportsFinishReason` — exhaustive `when`, decide it by measurement per §3.6) · `docs/user-guide.md` (the truncated-answer table under Settings → Models) · factory / resolver / executor unit tests |
 | A new prompt variable        | a new `PromptVariableProvider` implementation · `di/PromptTemplateModule.kt` (`@Binds @IntoSet`) · **`pipeline-editor.html`** (`PROMPT_VARIABLES`) · `docs/user-guide.md` (variables table) · provider unit test · `PromptTemplateEngine` round-trip test           |
 | A new bundled pipeline preset | a JSON file under `assets/presets/pipelines/` · `PipelinePresetCatalogValidationTest.expectedFileNames` · `BundledPresetCatalog.DISPLAY_ORDER` (unless `internal`) · run `./gradlew :app:generateBrowserEditorConstants` (`BUILTIN_PIPELINE_PRESETS` is generated) · catalogue + `PipelinePresetIntegrationTest` already cover the directory |

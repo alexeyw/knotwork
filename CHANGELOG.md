@@ -236,10 +236,16 @@ details.
   cloud-model client library (Koog 1.3) and the build tools (Gradle 9.8,
   Android Gradle Plugin 9.4, Kotlin 2.4.20). The inference engine and the
   database driver carry native code that only a phone exercises, so both are
-  checked on a device before this release. The app-functions libraries stay
-  where they are: their newer versions fold the service library into the main
-  one and change how an app declares its functions, which is a change to the
-  app rather than an update.
+  checked on a device before this release.
+- **The search Knotwork publishes to other apps moves to the current
+  AppFunctions library, on Android 16 and later, under a new id.** The newer
+  library declares an app's functions in one service instead of a separate
+  service library; the move also drops the path it offered through a
+  manufacturer's extension on Android 14 and 15. The function's id is now
+  `` app.knotwork.android.`data`.tools.local.appfunctions.AgentAppFunctionService#search ``
+  (was `…SearchAppFunction#invoke`), and it carries a description for the agent
+  that calls it. Only a privileged system agent can call it; nothing changes
+  inside the app.
 
 ### Fixed
 

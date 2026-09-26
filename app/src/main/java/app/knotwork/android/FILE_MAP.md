@@ -199,8 +199,9 @@ Only Kotlin files appear inside the generated blocks.
   - `tools/` - Tool and action implementations.
     - `local/` - Local tools implementations.
       - `AppFunctionDataCodec.kt` - Bidirectional codec between LLM-emitted JSON argument strings and the typed `AppFunctionData` consumed by `AppFunctionManager.executeAppFunction`, plus a flat-JSON projection of `ExecuteAppFunctionResponse` for the agent's observation log.
-      - `appfunctions/` - Callee-side `@AppFunction`-annotated wrappers exposing curated agent built-ins to other apps through the system AppFunctions framework (dispatched by the auto-merged `androidx.appfunctions.service.PlatformAppFunctionService`).
-        - `SearchAppFunction.kt` - `@AppFunction`-annotated callee-side wrapper around `SearchTool.executeSearch`; published in `app_functions_v2.xml` under the KSP-generated id `<FQN>#invoke` and delegates to the same code path the agent uses internally. Constructed via Hilt through `App.getAppFunctionConfiguration()`.
+      - `appfunctions/` - Callee side of AppFunctions: the one entry point publishing curated agent built-ins to other apps (Android 16+), and the injectable bodies its functions delegate to. The compiler generates `KnotworkAppFunctionService` here.
+        - `AgentAppFunctionService.kt` - `@AppFunctionServiceEntryPoint` (Hilt `@AndroidEntryPoint`, API 36): declares every published `@AppFunction` — today `search` — as a one-line delegation; KSP generates `KnotworkAppFunctionService` + `assets/knotwork_app_functions.xml`, registered in the manifest.
+        - `SearchAppFunction.kt` - Body of the published `search` AppFunction: argument checks (blank query, `lang` fallback/edition) and the call into `SearchTool.executeSearch`, the same path the agent uses; injected into `AgentAppFunctionService`.
       - `DelegateTaskTool.kt` - Task delegation tool.
       - `executors/` - `LocalToolExecutor` implementations registered via Hilt multibinding.
         - `AppendFileExecutor.kt` - `LocalToolExecutor` for the SENSITIVE `append_file` tool; adds UTF-8 content to the END of a workspace file via `AgentWorkspace.appendText` (creating it on first call, no overwrite flag), for accumulating entries in a log/report; maps every `WorkspaceError` to a readable observation.

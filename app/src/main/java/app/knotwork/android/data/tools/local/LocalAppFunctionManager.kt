@@ -20,8 +20,6 @@ import androidx.appfunctions.metadata.AppFunctionStringTypeMetadata
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.ToolRisk
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -148,31 +146,28 @@ class LocalAppFunctionManager(private val context: Context, private val codec: A
         }
         val searchSpec = AppFunctionSearchSpec()
 
-        // Observe app functions once, build the fresh discovery snapshot, and publish it
-        // atomically: the new immutable map replaces the @Volatile reference in a single
-        // write, so concurrent readers cannot observe a partially-mutated cache.
-        return manager.observeAppFunctions(searchSpec)
-            .map { packages ->
-                val fresh = mutableMapOf<String, DiscoveredAppFunction>()
-                val tools = packages.flatMap { pkg ->
-                    pkg.appFunctions.map { metadata ->
-                        val qualified = qualify(pkg.packageName, metadata.id)
-                        fresh[qualified] = DiscoveredAppFunction(
-                            packageName = pkg.packageName,
-                            functionIdentifier = metadata.id,
-                            parameters = metadata.parameters,
-                        )
-                        AgentTool(
-                            name = qualified,
-                            description = metadata.description ?: "App function $qualified",
-                            parameters = generateJsonSchema(metadata.parameters),
-                            risk = ToolRisk.SENSITIVE,
-                        )
-                    }
-                }
-                discoveredCache = fresh.toMap()
-                tools
-            }.first()
+        // Take one snapshot of the published functions, build the fresh discovery map, and
+        // publish it atomically: the new immutable map replaces the @Volatile reference in
+        // a single write, so concurrent readers cannot observe a partially-mutated cache.
+        // (`observeAppFunctions(spec)`, the stream this read the first value of, is
+        // restricted to the library itself from AppFunctions alpha11 on.)
+        val fresh = mutableMapOf<String, DiscoveredAppFunction>()
+        val tools = manager.searchAppFunctions(searchSpec).map { metadata ->
+            val qualified = qualify(metadata.packageName, metadata.id)
+            fresh[qualified] = DiscoveredAppFunction(
+                packageName = metadata.packageName,
+                functionIdentifier = metadata.id,
+                parameters = metadata.parameters,
+            )
+            AgentTool(
+                name = qualified,
+                description = metadata.description ?: "App function $qualified",
+                parameters = generateJsonSchema(metadata.parameters),
+                risk = ToolRisk.SENSITIVE,
+            )
+        }
+        discoveredCache = fresh.toMap()
+        return tools
     }
 
     /**

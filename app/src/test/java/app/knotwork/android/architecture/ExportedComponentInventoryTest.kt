@@ -137,6 +137,11 @@ class ExportedComponentInventoryTest {
                 ),
                 // External contract: its callers cannot hold a permission of ours.
                 Export(EXTERNAL_AUTOMATION_RECEIVER, permission = null),
+                // Published AppFunctions: generated from the entry point, bound only by the system.
+                Export(
+                    ".data.tools.local.appfunctions.KnotworkAppFunctionService",
+                    permission = "android.permission.BIND_APP_FUNCTION_SERVICE",
+                ),
             ),
             DEBUG_SOURCE_SET to setOf(Export(".debug.TriggerJournalDumpReceiver", permission = null)),
             "full" to emptySet(),

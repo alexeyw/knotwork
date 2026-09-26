@@ -39,13 +39,12 @@ uses-permission app.knotwork.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 exported activity app.knotwork.android.presentation.share.ShareReceiverActivity permission=none
 exported activity app.knotwork.android.presentation.ui.MainActivity permission=none
 exported receiver app.knotwork.android.presentation.receivers.ExternalAutomationReceiver permission=none
+exported service app.knotwork.android.data.tools.local.appfunctions.KnotworkAppFunctionService permission=android.permission.BIND_APP_FUNCTION_SERVICE
 exported service app.knotwork.android.presentation.tile.DutyPipelineTileService permission=android.permission.BIND_QUICK_SETTINGS_TILE
 
 # ── Exported by libraries — each behind a permission only the system holds ───
 exported receiver androidx.profileinstaller.ProfileInstallReceiver permission=android.permission.DUMP
 exported receiver androidx.work.impl.diagnostics.DiagnosticsReceiver permission=android.permission.DUMP
-exported service androidx.appfunctions.service.ExtensionAppFunctionService permission=android.permission.BIND_APP_FUNCTION_SERVICE
-exported service androidx.appfunctions.service.PlatformAppFunctionService permission=android.permission.BIND_APP_FUNCTION_SERVICE
 exported service androidx.work.impl.background.systemjob.SystemJobService permission=android.permission.BIND_JOB_SERVICE
 
 # ── Package visibility ───────────────────────────────────────────────────────

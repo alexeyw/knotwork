@@ -123,16 +123,16 @@
 -dontwarn io.ktor.**
 
 # ─── AppFunctions ────────────────────────────────────────────────────────────
-# What the platform loads BY NAME is the pair of aggregated classes KSP generates
-# into this app — `androidx.appfunctions.service.internal.$AggregatedAppFunctionInvoker_Impl`
-# and `androidx.appfunctions.internal.$AggregatedAppFunctionInventory_Impl`. The
-# library's own consumer rules keep them; they reach the per-function
-# `$<Class>_AppFunctionInventory` / `_AppFunctionInvoker` and the `@AppFunction`
-# methods by ordinary calls, so R8 may rename those (the release mapping does).
-# The rule below additionally keeps the library's whole package, the two
-# aggregated classes included. `verify<Variant>Instantiable` checks both are in
-# the dex under their own name. (Four rules here once named the interfaces and
-# the annotation in packages the library does not use, and matched nothing.)
+# What the platform loads BY NAME is the service KSP generates from the entry point
+# (`data.tools.local.appfunctions.KnotworkAppFunctionService`), bound through the
+# manifest — which is what keeps it. The service reaches its inventory and the
+# `@AppFunction` methods by ordinary calls, so R8 may rename those. The rule below
+# keeps the library's whole package as well: it still ships the older auto-merged
+# services and their name-loaded aggregated classes, unused here, and its consumer
+# rules keep `@AppFunctionSerializable` types by annotation. `verify<Variant>Instantiable`
+# checks the generated service is in the dex under its own name. (Four rules here
+# once named the interfaces and the annotation in packages the library does not
+# use, and matched nothing.)
 -keep class androidx.appfunctions.** { *; }
 -dontwarn androidx.appfunctions.**
 

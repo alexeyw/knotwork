@@ -172,16 +172,7 @@ plugins {
     // `assembleFossRelease` build never loads them.
 }
 
-// The androidx.appfunctions KSP processor generates the per-class
-// `*_AppFunctionInventory.kt` / `*_AppFunctionInvoker.kt` artefacts unconditionally,
-// but the leaf-application `app_functions_v2.xml` (and the legacy `app_functions.xml`)
-// that the platform's AppSearch indexer actually reads at install time is only produced
-// when `appfunctions:aggregateAppFunctions=true`. Without this flag the agent APK ships
-// `app_functions_schema.xsd` but no inventory XML, so the system AppFunctionManager has
-// no `search_tool` entry to advertise to other apps and the callee-side scenario in
-// `AppFunctionsEndToEndTest` comes back empty.
 ksp {
-    arg("appfunctions:aggregateAppFunctions", "true")
     // Export the Room schema for every version so that
     // `MigrationTestHelper` can validate migrations against frozen JSON
     // snapshots in `app/schemas/`. The corresponding `exportSchema = true`
@@ -792,10 +783,11 @@ kover {
                     // catalog snapshot suite, not JVM unit tests.
                     "app.knotwork.android.presentation.ui.settings.provider.ProviderPickerScreen*",
                     "app.knotwork.android.presentation.ui.settings.provider.ProviderDetailScreen*",
-                    // AppFunctions callee-side wrapper (SearchAppFunction). The
-                    // KSP-generated `*_AppFunctionInvoker` infrastructure and
-                    // the platform `PlatformAppFunctionService` need the Android
-                    // runtime plus the AppFunctions service host to execute.
+                    // AppFunctions callee side: the `AgentAppFunctionService`
+                    // entry point, the service and inventory the compiler
+                    // generates next to it, and the `SearchAppFunction` body
+                    // (unit-tested, but sharing the package). The service needs
+                    // the Android 16 AppFunctions host to run.
                     "app.knotwork.android.data.tools.local.appfunctions.*",
                     // `data.services.*` is now covered by
                     // Robolectric tests (`AgentForegroundServiceTest`,
@@ -809,11 +801,9 @@ kover {
                     // `AgentApprovalReceiverTest`). The exclusions that lived
                     // here while those packages waited for ShadowNotificationManager
                     // / BroadcastReceiver coverage have been lifted.
-                    // Tool-execution Android glue (AppFunctions service, search
+                    // Tool-execution Android glue (AppFunctions caller, search
                     // tool HTTP client, delegate-task LLM bridge) needs either
                     // an Android runtime or live LLM/HTTP fixtures.
-                    "app.knotwork.android.data.tools.local.AgentAppFunctionService",
-                    "app.knotwork.android.data.tools.local.AgentAppFunctionService$*",
                     "app.knotwork.android.data.tools.local.LocalAppFunctionManager",
                     "app.knotwork.android.data.tools.local.SearchTool*",
                     "app.knotwork.android.data.tools.local.DelegateTaskTool*",
@@ -1845,6 +1835,14 @@ tasks.withType<Test>().configureEach {
     inputs.dir(rootProject.file("catalog/src/main/java"))
         .withPropertyName("catalogSources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `AppFunctionServiceManifestGuardTest` reads the probe app's entry point and
+    // manifest, which are on no classpath of this module.
+    inputs.dir(rootProject.file("tools-probe/src/main"))
+        .withPropertyName("toolsProbeSources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("tools-probe/build.gradle.kts"))
+        .withPropertyName("toolsProbeBuildScript")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(layout.projectDirectory.dir("src/androidTest"))
         .withPropertyName("instrumentedSources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
@@ -2032,7 +2030,6 @@ dependencies {
 
     // AppFunctions
     implementation(libs.androidx.appfunctions)
-    implementation(libs.androidx.appfunctions.service)
     ksp(libs.androidx.appfunctions.compiler)
 
     // Markdown
@@ -2145,18 +2142,17 @@ val r8ProtectedPackages: List<String> = listOf("com.google.common.flogger.")
 // `TextEmbedder.createFromOptions`, so an abstractified message class breaks
 // the on-device embedding path — and therefore all of long-term memory.
 //
-// The two AppFunctions classes are KSP output of this app that
-// `androidx.appfunctions` loads BY NAME: the aggregated invoker and inventory
-// the platform dispatches every `@AppFunction` call through. The library's own
-// consumer rules keep them today (its `proguard.txt` carries a TODO to replace
-// those rules with a mapping, on an alpha); if that ever stops matching, the
-// indexer would find no function and the device would look unsupported. Being
-// in the dex under their own name, concrete, is exactly what this check asserts.
+// The AppFunctions service is KSP output of this app that the platform binds BY
+// NAME, from the manifest, to dispatch every `@AppFunction` call. The manifest
+// reference keeps it today; a renamed or abstractified class would leave the
+// function listed and every call to it failing to bind. Being in the dex under its
+// own name, concrete, is exactly what this check asserts. (Until the entry-point
+// model, these were the aggregated invoker and inventory the library loaded by name;
+// the generated service now reaches its inventory by an ordinary call.)
 val r8RequiredInstantiableClasses: List<String> = listOf(
     "com.google.protobuf.Any",
     "com.google.protobuf.UnknownFieldSetLite",
-    "androidx.appfunctions.service.internal.\$AggregatedAppFunctionInvoker_Impl",
-    "androidx.appfunctions.internal.\$AggregatedAppFunctionInventory_Impl",
+    "app.knotwork.android.data.tools.local.appfunctions.KnotworkAppFunctionService",
 )
 androidComponents {
     onVariants { variant ->

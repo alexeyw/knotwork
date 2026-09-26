@@ -286,10 +286,17 @@ new risk surface, and the design constrains it deliberately:
   caller can open a chat by its id, and nothing runs. The other two take content
   from any app on the device, and from `adb`: the share target
   (`ShareReceiverActivity`) and the external-automation receiver
-  (`ExternalAutomationReceiver`), both below. The Quick Settings tile is
-  exported too, but only the system can bind it. A build-time test holds this
-  list to the manifests, so a new export fails the build until it is added — and,
-  if it asks for no permission, named here.
+  (`ExternalAutomationReceiver`), both below. The Quick Settings tile and the
+  AppFunctions service are exported too, but only the system can bind them. A
+  build-time test holds this list to the manifests, so a new export fails the
+  build until it is added — and, if it asks for no permission, named here.
+- **One function is published to other apps.** `KnotworkAppFunctionService`
+  publishes `search`, a read-only Wikipedia lookup through the built-in
+  `search_tool`, on Android 16 and later. Only the system binds the service, and
+  only an agent holding `EXECUTE_APP_FUNCTIONS` — which Android 16 grants to
+  privileged system apps — can call it. The call does not pass through the
+  agent's tool catalogue, so switching `search_tool` off on the Tools screen does
+  not stop it; *Block network from local model* does, for every caller.
 - **The share target is reachable without the share sheet.** It has to be
   exported for the share sheet to start it on the sending app's behalf, so an app
   can also start it directly and put text of its choosing where the user's own
