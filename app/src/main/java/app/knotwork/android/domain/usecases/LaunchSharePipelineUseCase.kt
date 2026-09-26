@@ -54,7 +54,7 @@ import javax.inject.Inject
  * one does not use up the hour.
  */
 class LaunchSharePipelineUseCase @Inject constructor(
-    private val resolveSurfacePipeline: ResolveSurfacePipelineUseCase,
+    private val resolveSurfacePipeline: ResolveLaunchableSurfacePipelineUseCase,
     private val chatRepository: ChatRepository,
     private val attachmentStore: AttachmentStore,
     private val checkImageAttachment: CheckImageAttachmentUseCase,
@@ -79,7 +79,8 @@ class LaunchSharePipelineUseCase @Inject constructor(
      * @param nowMillis Current time, epoch-millis (injectable for tests); the
      *   moment the rate ceiling counts from.
      * @return [ShareLaunchResult.Launched] with the session id,
-     *   [ShareLaunchResult.NotConfigured] when nothing is bound,
+     *   [ShareLaunchResult.NotConfigured] when nothing is bound (or the binding
+     *   names a pipeline that no longer exists),
      *   [ShareLaunchResult.Blocked] when the pipeline may not start with the
      *   shared image, [ShareLaunchResult.RateLimited] when the hour's share
      *   ceiling is reached, or [ShareLaunchResult.NothingShared] when the payload

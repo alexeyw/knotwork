@@ -8,7 +8,7 @@ import android.widget.Toast
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.EntrySurface
 import app.knotwork.android.domain.usecases.LaunchTilePipelineUseCase
-import app.knotwork.android.domain.usecases.ResolveSurfacePipelineUseCase
+import app.knotwork.android.domain.usecases.ResolveLaunchableSurfacePipelineUseCase
 import app.knotwork.android.domain.usecases.TileLaunchResult
 import app.knotwork.android.presentation.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,7 +37,7 @@ class DutyPipelineTileService : TileService() {
 
     @Inject lateinit var launchTilePipeline: LaunchTilePipelineUseCase
 
-    @Inject lateinit var resolveSurfacePipeline: ResolveSurfacePipelineUseCase
+    @Inject lateinit var resolveSurfacePipeline: ResolveLaunchableSurfacePipelineUseCase
 
     /** Service-scoped scope for the brief settings reads; cancelled in [onDestroy]. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

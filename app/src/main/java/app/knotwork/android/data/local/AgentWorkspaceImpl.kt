@@ -307,6 +307,13 @@ class AgentWorkspaceImpl internal constructor(
             // would let it write storage the quota never counts (and that it could never see
             // or clean up). Reported as NotFound so the artifact stays invisible.
             isScratchFile(target) -> WorkspaceError.NotFound
+            // Checked on the path as requested, not on the canonical one: where the
+            // JVM cannot encode a character in a file name (a lone surrogate, or
+            // anything outside ASCII under a POSIX locale) canonicalising already
+            // replaced it with `?`, and the name rules below would pass the
+            // replacement. Only for an entry about to be created — one that exists,
+            // however it is named, stays readable and deletable.
+            !target.exists() && WorkspaceNamePolicy.hasForbiddenCharacter(relativePath) -> WorkspaceError.InvalidPath
             else -> null
         }
         return refusal?.let { WorkspaceResult.Failure(it) } ?: WorkspaceResult.Success(target)
@@ -426,6 +433,10 @@ class AgentWorkspaceImpl internal constructor(
         // replaced in place, whatever its name, so one made before the rules stays usable.
         !exists && WorkspaceNamePolicy.violationOf(WorkspaceTree.relativePath(target, root)) != null ->
             WorkspaceError.InvalidPath
+        // A directory level that is a file (`notes.md/x.txt` over `notes.md`) is a
+        // path the filesystem rejects with ENOTDIR — refused here, typed, instead of
+        // the write throwing on its scratch file.
+        !exists && WorkspaceTree.runsThroughFile(target, root) -> WorkspaceError.InvalidPath
         size > maxFileSizeBytes() -> WorkspaceError.TooLarge
         else -> null
     }

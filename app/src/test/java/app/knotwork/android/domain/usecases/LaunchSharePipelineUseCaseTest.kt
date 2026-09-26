@@ -30,7 +30,7 @@ import org.junit.Test
  */
 class LaunchSharePipelineUseCaseTest {
 
-    private val resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>()
+    private val resolveSurfacePipeline = mockk<ResolveLaunchableSurfacePipelineUseCase>()
     private val chatRepository = mockk<ChatRepository>(relaxed = true)
     private val attachmentStore = mockk<AttachmentStore>()
     private val checkImageAttachment = mockk<CheckImageAttachmentUseCase>()

@@ -3,9 +3,12 @@ package app.knotwork.android.data.tools.local
 import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.repositories.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -50,11 +53,29 @@ class SearchToolTest {
 
     private val networkActivity = NetworkActivityTrackerImpl()
 
-    private val searchTool = SearchTool(llmEngine, networkGate, localWikipedia, networkActivity)
+    private val settingsRepository = mockk<SettingsRepository> {
+        every { disabledAppFunctions } returns flowOf(emptySet())
+    }
+
+    private val searchTool = SearchTool(llmEngine, networkGate, localWikipedia, networkActivity, settingsRepository)
 
     @Before
     fun setUp() {
         server.start()
+    }
+
+    @Test
+    fun `given search_tool switched off on the Tools screen when searched then refused before any request`() = runTest {
+        // The switch has to hold for every caller: the published AppFunction
+        // reaches this method without passing through the tool catalogue.
+        coEvery { networkGate.networkToolRefusal(any()) } returns null
+        every { settingsRepository.disabledAppFunctions } returns flowOf(setOf(SearchTool.TOOL_NAME))
+
+        val result = searchTool.executeSearch("Kotlin", "en")
+
+        assertTrue(result, result.startsWith("Error: search_tool is switched off"))
+        assertEquals(0, server.requestCount)
+        assertTrue(opened.isEmpty())
     }
 
     @After
