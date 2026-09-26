@@ -440,7 +440,7 @@ internal object NodeConfigCodec {
                 title = title,
                 description = description,
                 planningPrompt = prompt,
-                maxSubtasks = node.maxSubtasks ?: DEFAULT_MAX_SUBTASKS,
+                maxSubtasks = node.maxSubtasks?.takeIf { it > 0 } ?: NodeModel.DEFAULT_MAX_SUBTASKS,
                 engineProvider = engineProvider,
             )
             CatalogNodeType.QUEUE_PROCESSOR -> QueueProcessorConfig(
@@ -631,6 +631,5 @@ internal object NodeConfigCodec {
     private const val DEFAULT_MAX_NEW_TOKENS = 512
     private const val DEFAULT_MAX_TOKENS = 1_024
     private const val DEFAULT_TIMEOUT_MS = 30_000
-    private const val DEFAULT_MAX_SUBTASKS = 5
     private const val DEFAULT_MAX_RETRIES = 2
 }

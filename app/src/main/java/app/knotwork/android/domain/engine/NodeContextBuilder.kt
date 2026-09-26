@@ -4,6 +4,7 @@ import app.knotwork.android.domain.engine.structured.ReasoningBlockSplitter
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.NodeContextConfig
+import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.ToolInvocationResult
 import app.knotwork.android.domain.prompt.ChatTranscript
 import javax.inject.Inject
@@ -38,7 +39,8 @@ import javax.inject.Singleton
  *  3. **Chat History** — prior session messages (numbered). When compression is
  *     active this is only the live window; otherwise the full history.
  *  4. **Long-Term Memory** — semantically retrieved memory chunks (numbered).
- *  5. **Tool Results** — outputs from tool invocations earlier in this run.
+ *  5. **Tool Results** — outputs from tool invocations earlier in this run,
+ *     each cut to [PipelineExecutionContext.toolResultCharBudget] when set.
  *  6. **Previous Node Output** — the immediate predecessor's payload, the
  *     thing the current node is expected to act on.
  *
@@ -77,7 +79,7 @@ class NodeContextBuilder @Inject constructor() {
                 blocks += renderBlock(HEADER_EARLIER_SUMMARY, summary.trim())
             }
             if (ctx.chatHistory.isNotEmpty()) {
-                blocks += renderBlock(HEADER_CHAT_HISTORY, formatChatHistory(ctx.chatHistory))
+                blocks += renderBlock(HEADER_CHAT_HISTORY, formatChatHistory(ctx.chatHistory, ctx.toolResultCharBudget))
             }
         }
 
@@ -86,11 +88,17 @@ class NodeContextBuilder @Inject constructor() {
         }
 
         if (config.toolResults && ctx.toolResults.isNotEmpty()) {
-            blocks += renderBlock(HEADER_TOOL_RESULTS, formatToolResults(ctx.toolResults))
+            blocks += renderBlock(HEADER_TOOL_RESULTS, formatToolResults(ctx.toolResults, ctx.toolResultCharBudget))
         }
 
         if (config.nodeInput && ctx.previousNodeOutput.isNotBlank()) {
-            blocks += renderBlock(HEADER_PREVIOUS_NODE_OUTPUT, ctx.previousNodeOutput.trim())
+            // A tool's result verbatim — the engine forwards a TOOL node's output
+            // unchanged, through pass-through nodes too — gets the same bound as
+            // in the Tool Results block. Any other payload is left whole.
+            val producedByTool = ctx.toolResults.any { it.output == ctx.previousNodeOutput }
+            val previous = ctx.previousNodeOutput.trim()
+            val body = if (producedByTool) boundToolText(previous, ctx.toolResultCharBudget) else previous
+            blocks += renderBlock(HEADER_PREVIOUS_NODE_OUTPUT, body)
         }
 
         return blocks.joinToString(BLOCK_SEPARATOR)
@@ -113,20 +121,53 @@ class NodeContextBuilder @Inject constructor() {
      * [ChatTranscript]: continuation lines are indented, so stored content — tool
      * output above all — cannot open a turn, an entry or a `--- Block ---` header
      * of its own.
+     *
+     * A `SYSTEM` row is the app's own record — for a tool call, `Observation from
+     * <tool>: <result>`, the result whole — so it gets the tool-text [budget];
+     * the user's and the model's turns are left as written.
      */
-    private fun formatChatHistory(messages: List<ChatMessage>): String = messages.mapIndexed { index, message ->
-        ChatTranscript.turn(
-            label = "${index + 1}. ${message.role.name}",
-            content = ReasoningBlockSplitter.split(message.content).answer,
-        )
-    }.joinToString("\n")
+    private fun formatChatHistory(messages: List<ChatMessage>, budget: Int?): String =
+        messages.mapIndexed { index, message ->
+            val content = ReasoningBlockSplitter.split(message.content).answer
+            ChatTranscript.turn(
+                label = "${index + 1}. ${message.role.name}",
+                content = if (message.role == Role.SYSTEM) boundToolText(content, budget) else content,
+            )
+        }.joinToString("\n")
 
     private fun formatMemory(entries: List<MemoryChunk>): String =
         entries.mapIndexed { index, chunk -> ChatTranscript.entry("${index + 1}. ", chunk.text) }.joinToString("\n")
 
-    private fun formatToolResults(results: List<ToolInvocationResult>): String = results.mapIndexed { index, result ->
-        ChatTranscript.turn(label = "${index + 1}. ${result.toolName}", content = result.output)
-    }.joinToString("\n")
+    private fun formatToolResults(results: List<ToolInvocationResult>, budget: Int?): String =
+        results.mapIndexed { index, result ->
+            ChatTranscript.turn(
+                label = "${index + 1}. ${result.toolName}",
+                content = boundToolText(result.output, budget),
+            )
+        }.joinToString("\n")
+
+    /**
+     * Cuts tool text to [budget] characters and says how much was left out.
+     *
+     * The response budget of `http_request` and MCP bounds what the app holds —
+     * a megabyte by default, hundreds of thousands of tokens — not what fits
+     * the on-device model's context; this is the bound that does. Text within
+     * the budget plus [OWN_NOTE_ALLOWANCE] is left alone, so a result its tool
+     * already cut to the same budget (`read_file` does, then says which offset
+     * continues it) keeps its own note. The cut never splits a surrogate pair.
+     *
+     * @param text a tool's result.
+     * @param budget longest text to keep, in characters; `null` keeps it whole.
+     * @return [text] itself, or its first [budget] characters and the note.
+     */
+    private fun boundToolText(text: String, budget: Int?): String {
+        if (budget == null || text.length <= budget + OWN_NOTE_ALLOWANCE) return text
+        var cut = budget.coerceAtLeast(1)
+        if (text[cut - 1].isHighSurrogate()) cut--
+        return text.substring(0, cut) +
+            "\n[... ${text.length - cut} more characters of this tool result were cut " +
+            "to fit the on-device model's context]"
+    }
 
     private companion object {
         private const val HEADER_ORIGINAL_TASK = "--- Original Task ---"
@@ -136,5 +177,11 @@ class NodeContextBuilder @Inject constructor() {
         private const val HEADER_TOOL_RESULTS = "--- Tool Results ---"
         private const val HEADER_PREVIOUS_NODE_OUTPUT = "--- Previous Node Output ---"
         private const val BLOCK_SEPARATOR = "\n\n"
+
+        /**
+         * Characters a tool result may run past the budget and stay whole: room
+         * for the note a tool appends after cutting to the same budget itself.
+         */
+        private const val OWN_NOTE_ALLOWANCE = 256
     }
 }

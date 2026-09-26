@@ -43,8 +43,8 @@
     <string name="settings_help_tool_call_timeout_ms">How long a run waits for you to approve a tool call before it parks and asks again later. It does not bound the call itself.</string>
     <string name="settings_help_workspace_max_file_size_bytes">The largest single file the workspace accepts, for both writing one and reading one whole.</string>
     <string name="settings_help_workspace_max_total_bytes">How much device storage the whole workspace may hold. A write that would push past it is refused rather than trimmed.</string>
-    <string name="settings_help_workspace_read_token_budget">How much of a file one read may put in front of the model. The rest is cut, leaving room for the prompt and the thread.</string>
-    <string name="settings_help_http_tool_max_response_bytes">How much of a web response or MCP tool result reaches the model. Past it the text is cut and marked, so it cannot flood the context.</string>
+    <string name="settings_help_workspace_read_token_budget">How much of one file read, or one tool result for the on-device model, reaches the model. The rest is cut, leaving room for the prompt.</string>
+    <string name="settings_help_http_tool_max_response_bytes">How much of a web response or MCP result the app keeps. Past it the text is cut and marked. It bounds memory, not the context.</string>
     <string name="settings_help_scheduled_task_notifications">A notification arrives when a scheduled task finishes or fails, so a background result does not wait for you to open the app.</string>
     <string name="settings_help_share_target_pipeline_id">Which pipeline runs when you share text or a link into the app from somewhere else.</string>
     <string name="settings_help_share_reuse_session">On, every share lands in one Shared chat. Off, each share opens its own, so the chat list grows with each one.</string>

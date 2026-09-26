@@ -213,8 +213,15 @@ confidentiality:
   refused.
 - A **per-read token budget** (default 2000 tokens) truncates `read_file`
   output so a single large file cannot blow out the local model's context
-  window, and the `http_request` response is capped (1 MB default) so untrusted
-  remote content cannot do the same. Both limits are user-tunable.
+  window. The same budget cuts every other tool result (an `http_request`
+  response, an MCP result) where it becomes a prompt for the on-device model:
+  in the *Tool Results* block, as the *Previous Node Output* it forwards, and
+  as a tool's record in the chat history a node replays. A note says how much
+  was left out. A TOOL node counts too, since its input is the prompt the
+  model turns into the tool's arguments; a node given a cloud provider gets
+  tool results whole. The **response budget** (1 MB default) bounds what the
+  app reads and keeps of one `http_request` response or MCP result, far more
+  than any on-device context. Both limits are user-tunable.
 - **MCP servers are bounded where their content enters the app** (`KoogMcpClient`).
   A tool result — and the text of an error the server returns instead — is cut
   at the same user-tunable budget as an `http_request` response, with a marker
@@ -624,12 +631,16 @@ oversight — and it works as follows:
   never a tool result, a refusal note, a run-outcome line or a message
   imported from a chat file. The transcripts
   and lists the app assembles for a model — the extraction and history
-  compression transcripts, and a node's chat history, memory and tool-result
-  lists — indent each continuation line of an entry, so an entry cannot open a
-  line of its own: a tool result there cannot write a line that reads as a
-  user turn, another entry, or a context-block header. The payload a node acts
-  on (*Previous Node Output*, often a raw tool result) and the *Original Task*
-  are passed as written.
+  compression transcripts, a node's chat history, memory and tool-result
+  lists, and the memory and tool lists a system prompt or a tool choice is
+  given (`$MEMORY_SUMMARY`, `$TOOLS`, a TOOL or SKILL node's catalogue) —
+  indent each continuation line of an entry, so an entry cannot open a line of
+  its own: a tool result there cannot write a line that reads as a user turn,
+  another entry, or a context-block header, and neither can a memory chunk or
+  a server's tool description. The payload a node acts on (*Previous Node
+  Output*, often a raw tool result) and the *Original Task* are passed as
+  written, except that a tool's result is cut to the single-read budget for a
+  node on the on-device model.
   What remains: the assistant's replies are read, and a reply can repeat what a
   tool returned, so an injection that gets the model to restate it in its
   answer can still reach the extractor, whose prompt tells the model to ignore

@@ -663,6 +663,117 @@ class NodeContextBuilderTest {
         assertEquals("$toolResultsHeader\n1. read_file: line one\n  line two", rendered)
     }
 
+    // --- Group F: tool text bounded for the on-device model ---------------
+
+    private val toolTextOnly = NodeContextConfig(
+        chatHistory = false,
+        originalTask = false,
+        nodeInput = true,
+        longTermMemory = false,
+        toolResults = true,
+    )
+
+    @Test
+    fun `given a tool result over the budget when building then it is cut with a marker`() {
+        val rendered = builder.build(
+            toolTextOnly,
+            richContext().copy(
+                toolResults = listOf(ToolInvocationResult("http_request", "a".repeat(100_000))),
+                previousNodeOutput = "the real payload",
+                toolResultCharBudget = 8_000,
+            ),
+        )
+
+        assertTrue(rendered.length.toString(), rendered.length < 8_000 + 1_000)
+        assertTrue(rendered, "a".repeat(8_000) in rendered)
+        assertTrue(rendered, "92000 more characters of this tool result were cut" in rendered)
+        assertTrue(rendered, rendered.endsWith("the real payload"))
+    }
+
+    @Test
+    fun `given previous node output that is a tool result over the budget when building then it is cut`() {
+        val page = "b".repeat(50_000)
+        val rendered = builder.build(
+            toolTextOnly.copy(toolResults = false),
+            richContext().copy(
+                toolResults = listOf(ToolInvocationResult("http_request", page)),
+                previousNodeOutput = page,
+                toolResultCharBudget = 8_000,
+            ),
+        )
+
+        assertTrue(rendered.length.toString(), rendered.length < 8_000 + 1_000)
+        assertTrue(rendered, "42000 more characters of this tool result were cut" in rendered)
+    }
+
+    @Test
+    fun `given previous node output no tool produced when building then it is not cut`() {
+        val answer = "c".repeat(50_000)
+        val rendered = builder.build(
+            toolTextOnly.copy(toolResults = false),
+            richContext().copy(previousNodeOutput = answer, toolResultCharBudget = 8_000),
+        )
+
+        assertTrue(rendered.endsWith(answer))
+    }
+
+    @Test
+    fun `given a tool result already cut to the budget by its tool when building then its own note survives`() {
+        // read_file serves at most the budget and appends where to continue;
+        // cutting that note off again would lose the offset the model needs.
+        val served = "d".repeat(8_000) + "\n[... truncated, 120000 bytes remain — use offset 8000 to continue]"
+        val rendered = builder.build(
+            toolTextOnly,
+            richContext().copy(
+                toolResults = listOf(ToolInvocationResult("read_file", served)),
+                previousNodeOutput = "p",
+                toolResultCharBudget = 8_000,
+            ),
+        )
+
+        assertTrue(rendered, "use offset 8000 to continue]" in rendered)
+        assertFalse(rendered, "were cut" in rendered)
+    }
+
+    @Test
+    fun `given a tool observation in chat history over the budget when building then only it is cut`() {
+        val question = "q".repeat(20_000)
+        val rendered = builder.build(
+            toolTextOnly.copy(chatHistory = true, toolResults = false, nodeInput = false),
+            richContext().copy(
+                chatHistory = listOf(
+                    ChatMessage(sessionId = "s1", role = Role.USER, content = question, timestamp = 0L),
+                    ChatMessage(
+                        sessionId = "s1",
+                        role = Role.SYSTEM,
+                        content = "Observation from http_request: " + "f".repeat(50_000),
+                        timestamp = 1L,
+                        isFinal = false,
+                    ),
+                ),
+                toolResultCharBudget = 8_000,
+            ),
+        )
+
+        assertTrue("A user's own message is not a tool result", question in rendered)
+        assertFalse(rendered, "f".repeat(50_000) in rendered)
+        assertTrue(rendered, "more characters of this tool result were cut" in rendered)
+    }
+
+    @Test
+    fun `given no budget when building then a tool result is passed whole`() {
+        val page = "e".repeat(100_000)
+        val rendered = builder.build(
+            toolTextOnly,
+            richContext().copy(
+                toolResults = listOf(ToolInvocationResult("http_request", page)),
+                previousNodeOutput = page,
+            ),
+        )
+
+        assertEquals(2, Regex("e{100000}").findAll(rendered).count())
+    }
+
     private fun assertHeaderPresence(rendered: String, mask: Int, header: String, expected: Boolean) {
         val actual = rendered.contains(header)
         if (expected != actual) {

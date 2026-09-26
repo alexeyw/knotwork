@@ -315,6 +315,26 @@ class MemoryJsonSerializerTest {
         assertEquals(null, chunk.lastUsedAt)
     }
 
+    @Test
+    fun `parse does not carry an id no export of this app could hold`() {
+        // An id near Long.MAX_VALUE, inserted as is, moves the table's AUTOINCREMENT
+        // counter to the end of its range: every later memory write fails, and
+        // deleting the row does not reset the counter. Ids an export can carry
+        // (positive, within Int range) still de-duplicate a Merge.
+        fun idOf(id: String): Long = (
+            MemoryJsonSerializer.parse(
+                """{"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+                   "chunks":[{"id":$id,"text":"x","embedding":[0.1],"timestamp":5}]}""",
+            ) as MemoryImportOutcome.Success
+            ).document.chunks.single().id
+
+        assertEquals(0L, idOf(Long.MAX_VALUE.toString()))
+        assertEquals(0L, idOf((Int.MAX_VALUE.toLong() + 1).toString()))
+        assertEquals(0L, idOf("-5"))
+        assertEquals(42L, idOf("42"))
+        assertEquals(Int.MAX_VALUE.toLong(), idOf(Int.MAX_VALUE.toString()))
+    }
+
     /** What an import does with each [MemoryChunk] field. */
     private enum class Policy {
         /** Taken from the file as written. */
@@ -331,7 +351,7 @@ class MemoryJsonSerializerTest {
         const val NOW = 1_758_000_000_000L
 
         val IMPORT_POLICY = mapOf(
-            "id" to Policy.CARRIED,
+            "id" to Policy.CAPPED,
             "text" to Policy.CARRIED,
             "embedding" to Policy.CARRIED,
             "timestamp" to Policy.CAPPED,
