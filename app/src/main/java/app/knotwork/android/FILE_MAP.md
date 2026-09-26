@@ -230,6 +230,7 @@ Only Kotlin files appear inside the generated blocks.
   - `DataModule.kt` - Data layer DI module.
   - `EmbeddingModule.kt` - Hilt multibinding for the `EmbeddingProvider` map (`use` / `openai_3_small` / `ollama`) and the `KoogEmbedderFactory` binding.
   - `HuggingFaceModule.kt` - Provides the `@HuggingFaceBaseUrl` Hub host (public Hub in production; mock-server URL in tests) consumed by `HuggingFaceModelApi`.
+  - `IoDispatcher.kt` - Qualifies the `kotlinx.coroutines.CoroutineDispatcher` for blocking I/O that `CoroutinesModule` provides as `kotlinx.coroutines.Dispatchers.IO`.
   - `LocalToolsModule.kt` - Hilt multibinding for `LocalToolExecutor` map and bindings for `CloudLlmClientFactory` / `CloudLlmModelResolver`.
   - `PromptTemplateModule.kt` - Hilt multibinding module for prompt variable providers.
 - `domain/` - Domain layer containing core business logic and Use Cases.

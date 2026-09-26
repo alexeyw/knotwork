@@ -587,8 +587,8 @@ class TriggerBackgroundRunIntegrationTest {
             pipelineRunRepository = runRepository,
             runTraceRepository = traceRepository,
             attachmentStore = mockk(relaxed = true),
+            dispatcher = testDispatcher,
         ).apply {
-            dispatcher = testDispatcher
             // The no-progress valve is disabled here: this harness advances a
             // virtual clock while the run really progresses on `Dispatchers.IO`
             // threads the scheduler cannot see, so the window would elapse on a
