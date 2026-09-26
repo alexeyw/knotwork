@@ -227,8 +227,8 @@ screen's search), work down this list:
 
 All local data is stored in an encrypted database whose key lives in
 Android's hardware keystore. In rare situations — typically right after
-restoring the app from a backup, after an OS update, or due to a
-transient keystore glitch — that key can become temporarily unreadable,
+an OS update, or due to a transient keystore glitch — that key can become
+temporarily unreadable,
 and the app shows a dedicated recovery screen instead of starting:
 
 - **Tap Retry first — possibly more than once.** Keystore failures are
@@ -238,8 +238,8 @@ and the app shows a dedicated recovery screen instead of starting:
 - **Erase data is the last resort.** If retrying never gets past the
   screen, the key is gone for good and the encrypted database can no
   longer be opened by anyone — including the app itself. **Erase data**
-  deletes the database, your agent workspace files and attachments, and
-  generates a fresh key so you can start over. Settings and saved keys are
+  deletes the database, your agent workspace files, attachments and scheduled
+  tasks, and generates a fresh key so you can start over. Settings and saved keys are
   kept, and so are downloaded models — they are listed again under Models,
   inactive, so pick one before chatting. The action is irreversible and
   guarded by a typed confirmation.

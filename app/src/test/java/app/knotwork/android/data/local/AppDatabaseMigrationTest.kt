@@ -1101,4 +1101,29 @@ class AppDatabaseMigrationTest {
             statement.captured,
         )
     }
+
+    @Test
+    fun `MIGRATION_63_64 targets versions 63 to 64`() {
+        val migration = AppDatabase.MIGRATION_63_64
+
+        assertEquals(63, migration.startVersion)
+        assertEquals(64, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_63_64 creates the background prompts table exactly as the entity declares it`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statement = slot<String>()
+
+        AppDatabase.MIGRATION_63_64.migrate(db)
+
+        verify(exactly = 1) { db.execSQL(capture(statement)) }
+        // Must match the exported v64 schema's createSql, or Room's validation
+        // rejects the migrated database.
+        assertEquals(
+            "CREATE TABLE IF NOT EXISTS `background_prompts` " +
+                "(`id` TEXT NOT NULL, `prompt` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            statement.captured,
+        )
+    }
 }

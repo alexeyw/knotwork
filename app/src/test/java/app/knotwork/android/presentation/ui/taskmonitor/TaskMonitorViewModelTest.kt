@@ -5,6 +5,7 @@ import androidx.work.WorkManager
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ChatSession
+import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.ScheduledTaskKind
@@ -15,6 +16,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -37,6 +39,12 @@ class TaskMonitorViewModelTest {
     private val settingsRepository: SettingsRepository = mockk(relaxed = true)
     private val taskQueueManager: TaskQueueManager = mockk(relaxed = true)
     private val cancelScheduledTasks: CancelScheduledTasksUseCase = mockk(relaxed = true)
+
+    /** The encrypted store the monitor reads prompt previews from, keyed by prompt id. */
+    private val storedPrompts = MutableStateFlow(mapOf(PROMPT_ID to "write the evening journal entry"))
+    private val backgroundPrompts: BackgroundPromptRepository = mockk {
+        every { observeAll() } returns storedPrompts
+    }
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -76,6 +84,7 @@ class TaskMonitorViewModelTest {
             settingsRepository,
             taskQueueManager,
             cancelScheduledTasks,
+            backgroundPrompts,
         )
     }
 
@@ -121,6 +130,7 @@ class TaskMonitorViewModelTest {
                 settingsRepository,
                 taskQueueManager,
                 cancelScheduledTasks,
+                backgroundPrompts,
             )
 
             val uiState = queuedViewModel.uiState.first { !it.isLoading }
@@ -155,12 +165,12 @@ class TaskMonitorViewModelTest {
         kind: ScheduledTaskKind = ScheduledTaskKind.PERIODIC,
         intervalHours: Long = 6,
         sessionId: String? = "session1",
-        prompt: String = "write the evening journal entry",
+        promptId: String = PROMPT_ID,
     ): WorkInfo = mockk(relaxed = true) {
         every { id } returns UUID.randomUUID()
         every { tags } returns setOf(
             ScheduledTaskTag.MARKER,
-            ScheduledTaskTag.encode(kind, intervalHours, sessionId, prompt),
+            ScheduledTaskTag.encode(kind, intervalHours, sessionId, promptId),
             WORKER_CLASS_TAG,
         )
         every { this@mockk.state } returns state
@@ -176,6 +186,7 @@ class TaskMonitorViewModelTest {
                 settingsRepository,
                 taskQueueManager,
                 cancelScheduledTasks,
+                backgroundPrompts,
             )
             viewModel.onFilterChanged(TaskFilterType.BACKGROUND)
 
@@ -186,8 +197,30 @@ class TaskMonitorViewModelTest {
             // same for every task, so cancelling the right one is guesswork.
             assertEquals(ScheduledTaskKind.PERIODIC, task.scheduled?.kind)
             assertEquals(6L, task.scheduled?.intervalHours)
+            // The tag names the prompt by id; the preview comes from the encrypted store.
             assertEquals("write the evening journal entry", task.scheduled?.promptPreview)
             assertEquals("First Session", task.boundSessionName)
+        }
+
+    @Test
+    fun `given a task whose stored prompt is gone when observed then the row keeps its label without a preview`() =
+        runTest(testDispatcher) {
+            every { workManager.getWorkInfosFlow(any()) } returns flowOf(listOf(scheduledWorkInfo(promptId = "gone")))
+            viewModel = TaskMonitorViewModel(
+                chatRepository,
+                workManager,
+                settingsRepository,
+                taskQueueManager,
+                cancelScheduledTasks,
+                backgroundPrompts,
+            )
+            viewModel.onFilterChanged(TaskFilterType.BACKGROUND)
+
+            val task = viewModel.uiState.first { !it.isLoading }.tasks
+                .single { it.type == TaskType.BACKGROUND_WORK }
+
+            assertEquals(ScheduledTaskKind.PERIODIC, task.scheduled?.kind)
+            assertEquals("", task.scheduled?.promptPreview)
         }
 
     @Test
@@ -207,6 +240,7 @@ class TaskMonitorViewModelTest {
                 settingsRepository,
                 taskQueueManager,
                 cancelScheduledTasks,
+                backgroundPrompts,
             )
 
             // Offering to stop tasks that already finished would be a lie.
@@ -230,6 +264,7 @@ class TaskMonitorViewModelTest {
                 settingsRepository,
                 taskQueueManager,
                 cancelScheduledTasks,
+                backgroundPrompts,
             )
             viewModel.onCancelAllScheduledClicked()
             assertTrue(viewModel.uiState.first { it.confirmingCancelAll }.confirmingCancelAll)
@@ -261,6 +296,7 @@ class TaskMonitorViewModelTest {
             settingsRepository,
             taskQueueManager,
             cancelScheduledTasks,
+            backgroundPrompts,
         )
         viewModel.onCancelAllScheduledClicked()
 
@@ -276,6 +312,7 @@ class TaskMonitorViewModelTest {
          * class name). Only its presence matters here: an unrelated tag must not
          * be mistaken for a label.
          */
+        const val PROMPT_ID = "periodic-1"
         const val WORKER_CLASS_TAG = "AgentWorker"
     }
 }

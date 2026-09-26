@@ -7,11 +7,9 @@ import app.knotwork.android.domain.services.TaskScheduler
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -29,8 +27,8 @@ class ScheduleTaskUseCaseTest {
     fun setup() {
         taskScheduler = mockk()
         pipelineRunRepository = mockk()
-        every { taskScheduler.scheduleOneTime(any(), any(), any(), any()) } just Runs
-        every { taskScheduler.schedulePeriodic(any(), any(), any(), any()) } just Runs
+        coEvery { taskScheduler.scheduleOneTime(any(), any(), any(), any()) } just Runs
+        coEvery { taskScheduler.schedulePeriodic(any(), any(), any(), any()) } just Runs
         // Quiet history by default; the runaway-guard tests override it.
         coEvery { pipelineRunRepository.countRootRunsByOriginSince(any(), any()) } returns 0
         scheduleTaskUseCase = ScheduleTaskUseCase(taskScheduler, pipelineRunRepository)
@@ -40,7 +38,7 @@ class ScheduleTaskUseCaseTest {
     fun `given positive interval when invoked then delegates to periodic scheduling`() = runTest {
         val result = scheduleTaskUseCase("check emails", intervalHours = 2, delayMinutes = 0)
 
-        verify {
+        coVerify {
             taskScheduler.schedulePeriodic(
                 "check emails",
                 2L,
@@ -48,7 +46,7 @@ class ScheduleTaskUseCaseTest {
                 ScheduledTaskConstraints(requiresBatteryNotLow = true),
             )
         }
-        verify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
         assertTrue(result.contains("every 2 hours"))
     }
 
@@ -56,7 +54,7 @@ class ScheduleTaskUseCaseTest {
     fun `given zero interval when invoked then delegates to one-time scheduling`() = runTest {
         val result = scheduleTaskUseCase("check emails once", intervalHours = 0, delayMinutes = 10)
 
-        verify {
+        coVerify {
             taskScheduler.scheduleOneTime(
                 "check emails once",
                 10L,
@@ -64,14 +62,14 @@ class ScheduleTaskUseCaseTest {
                 ScheduledTaskConstraints(requiresBatteryNotLow = true),
             )
         }
-        verify(exactly = 0) { taskScheduler.schedulePeriodic(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.schedulePeriodic(any(), any(), any(), any()) }
         assertTrue(result.contains("10 minutes delay"))
     }
 
     @Test
     fun `given session id when one-time then forwards session id to port`() = runTest {
         val sessionSlot = slot<String?>()
-        every { taskScheduler.scheduleOneTime(any(), any(), captureNullable(sessionSlot), any()) } just Runs
+        coEvery { taskScheduler.scheduleOneTime(any(), any(), captureNullable(sessionSlot), any()) } just Runs
 
         scheduleTaskUseCase("check emails once", sessionId = "session-7")
 
@@ -81,7 +79,7 @@ class ScheduleTaskUseCaseTest {
     @Test
     fun `given session id when periodic then forwards session id to port`() = runTest {
         val sessionSlot = slot<String?>()
-        every { taskScheduler.schedulePeriodic(any(), any(), captureNullable(sessionSlot), any()) } just Runs
+        coEvery { taskScheduler.schedulePeriodic(any(), any(), captureNullable(sessionSlot), any()) } just Runs
 
         scheduleTaskUseCase("check emails", intervalHours = 2, sessionId = "session-7")
 
@@ -91,7 +89,7 @@ class ScheduleTaskUseCaseTest {
     @Test
     fun `given no session id when invoked then forwards null to port`() = runTest {
         val sessionSlot = slot<String?>()
-        every { taskScheduler.scheduleOneTime(any(), any(), captureNullable(sessionSlot), any()) } just Runs
+        coEvery { taskScheduler.scheduleOneTime(any(), any(), captureNullable(sessionSlot), any()) } just Runs
 
         scheduleTaskUseCase("check emails once")
 
@@ -100,7 +98,7 @@ class ScheduleTaskUseCaseTest {
 
     @Test
     fun `given scheduler throws when invoked then returns failure message`() = runTest {
-        every {
+        coEvery {
             taskScheduler.scheduleOneTime(any(), any(), any(), any())
         } throws IllegalStateException("queue full")
 
@@ -120,8 +118,8 @@ class ScheduleTaskUseCaseTest {
         val result = scheduleTaskUseCase("keep going forever")
 
         assertEquals(ScheduleTaskUseCase.REFUSAL_MESSAGE, result)
-        verify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
-        verify(exactly = 0) { taskScheduler.schedulePeriodic(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.schedulePeriodic(any(), any(), any(), any()) }
     }
 
     @Test
@@ -133,7 +131,7 @@ class ScheduleTaskUseCaseTest {
         val result = scheduleTaskUseCase("keep going forever", intervalHours = 1)
 
         assertEquals(ScheduleTaskUseCase.REFUSAL_MESSAGE, result)
-        verify(exactly = 0) { taskScheduler.schedulePeriodic(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.schedulePeriodic(any(), any(), any(), any()) }
     }
 
     @Test
@@ -143,7 +141,7 @@ class ScheduleTaskUseCaseTest {
 
         scheduleTaskUseCase("legitimate follow-up")
 
-        verify(exactly = 1) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
     }
 
     @Test
@@ -167,6 +165,6 @@ class ScheduleTaskUseCaseTest {
 
         scheduleTaskUseCase("legitimate task")
 
-        verify(exactly = 1) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { taskScheduler.scheduleOneTime(any(), any(), any(), any()) }
     }
 }

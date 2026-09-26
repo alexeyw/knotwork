@@ -758,4 +758,22 @@ class AppDatabaseMigrationHelperTest {
             }
         }
     }
+
+    /**
+     * v63 → v64 adds `background_prompts`, where the prompts of queued background
+     * runs now live instead of the runtime's unencrypted store. The table starts
+     * empty and must be writable — and the schema must match the exported `64.json`.
+     */
+    @Test
+    fun migrate63to64_addsAnEmptyWritableBackgroundPromptsTable() {
+        helper.createDatabase(TEST_DB, 63).close()
+
+        helper.runMigrationsAndValidate(TEST_DB, 64, true, AppDatabase.MIGRATION_63_64).use { db ->
+            db.query("SELECT COUNT(*) FROM background_prompts").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(0, c.getInt(0))
+            }
+            db.execSQL("INSERT INTO background_prompts(id, prompt, createdAt) VALUES('p-1', 'check emails', 1)")
+        }
+    }
 }
