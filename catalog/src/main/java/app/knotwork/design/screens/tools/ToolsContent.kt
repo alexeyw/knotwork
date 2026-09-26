@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Edit
@@ -67,6 +68,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
@@ -955,6 +959,13 @@ private fun FormSectionLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * One text field of the MCP server form.
+ *
+ * @param secret `true` for a credential — a token, a password, an API key or a
+ *   header value: the text is masked, and the keyboard is told it is a password,
+ *   so it neither suggests nor learns it. Masking alone changes only what is drawn.
+ */
 @Composable
 private fun OutlinedFormTextField(
     value: String,
@@ -962,6 +973,7 @@ private fun OutlinedFormTextField(
     placeholder: String,
     isError: Boolean,
     modifier: Modifier = Modifier,
+    secret: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -980,6 +992,14 @@ private fun OutlinedFormTextField(
             singleLine = true,
             textStyle = KnotworkTextStyles.MonoBase.copy(color = MaterialTheme.colorScheme.onSurface),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = if (secret) {
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                )
+            } else {
+                KeyboardOptions.Default
+            },
+            visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
             modifier = Modifier.fillMaxWidth(),
         )
         if (value.isEmpty()) {
@@ -1020,6 +1040,7 @@ private fun AuthFields(form: AddMcpServerForm, callbacks: McpServerConfigCallbac
             onValueChange = callbacks.onBearerTokenChange,
             placeholder = stringResource(R.string.knotwork_tools_form_auth_bearer_placeholder),
             isError = false,
+            secret = true,
         )
         McpAuthSelector.BASIC -> {
             OutlinedFormTextField(
@@ -1033,6 +1054,7 @@ private fun AuthFields(form: AddMcpServerForm, callbacks: McpServerConfigCallbac
                 onValueChange = callbacks.onBasicPasswordChange,
                 placeholder = stringResource(R.string.knotwork_tools_form_auth_basic_pass_placeholder),
                 isError = false,
+                secret = true,
             )
         }
         McpAuthSelector.API_KEY -> {
@@ -1047,6 +1069,7 @@ private fun AuthFields(form: AddMcpServerForm, callbacks: McpServerConfigCallbac
                 onValueChange = callbacks.onApiKeyValueChange,
                 placeholder = stringResource(R.string.knotwork_tools_form_auth_apikey_value_placeholder),
                 isError = false,
+                secret = true,
             )
         }
     }
@@ -1096,6 +1119,8 @@ private fun HeaderRow(
             placeholder = stringResource(R.string.knotwork_tools_form_header_value_placeholder),
             isError = false,
             modifier = Modifier.weight(1f),
+            // Stored encrypted whole, as the form invites an Authorization row.
+            secret = true,
         )
         IconButton(onClick = onRemove) {
             Icon(

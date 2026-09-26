@@ -302,6 +302,12 @@ details.
   label that names no branch of the node refuses the file. The browser editor
   reads branch labels the same way.
 
+- **Keyboards are told when you type a secret.** The API-key, Hugging Face
+  token and MCP credential fields, and the value of an MCP custom header, now
+  ask the keyboard for a password input, so it does not suggest or learn what
+  you type there. The MCP credential and header values are also masked on
+  screen.
+
 ### Changed
 
 - **The app opens without loading the on-device model.** The start screen no

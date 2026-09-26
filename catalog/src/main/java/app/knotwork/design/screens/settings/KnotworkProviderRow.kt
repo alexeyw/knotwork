@@ -172,6 +172,9 @@ fun KnotworkProviderRow(
                             label = { Text(keyLabel) },
                             modifier = Modifier.fillMaxWidth(),
                             visualTransformation = PasswordVisualTransformation(),
+                            // Masking changes only what is drawn; the keyboard is told
+                            // by the input type, so it neither suggests nor learns the key.
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             singleLine = true,
                             enabled = !pendingChange,
                             colors = brandTextFieldColors(),

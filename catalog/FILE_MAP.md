@@ -507,6 +507,7 @@ matters.
     - `PromptPresetPickerSnapshotTest.kt` - Roborazzi baselines for the prompt-preset picker.
     - `SavePromptAsPresetFormTest.kt` - Pure-logic tests for the parsing and submit-gate helpers behind `SavePromptAsPresetDialog`.
     - `SavePromptAsPresetSnapshotTest.kt` - Roborazzi baselines for the save-prompt-as-preset form.
+  - `SecretFieldImeTest.kt` - Every field that takes a credential tells the keyboard it is a password.
   - `settings/` - the settings hub and its category sub-screens, including the hint affordance, the search surface, and the provider / run-limits details.
     - `HeroSnapshotTest.kt` - Roborazzi baseline for the README "Settings" hero shot at the canonical 1080 × 2400 resolution.
     - `ProviderDetailSnapshotTest.kt` - Roborazzi baselines for the provider detail screen.

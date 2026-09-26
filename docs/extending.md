@@ -1409,7 +1409,7 @@ do I reach for" lookup.
 | Choose from ≤ 8 mutually exclusive values                    | segmented `KnotworkFilterChip(size = Sm)` row                                          |
 | Choose from > 8 values                                       | catalog dropdown (out of scope for this guide)                                         |
 | Search bar                                                   | `KnotworkTextField(size = Md, search = true)`                                          |
-| Password / API key / token                                   | `KnotworkPasswordField`                                                                |
+| Password / API key / token                                   | `KnotworkPasswordField` — or, in a bespoke field, `KeyboardType.Password` and masking (`SecretFieldImeTest`) |
 | Chat input                                                   | catalog `ChatComposer` (`components/chat/ChatComposer.kt`)                             |
 | Inline rename (toolbar title)                                | `KnotworkTextField(size = Sm)` without external `KnotworkField` wrapper                |
 
