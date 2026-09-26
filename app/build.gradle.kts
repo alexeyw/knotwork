@@ -2432,7 +2432,8 @@ val documentationFiles: FileCollection = files(
 // written as a repository path (`domain/…/Foo.kt`).
 val verifyDocLinks by tasks.registering(VerifyDocLinksTask::class) {
     group = "verification"
-    description = "Fails the build if a relative link or an #anchor in the documentation leads nowhere."
+    description = "Fails the build if a relative link, an #anchor or an inline-code repository path in the " +
+        "documentation leads nowhere."
     repositoryRoot.set(rootProject.layout.projectDirectory)
     documents.from(documentationFiles)
     requiredPrefixes.set(documentationRoots)

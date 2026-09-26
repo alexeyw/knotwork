@@ -51,7 +51,8 @@ private val UNINDEXED_DIRECTORIES = setOf("build", ".git", ".gradle", ".idea", "
  * developer's checkout (all are Git-ignored), so a documentation path resolving
  * against one would pass locally and fail in CI.
  */
-private val CHECKOUT_ONLY_ROOT_ENTRIES = setOf(".claude", "project_docs", "local.properties", "CLAUDE.md", "CLAUDE.local.md")
+private val CHECKOUT_ONLY_ROOT_ENTRIES =
+    setOf(".claude", "project_docs", "local.properties", "CLAUDE.md", "CLAUDE.local.md")
 
 /**
  * Indexes every file of the working tree, for the inline-code path pass of
@@ -140,7 +141,8 @@ abstract class AbstractDocsScanTask : DefaultTask() {
 }
 
 /**
- * Fails the build when an internal documentation link leads nowhere.
+ * Fails the build when an internal documentation link, or an inline-code span
+ * written as a repository path, leads nowhere.
  *
  * Deliberately untracked. The task's verdict depends on files it cannot declare
  * as inputs — a link may point at any path in the repository, and the defect

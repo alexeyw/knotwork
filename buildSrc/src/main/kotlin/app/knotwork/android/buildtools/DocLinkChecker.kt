@@ -2,7 +2,8 @@ package app.knotwork.android.buildtools
 
 /**
  * Pure checker that resolves every **internal** link of the documentation set
- * and reports the ones that lead nowhere.
+ * — and every inline code span written as a repository path, see
+ * [checkCodePaths] — and reports the ones that lead nowhere.
  *
  * The split between what blocks a build and what only reports is deliberate. A
  * relative path or an `#anchor` is a statement about *this repository*: its
@@ -62,7 +63,7 @@ object DocLinkChecker {
         /** The target is Markdown outside the scanned set, so its anchors could not be checked. */
         UNSCANNED_TARGET("target Markdown file is outside the scanned set, so its anchors cannot be verified"),
 
-        /** An inline code span written as a repository path names no file — from the root, the document or a package. */
+        /** A code span written as a repository path names no file — from the root, the document or a package. */
         MISSING_CODE_PATH("inline-code path names no file in the repository"),
     }
 

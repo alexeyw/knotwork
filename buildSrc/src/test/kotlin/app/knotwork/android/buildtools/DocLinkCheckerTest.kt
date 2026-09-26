@@ -194,7 +194,9 @@ class DocLinkCheckerTest {
 
     @Test
     fun `given an inline code path with a line or an anchor when checked then only the path is resolved`() {
-        val docs = mapOf("docs/a.md" to "`app/build.gradle.kts:42`, `domain/models/NodeType.kt#L10`, `docs/gone.md:7`\n")
+        val docs = mapOf(
+            "docs/a.md" to "`app/build.gradle.kts:42`, `domain/models/NodeType.kt#L10`, `docs/gone.md:7`\n",
+        )
 
         val result = DocLinkChecker.checkCodePaths(docs, tree)
 
