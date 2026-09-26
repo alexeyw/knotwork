@@ -114,6 +114,19 @@ class NodeConfigCodecTest {
     }
 
     @Test
+    fun `given a decomposition node without a positive cap when decoded then the sheet shows the cap that runs`() {
+        // The executor keeps NodeModel.DEFAULT_MAX_SUBTASKS for each of these;
+        // the sheet has to show that number, not the raw value.
+        listOf(null, 0, -3).forEach { stored ->
+            val node = node(NodeType.DECOMPOSITION).copy(maxSubtasks = stored)
+
+            val decoded = NodeConfigCodec.decode(node) as DecompositionConfig
+
+            assertEquals("stored=$stored", NodeModel.DEFAULT_MAX_SUBTASKS, decoded.maxSubtasks)
+        }
+    }
+
+    @Test
     fun `given LiteRt config when apply-then-decode then payload preserved`() {
         val source = node(NodeType.LITE_RT, "Local")
         val config = LiteRtConfig(

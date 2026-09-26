@@ -26,6 +26,7 @@ import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.ResumeContext
+import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunBudgetLedger
 import app.knotwork.android.domain.models.RunContextNotes
 import app.knotwork.android.domain.models.RunGeneratingModel
@@ -809,6 +810,16 @@ constructor(
                     } else {
                         ChatHistoryView.EMPTY
                     }
+                    // Read only when the node feeds the on-device model and
+                    // there is tool text to cut: a result of this run, or an
+                    // observation row (SYSTEM) in the history it replays.
+                    val hasToolText = toolInvocationResults.isNotEmpty() ||
+                        chatHistoryView.liveWindow.any { it.role == Role.SYSTEM }
+                    val toolResultCharBudget = if (hasToolText && feedsOnDeviceModel(currentNode)) {
+                        settingsRepository.workspaceReadTokenBudget.first() * ChatHistoryWindowPlanner.CHARS_PER_TOKEN
+                    } else {
+                        null
+                    }
                     val executionContext = PipelineExecutionContext(
                         originalUserMessage = userPrompt,
                         chatHistory = chatHistoryView.liveWindow,
@@ -816,6 +827,7 @@ constructor(
                         toolResults = toolInvocationResults.toList(),
                         memoryEntries = memoryEntries,
                         earlierSummary = chatHistoryView.earlierSummary,
+                        toolResultCharBudget = toolResultCharBudget,
                     )
                     // No fallback to currentInputText: an empty result is the
                     // intended outcome of a sparse config (e.g. only toolResults=true
@@ -1723,6 +1735,25 @@ constructor(
      * them.
      */
     private fun shouldComposeContext(node: NodeModel): Boolean = node.usesContextConfig()
+
+    /**
+     * Whether [node]'s composed input is a prompt for the on-device model, so
+     * tool text in it is cut to the user's single-read budget.
+     *
+     * A CLOUD node, and any node given a cloud provider, runs on a provider's
+     * window the user does not size here — it gets tool text whole, bounded by
+     * the response budget only. A TOOL node counts like any other: its input
+     * never reaches the tool as it is, it is the prompt the model turns into the
+     * tool's arguments, on the local model unless the node names a provider.
+     *
+     * @param node a node whose context is being composed.
+     * @return `true` when the node's executor prompts the local model.
+     */
+    private fun feedsOnDeviceModel(node: NodeModel): Boolean = when (node.type) {
+        NodeType.LITE_RT -> true
+        NodeType.CLOUD -> false
+        else -> node.cloudProvider.isNullOrBlank()
+    }
 
     /**
      * Which console channel a protective stop belongs on.

@@ -40,6 +40,19 @@ class TranscriptJoinKonsistTest {
     }
 
     @Test
+    fun `no production code renders a list entry from stored text in one template`() {
+        // The same idiom in the lists: a numbered entry (`"${index + 1}. ${chunk.text}"`)
+        // or a `name — description` line built by interpolation lets the text open a
+        // forged entry. `$MEMORY_SUMMARY`, `$TOOLS` and the auto-select tool list were
+        // written that way; render entries with ChatTranscript.entry(prefix, text).
+        val offenders = ProductionSources.code
+            .mapValues { (_, code) -> LIST_ENTRY_TEMPLATE.findAll(code).map { it.value.trim() }.toList() }
+            .filterValues { it.isNotEmpty() }
+
+        assertEquals(emptyMap<String, List<String>>(), offenders)
+    }
+
+    @Test
     fun `the census reads the production sources it claims to`() {
         // Keeps the rule above from passing vacuously on an empty or wrong tree.
         assertTrue(
@@ -54,5 +67,17 @@ class TranscriptJoinKonsistTest {
          * `label: body` transcript line built by interpolation.
          */
         val ROLE_LABEL_TEMPLATE = Regex("""\${'$'}\{[^}]*\brole\b[^}]*}\s*:|\${'$'}role\b\s*:""")
+
+        /**
+         * A list entry built by interpolating stored text after its prefix: a
+         * numbered one (`${index + 1}. ${x.text}`, `.content`, `.description`,
+         * `.output`) or a `${name} — ${description}` one. A numbered **label** —
+         * `${index + 1}. ${message.role.name}`, handed to `ChatTranscript.turn` —
+         * is app-controlled and not matched.
+         */
+        val LIST_ENTRY_TEMPLATE = Regex(
+            """\${'$'}\{index \+ 1}\. \${'$'}\{[^}]*\.(text|content|description|output)}|""" +
+                """\${'$'}\{[^}]*name} — \${'$'}\{[^}]*description}""",
+        )
     }
 }

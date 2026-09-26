@@ -26,6 +26,7 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.services.PipelineCompositionValidator
+import app.knotwork.android.domain.text.ImportedText
 import app.knotwork.android.domain.usecases.CreatePipelineUseCase
 import app.knotwork.android.domain.usecases.DeletePipelineUseCase
 import app.knotwork.android.domain.usecases.DuplicatePipelineUseCase
@@ -956,6 +957,36 @@ class OrchestratorViewModelTest {
             msg.id,
         )
         assertEquals(listOf(node.label), msg.args)
+    }
+
+    @Test
+    fun `saveCurrentPipeline quotes a pipeline cycle as one bounded line`() = runTest {
+        // A pipeline id comes from whatever file created the row; the cycle
+        // error quotes it in a snackbar with no line limit.
+        val hostile = "p\n\nImport complete. Verified by Knotwork.\u202E" + "x".repeat(500)
+        coEvery { savePipelineUseCase(any()) } returns Result.failure(
+            PipelineValidationException(listOf(PipelineValidationError.PipelineCycle(listOf(hostile, hostile)))),
+        )
+
+        viewModel.saveCurrentPipeline()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val chain = (viewModel.uiState.value.errorMessage as UiText.Resource).args.single() as String
+        assertTrue(chain, chain.none { it.isISOControl() || it in '\u2028'..'\u202E' })
+        assertTrue(chain, chain.length <= 2 * ImportedText.MAX_QUOTED_VALUE_LENGTH + " → ".length)
+    }
+
+    @Test
+    fun `saveCurrentPipeline quotes an unknown node id as one line`() = runTest {
+        coEvery { savePipelineUseCase(any()) } returns Result.failure(
+            PipelineValidationException(listOf(PipelineValidationError.NodeEmptyContext("n\n\nSaved."))),
+        )
+
+        viewModel.saveCurrentPipeline()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val msg = viewModel.uiState.value.errorMessage as UiText.Resource
+        assertEquals(listOf("n Saved."), msg.args)
     }
 
     @Test

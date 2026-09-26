@@ -1107,36 +1107,38 @@ constructor(
             UiText(R.string.errors_orchestrator_validation_unreachable_node)
         is PipelineValidationError.DeadEndNode ->
             UiText(R.string.errors_orchestrator_validation_dead_end)
-        is PipelineValidationError.NodeEmptyContext -> {
-            val name = _uiState.value.currentPipeline.nodes
-                .find { it.id == err.nodeId }?.label ?: err.nodeId
-            UiText.of(R.string.errors_orchestrator_validation_node_no_sources, name)
-        }
-        is PipelineValidationError.MissingTargetPipeline -> {
-            val name = _uiState.value.currentPipeline.nodes
-                .find { it.id == err.nodeId }?.label ?: err.nodeId
-            UiText.of(R.string.errors_orchestrator_validation_missing_target_pipeline, name)
-        }
-        is PipelineValidationError.TargetPipelineNotFound -> {
-            val name = _uiState.value.currentPipeline.nodes
-                .find { it.id == err.nodeId }?.label ?: err.nodeId
-            UiText.of(R.string.errors_orchestrator_validation_target_pipeline_not_found, name)
-        }
+        is PipelineValidationError.NodeEmptyContext ->
+            UiText.of(R.string.errors_orchestrator_validation_node_no_sources, nodeNameForError(err.nodeId))
+        is PipelineValidationError.MissingTargetPipeline ->
+            UiText.of(R.string.errors_orchestrator_validation_missing_target_pipeline, nodeNameForError(err.nodeId))
+        is PipelineValidationError.TargetPipelineNotFound ->
+            UiText.of(R.string.errors_orchestrator_validation_target_pipeline_not_found, nodeNameForError(err.nodeId))
         is PipelineValidationError.PipelineCycle ->
-            UiText.of(R.string.errors_orchestrator_validation_pipeline_cycle, err.pipelineChain.joinToString(" → "))
+            UiText.of(
+                R.string.errors_orchestrator_validation_pipeline_cycle,
+                err.pipelineChain.joinToString(" → ") { it.toDisplaySafe() },
+            )
         is PipelineValidationError.PipelineNestingTooDeep ->
             UiText.of(R.string.errors_orchestrator_validation_pipeline_nesting_too_deep, err.limit)
-        is PipelineValidationError.MissingSkill -> {
-            val name = _uiState.value.currentPipeline.nodes
-                .find { it.id == err.nodeId }?.label ?: err.nodeId
-            UiText.of(R.string.errors_orchestrator_validation_missing_skill, name)
-        }
-        is PipelineValidationError.SkillNotFound -> {
-            val name = _uiState.value.currentPipeline.nodes
-                .find { it.id == err.nodeId }?.label ?: err.nodeId
-            UiText.of(R.string.errors_orchestrator_validation_skill_not_found, name)
-        }
+        is PipelineValidationError.MissingSkill ->
+            UiText.of(R.string.errors_orchestrator_validation_missing_skill, nodeNameForError(err.nodeId))
+        is PipelineValidationError.SkillNotFound ->
+            UiText.of(R.string.errors_orchestrator_validation_skill_not_found, nodeNameForError(err.nodeId))
     }
+
+    /**
+     * The name a validation error calls a node by: its label, or its id when
+     * the node is not on the canvas.
+     *
+     * Display-safe, because both may come from a file the user did not write —
+     * an imported label is bounded at parse, a node id is not — and the error
+     * is shown in a snackbar with no line limit.
+     *
+     * @param nodeId the id the validator reported.
+     * @return one line of at most [ImportedText.MAX_QUOTED_VALUE_LENGTH] characters.
+     */
+    private fun nodeNameForError(nodeId: String): String =
+        (_uiState.value.currentPipeline.nodes.find { it.id == nodeId }?.label ?: nodeId).toDisplaySafe()
 
     /**
      * Lifts a thrown exception into a `UiText`, falling back to the generic

@@ -63,7 +63,9 @@ import app.knotwork.android.domain.constants.DefaultPrompts
  * and a node able to declare "do not ask about this destructive call" would let
  * a document written by someone else walk past the gate.
  * @property maxSubtasks DECOMPOSITION only: how many sub-tasks are kept from the
- * generated list. `null` keeps every one the model produced.
+ * generated list. `null` (or a value below 1) means [DEFAULT_MAX_SUBTASKS] — the
+ * number the node sheet shows for a node without a value, so what the author sees
+ * is what runs.
  * @property stopOnError QUEUE_PROCESSOR only: `true` (and `null`, the historical
  * behaviour) fails the whole run on the first failing item; `false` records the
  * failure as that item's result and carries on with the next one.
@@ -98,4 +100,13 @@ data class NodeModel(
     val stopOnError: Boolean? = null,
     val contextConfig: NodeContextConfig = NodeContextConfig.ALL_ENABLED,
     val configJson: String? = null,
-)
+) {
+    /** Defaults shared by the engine and the node sheet. */
+    companion object {
+        /**
+         * How many sub-tasks a DECOMPOSITION node keeps when [maxSubtasks] is not
+         * set: the value the node sheet shows and saves for such a node.
+         */
+        const val DEFAULT_MAX_SUBTASKS: Int = 5
+    }
+}

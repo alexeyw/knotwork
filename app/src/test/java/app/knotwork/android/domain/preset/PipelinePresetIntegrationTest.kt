@@ -136,6 +136,7 @@ class PipelinePresetIntegrationTest {
         getContextWindowUseCase = mockk()
         retrieveRelevantMemoryUseCase = mockk()
         settingsRepository = mockk()
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
         apiKeyRepository = mockk(relaxed = true)
         metricsRepository = mockk(relaxed = true)
         approvalNotifier = mockk(relaxed = true)

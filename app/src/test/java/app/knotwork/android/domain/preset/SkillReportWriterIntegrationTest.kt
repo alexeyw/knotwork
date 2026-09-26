@@ -135,6 +135,7 @@ class SkillReportWriterIntegrationTest {
         every { llmEngine.currentModelPath } returns null
         toolRepository = mockk(relaxed = true)
         settingsRepository = mockk(relaxed = true)
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
         skillRepository = mockk()
         val context = mockk<Context>()
         every { context.filesDir } returns tempFolder.root

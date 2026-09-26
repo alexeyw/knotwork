@@ -126,6 +126,7 @@ class PipelineSecurityContourTest {
         toolRepository = mockk()
         chatRepository = mockk(relaxed = true)
         settingsRepository = mockk()
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
         context = mockk()
         every { context.filesDir } returns tempFolder.root
 

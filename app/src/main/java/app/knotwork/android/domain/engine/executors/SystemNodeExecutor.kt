@@ -261,10 +261,10 @@ class SystemNodeExecutor @Inject constructor(
                 // for in the prompt because a model that overshoots would
                 // otherwise hand the queue more work than the author allowed —
                 // and the prompt is the thing least able to enforce a number.
-                val capped = node.maxSubtasks
-                    ?.takeIf { it > 0 }
-                    ?.let { limit -> result.value.take(limit) }
-                    ?: result.value
+                // A node without a cap gets the default the sheet shows for it, so
+                // the number the author saw is the number that runs.
+                val limit = node.maxSubtasks?.takeIf { it > 0 } ?: NodeModel.DEFAULT_MAX_SUBTASKS
+                val capped = result.value.take(limit)
                 if (capped.size < result.value.size) {
                     emit(
                         NodeOutput.Console(

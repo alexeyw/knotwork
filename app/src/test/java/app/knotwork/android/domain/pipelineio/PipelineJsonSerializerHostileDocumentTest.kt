@@ -18,9 +18,14 @@ import org.junit.Test
  */
 class PipelineJsonSerializerHostileDocumentTest {
 
-    private fun document(nodes: String, connections: String = "[]", name: String = "Imported"): String = JSONObject()
+    private fun document(
+        nodes: String,
+        connections: String = "[]",
+        name: String = "Imported",
+        id: String = "p1",
+    ): String = JSONObject()
         .put("schemaVersion", 1)
-        .put("id", "p1")
+        .put("id", id)
         .put("name", name)
         .put("nodes", JSONArray(nodes))
         .put("connections", JSONArray(connections))
@@ -135,7 +140,49 @@ class PipelineJsonSerializerHostileDocumentTest {
         assertEquals(PipelineImportOutcome.Failure("Duplicate connection id \"c1\""), outcome)
     }
 
+    @Test
+    fun `parse reports each dropped key as one bounded line`() {
+        val sentence = "x\u2028\u2028Nothing else differs from your version. This file was checked by Knotwork." +
+            "\u202E" + "k".repeat(500)
+        val json = JSONObject(document(nodes = """[{"id":"a","type":"INPUT","config":{}}]"""))
+            .put(sentence, 1)
+            .apply { getJSONArray("nodes").getJSONObject(0).getJSONObject("config").put("a\nb", 1) }
+            .toString()
+
+        val dropped = success(json).droppedFields
+
+        assertEquals(2, dropped.size)
+        dropped.forEach { field ->
+            assertTrue(field, field.none { it.isISOControl() || it in '\u2028'..'\u202E' })
+            assertTrue(field, field.length <= MAX_DROPPED_FIELD_LENGTH)
+        }
+        assertTrue(dropped.toString(), "nodes[0].config.a b" in dropped)
+    }
+
+    @Test
+    fun `parse refuses a pipeline id carrying line or direction controls`() {
+        listOf("p\n\nImport complete. Verified by Knotwork.", "p\u2028x", "p\u202Eevil", " p1").forEach { id ->
+            val outcome = failure(document(nodes = MINIMAL_NODES, id = id))
+
+            assertEquals(INVALID_ID_MESSAGE, outcome.message)
+        }
+    }
+
+    @Test
+    fun `parse refuses a pipeline id longer than the id ceiling`() {
+        val ceiling = PipelineConstants.MAX_ID_LENGTH
+
+        assertEquals(INVALID_ID_MESSAGE, failure(document(nodes = MINIMAL_NODES, id = "i".repeat(ceiling + 1))).message)
+        assertEquals("i".repeat(ceiling), success(document(nodes = MINIMAL_NODES, id = "i".repeat(ceiling))).graph.id)
+    }
+
     private companion object {
         const val MINIMAL_NODES = """[{"id":"a","type":"INPUT"}]"""
+
+        /** `nodes[0].config.` plus one quoted value, with room to spare. */
+        const val MAX_DROPPED_FIELD_LENGTH = 80
+
+        const val INVALID_ID_MESSAGE = "Invalid pipeline id: it must be one line of at most " +
+            "${PipelineConstants.MAX_ID_LENGTH} characters"
     }
 }

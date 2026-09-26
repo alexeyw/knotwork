@@ -7,6 +7,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Skill
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.SkillRepository
@@ -219,6 +220,8 @@ private class ScopedToolsVariableProvider(
         val available = toolRepository.getAvailableTools()
         val visible = if (allowlist == null) available else available.filter { it.name in allowlist }
         if (visible.isEmpty()) return ""
-        return visible.joinToString(separator = "\n") { tool -> "${tool.name} — ${tool.description}" }
+        return visible.joinToString(separator = "\n") { tool ->
+            ChatTranscript.entry("${tool.name} — ", tool.description)
+        }
     }
 }
