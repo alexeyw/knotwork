@@ -19,6 +19,18 @@ object PipelineConstants {
     const val MAX_NAME_LENGTH: Int = 60
 
     /**
+     * Longest pipeline id a pipeline file may carry.
+     *
+     * Every id the app mints is a UUID (36 characters) or a bundled preset's
+     * snake_case slug; the ceiling leaves room for any other tool's scheme. The
+     * importer refuses a longer id, and one carrying a line break, control or
+     * bidi character, rather than rewriting it: an id is an identity other
+     * pipelines, triggers and bindings refer to, and it is quoted back in
+     * validation errors, so it has to be stored exactly as it reads.
+     */
+    const val MAX_ID_LENGTH: Int = 128
+
+    /**
      * Longest node label a pipeline file may store.
      *
      * The label is the canvas card's title, the sheet's title, and — for a

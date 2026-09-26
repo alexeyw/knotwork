@@ -131,6 +131,7 @@ class ShowcaseCompositionIntegrationTest {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
         settingsRepository = mockk(relaxed = true)
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
 
         // --- in-memory pipeline repository ---
         val pipelinesFlow = MutableStateFlow<List<PipelineGraph>>(emptyList())

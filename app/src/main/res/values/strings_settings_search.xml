@@ -87,7 +87,7 @@
     <string name="settings_search_name_workspace_max_total_bytes">Workspace size limit</string>
     <string name="settings_search_desc_workspace_max_total_bytes">Total workspace footprint the agent may use.</string>
     <string name="settings_search_name_workspace_read_token_budget">Single read budget</string>
-    <string name="settings_search_desc_workspace_read_token_budget">Token budget for a single workspace read.</string>
+    <string name="settings_search_desc_workspace_read_token_budget">Token budget for a single workspace read or tool result.</string>
     <string name="settings_search_name_http_tool_max_response_bytes">Largest tool response</string>
     <string name="settings_search_desc_http_tool_max_response_bytes">Largest web response or MCP result kept.</string>
     <string name="settings_search_name_link_files_domains">Allowed HTTP domains</string>

@@ -320,6 +320,7 @@ class GraphExecutionEngineTest {
         every { settingsRepository.runMaxTokensBackground } returns flowOf(100_000)
         coEvery { pipelineRunRepository.getSpend(any()) } returns RunSpend()
         every { settingsRepository.pipelineMaxNestingDepth } returns flowOf(3)
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
         coEvery { toolRepository.getAvailableTools() } returns emptyList()
 
         coEvery { loadModelUseCase(any()) } returns Result.Success(Unit)
@@ -2323,6 +2324,121 @@ class GraphExecutionEngineTest {
             "CLOUD prompt missing Previous Node Output block: $cloudPromptText",
             cloudPromptText.contains("--- Previous Node Output ---"),
         )
+    }
+
+    @Test
+    fun `given a tool result over the read budget then an on-device node gets it cut and a cloud node whole`() =
+        runTest {
+            every { settingsRepository.workspaceReadTokenBudget } returns flowOf(200)
+            val page = "p".repeat(20_000)
+            coEvery { toolRepository.getRisk("web.fetch", any()) } returns ToolRisk.READ_ONLY
+            coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool("web.fetch", "Fetch", "{}"))
+            coEvery { toolRepository.executeTool("web.fetch", any(), any()) } returns page
+
+            val cloudClient: LLMClient = mockk(relaxed = true)
+            val cloudPrompt = slot<Prompt>()
+            coEvery { cloudClient.executeStreaming(capture(cloudPrompt), any<LLModel>()) } returns
+                flowOf(StreamFrame.TextDelta("cloud_answer"))
+            coEvery { koogClientFactory.createAnthropicExecutor() } returns cloudClient
+            every { apiKeyRepository.getAnthropicKey() } returns flowOf("anthropic-test-key")
+            every { apiKeyRepository.getAnthropicModel() } returns flowOf("claude-sonnet-4-5")
+            every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
+            every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
+            every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
+
+            val localPrompts = mutableListOf<String>()
+            every { llmEngine.generateResponseStream(capture(localPrompts)) } returnsMany listOf(
+                flowOf("""{"tool":"web.fetch","arguments":"u"}"""),
+                flowOf("final"),
+            )
+
+            val toolResultsOnly = NodeContextConfig(
+                chatHistory = false,
+                originalTask = false,
+                nodeInput = false,
+                longTermMemory = false,
+                toolResults = true,
+            )
+            val graph = PipelineGraph(
+                id = "g1",
+                name = "Tool result budget",
+                nodes = listOf(
+                    NodeModel("input", NodeType.INPUT, 0f, 0f),
+                    NodeModel(id = "tool", type = NodeType.TOOL, x = 0f, y = 0f, toolName = "web.fetch"),
+                    // No provider named: a CLOUD node is a cloud node whatever
+                    // it leaves blank (the provider is then auto-detected).
+                    NodeModel(
+                        id = "cloud",
+                        type = NodeType.CLOUD,
+                        x = 0f,
+                        y = 0f,
+                        systemPrompt = "Answer.",
+                        contextConfig = toolResultsOnly,
+                    ),
+                    NodeModel(
+                        id = "output",
+                        type = NodeType.OUTPUT,
+                        x = 0f,
+                        y = 0f,
+                        systemPrompt = "Format:",
+                        contextConfig = toolResultsOnly,
+                    ),
+                ),
+                connections = listOf(
+                    ConnectionModel("c1", "input", "tool"),
+                    ConnectionModel("c2", "tool", "cloud"),
+                    ConnectionModel("c3", "cloud", "output"),
+                ),
+            )
+
+            engine(sessionId, "fetch it", graph).toList()
+
+            val cloudText = cloudPrompt.captured.messages.joinToString("\n") { it.textContent() }
+            assertTrue("A cloud node keeps the whole result", page in cloudText)
+            val outputPrompt = localPrompts.last()
+            assertFalse("The on-device OUTPUT node must not get the whole result", page in outputPrompt)
+            assertTrue(outputPrompt, "19200 more characters of this tool result were cut" in outputPrompt)
+        }
+
+    @Test
+    fun `given a tool result over the read budget then a TOOL node on the on-device model gets it cut`() = runTest {
+        // A TOOL node's input is the prompt its arguments are generated from, on
+        // the local model here — so it is bounded like any on-device prompt.
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(200)
+        val page = "p".repeat(20_000)
+        coEvery { toolRepository.getRisk(any(), any()) } returns ToolRisk.READ_ONLY
+        coEvery { toolRepository.getAvailableTools() } returns listOf(
+            AgentTool("web.fetch", "Fetch", "{}"),
+            AgentTool("notes.save", "Save", "{}"),
+        )
+        coEvery { toolRepository.executeTool("web.fetch", any(), any()) } returns page
+        coEvery { toolRepository.executeTool("notes.save", any(), any()) } returns "saved"
+        val localPrompts = mutableListOf<String>()
+        every { llmEngine.generateResponseStream(capture(localPrompts)) } returnsMany listOf(
+            flowOf("""{"url":"u"}"""),
+            flowOf("""{"text":"t"}"""),
+        )
+        val graph = PipelineGraph(
+            id = "g1",
+            name = "Tool to tool",
+            nodes = listOf(
+                NodeModel("input", NodeType.INPUT, 0f, 0f),
+                NodeModel(id = "fetch", type = NodeType.TOOL, x = 0f, y = 0f, toolName = "web.fetch"),
+                NodeModel(id = "save", type = NodeType.TOOL, x = 0f, y = 0f, toolName = "notes.save"),
+                NodeModel("output", NodeType.OUTPUT, 0f, 0f, systemPrompt = null),
+            ),
+            connections = listOf(
+                ConnectionModel("c1", "input", "fetch"),
+                ConnectionModel("c2", "fetch", "save"),
+                ConnectionModel("c3", "save", "output"),
+            ),
+        )
+
+        engine(sessionId, "fetch and save", graph).toList()
+
+        val savePrompt = localPrompts.last()
+        assertFalse("The second TOOL node must not get the whole result", page in savePrompt)
+        assertTrue(savePrompt, "more characters of this tool result were cut" in savePrompt)
     }
 
     // ─── Agent console event emissions ──────────────────────────

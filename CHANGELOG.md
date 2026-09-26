@@ -232,6 +232,23 @@ details.
   usual setting, and a switch that is neither on nor off, or a provider name
   the app does not know, refuses the file. "AUTO" now counts as automatic
   provider choice in any letter case, as the node sheet already showed it.
+- **A memory or a tool description can no longer add lines to a prompt.** The
+  `$MEMORY_SUMMARY` and `$TOOLS` lists, and the tool lists a tool or skill node
+  chooses from, now indent every further line of an entry, as the context
+  blocks already did — so an imported memory or an MCP server's description
+  cannot write a line that reads as the app's own.
+- **Importing a memory file can no longer stop memory from saving.** A file
+  could give an entry an id so large that every later memory write failed; an
+  id no export of the app could hold is now ignored.
+- **Import dialogs quote a file on one line.** The list of settings a newer
+  file carries, a prompt pack's name and a pipeline cycle error could each put
+  the file's own line breaks and text-direction marks on screen. A pipeline
+  file whose id is not one line of at most 128 characters is refused.
+- **Tool results are cut to fit the on-device model.** The response limit
+  (1 MB by default) bounds what the app keeps of a web page or MCP result, not
+  what a local model can read. A node on the on-device model now gets each tool
+  result cut to the **Single read budget**, with a note saying how much was
+  left out; a node on a cloud provider still gets it whole.
 
 ### Changed
 
@@ -257,6 +274,8 @@ details.
 
 ### Fixed
 
+- **A decomposition node without a subtask limit keeps 5.** Its sheet showed 5
+  while the run kept every subtask the model produced.
 - **Messages at the bottom of the screen look the same everywhere and stay out
   of the way.** They came in three styles and four positions: on every settings
   screen and in the pipeline library they appeared at the top-left, over the

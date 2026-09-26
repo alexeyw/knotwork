@@ -230,7 +230,7 @@ Turns one instruction into a list of subtasks. On its own it only produces the l
 | What it decides | Where the value comes from |
 |---|---|
 | The instruction that produces the subtask list | the sheet's `planningPrompt` — a new node arrives with this type's shipped default in it |
-| How many of the produced subtasks are kept | the sheet's `maxSubtasks` |
+| How many of the produced subtasks are kept | the sheet's `maxSubtasks` — 5 when a file leaves it unset, as the sheet shows |
 | Whether the planning runs on-device or in the cloud | the sheet's `engineProvider` |
 
 ### Queue Processor — `QUEUE_PROCESSOR`

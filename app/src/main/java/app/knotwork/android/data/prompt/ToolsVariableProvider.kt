@@ -1,5 +1,6 @@
 package app.knotwork.android.data.prompt
 
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.ToolRepository
 import javax.inject.Inject
@@ -40,9 +41,9 @@ class ToolsVariableProvider @Inject constructor(private val toolRepository: Tool
     override suspend fun resolve(): String {
         val tools = toolRepository.getAvailableTools()
         if (tools.isEmpty()) return ""
-        return tools.joinToString(separator = "\n") { tool ->
-            "${tool.name} — ${tool.description}"
-        }
+        // A description is the tool's own text — an MCP server's, for a server
+        // tool — so its further lines are indented and cannot pose as a tool entry.
+        return tools.joinToString(separator = "\n") { tool -> ChatTranscript.entry("${tool.name} — ", tool.description) }
     }
 
     private companion object {

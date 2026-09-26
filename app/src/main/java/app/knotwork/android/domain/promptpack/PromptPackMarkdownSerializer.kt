@@ -181,15 +181,20 @@ object PromptPackMarkdownSerializer {
             is FrontmatterParseResult.Parsed -> result
         }
 
-        val name = parsed.scalar("name")
+        val rawName = parsed.scalar("name")
             ?: return PromptPackImportOutcome.Failure(PromptPackParseError.MissingRequiredKey("name"))
-        if (name.isEmpty()) {
-            return PromptPackImportOutcome.Failure(PromptPackParseError.MissingRequiredKey("name"))
-        }
-        if (name.length > PromptPresetConstants.MAX_NAME_LENGTH) {
+        if (rawName.length > PromptPresetConstants.MAX_NAME_LENGTH) {
             return PromptPackImportOutcome.Failure(
                 PromptPackParseError.NameTooLong(PromptPresetConstants.MAX_NAME_LENGTH),
             )
+        }
+        // Flattened, as a pipeline name is: the name is quoted in the dialog
+        // that lists what was left out and in the success snackbar, and a
+        // value is one line only by `lines()`, which keeps U+2028 / U+202E.
+        // Within the ceiling already, so nothing is cut.
+        val name = rawName.toDisplaySafe(maxLength = PromptPresetConstants.MAX_NAME_LENGTH, ellipsis = "")
+        if (name.isEmpty()) {
+            return PromptPackImportOutcome.Failure(PromptPackParseError.MissingRequiredKey("name"))
         }
 
         val rawNodeType = parsed.scalar("nodeType")

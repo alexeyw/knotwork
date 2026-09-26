@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.engine.executors
 
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ExecutionScope
 import app.knotwork.android.domain.models.NodeExecutionResult
@@ -219,6 +220,6 @@ private class ScopedToolsVariableProvider(
         val available = toolRepository.getAvailableTools()
         val visible = if (allowlist == null) available else available.filter { it.name in allowlist }
         if (visible.isEmpty()) return ""
-        return visible.joinToString(separator = "\n") { tool -> "${tool.name} — ${tool.description}" }
+        return visible.joinToString(separator = "\n") { tool -> ChatTranscript.entry("${tool.name} — ", tool.description) }
     }
 }

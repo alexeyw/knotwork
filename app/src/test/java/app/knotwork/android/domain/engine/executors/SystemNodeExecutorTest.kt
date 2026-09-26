@@ -22,6 +22,7 @@ import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -267,7 +268,23 @@ class SystemNodeExecutorTest {
     }
 
     @Test
-    fun `given DECOMPOSITION with no cap then every produced subtask is kept`() = runTest {
+    fun `given DECOMPOSITION with no cap set then the default the node sheet shows is applied`() = runTest {
+        // The sheet shows 5 for a node without a value; the run used to keep every
+        // subtask the model produced. What the author sees is what runs.
+        val node = NodeModel("1", NodeType.DECOMPOSITION, 0f, 0f)
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
+            flowOf("[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\", \"g\", \"h\"]")
+
+        val outputs = executor.execute(node, "input", "session-1", "prompt", scope = ExecutionScope()).toList()
+
+        assertEquals(
+            NodeModel.DEFAULT_MAX_SUBTASKS,
+            JSONArray(outputs.lastResult().outputText).length(),
+        )
+    }
+
+    @Test
+    fun `given DECOMPOSITION with no cap set and fewer subtasks than the default then every one is kept`() = runTest {
         val node = NodeModel("1", NodeType.DECOMPOSITION, 0f, 0f)
         every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("[\"a\", \"b\", \"c\"]")
 

@@ -1,5 +1,6 @@
 package app.knotwork.android.data.prompt
 
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
@@ -48,8 +49,11 @@ class MemorySummaryVariableProvider @Inject constructor(
         // history on every prompt render.
         val recent = memoryRepository.getRecentMemorySummaries(limit)
         if (recent.isEmpty()) return ""
+        // Through ChatTranscript, as every other list the model reads: a memory's
+        // text comes from chats and from imported files, and a line of its own
+        // inside the system prompt reads as the prompt's own instructions.
         return recent
-            .mapIndexed { index, chunk -> "${index + 1}. ${chunk.text}" }
+            .mapIndexed { index, chunk -> ChatTranscript.entry("${index + 1}. ", chunk.text) }
             .joinToString(separator = "\n")
     }
 

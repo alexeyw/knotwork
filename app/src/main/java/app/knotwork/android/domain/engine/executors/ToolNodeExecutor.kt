@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.engine.executors
 
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.LlmInferenceEngine
@@ -226,8 +227,15 @@ class ToolNodeExecutor @Inject constructor(
                 throw ResolutionFailed()
             }
 
+            // The description and the parameter schema are the tool's own text (an
+            // MCP server's, for a server tool): their further lines are indented, so
+            // only a real tool can open a `Tool:` line.
             val toolsDescriptions = availableTools.joinToString("\n\n") {
-                "Tool: ${it.name}\nDescription: ${it.description}\nParameters: ${it.parameters}"
+                listOf(
+                    "Tool: ${it.name}",
+                    ChatTranscript.entry("Description: ", it.description),
+                    ChatTranscript.entry("Parameters: ", it.parameters),
+                ).joinToString("\n")
             }
 
             val prompt = DefaultPrompts.renderTemplate(

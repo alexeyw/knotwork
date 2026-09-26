@@ -170,6 +170,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
         coEvery { chatRepository.sessionExists(SESSION_ID) } returns true
 
         settingsRepository = mockk()
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
         every { settingsRepository.verboseMemoryLoggingEnabled } returns flowOf(false)
         every { settingsRepository.chatHistoryCompressionEnabled } returns flowOf(false)
         every { settingsRepository.chatHistoryCompressionThresholdTokens } returns flowOf(3_500)

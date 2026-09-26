@@ -35,6 +35,13 @@ import app.knotwork.android.domain.models.ToolInvocationResult
  * @property memoryEntries Long-term memory entries deemed relevant to
  * [originalUserMessage] (semantic similarity above the configured threshold).
  * Empty list when retrieval is disabled, fails, or returns nothing.
+ * @property toolResultCharBudget Longest tool text, in characters, the node may
+ * receive: each tool result, a [previousNodeOutput] that is a tool's result
+ * verbatim, and a `SYSTEM` row of [chatHistory] (the record of a tool call) are
+ * cut to it with a note saying how much was left out. Set for a node that
+ * prompts the on-device model, whose context window the user sizes — a TOOL
+ * node included, since its input is the prompt its arguments are generated
+ * from; `null` — nothing cut — for a node on a cloud provider.
  */
 data class PipelineExecutionContext(
     val originalUserMessage: String,
@@ -43,4 +50,5 @@ data class PipelineExecutionContext(
     val toolResults: List<ToolInvocationResult>,
     val memoryEntries: List<MemoryChunk>,
     val earlierSummary: String? = null,
+    val toolResultCharBudget: Int? = null,
 )

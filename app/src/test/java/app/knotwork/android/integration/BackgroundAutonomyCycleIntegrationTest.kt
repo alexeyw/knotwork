@@ -179,6 +179,7 @@ class BackgroundAutonomyCycleIntegrationTest {
         coEvery { pipelineRepository.getPipelineById(GRAPH_ID) } returns graph
 
         settingsRepository = mockk()
+        every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
         every { settingsRepository.verboseMemoryLoggingEnabled } returns flowOf(false)
         every { settingsRepository.chatHistoryCompressionEnabled } returns flowOf(false)
         every { settingsRepository.chatHistoryCompressionThresholdTokens } returns flowOf(3_500)

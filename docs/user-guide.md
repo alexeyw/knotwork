@@ -1540,7 +1540,11 @@ in rather than taken as written:
   editor copy; the browser editor still reads those from there and saves them
   into both.
 - **Names stay short.** The pipeline name and each node's label are kept to one
-  line of at most 60 characters; anything longer is cut.
+  line of at most 60 characters; anything longer is cut. The pipeline's id is
+  an identity other pipelines and triggers refer to, so it is not cut: a file
+  whose id is not one line of at most 128 characters is refused.
+- **Text quoted from the file stays on one line.** The settings a newer file
+  carries that this version would drop are listed one short line each.
 - **Starter prompts only name tools the pipeline calls.** The `uses · …` line
   under a starter prompt keeps a tool only if one of the pipeline's Tool nodes
   is set to call it, and a pipeline keeps at most six starter prompts.
@@ -1863,7 +1867,8 @@ size.
 
 A tool's **result** is limited too, and so is an error message the server
 sends instead: past the **Largest tool response** setting (*Settings → Tools &
-workspace*, default 1 024 KB) it is cut, with a marker saying so.
+workspace*, default 1 024 KB) it is cut, with a marker saying so. A node on the
+on-device model gets less: at most the **Single read budget** of it.
 
 #### How long a server is given to answer
 
@@ -2341,8 +2346,8 @@ repeated here.
 | **Approval wait** | How long a run waits for you to approve a tool call before it parks and asks again later. It does not bound the call itself. |
 | **Largest file** | The largest single file the workspace accepts, for both writing one and reading one whole. |
 | **Workspace size limit** | How much device storage the whole workspace may hold. A write that would push past it is refused rather than trimmed. |
-| **Single read budget** | How much of a file one read may put in front of the model. The rest is cut, leaving room for the prompt and the thread. |
-| **Largest tool response** | How much of a web response or MCP tool result reaches the model. Past it the text is cut and marked, so it cannot flood the context. |
+| **Single read budget** | How much of one file read, or one tool result for the on-device model, reaches the model. The rest is cut, leaving room for the prompt. |
+| **Largest tool response** | How much of a web response or MCP result the app keeps. Past it the text is cut and marked. It bounds memory, not the context. |
 | **Allowed HTTP domains** | *(no explanation — opens a screen that explains itself)* |
 
 #### Background & triggers
@@ -2686,10 +2691,14 @@ Advanced:
   workspace. A write that would cross either is refused.
 - **Single read budget** (200 – 8 000 tokens, default 2 000) — how much of a file
   one `read_file` call may return. Anything past it is cut, with a marker, so one
-  read cannot fill the model's whole context.
+  read cannot fill the model's whole context. A node on the on-device model gets
+  every other tool result cut to the same budget too: in its *Tool Results*
+  block, when the result is the input it acts on, and when the chat history it
+  reads repeats an earlier result. A node on a cloud provider gets them whole.
 - **Largest tool response** (64 – 8 192 KB, default 1 024) — how much of an
   `http_request` response or an MCP tool result is read into the answer. Bounds
-  how much untrusted remote text a single call can put in front of the model.
+  how much untrusted remote text a single call can hold in memory and in the
+  chat — at the default, far more than an on-device model can read at once.
 - **Files / allowed domains** *(link)* — the `http_request` domain allowlist and
   the workspace file browser.
 

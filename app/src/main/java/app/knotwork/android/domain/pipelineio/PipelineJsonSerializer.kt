@@ -88,7 +88,11 @@ import org.json.JSONObject
  * differently from how they validate:
  *  - `name` and every node and connection `label` become one line within
  *    [PipelineConstants.MAX_NAME_LENGTH] / [PipelineConstants.MAX_IMPORTED_LABEL_LENGTH];
- *  - two nodes or two connections sharing an id fail the import;
+ *  - two nodes or two connections sharing an id fail the import, and so does
+ *    a pipeline `id` that is not already one line within
+ *    [PipelineConstants.MAX_ID_LENGTH] (it is an identity, so it is refused
+ *    rather than rewritten);
+ *  - every key reported in `droppedFields` is made display-safe;
  *  - every value quoted back in an error message goes through
  *    [toDisplaySafe], so a crafted id or type cannot add lines to the error.
  *
@@ -381,9 +385,13 @@ object PipelineJsonSerializer {
         return dropped
     }
 
-    /** Keys of [json] that are not in [known], in document order. */
+    /**
+     * Keys of [json] that are not in [known], in document order, each made
+     * display-safe: the schema-mismatch dialog lists them one per line above
+     * *Import anyway*, and a key is text the file chose.
+     */
     private fun unknownKeys(json: JSONObject, known: Set<String>): List<String> =
-        json.keys().asSequence().filterNot { it in known }.toList()
+        json.keys().asSequence().filterNot { it in known }.map { it.toDisplaySafe() }.toList()
 
     // Reason: one throw per required field or identity rule, each with its own
     // message — the same trade-off as `buildConnection`.
@@ -391,6 +399,14 @@ object PipelineJsonSerializer {
     private fun buildGraph(root: JSONObject): PipelineGraph {
         val id = root.optString("id").takeIf { it.isNotBlank() }
             ?: throw PipelineParseException("Missing required field: id")
+        // Refused, not rewritten: other pipelines, triggers and bindings refer
+        // to the id, and validation errors quote it, so it is stored only if it
+        // already reads as one bounded line. Not quoted — it is the bad value.
+        if (id != id.toDisplaySafe(maxLength = PipelineConstants.MAX_ID_LENGTH, ellipsis = "")) {
+            throw PipelineParseException(
+                "Invalid pipeline id: it must be one line of at most ${PipelineConstants.MAX_ID_LENGTH} characters",
+            )
+        }
         // Normalised, not just checked: the name comes from a file the user did
         // not write and is rendered in the library list, the editor toolbar and
         // the import dialogs, so it gets the ceiling every in-app path enforces —

@@ -275,6 +275,26 @@ class PromptPackMarkdownSerializerTest {
     }
 
     @Test
+    fun `given a name carrying line and direction controls when parsed then it is one line`() {
+        // The name is quoted in the import dialog that lists what was left
+        // out and in the success snackbar; a separator in it would add a
+        // sentence of the file's own to the first.
+        val preset = success(
+            document(frontmatter = "name: Tidy\u2028\u2028Nothing was left out.\u202E\nnodeType: LITE_RT"),
+        ).preset
+
+        assertEquals("Tidy Nothing was left out.", preset.name)
+    }
+
+    @Test
+    fun `given a name that is only separators when parsed then it is missing`() {
+        assertEquals(
+            PromptPackParseError.MissingRequiredKey("name"),
+            failure(document(frontmatter = "name: \u2028\u202E\u2029\nnodeType: LITE_RT")),
+        )
+    }
+
+    @Test
     fun `given an over-long name when parsed then it is refused rather than clamped`() {
         val long = "n".repeat(PromptPresetConstants.MAX_NAME_LENGTH + 1)
 

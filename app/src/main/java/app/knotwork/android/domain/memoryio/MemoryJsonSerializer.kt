@@ -237,7 +237,11 @@ object MemoryJsonSerializer {
             // on insert; an explicit positive id would collide with existing
             // auto-increment rows (silently dropped by the Merge dedupe filter or
             // overwritten under Replace's REPLACE-on-conflict).
-            id = json.optLong(KEY_ID, 0L),
+            // Kept only within the range an export of this app holds: an id near
+            // Long.MAX_VALUE, inserted as is, moves the table's AUTOINCREMENT
+            // counter to the end of its range, and every later memory write fails
+            // for good. 0 lets Room assign one; in range, it still de-duplicates a Merge.
+            id = json.optLong(KEY_ID, 0L).takeIf { it in 1L..Int.MAX_VALUE.toLong() } ?: 0L,
             text = text,
             embedding = embedding,
             timestamp = timestamp.coerceAtMost(nowMillis),
