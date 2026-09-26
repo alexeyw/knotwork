@@ -10,7 +10,6 @@ import app.knotwork.android.domain.models.MemoryImportStrategy
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.domain.repositories.ApiKeyRepository
-import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
 import app.knotwork.android.domain.repositories.IdentityRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
@@ -70,7 +69,6 @@ class SettingsViewModel @Inject constructor(
     localModelRepository: LocalModelRepository,
     memoryRepository: MemoryRepository,
     identityRepository: IdentityRepository,
-    crashReportingRepository: CrashReportingRepository,
     testBackendUseCase: TestBackendUseCase,
     resetSamplingDefaultsUseCase: ResetSamplingDefaultsUseCase,
     resetToRecommendedDefaultsUseCase: ResetToRecommendedDefaultsUseCase,
@@ -140,7 +138,6 @@ class SettingsViewModel @Inject constructor(
         scope = viewModelScope,
         state = _uiState,
         settingsRepository = settingsRepository,
-        crashReportingRepository = crashReportingRepository,
     )
 
     private val about = AboutSettingsDelegate(
@@ -149,7 +146,6 @@ class SettingsViewModel @Inject constructor(
         appContext = appContext,
         identityRepository = identityRepository,
         resetToRecommendedDefaultsUseCase = resetToRecommendedDefaultsUseCase,
-        crashReportingRepository = crashReportingRepository,
     )
 
     // ─── Generation ────────────────────────────────────────────────────────

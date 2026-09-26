@@ -17,8 +17,11 @@ import java.io.IOException
  * Face discovery.
  *
  * Unlike the per-connection gates on the Ollama and MCP paths, this runs on
- * **every** request, so it also catches a redirect that tries to downgrade an
- * `https://` call to `http://` mid-flight — the case the platform used to cover.
+ * **every** hop. [SharedHttpClient] registers it twice: as an application
+ * interceptor, which refuses the first request before its host is even
+ * resolved, and as a network interceptor, which sees each redirect OkHttp
+ * follows — one that tries to downgrade an `https://` call to `http://`
+ * mid-flight, the case the platform used to cover.
  *
  * Private-LAN cleartext is deliberately **not** gated here. The destinations
  * that reach this client are either public (downloads, discovery) or already

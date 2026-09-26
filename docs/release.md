@@ -456,7 +456,7 @@ command above before tagging still buys something the release pipeline does not.
 
 `./gradlew check` never runs R8's output, so a release-only defect has exactly
 one place left to be caught: the release build itself. Two tasks run before R8
-and the strip step, two after packaging, and each checks a property the others
+and the strip step, three after packaging, and each checks a property the others
 cannot see. Before R8 and the strip step:
 
 - **`verify<Variant>KeepRuleTargets`** runs before R8 and resolves every class,
@@ -481,6 +481,17 @@ the app was broken:
   protobuf, the list holds the two aggregated AppFunctions classes the platform
   loads by name — kept today by the library's own rules, which its `proguard.txt`
   plans to replace.
+- **`verify<Variant>NoMediaPipeTelemetry`** disassembles the packaged dex with the
+  SDK's `dexdump` and fails on any call to MediaPipe's `LoggingClient.logEvent`.
+  MediaPipe Tasks attaches a usage logger to every task it creates, which sends
+  the app id and version and the device's model, fingerprint, country and
+  carrier to Google's Firelog endpoint; `full` keeps the upload component for
+  Crashlytics. `-assumenosideeffects` in `proguard-rules.pro` removes the one call
+  site and leaves the declaration (MediaPipe is kept whole), so neither the
+  mapping nor the class table can show whether the removal happened — only the
+  instructions can. It fails too when the call-site class is missing, so it
+  cannot pass over nothing. Verified both ways on `fullRelease`: one call site
+  without the rules, none with them.
 
 The instantiability check was added after long-term memory turned out to have
 never worked in any released build. R8 in full mode left

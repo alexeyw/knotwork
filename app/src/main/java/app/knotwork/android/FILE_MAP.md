@@ -128,6 +128,7 @@ Only Kotlin files appear inside the generated blocks.
       - `HuggingFaceDto.kt` - `@Serializable` wire DTOs (`HfModelDto`/`HfSiblingDto`/`HfCardDataDto`) shared by the list and detail endpoints; `gated` decoded as an opaque `JsonElement`.
       - `HuggingFaceModelApi.kt` - Raw-OkHttp + `kotlinx.serialization` client: `GET /api/models?author=litert-community&full=true` (list/search) and `GET /api/models/{repoId}?blobs=true` (detail with file sizes). Host injected via `@HuggingFaceBaseUrl`; no token sent (browsing is public); non-2xx → `HuggingFaceApiException`.
     - `ResumableFileDownloader.kt` - The transfer itself: OkHttp streaming with HTTP `Range` resume, writing to a URL-keyed `.part` file that is renamed only on completion (so an interrupted download never passes for an installed model), handling a server that ignores the range (200) or rejects it (416), and reporting whole-percent progress. Owns the path-traversal-safe target resolution (containment through `PathContainment`).
+    - `SharedHttpClient.kt` - Builds the app's shared OkHttp client — the one the `http_request` tool, model downloads and Hugging Face discovery go through.
   - `prompt/` - Built-in `PromptVariableProvider` implementations.
     - `DateVariableProvider.kt` - Resolves `$DATE` to the current device-local date (`dd MMMM yyyy`).
     - `DeviceVariableProvider.kt` - Resolves `$DEVICE` to a short "manufacturer · model · Android version" descriptor.

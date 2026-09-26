@@ -6,6 +6,7 @@ import app.knotwork.android.buildtools.BrowserEditorRuntimeFieldGuard
 import app.knotwork.android.buildtools.CookbookDocsGenerator
 import app.knotwork.android.buildtools.DetektAnalysisModeGuard
 import app.knotwork.android.buildtools.DexInstantiabilityChecker
+import app.knotwork.android.buildtools.DexInvocationChecker
 import app.knotwork.android.buildtools.DocumentationRef
 import app.knotwork.android.buildtools.ExternalAutomationDocsGenerator
 import app.knotwork.android.buildtools.FileMapSpec
@@ -2234,6 +2235,70 @@ androidComponents {
             }
         }
 
+        // MediaPipe's usage logger must never send. `proguard-rules.pro` removes
+        // its one call site with `-assumenosideeffects`; the declaration stays
+        // (MediaPipe is kept whole), so the mapping cannot show whether the call
+        // is gone — only the instructions can. Read with the SDK's `dexdump`, a
+        // line at a time: the disassembly runs to millions of lines.
+        val dexdumpSdk = androidComponents.sdkComponents.sdkDirectory
+        val buildTools = android.buildToolsVersion
+        val verifyNoMediaPipeTelemetry = tasks.register("verify${variantName}NoMediaPipeTelemetry") {
+            group = "verification"
+            description = "Fails the release build if MediaPipe's usage logger can still send an event."
+            inputs.files(apkDir).withPropertyName("packagedApk")
+            val checkedVariant = variant.name
+            val loader = variant.artifacts.getBuiltArtifactsLoader()
+            doLast {
+                val apk = loader.load(apkDir.get())
+                    ?.elements
+                    ?.map { File(it.outputFile) }
+                    ?.firstOrNull { it.exists() }
+                    ?: throw GradleException(
+                        "Telemetry check cannot run for `$checkedVariant`: no packaged APK was found.",
+                    )
+                val dexdump = File(dexdumpSdk.get().asFile, "build-tools/$buildTools/dexdump")
+                if (!dexdump.canExecute()) {
+                    throw GradleException("Telemetry check needs `dexdump`, not found at ${dexdump.path}.")
+                }
+                val logging = "Lcom/google/mediapipe/tasks/core/logging"
+                val callSiteClass = "$logging/TasksStatsProtoLogger"
+                var callSiteSeen = false
+                val calls = mutableListOf<String>()
+                ZipFile(apk).use { zip ->
+                    zip.entries().asSequence().filter { it.name.endsWith(".dex") }.forEach { entry ->
+                        val dex = File(temporaryDir, entry.name)
+                        zip.getInputStream(entry).use { input -> dex.outputStream().use { input.copyTo(it) } }
+                        val process = ProcessBuilder(dexdump.path, "-d", dex.path).redirectErrorStream(true).start()
+                        process.inputStream.bufferedReader().useLines { lines ->
+                            lines.forEach { line ->
+                                if (DexInvocationChecker.isClassDefinition(line, callSiteClass)) callSiteSeen = true
+                                if (DexInvocationChecker.isInvocation(line, "$logging/LoggingClient", "logEvent") ||
+                                    DexInvocationChecker.isInvocation(line, "$logging/RemoteLoggingClient", "logEvent")
+                                ) {
+                                    calls += line.trim()
+                                }
+                            }
+                        }
+                        if (process.waitFor() != 0) throw GradleException("dexdump failed on ${entry.name}.")
+                    }
+                }
+                if (!callSiteSeen) {
+                    throw GradleException(
+                        "Telemetry check read nothing for `$checkedVariant`: `$callSiteClass` is not in the dex. " +
+                            "MediaPipe moved its logger, or the check lost its grip on the artefact.",
+                    )
+                }
+                if (calls.isNotEmpty()) {
+                    throw GradleException(
+                        "MediaPipe's usage logger can still send in `$checkedVariant` (${calls.size} call site(s)):\n" +
+                            calls.joinToString("\n") { "  $it" } +
+                            "\n\nThe `-assumenosideeffects` rules for `LoggingClient.logEvent` in " +
+                            "`app/proguard-rules.pro` no longer match.",
+                    )
+                }
+            }
+        }
+
         // Third guard, and the only one that runs BEFORE R8: every name in
         // `proguard-rules.pro` must exist on the classpath R8 is about to read.
         // R8 matches a misspelt or moved name with nothing and says nothing —
@@ -2292,6 +2357,7 @@ androidComponents {
         // The dex guard needs a packaged APK, so it rides `assemble` only;
         // the AAB carries the same dex from the same R8 run.
         tasks.matching { it.name == "assemble$variantName" }.configureEach { finalizedBy(verifyInstantiable) }
+        tasks.matching { it.name == "assemble$variantName" }.configureEach { finalizedBy(verifyNoMediaPipeTelemetry) }
     }
 }
 

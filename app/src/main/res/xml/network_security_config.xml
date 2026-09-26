@@ -21,7 +21,9 @@
                                            KoogClientFactory (chat) and
                                            OllamaEmbeddingProvider (memory)
       * McpConnectionPool                  — every MCP connection
-      * CleartextGuardInterceptor          — the shared OkHttp client, per request
+      * CleartextGuardInterceptor          — the shared OkHttp client, every hop
+                                           (before the first lookup, and on each
+                                           redirect OkHttp follows)
 
     The trade-off (the platform no longer blocks a cleartext redirect inside the
     third-party Koog / Ktor stacks) is recorded in `project_docs/decisions.md`.

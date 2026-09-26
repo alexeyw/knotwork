@@ -28,6 +28,9 @@ internal object NetworkClientImports {
      *    its own schedule.
      *  - `android.webkit.` — a `WebView` is a complete HTTP client. `MimeTypeMap` lives
      *    in the same package and is inventoried as opening nothing.
+     *  - `com.google.mediapipe.` — MediaPipe Tasks attaches a usage logger to every task
+     *    it creates, which sends to Google's Firelog endpoint on its own. A file creating
+     *    a task opens that path without importing any HTTP stack; it went unlisted.
      */
     val PREFIXES: List<String> = listOf(
         "okhttp3.",
@@ -38,5 +41,6 @@ internal object NetworkClientImports {
         "coil3.",
         "com.google.firebase.",
         "android.webkit.",
+        "com.google.mediapipe.",
     )
 }

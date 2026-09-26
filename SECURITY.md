@@ -574,6 +574,12 @@ only for gated repositories) is handled exactly like a cloud-provider key:
     are the tool's own switch on the **Tools** screen and the *Block network
     from local model* restriction, which withholds it; it has no allowlist and
     no per-call gate. See [PRIVACY.md § 3.4](PRIVACY.md#34-outbound-requests-from-tools).
+- A library can open a path of its own. The on-device embedding library
+  (MediaPipe) attaches a usage logger to every task it creates, which would
+  send usage counts and the device's model, build fingerprint, country and
+  carrier to Google. In release builds that call is removed when the app is
+  minified, and every release build checks its packaged code for it; the
+  `foss` build also lacks the component that would upload it.
 
 ### Prompt injection via tool content (accepted risk)
 
@@ -706,11 +712,22 @@ The defences are layered so that no single one has to be perfect:
   card shows the model-produced **URL and arguments**, so a user who is paying
   attention sees the destination before the data leaves the device. An
   unparsable call falls back to the strictest risk.
-- **Stored-credential filter.** Before a request is sent, its URL, headers,
-  and body are scanned for any saved cloud-provider API key (OpenAI,
-  Anthropic, Google, DeepSeek). If a request would carry one, it is refused
-  outright — a saved key can never be exfiltrated through this tool, even with
-  user approval.
+- **Stored-credential filter.** Before a request is sent, its URL, header
+  names and values, and body are scanned for any saved cloud-provider API key
+  (OpenAI, Anthropic, Google, DeepSeek) — the URL and the body also
+  percent-decoded. A request carrying one as written is refused outright, even
+  with user approval. It is a substring filter, and it promises what one can:
+  a key the model splits across fields or encodes some other way is not
+  recognised, so a key the model has seen is protected by the gate and the
+  allowlist, not by this filter alone.
+- **Headers the transport owns are refused.** `Host`, `Content-Length`,
+  `Transfer-Encoding`, `Connection` and their kind are set from the URL and the
+  body, never from the model's arguments: a `Host` header would choose the
+  virtual host behind an allowlisted address, which the allowlist never saw.
+- **Every call has a deadline and ends with the run.** One hop may take at
+  most 60 seconds from connecting to the last byte of the body, and stopping
+  the run cancels a call in flight — a response that keeps trickling can no
+  longer hold the run, *Stop*, or the chats queued behind it.
 - **Redirect re-validation.** Automatic redirects are disabled; each hop is
   re-validated against the same allowlist (a redirect that points outside it
   aborts the request), the chain is capped, and credential headers are
@@ -720,7 +737,9 @@ The defences are layered so that no single one has to be perfect:
   permitted only for loopback / private-LAN addresses written as plain decimal
   IPv4 literals (the same rule the app applies to a local Ollama or MCP server;
   the platform network-security config permits cleartext app-wide, because it
-  cannot express "any private address").
+  cannot express "any private address"). The shared client that model
+  downloads and discovery use enforces the same floor on **every hop**,
+  including redirects it follows itself.
 
 The residual risk is the honest one: a user who has **deliberately added a
 host to the allowlist** and then **approves** a `SENSITIVE`/`DESTRUCTIVE`
