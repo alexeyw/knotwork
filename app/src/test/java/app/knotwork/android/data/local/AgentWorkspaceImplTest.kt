@@ -401,13 +401,16 @@ class AgentWorkspaceImplTest {
         assertSuccess(workspace.writeText("a", "12345")) // 5 bytes; primes the cache to 5
         putRawFile("ext.txt", ByteArray(10) { 'x'.code.toByte() }) // +10 on disk, behind the cache's back
 
-        // Writing under "a" (a regular file, not a directory) throws partway; the fix
-        // invalidates the cache instead of leaving it stuck at 5.
+        // A directory squatting on the write's scratch name makes the write throw
+        // partway, after every refusal check has passed (a path through a file is
+        // refused up front now); the fix invalidates the cache instead of leaving
+        // it stuck at 5.
+        File(workspaceRoot(), "b.txt.knotwork-tmp").mkdirs()
         try {
-            workspace.writeText("a/b.txt", "x")
-            fail("expected the parent-is-a-file write to throw")
+            workspace.writeText("b.txt", "x")
+            fail("expected the write onto a directory-shaped scratch file to throw")
         } catch (expected: IOException) {
-            // The write into a path whose parent is a regular file is supposed to fail.
+            // Staging into a path that is a directory is supposed to fail.
         }
 
         // The next quota check must recompute the true 15 bytes on disk: 15 + 20 = 35 > 30.
@@ -1090,6 +1093,27 @@ class AgentWorkspaceImplTest {
 
         assertFailure(workspace.writeText("notes.md\nforged.txt", "x"), WorkspaceError.InvalidPath)
         assertTrue(workspaceRoot().listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `given a name with a lone surrogate when writeText then InvalidPath and nothing is created`() = runTest {
+        // The JVM would write it as "?.txt" and report success; on the device the
+        // name is one java.nio cannot represent, and it jammed every later walk.
+        val workspace = workspaceWith()
+
+        assertFailure(workspace.writeText("\uD800.txt", "x"), WorkspaceError.InvalidPath)
+        assertTrue(workspaceRoot().listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `given a path that runs through an existing file when written or appended then InvalidPath`() = runTest {
+        // A directory level that is a file (ENOTDIR) is a path the filesystem
+        // rejects; the promise is a typed refusal, not an exception.
+        val workspace = workspaceWith()
+        workspace.writeText("notes.md", "x")
+
+        assertFailure(workspace.writeText("notes.md/x.txt", "y"), WorkspaceError.InvalidPath)
+        assertFailure(workspace.appendText("notes.md/x.txt", "y"), WorkspaceError.InvalidPath)
     }
 
     @Test

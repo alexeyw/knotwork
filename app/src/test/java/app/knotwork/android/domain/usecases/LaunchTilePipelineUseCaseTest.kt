@@ -16,7 +16,7 @@ import org.junit.Test
  */
 class LaunchTilePipelineUseCaseTest {
 
-    private val resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>()
+    private val resolveSurfacePipeline = mockk<ResolveLaunchableSurfacePipelineUseCase>()
     private val taskScheduler = mockk<TaskScheduler>(relaxed = true)
     private val useCase = LaunchTilePipelineUseCase(resolveSurfacePipeline, taskScheduler)
 

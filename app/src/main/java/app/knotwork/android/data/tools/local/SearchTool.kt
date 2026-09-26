@@ -6,8 +6,10 @@ import app.knotwork.android.domain.constants.RepositoryLinks
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
+import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -40,6 +42,9 @@ import javax.inject.Singleton
  * @property networkActivityTracker Told about every lookup that gets as far as opening a
  *   connection, so the More tab's privacy indicator does not report "no network calls"
  *   while this tool — on by default — is reaching Wikipedia.
+ * @property settingsRepository Holds the Tools screen's per-tool switch. Read here for the
+ *   same reason as the network check: switching `search_tool` off has to stop the
+ *   published AppFunction too, which never passes through the tool catalogue.
  */
 @Singleton
 class SearchTool @Inject constructor(
@@ -47,6 +52,7 @@ class SearchTool @Inject constructor(
     private val networkGate: ModelNetworkGate,
     private val connectionOpener: ConnectionOpener,
     private val networkActivityTracker: NetworkActivityTracker,
+    private val settingsRepository: SettingsRepository,
 ) {
 
     /**
@@ -81,6 +87,14 @@ class SearchTool @Inject constructor(
 
     companion object {
         const val TOOL_NAME = "search_tool"
+
+        /**
+         * What every caller gets while `search_tool` is switched off on the Tools
+         * screen: the agent through the catalogue (which also withholds the tool)
+         * and another app through the published AppFunction alike.
+         */
+        const val SWITCHED_OFF_ERROR =
+            "Error: search_tool is switched off on the Tools screen. Switch it on there to use it."
         const val TOOL_DESCRIPTION =
             "Searches Wikipedia for up-to-date information about a topic. " +
                 "Use this when you need facts or data to answer a user's question."
@@ -211,6 +225,7 @@ class SearchTool @Inject constructor(
      *   Wikipedia subdomain.
      */
     suspend fun executeSearch(query: String, lang: String): String = withContext(Dispatchers.IO) {
+        if (TOOL_NAME in settingsRepository.disabledAppFunctions.first()) return@withContext SWITCHED_OFF_ERROR
         networkGate.networkToolRefusal(TOOL_NAME)?.let { return@withContext it }
         // Refused rather than replaced with `en`: a silent fallback would search the
         // wrong edition and hand the model a confident answer to a different question.

@@ -20,6 +20,8 @@ import org.robolectric.Shadows.shadowOf
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
+import java.util.Arrays
 import kotlin.math.abs
 
 /**
@@ -184,6 +186,40 @@ class AttachmentStoreImplTest {
         requireNotNull(attachment)
         assertEquals(1000, attachment.width)
         assertEquals(800, attachment.height)
+    }
+
+    @Test
+    fun `given a stream longer than the cap when ingested then it fails having read at most cap+1 bytes`() = runTest {
+        // A share can come from any app, and so can its stream: an endless one
+        // used to be read into memory until the process died.
+        val uri = "content://test/endless".toUri()
+        val endless = CountingEndlessStream()
+        shadowOf(context.contentResolver).registerInputStream(uri, endless)
+
+        val result = store.ingestUri(uri.toString())
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "read ${endless.served} bytes past a cap of ${AttachmentStoreImpl.MAX_INGEST_BYTES}",
+            endless.served <= AttachmentStoreImpl.MAX_INGEST_BYTES + 1L,
+        )
+    }
+
+    /** A stream that never ends, counting what it served; allocates nothing per byte. */
+    private class CountingEndlessStream : InputStream() {
+        var served = 0L
+            private set
+
+        override fun read(): Int {
+            served++
+            return 0
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            Arrays.fill(b, off, off + len, 0)
+            served += len
+            return len
+        }
     }
 
     @Test

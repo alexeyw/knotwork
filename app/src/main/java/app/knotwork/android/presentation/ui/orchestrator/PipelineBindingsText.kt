@@ -55,14 +55,14 @@ internal object PipelineBindingsText {
      * One line of the bundle confirmation: the library pipeline's name, then
      * what runs it, if anything.
      *
-     * @param collision A bundle pipeline whose id is already in the library.
-     * @return `“Name”`, or `“Name” — line; line; …`.
+     * @param collision A bundle pipeline whose id is already taken.
+     * @return `“Name”`, or `“Name” — line; line; …`; for an id only a deleted
+     *   pipeline's bindings hold, the file's name marked as such.
      */
     fun summaryLine(collision: PipelineCollision): UiText {
-        val name = UiText.of(
-            R.string.orchestrator_library_import_bundle_collision_item,
-            collision.existingName.toDisplaySafe(),
-        )
+        val name = collision.existingName?.let {
+            UiText.of(R.string.orchestrator_library_import_bundle_collision_item, it.toDisplaySafe())
+        } ?: UiText.of(R.string.orchestrator_library_import_bundle_orphan_item, collision.incoming.name.toDisplaySafe())
         val bound = lines(collision.bindings)
         return if (bound.isEmpty()) name else UiText.Joined(listOf(name, UiText.Joined(bound, "; ")), " — ")
     }

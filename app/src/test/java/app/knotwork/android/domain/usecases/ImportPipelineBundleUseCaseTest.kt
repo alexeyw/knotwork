@@ -125,8 +125,11 @@ class ImportPipelineBundleUseCaseTest {
     @Test
     fun `given a collision when prepare then it names the library pipeline and what is bound to it`() = runTest {
         every { pipelineRepository.observePipelineNames() } returns flowOf(mapOf("sub" to "Act on the task"))
-        coEvery { findPipelineBindings(listOf("sub")) } returns
-            mapOf("sub" to PipelineBindings(callerNames = listOf("Full agent")))
+        coEvery { findPipelineBindings(any()) } answers {
+            firstArg<Collection<String>>().associateWith { id ->
+                if (id == "sub") PipelineBindings(callerNames = listOf("Full agent")) else PipelineBindings()
+            }
+        }
         val json = bundleOf(linearGraph("root", targets = listOf("sub")), linearGraph("sub"))
 
         val collision = (useCase.prepare(json) as PipelineBundlePrepareResult.Ready).collisions.single()
@@ -134,6 +137,25 @@ class ImportPipelineBundleUseCaseTest {
         assertEquals("sub", collision.incoming.id)
         assertEquals("Act on the task", collision.existingName)
         assertEquals(listOf("Full agent"), collision.bindings.callerNames)
+    }
+
+    @Test
+    fun `given a bundle pipeline whose free id something is still bound to when prepare then it asks`() = runTest {
+        // A deleted pipeline's id: no library row, but a trigger still names it.
+        // Persisting with the ids kept would hand the trigger the file's graph.
+        coEvery { findPipelineBindings(any()) } answers {
+            firstArg<Collection<String>>().associateWith { id ->
+                if (id == "sub") PipelineBindings(triggerCount = 1) else PipelineBindings()
+            }
+        }
+        val json = bundleOf(linearGraph("root", targets = listOf("sub")), linearGraph("sub"))
+
+        val ready = useCase.prepare(json) as PipelineBundlePrepareResult.Ready
+
+        val collision = ready.collisions.single()
+        assertEquals("sub", collision.incoming.id)
+        assertNull(collision.existingName)
+        assertEquals(1, collision.bindings.triggerCount)
     }
 
     @Test
