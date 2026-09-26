@@ -452,6 +452,11 @@ constructor(
         var currentNode: NodeModel? = inputNode
         var stepCount = 0
         var currentInputText = userPrompt
+        // Whether a model wrote `currentInputText` (ModelAuthorship): the run's
+        // prompt is the user's, a tool's result is not a model's, and a
+        // pass-through node keeps whatever it received. The root OUTPUT records
+        // it on the chat row so memory extraction skips relayed text.
+        var currentInputByModel = false
 
         val activeQueue = mutableListOf<String>()
         var activeQueueProcessorId: String? = null
@@ -931,6 +936,7 @@ constructor(
                             imagePresent = imagePresent,
                             generatingModel = genModel,
                             runOrigin = origin,
+                            inputWrittenByModel = currentInputByModel,
                         ),
                     )
                         .collect { output ->
@@ -1116,6 +1122,7 @@ constructor(
                     queueResults.add("Subtask failed: $nodeError")
                     val step = stepQueue(graph, failedQueueId, activeQueue, queueResults)
                     if (step.queueFinished) activeQueueProcessorId = null
+                    currentInputByModel = false
                     currentInputText = step.inputText
                     currentNode = step.node
                     continue
@@ -1331,6 +1338,9 @@ constructor(
                         "Result of Subtask ${i + 1}:\n$res"
                     }.joinToString("\n\n")
                     val subtaskInstruction = DefaultPrompts.QueueProcessor.SUBTASK_INSTRUCTION
+                    // Assembled from earlier results and a planned subtask: the
+                    // app's text around other nodes' output, so not a model's.
+                    currentInputByModel = false
                     currentInputText = if (contextStr.isNotEmpty()) {
                         "PREVIOUS RESULTS CONTEXT:\n$contextStr\n\n---\n\n$subtaskInstruction\n\nCURRENT SUBTASK TO EXECUTE:\n$nextItem"
                     } else {
@@ -1347,6 +1357,8 @@ constructor(
 
             // INTENT_ROUTER's outputText is the routing key — a control signal, not a content payload.
             // Preserve currentInputText so downstream nodes receive the original data, not the routing label.
+            currentInputByModel =
+                ModelAuthorship.after(currentNode.type, nodeResult, currentInputText, currentInputByModel)
             currentInputText = if (currentNode.type == NodeType.INTENT_ROUTER) {
                 currentInputText
             } else {
@@ -1366,6 +1378,7 @@ constructor(
                 queueResults.add(currentInputText)
                 val step = stepQueue(graph, activeQueueId, activeQueue, queueResults)
                 if (step.queueFinished) activeQueueProcessorId = null
+                currentInputByModel = false
                 currentInputText = step.inputText
                 currentNode = step.node
                 continue

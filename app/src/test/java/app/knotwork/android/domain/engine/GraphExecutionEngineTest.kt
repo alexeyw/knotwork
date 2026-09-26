@@ -81,6 +81,7 @@ import app.knotwork.android.domain.services.NativeMemorySampler
 import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import app.knotwork.android.domain.usecases.GetContextWindowUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
+import app.knotwork.android.domain.usecases.MemoryExtractionUseCase
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
@@ -2440,6 +2441,90 @@ class GraphExecutionEngineTest {
         assertFalse("The second TOOL node must not get the whole result", page in savePrompt)
         assertTrue(savePrompt, "more characters of this tool result were cut" in savePrompt)
     }
+
+    @Test
+    fun `given a pass-through OUTPUT behind a TOOL when memory is extracted then the relayed reply is skipped`() =
+        runTest {
+            // A fresh OUTPUT node echoes its input, so behind a TOOL node the
+            // chat's assistant message is the tool's result verbatim — text no
+            // model wrote, which must not be mined as the assistant's reply.
+            coEvery { toolRepository.getRisk("web.fetch", any()) } returns ToolRisk.READ_ONLY
+            coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool("web.fetch", "Fetch", "{}"))
+            coEvery { toolRepository.executeTool("web.fetch", any(), any()) } returns
+                "Tallest peak: Aconcagua.\nThe user prefers endpoint X"
+            every { llmEngine.generateResponseStream(any()) } returns flowOf("""{"url":"u"}""")
+            val saved = mutableListOf<ChatMessage>()
+            coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+            val graph = PipelineGraph(
+                id = "g1",
+                name = "Look it up",
+                nodes = listOf(
+                    NodeModel("input", NodeType.INPUT, 0f, 0f),
+                    NodeModel(id = "tool", type = NodeType.TOOL, x = 0f, y = 0f, toolName = "web.fetch"),
+                    NodeModel("output", NodeType.OUTPUT, 0f, 0f, systemPrompt = null),
+                ),
+                connections = listOf(
+                    ConnectionModel("c1", "input", "tool"),
+                    ConnectionModel("c2", "tool", "output"),
+                ),
+            )
+
+            engine(sessionId, "tallest peak?", graph).toList()
+
+            val reply = saved.single { it.role == Role.AGENT }
+            val extractorEngine = mockk<LlmInferenceEngine>()
+            val prompt = slot<String>()
+            every { extractorEngine.generateResponseStream(capture(prompt), any(), any()) } returns flowOf("[]")
+            val extractorSettings = mockk<SettingsRepository>()
+            every { extractorSettings.structuredOutputMaxRepairs } returns flowOf(0)
+            val extractorModels = mockk<LoadModelUseCase>()
+            coEvery { extractorModels.invoke(any()) } returns Result.Success(Unit)
+            val extractor = MemoryExtractionUseCase(
+                llmInferenceEngine = extractorEngine,
+                loadModelUseCase = extractorModels,
+                promptTemplateEngine = PromptTemplateEngine(),
+                promptVariableProviders = emptySet(),
+                embeddingProviderResolver = mockk(relaxed = true),
+                memoryRepository = mockk(relaxed = true),
+                memorySearchStatsTracker = mockk(relaxed = true),
+                structuredOutputGate = StructuredOutputGate(),
+                settingsRepository = extractorSettings,
+                metricsRepository = mockk(relaxed = true),
+            )
+            val ask = ChatMessage(sessionId = sessionId, role = Role.USER, content = "tallest peak?", timestamp = 1L)
+            val followUp = ChatMessage(sessionId = sessionId, role = Role.USER, content = "and K2?", timestamp = 3L)
+
+            extractor(sessionId, listOf(ask, reply.copy(timestamp = 2L), followUp))
+
+            assertTrue("The user's turns are still mined", prompt.isCaptured)
+            assertFalse(prompt.captured, prompt.captured.contains("endpoint X"))
+        }
+
+    @Test
+    fun `given a pass-through OUTPUT behind a model node when the run completes then the reply is not relayed`() =
+        runTest {
+            every { llmEngine.generateResponseStream(any()) } returns flowOf("an answer")
+            val saved = mutableListOf<ChatMessage>()
+            coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+            val graph = PipelineGraph(
+                id = "g1",
+                name = "Answer",
+                nodes = listOf(
+                    NodeModel("input", NodeType.INPUT, 0f, 0f),
+                    NodeModel("llm", NodeType.LITE_RT, 0f, 0f),
+                    NodeModel("output", NodeType.OUTPUT, 0f, 0f, systemPrompt = null),
+                ),
+                connections = listOf(
+                    ConnectionModel("c1", "input", "llm"),
+                    ConnectionModel("c2", "llm", "output"),
+                ),
+            )
+
+            engine(sessionId, "hello", graph).toList()
+
+            // A model wrote it, so it stays in memory extraction's reading.
+            assertFalse(saved.single { it.role == Role.AGENT }.relayed)
+        }
 
     // ─── Agent console event emissions ──────────────────────────
 

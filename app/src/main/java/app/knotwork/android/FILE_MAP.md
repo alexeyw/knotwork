@@ -281,6 +281,7 @@ Only Kotlin files appear inside the generated blocks.
     - `LlmInferenceEngine.kt` - LLM engine interface.
     - `MemoryAccessLogFormatter.kt` - Pure formatter for the `MemoryAccess` console event. Renders the terse one-line summary (`query` + key source + hit count + scores) and, when verbose memory logging is on, the per-hit snippet/score expansion. Used by `GraphExecutionEngine`.
     - `MemoryRetrievalQueryResolver.kt` - Pure resolver of a run's long-term-memory search key from its `RunOrigin`: interactive runs key off the user prompt, background runs (trigger / scheduled / tile) prefer the pipeline's declared `memoryRetrievalQuery`, then the first memory-aware node's input. Also owns `RunOrigin.isInteractive` and the `RetrievalQuerySource` tag rendered in the console.
+    - `ModelAuthorship.kt` - Decides whether the text a run carries from node to node was written by a model.
     - `NodeContextBuilder.kt` - Assembles a node's executor input by concatenating only the context blocks enabled by its `NodeContextConfig` (Original Task, Chat History, Long-Term Memory, Tool Results, Previous Node Output).
     - `PeakHeapSampler.kt` - Per-run helper tracking the peak native-heap reading across an inference window; reads `NativeMemorySampler` at a throttled (~150 ms) cadence. Used by `StreamInferenceMeter`.
     - `PipelineExecutionContext.kt` - Immutable per-iteration snapshot of pipeline-scoped data (original user message, chat history, previous node output, tool invocation results, memory entries) consumed by `NodeContextBuilder`.

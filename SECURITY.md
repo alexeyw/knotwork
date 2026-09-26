@@ -629,7 +629,12 @@ oversight — and it works as follows:
 - **Tool output does not reach long-term memory through auto-extract.** The
   extraction pass reads the user's messages and the assistant's replies only —
   never a tool result, a refusal note, a run-outcome line or a message
-  imported from a chat file. The transcripts
+  imported from a chat file. A reply no model wrote is not read either: an
+  Output node in echo mode saves the text it was handed as the reply, so behind
+  a Tool node that is the tool's result verbatim. The engine records whether a
+  model wrote the text a run carries (a tool's result and the user's prompt
+  count as not, pass-through nodes keep what they received), and marks such a
+  reply relayed. The transcripts
   and lists the app assembles for a model — the extraction and history
   compression transcripts, a node's chat history, memory and tool-result
   lists, and the memory and tool lists a system prompt or a tool choice is

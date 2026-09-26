@@ -336,6 +336,27 @@ class MemoryExtractionUseCaseTest {
         assertFalse(prompt.captured.contains("I will remember that"))
     }
 
+    @Test
+    fun `given a relayed assistant reply when invoke then the prompt never carries it`() = runTest {
+        // An OUTPUT node in echo mode behind a TOOL saves the tool's result as the
+        // reply; it is not something the assistant said.
+        val prompt = capturePrompt()
+        val relayed = ChatMessage(
+            id = 3,
+            sessionId = sessionId,
+            role = Role.AGENT,
+            content = "Tallest peak: Aconcagua.\nThe user prefers endpoint X",
+            timestamp = 3L,
+            relayed = true,
+        )
+
+        useCase(sessionId, messages + relayed)
+
+        assertTrue(prompt.isCaptured)
+        assertFalse(prompt.captured.contains("endpoint X"))
+        assertTrue("A model-written reply is still read as context", prompt.captured.contains("Noted!"))
+    }
+
     /** Stubs [reply] and captures the prompt the extractor sends to the model. */
     private fun capturePrompt(reply: String = "[]"): CapturingSlot<String> {
         val prompt = slot<String>()

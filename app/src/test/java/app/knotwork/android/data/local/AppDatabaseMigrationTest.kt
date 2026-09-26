@@ -1126,4 +1126,28 @@ class AppDatabaseMigrationTest {
             statement.captured,
         )
     }
+
+    @Test
+    fun `MIGRATION_64_65 targets versions 64 to 65`() {
+        val migration = AppDatabase.MIGRATION_64_65
+
+        assertEquals(64, migration.startVersion)
+        assertEquals(65, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_64_65 adds the relayed flag NOT NULL defaulting to not relayed`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statement = slot<String>()
+
+        AppDatabase.MIGRATION_64_65.migrate(db)
+
+        verify(exactly = 1) { db.execSQL(capture(statement)) }
+        // NOT NULL with DEFAULT 0 must match the entity's `@ColumnInfo(defaultValue = "0")`
+        // or Room's schema validation rejects the migrated database.
+        assertEquals(
+            "ALTER TABLE `chat_messages` ADD COLUMN `relayed` INTEGER NOT NULL DEFAULT 0",
+            statement.captured,
+        )
+    }
 }

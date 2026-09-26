@@ -2045,7 +2045,8 @@ ignored, and a fact that closely matches one you already have is
 skipped rather than duplicated.
 
 It reads your messages and the assistant's replies — never tool results
-(a web lookup, a file the agent read, an MCP server's answer), and never
+(a web lookup, a file the agent read, an MCP server's answer), not even when
+an **Output** node with no instruction passes one on as the reply, and never
 the messages of an imported chat, which are someone else's words whatever
 the file calls them — and no message can pass for a turn of yours, so text
 a tool fetched is not put before the extractor as something you said. Text
