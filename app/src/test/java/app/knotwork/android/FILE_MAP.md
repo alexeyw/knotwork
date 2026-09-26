@@ -113,6 +113,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ToolsVariableProviderTest.kt` - Unit tests for `ToolsVariableProvider`.
   - `repositories/` - Tests for the repository implementations.
     - `AssetBundledDocumentationRepositoryTest.kt` - Verifies `AssetBundledDocumentationRepository` against the **real** generated assets rather than a fixture.
+    - `BackgroundPromptRepositoryImplTest.kt` - `BackgroundPromptRepositoryImpl` against a real (in-memory) Room database: the encrypted home of the prompts queued background runs execute.
     - `ChatArchivePersistenceTest.kt` - Drives the chat-archive stack — `ArchiveChatUseCase` / `UnarchiveChatUseCase` → `ChatRepositoryImpl` → `ChatDao` — against a **real in-memory Room database**, so the SQL itself is under test and not just the call routing the mocked repository tests cover.
     - `ChatRepositoryImplTest.kt` - Unit tests for `ChatRepositoryImpl`. Session deletion must go through the single transactional DAO method — messages, run records (no FK cascade) and the session row die together or not at all.
     - `ClarificationRepositoryImplTest.kt` - Unit tests for `ClarificationRepositoryImpl`.

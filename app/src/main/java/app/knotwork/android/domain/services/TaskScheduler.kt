@@ -28,9 +28,15 @@ data class ScheduledTaskConstraints(val requiresBatteryNotLow: Boolean)
  * carries zero Android/framework dependencies and never depends on `data`.
  *
  * The implementation (`data/services/WorkManagerTaskScheduler`) maps these
- * domain calls onto `WorkManager` requests. Both methods operate purely on
+ * domain calls onto `WorkManager` requests. The methods operate purely on
  * domain types; framework specifics (request builders, the unique-work key,
  * the existing-work policy) stay behind this boundary.
+ *
+ * **A prompt never reaches the runtime.** The runtime stores a request's input,
+ * tags and unique name in its own unencrypted database; the scheduling methods
+ * keep the prompt in the encrypted store
+ * ([app.knotwork.android.domain.repositories.BackgroundPromptRepository]) and
+ * hand the runtime an id — which is why they suspend.
  */
 interface TaskScheduler {
 
@@ -59,7 +65,7 @@ interface TaskScheduler {
      *   its two-phase journal row **before** the run exists, then attribute the
      *   run's terminal outcome back by the very same id.
      */
-    fun scheduleOneTime(
+    suspend fun scheduleOneTime(
         prompt: String,
         delayMinutes: Long,
         sessionId: String?,
@@ -91,7 +97,7 @@ interface TaskScheduler {
      * @param constraints Domain constraints the runtime must honour before
      *   executing each run.
      */
-    fun schedulePeriodic(
+    suspend fun schedulePeriodic(
         prompt: String,
         intervalHours: Long,
         sessionId: String?,
@@ -110,4 +116,19 @@ interface TaskScheduler {
      * stopped run; nothing re-schedules it afterwards.
      */
     fun cancelAllScheduled()
+
+    /**
+     * Cancels every queued or running background run, whatever started it, and
+     * clears the runtime's record of finished ones — the part of *Erase data*
+     * the database wipe cannot reach, because the runtime keeps its own store.
+     */
+    suspend fun cancelAllBackgroundRuns()
+
+    /**
+     * Drops the stored prompts that no unfinished background run carries any
+     * more — requests cancelled before they ran leave theirs behind.
+     *
+     * @return How many prompts were dropped.
+     */
+    suspend fun pruneOrphanPrompts(): Int
 }

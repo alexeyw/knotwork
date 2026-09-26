@@ -109,7 +109,7 @@ class FireTriggerUseCaseTest {
         val outcome = useCase(triggerId, source, now)
 
         assertEquals(TriggerFireOutcome.NotFound, outcome)
-        verify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
         // A deleted trigger has no row to attribute a journal entry to.
         coVerify(exactly = 0) { recordEvaluation(any(), any(), any(), any(), any(), any()) }
     }
@@ -123,7 +123,7 @@ class FireTriggerUseCaseTest {
         val outcome = useCase(triggerId, source, now)
 
         assertEquals(TriggerFireOutcome.Skipped(TriggerSkipReason.ALREADY_FIRED), outcome)
-        verify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { triggerRepository.markFired(any(), any()) }
         assertExactlyOneJournalRow(
             verdict = TriggerEvaluationVerdict.Skipped(TriggerSkipReason.ALREADY_FIRED),
@@ -161,7 +161,7 @@ class FireTriggerUseCaseTest {
         coVerify(exactly = 1) { triggerRepository.setArmed(triggerId, true) }
         // Re-arm re-registers so the consumed charging one-shot watch is recreated.
         verify(exactly = 1) { triggerScheduler.register(chargingTrigger) }
-        verify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { triggerRepository.markFired(any(), any()) }
         assertExactlyOneJournalRow(verdict = TriggerEvaluationVerdict.ReArmed)
     }
@@ -173,7 +173,7 @@ class FireTriggerUseCaseTest {
             every { evaluate(any(), any(), any(), any(), any()) } returns TriggerFiringDecision.Fire("pipe-1", "do it")
             coEvery { pipelineRepository.getPipelineById("pipe-1") } returns mockk<PipelineGraph>()
             val scheduledRunId = slot<String?>()
-            every {
+            coEvery {
                 taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), captureNullable(scheduledRunId))
             } returns Unit
             val journaledRunId = slot<String?>()
@@ -186,7 +186,7 @@ class FireTriggerUseCaseTest {
             assertEquals(TriggerFireOutcome.Fired("pipe-1"), outcome)
             coVerify(exactly = 1) { triggerRepository.markFired(triggerId, now) }
             coVerify(exactly = 1) { triggerRepository.setArmed(triggerId, false) }
-            verify(exactly = 1) {
+            coVerify(exactly = 1) {
                 taskScheduler.scheduleOneTime(
                     prompt = "do it",
                     delayMinutes = 0,
@@ -232,7 +232,7 @@ class FireTriggerUseCaseTest {
         every { evaluate(any(), any(), any(), any(), any()) } returns TriggerFiringDecision.Fire("pipe-1", "do it")
         coEvery { pipelineRepository.getPipelineById("pipe-1") } returns mockk<PipelineGraph>()
         val scheduledSessionId = slot<String?>()
-        every {
+        coEvery {
             taskScheduler.scheduleOneTime(any(), any(), captureNullable(scheduledSessionId), any(), any(), any(), any())
         } returns Unit
 
@@ -256,7 +256,7 @@ class FireTriggerUseCaseTest {
 
             assertEquals(TriggerFireOutcome.Disabled("pipe-1"), outcome)
             coVerify(exactly = 1) { triggerRepository.setEnabled(triggerId, false) }
-            verify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { triggerRepository.markFired(any(), any()) }
             // A fire into a deleted pipeline enqueues no run, so it journals as a
             // skip: the bound pipeline is gone, which reads as UNBOUND after the fact.
@@ -273,7 +273,7 @@ class FireTriggerUseCaseTest {
         val boundSessionId = slot<String>()
         coEvery { triggerRepository.setSessionId(triggerId, capture(boundSessionId)) } returns Unit
         val scheduledSessionId = slot<String?>()
-        every {
+        coEvery {
             taskScheduler.scheduleOneTime(any(), any(), captureNullable(scheduledSessionId), any(), any(), any(), any())
         } returns Unit
         val notifiedSessionId = slot<String>()
@@ -304,7 +304,7 @@ class FireTriggerUseCaseTest {
 
         coVerify(exactly = 0) { chatRepository.saveSession(any()) }
         coVerify(exactly = 0) { triggerRepository.setSessionId(any(), any()) }
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             taskScheduler.scheduleOneTime(any(), any(), "sess-1", any(), any(), any(), any())
         }
         coVerify(exactly = 1) { scheduledTaskNotifier.notifyTriggerFired("sess-1", "T") }
@@ -335,7 +335,7 @@ class FireTriggerUseCaseTest {
             coEvery { pipelineRepository.getPipelineById("pipe-1") } returns mockk<PipelineGraph>()
             val savedSession = slot<ChatSession>()
             coEvery { chatRepository.saveSession(capture(savedSession)) } returns Unit
-            every { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) } throws
+            coEvery { taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any(), any()) } throws
                 RuntimeException("enqueue failed")
 
             assertThrows(RuntimeException::class.java) { runBlockingFire() }

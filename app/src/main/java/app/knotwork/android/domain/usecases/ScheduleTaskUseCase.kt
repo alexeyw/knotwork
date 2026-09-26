@@ -79,7 +79,7 @@ class ScheduleTaskUseCase @Inject constructor(
      *
      * @return The user-facing confirmation for the tool result.
      */
-    private fun schedule(prompt: String, intervalHours: Long, delayMinutes: Long, sessionId: String?): String {
+    private suspend fun schedule(prompt: String, intervalHours: Long, delayMinutes: Long, sessionId: String?): String {
         val constraints = ScheduledTaskConstraints(requiresBatteryNotLow = true)
 
         return if (intervalHours > 0) {

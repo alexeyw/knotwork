@@ -52,6 +52,13 @@ storage and credentials:
     wait in the background: each record stores the staged **tool name and the
     exact arguments** awaiting approval (or the clarification question), so
     they are protected at rest like the conversation that produced them.
+  - `background_prompts` — the prompt of every queued background run: a
+    `schedule_task` instruction, a trigger's prompt, a request from another app.
+    The background runtime (WorkManager) keeps its queue in an unencrypted
+    database of its own, so it is handed only an id; the prompt stays here.
+    A task scheduled by an earlier release carried its prompt in the runtime's
+    store; a recurring one moves it here at its next run, and a one-time one
+    runs once and is pruned.
 - The SQLCipher passphrase is a **32-byte random value** persisted in a
   Keystore-backed encrypted store: each value is encrypted with AES-256-GCM
   under a dedicated, non-exportable key held in the Android Keystore, and
@@ -78,7 +85,9 @@ storage and credentials:
   can handle it.
 - **What Erase data erases.** The database and its passphrase first; then,
   only once the database is gone, the agent workspace, the stored image
-  attachments and every temporary copy in the app cache. It keeps settings,
+  attachments, every temporary copy in the app cache, and every queued
+  background run — scheduled tasks and runs from triggers and other apps —
+  together with the runtime's record of finished ones. It keeps settings,
   saved cloud API keys, the Hugging Face token and MCP credentials: they still
   work on the device where the database failed, and the dialog says they are
   kept. If the database cannot be deleted, nothing else is touched.

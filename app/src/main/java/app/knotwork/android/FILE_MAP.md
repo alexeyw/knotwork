@@ -46,6 +46,7 @@ Only Kotlin files appear inside the generated blocks.
       - `KeystoreBackedPrefsStore.kt` - `SecretStore` impl: plain `SharedPreferences` file with AEAD-encrypted values (base64 blobs, AAD = `store/entry` slot binding). Opening never fails — failures move to per-value reads (`SecureValueUnreadableException`), letting each consumer pick its recovery policy; `destroy()` clears entries, deletes the file and the Keystore key.
       - `SecretStore.kt` - Minimal `getString`/`putString`/`remove` seam over the encrypted store; injected into `SettingsManager` so unit tests substitute an in-memory fake. Implemented by `KeystoreBackedPrefsStore`.
     - `dao/` - Data Access Objects (DAOs).
+      - `BackgroundPromptDao.kt` - Data access for the `background_prompts` table: the prompts of queued background runs, held here instead of in the background runtime's unencrypted store.
       - `ChatDao.kt` - Chat messages + chat sessions DAO. Session listing is archive-aware: `getSessionsFlow(includeArchived)` (default caller value `false` — archived chats stay out of the thread list) and `getArchivedSessionsFlow()`; `setSessionArchived` / `setSessionStarred` are single-column `UPDATE`s that cannot race the orchestrator's `updatedAt` writes.
       - `ChatHistorySummaryDao.kt` - Per-session compressed-history summary DAO (`chat_history_summaries` table, v38); get-by-session + REPLACE upsert.
       - `ExternalAutomationJournalDao.kt` - External-automation request journal DAO (`external_automation_requests` table, v58). `insert`, `countAdmittedSince(windowStart)` (admission == `runId IS NOT NULL`), a `@Transaction insertIfUnderCeiling(entity, windowStart, limit)` that counts and inserts atomically (a receiver answers immediately and several can be in flight, so a separate count-then-insert would admit a whole broadcast burst), `collapseNewestRefusal(...)` + `@Transaction recordRefusal` (folds an uninterrupted run of the identical refusal onto one row, `IS` not `=` so a targetless refusal still matches), a once-only `settleStatus(runId, …, fromStatusKind)` (a run can go terminal twice — `INTERRUPTED` is terminal *and* resumable — and the first outcome stands), `findByRunId`, `observeAll` (newest-first), and a `@Transaction applyRetention(cutoff, cap)`. The cap is applied **per partition**, never to one shared newest-N pool: `enforceRefusalCap` (write path and retention) touches only refusals, `enforceAdmissionCap` only settled admissions. Sharing a pool would let the high-volume partition crowd out the low-volume one — refusals arrive at a rate a third-party app chooses, admissions at the ceiling's — and evict the rows the rate ledger counts.
@@ -72,6 +73,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ImageCaptureStoreImpl.kt` - Filesystem-backed `ImageCaptureStore` rooted at `cacheDir/images/` (`TransientCacheDirectory.CAMERA_CAPTURE`) — the directory `res/xml/file_paths.xml` exposes to the camera app through the app's `FileProvider`.
     - `McpServerCollisionCheck.kt` - Pure helper that detects when an `updateMcpServer` call would persist a duplicate URL row (editing server A's URL to match an existing server B's URL). Extracted from `SettingsManager.updateMcpServer` so the decision matrix is unit-testable without DataStore plumbing.
     - `models/` - Local DB entity models.
+      - `BackgroundPromptEntity.kt` - The prompt of one queued background run, kept in the encrypted database so the background runtime's own store — unencrypted — never holds it.
       - `ChatHistorySummaryEntity.kt` - Compressed-history summary row (`chat_history_summaries`, v38): per-session prose summary + `coveredMessageCount` cursor; FK onto `chat_sessions(id)` ON DELETE CASCADE.
       - `ChatMessageEntity.kt` - Chat message entity.
       - `ChatSessionEntity.kt` - Chat session entity.
@@ -139,6 +141,7 @@ Only Kotlin files appear inside the generated blocks.
   - `repositories/` - Repository implementations.
     - `AssetBundledDocumentationRepository.kt` - Reads the documentation the build copied into `assets/docs`.
     - `AssetBundledSkillSource.kt` - Asset-backed `BundledSkillSource`: lists the JSON files under `assets/presets/skills`, parses each via `SkillJsonSerializer` on the IO dispatcher, skipping malformed files.
+    - `BackgroundPromptRepositoryImpl.kt` - `BackgroundPromptRepository` over the `background_prompts` table of the encrypted database.
     - `BestEffortStore.kt` - Shared `absorbingStoreFailure` helper implementing the best-effort persistence contract (absorb storage failures, re-throw `CancellationException` first) reused by the run-record and run-trace repositories.
     - `BundledSkillSource.kt` - Interface reading the bundled skills under `assets/presets/skills` (split from its impl so the repository seed path is unit-testable with a fake).
     - `ChatRepositoryImpl.kt` - Chat repository implementation.
@@ -439,6 +442,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ContentReportComposer.kt` - Pure renderer: subject line plus a Markdown body (note, category, block-quoted model output capped at `MAX_QUOTED_CHARS` with the omission stated, build metadata). Framework-free so "what exactly is in a report" is unit-testable.
   - `repositories/` - Repository interfaces.
     - `ApiKeyRepository.kt` - API key repository interface.
+    - `BackgroundPromptRepository.kt` - The prompts of background runs waiting in the scheduler, kept in the encrypted database rather than handed to the background runtime.
     - `BundledDocumentationRepository.kt` - Access to the documentation that ships inside the APK.
     - `ChatRepository.kt` - Chat repository interface.
     - `ClarificationRepository.kt` - Bridges the agent (suspending until the user answers) and the UI (publishing the pending question, forwarding the reply).

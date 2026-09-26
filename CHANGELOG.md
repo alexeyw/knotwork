@@ -36,6 +36,13 @@ details.
 - **Wikipedia search can only reach Wikipedia.** The language code chosen for a
   search is checked before the request is built, so it can no longer point the
   request at another server.
+- **Prompts of scheduled and background runs are encrypted on the phone.** A
+  scheduled task's instruction, a trigger's prompt and a request from another app
+  were kept by Android's background scheduler in its own unencrypted store, and
+  *Erase data* did not reach it — a recurring task fired again after the wipe.
+  The prompts now live in the encrypted database, and *Erase data* cancels
+  every queued run. Tasks scheduled before this release move over the next time
+  they run.
 - **A denied tool call stays denied.** If the approval setting or the tool's
   risk level was relaxed while a background run waited for an answer, a
   **Deny** given afterwards was recorded but not applied, and the tool ran. The

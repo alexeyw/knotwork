@@ -261,6 +261,14 @@ class PersistentStorageInventoryGuardTest {
 
         /** Trigger-journal soak dumps of the debug build type only — never in a release. */
         DEBUG_SOAK_DUMPS(domain = "external", plaintextPath = null, erasedBy = null, kept = "debug builds only"),
+
+        /**
+         * The background runtime's own database (WorkManager's `androidx.work.workdb`) —
+         * queued requests with their input and tags, unencrypted. A library opens it, so
+         * the census below never sees it; it is listed by hand. It holds prompt **ids**,
+         * never prompts (those are in [DATABASE]), and the wipe cancels and prunes it.
+         */
+        WORK_MANAGER_DB(domain = "database", plaintextPath = null, erasedBy = "TaskScheduler", kept = null),
     }
 
     private companion object {

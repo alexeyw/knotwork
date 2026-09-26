@@ -3,7 +3,9 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.services.AgentWorkspace
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.DatabaseResetService
+import app.knotwork.android.domain.services.TaskScheduler
 import app.knotwork.android.domain.services.TransientCacheSweeper
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -16,7 +18,10 @@ import javax.inject.Inject
  * that belongs to the same data: the agent workspace ([AgentWorkspace.eraseAll]), the
  * stored image attachments ([AttachmentStore.deleteAll]) and every transient cache copy
  * made from either ([TransientCacheSweeper.sweepAll]) — share copies, staged journal
- * exports, camera captures, voice clips.
+ * exports, camera captures, voice clips — and every queued background run
+ * ([TaskScheduler.cancelAllBackgroundRuns]). The runtime keeps those in a store of
+ * its own the database wipe cannot reach; a recurring task would otherwise fire on
+ * after the wipe and re-create its chat.
  *
  * **What it keeps, deliberately.** Settings, saved cloud API keys, the Hugging Face token
  * and MCP credentials. The wipe exists to escape a database that cannot be opened; on the
@@ -32,12 +37,14 @@ import javax.inject.Inject
  * @property agentWorkspace Owner of the agent workspace directory.
  * @property attachmentStore Owner of the stored image attachments.
  * @property transientCacheSweeper Owner of the transient cache directories.
+ * @property taskScheduler Owner of the queued background runs.
  */
 class ResetLockedDatabaseUseCase @Inject constructor(
     private val databaseResetService: DatabaseResetService,
     private val agentWorkspace: AgentWorkspace,
     private val attachmentStore: AttachmentStore,
     private val transientCacheSweeper: TransientCacheSweeper,
+    private val taskScheduler: TaskScheduler,
 ) {
 
     /**
@@ -55,6 +62,7 @@ class ResetLockedDatabaseUseCase @Inject constructor(
             agentWorkspace.eraseAll(),
             attachmentStore.deleteAll(),
             transientCacheSweeper.sweepAll(),
+            cancelBackgroundRuns(),
         )
         val shortfall = erased.count { !it }
         if (shortfall > 0) {
@@ -65,5 +73,21 @@ class ResetLockedDatabaseUseCase @Inject constructor(
             )
         }
         return shortfall == 0
+    }
+
+    /**
+     * Cancels every queued background run and clears the runtime's record of them.
+     *
+     * @return `true` when that succeeded; `false` (logged by type) otherwise, so it
+     *   counts as a store that kept something rather than stopping the steps after it.
+     */
+    private suspend fun cancelBackgroundRuns(): Boolean = try {
+        taskScheduler.cancelAllBackgroundRuns()
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "Data wipe: queued background runs could not be cancelled")
+        false
     }
 }
