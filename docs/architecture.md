@@ -859,8 +859,8 @@ The agent talks to AppFunctions in two directions:
   `androidx.appfunctions.AppFunctionService` annotated
   `@AppFunctionServiceEntryPoint` and `@AndroidEntryPoint`. The
   AppFunctions compiler generates the concrete `KnotworkAppFunctionService`
-  with its dispatch and writes the inventory to
-  `assets/knotwork_app_functions.xml`; the manifest registers that service,
+  with its dispatch and writes the inventory to the generated
+  `knotwork_app_functions.xml` asset; the manifest registers that service,
   guarded by `BIND_APP_FUNCTION_SERVICE`, and names the inventory
   (`AppFunctionServiceManifestGuardTest` keeps the three in step). Each
   `@AppFunction` delegates to a Hilt-injected class, so the callee path

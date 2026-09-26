@@ -2,7 +2,8 @@ package app.knotwork.android.buildtools
 
 /**
  * Pure checker that resolves every **internal** link of the documentation set
- * and reports the ones that lead nowhere.
+ * — and every inline code span written as a repository path, see
+ * [checkCodePaths] — and reports the ones that lead nowhere.
  *
  * The split between what blocks a build and what only reports is deliberate. A
  * relative path or an `#anchor` is a statement about *this repository*: its
@@ -61,6 +62,9 @@ object DocLinkChecker {
 
         /** The target is Markdown outside the scanned set, so its anchors could not be checked. */
         UNSCANNED_TARGET("target Markdown file is outside the scanned set, so its anchors cannot be verified"),
+
+        /** A code span written as a repository path names no file — from the root, the document or a package. */
+        MISSING_CODE_PATH("inline-code path names no file in the repository"),
     }
 
     /**
@@ -106,6 +110,32 @@ object DocLinkChecker {
         val internalLinkCount: Int,
     )
 
+    /**
+     * Everything the inline-code path pass produced.
+     *
+     * @property violations Spans naming no file, in document order.
+     * @property checkedCount How many spans were read as repository paths —
+     *   reported on success for the same reason as [Result.internalLinkCount].
+     */
+    data class CodePathResult(val violations: List<Violation>, val checkedCount: Int)
+
+    /**
+     * Extensions of the files a documentation span can name. A span without one
+     * — a class name, a package, a directory — is not read as a path: it names
+     * something the file system cannot answer for.
+     */
+    private val SOURCE_EXTENSIONS = listOf(
+        ".kt", ".kts", ".java", ".md", ".yml", ".yaml", ".xml", ".json", ".toml",
+        ".properties", ".sh", ".py", ".mjs", ".js", ".html", ".pro", ".txt",
+    )
+
+    /**
+     * Marks of a span that stands for many paths or for part of one: an elision
+     * (`…`, `...`), a glob, or a template placeholder. Such a span is shorthand,
+     * not a claim that one file exists.
+     */
+    private val SHORTHAND = Regex("""[*?\[\]<>{}${'$'}…]|\.\.\.""")
+
     /** Schemes that address something other than a document, and are simply skipped. */
     private val IGNORED_SCHEMES = listOf("mailto:", "tel:", "data:", "javascript:")
 
@@ -138,6 +168,86 @@ object DocLinkChecker {
             }
         }
         return Result(violations, external, internal)
+    }
+
+    /**
+     * Resolves every inline code span that is written as a repository path.
+     *
+     * Documentation names source files in code spans far more often than in
+     * links, and [check] never reads a span — so a rule sending implementers to
+     * "the canonical parser in `domain/parser/ToolArgumentParser.kt`" pointed at a
+     * file that never existed, for four months, with every gate green. This pass
+     * reads those spans as the claims they are.
+     *
+     * A span is read as a path only when it looks like one: it holds a `/`, no
+     * whitespace and no scheme, ends in a [SOURCE_EXTENSIONS] extension (after an
+     * optional `:line` or `#anchor`), is not [SHORTHAND], has no `build` segment
+     * (build output is not in the tree being checked), does not start with `/`
+     * (an absolute path is a device path, never a repository one), and either
+     * starts with `./` / `../` or begins with a directory name that exists
+     * somewhere in the repository — so `reports/name.md` in a user-facing example
+     * is left alone while `domain/…` is not.
+     *
+     * It resolves if it names a file from the repository root, from the
+     * document's directory, or — for a path without `..` — as the tail of a file's
+     * path on a segment boundary: the documentation writes sources relative to
+     * the package root (`data/mcp/KoogMcpClient.kt`) as often as from the root.
+     *
+     * @param docs Document text by repository-relative path.
+     * @param files Every file of the repository, by repository-relative path.
+     * @return The spans naming no file, and how many spans were read as paths.
+     */
+    fun checkCodePaths(docs: Map<String, String>, files: Set<String>): CodePathResult {
+        val directoryNames = files.flatMapTo(HashSet()) { it.split('/').dropLast(1) }
+        val violations = mutableListOf<Violation>()
+        var checked = 0
+        for ((path, text) in docs.entries.sortedBy { it.key }) {
+            for (span in MarkdownLinks.codeSpansOf(text)) {
+                val candidate = repositoryPathOf(span.text, directoryNames) ?: continue
+                checked++
+                if (!resolvesToFile(path, candidate, files)) {
+                    violations += Violation(path, span.line, span.text, Reason.MISSING_CODE_PATH)
+                }
+            }
+        }
+        return CodePathResult(violations, checked)
+    }
+
+    /**
+     * Reads a code span as a repository path, when it is written as one.
+     *
+     * @param span The span's content.
+     * @param directoryNames Every directory name occurring in the repository.
+     * @return The path part of the span, or `null` when the span is not a
+     *   repository path (see [checkCodePaths] for the rules).
+     */
+    private fun repositoryPathOf(span: String, directoryNames: Set<String>): String? {
+        if ('/' !in span || span.any { it.isWhitespace() } || "://" in span) return null
+        val path = span.substringBefore('#').substringBefore(':')
+        val isCandidate = !path.startsWith("/") &&
+            SOURCE_EXTENSIONS.any { path.endsWith(it, ignoreCase = true) } &&
+            !SHORTHAND.containsMatchIn(path) &&
+            "build" !in path.split('/')
+        if (!isCandidate) return null
+        val explicitlyRelative = path.startsWith("./") || path.startsWith("../")
+        return path.takeIf { explicitlyRelative || path.substringBefore('/') in directoryNames }
+    }
+
+    /**
+     * Reports whether a path read from a code span names a file.
+     *
+     * @param document Path of the document holding the span.
+     * @param path The span's path part.
+     * @param files Every file of the repository.
+     * @return `true` when the path names a file from the root, from the
+     *   document's directory, or as a path tail.
+     */
+    private fun resolvesToFile(document: String, path: String, files: Set<String>): Boolean {
+        if (normalize("", path) in files) return true
+        if (normalize(parentOf(document), path) in files) return true
+        if (path.split('/').contains("..")) return false
+        val tail = normalize("", path) ?: return false
+        return files.any { it.endsWith("/$tail") }
     }
 
     /**

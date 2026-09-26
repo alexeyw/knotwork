@@ -259,8 +259,14 @@ interface Tool {
 - Use `org.json.JSONObject` or `kotlinx.serialization` — **never** manual
   string parsing.
 - Always handle `JSONException` and map it to a typed error result.
-- When parsing tool arguments from LLM output, use the canonical parser in
-  `domain/parser/ToolArgumentParser.kt`.
+- Tool arguments from LLM output have no shared parser. The call envelope is
+  extracted by `ToolCallParser` (and by `ToolNodeExecutor` through
+  `StructuredOutputGate`), both on `JsonPayloadExtractor`; each
+  `LocalToolExecutor` then reads its own fields with `org.json`. Catch
+  `JSONException` in the executor and answer with an error, as
+  `HttpRequestExecutor` does. Most executors still let it reach
+  `ToolInvocationGate`, which hands it to the model as a failed call: the run
+  goes on and nothing executes.
 
 ---
 
