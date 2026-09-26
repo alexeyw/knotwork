@@ -299,6 +299,10 @@ details.
 
 ### Fixed
 
+- **Stopping a chat's queued message no longer leaves the chat looking busy.**
+  Stopping a message that was still waiting — right after the chat's previous
+  answer had finished — dropped the message but left the chat showing it was
+  working, until something else ran there.
 - **Messages at the bottom of the screen look the same everywhere and stay out
   of the way.** They came in three styles and four positions: on every settings
   screen and in the pipeline library they appeared at the top-left, over the

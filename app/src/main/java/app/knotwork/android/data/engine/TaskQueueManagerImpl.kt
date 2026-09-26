@@ -1,6 +1,7 @@
 package app.knotwork.android.data.engine
 
 import androidx.annotation.VisibleForTesting
+import app.knotwork.android.di.IoDispatcher
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.GraphExecutionEngine
 import app.knotwork.android.domain.engine.TaskQueueManager
@@ -22,12 +23,11 @@ import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -64,18 +64,22 @@ class TaskQueueManagerImpl @Inject constructor(
     private val pipelineRunRepository: PipelineRunRepository,
     private val runTraceRepository: RunTraceRepository,
     private val attachmentStore: AttachmentStore,
+    @IoDispatcher private val dispatcher: CoroutineDispatcher,
 ) : TaskQueueManager {
 
+    /**
+     * Owns the worker and every enqueue, cancel and run the queue starts.
+     *
+     * Built once from the injected [dispatcher] and never replaced: the worker
+     * starts in `init`, so a dispatcher swapped in afterwards would leave a
+     * first worker already launched on the one it replaced. Tests pass their
+     * test dispatcher to the constructor and cancel this scope to end a harness.
+     */
     @VisibleForTesting
-    internal var dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
-        set(value) {
-            field = value
-            scope.cancel()
-            scope = CoroutineScope(value + SupervisorJob())
-            startWorker()
-        }
+    internal val scope = CoroutineScope(dispatcher + SupervisorJob())
 
-    internal var scope = CoroutineScope(dispatcher + SupervisorJob())
+    /** The worker [startWorker] launched, kept so [debugSnapshot] can say whether it is alive. */
+    private var workerJob: Job? = null
 
     /**
      * How long a run may go without emitting anything before the worker gives
@@ -298,8 +302,8 @@ class TaskQueueManagerImpl @Inject constructor(
         startWorker()
     }
 
-    internal fun startWorker() {
-        scope.launch {
+    private fun startWorker() {
+        workerJob = scope.launch {
             for (signal in taskSignal) {
                 while (true) {
                     val task = queueMutex.withLock {
@@ -314,13 +318,18 @@ class TaskQueueManagerImpl @Inject constructor(
                     // failure to propagate: the loop must go straight on to the
                     // next task.
                     val job = launch { processTask(task) }
-                    activeRun.set(ActiveRun(sessionId = task.sessionId, job = job))
+                    val run = ActiveRun(sessionId = task.sessionId, job = job)
+                    activeRun.set(run)
                     job.join()
                     // Compare-and-set, never a bare clear: by the time this runs
                     // the reference may already describe the *next* task if a
                     // cancel raced the handover, and clearing that would leave a
-                    // live run nothing could stop.
-                    activeRun.compareAndSet(ActiveRun(sessionId = task.sessionId, job = job), null)
+                    // live run nothing could stop. Against the instance that was
+                    // set: AtomicReference compares by identity, so an equal copy
+                    // never matched, and a finished run stayed "active" — a Stop
+                    // of the session's next, still-queued task then cancelled the
+                    // finished job and never settled the session.
+                    activeRun.compareAndSet(run, null)
                 }
             }
         }
@@ -402,10 +411,13 @@ class TaskQueueManagerImpl @Inject constructor(
     /**
      * A task being executed, paired with the job driving it.
      *
+     * A plain class, not a data class: [activeRun] compares by identity, so value
+     * equality would only suggest that a copy can stand for the instance set.
+     *
      * @property sessionId Session the task belongs to.
      * @property job The coroutine running it, cancelled by [cancelRun].
      */
-    private data class ActiveRun(val sessionId: String, val job: Job)
+    private class ActiveRun(val sessionId: String, val job: Job)
 
     private suspend fun processTask(task: AgentTask) {
         if (task.isResume) {
@@ -741,6 +753,21 @@ class TaskQueueManagerImpl @Inject constructor(
             pipelineRunRepository.createRun(task.toQueuedRun())
         }
     }
+
+    /**
+     * One line describing the queue's internals, for a test's failure message.
+     *
+     * Names what a stuck session cannot tell apart on its own: whether the task
+     * is still queued, whether the worker holds one or has died, which session is
+     * running, and the global state. Read without [queueMutex] — a snapshot for a
+     * message, never an input to a decision.
+     *
+     * @return e.g. `queued=0 workerBusy=false workerAlive=true activeRun=null global=Error`.
+     */
+    @VisibleForTesting
+    internal fun debugSnapshot(): String =
+        "queued=${taskQueue.size} workerBusy=${workerBusy.get()} workerAlive=${workerJob?.isActive} " +
+            "activeRun=${activeRun.get()?.sessionId} global=${_globalState.value::class.simpleName}"
 
     override fun observeTaskState(sessionId: String): Flow<AgentOrchestratorState> =
         getOrCreateStateFlow(sessionId).asSharedFlow()

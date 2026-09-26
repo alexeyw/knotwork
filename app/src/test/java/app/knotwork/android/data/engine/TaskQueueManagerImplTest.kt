@@ -54,9 +54,11 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.coroutines.ContinuationInterceptor
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskQueueManagerImplTest {
@@ -101,14 +103,57 @@ class TaskQueueManagerImplTest {
             pipelineRunRepository = pipelineRunRepository,
             runTraceRepository = runTraceRepository,
             attachmentStore = attachmentStore,
-        ).apply {
-            dispatcher = testDispatcher
-        }
+            dispatcher = testDispatcher,
+        )
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    /**
+     * The failure message for a session that should have settled on `Error`: the
+     * state it holds plus the queue's own snapshot, so a one-off CI failure says
+     * whether the task was still queued, running, or never picked up.
+     */
+    private fun expectedError(state: AgentOrchestratorState): String =
+        "Expected Error, got $state; ${taskQueueManager.debugSnapshot()}"
+
+    @Test
+    fun `given a dispatcher passed to the constructor then the queue runs on it`() {
+        // Nothing may start anywhere else first: the worker is launched while the
+        // manager is being built, so a dispatcher swapped in afterwards came too late.
+        assertSame(testDispatcher, taskQueueManager.scope.coroutineContext[ContinuationInterceptor])
+    }
+
+    @Test
+    fun `given a finished run when the session's next task is cancelled before pickup then the session settles`() =
+        testScope.runTest {
+            // The first task settles on Error at once (empty library).
+            every { pipelineRepository.getAllPipelines() } returns flowOf(emptyList())
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "a", prompt = "one", priority = TaskPriority.NORMAL))
+            advanceUntilIdle()
+
+            // The second is queued and stopped before the worker takes it: the
+            // finished first run must not pass for the one to cancel.
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "a", prompt = "two", priority = TaskPriority.NORMAL))
+            taskQueueManager.cancelRun("a")
+            advanceUntilIdle()
+
+            assertEquals(AgentOrchestratorState.Idle, taskQueueManager.observeTaskState("a").first())
+        }
+
+    @Test
+    fun `given a settled task when the snapshot is read then it names an idle live worker`() = testScope.runTest {
+        every { pipelineRepository.getAllPipelines() } returns flowOf(emptyList())
+        taskQueueManager.enqueueTask(AgentTask(sessionId = "s", prompt = "go", priority = TaskPriority.NORMAL))
+        advanceUntilIdle()
+
+        assertEquals(
+            "queued=0 workerBusy=false workerAlive=true activeRun=null global=Error",
+            taskQueueManager.debugSnapshot(),
+        )
     }
 
     @Test
@@ -356,7 +401,7 @@ class TaskQueueManagerImplTest {
         advanceUntilIdle()
 
         val state = taskQueueManager.observeTaskState("session-no-default").first()
-        assertTrue("Expected Error, got $state", state is AgentOrchestratorState.Error)
+        assertTrue(expectedError(state), state is AgentOrchestratorState.Error)
         assertEquals(
             "No default pipeline configured. Set one in Settings or bind a pipeline to this chat.",
             (state as AgentOrchestratorState.Error).message,
@@ -387,7 +432,7 @@ class TaskQueueManagerImplTest {
         advanceUntilIdle()
 
         val state = taskQueueManager.observeTaskState("session-orphaned-no-default").first()
-        assertTrue("Expected Error, got $state", state is AgentOrchestratorState.Error)
+        assertTrue(expectedError(state), state is AgentOrchestratorState.Error)
         verify(exactly = 0) { graphExecutionEngine.invoke(any(), any(), any(), any()) }
     }
 
@@ -411,7 +456,7 @@ class TaskQueueManagerImplTest {
         advanceUntilIdle()
 
         val state = taskQueueManager.observeTaskState("session-empty-library").first()
-        assertTrue("Expected Error, got $state", state is AgentOrchestratorState.Error)
+        assertTrue(expectedError(state), state is AgentOrchestratorState.Error)
         assertEquals(
             "No active pipeline found. Please create one in the Visual Orchestrator.",
             (state as AgentOrchestratorState.Error).message,
@@ -491,7 +536,7 @@ class TaskQueueManagerImplTest {
         advanceUntilIdle()
 
         val state = taskQueueManager.observeTaskState(sessionId).first()
-        assertTrue("Expected Error, got $state", state is AgentOrchestratorState.Error)
+        assertTrue(expectedError(state), state is AgentOrchestratorState.Error)
         assertEquals("engine blew up", (state as AgentOrchestratorState.Error).message)
     }
 
