@@ -2,7 +2,6 @@ package app.knotwork.android.presentation.ui.settings
 
 import android.content.Context
 import app.knotwork.android.R
-import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.IdentityRepository
 import app.knotwork.android.domain.usecases.ResetToRecommendedDefaultsUseCase
@@ -24,8 +23,6 @@ import kotlinx.coroutines.launch
  * @property identityRepository Source of the identity-card snapshot.
  * @property resetToRecommendedDefaultsUseCase Single atomic write restoring every
  *   tunable preference to its recommended default.
- * @property crashReportingRepository Live crash-collector consent sink, flipped on
- *   reset so Crashlytics actually stops (the persisted flag alone does not).
  */
 class AboutSettingsDelegate(
     private val scope: CoroutineScope,
@@ -33,7 +30,6 @@ class AboutSettingsDelegate(
     private val appContext: Context,
     private val identityRepository: IdentityRepository,
     private val resetToRecommendedDefaultsUseCase: ResetToRecommendedDefaultsUseCase,
-    private val crashReportingRepository: CrashReportingRepository,
 ) {
 
     init {
@@ -59,8 +55,9 @@ class AboutSettingsDelegate(
      */
     fun performResetSettings() {
         scope.launch {
+            // The reset writes the consent default too; the app's observer turns
+            // the collector off from the persisted flag.
             resetToRecommendedDefaultsUseCase()
-            crashReportingRepository.setEnabled(SettingsDefaults.CRASH_REPORTING_ENABLED_DEFAULT)
             state.update { it.copy(snackbarMessage = appContext.getString(R.string.settings_reset_button)) }
         }
     }

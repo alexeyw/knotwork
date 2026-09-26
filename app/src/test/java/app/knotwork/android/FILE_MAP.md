@@ -17,6 +17,7 @@ Only Kotlin files appear inside the generated blocks.
   - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
   - `ContentUriReadInventoryTest.kt` - Inventory of every production file that opens a URI through `ContentResolver`, with where that URI comes from.
+  - `CrashReportingConsentOwnerTest.kt` - Only the app's release-only observer turns the crash collector on or off.
   - `DomainPurityKonsistTest.kt` - Konsist guard enforcing the strictest project rule for the `domain` layer: it is pure Kotlin with **zero** Android/framework imports, so it can be compiled and unit-tested off-device.
   - `EntrySurfaceLimitsDocumentsTest.kt` - Pins every number the public documents quote about the entry surfaces' limits to the constant that enforces it.
   - `ExportedComponentInventoryTest.kt` - Census of every component the app's source manifests export, and the permission each one demands of its caller.
@@ -105,6 +106,7 @@ Only Kotlin files appear inside the generated blocks.
     - `huggingface/` - Tests for the Hugging Face Hub client.
       - `HuggingFaceModelApiTest.kt` - Unit tests for `HuggingFaceModelApi`'s part in the More tab's privacy indicator.
     - `ResumableFileDownloaderTest.kt` - Covers the streaming downloader, with the weight on the paths that only matter once a transfer can be interrupted: resuming a partial file, refusing to resume when that would corrupt the result, and never letting an unfinished transfer sit at the final file name where it would pass for an installed model.
+    - `SharedHttpClientTest.kt` - The shared client's cleartext guard sees **every hop**, redirects included.
   - `prompt/` - Tests for the built-in `PromptVariableProvider` implementations.
     - `DateVariableProviderTest.kt` - Unit tests for `DateVariableProvider`.
     - `MemorySummaryVariableProviderTest.kt` - Unit tests for `MemorySummaryVariableProvider`.

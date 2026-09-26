@@ -44,6 +44,22 @@ details.
   arguments are longer than a notification can show is cut there with a note and
   approved in the chat, where every argument is visible. Deny still works from
   the notification.
+- **The memory library no longer reports usage to Google.** The on-device
+  library behind memory embeddings (MediaPipe) sent usage counts, the phone's
+  model, build fingerprint, country and carrier to Google in the `full` build,
+  without asking. Release builds now remove that call, and each release build is
+  checked for it.
+- **A download can no longer be redirected to an unencrypted public address.**
+  The rule that public hosts need https applied to the first request of a model
+  download or a Hugging Face search, not to a redirect that followed.
+- **`http_request` has a deadline and stops with the run.** A response that kept
+  trickling held the run, *Stop* and every chat queued behind it; one call now
+  ends after 60 seconds, and stopping the run ends it at once. The tool also
+  refuses a `Host` header (it would pick another site behind an allowed address)
+  and finds a saved key in a header name or a percent-encoded address or body.
+- **A developer build no longer starts crash reporting.** Turning the switch on
+  in a debug build turned Crashlytics on there as well; the switch now only
+  records consent, and release builds act on it.
 - **A denied tool call stays denied.** If the approval setting or the tool's
   risk level was relaxed while a background run waited for an answer, a
   **Deny** given afterwards was recorded but not applied, and the tool ran. The

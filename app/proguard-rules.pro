@@ -105,6 +105,23 @@
 -dontwarn com.google.ai.edge.**
 -dontwarn org.tensorflow.lite.**
 
+# ─── MediaPipe usage telemetry: never sent ───────────────────────────────────
+# MediaPipe Tasks attaches an unconditional usage logger to every task it
+# creates (`TaskRunner.create` → `TasksStatsProtoLogger` → `RemoteLoggingClient`),
+# which sends the app id, version and the device's model, fingerprint, country
+# and carrier to Google's Firelog endpoint through DataTransport. The `full`
+# build keeps the DataTransport backend (Crashlytics uploads through it), so the
+# events would leave the device without consent — nothing in the app asks. The
+# logger's one call site goes through the `LoggingClient` interface, so the call
+# is removed there (and on the implementation, in case a direct call appears).
+# Checked on the minified dex by `verify<Variant>NoMediaPipeTelemetry`.
+-assumenosideeffects interface com.google.mediapipe.tasks.core.logging.LoggingClient {
+    public void logEvent(com.google.mediapipe.proto.MediaPipeLoggingProto$MediaPipeLogExtension);
+}
+-assumenosideeffects class com.google.mediapipe.tasks.core.logging.RemoteLoggingClient {
+    public void logEvent(com.google.mediapipe.proto.MediaPipeLoggingProto$MediaPipeLogExtension);
+}
+
 # ─── SQLCipher ───────────────────────────────────────────────────────────────
 # `net.zetetic:sqlcipher-android` loads its native lib by reflection.
 -keep class net.zetetic.database.** { *; }

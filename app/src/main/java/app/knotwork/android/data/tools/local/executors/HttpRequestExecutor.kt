@@ -8,9 +8,14 @@ import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.HttpRequestPolicy
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Call
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -21,6 +26,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.IOException
+import java.net.URLDecoder
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.min
@@ -43,10 +49,15 @@ import kotlin.math.min
  *  3. **Transport gate** — public hosts must use `https://`; cleartext is only
  *     tolerated for loopback / private-LAN addresses (the Ollama exception that
  *     `network_security_config.xml` also carves out).
- *  4. **Credential gate** — if any stored provider API key value appears in an
- *     outgoing header or the body, the call is refused with
- *     "request contains a stored credential".
- *  5. **Redirect gate** — automatic redirects are disabled; each hop is
+ *  4. **Header gate** — a header the transport owns (`Host`, `Content-Length`,
+ *     `Transfer-Encoding`, `Connection`, …) is refused: `Host` would choose the
+ *     virtual host behind an allowlisted address, which the allowlist never saw.
+ *  5. **Credential gate** — if any stored provider API key value appears in an
+ *     outgoing header name or value, the body or the URL — the latter two also
+ *     percent-decoded — the call is refused with "request contains a stored
+ *     credential". A key the model splits or encodes some other way is not
+ *     recognised; no substring filter can promise more.
+ *  6. **Redirect gate** — automatic redirects are disabled; each hop is
  *     re-validated against the same allowlist / transport rules, and a redirect
  *     pointing outside the allowlist aborts the call.
  *
@@ -56,19 +67,44 @@ import kotlin.math.min
  * mapped to a readable observation string instead of throwing — the agent sees
  * the cause and can react.
  *
+ * **Every hop has a deadline and ends with the run.** A call is bounded by
+ * [callDeadlineMs] as a whole — a response that trickles never trips a per-read
+ * timeout — and is cancelled when the calling coroutine is: the blocking OkHttp
+ * call does not notice a coroutine cancel on its own, so *Stop* used to wait for
+ * the body, and every chat queued behind the run waited with it.
+ *
  * @property okHttpClient Shared client; a per-call derivative disables automatic
  *   redirect following so each hop can be validated.
  * @property settingsRepository Source of the allowlist and the response-size cap.
  * @property apiKeyRepository Source of the stored provider keys scanned for leaks.
  * @property networkActivityTracker Told about every hop sent, so the More tab's privacy
  *   indicator counts this tool's requests.
+ * @property callDeadlineMs Longest one hop may take, from connecting to reading
+ *   the last byte of the body; a test shortens it.
  */
-class HttpRequestExecutor @Inject constructor(
+class HttpRequestExecutor internal constructor(
     private val okHttpClient: OkHttpClient,
     private val settingsRepository: SettingsRepository,
     private val apiKeyRepository: ApiKeyRepository,
     private val networkActivityTracker: NetworkActivityTracker,
+    private val callDeadlineMs: Long,
 ) : LocalToolExecutor {
+
+    /**
+     * Creates the executor with the production call deadline.
+     *
+     * @param okHttpClient Shared client.
+     * @param settingsRepository Source of the allowlist and the response-size cap.
+     * @param apiKeyRepository Source of the stored provider keys scanned for leaks.
+     * @param networkActivityTracker Told about every hop sent.
+     */
+    @Inject
+    constructor(
+        okHttpClient: OkHttpClient,
+        settingsRepository: SettingsRepository,
+        apiKeyRepository: ApiKeyRepository,
+        networkActivityTracker: NetworkActivityTracker,
+    ) : this(okHttpClient, settingsRepository, apiKeyRepository, networkActivityTracker, CALL_DEADLINE_MS)
 
     override val toolName: String = TOOL_NAME
 
@@ -101,13 +137,29 @@ class HttpRequestExecutor @Inject constructor(
         targetError(parsedUrl, allowed)?.let { return "Error: $it" }
 
         val headers = parseHeaders(json)
+        headers.firstOrNull { (name, _) -> name.trim().lowercase() in TRANSPORT_HEADERS }?.let { (name, _) ->
+            return "Error: header '$name' is set by the transport from the URL and the body; remove it."
+        }
         val body = if (HttpRequestPolicy.methodAllowsBody(method)) json.optString("body", "") else null
 
         // Scan the URL too, not just headers/body: for a GET the query string and
         // path are the easiest channel to smuggle a stored key out
         // (`https://allowed.example/log?k=sk-…`), so leaving the URL unchecked
-        // would defeat the credential filter for the most common method.
-        val scanTexts = headers.map { it.second } + listOfNotNull(body?.takeIf { it.isNotEmpty() }, rawUrl)
+        // would defeat the credential filter for the most common method. Header
+        // names and the percent-decoded URL and body are scanned too; a key the
+        // model splits or encodes some other way is beyond a substring filter.
+        val scanTexts = buildList {
+            headers.forEach { (name, value) ->
+                add(name)
+                add(value)
+            }
+            body?.takeIf { it.isNotEmpty() }?.let {
+                add(it)
+                add(percentDecoded(it))
+            }
+            add(rawUrl)
+            add(percentDecoded(rawUrl))
+        }
         if (HttpRequestPolicy.leaksCredential(scanTexts, collectStoredSecrets())) {
             return "Error: request contains a stored credential — refusing to send a saved API key off-device."
         }
@@ -134,7 +186,7 @@ class HttpRequestExecutor @Inject constructor(
      * allowlist.
      */
     @Suppress("ReturnCount")
-    private fun runRequest(
+    private suspend fun runRequest(
         startUrl: HttpUrl,
         startMethod: String,
         startBody: String?,
@@ -147,46 +199,97 @@ class HttpRequestExecutor @Inject constructor(
             .followSslRedirects(false)
             .connectTimeout(SettingsDefaults.HTTP_TOOL_TIMEOUT_MS_DEFAULT, TimeUnit.MILLISECONDS)
             .readTimeout(SettingsDefaults.HTTP_TOOL_TIMEOUT_MS_DEFAULT, TimeUnit.MILLISECONDS)
+            .callTimeout(callDeadlineMs, TimeUnit.MILLISECONDS)
             .build()
 
         var url = startUrl
         var method = startMethod
         var body = startBody
         var currentHeaders = headers
-        var hop = 0
+        var hopCount = 0
         while (true) {
             // Every hop is a request of its own, and a redirect can lead to another host.
             networkActivityTracker.recordOutbound()
-            val response = client.newCall(buildRequest(url, method, body, currentHeaders)).execute()
-            val code = response.code
-            if (response.isRedirect && hop < SettingsDefaults.HTTP_TOOL_MAX_REDIRECTS) {
+            val call = client.newCall(buildRequest(url, method, body, currentHeaders))
+            val hop = call.cancellingWithCaller { response ->
                 val location = response.header("Location")
-                if (location == null) {
-                    return formatResponse(response, maxBytes)
+                if (response.isRedirect && hopCount < SettingsDefaults.HTTP_TOOL_MAX_REDIRECTS && location != null) {
+                    // Only the status and the location are needed from a redirect.
+                    response.close()
+                    Hop.Redirect(response.code, location)
+                } else {
+                    Hop.Final(formatResponse(response, maxBytes))
                 }
-                val next = url.resolve(location)
-                response.close()
-                next ?: return "Error: redirect to an unresolvable location '$location'."
-                targetError(next, allowed)?.let { return "Error: redirect blocked — $it" }
-                // 301/302/303 demote the follow-up to a bodyless GET (browser semantics);
-                // 307/308 preserve the method and body.
-                if (code == HTTP_MOVED_PERMANENTLY || code == HTTP_FOUND || code == HTTP_SEE_OTHER) {
-                    method = "GET"
-                    body = null
-                }
-                // Drop credential headers when the redirect crosses to a different
-                // host, mirroring OkHttp's automatic-redirect behaviour we forgo here.
-                currentHeaders = HttpRequestPolicy.headersForRedirect(
-                    headers = currentHeaders,
-                    fromHost = url.host,
-                    toHost = next.host,
-                )
-                url = next
-                hop++
-                continue
             }
-            return formatResponse(response, maxBytes)
+            val redirect = when (hop) {
+                is Hop.Final -> return hop.text
+                is Hop.Redirect -> hop
+            }
+            val next = url.resolve(redirect.location)
+                ?: return "Error: redirect to an unresolvable location '${redirect.location}'."
+            targetError(next, allowed)?.let { return "Error: redirect blocked — $it" }
+            // 301/302/303 demote the follow-up to a bodyless GET (browser semantics);
+            // 307/308 preserve the method and body.
+            if (redirect.code == HTTP_MOVED_PERMANENTLY ||
+                redirect.code == HTTP_FOUND ||
+                redirect.code == HTTP_SEE_OTHER
+            ) {
+                method = "GET"
+                body = null
+            }
+            // Drop credential headers when the redirect crosses to a different
+            // host, mirroring OkHttp's automatic-redirect behaviour we forgo here.
+            currentHeaders = HttpRequestPolicy.headersForRedirect(
+                headers = currentHeaders,
+                fromHost = url.host,
+                toHost = next.host,
+            )
+            url = next
+            hopCount++
         }
+    }
+
+    /** What one hop produced: the formatted final response, or a redirect to follow. */
+    private sealed interface Hop {
+        /** The response to hand back, formatted. */
+        data class Final(val text: String) : Hop
+
+        /** A redirect with its status [code] and the [location] it points at. */
+        data class Redirect(val code: Int, val location: String) : Hop
+    }
+
+    /**
+     * Executes the call and hands its response to [block] on the IO dispatcher,
+     * cancelling the call when the calling coroutine is cancelled.
+     *
+     * A blocking OkHttp call does not notice a coroutine cancel: *Stop* would wait
+     * for the body to end, or for a read to stall past its timeout. `Call.cancel`
+     * unblocks it, including a body read inside [block].
+     *
+     * @param block Reads the response; runs on the IO dispatcher and must close it.
+     * @return What [block] returned.
+     */
+    private suspend fun <T> Call.cancellingWithCaller(block: (Response) -> T): T = coroutineScope {
+        val call = this@cancellingWithCaller
+        val canceller = launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                awaitCancellation()
+            } finally {
+                call.cancel()
+            }
+        }
+        try {
+            withContext(Dispatchers.IO) { block(call.execute()) }
+        } finally {
+            canceller.cancel()
+        }
+    }
+
+    /** [text] percent-decoded, or unchanged when it holds no valid escape. */
+    private fun percentDecoded(text: String): String = try {
+        URLDecoder.decode(text, Charsets.UTF_8)
+    } catch (e: IllegalArgumentException) {
+        text
     }
 
     /** Builds the OkHttp [Request] for one hop. */
@@ -284,6 +387,22 @@ class HttpRequestExecutor @Inject constructor(
 
         /** Maximum characters of response headers echoed back to the agent. */
         private const val HEADER_CHAR_LIMIT = 2_000
+
+        /**
+         * Longest one hop may take as a whole, connecting to the last byte of the
+         * body (60 s): the same deadline an MCP tool call gets.
+         */
+        const val CALL_DEADLINE_MS: Long = 60_000L
+
+        /**
+         * Headers the transport owns, lower-cased: set from the URL and the body,
+         * never by the model. `Host` in particular would pick the virtual host
+         * behind an allowlisted address.
+         */
+        private val TRANSPORT_HEADERS = setOf(
+            "host", "content-length", "transfer-encoding", "connection", "upgrade", "te", "trailer",
+            "keep-alive", "proxy-connection", "proxy-authorization", "expect",
+        )
 
         private const val HTTP_MOVED_PERMANENTLY = 301
         private const val HTTP_FOUND = 302

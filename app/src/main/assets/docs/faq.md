@@ -139,8 +139,9 @@ providers](../SECURITY.md#api-keys-for-cloud-providers).
 Usage statistics exist, they stay on the device, and they are never transmitted —
 a build-time check fails the build if any network dependency reaches that code.
 Crash reporting is separate, off by default, `full`-build only, and asks before
-it collects anything. See [SECURITY § What is
-collected](../SECURITY.md#what-is-collected-crash-reporting).
+it collects anything. The on-device library behind memory search (MediaPipe)
+carries a usage reporter of its own; release builds remove it. See [SECURITY §
+What is collected](../SECURITY.md#what-is-collected-crash-reporting).
 
 ### Is my chat history encrypted on the phone?
 

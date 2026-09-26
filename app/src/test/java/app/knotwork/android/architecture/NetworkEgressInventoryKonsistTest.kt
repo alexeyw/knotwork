@@ -398,6 +398,15 @@ class NetworkEgressInventoryKonsistTest {
             "$MAIN/data/services/embedding/OllamaEmbeddingProvider.kt",
         )
 
+        /**
+         * Why a file creating a MediaPipe task opens nothing in a release build: the task's
+         * usage logger has one call site, and the rule removing it is checked on the dex.
+         */
+        const val MEDIAPIPE_LOGGER_REMOVED =
+            "creates a MediaPipe task, whose usage logger would send to Firelog; its one call site " +
+                "(LoggingClient.logEvent) is removed by -assumenosideeffects in proguard-rules.pro, and " +
+                "verify<Variant>NoMediaPipeTelemetry checks the release dex for it — a release sends nothing"
+
         /** Why the crash-report path is invisible to the privacy indicator. */
         const val FIREBASE_NOT_SHOWN =
             "the Firebase SDK sends crash reports on its own schedule, after the user's opt-in; the app " +
@@ -473,6 +482,10 @@ class NetworkEgressInventoryKonsistTest {
                     "provides the shared OkHttpClient; every request made with it is issued by a " +
                         "file listed above, and this module issues none itself",
                 ),
+            "$MAIN/data/network/SharedHttpClient.kt" to
+                Egress.None("builds the shared OkHttpClient and registers the cleartext guard; issues no request"),
+            "$MAIN/data/engine/TextEmbedderFactory.kt" to Egress.None(MEDIAPIPE_LOGGER_REMOVED),
+            "$MAIN/data/engine/MediaPipeTextEmbeddingEngine.kt" to Egress.None(MEDIAPIPE_LOGGER_REMOVED),
             "$MAIN/data/network/CleartextGuardInterceptor.kt" to
                 Egress.None(
                     "an OkHttp interceptor on the shared client: it inspects and refuses requests " +

@@ -7,7 +7,6 @@ import app.knotwork.android.domain.models.MemoryStats
 import app.knotwork.android.domain.models.TestProbeResult
 import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.domain.repositories.ApiKeyRepository
-import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
 import app.knotwork.android.domain.repositories.IdentityRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
@@ -69,7 +68,6 @@ class SettingsViewModelTest {
     private val localModels = mockk<LocalModelRepository>(relaxed = true)
     private val memory = mockk<MemoryRepository>(relaxed = true)
     private val identity = mockk<IdentityRepository>(relaxed = true)
-    private val crashReporting = mockk<CrashReportingRepository>(relaxed = true)
     private val testBackend = mockk<TestBackendUseCase>(relaxed = true)
     private val resetSampling = mockk<ResetSamplingDefaultsUseCase>(relaxed = true)
     private val resetToRecommended = mockk<ResetToRecommendedDefaultsUseCase>(relaxed = true)
@@ -547,9 +545,9 @@ class SettingsViewModelTest {
         // No typed input — the plain confirm dialog has no keyword gate.
         viewModel.confirmDestructive()
         advanceUntilIdle()
+        // The reset writes the consent default with every other preference; the
+        // collector follows the persisted flag (see CrashReportingConsentOwnerTest).
         coVerify { resetToRecommended() }
-        // Reset consent must also flip the live Crashlytics collector, not just the flag.
-        coVerify { crashReporting.setEnabled(SettingsDefaults.CRASH_REPORTING_ENABLED_DEFAULT) }
         assertNotNull(viewModel.uiState.value.snackbarMessage)
         assertNull(viewModel.uiState.value.pendingDestructive)
     }
@@ -599,12 +597,13 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `setCrashReportingEnabled syncs both settings and crashReporting`() = runTest {
+    fun `setCrashReportingEnabled persists consent`() = runTest {
         advanceUntilIdle()
         viewModel.setCrashReportingEnabled(true)
         advanceUntilIdle()
+        // Only persisted: the collector follows the flag through the app's
+        // release-only observer (see CrashReportingConsentOwnerTest).
         coVerify { settings.setCrashReportingEnabled(true) }
-        coVerify { crashReporting.setEnabled(true) }
     }
 
     @Test
@@ -806,7 +805,6 @@ class SettingsViewModelTest {
         localModelRepository = localModels,
         memoryRepository = memory,
         identityRepository = identity,
-        crashReportingRepository = crashReporting,
         testBackendUseCase = testBackend,
         resetSamplingDefaultsUseCase = resetSampling,
         resetToRecommendedDefaultsUseCase = resetToRecommended,

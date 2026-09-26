@@ -31,7 +31,7 @@ import app.knotwork.android.data.local.dao.TraceStepDao
 import app.knotwork.android.data.local.dao.TriggerDao
 import app.knotwork.android.data.local.dao.TriggerJournalDao
 import app.knotwork.android.data.local.dao.UsageTelemetryDao
-import app.knotwork.android.data.network.CleartextGuardInterceptor
+import app.knotwork.android.data.network.SharedHttpClient
 import app.knotwork.android.data.services.ExternalAutomationCallbackSender
 import app.knotwork.android.data.services.WorkManagerTaskScheduler
 import app.knotwork.android.data.tools.local.AppFunctionDataCodec
@@ -57,7 +57,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 /**
@@ -74,9 +73,6 @@ import javax.inject.Singleton
 object AppModule {
 
     private const val USER_PREFERENCES_NAME = "agent_preferences"
-
-    /** Connect/read/write timeout for the shared OkHttp client, in seconds. */
-    private const val HTTP_TIMEOUT_SECONDS = 60L
 
     /**
      * Backing file name of the settings-secrets store. Must stay byte-identical
@@ -378,16 +374,7 @@ object AppModule {
      */
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .writeTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        // The manifest permits cleartext app-wide because Android cannot express
-        // "any private-LAN address" in its network-security config; this restores
-        // the public-host half of that protection in app code, on every request,
-        // so a redirect cannot downgrade an https call mid-flight.
-        .addInterceptor(CleartextGuardInterceptor())
-        .build()
+    fun provideOkHttpClient(): OkHttpClient = SharedHttpClient.build()
 
     /**
      * Provides how `search_tool` opens its connection: the platform's own, in the app.

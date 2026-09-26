@@ -253,10 +253,16 @@ that app's own policy applies from that point on.
   architecture test fails the build if any network dependency ever reaches
   that code. Exporting the statistics as a file is a manual action you take,
   and the resulting file goes wherever you send it.
+- **A library's own usage statistics.** The on-device library that builds
+  memory embeddings (MediaPipe) comes with a usage logger that would report to
+  Google how it is used, together with your phone's model, build, country and
+  carrier. Release builds remove that call, and each release build is checked
+  for it before it ships.
 - **Your keys and credentials.** API keys, the Hugging Face token, and MCP
   credentials are used only to authenticate to the service you entered them
   for. They are never sent anywhere else, and a saved provider key found in an
-  outgoing `http_request` causes that request to be refused outright.
+  outgoing `http_request` — in a header, the body or the address — causes that
+  request to be refused outright.
 - **Attachments.** Images and audio you attach are processed by the on-device
   model unless a cloud node in your pipeline consumes them (section 3.1).
 - **Nothing is sent to the developer on its own.** The only two paths that can

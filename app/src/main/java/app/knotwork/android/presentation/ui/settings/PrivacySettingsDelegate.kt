@@ -1,6 +1,5 @@
 package app.knotwork.android.presentation.ui.settings
 
-import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,21 +13,21 @@ import kotlinx.coroutines.launch
  *
  * Owns crash-reporting consent and the two trace retention windows. Observes
  * their persisted flows into the shared [state] and routes edits back through
- * [settingsRepository]. The crash-reporting setter
- * additionally drives [crashReportingRepository] so the live Crashlytics
- * collector starts/stops — the persisted flag alone does not flip it. Shares the
- * ViewModel's [scope] and single [SettingsUiState] reducer.
+ * [settingsRepository]. Crash-reporting consent is **only** persisted here: the
+ * app's observer (`App.observeCrashReportingOptIn`, installed in release builds of
+ * the `full` flavour alone) mirrors the flag into the live collector. Flipping the
+ * collector from here as well turned Crashlytics on in debug builds, which the
+ * privacy policy says never happens. Shares the ViewModel's [scope] and single
+ * [SettingsUiState] reducer.
  *
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.
  * @property settingsRepository Persistence for the privacy settings.
- * @property crashReportingRepository Live crash-collector consent sink.
  */
 class PrivacySettingsDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<SettingsUiState>,
     private val settingsRepository: SettingsRepository,
-    private val crashReportingRepository: CrashReportingRepository,
 ) {
 
     init {
@@ -46,14 +45,13 @@ class PrivacySettingsDelegate(
     }
 
     /**
-     * Persists crash-reporting consent and mirrors it into the live collector so
-     * Crashlytics actually starts/stops — not just the persisted flag.
+     * Persists crash-reporting consent; the app's release-only observer turns the
+     * live collector on or off from it.
+     *
+     * @param enabled Whether the user consents to crash reports.
      */
     fun setCrashReportingEnabled(enabled: Boolean) {
-        scope.launch {
-            settingsRepository.setCrashReportingEnabled(enabled)
-            crashReportingRepository.setEnabled(enabled)
-        }
+        scope.launch { settingsRepository.setCrashReportingEnabled(enabled) }
     }
 
     /**
