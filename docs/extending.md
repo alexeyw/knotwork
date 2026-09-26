@@ -388,10 +388,10 @@ second entry point or write a manual router. Android 16 and later only.
 Publishing is open to any app; **being called is not**. Discovering and
 executing another app's AppFunctions requires `EXECUTE_APP_FUNCTIONS`,
 declared `internal|privileged` on Android 16 and granted to privileged
-system apps only — so in practice the caller that reaches your wrapper
+system apps only — so in practice the caller that reaches your function
 is a system assistant, not an arbitrary app from the store. Publish the
-wrapper anyway if the function belongs in that catalogue, but do not
-expect a peer app to invoke it.
+function anyway if it belongs in that catalogue, but do not expect a
+peer app to invoke it.
 
 Only expose tools that are safe to run on behalf of an unknown caller —
 typically `READ_ONLY` operations. `schedule_task` and `delegate_task`

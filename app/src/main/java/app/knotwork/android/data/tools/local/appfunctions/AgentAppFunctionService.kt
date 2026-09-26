@@ -23,8 +23,10 @@ import javax.inject.Inject
  * library, which would need a second entry point declaring each function again; the app
  * does not publish there.
  *
- * A function's wire id is `<this class's name>#<method name>` — see the generated
- * `AgentAppFunctionServiceIds`. Each method only delegates: the logic lives in injectable
+ * A function's wire id is `<this class's name>#<method name>` — the generated service
+ * carries each as a constant (`KnotworkAppFunctionService.FUNCTION_ID_SEARCH`). The
+ * compiler writes the `data` package segment escaped, with backticks, and callers must send
+ * it that way. Each method only delegates: the logic lives in injectable
  * classes ([SearchAppFunction]) that share caches and limits with the in-agent path and
  * are tested without a service.
  */
