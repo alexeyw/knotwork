@@ -2428,13 +2428,16 @@ val documentationFiles: FileCollection = files(
 
 // Internal links — a blocking gate. A relative path or an `#anchor` is a claim
 // about this repository, so its verdict is a function of the commit under review
-// and a dead one is a defect the build can refuse.
+// and a dead one is a defect the build can refuse. So is an inline-code span
+// written as a repository path (`domain/…/Foo.kt`).
 val verifyDocLinks by tasks.registering(VerifyDocLinksTask::class) {
     group = "verification"
     description = "Fails the build if a relative link or an #anchor in the documentation leads nowhere."
     repositoryRoot.set(rootProject.layout.projectDirectory)
     documents.from(documentationFiles)
     requiredPrefixes.set(documentationRoots)
+    // History names the files of the tree each entry was written against.
+    codePathExemptions.set(listOf("CHANGELOG.md"))
 }
 tasks.named("check") { dependsOn(verifyDocLinks) }
 

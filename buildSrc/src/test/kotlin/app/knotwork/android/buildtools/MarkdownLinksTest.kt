@@ -77,6 +77,13 @@ class MarkdownLinksTest {
     }
 
     @Test
+    fun `given a stray backtick run before a code span holding a link when read then the span is still masked`() {
+        val links = MarkdownLinks.linksOf("a ``stray `[x](gone.md)` and [y](real.md)\n")
+
+        assertEquals(listOf("real.md"), links.map { it.target })
+    }
+
+    @Test
     fun `given a link inside an HTML comment when read then it is ignored`() {
         val markdown = "<!-- [hidden](nope.md)\nstill hidden [x](nope2.md) -->\n[real](yes.md)\n"
 
@@ -191,5 +198,34 @@ class MarkdownLinksTest {
         val markdown = "```\n## Not a heading\n```\n\n## A heading\n"
 
         assertEquals(mapOf("a-heading" to 1), MarkdownLinks.headingSlugCounts(markdown))
+    }
+
+    @Test
+    fun `given code spans when read then their text and lines are reported`() {
+        val markdown = "Use `a/b.kt` and ``c`d.kt``.\n\nThen ` e/f.md `.\n"
+
+        assertEquals(
+            listOf(
+                MarkdownLinks.CodeSpan("a/b.kt", 1),
+                MarkdownLinks.CodeSpan("c`d.kt", 1),
+                MarkdownLinks.CodeSpan("e/f.md", 3),
+            ),
+            MarkdownLinks.codeSpansOf(markdown),
+        )
+    }
+
+    @Test
+    fun `given code inside a fence or a comment when spans are read then it is ignored`() {
+        val markdown = "```\n`a/b.kt`\n```\n<!-- `c/d.kt` -->\n~~~\n`e/f.kt`\n~~~\n"
+
+        assertTrue(MarkdownLinks.codeSpansOf(markdown).isEmpty())
+    }
+
+    @Test
+    fun `given an unclosed backtick run when spans are read then it is literal and later spans are still read`() {
+        assertEquals(
+            listOf(MarkdownLinks.CodeSpan("x/y.kt", 1)),
+            MarkdownLinks.codeSpansOf("a ``stray `x/y.kt` end\n"),
+        )
     }
 }

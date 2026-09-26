@@ -41,6 +41,42 @@ internal fun uncoveredPrefixes(paths: Collection<String>, prefixes: List<String>
     }
 
 /**
+ * Directory names left out of [repositoryFilesOf] wherever they occur: build
+ * output and tool state, none of which is part of the repository.
+ */
+private val UNINDEXED_DIRECTORIES = setOf("build", ".git", ".gradle", ".idea", ".kotlin", "node_modules")
+
+/**
+ * Root-level entries left out of [repositoryFilesOf]: they exist only in a
+ * developer's checkout (all are Git-ignored), so a documentation path resolving
+ * against one would pass locally and fail in CI.
+ */
+private val CHECKOUT_ONLY_ROOT_ENTRIES = setOf(".claude", "project_docs", "local.properties", "CLAUDE.md", "CLAUDE.local.md")
+
+/**
+ * Indexes every file of the working tree, for the inline-code path pass of
+ * [VerifyDocLinksTask].
+ *
+ * Walks the tree rather than asking Git, for the reason the task's documents
+ * are declared rather than listed from the index: a file not yet added to the
+ * index would be invisible, and a checker blind to it would reject a correct
+ * path to it.
+ *
+ * @param root The repository root.
+ * @return Repository-relative paths of every file outside build output, tool
+ *   state and checkout-only entries.
+ */
+internal fun repositoryFilesOf(root: File): Set<String> =
+    root.walkTopDown()
+        .onEnter { directory ->
+            directory == root ||
+                directory.name !in UNINDEXED_DIRECTORIES &&
+                !(directory.parentFile == root && directory.name in CHECKOUT_ONLY_ROOT_ENTRIES)
+        }
+        .filter { it.isFile && !(it.parentFile == root && it.name in CHECKOUT_ONLY_ROOT_ENTRIES) }
+        .mapTo(HashSet()) { it.relativeTo(root).invariantSeparatorsPath }
+
+/**
  * Shared plumbing of the documentation checks that read the Markdown set.
  *
  * The file set arrives as a declared Gradle input, never from a Git query. A
@@ -117,7 +153,18 @@ abstract class AbstractDocsScanTask : DefaultTask() {
 @UntrackedTask(because = "a link may point at any path in the repository, so the inputs cannot be declared")
 abstract class VerifyDocLinksTask : AbstractDocsScanTask() {
 
-    /** Resolves the internal links and fails on the ones that lead nowhere. */
+    /**
+     * Documents whose inline-code paths are not checked, by repository-relative
+     * path. Their links still are.
+     *
+     * Meant for history: a changelog entry names the files of the tree it was
+     * written against, and a file that has since moved does not make the entry
+     * wrong.
+     */
+    @get:Input
+    abstract val codePathExemptions: ListProperty<String>
+
+    /** Resolves the internal links and the inline-code paths, and fails on the ones that lead nowhere. */
     @TaskAction
     fun verify() {
         val root = repositoryRoot.get().asFile
@@ -130,18 +177,25 @@ abstract class VerifyDocLinksTask : AbstractDocsScanTask() {
                 else -> DocLinkChecker.PathKind.MISSING
             }
         }
-        if (result.violations.isNotEmpty()) {
+        val exempt = codePathExemptions.get().toSet()
+        val codePaths = DocLinkChecker.checkCodePaths(documents.filterKeys { it !in exempt }, repositoryFilesOf(root))
+        val violations = (result.violations + codePaths.violations).sortedWith(compareBy({ it.file }, { it.line }))
+        if (violations.isNotEmpty()) {
             throw VerificationException(
-                "Dead internal documentation links (${result.violations.size}):\n" +
-                    result.violations.joinToString("\n") { "  ${it.format()}" } + "\n\n" +
+                "Dead internal documentation links and paths (${violations.size}):\n" +
+                    violations.joinToString("\n") { "  ${it.format()}" } + "\n\n" +
                     "Relative paths and `#anchors` resolve against this repository, so a dead one is a " +
-                    "defect in the commit, not in somebody else's server. External `http` links are not " +
-                    "checked here; `./gradlew :app:reportExternalDocLinks` reports on those without gating.",
+                    "defect in the commit, not in somebody else's server. An inline-code span written as a " +
+                    "repository path is a claim too: point it at the file that exists, or — when it is " +
+                    "deliberately not one file — elide it (`…`), or name the file without its directory. " +
+                    "External `http` links are not checked here; `./gradlew :app:reportExternalDocLinks` " +
+                    "reports on those without gating.",
             )
         }
         logger.lifecycle(
-            "Checked ${result.internalLinkCount} internal link(s) across ${documents.size} document(s); " +
-                "${result.external.size} external link(s) left to the report.",
+            "Checked ${result.internalLinkCount} internal link(s) and ${codePaths.checkedCount} inline-code " +
+                "path(s) across ${documents.size} document(s); ${result.external.size} external link(s) left " +
+                "to the report.",
         )
     }
 }

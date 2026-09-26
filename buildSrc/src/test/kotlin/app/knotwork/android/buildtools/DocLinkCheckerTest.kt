@@ -154,4 +154,106 @@ class DocLinkCheckerTest {
 
         assertTrue(DocLinkChecker.check(docs, repository("docs/a.md" to PathKind.FILE)).violations.isEmpty())
     }
+
+    // ─── Inline-code paths ───────────────────────────────────────────────────
+
+    /** A tree holding one source file under a package-relative `domain/` directory, plus two root documents. */
+    private val tree = setOf(
+        "SECURITY.md",
+        "app/build.gradle.kts",
+        "app/src/main/java/app/knotwork/android/domain/models/NodeType.kt",
+        "docs/a.md",
+    )
+
+    @Test
+    fun `given an inline code path to a source file that does not exist when checked then it is reported`() {
+        val docs = mapOf("docs/a.md" to "Rule.\n\n- use the parser in `domain/parser/ToolArgumentParser.kt`.\n")
+
+        val result = DocLinkChecker.checkCodePaths(docs, tree)
+
+        assertEquals(1, result.violations.size)
+        assertEquals(Reason.MISSING_CODE_PATH, result.violations[0].reason)
+        assertEquals(3, result.violations[0].line)
+        assertEquals(
+            "docs/a.md:3: inline-code path names no file in the repository -> `domain/parser/ToolArgumentParser.kt`",
+            result.violations[0].format(),
+        )
+    }
+
+    @Test
+    fun `given inline code paths written from the root, the document or the package when checked then all resolve`() {
+        val docs = mapOf(
+            "docs/a.md" to "`app/build.gradle.kts`, `../SECURITY.md`, `./a.md` and `domain/models/NodeType.kt`.\n",
+        )
+
+        val result = DocLinkChecker.checkCodePaths(docs, tree)
+
+        assertTrue(result.violations.isEmpty())
+        assertEquals(4, result.checkedCount)
+    }
+
+    @Test
+    fun `given an inline code path with a line or an anchor when checked then only the path is resolved`() {
+        val docs = mapOf("docs/a.md" to "`app/build.gradle.kts:42`, `domain/models/NodeType.kt#L10`, `docs/gone.md:7`\n")
+
+        val result = DocLinkChecker.checkCodePaths(docs, tree)
+
+        assertEquals(listOf("docs/gone.md:7"), result.violations.map { it.target })
+        assertEquals(3, result.checkedCount)
+    }
+
+    @Test
+    fun `given spans that do not name one repository file when checked then none is read as a path`() {
+        val docs = mapOf(
+            "docs/a.md" to listOf(
+                "`app/src/main/…/FILE_MAP.md`", // elided
+                "`catalog/.../NodeConfig.kt`", // elided, ASCII
+                "`docs/*.md`", // glob
+                "`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`", // template
+                "`app/build/reports/kover/reportFullDebug.xml`", // build output
+                "`reports/name.md`", // first segment is no directory of the repository
+                "`/data/local/tmp/domain/x.json`", // absolute: a device path, not a repository one
+                "`NodeType.kt`", // no directory at all
+                "`./gradlew check`", // a command
+                "`https://example.com/domain/x.md`", // a URL
+                "`domain/models/`", // a directory, no file extension
+                "`domain/models/NodeType`", // a class name, no file extension
+            ).joinToString("\n"),
+        )
+
+        val result = DocLinkChecker.checkCodePaths(docs, tree)
+
+        assertTrue(result.violations.isEmpty())
+        assertEquals(0, result.checkedCount)
+    }
+
+    @Test
+    fun `given a missing path inside a fenced block or an HTML comment when checked then it is not read`() {
+        val docs = mapOf(
+            "docs/a.md" to "```\nsee `domain/gone/Gone.kt`\n```\n<!-- `domain/gone/Gone.kt` -->\n",
+        )
+
+        val result = DocLinkChecker.checkCodePaths(docs, tree)
+
+        assertTrue(result.violations.isEmpty())
+        assertEquals(0, result.checkedCount)
+    }
+
+    @Test
+    fun `given a path climbing above the repository root when checked then it is reported`() {
+        val docs = mapOf("docs/a.md" to "`../../SECURITY.md`\n")
+
+        val violations = DocLinkChecker.checkCodePaths(docs, tree).violations
+
+        assertEquals(listOf(Reason.MISSING_CODE_PATH), violations.map { it.reason })
+    }
+
+    @Test
+    fun `given a relative path whose suffix exists elsewhere when checked then it is not resolved by suffix`() {
+        val docs = mapOf("docs/a.md" to "`../models/NodeType.kt`\n")
+
+        val violations = DocLinkChecker.checkCodePaths(docs, tree).violations
+
+        assertEquals(listOf("../models/NodeType.kt"), violations.map { it.target })
+    }
 }

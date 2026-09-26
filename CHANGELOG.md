@@ -379,6 +379,11 @@ details.
   has been wired up or removed. Two rows of `docs/coverage-baseline.md` were
   re-measured and had drifted in opposite directions: one package had closed its
   gap unaided, another had fallen by growing faster than its tests.
+- **Contributor documentation no longer points at files that do not exist.** The
+  rule for parsing tool arguments named a parser that was never written, and the
+  guide to adding a cloud provider named a settings screen that has since been
+  split. The documentation check now reads file paths written as code, not only
+  links, so a path that stops existing fails the build.
 
 ## [0.10.1] - 2026-09-20
 
