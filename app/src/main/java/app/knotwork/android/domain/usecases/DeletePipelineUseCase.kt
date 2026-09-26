@@ -4,6 +4,7 @@ import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.TriggerRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -22,10 +23,13 @@ import javax.inject.Inject
  *
  * @property pipelineRepository Persistence sink for the cascading delete.
  * @property triggerRepository Triggers, switched off when their pipeline goes.
+ * @property syncTriggers Re-syncs the trigger runtime after that, as switching a
+ *   trigger off on the Triggers screen does.
  */
 class DeletePipelineUseCase @Inject constructor(
     private val pipelineRepository: PipelineRepository,
     private val triggerRepository: TriggerRepository,
+    private val syncTriggers: SyncTriggersUseCase,
 ) {
     /**
      * Deletes the pipeline identified by [pipelineId].
@@ -57,8 +61,19 @@ class DeletePipelineUseCase @Inject constructor(
      * @param pipelineId Id of the pipeline just deleted.
      */
     private suspend fun disableBoundTriggers(pipelineId: String) {
-        triggerRepository.observeTriggers().first()
-            .filter { it.pipelineId == pipelineId && it.enabled }
-            .forEach { triggerRepository.setEnabled(it.id, false) }
+        try {
+            val bound = triggerRepository.observeTriggers().first()
+                .filter { it.pipelineId == pipelineId && it.enabled }
+            if (bound.isEmpty()) return
+            bound.forEach { triggerRepository.setEnabled(it.id, false) }
+            syncTriggers()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The pipeline is already gone; failing the delete now would stop the
+            // caller from clearing the default and the surfaces that named it. A
+            // trigger left on is switched off by its next fire, as before.
+            Timber.w(e, "Could not switch off the triggers of a deleted pipeline")
+        }
     }
 }

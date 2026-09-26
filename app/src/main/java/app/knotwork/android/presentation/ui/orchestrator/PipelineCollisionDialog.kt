@@ -112,6 +112,9 @@ internal fun BundleCollisionDialog(
 ) {
     val count = pending.collisions.size
     val items = pending.collisions.map { PipelineBindingsText.summaryLine(it).asString() }
+    // "Already in your library" is true only while every taken id is a library
+    // pipeline; an id a deleted pipeline left bound is taken without being there.
+    val allInLibrary = pending.collisions.all { it.existingName != null }
     val body = listOfNotNull(
         UiText(R.string.orchestrator_library_import_bundle_collision_body),
         UiText(R.string.orchestrator_library_import_bundle_schema_body).takeIf {
@@ -121,14 +124,24 @@ internal fun BundleCollisionDialog(
     OutcomeDialog(
         tone = OutcomeTone.QUESTION,
         headline = pluralStringResource(
-            R.plurals.orchestrator_library_import_bundle_collision_title,
+            if (allInLibrary) {
+                R.plurals.orchestrator_library_import_bundle_collision_title
+            } else {
+                R.plurals.orchestrator_library_import_bundle_taken_title
+            },
             count,
             count,
             pending.pipelines.size,
         ),
         body = UiText.Joined(body, " ").asString(),
         namedList = OutcomeNamedList(
-            heading = stringResource(R.string.orchestrator_library_import_bundle_collision_heading),
+            heading = stringResource(
+                if (allInLibrary) {
+                    R.string.orchestrator_library_import_bundle_collision_heading
+                } else {
+                    R.string.orchestrator_library_import_bundle_taken_heading
+                },
+            ),
             items = items,
             moreLabel = moreLabel(items.size),
         ),

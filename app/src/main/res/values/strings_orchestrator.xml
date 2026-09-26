@@ -163,6 +163,11 @@
     </plurals>
     <string name="orchestrator_library_import_bundle_collision_body">Replace swaps their steps for the ones in this file. Import as copies keeps both.</string>
     <string name="orchestrator_library_import_bundle_collision_heading">Replace keeps everything that runs them. Already in your library:</string>
+    <plurals name="orchestrator_library_import_bundle_taken_title">
+        <item quantity="one">%1$d of %2$d pipelines uses an id that is already taken</item>
+        <item quantity="other">%1$d of %2$d pipelines use an id that is already taken</item>
+    </plurals>
+    <string name="orchestrator_library_import_bundle_taken_heading">Replace keeps everything that runs them. Already taken — in your library, or still named by a deleted pipeline\'s chats, triggers or callers:</string>
     <!-- One colliding pipeline in the bundle list: its name, then what runs it. -->
     <string name="orchestrator_library_import_bundle_collision_item">“%1$s”</string>
 

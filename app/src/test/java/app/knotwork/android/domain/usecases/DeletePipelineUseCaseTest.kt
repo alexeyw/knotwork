@@ -25,7 +25,8 @@ class DeletePipelineUseCaseTest {
     private val triggerRepository: TriggerRepository = mockk(relaxed = true) {
         coEvery { observeTriggers() } returns flowOf(emptyList())
     }
-    private val useCase = DeletePipelineUseCase(pipelineRepository, triggerRepository)
+    private val syncTriggers: SyncTriggersUseCase = mockk(relaxed = true)
+    private val useCase = DeletePipelineUseCase(pipelineRepository, triggerRepository, syncTriggers)
 
     private fun trigger(id: String, pipelineId: String?, enabled: Boolean = true) = Trigger(
         id = id,
@@ -51,6 +52,29 @@ class DeletePipelineUseCaseTest {
         coVerify(exactly = 1) { triggerRepository.setEnabled("t1", false) }
         coVerify(exactly = 0) { triggerRepository.setEnabled("t2", any()) }
         coVerify(exactly = 0) { triggerRepository.setEnabled("t3", any()) }
+        // The runtime follows the table, as it does when the user switches a trigger off.
+        coVerify(exactly = 1) { syncTriggers() }
+    }
+
+    @Test
+    fun `given the triggers cannot be switched off when the pipeline is deleted then the delete still succeeds`() =
+        runTest {
+            // The pipeline is gone either way; reporting a failure would stop the
+            // caller from clearing the default and the surfaces that named it. A
+            // trigger left on is still switched off by its next fire.
+            coEvery { triggerRepository.observeTriggers() } returns flowOf(listOf(trigger("t1", "p1")))
+            coEvery { triggerRepository.setEnabled(any(), any()) } throws RuntimeException("db locked")
+
+            val result = useCase(pipelineId = "p1")
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun `given no trigger is bound to the pipeline when it is deleted then the runtime is not re-synced`() = runTest {
+        useCase(pipelineId = "p1")
+
+        coVerify(exactly = 0) { syncTriggers() }
     }
 
     @Test
