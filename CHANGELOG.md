@@ -36,6 +36,14 @@ details.
 - **Wikipedia search can only reach Wikipedia.** The language code chosen for a
   search is checked before the request is built, so it can no longer point the
   request at another server.
+- **An approval covers only the call it was given for.** When a run that waited
+  in the background resumes, your answer is applied only if the call is the one
+  you answered — the same arguments at the same risk. If it has changed, you are
+  asked again, even if **Approve tool calls** is set to *Never*.
+- **Approving from a notification needs the whole call on screen.** A call whose
+  arguments are longer than a notification can show is cut there with a note and
+  approved in the chat, where every argument is visible. Deny still works from
+  the notification.
 - **A denied tool call stays denied.** If the approval setting or the tool's
   risk level was relaxed while a background run waited for an answer, a
   **Deny** given afterwards was recorded but not applied, and the tool ran. The
