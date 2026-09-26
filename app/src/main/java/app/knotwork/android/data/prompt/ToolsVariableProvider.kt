@@ -43,7 +43,9 @@ class ToolsVariableProvider @Inject constructor(private val toolRepository: Tool
         if (tools.isEmpty()) return ""
         // A description is the tool's own text — an MCP server's, for a server
         // tool — so its further lines are indented and cannot pose as a tool entry.
-        return tools.joinToString(separator = "\n") { tool -> ChatTranscript.entry("${tool.name} — ", tool.description) }
+        return tools.joinToString(separator = "\n") { tool ->
+            ChatTranscript.entry("${tool.name} — ", tool.description)
+        }
     }
 
     private companion object {

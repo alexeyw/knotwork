@@ -1,6 +1,5 @@
 package app.knotwork.android.domain.engine.executors
 
-import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.LlmInferenceEngine
@@ -20,6 +19,7 @@ import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.usecases.LoadModelUseCase
