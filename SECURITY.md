@@ -204,15 +204,15 @@ confidentiality:
   refused.
 - A **per-read token budget** (default 2000 tokens) truncates `read_file`
   output so a single large file cannot blow out the local model's context
-  window. The same budget cuts every other tool result — an `http_request`
-  response, an MCP result — where it becomes the prompt of a node on the
-  on-device model — in the *Tool Results* block, as the *Previous Node
-  Output* it forwards and as a tool's record in the chat history it replays —
-  with a note saying how much was left out. That includes a TOOL node, whose
-  input is a prompt the model turns into the tool's arguments. A node given a
-  cloud provider gets tool results whole. The **response budget** (1 MB default) bounds what
-  the app reads and keeps of one `http_request` response or MCP result; it is
-  far larger than any on-device context. All three are user-tunable.
+  window. The same budget cuts every other tool result (an `http_request`
+  response, an MCP result) where it becomes a prompt for the on-device model:
+  in the *Tool Results* block, as the *Previous Node Output* it forwards, and
+  as a tool's record in the chat history a node replays. A note says how much
+  was left out. A TOOL node counts too, since its input is the prompt the
+  model turns into the tool's arguments; a node given a cloud provider gets
+  tool results whole. The **response budget** (1 MB default) bounds what the
+  app reads and keeps of one `http_request` response or MCP result, far more
+  than any on-device context. Both limits are user-tunable.
 - **MCP servers are bounded where their content enters the app** (`KoogMcpClient`).
   A tool result — and the text of an error the server returns instead — is cut
   at the same user-tunable budget as an `http_request` response, with a marker
