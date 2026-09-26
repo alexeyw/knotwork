@@ -13,19 +13,18 @@ import androidx.appfunctions.metadata.AppFunctionIntTypeMetadata
 import androidx.appfunctions.metadata.AppFunctionLongTypeMetadata
 import androidx.appfunctions.metadata.AppFunctionMetadata
 import androidx.appfunctions.metadata.AppFunctionObjectTypeMetadata
-import androidx.appfunctions.metadata.AppFunctionPackageMetadata
 import androidx.appfunctions.metadata.AppFunctionParameterMetadata
 import androidx.appfunctions.metadata.AppFunctionReferenceTypeMetadata
 import androidx.appfunctions.metadata.AppFunctionResponseMetadata
 import androidx.appfunctions.metadata.AppFunctionStringTypeMetadata
 import androidx.appfunctions.metadata.AppFunctionUnitTypeMetadata
 import app.knotwork.android.domain.models.ToolRisk
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.After
@@ -393,8 +392,8 @@ class LocalAppFunctionManagerTest {
 
             assertFalse(subject.isDiscovered("com.example/foo"))
 
-            // Re-discovery was attempted: observeAppFunctions was called once on the cache miss.
-            coVerify(exactly = 1) { manager.observeAppFunctions(any()) }
+            // Re-discovery was attempted: searchAppFunctions was called once on the cache miss.
+            coVerify(exactly = 1) { manager.searchAppFunctions(any()) }
         }
 
     @Test
@@ -493,12 +492,22 @@ class LocalAppFunctionManagerTest {
 
     // region Helpers
 
-    private fun stubDiscovery(vararg packages: AppFunctionPackageMetadata) {
-        every { manager.observeAppFunctions(any()) } returns flowOf(packages.toList())
+    private fun stubDiscovery(vararg packages: List<AppFunctionMetadata>) {
+        coEvery { manager.searchAppFunctions(any()) } returns packages.flatMap { it }
     }
 
-    private fun packageFixture(packageName: String, vararg functions: AppFunctionMetadata) =
-        AppFunctionPackageMetadata(packageName = packageName, appFunctions = functions.toList())
+    /** The [functions] as one package publishes them: each carries [packageName] itself. */
+    private fun packageFixture(packageName: String, vararg functions: AppFunctionMetadata) = functions.map {
+        AppFunctionMetadata(
+            id = it.id,
+            packageName = packageName,
+            isEnabled = true,
+            schema = it.schema,
+            parameters = it.parameters,
+            response = it.response,
+            description = it.description,
+        )
+    }
 
     private fun metadataFixture(
         id: String,
@@ -515,10 +524,9 @@ class LocalAppFunctionManagerTest {
     )
 
     /**
-     * `AppFunctionMetadata` needs a packageName, but `packageFixture` then takes the same
-     * package and wraps the metadata into an `AppFunctionPackageMetadata`. The
-     * `LocalAppFunctionManager` qualifier reads the package off `AppFunctionPackageMetadata`
-     * (not off the metadata), so this placeholder simply satisfies the metadata constructor.
+     * `AppFunctionMetadata` needs a packageName; [packageFixture] rebuilds each fixture
+     * with the package it is published under, so this placeholder only satisfies the
+     * constructor and never reaches the code under test.
      */
     private fun currentFixturePackage(): String = "ignored.metadata.package"
 

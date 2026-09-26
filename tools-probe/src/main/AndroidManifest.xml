@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
         EXECUTE_APP_FUNCTIONS is required for the probe's MainActivity to call the agent's
@@ -10,7 +11,7 @@
 
     <!--
         The probe needs `canPackageQuery` access to the agent app
-        so `AppFunctionManager.observeAppFunctions` can resolve the agent's
+        so `AppFunctionManager.searchAppFunctions` can resolve the agent's
         `search_tool` metadata when the user taps the probe's invoke button.
     -->
     <queries>
@@ -32,6 +33,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            The probe's `echo` AppFunction: the class is generated from the entry point
+            `ProbeAppFunctionService` (its `serviceName`), and `v2` names the inventory
+            the compiler writes to `assets/` (its `appFunctionXmlFileName` plus `.xml`).
+        -->
+        <service
+            android:name=".EchoAppFunctionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
+            tools:targetApi="36">
+            <property
+                android:name="android.app.appfunctions.schema"
+                android:value="app_functions_schema.xsd" />
+            <property
+                android:name="android.app.appfunctions.v2"
+                android:value="tools_probe_app_functions.xml" />
+            <intent-filter>
+                <action android:name="android.app.appfunctions.AppFunctionService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

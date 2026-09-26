@@ -49,14 +49,13 @@ name: Instrumented
 # specifically at API 34 (resource resolution, startup, a platform behaviour
 # difference) had nothing to surface it.
 #
-# What this leg does NOT buy, stated so nobody assumes otherwise: it does not
-# exercise the AppFunctions extension path. Below API 36 the library selects the
-# `com.android.extensions.appfunctions` sidecar instead of the platform service,
-# which is genuinely unreachable on an API 36 emulator — but the only test that
-# would reach it, `AppFunctionsEndToEndTest`, is on the device-only exclusion
-# list because Android 16 declares `EXECUTE_APP_FUNCTIONS` at `internal|privileged`
-# and an emulator cannot grant it to a developer-installed app. That path remains
-# covered by nothing automated, at any API level.
+# What this leg does NOT buy, stated so nobody assumes otherwise: AppFunctions.
+# Below API 36 the app publishes none — its entry point extends the platform
+# service added in API 36 — and the only test that reaches the AppFunctions
+# runtime, `AppFunctionsEndToEndTest`, is on the device-only exclusion list
+# because Android 16 declares `EXECUTE_APP_FUNCTIONS` at `internal|privileged`
+# and an emulator cannot grant it to a developer-installed app. The runtime
+# remains covered by nothing automated, at any API level.
 #
 # The cost is named rather than papered over: **the app targets API 37 and no
 # emulator run covers it.** That gap belongs to the manual reference-device
@@ -133,9 +132,9 @@ jobs:
           # The floor leg. `minSdk` is 34, and until this leg existed nothing
           # automated ran there — the suite only ever saw API 36, which is the
           # ceiling of what we support, not the edge where things break.
-          # It buys the whole suite at the floor; it does NOT buy the AppFunctions
-          # extension path (see the header note — the only test that reaches that
-          # is excluded from emulator runs). `full` rather than `foss` because the
+          # It buys the whole suite at the floor; it does NOT buy AppFunctions
+          # (see the header note — the app publishes none below API 36, and the
+          # only test that reaches the runtime is excluded from emulator runs). `full` rather than `foss` because the
           # flavour axis is already covered at 36 and the two share every
           # measured source.
           - flavour: Full

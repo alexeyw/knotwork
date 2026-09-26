@@ -44,12 +44,15 @@ interface LiteRtRepository {
   their qualified name (`"${packageName}/${id}"`) so identical ids
   from different packages can coexist. `ToolRepositoryImpl` merges the
   discovered set into the visible tool catalogue.
-- **Callee-side** wrappers live in `data/tools/local/appfunctions/`
-  annotated with `androidx.appfunctions.service.AppFunction`. The
-  auto-merged `androidx.appfunctions.service.PlatformAppFunctionService`
-  (from `appfunctions-service`) dispatches incoming requests through
-  KSP-generated invokers. Do **not** subclass `AppFunctionService` or
-  write a manual router; the recipe for a new wrapper lives in
+- **Callee-side**, every published function is declared on the one entry
+  point, `data/tools/local/appfunctions/AgentAppFunctionService` — an
+  abstract `androidx.appfunctions.AppFunctionService` annotated
+  `@AppFunctionServiceEntryPoint`. The AppFunctions compiler generates the
+  concrete service and its dispatch; the app registers that service in its
+  manifest (`AppFunctionServiceManifestGuardTest` holds the two in step).
+  Do **not** write a manual router or a second entry point, and keep each
+  `@AppFunction` a one-line delegation to an injectable class that holds the
+  logic. Android 16+ only. The recipe for a new function lives in
   [`extending.md`](extending.md) §2.5.
 - **`AppFunctionDataCodec` is the single point of serialization.** Every
   conversion between the LLM-emitted JSON argument string and the typed

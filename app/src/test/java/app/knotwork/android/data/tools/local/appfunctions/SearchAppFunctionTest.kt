@@ -1,6 +1,5 @@
 package app.knotwork.android.data.tools.local.appfunctions
 
-import androidx.appfunctions.AppFunctionContext
 import app.knotwork.android.data.tools.local.SearchTool
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -30,42 +29,41 @@ class SearchAppFunctionTest {
 
     private val searchTool: SearchTool = mockk()
     private val searchAppFunction = SearchAppFunction(searchTool)
-    private val appFunctionContext: AppFunctionContext = mockk(relaxed = true)
 
     @Test
-    fun `given valid arguments when invoke then delegates to SearchTool and returns result`() = runTest {
+    fun `given valid arguments when search then delegates to SearchTool and returns result`() = runTest {
         coEvery { searchTool.executeSearch("kotlin", "en") } returns "Kotlin is a programming language."
 
-        val result = searchAppFunction.invoke(appFunctionContext, query = "kotlin", lang = "en")
+        val result = searchAppFunction.search(query = "kotlin", lang = "en")
 
         assertEquals("Kotlin is a programming language.", result)
         coVerify(exactly = 1) { searchTool.executeSearch("kotlin", "en") }
     }
 
     @Test
-    fun `given blank query when invoke then throws IllegalArgumentException`() {
+    fun `given blank query when search then throws IllegalArgumentException`() {
         val exception = assertThrows(IllegalArgumentException::class.java) {
-            runBlocking { searchAppFunction.invoke(appFunctionContext, query = "  ", lang = "en") }
+            runBlocking { searchAppFunction.search(query = "  ", lang = "en") }
         }
         assertEquals("search_tool requires a non-blank 'query' argument", exception.message)
     }
 
     @Test
-    fun `given blank lang when invoke then falls back to default en`() = runTest {
+    fun `given blank lang when search then falls back to default en`() = runTest {
         coEvery { searchTool.executeSearch("kotlin", "en") } returns "ok"
 
-        val result = searchAppFunction.invoke(appFunctionContext, query = "kotlin", lang = "")
+        val result = searchAppFunction.search(query = "kotlin", lang = "")
 
         assertEquals("ok", result)
         coVerify(exactly = 1) { searchTool.executeSearch("kotlin", "en") }
     }
 
     @Test
-    fun `given a lang that cannot name a Wikipedia edition when invoke then throws and never searches`() {
+    fun `given a lang that cannot name a Wikipedia edition when search then throws and never searches`() {
         // SearchTool refuses such a value too; rejecting it here gives the external caller
         // the same typed ERROR_INVALID_ARGUMENT outcome a blank query gets.
         val exception = assertThrows(IllegalArgumentException::class.java) {
-            runBlocking { searchAppFunction.invoke(appFunctionContext, query = "kotlin", lang = "evil.example/") }
+            runBlocking { searchAppFunction.search(query = "kotlin", lang = "evil.example/") }
         }
 
         assertTrue(exception.message.orEmpty().contains("'lang'"))
