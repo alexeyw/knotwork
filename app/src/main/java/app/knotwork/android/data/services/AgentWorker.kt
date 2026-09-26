@@ -9,6 +9,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
@@ -19,9 +20,12 @@ import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
+import app.knotwork.android.domain.services.ScheduledTaskKind
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
+import app.knotwork.android.domain.services.ScheduledTaskTag
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -63,10 +67,31 @@ class AgentWorker @AssistedInject constructor(
     private val pipelineRunRepository: PipelineRunRepository,
     private val scheduledTaskNotifier: ScheduledTaskNotifier,
     private val llmEngine: LlmInferenceEngine,
+    private val backgroundPrompts: BackgroundPromptRepository,
+    private val taskScheduler: WorkManagerTaskScheduler,
+    private val workManager: WorkManager,
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
-        /** Input-data key carrying the stored prompt of the scheduled task. */
+        /**
+         * Input-data key carrying the id of the run's prompt in
+         * [BackgroundPromptRepository] — the prompt itself never goes into the
+         * runtime's unencrypted store.
+         */
+        const val KEY_PROMPT_ID = "agent_prompt_id"
+
+        /**
+         * Input-data key: `true` when the stored prompt serves every run of a
+         * recurring task, `false` (or absent) when it belongs to this one run and
+         * is dropped once the run is enqueued.
+         */
+        const val KEY_PROMPT_REUSED = "agent_prompt_reused"
+
+        /**
+         * Input-data key under which releases before the prompt moved out of the
+         * runtime put the prompt text itself. Read only for such a request, which
+         * may still be queued after the update.
+         */
         const val KEY_PROMPT = "agent_prompt"
 
         /**
@@ -108,12 +133,20 @@ class AgentWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        val prompt = inputData.getString(KEY_PROMPT)
+        val promptId = inputData.getString(KEY_PROMPT_ID)
+        val prompt = if (promptId != null) {
+            backgroundPrompts.get(promptId)
+        } else {
+            inputData.getString(KEY_PROMPT)
+        }
 
         if (prompt.isNullOrBlank()) {
-            Timber.e("AgentWorker failed: Prompt is null or empty.")
+            // A stored prompt is missing when the request was cancelled and pruned
+            // or the data was erased — there is nothing left to run.
+            Timber.e("AgentWorker failed: no prompt to run.")
             return Result.failure()
         }
+        val legacyPeriodic = promptId == null && migrateLegacyPeriodic(prompt)
 
         promoteToForeground()
 
@@ -131,6 +164,10 @@ class AgentWorker @AssistedInject constructor(
                 runId = inputData.getString(KEY_RUN_ID),
             )
             Timber.d("AgentWorker enqueued background run %s into session %s", runId, sessionId)
+            // The prompt now lives in the run's user message; a one-time run's
+            // stored copy has served its purpose. Dropped only after the enqueue
+            // succeeded, so a retry still finds it.
+            if (promptId != null && !inputData.getBoolean(KEY_PROMPT_REUSED, false)) backgroundPrompts.delete(promptId)
         } catch (e: CancellationException) {
             // WorkManager cancels the worker by cancelling this coroutine —
             // mapping the cancellation to `retry()` would resurrect a job the
@@ -154,7 +191,38 @@ class AgentWorker @AssistedInject constructor(
         } catch (e: Exception) {
             Timber.e(e, "AgentWorker failed while tracking run %s.", runId)
         }
+        // Not awaited: stopping this request while its own doWork still runs
+        // would cancel the run above; the cancellation lands once it returns.
+        if (legacyPeriodic) workManager.cancelWorkById(id)
         return Result.success()
+    }
+
+    /**
+     * Moves a recurring task scheduled by an earlier release — whose request
+     * carries the prompt text — onto the encrypted store: a replacement is
+     * enqueued with only the prompt's id, first due one interval from now.
+     *
+     * The runtime does not expose a queued request's input, so this, the legacy
+     * request's own run, is the only point where its prompt can be read. A
+     * one-time legacy request needs nothing: it runs once and its row is pruned.
+     *
+     * @param prompt The prompt the legacy request carried.
+     * @return `true` when a replacement was enqueued and this request must be
+     *   cancelled once its run is done; `false` when it is not a recurring task
+     *   or the replacement could not be enqueued (it then keeps running as is).
+     */
+    private suspend fun migrateLegacyPeriodic(prompt: String): Boolean {
+        val label = ScheduledTaskTag.parse(tags) ?: return false
+        if (label.kind != ScheduledTaskKind.PERIODIC || label.promptId != null) return false
+        return try {
+            taskScheduler.migrateLegacyPeriodic(prompt, label.intervalHours, label.sessionId)
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "Could not move a recurring task's prompt to the encrypted store")
+            false
+        }
     }
 
     /**

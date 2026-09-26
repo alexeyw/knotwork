@@ -2,6 +2,7 @@ package app.knotwork.android.data.local
 
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 
 /**
  * The agent workspace's directory as a tree of real entries: the one walk behind
@@ -31,8 +32,29 @@ internal object WorkspaceTree {
      * @return The entries, bottom-up.
      */
     fun realEntries(root: File): Sequence<File> = root.walkBottomUp()
-        .onEnter { it == root || !Files.isSymbolicLink(it.toPath()) }
-        .filter { it != root && !Files.isSymbolicLink(it.toPath()) }
+        .onEnter { it == root || isRealEntry(it) }
+        .filter { it != root && isRealEntry(it) }
+
+    /**
+     * Reports whether [entry] is itself a real file or directory rather than a
+     * symbolic link.
+     *
+     * Asks `java.nio` first. A name `java.nio` cannot turn into a `Path` — a lone
+     * UTF-16 surrogate, which the platform's path encoder refuses — makes
+     * `toPath` throw, and one such entry used to fail every walk. For those the
+     * answer comes from `java.io` instead: an entry is real when resolving it
+     * changes nothing, that is when its canonical path is its own absolute path
+     * under the (canonical) directory holding it. A link resolves elsewhere.
+     *
+     * @param entry An entry found by the walk.
+     * @return `true` for a real file or directory, `false` for a link.
+     */
+    fun isRealEntry(entry: File): Boolean = try {
+        !Files.isSymbolicLink(entry.toPath())
+    } catch (e: InvalidPathException) {
+        val parent = entry.parentFile?.canonicalFile ?: return false
+        entry.canonicalPath == File(parent, entry.name).absolutePath
+    }
 
     /**
      * Counts what [root] holds and removes every empty directory on the way —
@@ -58,6 +80,23 @@ internal object WorkspaceTree {
             }
         }
         return Tally(bytes, entries)
+    }
+
+    /**
+     * Reports whether a directory level between [target] and [root] exists as a
+     * regular file, so no entry can be created at [target].
+     *
+     * @param target The canonical path about to be written.
+     * @param root The canonical workspace root.
+     * @return `true` when some ancestor of [target] below [root] is a file.
+     */
+    fun runsThroughFile(target: File, root: File): Boolean {
+        var dir = target.parentFile
+        while (dir != null && dir != root) {
+            if (dir.exists() && !dir.isDirectory) return true
+            dir = dir.parentFile
+        }
+        return false
     }
 
     /**

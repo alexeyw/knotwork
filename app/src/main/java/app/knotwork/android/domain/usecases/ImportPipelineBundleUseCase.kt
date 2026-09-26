@@ -82,15 +82,19 @@ class ImportPipelineBundleUseCase @Inject constructor(
         // Lightweight existence check: id → name projection, one query, no graph
         // materialisation (vs. getPipelineById per id, which loads full graphs).
         val existingNames = pipelineRepository.observePipelineNames().first()
-        val colliding = pipelines.filter { it.id in existingNames }
-        val bindings = findPipelineBindings(colliding.map { it.id })
-        val collisions = colliding.map { graph ->
-            PipelineCollision(
-                incoming = graph,
-                existingName = existingNames.getValue(graph.id),
-                bindings = bindings.getValue(graph.id),
-            )
-        }
+        // Every id is looked up, not only the ones the library holds: a deleted
+        // pipeline's id is free in the library while its chats, triggers and
+        // callers still name it, and keeping it would re-bind them to the file.
+        val bindings = findPipelineBindings(pipelines.map { it.id })
+        val collisions = pipelines
+            .filter { it.id in existingNames || !bindings.getValue(it.id).isEmpty }
+            .map { graph ->
+                PipelineCollision(
+                    incoming = graph,
+                    existingName = existingNames[graph.id],
+                    bindings = bindings.getValue(graph.id),
+                )
+            }
 
         return PipelineBundlePrepareResult.Ready(
             pipelines = pipelines,

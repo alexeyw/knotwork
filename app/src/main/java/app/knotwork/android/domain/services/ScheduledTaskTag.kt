@@ -23,15 +23,20 @@ enum class ScheduledTaskKind {
  * @property sessionId Id of the chat session the run lands its result in, or
  *   `null` when the task was scheduled without a bound session (the worker then
  *   creates a fresh one per run).
- * @property promptPreview First [ScheduledTaskTag.PROMPT_PREVIEW_MAX_CHARS]
- *   characters of the prompt, whitespace-collapsed — enough to recognise the
- *   task, never the whole instruction.
+ * @property promptId Id of the task's prompt in the encrypted store
+ *   ([app.knotwork.android.domain.repositories.BackgroundPromptRepository]), or
+ *   `null` for a task scheduled by a release that wrote the preview itself.
+ * @property promptPreview What to show for the prompt: the first
+ *   [ScheduledTaskTag.PROMPT_PREVIEW_MAX_CHARS] characters, whitespace-collapsed —
+ *   enough to recognise the task, never the whole instruction. Empty until the
+ *   reader resolves [promptId] (see [ScheduledTaskTag.preview]).
  */
 data class ScheduledTaskLabel(
     val kind: ScheduledTaskKind,
     val intervalHours: Long,
     val sessionId: String?,
-    val promptPreview: String,
+    val promptId: String? = null,
+    val promptPreview: String = "",
 )
 
 /**
@@ -51,12 +56,12 @@ data class ScheduledTaskLabel(
  * "cancel every scheduled task" to exactly the tasks this tool created, and the
  * [encode]d label carrying the human-readable detail.
  *
- * **What goes in the label.** Only what the user needs to choose between rows:
- * kind, interval, bound session, and a truncated prompt preview. The full prompt
- * already travels through the runtime's own (unencrypted) store as the worker's
- * input data, so the preview adds no new class of exposure — but it is truncated
- * and whitespace-collapsed anyway, because a tag is a diagnostic label, not a
- * copy of the instruction.
+ * **What goes in the label.** Only what the user needs to choose between rows —
+ * kind, interval, bound session — and the **id** of the prompt, never its text.
+ * The runtime stores tags in the clear, like its input data, so the prompt lives
+ * in the encrypted database and the monitor looks its preview up by id. Labels
+ * written by earlier releases (`kst1`) carried a preview of their own; they are
+ * still read, so a task scheduled before the change stays recognisable.
  *
  * Pure string handling with no framework types, so the writer (the scheduler,
  * in `data`) and the reader (the task monitor, in `presentation`) share one
@@ -74,13 +79,16 @@ object ScheduledTaskTag {
     /** Maximum prompt characters kept in the label. */
     const val PROMPT_PREVIEW_MAX_CHARS: Int = 80
 
-    /** Version prefix of the encoded label; lets a later format be told apart. */
-    private const val PREFIX = "kst1"
+    /** Version prefix of the current label, carrying a prompt id. */
+    private const val PREFIX = "kst2"
 
-    /** Field separator. Safe because the preview is always the last field. */
+    /** Version prefix of a label written before prompts left the runtime, carrying a preview. */
+    private const val LEGACY_PREFIX = "kst1"
+
+    /** Field separator. Safe because the last field (an id, or a legacy preview) is read whole. */
     private const val SEPARATOR = '|'
 
-    /** Number of fields in an encoded label, preview included. */
+    /** Number of fields in an encoded label. */
     private const val FIELD_COUNT = 5
 
     /**
@@ -89,16 +97,15 @@ object ScheduledTaskTag {
      * @param kind One-shot or repeating.
      * @param intervalHours Repeat interval in hours; `0` for a one-time task.
      * @param sessionId Bound chat session, or `null`.
-     * @param prompt The task's prompt; truncated and whitespace-collapsed into
-     *   the preview.
+     * @param promptId Id of the task's prompt in the encrypted store.
      * @return The tag to attach to the scheduled work.
      */
-    fun encode(kind: ScheduledTaskKind, intervalHours: Long, sessionId: String?, prompt: String): String = listOf(
+    fun encode(kind: ScheduledTaskKind, intervalHours: Long, sessionId: String?, promptId: String): String = listOf(
         PREFIX,
         kind.name,
         intervalHours.toString(),
         sessionId.orEmpty(),
-        preview(prompt),
+        promptId,
     ).joinToString(SEPARATOR.toString())
 
     /**
@@ -112,24 +119,31 @@ object ScheduledTaskTag {
      * @return The decoded label, or `null` when none of [tags] is a readable one.
      */
     fun parse(tags: Collection<String>): ScheduledTaskLabel? {
-        val raw = tags.firstOrNull { it.startsWith("$PREFIX$SEPARATOR") } ?: return null
+        val raw = tags.firstOrNull { it.startsWith("$PREFIX$SEPARATOR") || it.startsWith("$LEGACY_PREFIX$SEPARATOR") }
+            ?: return null
         val fields = raw.split(SEPARATOR, limit = FIELD_COUNT)
         if (fields.size < FIELD_COUNT) return null
         val kind = ScheduledTaskKind.entries.firstOrNull { it.name == fields[1] } ?: return null
         val intervalHours = fields[2].toLongOrNull() ?: return null
+        val legacy = fields[0] == LEGACY_PREFIX
         return ScheduledTaskLabel(
             kind = kind,
             intervalHours = intervalHours,
             sessionId = fields[3].ifEmpty { null },
-            promptPreview = fields[4],
+            promptId = fields[4].takeUnless { legacy },
+            promptPreview = if (legacy) fields[4] else "",
         )
     }
 
     /**
      * Collapses [prompt] to a single line and truncates it to
-     * [PROMPT_PREVIEW_MAX_CHARS], appending an ellipsis when it was cut.
+     * [PROMPT_PREVIEW_MAX_CHARS], appending an ellipsis when it was cut — what a
+     * task row shows of a prompt it looked up by [ScheduledTaskLabel.promptId].
+     *
+     * @param prompt The full prompt.
+     * @return Its preview.
      */
-    private fun preview(prompt: String): String {
+    fun preview(prompt: String): String {
         val collapsed = prompt.replace(WHITESPACE_RUN, " ").trim()
         return if (collapsed.length <= PROMPT_PREVIEW_MAX_CHARS) {
             collapsed

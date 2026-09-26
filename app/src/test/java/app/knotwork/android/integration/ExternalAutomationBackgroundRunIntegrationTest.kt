@@ -697,7 +697,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
         var lastRunId: String? = null
         var lastOrigin: RunOrigin? = null
 
-        override fun scheduleOneTime(
+        override suspend fun scheduleOneTime(
             prompt: String,
             delayMinutes: Long,
             sessionId: String?,
@@ -720,7 +720,11 @@ class ExternalAutomationBackgroundRunIntegrationTest {
 
         override fun cancelAllScheduled() = Unit
 
-        override fun schedulePeriodic(
+        override suspend fun cancelAllBackgroundRuns() = Unit
+
+        override suspend fun pruneOrphanPrompts(): Int = 0
+
+        override suspend fun schedulePeriodic(
             prompt: String,
             intervalHours: Long,
             sessionId: String?,

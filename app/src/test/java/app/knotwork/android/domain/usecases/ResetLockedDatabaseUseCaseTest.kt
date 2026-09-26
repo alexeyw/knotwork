@@ -3,6 +3,7 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.services.AgentWorkspace
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.DatabaseResetService
+import app.knotwork.android.domain.services.TaskScheduler
 import app.knotwork.android.domain.services.TransientCacheSweeper
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -29,8 +30,10 @@ class ResetLockedDatabaseUseCaseTest {
     private val workspace = mockk<AgentWorkspace>()
     private val attachments = mockk<AttachmentStore>()
     private val caches = mockk<TransientCacheSweeper>()
+    private val taskScheduler = mockk<TaskScheduler>()
 
-    private val useCase = ResetLockedDatabaseUseCase(databaseResetService, workspace, attachments, caches)
+    private val useCase =
+        ResetLockedDatabaseUseCase(databaseResetService, workspace, attachments, caches, taskScheduler)
 
     @Before
     fun setup() {
@@ -38,6 +41,7 @@ class ResetLockedDatabaseUseCaseTest {
         coEvery { workspace.eraseAll() } returns true
         coEvery { attachments.deleteAll() } returns true
         coEvery { caches.sweepAll() } returns true
+        coEvery { taskScheduler.cancelAllBackgroundRuns() } just runs
     }
 
     @Test
@@ -49,8 +53,21 @@ class ResetLockedDatabaseUseCaseTest {
             workspace.eraseAll()
             attachments.deleteAll()
             caches.sweepAll()
+            // The runtime keeps queued runs in a store the database wipe cannot
+            // reach; a recurring task would fire again and re-create its chat.
+            taskScheduler.cancelAllBackgroundRuns()
         }
     }
+
+    @Test
+    fun `given the background runs cannot be cancelled when invoked then the result says something was kept`() =
+        runTest {
+            coEvery { taskScheduler.cancelAllBackgroundRuns() } throws IllegalStateException("runtime unavailable")
+
+            assertFalse(useCase())
+
+            coVerify(exactly = 1) { caches.sweepAll() }
+        }
 
     @Test
     fun `given the database survives when invoked then the failure propagates and no file is touched`() = runTest {
@@ -67,6 +84,7 @@ class ResetLockedDatabaseUseCaseTest {
         coVerify(exactly = 0) { workspace.eraseAll() }
         coVerify(exactly = 0) { attachments.deleteAll() }
         coVerify(exactly = 0) { caches.sweepAll() }
+        coVerify(exactly = 0) { taskScheduler.cancelAllBackgroundRuns() }
     }
 
     @Test

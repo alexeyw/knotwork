@@ -67,8 +67,9 @@ backup or in a transfer to a new device
 - API keys, the Hugging Face access token, and MCP credentials and custom
   headers you entered.
 
-**Encryption at rest.** The local database — chats, memory, run traces — is
-encrypted with SQLCipher. API keys, the Hugging Face token, and MCP credentials
+**Encryption at rest.** The local database — chats, memory, run traces, and
+the prompts of scheduled and background runs waiting to start — is encrypted
+with SQLCipher. API keys, the Hugging Face token, and MCP credentials
 and headers are sealed with AES-GCM under a dedicated Android Keystore key.
 Details and limits are in [SECURITY.md](SECURITY.md#threat-model).
 
@@ -76,8 +77,8 @@ Details and limits are in [SECURITY.md](SECURITY.md#threat-model).
 memories, pipelines, and run history can be deleted from inside the app, and
 run history is also pruned automatically according to the retention setting.
 If the database can no longer be unlocked, **Erase data** on the recovery
-screen deletes chats, memory, pipelines, workspace files and attachments, and
-keeps your settings and saved keys. Downloaded models stay on the device too:
+screen deletes chats, memory, pipelines, workspace files, attachments and
+scheduled tasks, and keeps your settings and saved keys. Downloaded models stay on the device too:
 the app lists them again under Models the next time it starts.
 
 ---
@@ -174,6 +175,10 @@ is classified read-only, so it does not stop for a confirmation. Either of two
 switches ends it — **Settings → Tools & workspace → Block network from local
 model**, which withholds this tool along with the cloud paths, or the tool's
 own switch on the **Tools** screen.
+
+On Android 16 and later the same lookup is also published to other apps as an
+AppFunction (`search`), which only a privileged system agent can call. Such a
+call goes out exactly like the agent's own, and the same two switches stop it.
 
 **`http_request` — off until you name a destination.** It can reach only hosts
 you have added to the allowed-domains list; while that list is empty the tool

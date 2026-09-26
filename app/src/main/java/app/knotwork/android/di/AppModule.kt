@@ -14,6 +14,7 @@ import app.knotwork.android.data.local.EncryptedDbPassphraseProvider
 import app.knotwork.android.data.local.crypto.AeadCipher
 import app.knotwork.android.data.local.crypto.KeystoreBackedPrefsStore
 import app.knotwork.android.data.local.crypto.SecretStore
+import app.knotwork.android.data.local.dao.BackgroundPromptDao
 import app.knotwork.android.data.local.dao.ChatDao
 import app.knotwork.android.data.local.dao.ChatHistorySummaryDao
 import app.knotwork.android.data.local.dao.ExternalAutomationJournalDao
@@ -217,6 +218,7 @@ object AppModule {
                 AppDatabase.MIGRATION_60_61,
                 AppDatabase.MIGRATION_61_62,
                 AppDatabase.MIGRATION_62_63,
+                AppDatabase.MIGRATION_63_64,
             )
             // No destructive fallback on upgrade: every version bump must supply an explicit
             // migration above so user data survives. Destructive recreation is kept only for the
@@ -332,6 +334,15 @@ object AppModule {
     @Provides
     fun provideExternalAutomationJournalDao(database: AppDatabase): ExternalAutomationJournalDao =
         database.externalAutomationJournalDao()
+
+    /**
+     * Provides the [BackgroundPromptDao] from the database.
+     *
+     * @param database The app's encrypted database.
+     * @return The [BackgroundPromptDao] instance.
+     */
+    @Provides
+    fun provideBackgroundPromptDao(database: AppDatabase): BackgroundPromptDao = database.backgroundPromptDao()
 
     /**
      * Provides the [UsageTelemetryDao] backing the privacy-preserving local

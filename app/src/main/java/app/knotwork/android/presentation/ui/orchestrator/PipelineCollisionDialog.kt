@@ -16,7 +16,8 @@ import app.knotwork.design.components.dialogs.OutcomeNamedList
 import app.knotwork.design.components.dialogs.OutcomeTone
 
 /**
- * Asks what to do with an imported pipeline whose id is already in the library.
+ * Asks what to do with an imported pipeline whose id is already taken — by a
+ * pipeline in the library, or by what a deleted pipeline left bound to it.
  *
  * Names the pipeline **already there** — the file's own `name` is its author's
  * to choose, and the dialog once named it, claiming the library held a
@@ -38,21 +39,35 @@ internal fun PipelineCollisionDialog(
     onDismiss: () -> Unit,
 ) {
     val bound = PipelineBindingsText.lines(collision.bindings).map { it.asString() }
+    // No library pipeline holds the id when a deleted one left its bindings
+    // behind: there is nothing to replace, only bindings the id would take over.
+    val existingName = collision.existingName
     OutcomeDialog(
         tone = OutcomeTone.QUESTION,
-        headline = stringResource(
-            R.string.orchestrator_library_import_collision_title_format,
-            collision.existingName.toDisplaySafe(),
-        ),
+        headline = if (existingName != null) {
+            stringResource(R.string.orchestrator_library_import_collision_title_format, existingName.toDisplaySafe())
+        } else {
+            stringResource(R.string.orchestrator_library_import_orphan_title)
+        },
         // The file's own name, as the file's claim — so a user who picked the
         // wrong file can tell, without the name standing in for the library's.
         body = stringResource(
-            R.string.orchestrator_library_import_collision_single_body,
+            if (existingName != null) {
+                R.string.orchestrator_library_import_collision_single_body
+            } else {
+                R.string.orchestrator_library_import_orphan_body
+            },
             collision.incoming.name.toDisplaySafe(),
         ),
         namedList = bound.takeIf { it.isNotEmpty() }?.let { items ->
             OutcomeNamedList(
-                heading = stringResource(R.string.orchestrator_library_import_collision_bindings_heading),
+                heading = stringResource(
+                    if (existingName != null) {
+                        R.string.orchestrator_library_import_collision_bindings_heading
+                    } else {
+                        R.string.orchestrator_library_import_orphan_bindings_heading
+                    },
+                ),
                 items = items,
                 moreLabel = moreLabel(items.size),
             )
@@ -63,7 +78,13 @@ internal fun PipelineCollisionDialog(
             emphasis = OutcomeActionEmphasis.EMPHASISED,
         ),
         neutral = OutcomeAction(
-            label = stringResource(R.string.orchestrator_library_import_collision_replace),
+            label = stringResource(
+                if (existingName != null) {
+                    R.string.orchestrator_library_import_collision_replace
+                } else {
+                    R.string.orchestrator_library_import_orphan_keep
+                },
+            ),
             onClick = onReplace,
         ),
         dismiss = OutcomeAction(label = stringResource(R.string.common_cancel), onClick = onDismiss),
@@ -91,6 +112,9 @@ internal fun BundleCollisionDialog(
 ) {
     val count = pending.collisions.size
     val items = pending.collisions.map { PipelineBindingsText.summaryLine(it).asString() }
+    // "Already in your library" is true only while every taken id is a library
+    // pipeline; an id a deleted pipeline left bound is taken without being there.
+    val allInLibrary = pending.collisions.all { it.existingName != null }
     val body = listOfNotNull(
         UiText(R.string.orchestrator_library_import_bundle_collision_body),
         UiText(R.string.orchestrator_library_import_bundle_schema_body).takeIf {
@@ -100,14 +124,24 @@ internal fun BundleCollisionDialog(
     OutcomeDialog(
         tone = OutcomeTone.QUESTION,
         headline = pluralStringResource(
-            R.plurals.orchestrator_library_import_bundle_collision_title,
+            if (allInLibrary) {
+                R.plurals.orchestrator_library_import_bundle_collision_title
+            } else {
+                R.plurals.orchestrator_library_import_bundle_taken_title
+            },
             count,
             count,
             pending.pipelines.size,
         ),
         body = UiText.Joined(body, " ").asString(),
         namedList = OutcomeNamedList(
-            heading = stringResource(R.string.orchestrator_library_import_bundle_collision_heading),
+            heading = stringResource(
+                if (allInLibrary) {
+                    R.string.orchestrator_library_import_bundle_collision_heading
+                } else {
+                    R.string.orchestrator_library_import_bundle_taken_heading
+                },
+            ),
             items = items,
             moreLabel = moreLabel(items.size),
         ),

@@ -4,8 +4,8 @@ import app.knotwork.android.domain.models.EntrySurface
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.services.TaskScheduler
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -16,7 +16,7 @@ import org.junit.Test
  */
 class LaunchTilePipelineUseCaseTest {
 
-    private val resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>()
+    private val resolveSurfacePipeline = mockk<ResolveLaunchableSurfacePipelineUseCase>()
     private val taskScheduler = mockk<TaskScheduler>(relaxed = true)
     private val useCase = LaunchTilePipelineUseCase(resolveSurfacePipeline, taskScheduler)
 
@@ -27,7 +27,7 @@ class LaunchTilePipelineUseCaseTest {
         val result = useCase("Run")
 
         assertEquals(TileLaunchResult.Launched, result)
-        verify {
+        coVerify {
             taskScheduler.scheduleOneTime(
                 prompt = "Run",
                 delayMinutes = 0,
@@ -46,7 +46,7 @@ class LaunchTilePipelineUseCaseTest {
         val result = useCase("Run")
 
         assertEquals(TileLaunchResult.NotConfigured, result)
-        verify(exactly = 0) {
+        coVerify(exactly = 0) {
             taskScheduler.scheduleOneTime(any(), any(), any(), any(), any(), any())
         }
     }

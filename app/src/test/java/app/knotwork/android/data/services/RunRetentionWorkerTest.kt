@@ -5,6 +5,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import app.knotwork.android.domain.services.TaskScheduler
 import app.knotwork.android.domain.usecases.CleanupPipelineRunsUseCase
 import app.knotwork.android.domain.usecases.CleanupTriggerJournalUseCase
 import app.knotwork.android.domain.usecases.automation.CleanupExternalAutomationJournalUseCase
@@ -34,6 +35,7 @@ class RunRetentionWorkerTest {
     private lateinit var runUseCase: CleanupPipelineRunsUseCase
     private lateinit var journalUseCase: CleanupTriggerJournalUseCase
     private lateinit var externalJournalUseCase: CleanupExternalAutomationJournalUseCase
+    private lateinit var taskScheduler: TaskScheduler
 
     @Before
     fun setup() {
@@ -41,6 +43,8 @@ class RunRetentionWorkerTest {
         runUseCase = mockk()
         journalUseCase = mockk()
         externalJournalUseCase = mockk()
+        taskScheduler = mockk()
+        coEvery { taskScheduler.pruneOrphanPrompts() } returns 0
     }
 
     private fun workerFactory(): WorkerFactory = object : WorkerFactory() {
@@ -48,8 +52,14 @@ class RunRetentionWorkerTest {
             appContext: Context,
             workerClassName: String,
             workerParameters: WorkerParameters,
-        ): ListenableWorker =
-            RunRetentionWorker(appContext, workerParameters, runUseCase, journalUseCase, externalJournalUseCase)
+        ): ListenableWorker = RunRetentionWorker(
+            appContext,
+            workerParameters,
+            runUseCase,
+            journalUseCase,
+            externalJournalUseCase,
+            taskScheduler,
+        )
     }
 
     private fun buildWorker(): RunRetentionWorker = TestListenableWorkerBuilder<RunRetentionWorker>(context)
@@ -71,6 +81,8 @@ class RunRetentionWorkerTest {
         coVerify(exactly = 1) { runUseCase() }
         coVerify(exactly = 1) { journalUseCase(any()) }
         coVerify(exactly = 1) { externalJournalUseCase(any()) }
+        // The prompts of background runs cancelled before they ran go in the same pass.
+        coVerify(exactly = 1) { taskScheduler.pruneOrphanPrompts() }
     }
 
     @Test

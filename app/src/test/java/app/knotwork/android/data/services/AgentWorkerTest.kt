@@ -3,6 +3,7 @@ package app.knotwork.android.data.services
 import android.content.Context
 import androidx.work.Data
 import androidx.work.ListenableWorker
+import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
@@ -13,6 +14,7 @@ import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
@@ -25,6 +27,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -54,6 +57,10 @@ class AgentWorkerTest {
     private lateinit var pipelineRunRepository: PipelineRunRepository
     private lateinit var scheduledTaskNotifier: ScheduledTaskNotifier
     private lateinit var llmEngine: LlmInferenceEngine
+    private lateinit var prompts: MutableMap<String, String>
+    private lateinit var backgroundPrompts: BackgroundPromptRepository
+    private lateinit var taskScheduler: WorkManagerTaskScheduler
+    private lateinit var workManager: WorkManager
 
     @Before
     fun setup() {
@@ -71,6 +78,12 @@ class AgentWorkerTest {
         coJustRun { scheduledTaskNotifier.notifyFailed(any(), any()) }
         every { pipelineRunRepository.observeActiveRunSessionIds() } returns flowOf(emptySet())
         every { llmEngine.isInitialized } returns false
+        prompts = mutableMapOf()
+        backgroundPrompts = mockk()
+        coEvery { backgroundPrompts.get(any()) } answers { prompts[firstArg<String>()] }
+        coEvery { backgroundPrompts.delete(any()) } answers { prompts.remove(firstArg<String>()) }
+        taskScheduler = mockk(relaxed = true)
+        workManager = mockk(relaxed = true)
     }
 
     private fun workerFactory(): WorkerFactory = object : WorkerFactory() {
@@ -86,17 +99,37 @@ class AgentWorkerTest {
             pipelineRunRepository,
             scheduledTaskNotifier,
             llmEngine,
+            backgroundPrompts,
+            taskScheduler,
+            workManager,
         )
     }
 
-    private fun buildWorker(input: Data = Data.EMPTY): AgentWorker = TestListenableWorkerBuilder<AgentWorker>(context)
-        .setInputData(input)
-        .setWorkerFactory(workerFactory())
-        .build()
+    private fun buildWorker(input: Data = Data.EMPTY, tags: List<String> = emptyList()): AgentWorker =
+        TestListenableWorkerBuilder<AgentWorker>(context)
+            .setInputData(input)
+            .setTags(tags)
+            .setWorkerFactory(workerFactory())
+            .build()
 
-    private fun inputData(prompt: String? = "hello", sessionId: String? = SESSION_ID): Data {
+    /**
+     * Input data as the scheduler writes it now: the prompt is stored under
+     * [PROMPT_ID] and the request carries only the id.
+     */
+    private fun inputData(prompt: String? = "hello", sessionId: String? = SESSION_ID, reused: Boolean = false): Data {
         val builder = Data.Builder()
-        if (prompt != null) builder.putString(AgentWorker.KEY_PROMPT, prompt)
+        if (prompt != null) {
+            prompts[PROMPT_ID] = prompt
+            builder.putString(AgentWorker.KEY_PROMPT_ID, PROMPT_ID)
+            builder.putBoolean(AgentWorker.KEY_PROMPT_REUSED, reused)
+        }
+        if (sessionId != null) builder.putString(AgentWorker.KEY_SESSION_ID, sessionId)
+        return builder.build()
+    }
+
+    /** Input data as a release before the prompt left the runtime wrote it: the prompt itself. */
+    private fun legacyInputData(prompt: String, sessionId: String? = SESSION_ID): Data {
+        val builder = Data.Builder().putString(AgentWorker.KEY_PROMPT, prompt)
         if (sessionId != null) builder.putString(AgentWorker.KEY_SESSION_ID, sessionId)
         return builder.build()
     }
@@ -156,6 +189,73 @@ class AgentWorkerTest {
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.failure(), result)
+    }
+
+    @Test
+    fun `given a prompt id whose prompt is no longer stored when doWork runs then fails and enqueues nothing`() =
+        runTest {
+            // Erased data, or a request cancelled and pruned: nothing left to run.
+            val worker = buildWorker(Data.Builder().putString(AgentWorker.KEY_PROMPT_ID, "gone").build())
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            coVerify(exactly = 0) { useCase.enqueueScheduled(any(), any()) }
+        }
+
+    @Test
+    fun `given a one-time run's stored prompt when the run is enqueued then the stored copy is dropped`() = runTest {
+        stubRunLifecycle(run(PipelineRunStatus.COMPLETED))
+
+        buildWorker(inputData()).doWork()
+
+        // The prompt now lives in the run's user message, in the chat.
+        assertTrue(PROMPT_ID !in prompts)
+    }
+
+    @Test
+    fun `given a recurring task's stored prompt when a run is enqueued then the stored copy stays for the next`() =
+        runTest {
+            stubRunLifecycle(run(PipelineRunStatus.COMPLETED))
+
+            buildWorker(inputData(reused = true)).doWork()
+
+            assertEquals("hello", prompts[PROMPT_ID])
+        }
+
+    @Test
+    fun `given the enqueue fails when doWork runs then the stored prompt stays for the retry`() = runTest {
+        coEvery { chatRepository.sessionExists(SESSION_ID) } returns true
+        every { useCase.enqueueScheduled(any(), any()) } throws RuntimeException("boom")
+
+        val result = buildWorker(inputData()).doWork()
+
+        assertEquals(ListenableWorker.Result.retry(), result)
+        assertEquals("hello", prompts[PROMPT_ID])
+    }
+
+    @Test
+    fun `given a legacy recurring request when it runs then its prompt moves to the store and it retires`() = runTest {
+        stubRunLifecycle(run(PipelineRunStatus.COMPLETED))
+        val worker = buildWorker(legacyInputData("hello"), tags = listOf("kst1|PERIODIC|6|$SESSION_ID|hello"))
+
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        coVerify(exactly = 1) { useCase.enqueueScheduled(SESSION_ID, "hello") }
+        coVerify(exactly = 1) { taskScheduler.migrateLegacyPeriodic("hello", 6, SESSION_ID) }
+        verify(exactly = 1) { workManager.cancelWorkById(worker.id) }
+    }
+
+    @Test
+    fun `given a legacy one-time request when it runs then it runs as before and nothing is re-enqueued`() = runTest {
+        stubRunLifecycle(run(PipelineRunStatus.COMPLETED))
+
+        buildWorker(legacyInputData("hello")).doWork()
+
+        coVerify(exactly = 1) { useCase.enqueueScheduled(SESSION_ID, "hello") }
+        coVerify(exactly = 0) { taskScheduler.migrateLegacyPeriodic(any(), any(), any()) }
+        verify(exactly = 0) { workManager.cancelWorkById(any()) }
     }
 
     @Test
@@ -391,6 +491,9 @@ class AgentWorkerTest {
         // The public keys are the wire-level contract between the worker and
         // `WorkManagerTaskScheduler` (the sole writer of the input data) — a
         // typo here breaks the integration silently.
+        assertEquals("agent_prompt_id", AgentWorker.KEY_PROMPT_ID)
+        assertEquals("agent_prompt_reused", AgentWorker.KEY_PROMPT_REUSED)
+        // Read only from a request an earlier release queued.
         assertEquals("agent_prompt", AgentWorker.KEY_PROMPT)
         assertEquals("agent_session_id", AgentWorker.KEY_SESSION_ID)
         assertEquals("current_stage", AgentWorker.KEY_CURRENT_STAGE)
@@ -399,5 +502,6 @@ class AgentWorkerTest {
     private companion object {
         const val SESSION_ID = "session-1"
         const val RUN_ID = "run-1"
+        const val PROMPT_ID = "prompt-1"
     }
 }

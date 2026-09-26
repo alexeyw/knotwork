@@ -82,6 +82,35 @@ class ImportPipelineUseCaseTest {
     }
 
     @Test
+    fun `given an id no library row holds but something is bound to when invoke then nothing is saved and it asks`() =
+        runTest {
+            // The id of a deleted pipeline: chats, triggers or callers still name it.
+            // Saving under it would re-bind all of them to the file without a word.
+            coEvery { findPipelineBindings.of("p") } returns PipelineBindings(triggerCount = 1, chatCount = 2)
+
+            val invocation = useCase(validJson)
+
+            assertNull(invocation.saveResult)
+            val pending = requireNotNull(invocation.pendingCollision)
+            assertNull("no library pipeline holds the id", pending.existingName)
+            assertEquals(PipelineBindings(triggerCount = 1, chatCount = 2), pending.bindings)
+            coVerify(exactly = 0) { savePipelineUseCase(any()) }
+        }
+
+    @Test
+    fun `given a schema mismatch confirmed for an id something is still bound to when persisted then it asks`() =
+        runTest {
+            coEvery { findPipelineBindings.of("p") } returns PipelineBindings(isDefault = true)
+            val mismatch = useCase(mismatchJson).outcome as PipelineImportOutcome.SchemaMismatch
+
+            val confirmed = useCase.persistConfirmed(mismatch)
+
+            assertTrue(confirmed is ConfirmedImport.Collision)
+            assertNull((confirmed as ConfirmedImport.Collision).collision.existingName)
+            coVerify(exactly = 0) { savePipelineUseCase(any()) }
+        }
+
+    @Test
     fun `given valid JSON when invoke then node and connection ids are freshened before save`() = runTest {
         val saved = slot<PipelineGraph>()
         coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
