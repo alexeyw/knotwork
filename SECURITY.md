@@ -551,6 +551,16 @@ only for gated repositories) is handled exactly like a cloud-provider key:
   them from the JSON**. The encrypted copy is committed before the plain one is
   removed, so an interrupted migration leaves both, never neither.
 
+### Entering a secret
+
+Every field that takes a credential — a cloud provider's API key, the Hugging
+Face token, an MCP server's Bearer token, Basic password and API-key value, and
+a custom header's value — tells the keyboard it is a password, so a keyboard
+that honours the input type neither suggests it nor adds it to its dictionary.
+The MCP fields mask what is typed as well. What this cannot stop is a keyboard
+that ignores the input type: a keyboard sees everything typed into any field,
+which is why an input method granted by the user is outside this policy's scope.
+
 ### On-device processing by default
 
 - All inference performed through the on-device LiteRT-LM engine is local.
