@@ -1137,6 +1137,8 @@ val browserEditorSerializerFile =
     file("$projectDir/src/main/java/app/knotwork/android/domain/pipelineio/PipelineJsonSerializer.kt")
 val browserEditorCloudProviderFile =
     file("$projectDir/src/main/java/app/knotwork/android/domain/models/CloudProvider.kt")
+val browserEditorRouteLabelsFile =
+    file("$projectDir/src/main/java/app/knotwork/android/domain/models/RouteLabels.kt")
 // Every file whose content feeds the generated blocks; drives up-to-date checks.
 val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + browserEditorPresetFiles +
     browserEditorTemplateFiles + setOf(
@@ -1266,7 +1268,7 @@ val verifyBrowserEditorConstants by tasks.registering {
         "Fails the build if pipeline-editor.html AUTO-GEN constant blocks have drifted from the Android domain sources."
     inputs.files(browserEditorInputFiles)
     inputs.file(browserEditorHtmlFile)
-    inputs.files(browserEditorSerializerFile, browserEditorCloudProviderFile)
+    inputs.files(browserEditorSerializerFile, browserEditorCloudProviderFile, browserEditorRouteLabelsFile)
     doLast {
         val drifted = BrowserEditorConstantsGenerator.drift(
             html = browserEditorHtmlFile.readText(),
@@ -1325,11 +1327,13 @@ val verifyBrowserEditorConstants by tasks.registering {
             )
         }
         // And the editor must read a file by the app's rules: the same config keys, the
-        // same Input-data flags, the same provider ids — checked against the app's source.
+        // same Input-data flags, the same provider ids, the same branch labels — checked
+        // against the app's source.
         val parity = BrowserEditorImportParityGuard.mismatches(
             html = browserEditorHtmlFile.readText(),
             serializerSource = browserEditorSerializerFile.readText(),
             cloudProviderSource = browserEditorCloudProviderFile.readText(),
+            routeLabelsSource = browserEditorRouteLabelsFile.readText(),
         )
         if (parity.isNotEmpty()) {
             throw GradleException(

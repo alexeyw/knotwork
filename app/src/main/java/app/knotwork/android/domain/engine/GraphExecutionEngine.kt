@@ -27,6 +27,7 @@ import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.Role
+import app.knotwork.android.domain.models.RouteLabels
 import app.knotwork.android.domain.models.RunBudgetLedger
 import app.knotwork.android.domain.models.RunContextNotes
 import app.knotwork.android.domain.models.RunGeneratingModel
@@ -1320,9 +1321,9 @@ constructor(
                 activeQueueProcessorId = currentNode.id
 
                 val edges = graph.connections.filter { it.sourceNodeId == currentNode.id }
-                val itemNodeId = edges.find { it.label.equals("Item", ignoreCase = true) }?.targetNodeId
+                val itemNodeId = edges.find { RouteLabels.matches(it.label, RouteLabels.ITEM) }?.targetNodeId
                     ?: edges.firstOrNull()?.targetNodeId
-                val doneNodeId = edges.find { it.label.equals("Done", ignoreCase = true) }?.targetNodeId
+                val doneNodeId = edges.find { RouteLabels.matches(it.label, RouteLabels.DONE) }?.targetNodeId
 
                 if (activeQueue.isNotEmpty() && itemNodeId != null) {
                     // Compute dynamic total: current steps already done + all queue iterations + tail after queue.
@@ -1473,16 +1474,16 @@ constructor(
         }
 
         val targetNodeId = if (currentNode.type == NodeType.IF_CONDITION) {
-            val expectedLabel = if (conditionResult == true) "True" else "False"
-            val oppositeLabel = if (conditionResult == true) "False" else "True"
-            val exactTarget = edges.find { it.label.equals(expectedLabel, ignoreCase = true) }?.targetNodeId
+            val expectedLabel = if (conditionResult == true) RouteLabels.TRUE else RouteLabels.FALSE
+            val oppositeLabel = if (conditionResult == true) RouteLabels.FALSE else RouteLabels.TRUE
+            val exactTarget = edges.find { RouteLabels.matches(it.label, expectedLabel) }?.targetNodeId
             when {
                 exactTarget != null -> exactTarget
                 // The author wired the opposite branch but left this one
                 // unconnected: terminate the branch (-> "terminated without
                 // OUTPUT") instead of silently falling through to an arbitrary
                 // first edge and running the wrong branch on this verdict.
-                edges.any { it.label.equals(oppositeLabel, ignoreCase = true) } -> null
+                edges.any { RouteLabels.matches(it.label, oppositeLabel) } -> null
                 // No True/False labels at all — a single default edge. Keep the
                 // legacy fall-through so an unlabelled pass-through still routes.
                 else -> edges.firstOrNull()?.targetNodeId
@@ -1495,7 +1496,7 @@ constructor(
             // repair attempts — which is why the fallback has to cover the null
             // case, and why it was reachable by nothing when it did not.
             val matchedEdge = routingKey?.let { key ->
-                edges.find { it.label?.equals(key, ignoreCase = true) == true }
+                edges.find { RouteLabels.matches(it.label, key) }
                     ?: edges.find { !it.label.isNullOrBlank() && routingKeyContainsLabelAsWord(key, it.label) }
             }
             matchedEdge?.targetNodeId ?: unmatchedRouterTarget(currentNode, edges)
@@ -1503,7 +1504,7 @@ constructor(
             // EVALUATION emits a Pass / Retry / Fail verdict as the routing key;
             // route to the edge whose label matches the verdict, falling back to
             // the first outgoing edge when the verdict has no dedicated port.
-            edges.find { it.label?.equals(routingKey, ignoreCase = true) == true }?.targetNodeId
+            edges.find { RouteLabels.matches(it.label, routingKey) }?.targetNodeId
                 ?: edges.firstOrNull()?.targetNodeId
         } else {
             edges.firstOrNull()?.targetNodeId
@@ -1551,9 +1552,9 @@ constructor(
         results: List<String>,
     ): QueueStep {
         val edges = graph.connections.filter { it.sourceNodeId == queueProcessorId }
-        val itemNodeId = edges.find { it.label.equals("Item", ignoreCase = true) }?.targetNodeId
+        val itemNodeId = edges.find { RouteLabels.matches(it.label, RouteLabels.ITEM) }?.targetNodeId
             ?: edges.firstOrNull()?.targetNodeId
-        val doneNodeId = edges.find { it.label.equals("Done", ignoreCase = true) }?.targetNodeId
+        val doneNodeId = edges.find { RouteLabels.matches(it.label, RouteLabels.DONE) }?.targetNodeId
 
         if (remainingItems.isEmpty() || itemNodeId == null) {
             val summary = "Queue execution completed.\nResults:\n" +

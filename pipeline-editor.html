@@ -8326,11 +8326,25 @@
                 return;
             }
         }
+        // A fixed-branch node's edge labels, spelled as their sockets are: the app
+        // matches them without regard to case and refuses a label naming no branch,
+        // so an edge labelled `false` must hang from the False socket here too.
+        const branchLabels = new Map();
         for (let i = 0; i < rawConnections.length; i++) {
             const jc = rawConnections[i];
             if (!jc || typeof jc !== 'object' || Array.isArray(jc)) {
                 alert(`Invalid pipeline document: connections[${i}] is not an object.`);
                 return;
+            }
+            const srcType = rawNodes.find(n => n.id === jc.fromNodeId)?.type;
+            if (typeof jc.label === 'string' && jc.label.trim() && PORT_AUTO_LABELS[srcType]) {
+                const branch = canonicalBranchLabel(srcType, jc.label);
+                if (!branch) {
+                    alert(`Connection "${jc.id}" from ${srcType} node "${jc.fromNodeId}" is labelled ` +
+                        `"${jc.label}"; its branches are ${Object.values(PORT_AUTO_LABELS[srcType]).join(', ')}`);
+                    return;
+                }
+                branchLabels.set(i, branch);
             }
         }
 
@@ -8415,7 +8429,7 @@
                 if (labelEl) labelEl.textContent = data.label || t.label;
             });
 
-            rawConnections.forEach(jc => {
+            rawConnections.forEach((jc, i) => {
                 const srcDf = idMap.get(jc.fromNodeId);
                 const tgtDf = idMap.get(jc.toNodeId);
                 if (!srcDf || !tgtDf) {
@@ -8423,11 +8437,12 @@
                     return;
                 }
                 const srcType = editor.getNodeFromId(srcDf)?.name;
-                const outClass = pickOutputClass(srcType, jc.label);
+                const label = branchLabels.get(i) ?? jc.label;
+                const outClass = pickOutputClass(srcType, label);
                 const inClass = 'input_1';
                 editor.addConnection(srcDf, tgtDf, outClass, inClass);
-                if (jc.label) {
-                    connectionLabels.set(connectionKey(srcDf, outClass, tgtDf, inClass), jc.label);
+                if (label) {
+                    connectionLabels.set(connectionKey(srcDf, outClass, tgtDf, inClass), label);
                 }
             });
 
@@ -8448,6 +8463,19 @@
         historyIndex = -1;
         pushSnapshot();
         runValidation();
+    }
+
+    /**
+     * The socket spelling of an edge [label] leaving a [nodeType] node with fixed
+     * branches, or `null` when it names none of them. The app's rule
+     * (`RouteLabels.canonical`): equal ignoring case — the engine routes by it, so
+     * the socket an edge hangs from here is the branch the run takes it by.
+     */
+    function canonicalBranchLabel(nodeType, label) {
+        const map = PORT_AUTO_LABELS[nodeType];
+        if (!map) return null;
+        const wanted = String(label).trim().toLowerCase();
+        return Object.values(map).find(branch => branch.toLowerCase() === wanted) ?? null;
     }
 
     /**

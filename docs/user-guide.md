@@ -1548,6 +1548,12 @@ in rather than taken as written:
   whose id is not one line of at most 128 characters is refused.
 - **Text quoted from the file stays on one line.** The settings a newer file
   carries that this version would drop are listed one short line each.
+- **Branches are drawn where the run takes them.** An **If**, **Queue** or
+  **Evaluation** edge label is read in any letter case and saved as its port
+  spells it (`false` becomes **False**); a label that names none of the node's
+  branches refuses the file. A router edge whose label names none of the
+  router's classes gets a port of its own on the canvas, since the run can
+  choose it too.
 - **Starter prompts only name tools the pipeline calls.** The `uses · …` line
   under a starter prompt keeps a tool only if one of the pipeline's Tool nodes
   is set to call it, and a pipeline keeps at most six starter prompts.

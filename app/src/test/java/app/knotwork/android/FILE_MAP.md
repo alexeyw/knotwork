@@ -255,6 +255,7 @@ Only Kotlin files appear inside the generated blocks.
     - `PipelineGraphValidationTest.kt` - Cycle detection in `PipelineGraph.isValidDAG` / `PipelineGraph.validate`.
     - `PipelinePresetTest.kt` - Tests for `PipelinePreset` and `PresetCategory`.
     - `ResultTest.kt` - Tests for Result.
+    - `RouteLabelsTest.kt` - `RouteLabels`: the branch labels a run follows, and the one rule that matches them.
     - `RunBudgetLedgerTest.kt` - Unit tests for `RunBudgetLedger` — the run-tree spend ledger every autonomous ceiling is charged against.
     - `RunNoticeCauseTest.kt` - The live-only advisory raised while a run is still going.
     - `RunTerminationReasonTest.kt` - Unit tests for `RunTerminationReason` and its persisted discriminator.
@@ -518,6 +519,7 @@ Only Kotlin files appear inside the generated blocks.
       - `editor/` - Tests for the editor screen and its state.
         - `canvas/` - Tests for the canvas geometry and hit-testing.
           - `EditorHitTestTest.kt` - Unit tests for the editor's canvas-space hit-test geometry — the maths behind connection creation.
+          - `ImportedRoutingDisplayTest.kt` - The canvas draws an imported branching node's edges from the port the run takes them by.
         - `config/` - Tests for the node-configuration codec and its type mapping.
           - `BundledPresetEditabilityTest.kt` - Proves every node of every bundled pipeline preset opens **cleanly** in the editor's `NodeConfigSheet` — decoded by `NodeConfigCodec` and accepted by `NodeConfigValidation` with zero field errors.
           - `CookbookRuntimeReachTest.kt` - Holds the published claim "this configuration field reaches the run" against what `NodeConfigCodec` actually does.

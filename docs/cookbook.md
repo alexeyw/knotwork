@@ -86,7 +86,7 @@ that it did.
 | **Output**<br>`OUTPUT` | Where the run ends and the answer reaches you. With no prompt of its own it forwards the previous node's text verbatim; give it one and it re-formats that text with one more model pass. Exactly one per pipeline. | 1 | — | nodeInput \* |
 | **LiteRT**<br>`LITE_RT` | One inference step on the model running on the phone. The default answering node, and the one to reach for unless a step genuinely needs a larger model. | 1 | 1 | originalTask, nodeInput |
 | **Cloud**<br>`CLOUD` | One inference step against a configured cloud provider. Everything this node is given leaves the device, so it is a node to place deliberately rather than by default. | 1 | 1 | chatHistory, originalTask, nodeInput |
-| **Intent Router**<br>`INTENT_ROUTER` | Sorts the incoming text into one of the classes you declare and sends the run down the matching branch — the way to give one pipeline several behaviours. | 1 | one per class | chatHistory, originalTask, nodeInput |
+| **Intent Router**<br>`INTENT_ROUTER` | Sorts the incoming text into one of the classes you declare and sends the run down the matching branch — the way to give one pipeline several behaviours. | 1 | one per class, plus one per unnamed edge label | chatHistory, originalTask, nodeInput |
 | **If Condition**<br>`IF_CONDITION` | A two-way branch: a yes/no question about the input, or a deterministic check for whether the run carries an image. | 1 | True / False | input forwarded as-is |
 | **Clarification**<br>`CLARIFICATION` | Pauses the run to ask you a question and waits for the answer, which then becomes the node's output. The one node that deliberately stops mid-run. | 1 | 1 | originalTask, nodeInput |
 | **Tool**<br>`TOOL` | Calls one tool — a built-in, an AppFunction from another app, or one published by an MCP server — and passes the result on. Anything its risk level does not clear waits for your approval. | 1 | 1 | nodeInput |
@@ -97,7 +97,7 @@ that it did.
 | **Pipeline**<br>`PIPELINE` | Runs another saved pipeline as a single step and returns its answer — a function call between pipelines, and the way to reuse a branch instead of copying it. | 1 | 1 | input forwarded as-is |
 | **Skill**<br>`SKILL` | Runs a reusable skill: a fixed instruction plus the list of tools that skill may use. The allowlist is enforced when a tool is called, not merely suggested in the prompt. | 1 | 1 | originalTask, nodeInput |
 
-† A port the node only has while its configuration asks for it — see that node's own section below.
+† A port the node only has while its configuration asks for it, or an edge already uses it — see that node's own section below.
 
 \* `OUTPUT` — only when the node has a prompt of its own; in pass-through mode the upstream text is forwarded without any context being composed.
 <!-- /AUTO-GEN:NODE_REFERENCE -->
@@ -159,7 +159,7 @@ One inference step against a configured cloud provider. Everything this node is 
 
 Sorts the incoming text into one of the classes you declare and sends the run down the matching branch — the way to give one pipeline several behaviours.
 
-- **Ports.** One inbound port; one outbound port per class declared on the node.
+- **Ports.** One inbound port; one outbound port per class declared on the node, and one per outgoing edge label no class names — the run chooses among the edge labels, so every one of them is drawn.
 - **Context on a new node.** `chatHistory`, `originalTask`, `nodeInput`.
 
 **What decides what it does**
@@ -169,7 +169,7 @@ Sorts the incoming text into one of the classes you declare and sends the run do
 | The instruction that sorts the message into a class | the sheet's `classifierPrompt` — a new node arrives with this type's shipped default in it |
 | Where an answer matching no class goes. Unset, it takes the first branch you connected; set, it takes that class's branch, and terminates when that branch is unwired | the sheet's `fallbackClass` |
 | Whether the sorting runs on-device or in the cloud | the sheet's `engineProvider` |
-| Which branches exist — one port per class, and the run follows the edge the model picks | the sheet's `classes` |
+| Which ports the canvas draws — one per class, plus one per edge label no class names; the run chooses among the edge labels | the sheet's `classes` |
 
 ### If Condition — `IF_CONDITION`
 
@@ -259,7 +259,7 @@ Judges what the previous step produced and answers Pass, Retry or Fail — the n
 |---|---|
 | The instruction that judges the result | the sheet's `criteriaPrompt` — a new node arrives with this type's shipped default in it |
 | Whether the judgement runs on-device or in the cloud | the sheet's `engineProvider` |
-| Whether the node has a Retry branch at all — it does not cap how often that branch is taken | the sheet's `maxRetries` |
+| Whether the canvas shows a Retry port when no edge is labelled Retry — a Retry edge is taken on a Retry verdict either way, and this does not cap how often | the sheet's `maxRetries` |
 
 ### Summary — `SUMMARY`
 
@@ -547,7 +547,7 @@ grows its own row back.
 | `CLOUD` | `temperature` | `0.7f` | **Not a control** — no sheet shows it; kept so an older pipeline file round-trips (the cloud client is configured from the provider's own settings) |
 | `CLOUD` | `maxTokens` | `1024` | **Not a control** — no sheet shows it; kept so an older pipeline file round-trips (the cloud client is configured from the provider's own settings) |
 | `CLOUD` | `timeoutMs` | `30_000` | **Not a control** — no sheet shows it; kept so an older pipeline file round-trips (the cloud client is configured from the provider's own settings) |
-| `INTENT_ROUTER` | `classes` | `emptyList()` | **Shapes the graph** — which branches exist — one port per class, and the run follows the edge the model picks |
+| `INTENT_ROUTER` | `classes` | `emptyList()` | **Shapes the graph** — which ports the canvas draws — one per class, plus one per edge label no class names; the run chooses among the edge labels |
 | `INTENT_ROUTER` | `classifierPrompt` | `""` | **Yes** — saved as the node's `systemPrompt` |
 | `INTENT_ROUTER` | `fallbackClass` | `null` | **Yes** — saved as the node's `fallbackClass` |
 | `INTENT_ROUTER` | `engineProvider` | `null` | **Yes** — saved as the node's `cloudProvider` |
@@ -567,7 +567,7 @@ grows its own row back.
 | `DECOMPOSITION` | `engineProvider` | `null` | **Yes** — saved as the node's `cloudProvider` |
 | `QUEUE_PROCESSOR` | `stopOnError` | `true` | **Yes** — saved as the node's `stopOnError` |
 | `EVALUATION` | `criteriaPrompt` | `""` | **Yes** — saved as the node's `systemPrompt` |
-| `EVALUATION` | `maxRetries` | `2` | **Shapes the graph** — whether the node has a Retry branch at all — it does not cap how often that branch is taken |
+| `EVALUATION` | `maxRetries` | `2` | **Shapes the graph** — whether the canvas shows a Retry port when no edge is labelled Retry — a Retry edge is taken on a Retry verdict either way, and this does not cap how often |
 | `EVALUATION` | `engineProvider` | `null` | **Yes** — saved as the node's `cloudProvider` |
 | `SUMMARY` | `customPrompt` | `null` | **Yes** — saved as the node's `systemPrompt` |
 | `PIPELINE` | `targetPipelineId` | `""` | **Yes** — saved as the node's `targetPipelineId` |

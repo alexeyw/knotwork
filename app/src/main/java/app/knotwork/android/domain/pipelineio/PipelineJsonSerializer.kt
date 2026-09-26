@@ -8,6 +8,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
+import app.knotwork.android.domain.models.RouteLabels
 import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
@@ -431,9 +432,9 @@ object PipelineJsonSerializer {
         }
 
         val connectionsJson = root.optJSONArray("connections") ?: JSONArray()
-        val nodeIds = nodes.mapTo(mutableSetOf()) { it.id }
+        val nodeTypes = nodes.associate { it.id to it.type }
         val connections = (0 until connectionsJson.length()).map { i ->
-            buildConnection(connectionsJson.getJSONObject(i), index = i, nodeIds = nodeIds)
+            buildConnection(connectionsJson.getJSONObject(i), index = i, nodeTypes = nodeTypes)
         }
         firstDuplicate(connections.map { it.id })?.let { duplicate ->
             throw PipelineParseException("Duplicate connection id \"${duplicate.toDisplaySafe()}\"")
@@ -536,10 +537,11 @@ object PipelineJsonSerializer {
 
     // Reason: each `throw` here pinpoints a distinct schema-violation kind
     // (`missing id`, `missing fromNodeId`, `missing toNodeId`, `unknown source`,
-    // `unknown target`). Folding them into a single Result<Throwable> would
-    // erase the message-specificity that makes import errors actionable.
+    // `unknown target`, `no such branch`). Folding them into a single
+    // Result<Throwable> would erase the message-specificity that makes import
+    // errors actionable.
     @Suppress("ThrowsCount")
-    private fun buildConnection(json: JSONObject, index: Int, nodeIds: Set<String>): ConnectionModel {
+    private fun buildConnection(json: JSONObject, index: Int, nodeTypes: Map<String, NodeType>): ConnectionModel {
         val id = json.optString("id").takeIf { it.isNotBlank() }
             ?: throw PipelineParseException("Connection #$index missing id")
         val quotedId = id.toDisplaySafe()
@@ -547,10 +549,10 @@ object PipelineJsonSerializer {
             ?: throw PipelineParseException("Connection \"$quotedId\" missing fromNodeId")
         val to = json.optString("toNodeId").takeIf { it.isNotBlank() }
             ?: throw PipelineParseException("Connection \"$quotedId\" missing toNodeId")
-        if (from !in nodeIds) {
+        if (from !in nodeTypes) {
             throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${from.toDisplaySafe()}\"")
         }
-        if (to !in nodeIds) {
+        if (to !in nodeTypes) {
             throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${to.toDisplaySafe()}\"")
         }
         // Drawn on the canvas beside the edge, so it gets the node label's rule.
@@ -558,7 +560,37 @@ object PipelineJsonSerializer {
         val label = json.optStringOrNull("label")
             ?.toDisplaySafe(maxLength = PipelineConstants.MAX_IMPORTED_LABEL_LENGTH, ellipsis = "")
             ?.takeIf { it.isNotEmpty() }
-        return ConnectionModel(id = id, sourceNodeId = from, targetNodeId = to, label = label)
+        return ConnectionModel(
+            id = id,
+            sourceNodeId = from,
+            targetNodeId = to,
+            label = branchLabel(label, from, nodeTypes, quotedId),
+        )
+    }
+
+    /**
+     * [label] as the port of a fixed-branch node spells it, so the canvas draws the
+     * edge from the port the run takes it by.
+     *
+     * A label naming none of the node's branches is refused: the run would take the
+     * edge for no verdict, or — for an EVALUATION — as its fallback, while the canvas
+     * drew it from a real port. An unlabelled edge stays unlabelled; the engine
+     * treats a lone one as the node's single way out.
+     *
+     * @param label the edge's display-safe label, or `null`.
+     * @param from id of the node the edge leaves.
+     * @param nodeTypes every node's type, by id.
+     * @param quotedId the edge id, already display-safe, for the error message.
+     * @return the label to store.
+     */
+    private fun branchLabel(label: String?, from: String, nodeTypes: Map<String, NodeType>, quotedId: String): String? {
+        val type = nodeTypes.getValue(from)
+        val branches = RouteLabels.fixedBranches(type)
+        if (label == null || branches == null) return label
+        return RouteLabels.canonical(type, label) ?: throw PipelineParseException(
+            "Connection \"$quotedId\" from ${type.name} node \"${from.toDisplaySafe()}\" is labelled \"$label\"; " +
+                "its branches are ${branches.joinToString(", ")}",
+        )
     }
 
     /** The first value of [ids] that occurs twice, or `null` when every id is distinct. */

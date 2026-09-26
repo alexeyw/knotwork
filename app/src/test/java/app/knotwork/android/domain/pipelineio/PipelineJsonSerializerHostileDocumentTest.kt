@@ -176,6 +176,45 @@ class PipelineJsonSerializerHostileDocumentTest {
         assertEquals("i".repeat(ceiling), success(document(nodes = MINIMAL_NODES, id = "i".repeat(ceiling))).graph.id)
     }
 
+    @Test
+    fun `parse spells a fixed branch label the way its port does`() {
+        val graph = success(
+            document(
+                nodes = """[
+                    {"id":"if","type":"IF_CONDITION","config":{"conditionKeywords":"urgent"}},
+                    {"id":"q","type":"QUEUE_PROCESSOR"},{"id":"ev","type":"EVALUATION"},
+                    {"id":"a","type":"OUTPUT"}
+                ]""",
+                connections = """[
+                    {"id":"f","fromNodeId":"if","toNodeId":"a","label":"false"},
+                    {"id":"d","fromNodeId":"q","toNodeId":"a","label":"DONE"},
+                    {"id":"r","fromNodeId":"ev","toNodeId":"a","label":"retry"},
+                    {"id":"u","fromNodeId":"if","toNodeId":"q"}
+                ]""",
+            ),
+        ).graph
+
+        assertEquals(
+            mapOf("f" to "False", "d" to "Done", "r" to "Retry", "u" to null),
+            graph.connections.associate { it.id to it.label },
+        )
+    }
+
+    @Test
+    fun `parse refuses a label that names no branch of a fixed-branch node`() {
+        val outcome = failure(
+            document(
+                nodes = """[{"id":"if","type":"IF_CONDITION"},{"id":"a","type":"OUTPUT"}]""",
+                connections = """[{"id":"m","fromNodeId":"if","toNodeId":"a","label":"maybe"}]""",
+            ),
+        )
+
+        assertEquals(
+            "Connection \"m\" from IF_CONDITION node \"if\" is labelled \"maybe\"; its branches are True, False",
+            outcome.message,
+        )
+    }
+
     private companion object {
         const val MINIMAL_NODES = """[{"id":"a","type":"INPUT"}]"""
 
