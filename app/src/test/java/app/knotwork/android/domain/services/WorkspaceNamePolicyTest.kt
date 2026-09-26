@@ -55,6 +55,14 @@ class WorkspaceNamePolicyTest {
     }
 
     @Test
+    fun `given text when hasForbiddenCharacter then only control characters and broken pairs count`() {
+        assertTrue(WorkspaceNamePolicy.hasForbiddenCharacter("a\uD800b"))
+        assertTrue(WorkspaceNamePolicy.hasForbiddenCharacter("line\nbreak"))
+        assertFalse(WorkspaceNamePolicy.hasForbiddenCharacter("notes/\uD83D\uDE00.md"))
+        assertFalse(WorkspaceNamePolicy.hasForbiddenCharacter("../x.md"))
+    }
+
+    @Test
     fun `given a whole surrogate pair when violationOf then there is none`() {
         assertNull(WorkspaceNamePolicy.violationOf("notes/\uD83D\uDE00 smile.md"))
     }

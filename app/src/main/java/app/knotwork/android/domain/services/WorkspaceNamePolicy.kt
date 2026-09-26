@@ -76,11 +76,20 @@ object WorkspaceNamePolicy {
      * @return The first rule [relativePath] breaks, or `null` when it may be created.
      */
     fun violationOf(relativePath: String): Violation? = when {
-        relativePath.indices.any { relativePath.forbiddenAt(it) } -> Violation.CONTROL_CHARACTER
+        hasForbiddenCharacter(relativePath) -> Violation.CONTROL_CHARACTER
         relativePath.utf8Size() > MAX_PATH_BYTES -> Violation.PATH_TOO_LONG
         relativePath.split('/').any { it.utf8Size() > MAX_NAME_BYTES } -> Violation.NAME_TOO_LONG
         else -> null
     }
+
+    /**
+     * Reports whether [text] holds a character no new name may carry: one
+     * [isForbidden] rejects, or half of a surrogate pair.
+     *
+     * @param text A path or a name, as the caller wrote it.
+     * @return `true` when some character of [text] is forbidden.
+     */
+    fun hasForbiddenCharacter(text: String): Boolean = text.indices.any { text.forbiddenAt(it) }
 
     /**
      * Replaces every forbidden character of [name] with [REPLACEMENT], one for
