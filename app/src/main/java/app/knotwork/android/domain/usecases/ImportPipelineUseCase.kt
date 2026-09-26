@@ -22,7 +22,8 @@ import javax.inject.Inject
  *    / [PipelineImportOutcome.Failure]; what the file claims about itself is
  *    then checked against its graph ([ImportedPipelineClaims]).
  * 2. On a clean [PipelineImportOutcome.Success] this use case checks whether
- *    the imported graph's id already names a saved pipeline. If it does **not**,
+ *    the imported graph's id is already taken — it names a saved pipeline, or a
+ *    deleted pipeline's bindings still name it. If it is **not**,
  *    the graph is persisted immediately through [SavePipelineUseCase]. If it
  *    **does**, nothing is written — [ImportInvocation.pendingCollision] carries
  *    the graph so the UI can prompt the user (Replace / Import as copy /
@@ -91,13 +92,9 @@ class ImportPipelineUseCase @Inject constructor(
             return ImportInvocation(outcome = outcome, saveResult = null)
         }
 
-        val existing = pipelineRepository.getPipelineById(outcome.graph.id)
-        return if (existing != null) {
-            ImportInvocation(
-                outcome = outcome,
-                saveResult = null,
-                pendingCollision = collision(outcome.graph, existing),
-            )
+        val collision = collisionOf(outcome.graph)
+        return if (collision != null) {
+            ImportInvocation(outcome = outcome, saveResult = null, pendingCollision = collision)
         } else {
             ImportInvocation(outcome = outcome, saveResult = save(freshenElementIds(outcome.graph)))
         }
@@ -115,9 +112,9 @@ class ImportPipelineUseCase @Inject constructor(
      *   or [ConfirmedImport.Collision] describing the collision when it is not.
      */
     suspend fun persistConfirmed(outcome: PipelineImportOutcome.SchemaMismatch): ConfirmedImport {
-        val existing = pipelineRepository.getPipelineById(outcome.graph.id)
-        return if (existing != null) {
-            ConfirmedImport.Collision(collision(outcome.graph, existing))
+        val collision = collisionOf(outcome.graph)
+        return if (collision != null) {
+            ConfirmedImport.Collision(collision)
         } else {
             ConfirmedImport.Saved(save(freshenElementIds(outcome.graph)))
         }
@@ -155,13 +152,24 @@ class ImportPipelineUseCase @Inject constructor(
     /** Saves [graph] and, on success, returns it — the graph now in storage. */
     private suspend fun save(graph: PipelineGraph): Result<PipelineGraph> = savePipelineUseCase(graph).map { graph }
 
-    /** Describes [incoming] colliding with the library's [existing] pipeline. */
-    private suspend fun collision(incoming: PipelineGraph, existing: PipelineGraph): PipelineCollision =
-        PipelineCollision(
-            incoming = incoming,
-            existingName = existing.name,
-            bindings = findPipelineBindings.of(existing.id),
-        )
+    /**
+     * Describes what [incoming]'s id is already taken by, if anything: a library
+     * pipeline, or bindings left behind by a deleted one. A deleted pipeline's id
+     * is free in the library, but its chats, triggers and callers still name it;
+     * saving under it without asking would re-bind all of them to the file.
+     *
+     * @param incoming The checked imported graph.
+     * @return The collision to confirm, or `null` when the id is free of both.
+     */
+    private suspend fun collisionOf(incoming: PipelineGraph): PipelineCollision? {
+        val existing = pipelineRepository.getPipelineById(incoming.id)
+        val bindings = findPipelineBindings.of(incoming.id)
+        return when {
+            existing != null -> PipelineCollision(incoming, existing.name, bindings)
+            !bindings.isEmpty -> PipelineCollision(incoming, existingName = null, bindings = bindings)
+            else -> null
+        }
+    }
 
     /**
      * Regenerates [graph]'s node and connection ids (pipeline id preserved) so

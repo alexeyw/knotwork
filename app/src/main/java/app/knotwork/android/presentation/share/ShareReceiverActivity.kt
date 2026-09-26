@@ -1,12 +1,10 @@
 package app.knotwork.android.presentation.share
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.annotation.StringRes
-import androidx.core.content.IntentCompat
 import androidx.lifecycle.lifecycleScope
 import app.knotwork.android.R
 import app.knotwork.android.domain.usecases.ImageAttachmentBlock
@@ -50,11 +48,16 @@ class ShareReceiverActivity : ComponentActivity() {
             return
         }
 
-        val streamUri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+        val fields = SharedIntentFields.read(intent)
+        if (fields == null) {
+            toast(getString(R.string.share_nothing_to_share))
+            finish()
+            return
+        }
         val payload = parseSharedContent(
-            mimeType = intent.type,
-            text = intent.getStringExtra(Intent.EXTRA_TEXT),
-            streamUri = streamUri?.toString(),
+            mimeType = fields.mimeType,
+            text = fields.text,
+            streamUri = fields.streamUri,
         )
 
         lifecycleScope.launch {

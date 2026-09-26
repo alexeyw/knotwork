@@ -44,6 +44,25 @@ details.
   arguments are longer than a notification can show is cut there with a note and
   approved in the chat, where every argument is visible. Deny still works from
   the notification.
+- **A share or the Quick Settings tile no longer runs a pipeline you did not bind.**
+  If the pipeline they were bound to no longer existed — after *Erase data*, for
+  example — they ran the default pipeline while Settings said "Not set". They now
+  do nothing until you bind one.
+- **Deleting a pipeline switches its triggers off at once**, and importing a file
+  under a deleted pipeline's id asks first. The id stayed free while chats,
+  triggers and calling pipelines still named it, so an import could quietly
+  become what they ran. The import now lists them, and importing as a copy — the
+  default — leaves them alone.
+- **Switching `search_tool` off stops the lookup other apps can ask for too.**
+  The Wikipedia search published to other apps on Android 16 ignored the tool's
+  switch on the Tools screen.
+- **Another app can no longer crash Knotwork through the share sheet.** A share
+  carrying data the app cannot read is now treated as an empty share, and a shared
+  image larger than 64 MB is refused instead of being read into memory.
+- **A file name the phone cannot store is refused.** A name holding half of a
+  surrogate pair (a broken emoji, say) could stop the Files screen and the file
+  tools from listing anything; it is refused now, and a name like that left by an
+  earlier version no longer breaks the listing.
 - **A denied tool call stays denied.** If the approval setting or the tool's
   risk level was relaxed while a background run waited for an answer, a
   **Deny** given afterwards was recorded but not applied, and the tool ran. The

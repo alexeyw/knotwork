@@ -165,14 +165,16 @@ the database's**, and this is the honest statement of that trade-off:
 - **Sharing hands over a copy, never the workspace.** The Files screen's
   **Share** stages a copy of the file in the app cache and grants the receiving
   app read access to that copy only. Deleting the file deletes its copies; any
-  other copy is removed after it is an hour old, by the next share or the daily
-  maintenance pass (whichever comes first, so possibly up to a day later) —
-  never earlier, so one share cannot take another share's file away from an app
-  that is still reading it.
-- A path the filesystem cannot take — a NUL byte, or one it rejects — is
-  refused with `WorkspaceError.InvalidPath` instead of an exception. A write that
-  would **create** a file also needs a name without control characters or line
-  breaks, at most 242 bytes per name and 512 bytes per path. Imports replace such
+  other copy is removed once it is an hour old, by the next share or by the
+  daily maintenance pass — never earlier, so one share cannot take another
+  share's file away from an app that is still reading it. The maintenance pass
+  runs only while the phone is charging and idle, so without a later share a
+  copy can outlive the hour by more than a day on a phone that rarely is.
+- A path the filesystem cannot take — a NUL byte, a directory level that is a
+  file, or a name it rejects — is refused with `WorkspaceError.InvalidPath`
+  instead of an exception. A write that would **create** a file also needs a name
+  without control characters, line breaks or half of a surrogate pair, at most
+  242 bytes per name and 512 bytes per path. Imports replace such
   characters with `_`; a file named before this rule can still be read and
   deleted, and the file listings the agent reads show its control characters
   escaped, so a name cannot add a line of its own to a listing.
@@ -279,15 +281,20 @@ new risk surface, and the design constrains it deliberately:
   entry and an explicit, revocable consent.
 - **Inert until the user binds a pipeline.** A trigger, the share target and the
   tile all do **nothing** until the user explicitly points them at a pipeline —
-  the privacy-first default. An unbound trigger never fires, and a bound trigger
-  is **auto-disabled** if its pipeline is later deleted, so a dangling automation
-  can never wake and run an unintended graph. A binding is to a pipeline's
-  identity, not to its steps: **importing a file with Replace** keeps the
-  identity, and with it every binding — the trigger, the share target, the tile,
-  the default pipeline, the chats and the pipelines that call it all run the
+  the privacy-first default. An unbound trigger never fires. Deleting a pipeline
+  switches its triggers off and clears the share target, the tile and the default
+  that named it, and a share or tile whose binding names a pipeline that no longer
+  exists — say after *Erase data*, which keeps settings — does nothing, so a
+  dangling automation can never wake and run an unintended graph. A binding is to
+  a pipeline's identity, not to its steps: **importing a file with Replace** keeps
+  the identity, and with it every binding — the trigger, the share target, the
+  tile, the default pipeline, the chats and the pipelines that call it all run the
   imported steps afterwards. That is by design (it is how an updated pipeline
   keeps working), so the Replace confirmation names the pipeline already in the
-  library and lists each of those bindings before anything is written.
+  library and lists each of those bindings before anything is written. A file
+  imported under the id of a pipeline that was deleted asks the same way: the
+  chats, triggers and calling pipelines that still name that id are listed, and
+  importing as a copy — the default — leaves them alone.
 - **What another app can reach without asking.** Three components are exported
   without a permission. The launcher activity (`MainActivity`) only navigates: a
   caller can open a chat by its id, and nothing runs. The other two take content
@@ -302,8 +309,9 @@ new risk surface, and the design constrains it deliberately:
   `search_tool`, on Android 16 and later. Only the system binds the service, and
   only an agent holding `EXECUTE_APP_FUNCTIONS` — which Android 16 grants to
   privileged system apps — can call it. The call does not pass through the
-  agent's tool catalogue, so switching `search_tool` off on the Tools screen does
-  not stop it; *Block network from local model* does, for every caller.
+  agent's tool catalogue, so the tool checks both of its switches itself:
+  switching `search_tool` off on the Tools screen stops it, and so does *Block
+  network from local model*, for every caller.
 - **The share target is reachable without the share sheet.** It has to be
   exported for the share sheet to start it on the sending app's behalf, so an app
   can also start it directly and put text of its choosing where the user's own

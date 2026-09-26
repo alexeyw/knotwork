@@ -20,6 +20,7 @@ Only Kotlin files appear inside the generated blocks.
   - `DomainPurityKonsistTest.kt` - Konsist guard enforcing the strictest project rule for the `domain` layer: it is pure Kotlin with **zero** Android/framework imports, so it can be compiled and unit-tested off-device.
   - `EntrySurfaceLimitsDocumentsTest.kt` - Pins every number the public documents quote about the entry surfaces' limits to the constant that enforces it.
   - `ExportedComponentInventoryTest.kt` - Census of every component the app's source manifests export, and the permission each one demands of its caller.
+  - `ExportedEntryExtrasGuardTest.kt` - Every component exported **without a permission** reads its caller's extras only inside a function that catches `RuntimeException`.
   - `FirebaseIsolationKonsistTest.kt` - Konsist guard keeping the Firebase SDK out of the shared `main` source set.
   - `HitlDispatchKonsistTest.kt` - Census of the seams through which a tool call can take effect, and of the one channel through which a human answer can reach the gate in front of them.
   - `ImageAttachmentEntryCensusTest.kt` - Census of the production files that start runs through `AgentOrchestratorUseCase`, with whether each can attach an image — and, if it can, proof that it asks the multimodal pre-flight (`CheckImageAttachmentUseCase`) first.
@@ -39,6 +40,7 @@ Only Kotlin files appear inside the generated blocks.
   - `RegexConstructionKonsistTest.kt` - Census of how production code builds a regular expression: every pattern must be a **string literal in the source**, and anything spliced into it at runtime must pass through `Regex.escape` (or `Pattern.quote`).
   - `RepositoryPlacementKonsistTest.kt` - Konsist guard enforcing the repository placement convention from the api-conventions rule: the abstraction (`<Noun>Repository` interface) is owned by the `domain` layer, and its implementation (`<Noun>RepositoryImpl`) lives in the `data` layer.
   - `SnackbarHostGuardTest.kt` - Every snackbar in the app renders through `KnotworkSnackbarHost`, and every host has a place.
+  - `SurfaceBindingReadersTest.kt` - Only the callers that need a binding **after** its pipeline is gone read the raw surface binding; everything that starts a run from a surface, or shows it as ready, reads the existence-checked one.
   - `TabRootEntryGuardTest.kt` - Structural guard over the one navigation invariant the closed test bought us:
   - `TimberMessageTemplateKonsistTest.kt` - Census of the message every `WARN`-and-above Timber call writes: it must be a **string literal without templates**, with anything dynamic passed as a format argument.
   - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**
@@ -89,6 +91,7 @@ Only Kotlin files appear inside the generated blocks.
     - `TagsCsvTest.kt` - Unit tests for the shared `TagsCsv` codec.
     - `TransientCacheSweeperImplTest.kt` - Verifies `TransientCacheSweeperImpl` on a real filesystem: every registered handoff directory is swept, only past the shared retention, a share slot counts as fresh while its copy is, and nothing outside the registry is touched.
     - `WorkspaceShareCopiesTest.kt` - Unit tests for `WorkspaceShareCopies` on its own, for what the workspace tests cannot reach: a copy that fails half-way leaves nothing staged.
+    - `WorkspaceTreeTest.kt` - Unit tests for `WorkspaceTree.isRealEntry` — the link check behind every walk of the workspace (listing, quota, pruning).
   - `logging/` - Tests for the application-level Timber sinks.
     - `CrashlyticsTimberTreeTest.kt` - Unit tests for `CrashlyticsTimberTree`.
   - `mappers/` - Tests for the entity ↔ domain mappers.
@@ -387,6 +390,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ResetToRecommendedDefaultsUseCaseTest.kt` - Unit tests for `ResetToRecommendedDefaultsUseCase`.
     - `ResolveDocumentationLinkUseCaseTest.kt` - Unit tests for `ResolveDocumentationLinkUseCase`.
     - `ResolveEntryInferenceUseCaseTest.kt` - Unit tests for `ResolveEntryInferenceUseCase`, over two-node `INPUT` → entry graphs, one per entry node type.
+    - `ResolveLaunchableSurfacePipelineUseCaseTest.kt` - Unit tests for `ResolveLaunchableSurfacePipelineUseCase`: a surface runs only a pipeline that exists.
     - `ResolveRunCeilingsUseCaseTest.kt` - Unit tests for `ResolveRunCeilingsUseCase` — which configured numbers apply to a run, decided from its origin.
     - `ResolveSurfacePipelineUseCaseTest.kt` - Unit tests for `ResolveSurfacePipelineUseCase`, confirming each surface reads its own binding flow and passes through `null` (the inert default).
     - `ResumePipelineRunUseCaseTest.kt` - Behavioural coverage for `ResumePipelineRunUseCase` — every resume precondition (status, prompt presence, age window, graph identity) and the happy path that re-enqueues the run as a resume-flagged `AgentTask`.
@@ -442,6 +446,8 @@ Only Kotlin files appear inside the generated blocks.
     - `ExternalAutomationReceiverTest.kt` - Robolectric coverage for `ExternalAutomationReceiver` — the exported entry point a third-party automation app broadcasts to.
   - `run/` - Tests for the run-lifecycle collaborators in `presentation/run/`.
     - `RunOutcomeAnnouncerImplTest.kt` - Coverage for `RunOutcomeAnnouncerImpl` — the line a stopped run leaves in the chat it ran in.
+  - `share/` - Tests for the share-target entry point: reading a caller's share extras without crashing.
+    - `SharedIntentFieldsTest.kt` - Unit tests for `SharedIntentFields.read` — the only place `ShareReceiverActivity` touches a caller's extras.
   - `startup/` - Tests for the cold-start upkeep: every step failing in turn leaves the others running.
     - `StartupMaintenanceTest.kt` - `StartupMaintenance` must survive every one of its steps failing — the case it was written for is a database whose key is lost, where the trigger sync threw `DbPassphraseUnavailableException` out of `MainActivity` and killed the process before the splash could show *Erase data*, on every launch.
   - `ui/` - Tests for the screens and their ViewModels.

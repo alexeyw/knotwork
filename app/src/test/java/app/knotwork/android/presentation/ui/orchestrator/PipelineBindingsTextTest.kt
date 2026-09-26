@@ -64,6 +64,22 @@ class PipelineBindingsTextTest {
     }
 
     @Test
+    fun `given an id only a deleted pipeline's bindings hold when summarised then the file's name is marked as such`() {
+        val collision = PipelineCollision(
+            incoming = PipelineGraph(id = "p", name = "file name"),
+            existingName = null,
+            bindings = PipelineBindings(triggerCount = 1),
+        )
+
+        val line = PipelineBindingsText.summaryLine(collision) as UiText.Joined
+
+        assertEquals(
+            UiText.of(R.string.orchestrator_library_import_bundle_orphan_item, "file name"),
+            line.parts.first(),
+        )
+    }
+
+    @Test
     fun `given a colliding pipeline with bindings when summarised then its name leads and they follow`() {
         val collision = PipelineCollision(
             incoming = PipelineGraph(id = "p", name = "file name"),
