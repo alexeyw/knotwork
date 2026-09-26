@@ -389,6 +389,7 @@ Only Kotlin files appear inside the generated blocks.
     - `Result.kt` - Result wrapper model.
     - `ResumeContext.kt` - Checkpoint payload switching `GraphExecutionEngine` into resume mode: seq-ordered `NodeIo` prefix to replay (cursor model — sound for QUEUE_PROCESSOR loops), optional memory snapshot, and the next free trace seq. Documents the TOOL-node replay asymmetry.
     - `Role.kt` - Chat role enum.
+    - `RouteLabels.kt` - The branch labels a run follows out of a branching node, and the one rule that matches an edge's label against them.
     - `RoutingDecision.kt` - Routing decision model.
     - `RunBudgetLedger.kt` - Mutable spend ledger shared across one execution tree (steps + tokens), so a sub-pipeline charges the parent's ceilings instead of getting a private allowance and a breach at any depth fails the whole stack. Seeded from — and written back to — the root run record, so the count survives a park and resume; replayed nodes are never charged twice. Carries `SoftCeilingBreach`, the once-per-axis warning crossing.
     - `RunCeilings.kt` - The limits in force for one run: `RunCeilingAxis` (STEPS / TOKENS / MONEY), `RunCeilingLimit` (`Enforced(soft, hard)` or `Unavailable` — the state the money axis is in, said out loud rather than rendered as zero), and the soft-threshold arithmetic.

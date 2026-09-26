@@ -352,7 +352,10 @@ object CookbookDocsGenerator {
         "CloudConfig.maxTokens" to Reach.RoundTripOnly(CLOUD_CLIENT_OWNED),
         "CloudConfig.timeoutMs" to Reach.RoundTripOnly(CLOUD_CLIENT_OWNED),
         "IntentRouterConfig.classes" to
-            Reach.Graph("which branches exist — one port per class, and the run follows the edge the model picks"),
+            Reach.Graph(
+                "which ports the canvas draws — one per class, plus one per edge label no class names; " +
+                    "the run chooses among the edge labels",
+            ),
         "IntentRouterConfig.classifierPrompt" to Reach.Runtime("systemPrompt"),
         "IntentRouterConfig.fallbackClass" to Reach.Runtime("fallbackClass"),
         "IntentRouterConfig.engineProvider" to Reach.Runtime("cloudProvider"),
@@ -373,7 +376,10 @@ object CookbookDocsGenerator {
         "QueueProcessorConfig.stopOnError" to Reach.Runtime("stopOnError"),
         "EvaluationConfig.criteriaPrompt" to Reach.Runtime("systemPrompt"),
         "EvaluationConfig.maxRetries" to
-            Reach.Graph("whether the node has a Retry branch at all — it does not cap how often that branch is taken"),
+            Reach.Graph(
+                "whether the canvas shows a Retry port when no edge is labelled Retry — a Retry edge is taken " +
+                    "on a Retry verdict either way, and this does not cap how often",
+            ),
         "EvaluationConfig.engineProvider" to Reach.Runtime("cloudProvider"),
         "SummaryConfig.customPrompt" to Reach.Runtime("systemPrompt"),
         "PipelineConfig.targetPipelineId" to Reach.Runtime("targetPipelineId"),
@@ -771,8 +777,8 @@ object CookbookDocsGenerator {
                 .append(describeContext(node)).append(" |\n")
         }
         if (nodes.any { it.ports.conditional.isNotEmpty() }) {
-            out.append("\n† A port the node only has while its configuration asks for it — see that node's ")
-                .append("own section below.\n")
+            out.append("\n† A port the node only has while its configuration asks for it, or an edge already ")
+                .append("uses it — see that node's own section below.\n")
         }
         CONTEXT_EXCEPTIONS.forEach { (id, note) ->
             out.append("\n\\* `").append(id).append("` — ").append(note).append(".\n")
@@ -901,7 +907,7 @@ object CookbookDocsGenerator {
 
     /** Compact outbound-port description for the overview table. */
     private fun describePorts(ports: Ports): String = when {
-        ports.perDeclaredClass -> "one per class"
+        ports.perDeclaredClass -> "one per class, plus one per unnamed edge label"
         ports.outbound.isEmpty() -> "—"
         ports.outbound == listOf(DEFAULT_PORT) -> "1"
         else -> ports.outbound.joinToString(" / ") { if (it in ports.conditional) "$it†" else it }
@@ -919,7 +925,9 @@ object CookbookDocsGenerator {
     private fun sentencePorts(ports: Ports): String {
         val inbound = if (ports.inbound == 0) "No inbound port" else "One inbound port"
         val outbound = when {
-            ports.perDeclaredClass -> "one outbound port per class declared on the node"
+            ports.perDeclaredClass ->
+                "one outbound port per class declared on the node, and one per outgoing edge label " +
+                    "no class names — the run chooses among the edge labels, so every one of them is drawn"
             ports.outbound.isEmpty() -> "no outbound port"
             ports.outbound == listOf(DEFAULT_PORT) -> "one unlabelled outbound port"
             else -> "outbound ports " + ports.outbound.joinToString(", ") { label ->

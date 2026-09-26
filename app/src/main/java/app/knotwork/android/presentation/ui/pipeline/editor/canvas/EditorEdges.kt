@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeModel
+import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.domain.models.RouteLabels
 import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeConfigCodec
 import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeTypeMapper
 import app.knotwork.android.presentation.ui.pipeline.editor.core.BezierEdge
@@ -69,9 +71,11 @@ internal fun inboundPortAnchor(node: NodeModel): PortAnchor =
  * For nodes with a single unlabelled outbound port the label is empty; for IF / Queue / Eval
  * / IntentRouter the label distinguishes which port the edge originates from.
  *
- * If [portLabel] doesn't match any declared port the anchor falls back to index 0 — that
- * way an imported connection with a stale label still renders next to a real port instead
- * of disappearing.
+ * A labelled edge always has its own port: [portsFor], given the node's outgoing labels,
+ * adds one for a router label no class names and surfaces the Retry port a Retry edge
+ * needs, and the importer spells fixed branch labels as their ports do. What still falls
+ * back to index 0 is an unlabelled edge on a node with only labelled ports — the engine's
+ * lone default way out of an IF_CONDITION.
  */
 internal fun outboundPortAnchor(node: NodeModel, ports: NodePorts, portLabel: String?): PortAnchor {
     val centreX = node.x + NodeCardFootprint.WIDTH / 2f
@@ -104,8 +108,11 @@ internal fun nodeCanvasBounds(node: NodeModel): NodeBounds = NodeBounds(
  * the canvas gesture handler can decide whether a press landed on a port (→ start a
  * connection) instead of panning.
  */
-internal fun outboundPortAnchors(node: NodeModel): List<Pair<String, PortAnchor>> {
-    val outbound = portsFor(node).outbound
+internal fun outboundPortAnchors(
+    node: NodeModel,
+    outboundLabels: List<String?> = emptyList(),
+): List<Pair<String, PortAnchor>> {
+    val outbound = portsFor(node, outboundLabels).outbound
     if (outbound.isEmpty()) return emptyList()
     val centreX = node.x + NodeCardFootprint.WIDTH / 2f
     val outY = node.y + NodeCardFootprint.BASE_HEIGHT
@@ -115,37 +122,58 @@ internal fun outboundPortAnchors(node: NodeModel): List<Pair<String, PortAnchor>
 }
 
 /**
- * Single source of truth for matching a connection's [ConnectionModel.label] against an
- * [OutboundPort]: equal labels, or the connection's `null` / blank label matched against
- * a `Default` port.
+ * Matches a connection's [ConnectionModel.label] against an [OutboundPort] by the rule the
+ * engine routes by ([RouteLabels.matches], case-insensitive), or the connection's `null` /
+ * blank label against a `Default` port.
  */
 private fun matchesPort(port: OutboundPort, label: String?): Boolean = when {
     label.isNullOrBlank() -> port is OutboundPort.Default
-    else -> port.label == label
+    else -> RouteLabels.matches(label, port.label)
 }
+
+/**
+ * The labels of the edges leaving [nodeId], in [connections] order — what [portsFor]
+ * needs to draw every branch the run can take.
+ *
+ * @param nodeId the source node.
+ * @param connections the graph's edges.
+ * @return one entry per outgoing edge, `null` for an unlabelled one.
+ */
+internal fun outboundLabelsOf(nodeId: String, connections: List<ConnectionModel>): List<String?> =
+    connections.filter { it.sourceNodeId == nodeId }.map { it.label }
 
 /**
  * Builds the catalog `NodePorts` for a domain node, threading through the per-type
  * overrides that depend on the decoded `NodeConfig`:
  *
- *  - `INTENT_ROUTER` → one [OutboundPort.Custom] per declared class. Without this the
- *    routes the user just typed into the config sheet would never appear as outbound
- *    ports on the node card.
- *  - `EVALUATION` → the `Retry` port is only surfaced when `maxRetries > 0`.
+ *  - `INTENT_ROUTER` → one [OutboundPort.Custom] per declared class, then one per
+ *    distinct outgoing edge label no class names. The run chooses among the edge labels,
+ *    not the classes, so a branch the sheet does not list still gets a port of its own
+ *    instead of borrowing the first one.
+ *  - `EVALUATION` → the `Retry` port is surfaced when `maxRetries > 0`, or when an edge is
+ *    labelled Retry: the run takes it on a Retry verdict whatever the retry count says.
  *
  *  All other types ignore the extra parameters. Decoding is cheap (small JSON
  *  documents, fast fallback to legacy flat fields), and EditorCanvas memoises the
  *  result per node so port lookup during a hot drag doesn't re-decode.
  */
-internal fun portsFor(node: NodeModel): NodePorts {
+internal fun portsFor(node: NodeModel, outboundLabels: List<String?> = emptyList()): NodePorts {
     val catalogType = NodeTypeMapper.toCatalog(node.type)
     val decoded = NodeConfigCodec.decode(node)
-    val intentClasses = (decoded as? IntentRouterConfig)?.classes?.map { it.name }.orEmpty()
+    val declared = (decoded as? IntentRouterConfig)?.classes?.map { it.name }.orEmpty()
+    val intentClasses = if (node.type == NodeType.INTENT_ROUTER) {
+        outboundLabels.filterNotNull().filter { it.isNotBlank() }.fold(declared) { names, label ->
+            if (names.any { RouteLabels.matches(label, it) }) names else names + label
+        }
+    } else {
+        declared
+    }
     val maxRetries = (decoded as? EvaluationConfig)?.maxRetries ?: 0
+    val retryWired = outboundLabels.any { RouteLabels.matches(it, RouteLabels.RETRY) }
     return NodePorts.forType(
         type = catalogType,
         intentClasses = intentClasses,
-        maxRetries = maxRetries,
+        maxRetries = if (retryWired) maxOf(maxRetries, 1) else maxRetries,
     )
 }
 
@@ -183,7 +211,8 @@ internal fun EditorEdges(
             val target = nodesById[c.targetNodeId] ?: return@forEach
             // Per-port anchors: edges originate at the dot matching the connection label
             // (e.g. Item / Done on QUEUE, True / False on IF) rather than the node centre.
-            val srcAnchor = outboundPortAnchor(source, portsFor(source), c.label)
+            val srcAnchor =
+                outboundPortAnchor(source, portsFor(source, outboundLabelsOf(source.id, connections)), c.label)
             val tgtAnchor = inboundPortAnchor(target)
             val sx = transform.canvasToScreenX(srcAnchor.xCanvas)
             val sy = transform.canvasToScreenY(srcAnchor.yCanvas)
@@ -245,7 +274,7 @@ internal fun hitTestEdge(
     connections.forEach { c ->
         val src = nodesById[c.sourceNodeId] ?: return@forEach
         val tgt = nodesById[c.targetNodeId] ?: return@forEach
-        val srcAnchor = outboundPortAnchor(src, portsFor(src), c.label)
+        val srcAnchor = outboundPortAnchor(src, portsFor(src, outboundLabelsOf(src.id, connections)), c.label)
         val tgtAnchor = inboundPortAnchor(tgt)
         val (cp0, cp1) = BezierEdge.controlPoints(
             srcAnchor.xCanvas,

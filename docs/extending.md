@@ -1023,7 +1023,12 @@ validation error blocking Save. Declare the classes to match the node's
 outgoing edge labels, in the same order, and set `fallbackClass` to the
 **first** of them — the runtime routes on those labels and falls through to
 the first outgoing edge when the model emits nothing recognised, so any
-other declaration would be a lie the editor shows the user:
+other declaration would be a lie the editor shows the user. The canvas does not
+hide such a lie: an edge label no class names is drawn as a port of its own.
+Edges out of `IF_CONDITION`, `QUEUE_PROCESSOR` and `EVALUATION` carry the
+branch labels `RouteLabels` lists (`True`/`False`, `Item`/`Done`,
+`Pass`/`Retry`/`Fail`); the importer saves any letter case as the port spells
+it and refuses any other label:
 
 ```json
 "nodeConfig": {

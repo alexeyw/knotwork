@@ -31,6 +31,18 @@ class BrowserEditorImportParityGuardTest {
         }
     """.trimIndent()
 
+    private val routeLabels = """
+        const val TRUE: String = "True"
+        const val FALSE: String = "False"
+        const val ITEM: String = "Item"
+        const val DONE: String = "Done"
+        fun fixedBranches(type: NodeType): List<String>? = when (type) {
+            NodeType.IF_CONDITION -> listOf(TRUE, FALSE)
+            NodeType.QUEUE_PROCESSOR -> listOf(ITEM, DONE)
+            else -> null
+        }
+    """.trimIndent()
+
     /** An editor that reads a file by the app's rules; each argument replaces one piece. */
     private fun editor(
         importBody: String = "const flatIn = { systemPrompt: jn.config?.systemPrompt, " +
@@ -43,11 +55,25 @@ class BrowserEditorImportParityGuardTest {
             " default: return null; }",
         cloud: String = "return wireToTile(flatId) ?? 'AUTO';",
         engine: String = "return wireToTile(flatId) ?? '';",
+        branchTable: String = "IF_CONDITION: { output_1: 'True', output_2: 'False' },\n" +
+            "QUEUE_PROCESSOR: { output_1: 'Item', output_2: 'Done' },",
+        edgeRead: String = "const label = canonicalBranchLabel(srcType, jc.label);",
+        canonicalizer: String = "const map = PORT_AUTO_LABELS[nodeType];\n" +
+            "return Object.values(map).find(b => b.toLowerCase() === String(label).toLowerCase()) ?? null;",
     ) = """
+        const PORT_AUTO_LABELS = {
+            $branchTable
+        };
         function importFromJson(doc) {
             rawNodes.forEach(jn => {
                 $importBody
             });
+            rawConnections.forEach(jc => {
+                $edgeRead
+            });
+        }
+        function canonicalBranchLabel(nodeType, label) {
+            $canonicalizer
         }
         function wireBool(v) { return typeof v === 'boolean' ? v : null; }
         function readContextConfig(typeId, raw) {
@@ -64,7 +90,8 @@ class BrowserEditorImportParityGuardTest {
         }
     """.trimIndent()
 
-    private fun mismatches(html: String) = BrowserEditorImportParityGuard.mismatches(html, serializer, cloudProvider)
+    private fun mismatches(html: String) =
+        BrowserEditorImportParityGuard.mismatches(html, serializer, cloudProvider, routeLabels)
 
     @Test
     fun `given an editor that reads a file by the app's rules when checked then nothing is reported`() {
@@ -149,6 +176,39 @@ class BrowserEditorImportParityGuardTest {
     fun `given a serializer without CONFIG_KEYS when checked then it fails loudly`() {
         val renamed = serializer.replace("CONFIG_KEYS = ", "KEYS = ")
 
-        BrowserEditorImportParityGuard.mismatches(editor(), renamed, cloudProvider)
+        BrowserEditorImportParityGuard.mismatches(editor(), renamed, cloudProvider, routeLabels)
+    }
+
+    @Test
+    fun `given a branch spelled differently from the app when checked then it is reported`() {
+        val html = editor(
+            branchTable = "IF_CONDITION: { output_1: 'True', output_2: 'false' },\n" +
+                "QUEUE_PROCESSOR: { output_1: 'Item', output_2: 'Done' },",
+        )
+
+        assertEquals(
+            listOf("PORT_AUTO_LABELS spells IF_CONDITION's branches [True, false], the app [True, False]"),
+            mismatches(html),
+        )
+    }
+
+    @Test
+    fun `given an import that takes edge labels as written when checked then it is reported`() {
+        val html = editor(edgeRead = "const label = jc.label;")
+
+        assertEquals(
+            listOf("importFromJson does not read branch labels through canonicalBranchLabel"),
+            mismatches(html),
+        )
+    }
+
+    @Test
+    fun `given a canonicalizer that matches case-sensitively when checked then it is reported`() {
+        val html = editor(canonicalizer = "return Object.values(PORT_AUTO_LABELS[nodeType]).find(b => b === label);")
+
+        assertEquals(
+            listOf("canonicalBranchLabel does not match PORT_AUTO_LABELS without regard to case"),
+            mismatches(html),
+        )
     }
 }

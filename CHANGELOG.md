@@ -294,6 +294,14 @@ details.
   result cut to the **Single read budget**, with a note saying how much was
   left out; a node on a cloud provider still gets it whole.
 
+- **An imported pipeline's branches are drawn where the run takes them.** A
+  router edge whose label named none of the router's classes was drawn from the
+  first class's port and could still win most replies; it now has a port of its
+  own. An If, Queue or Evaluation edge labelled in another letter case (`false`)
+  was drawn from the wrong port; it is now saved as its port spells it, and a
+  label that names no branch of the node refuses the file. The browser editor
+  reads branch labels the same way.
+
 ### Changed
 
 - **The app opens without loading the on-device model.** The start screen no

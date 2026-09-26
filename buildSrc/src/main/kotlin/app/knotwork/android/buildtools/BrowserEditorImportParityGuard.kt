@@ -16,14 +16,16 @@ package app.knotwork.android.buildtools
  *   as off while the app read them as **on** — so long-term memory and tool results
  *   showed off on a cloud node the app sent them to;
  * - provider ids were matched case-sensitively, so `"Anthropic"` showed as on-device
- *   while the app called Anthropic.
+ *   while the app called Anthropic;
+ * - branch labels were matched case-sensitively, so an IF edge labelled `false` hung
+ *   from the True socket while the app took it for every message without the keyword.
  *
  * Each check takes its reference from the app's own source, not from the editor:
- * `CONFIG_KEYS` / `CONTEXT_CONFIG_KEYS` in `PipelineJsonSerializer` and the ids
- * `CloudProvider.fromId` accepts. What the checks cannot see is how a value is coerced
+ * `CONFIG_KEYS` / `CONTEXT_CONFIG_KEYS` in `PipelineJsonSerializer`, the ids
+ * `CloudProvider.fromId` accepts and the branches `RouteLabels.fixedBranches` lists. What the checks cannot see is how a value is coerced
  * once it is read — there is no JavaScript runtime in the build — so the coercion rules
- * live in two named editor functions (`wireBool`, `readContextConfig`) whose KDoc states
- * the app's rule, and the checks make every read go through them.
+ * live in named editor functions (`wireBool`, `readContextConfig`, `canonicalBranchLabel`)
+ * whose comments state the app's rule, and the checks make every read go through them.
  */
 object BrowserEditorImportParityGuard {
 
@@ -41,11 +43,17 @@ object BrowserEditorImportParityGuard {
      * @param html Content of `pipeline-editor.html`.
      * @param serializerSource Content of `PipelineJsonSerializer.kt`.
      * @param cloudProviderSource Content of `domain/models/CloudProvider.kt`.
+     * @param routeLabelsSource Content of `domain/models/RouteLabels.kt`.
      * @return The mismatches; empty when the editor reads a file by the app's rules.
-     * @throws IllegalStateException when a function, a key set or `fromId` cannot be
-     *   found, so a rename cannot make the guard pass by checking nothing.
+     * @throws IllegalStateException when a function, a key set, `fromId` or a branch
+     *   table cannot be found, so a rename cannot make the guard pass by checking nothing.
      */
-    fun mismatches(html: String, serializerSource: String, cloudProviderSource: String): List<String> {
+    fun mismatches(
+        html: String,
+        serializerSource: String,
+        cloudProviderSource: String,
+        routeLabelsSource: String,
+    ): List<String> {
         val configKeys = kotlinStringSet(serializerSource, "CONFIG_KEYS")
         val contextKeys = kotlinStringSet(serializerSource, "CONTEXT_CONFIG_KEYS")
         val providerIds = fromIdLiterals(cloudProviderSource)
@@ -53,7 +61,8 @@ object BrowserEditorImportParityGuard {
         return (
             unknownConfigReads(import, configKeys) +
                 contextConfigReads(html, import, contextKeys) +
-                providerMapping(html, providerIds)
+                providerMapping(html, providerIds) +
+                branchLabels(html, import, appBranches(routeLabelsSource))
             ).sorted()
     }
 
@@ -97,6 +106,53 @@ object BrowserEditorImportParityGuard {
         return problems
     }
 
+    /**
+     * `PORT_AUTO_LABELS` spells every fixed-branch node's branches as `RouteLabels` does,
+     * in the same socket order, and the import reads each edge label through
+     * `canonicalBranchLabel`, which matches without regard to case.
+     */
+    private fun branchLabels(html: String, import: String, appBranches: Map<String, List<String>>): List<String> {
+        val problems = mutableListOf<String>()
+        val editorBranches = editorBranches(html)
+        (appBranches.keys + editorBranches.keys).sorted().forEach { type ->
+            val app = appBranches[type]
+            val editor = editorBranches[type]
+            if (app != editor) problems += "PORT_AUTO_LABELS spells $type's branches $editor, the app $app"
+        }
+        if ("canonicalBranchLabel(" !in import) {
+            problems += "importFromJson does not read branch labels through canonicalBranchLabel"
+        }
+        val canonicalizer = functionBody(html, "canonicalBranchLabel")
+        if (".toLowerCase()" !in canonicalizer || "PORT_AUTO_LABELS" !in canonicalizer) {
+            problems += "canonicalBranchLabel does not match PORT_AUTO_LABELS without regard to case"
+        }
+        return problems
+    }
+
+    /** `RouteLabels.fixedBranches`: node type → branch labels, resolved through its constants. */
+    private fun appBranches(source: String): Map<String, List<String>> {
+        val constants = KOTLIN_STRING_CONST.findAll(source).associate { it.groupValues[1] to it.groupValues[2] }
+        val start = source.indexOf("fun fixedBranches(")
+        check(start >= 0) { "RouteLabels.fixedBranches not found" }
+        val body = source.substring(start, source.indexOf("else ->", start))
+        return FIXED_BRANCH_ENTRY.findAll(body).associate { match ->
+            match.groupValues[1] to match.groupValues[2].split(',').map { name ->
+                constants[name.trim()] ?: error("RouteLabels has no constant ${name.trim()}")
+            }
+        }.also { check(it.isNotEmpty()) { "RouteLabels.fixedBranches lists no branches" } }
+    }
+
+    /** The editor's `PORT_AUTO_LABELS`: node type → socket labels in socket order. */
+    private fun editorBranches(html: String): Map<String, List<String>> {
+        val start = html.indexOf("const PORT_AUTO_LABELS = {")
+        check(start >= 0) { "PORT_AUTO_LABELS not found in pipeline-editor.html" }
+        val open = html.indexOf('{', start)
+        val table = html.substring(open + 1, closingBrace(html, open) - 1)
+        return EDITOR_BRANCH_ENTRY.findAll(table).associate { match ->
+            match.groupValues[1] to JS_STRING_LITERAL.findAll(match.groupValues[2]).map { it.groupValues[1] }.toList()
+        }.also { check(it.isNotEmpty()) { "PORT_AUTO_LABELS lists no branches" } }
+    }
+
     /** String literals of `private val NAME = setOf( … )` in a Kotlin source. */
     private fun kotlinStringSet(source: String, name: String): Set<String> {
         val start = source.indexOf("val $name = setOf(")
@@ -136,6 +192,10 @@ object BrowserEditorImportParityGuard {
     }
 
     private val CONFIG_READ = Regex("""\bjn\.config\??\.(\w+)""")
+    private val KOTLIN_STRING_CONST = Regex("""const val (\w+): String = "([^"]*)"""")
+    private val FIXED_BRANCH_ENTRY = Regex("""NodeType\.(\w+) -> listOf\(([^)]*)\)""")
+    private val EDITOR_BRANCH_ENTRY = Regex("""(\w+):\s*\{([^}]*)}""")
+    private val JS_STRING_LITERAL = Regex("""'([^']*)'""")
     private val CONTEXT_READ = Regex("""\bjn\.contextConfig\b""")
     private val ROUTED_CONTEXT_READ = Regex("""readContextConfig\(\s*jn\.type\s*,\s*jn\.contextConfig\s*\)""")
     private val STRING_LITERAL = Regex(""""([^"\\]+)"""")

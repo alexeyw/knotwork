@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import app.knotwork.android.R
+import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
@@ -233,6 +234,7 @@ internal fun EditorCanvas(
                             downCanvasY,
                             currentNodesById.values,
                             editor.transform,
+                            currentGraph.connections,
                         ) != null
                     ) {
                         return@awaitEachGesture
@@ -277,7 +279,8 @@ internal fun EditorCanvas(
 
         val draftDraw = editor.connectionInProgress?.let { draft ->
             val source = nodesByIdLive[draft.sourceNodeId] ?: return@let null
-            val anchor = outboundPortAnchor(source, portsFor(source), draft.sourcePortLabel)
+            val ports = portsFor(source, outboundLabelsOf(source.id, graph.connections))
+            val anchor = outboundPortAnchor(source, ports, draft.sourcePortLabel)
             // The draft is stored in canvas-space (see ConnectionDraft KDoc); project both
             // anchor and live pointer through `transform` here so the draw layer stays in
             // screen-space and doesn't need to know about CanvasTransform.
@@ -304,13 +307,13 @@ internal fun EditorCanvas(
         // classes + Evaluation retry visibility), which would otherwise re-decode the
         // config JSON for every recomposition × every node × every connection during
         // a hot drag. Memoise once per `graph.nodes` change so the canvas stays fluid.
-        val portsByNodeId = remember(graph.nodes) {
-            graph.nodes.associate { it.id to portsFor(it) }
+        val portsByNodeId = remember(graph.nodes, graph.connections) {
+            graph.nodes.associate { it.id to portsFor(it, outboundLabelsOf(it.id, graph.connections)) }
         }
 
         nodesWithDrag.forEach { node ->
             val originalNode = nodesById[node.id] ?: node
-            val ports = portsByNodeId[node.id] ?: portsFor(node)
+            val ports = portsByNodeId[node.id] ?: portsFor(node, outboundLabelsOf(node.id, graph.connections))
             EditorNode(
                 node = node,
                 transform = editor.transform,
@@ -626,12 +629,13 @@ internal fun hitTestOutboundPort(
     pointerCanvasY: Float,
     nodes: Collection<NodeModel>,
     transform: CanvasTransform,
+    connections: List<ConnectionModel> = emptyList(),
 ): OutboundHit? {
     val toleranceCanvas = OUTBOUND_HIT_DP / transform.scale
     var best: OutboundHit? = null
     var bestDist = Float.MAX_VALUE
     nodes.forEach { node ->
-        outboundPortAnchors(node).forEach { (label, anchor) ->
+        outboundPortAnchors(node, outboundLabelsOf(node.id, connections)).forEach { (label, anchor) ->
             val dist = kotlin.math.hypot(anchor.xCanvas - pointerCanvasX, anchor.yCanvas - pointerCanvasY)
             if (dist < toleranceCanvas && dist < bestDist) {
                 best = OutboundHit(node.id, label)
