@@ -27,6 +27,11 @@ package app.knotwork.android.domain.models
  *   imported USER row is not something this device's user said: long-term memory
  *   extraction never reads imported rows, Retry never re-runs one, and an imported
  *   AGENT row is not attributed to the active model. See [writtenOnThisDevice].
+ * @property relayed Whether an AGENT row's text was handed on unchanged rather than
+ *   written by a model — an OUTPUT node in echo mode saving a tool's result, or the
+ *   user's own words, as the reply. Long-term memory extraction reads such a row no
+ *   more than an imported one: it is not something the assistant said. `false` for
+ *   every other row, and for rows saved before this was recorded.
  */
 data class ChatMessage(
     val id: Long? = null,
@@ -39,6 +44,7 @@ data class ChatMessage(
     val attachment: MessageAttachment? = null,
     val modelName: String? = null,
     val imported: Boolean = false,
+    val relayed: Boolean = false,
 ) {
     /**
      * `true` for a message this app wrote on this device — typed by the user, produced

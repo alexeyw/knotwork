@@ -35,6 +35,9 @@ import androidx.room.PrimaryKey
  * @property imported Whether the row came from a chat file (*Import chat*) instead of
  *   being written on this device. Added in `MIGRATION_62_63`; every row that existed
  *   before it was written here, so it is back-filled with `0`.
+ * @property relayed Whether an AGENT row's text was handed on unchanged instead of
+ *   written by a model (see `ChatMessage.relayed`). Added in `MIGRATION_64_65` and
+ *   back-filled with `0`: how an earlier row was produced was never recorded.
  */
 @Entity(
     tableName = "chat_messages",
@@ -61,4 +64,6 @@ data class ChatMessageEntity(
     val modelName: String? = null,
     @ColumnInfo(defaultValue = "0")
     val imported: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
+    val relayed: Boolean = false,
 )

@@ -37,6 +37,7 @@ fun ChatMessageEntity.toDomain(): ChatMessage = ChatMessage(
     },
     modelName = modelName,
     imported = imported,
+    relayed = relayed,
 )
 
 /**
@@ -58,4 +59,5 @@ fun ChatMessage.toEntity(): ChatMessageEntity = ChatMessageEntity(
     attachmentHeight = attachment?.height,
     modelName = modelName,
     imported = imported,
+    relayed = relayed,
 )

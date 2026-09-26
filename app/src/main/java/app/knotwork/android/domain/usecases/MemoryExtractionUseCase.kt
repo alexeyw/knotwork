@@ -36,7 +36,9 @@ import javax.inject.Inject
  *  1. Keep only the conversational turns ([EXTRACTED_ROLES]) written on this
  *     device ([ChatMessage.writtenOnThisDevice]) and take the most recent slice of
  *     them (see [RECENT_MESSAGE_WINDOW]). A row imported from a chat file is not
- *     something this device's user said, whatever role the file gave it.
+ *     something this device's user said, whatever role the file gave it; a
+ *     [relayed][ChatMessage.relayed] AGENT row is not something the assistant
+ *     said — an OUTPUT node in echo mode saved a tool's result as the reply.
  *  2. Render the conservative extraction system prompt
  *     ([DefaultPrompts.MemoryExtraction.SYSTEM_FALLBACK]) — resolving `$DATE`
  *     for temporal grounding — and run it once through the local LiteRT model.
@@ -101,7 +103,7 @@ class MemoryExtractionUseCase @Inject constructor(
      * @param sessionId Id of the chat session the [messages] belong to; recorded
      *   as [MemorySource.ChatSession] on every saved chunk.
      * @param messages The conversation to mine. Only its [EXTRACTED_ROLES] rows
-     *   written on this device are read (never an imported row), and of those only
+     *   written on this device are read (never an imported or a relayed row), and of those only
      *   the trailing [RECENT_MESSAGE_WINDOW]; passes
      *   with fewer than [MIN_MESSAGES_TO_EXTRACT] such rows are skipped (too
      *   little signal).
@@ -110,7 +112,7 @@ class MemoryExtractionUseCase @Inject constructor(
      */
     suspend operator fun invoke(sessionId: String, messages: List<ChatMessage>): MemoryExtractionOutcome =
         withContext(Dispatchers.Default) {
-            val recent = messages.filter { it.writtenOnThisDevice && it.role in EXTRACTED_ROLES }
+            val recent = messages.filter { it.writtenOnThisDevice && !it.relayed && it.role in EXTRACTED_ROLES }
                 .takeLast(RECENT_MESSAGE_WINDOW)
             if (recent.size < MIN_MESSAGES_TO_EXTRACT) {
                 return@withContext MemoryExtractionOutcome.EMPTY

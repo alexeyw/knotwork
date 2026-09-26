@@ -127,9 +127,11 @@ details.
 - **Tool results no longer reach long-term memory.** Automatic memory
   extraction read the whole recent chat, tool results included, so text a web
   page or an MCP server returned could be saved as something you said. It now
-  reads only your messages and the assistant's replies. The transcripts the app
-  builds for the model also lay out a message of several lines so that it
-  cannot pass for a separate turn.
+  reads only your messages and the assistant's replies — and not a reply that
+  is a tool's result passed on unchanged, which an Output node with no
+  instruction does behind a Tool node. The transcripts the app builds for the
+  model also lay out a message of several lines so that it cannot pass for a
+  separate turn.
 - **An imported memory file can no longer pin its entries or date them in the
   future.** A pinned entry is recalled whatever the question, a future-dated one
   stays first among recent memories, and both escaped compaction. Imported

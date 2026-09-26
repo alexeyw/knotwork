@@ -5,7 +5,9 @@ import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.Role
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatMessageMapperTest {
@@ -206,6 +208,34 @@ class ChatMessageMapperTest {
                 content = "hi",
                 timestamp = 1700000022L,
             ).toDomain().modelName,
+        )
+    }
+
+    @Test
+    fun `relayed round-trips through both mappers and defaults to false`() {
+        val entity = ChatMessageEntity(
+            id = 40L,
+            sessionId = "relay",
+            role = "AGENT",
+            content = "a tool's result",
+            timestamp = 1700000030L,
+            relayed = true,
+        )
+        assertTrue(entity.toDomain().relayed)
+
+        val domain = ChatMessage(
+            id = 41L,
+            sessionId = "relay",
+            role = Role.AGENT,
+            content = "a tool's result",
+            timestamp = 1700000031L,
+            relayed = true,
+        )
+        assertTrue(domain.toEntity().relayed)
+
+        assertFalse(
+            ChatMessageEntity(id = 42L, sessionId = "legacy", role = "AGENT", content = "a", timestamp = 1L)
+                .toDomain().relayed,
         )
     }
 

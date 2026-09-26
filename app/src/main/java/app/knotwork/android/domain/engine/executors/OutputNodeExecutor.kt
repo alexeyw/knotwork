@@ -141,6 +141,9 @@ class OutputNodeExecutor @Inject constructor(
                         content = finalOutput,
                         timestamp = System.currentTimeMillis(),
                         modelName = generatingModelName,
+                        // An empty generation falls back to the input above,
+                        // which no model wrote here.
+                        relayed = generatedText.isEmpty(),
                     ),
                 )
             }
@@ -157,6 +160,9 @@ class OutputNodeExecutor @Inject constructor(
                         content = inputText,
                         timestamp = System.currentTimeMillis(),
                         modelName = generatingModelName,
+                        // Echo mode saves its input as the reply: a model's text
+                        // behind a model node, a tool's result behind a TOOL.
+                        relayed = !scope.inputWrittenByModel,
                     ),
                 )
             }

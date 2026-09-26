@@ -82,6 +82,11 @@ import app.knotwork.android.domain.engine.stuck.GraphStuckDetector
  *   parent does. Consumed by the engine's long-term-memory retrieval (see
  *   [MemoryRetrievalQueryResolver][app.knotwork.android.domain.engine.MemoryRetrievalQueryResolver]);
  *   node executors other than `PIPELINE` ignore it.
+ * @property inputWrittenByModel Whether a model wrote the text the run carried into
+ *   this node (see [ModelAuthorship][app.knotwork.android.domain.engine.ModelAuthorship]).
+ *   `false` for the run's prompt and for a tool's result, however many pass-through
+ *   nodes it crossed. Read by the OUTPUT node, whose echo mode saves that text as
+ *   the assistant's message and marks the row relayed when no model wrote it.
  */
 data class ExecutionScope(
     val depth: Int = 0,
@@ -95,4 +100,5 @@ data class ExecutionScope(
     val imagePresent: Boolean = false,
     val generatingModel: RunGeneratingModel? = null,
     val runOrigin: RunOrigin = RunOrigin.CHAT,
+    val inputWrittenByModel: Boolean = false,
 )

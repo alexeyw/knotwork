@@ -776,4 +776,26 @@ class AppDatabaseMigrationHelperTest {
             db.execSQL("INSERT INTO background_prompts(id, prompt, createdAt) VALUES('p-1', 'check emails', 1)")
         }
     }
+
+    /**
+     * v64 → v65 adds `chat_messages.relayed`. How an earlier row was produced was
+     * never recorded, so a pre-existing message keeps the behaviour it had: not
+     * relayed. The schema must match the exported `65.json`.
+     */
+    @Test
+    fun migrate64to65_marksExistingMessagesAsNotRelayed() {
+        helper.createDatabase(TEST_DB, 64).use { db ->
+            db.execSQL(
+                "INSERT INTO chat_messages(sessionId, role, content, timestamp) " +
+                    "VALUES('sess-1', 'AGENT', 'an answer', 100)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 65, true, AppDatabase.MIGRATION_64_65).use { db ->
+            db.query("SELECT relayed FROM chat_messages WHERE content = 'an answer'").use { c ->
+                assertTrue("the pre-existing message must survive the migration", c.moveToFirst())
+                assertEquals("a pre-existing message is not marked relayed", 0, c.getInt(0))
+            }
+        }
+    }
 }

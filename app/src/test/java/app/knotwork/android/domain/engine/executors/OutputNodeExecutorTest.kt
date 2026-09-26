@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -178,5 +179,72 @@ class OutputNodeExecutorTest {
         executor.execute(node, "final text", "session-1", "prompt").toList().unwrap()
 
         coVerify(exactly = 1) { chatRepository.saveMessage(any()) }
+    }
+
+    @Test
+    fun `given echo mode behind a node no model wrote when saved then the reply is marked relayed`() = runTest {
+        val chatRepository = mockk<ChatRepository>(relaxed = true)
+        val saved = slot<ChatMessage>()
+        coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+        val executor = OutputNodeExecutor(mockk(), mockk(), chatRepository, mockk(relaxed = true))
+        val node = NodeModel("1", NodeType.OUTPUT, 0f, 0f, systemPrompt = null)
+
+        executor.execute(node, "a tool's result", "session-1", "prompt", runId = null, scope = ExecutionScope())
+            .toList()
+
+        assertTrue(saved.captured.relayed)
+    }
+
+    @Test
+    fun `given echo mode behind a model's answer when saved then the reply is not relayed`() = runTest {
+        val chatRepository = mockk<ChatRepository>(relaxed = true)
+        val saved = slot<ChatMessage>()
+        coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+        val executor = OutputNodeExecutor(mockk(), mockk(), chatRepository, mockk(relaxed = true))
+        val node = NodeModel("1", NodeType.OUTPUT, 0f, 0f, systemPrompt = null)
+        val scope = ExecutionScope(inputWrittenByModel = true)
+
+        executor.execute(node, "an answer", "session-1", "prompt", runId = null, scope = scope).toList()
+
+        assertFalse(saved.captured.relayed)
+    }
+
+    @Test
+    fun `given formatting mode when the model writes the reply then it is not relayed`() = runTest {
+        val llmEngine = mockk<LlmInferenceEngine>()
+        val loadModelUseCase = mockk<LoadModelUseCase>()
+        coEvery { loadModelUseCase(any()) } returns Result.Success(Unit)
+        every { llmEngine.generateResponseStream(any()) } returns flowOf("Formatted")
+        val chatRepository = mockk<ChatRepository>(relaxed = true)
+        val saved = slot<ChatMessage>()
+        coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+        val executor = OutputNodeExecutor(llmEngine, loadModelUseCase, chatRepository, mockk(relaxed = true))
+        val node = NodeModel("1", NodeType.OUTPUT, 0f, 0f, systemPrompt = "Format:")
+
+        executor.execute(node, "a tool's result", "session-1", "prompt", runId = null, scope = ExecutionScope())
+            .toList()
+
+        assertFalse(saved.captured.relayed)
+    }
+
+    @Test
+    fun `given formatting mode when the model writes nothing then the fallback reply is relayed`() = runTest {
+        val llmEngine = mockk<LlmInferenceEngine>()
+        val loadModelUseCase = mockk<LoadModelUseCase>()
+        coEvery { loadModelUseCase(any()) } returns Result.Success(Unit)
+        every { llmEngine.generateResponseStream(any()) } returns flowOf("  ")
+        val chatRepository = mockk<ChatRepository>(relaxed = true)
+        val saved = slot<ChatMessage>()
+        coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+        val executor = OutputNodeExecutor(llmEngine, loadModelUseCase, chatRepository, mockk(relaxed = true))
+        val node = NodeModel("1", NodeType.OUTPUT, 0f, 0f, systemPrompt = "Format:")
+        // Even behind a model's answer: the fallback is the node's composed input.
+        val scope = ExecutionScope(inputWrittenByModel = true)
+
+        executor.execute(node, "context and a tool's result", "session-1", "prompt", runId = null, scope = scope)
+            .toList()
+
+        assertEquals("context and a tool's result", saved.captured.content)
+        assertTrue(saved.captured.relayed)
     }
 }
