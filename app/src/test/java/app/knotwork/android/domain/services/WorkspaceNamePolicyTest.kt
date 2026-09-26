@@ -45,6 +45,31 @@ class WorkspaceNamePolicyTest {
     }
 
     @Test
+    fun `given half of a surrogate pair anywhere in the path when violationOf then CONTROL_CHARACTER`() {
+        // A lone surrogate has no UTF-8 encoding: the JVM writes it as '?', and
+        // java.nio refuses to turn the name into a Path at all — which the
+        // workspace walk does for every entry. It must never become a name.
+        for (path in listOf("\uD800.txt", "notes/a\uDC00b.md", "x\uD83D")) {
+            assertEquals(path, WorkspaceNamePolicy.Violation.CONTROL_CHARACTER, WorkspaceNamePolicy.violationOf(path))
+        }
+    }
+
+    @Test
+    fun `given a whole surrogate pair when violationOf then there is none`() {
+        assertNull(WorkspaceNamePolicy.violationOf("notes/\uD83D\uDE00 smile.md"))
+    }
+
+    @Test
+    fun `given a lone surrogate when replaceForbidden then it is replaced and a whole pair is kept`() {
+        assertEquals("_.txt \uD83D\uDE00_", WorkspaceNamePolicy.replaceForbidden("\uD800.txt \uD83D\uDE00\uDC00"))
+    }
+
+    @Test
+    fun `given a lone surrogate when escapeForbidden then it is shown as an escape`() {
+        assertEquals("a\\uD800b", WorkspaceNamePolicy.escapeForbidden("a\uD800b"))
+    }
+
+    @Test
     fun `given a name at and one over the byte limit when violationOf then only the longer is refused`() {
         assertNull(WorkspaceNamePolicy.violationOf("n".repeat(WorkspaceNamePolicy.MAX_NAME_BYTES)))
         assertEquals(

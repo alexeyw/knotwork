@@ -597,6 +597,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ResetToRecommendedDefaultsUseCase.kt` - Restores every tunable preference to its `SettingsDefaults` value (backs Settings → Privacy → "Reset all settings"); never touches user data/config.
     - `ResolveDocumentationLinkUseCase.kt` - Decides what tapping a link inside a bundled document should do.
     - `ResolveEntryInferenceUseCase.kt` - Classifies the inference entry of the pipeline a chat session would run (`EntryInferenceKind` = `LOCAL` / `CLOUD` / `NONE`) by resolving the bound-or-default graph: `CLOUD` when the `INPUT` successor is a cloud node, `LOCAL` when a vision sink (`LITE_RT` node with `originalTask`) is reachable from `INPUT`, else `NONE`. Mirrors the engine's delivery predicate so the multimodal send-time pre-flight blocks cloud-first / non-vision-model / no-sink pipelines instead of silently dropping the image.
+    - `ResolveLaunchableSurfacePipelineUseCase.kt` - Resolves the pipeline an `EntrySurface` would **run**: its binding, but only while the bound pipeline still exists.
     - `ResolveRunCeilingsUseCase.kt` - Resolves which configured ceilings apply to a run, keyed on `RunOrigin.isInteractive` so the interactive/background split is declared once rather than restated here. Follows the `RunRateCeiling` precedent: the resolved value carries the limits, never the counter.
     - `ResolveSurfacePipelineUseCase.kt` - Reads the pipeline bound to an `EntrySurface` (or `null` = inert) from `SettingsRepository`; exhaustive-`when` read dispatch.
     - `ResumePipelineRunUseCase.kt` - Validates and launches the checkpoint resume of a non-live run — INTERRUPTED (resume-window age) or persistently waiting WAITING_* (parked record + approval window) — with graph content-hash preconditions and the guarded status → QUEUED transition. Hosts the `ResumeOutcome` sealed result.
@@ -649,6 +650,7 @@ Only Kotlin files appear inside the generated blocks.
   - `run/` - Presentation-side collaborators for the run lifecycle that background code calls through a domain interface — here because they need string resources, not because a screen uses them.
     - `RunOutcomeAnnouncerImpl.kt` - Presentation-layer `RunOutcomeAnnouncer`: turns a terminal run outcome into a `SYSTEM` chat message.
   - `share/` - OS share-target entry point.
+    - `SharedIntentFields.kt` - The three values a share intent carries that `ShareReceiverActivity` reads: its MIME type, its text and its stream.
     - `ShareReceiverActivity.kt` - Invisible `ACTION_SEND` (text/image) receiver; parses the intent via `ParseSharedContentUseCase`, delegates to `LaunchSharePipelineUseCase`, and deep-links into the resulting session (or toasts when unbound / empty / blocked by the pre-flight — short `share_image_blocked_*` strings, since a toast holds two lines).
   - `shortcuts/` - Launcher shortcuts.
     - `AppShortcutPublisher.kt` - `@Singleton` that converts `BuildDynamicShortcutsUseCase` specs into `ShortcutInfoCompat`s and publishes them (`@WorkerThread`); refreshed from `MainActivity.onCreate`. Static shortcuts live in `res/xml/shortcuts.xml`.

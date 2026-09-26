@@ -18,10 +18,10 @@ import javax.inject.Singleton
  * matching the in-agent risk for `search_tool` set in `ToolRepositoryImpl`.
  *
  * **What does still apply to an external caller.** This path reaches [SearchTool]
- * directly and never passes through `ToolRepositoryImpl`, so the checks that repository
- * performs — the Tools screen's per-tool switch among them — do not run on it. What does
- * run is the check [SearchTool] makes itself: while *Block network from local model* is
- * on, the search is refused for every caller. Anything a future caller must not be able to
+ * directly and never passes through `ToolRepositoryImpl`, so only the checks [SearchTool]
+ * makes itself run on it — which is why both of the tool's switches live there: with
+ * `search_tool` switched off on the Tools screen, or *Block network from local model* on,
+ * the search is refused for every caller. Anything a future caller must not be able to
  * bypass belongs in [SearchTool], not in the repository.
  */
 @Singleton

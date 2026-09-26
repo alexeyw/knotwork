@@ -426,6 +426,10 @@ class AgentWorkspaceImpl internal constructor(
         // replaced in place, whatever its name, so one made before the rules stays usable.
         !exists && WorkspaceNamePolicy.violationOf(WorkspaceTree.relativePath(target, root)) != null ->
             WorkspaceError.InvalidPath
+        // A directory level that is a file (`notes.md/x.txt` over `notes.md`) is a
+        // path the filesystem rejects with ENOTDIR — refused here, typed, instead of
+        // the write throwing on its scratch file.
+        !exists && WorkspaceTree.runsThroughFile(target, root) -> WorkspaceError.InvalidPath
         size > maxFileSizeBytes() -> WorkspaceError.TooLarge
         else -> null
     }

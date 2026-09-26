@@ -175,6 +175,10 @@ switches ends it — **Settings → Tools & workspace → Block network from loc
 model**, which withholds this tool along with the cloud paths, or the tool's
 own switch on the **Tools** screen.
 
+On Android 16 and later the same lookup is also published to other apps as an
+AppFunction (`search`), which only a privileged system agent can call. Such a
+call goes out exactly like the agent's own, and the same two switches stop it.
+
 **`http_request` — off until you name a destination.** It can reach only hosts
 you have added to the allowed-domains list; while that list is empty the tool
 is not offered to the model at all. A call waits for your approval, showing

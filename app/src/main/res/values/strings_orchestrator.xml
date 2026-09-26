@@ -149,6 +149,11 @@
     <string name="orchestrator_library_import_collision_bindings_heading">Replace keeps everything that runs it. After Replace, these run the file\'s steps:</string>
     <string name="orchestrator_library_import_collision_replace">Replace</string>
     <string name="orchestrator_library_import_collision_copy">Import as copy</string>
+    <string name="orchestrator_library_import_orphan_title">This file uses the id of a pipeline you deleted</string>
+    <string name="orchestrator_library_import_orphan_body">The file calls it “%1$s”. Keep the id and what still runs it will run the file\'s steps; Import as copy leaves them alone.</string>
+    <string name="orchestrator_library_import_orphan_bindings_heading">These still run that id. After Keep the id, they run the file\'s steps:</string>
+    <string name="orchestrator_library_import_orphan_keep">Keep the id</string>
+    <string name="orchestrator_library_import_bundle_orphan_item">“%1$s” (the id of a deleted pipeline)</string>
 
     <!-- Pipeline bundle import (library) -->
     <string name="orchestrator_library_import_bundle_title">Import bundle</string>

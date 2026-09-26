@@ -898,7 +898,9 @@ Bind a pipeline to a surface in either place:
   Quick Settings tile pipeline (next to the filled **DEFAULT** pill).
 
 If you delete a pipeline that a surface was using, that surface simply
-turns off again until you bind another.
+turns off again until you bind another. The same holds if the bound pipeline
+is gone for any other reason — after **Erase data**, for example: a surface
+never falls back to another pipeline.
 
 ---
 
@@ -949,7 +951,8 @@ An **unbound** trigger (no pipeline) is always inert and shows "No
 pipeline — tap to bind" with a disabled switch — a trigger fires nothing
 without a pipeline. Saving, enabling, disabling or deleting a trigger
 takes effect immediately, without waiting for the next app launch. If you
-delete the bound pipeline, the trigger is disabled automatically.
+delete the bound pipeline, the trigger is switched off at once; it keeps its
+binding, so point it at another pipeline and switch it back on.
 
 ### How soon a trigger fires
 
@@ -1573,6 +1576,11 @@ dangling references. A **bundle** solves this: it packs the pipeline
   automation triggers, chats, and other pipelines that call it. Replace keeps
   all of these pointed at it, so from then on they run the file's steps. When
   in doubt, import as a copy — it changes nothing that already works.
+
+  The same question comes up when the file carries the identity of a pipeline
+  you **deleted**: chats, triggers and pipelines that called it keep that
+  identity, so **Keep the id** would make them run the file's steps. The
+  question lists them; importing as a copy leaves them as they are.
 
 Bundles carry pipelines only — not triggers, tool/MCP settings, prompt
 presets, or chat history. Those stay on the device they were set up on.

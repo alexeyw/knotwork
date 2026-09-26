@@ -4,10 +4,12 @@ package app.knotwork.android.domain.models
  * Everything bound to one pipeline id: what runs that pipeline without the
  * user choosing it again.
  *
- * The app binds by **id**, not by graph. Deleting a pipeline clears these
- * bindings; replacing it on import keeps the id — and so keeps every binding,
- * pointed at the imported graph from then on. This is what the Replace
- * confirmation lists, so the user agrees to it knowingly.
+ * The app binds by **id**, not by graph. Deleting a pipeline clears the
+ * default and the entry surfaces and switches its triggers off, but triggers,
+ * chats and calling pipelines keep the id. Replacing a pipeline on import keeps
+ * the id — and so keeps every binding, pointed at the imported graph from then
+ * on — and so does importing a file under a deleted pipeline's id. This is what
+ * the import confirmation lists, so the user agrees to it knowingly.
  *
  * @property isDefault The pipeline is the app-wide default — what a chat with
  *   no pipeline of its own runs.

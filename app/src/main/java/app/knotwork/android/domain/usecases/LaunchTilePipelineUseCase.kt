@@ -20,7 +20,7 @@ import javax.inject.Inject
  * the caller then routes the user to the binding UI instead of running anything.
  */
 class LaunchTilePipelineUseCase @Inject constructor(
-    private val resolveSurfacePipeline: ResolveSurfacePipelineUseCase,
+    private val resolveSurfacePipeline: ResolveLaunchableSurfacePipelineUseCase,
     private val taskScheduler: TaskScheduler,
 ) {
 
@@ -31,7 +31,8 @@ class LaunchTilePipelineUseCase @Inject constructor(
      * @param prompt The text fed to the pipeline as the user message. The tile
      *   has no free-form input, so the caller supplies a localised stand-in.
      * @return [TileLaunchResult.Launched] when a run was enqueued, or
-     *   [TileLaunchResult.NotConfigured] when the tile has no bound pipeline.
+     *   [TileLaunchResult.NotConfigured] when the tile has no bound pipeline, or
+     *   its binding names a pipeline that no longer exists.
      */
     suspend operator fun invoke(prompt: String): TileLaunchResult {
         val pipelineId = resolveSurfacePipeline(EntrySurface.QUICK_TILE) ?: return TileLaunchResult.NotConfigured
