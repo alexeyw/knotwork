@@ -657,7 +657,10 @@ oversight — and it works as follows:
   from that server, and a call that fails there is not retried on another. The
   risk is re-checked against the serving server just before the call, which is
   refused if a reconnect handed the name to a server with a different decision
-  after the gate asked. The Tools screen marks a server tool that is not offered.
+  after the gate asked. An approval recorded on a run that waited in the
+  background applies only to the call it was given for — the same arguments at
+  the same risk; if the resumed run resolves differently, the user is asked
+  again. The Tools screen marks a server tool that is not offered.
 
 **Recommendation:** when connecting an MCP server you do not fully trust —
 or one that serves content from the open web — set the tool-approval policy

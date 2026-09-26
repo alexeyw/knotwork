@@ -859,8 +859,8 @@ The agent talks to AppFunctions in two directions:
   `androidx.appfunctions.AppFunctionService` annotated
   `@AppFunctionServiceEntryPoint` and `@AndroidEntryPoint`. The
   AppFunctions compiler generates the concrete `KnotworkAppFunctionService`
-  with its dispatch and writes the inventory to
-  `assets/knotwork_app_functions.xml`; the manifest registers that service,
+  with its dispatch and writes the inventory to the generated
+  `knotwork_app_functions.xml` asset; the manifest registers that service,
   guarded by `BIND_APP_FUNCTION_SERVICE`, and names the inventory
   (`AppFunctionServiceManifestGuardTest` keeps the three in step). Each
   `@AppFunction` delegates to a Hilt-injected class, so the callee path
@@ -1661,12 +1661,14 @@ in two phases:
    denying from it — even after process death — records the decision
    onto the parked record and resumes the run from its checkpoint, where
    the `TOOL` node consumes the decision under a TOCTOU guard (the
-   re-resolved tool call must match the parked snapshot exactly). The
-   decision is consumed before anything can end the gate early, and
-   applied whatever the approval policy or the tool's risk say at
-   resume time: those only decide whether a *new* question is needed,
-   so a denial recorded under a strict policy stays a denial after the
-   user relaxes it.
+   re-resolved tool call must match the parked snapshot exactly, and an
+   approval must meet the same risk it was given at; a denial applies at
+   any risk). The decision is consumed before anything can end the gate
+   early, and applied whatever the approval policy says at resume time:
+   the policy only decides whether a *new* question is needed, so a denial
+   recorded under a strict policy stays a denial after the user relaxes
+   it. An answer the guard does not let through is not dropped into the
+   policy either — the question is raised again, whatever the policy.
    Clarifications park the same way, answered via a deep link into the
    chat. An unanswered park is failed by the maintenance pass once the
    user-configurable **approval window** (default 24 h) elapses.

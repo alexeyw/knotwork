@@ -667,7 +667,9 @@ If that chat is not on screen when the request comes in, it also
 arrives as a notification. For read-only and sensitive tools it offers
 **Approve** and **Deny**. Destructive tools never execute from a
 notification — it offers **Deny** and a **Review in chat** link to the
-regular typed-confirm card.
+regular typed-confirm card. The same goes for a call whose arguments are
+longer than a notification can show: its text is cut with a note, and it is
+approved in the chat, where the card shows every argument.
 
 Each notification and each card answers only the request it shows. If two
 runs are waiting in the same chat, each has its own notification, and a
@@ -681,6 +683,10 @@ re-posts it. Its buttons work even if the app process has since been
 killed: the run resumes from its checkpoint and the tool call is
 re-validated before your stored decision is applied. A **Deny** stays
 a deny even if you change **Approve tool calls** while the run waits.
+If the resumed run makes a different call — other arguments — or the
+call now carries a different risk than the one you answered, your answer
+is not applied to it and you are asked again, whatever **Approve tool
+calls** says.
 Clarifying questions park the same way under an **Agent needs
 your input** notification that deep-links back to the chat. Parked
 requests expire after the **Settings → Background & triggers → Approval window**
@@ -740,7 +746,7 @@ setting once by hand.
 | Notification | When | Actions |
 |---|---|---|
 | *Agent is working* (only while working) | While a run executes in the background; auto-removed when it finishes | Opens the app |
-| *Approval required* | A sensitive/destructive tool call awaits your decision | **Approve** / **Deny** (destructive: **Deny** / **Review in chat**) |
+| *Approval required* | A sensitive/destructive tool call awaits your decision | **Approve** / **Deny** (destructive, or arguments too long to show: **Deny** / **Review in chat**) |
 | *Agent needs your input* | A clarification question is waiting | Deep-links into the chat |
 | *Task completed* / *Task failed* | A scheduled task finished | Opens the conversation the result landed in |
 | *Still running* (optional ping) | A long backgrounded run is still going | Opens the app |

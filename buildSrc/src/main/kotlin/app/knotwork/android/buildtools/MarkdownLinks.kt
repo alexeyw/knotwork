@@ -40,6 +40,24 @@ object MarkdownLinks {
      */
     data class Link(val target: String, val line: Int)
 
+    /**
+     * One inline code span found in a document.
+     *
+     * @property text The span's content without its backtick delimiters, trimmed.
+     * @property line 1-indexed line the span was written on.
+     */
+    data class CodeSpan(val text: String, val line: Int)
+
+    /**
+     * Where one inline code span sits on its line.
+     *
+     * @property start Index of the span's first opening backtick.
+     * @property contentStart Index of the first character after the opening run.
+     * @property contentEnd Index of the closing run's first backtick.
+     * @property end Index just past the closing run.
+     */
+    private data class SpanBounds(val start: Int, val contentStart: Int, val contentEnd: Int, val end: Int)
+
     /** Opening or closing fence of a code block: three or more backticks or tildes. */
     private val FENCE = Regex("""^ {0,3}(`{3,}|~{3,})""")
 
@@ -109,6 +127,24 @@ object MarkdownLinks {
         }
         return links
     }
+
+    /**
+     * Extracts every inline code span of a document.
+     *
+     * Read with the same masking as [linksOf] — fenced blocks and HTML comments
+     * blanked — and the same span boundaries its code-span mask uses, so the
+     * text one check treats as code is exactly the text the other skips. A span
+     * opened on one line and closed on the next is not read, as with the mask.
+     *
+     * @param markdown The document's full text.
+     * @return Every span's content with its line, in document order.
+     */
+    fun codeSpansOf(markdown: String): List<CodeSpan> =
+        maskedLines(markdown, maskCodeSpans = false).flatMapIndexed { index, line ->
+            codeSpanBounds(line).map { span ->
+                CodeSpan(line.substring(span.contentStart, span.contentEnd).trim(), index + 1)
+            }
+        }
 
     /**
      * Collects every anchor a link can target inside a document: the slug of
@@ -396,42 +432,59 @@ object MarkdownLinks {
     /**
      * Masks the contents of inline code spans on one line.
      *
-     * A span opens and closes on a run of backticks of equal length; an unclosed
-     * run is left alone, since masking to the end of the line would hide real
-     * links after a stray backtick.
-     *
      * @param line The line to mask.
-     * @return The line with span contents replaced by spaces.
+     * @return The line with every span, delimiters included, replaced by spaces.
      */
     private fun maskCodeSpans(line: String): String {
-        if (!line.contains('`')) return line
+        val spans = codeSpanBounds(line)
+        if (spans.isEmpty()) return line
         val masked = line.toCharArray()
+        for (span in spans) for (position in span.start until span.end) masked[position] = ' '
+        return String(masked)
+    }
+
+    /**
+     * Finds the inline code spans on one line.
+     *
+     * A span opens and closes on a run of backticks of equal length. A run that
+     * is never closed is literal text, as CommonMark reads it, and the scan goes
+     * on after it — masking to the end of the line would hide real links after a
+     * stray backtick, and stopping there would leave the spans after it unread.
+     *
+     * The single owner of span boundaries: [maskCodeSpans] blanks exactly what
+     * [codeSpansOf] reports.
+     *
+     * @param line One line, already masked for fences and comments.
+     * @return The spans, in order.
+     */
+    private fun codeSpanBounds(line: String): List<SpanBounds> {
+        if (!line.contains('`')) return emptyList()
+        val spans = mutableListOf<SpanBounds>()
         var index = 0
-        while (index < masked.size) {
-            if (masked[index] != '`') {
+        while (index < line.length) {
+            if (line[index] != '`') {
                 index++
                 continue
             }
             val openStart = index
-            while (index < masked.size && masked[index] == '`') index++
+            while (index < line.length && line[index] == '`') index++
             val openLength = index - openStart
             var scan = index
-            while (scan < masked.size) {
-                if (masked[scan] == '`') {
-                    val closeStart = scan
-                    while (scan < masked.size && masked[scan] == '`') scan++
-                    if (scan - closeStart == openLength) {
-                        for (position in openStart until scan) masked[position] = ' '
-                        index = scan
-                        break
-                    }
-                } else {
+            while (scan < line.length) {
+                if (line[scan] != '`') {
                     scan++
+                    continue
+                }
+                val closeStart = scan
+                while (scan < line.length && line[scan] == '`') scan++
+                if (scan - closeStart == openLength) {
+                    spans += SpanBounds(openStart, openStart + openLength, closeStart, scan)
+                    index = scan
+                    break
                 }
             }
-            if (scan >= masked.size) break
         }
-        return String(masked)
+        return spans
     }
 
     /**

@@ -224,7 +224,7 @@ which is unnecessary for this single-variant project.
 
 ## CI integration — deferred
 
-There is still no `.github/workflows/coverage.yml` job publishing the HTML
+There is still no coverage job under `.github/workflows/` publishing the HTML
 report as a PR artefact. The original reason — the Git remote's PAT lacking the
 `workflow` scope — no longer applies (`.github/workflows/` now holds both
 `check.yml` and `release.yml`); what remains is that the build-failing threshold

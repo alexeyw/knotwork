@@ -36,6 +36,14 @@ details.
 - **Wikipedia search can only reach Wikipedia.** The language code chosen for a
   search is checked before the request is built, so it can no longer point the
   request at another server.
+- **An approval covers only the call it was given for.** When a run that waited
+  in the background resumes, your answer is applied only if the call is the one
+  you answered — the same arguments at the same risk. If it has changed, you are
+  asked again, even if **Approve tool calls** is set to *Never*.
+- **Approving from a notification needs the whole call on screen.** A call whose
+  arguments are longer than a notification can show is cut there with a note and
+  approved in the chat, where every argument is visible. Deny still works from
+  the notification.
 - **A share or the Quick Settings tile no longer runs a pipeline you did not bind.**
   If the pipeline they were bound to no longer existed — after *Erase data*, for
   example — they ran the default pipeline while Settings said "Not set". They now
@@ -398,6 +406,11 @@ details.
   has been wired up or removed. Two rows of `docs/coverage-baseline.md` were
   re-measured and had drifted in opposite directions: one package had closed its
   gap unaided, another had fallen by growing faster than its tests.
+- **Contributor documentation no longer points at files that do not exist.** The
+  rule for parsing tool arguments named a parser that was never written, and the
+  guide to adding a cloud provider named a settings screen that has since been
+  split. The documentation check now reads file paths written as code, not only
+  links, so a path that stops existing fails the build.
 
 ## [0.10.1] - 2026-09-20
 

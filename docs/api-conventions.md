@@ -95,6 +95,12 @@ interface LiteRtRepository {
   "whatever the session is waiting on" is not an address. A new answering
   surface carries the id; a new caller of `resumeWithApproval`,
   `executeTool` or `invokeByName` fails `HitlDispatchKonsistTest`.
+- **A recorded answer applies only to the call it answered.** A run resumed
+  from its parked record applies the user's decision only when the
+  re-resolved call has the same name and arguments and — for an approval —
+  the same risk as the card the user saw. Anything else raises the question
+  again, whatever the policy: a quiet policy never settles a question that
+  was already asked. A denial applies at any risk.
 
 ```kotlin
 enum class ToolRisk { READ_ONLY, SENSITIVE, DESTRUCTIVE }
@@ -259,8 +265,14 @@ interface Tool {
 - Use `org.json.JSONObject` or `kotlinx.serialization` — **never** manual
   string parsing.
 - Always handle `JSONException` and map it to a typed error result.
-- When parsing tool arguments from LLM output, use the canonical parser in
-  `domain/parser/ToolArgumentParser.kt`.
+- Tool arguments from LLM output have no shared parser. The call envelope is
+  extracted by `ToolCallParser` (and by `ToolNodeExecutor` through
+  `StructuredOutputGate`), both on `JsonPayloadExtractor`; each
+  `LocalToolExecutor` then reads its own fields with `org.json`. Catch
+  `JSONException` in the executor and answer with an error, as
+  `HttpRequestExecutor` does. Most executors still let it reach
+  `ToolInvocationGate`, which hands it to the model as a failed call: the run
+  goes on and nothing executes.
 
 ---
 

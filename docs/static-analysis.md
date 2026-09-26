@@ -50,7 +50,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifySettingsHelpDocs`                 | Fails if the settings reference table in `docs/user-guide.md` drifts from the shipped help strings (see below). |
 | `:app:verifyCookbookDocs`                     | Fails if the node reference in `docs/cookbook.md` drifts from the node sources (see below). |
 | `:app:verifyFileMap`                          | Fails if a generated `FILE_MAP.md` drifts from the Kotlin sources, or an undocumented-file count grows past its ratchet (see below). |
-| `:app:verifyDocLinks`                         | Fails if a relative link or an `#anchor` anywhere in the documentation leads nowhere (see below). External `http` links are reported, not gated. |
+| `:app:verifyDocLinks`                         | Fails if a relative link, an `#anchor` or an inline-code repository path anywhere in the documentation leads nowhere (see below). External `http` links are reported, not gated. |
 | `:app:verifyMermaidDiagrams`                  | Fails if an embedded Mermaid diagram is structurally broken (see below). |
 | `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
 | `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
@@ -1101,8 +1101,26 @@ about *this repository*: its verdict is a function of the commit under review
 and nothing else, so a dead one is a defect the build can refuse. It resolves
 every internal link across the whole Markdown set — the top-level documents,
 `docs/`, `.github/`, the `FILE_MAP.md` family and `gradle/` — and fails naming
-the file, the line and the target. Today that is more than 400 internal links
+the file, the line and the target. Today that is more than 450 internal links
 across 35 Markdown files.
+
+**It reads inline-code paths too.** Documentation names source files in code
+spans far more often than in links, and a span is invisible to a link checker —
+which is how a rule in `api-conventions.md` sent implementers to a parser file
+that had never existed, for four months, with this gate green. So a span written
+as a repository path is resolved as well: it must hold a `/`, end in a source
+extension (`.kt`, `.md`, `.yml`, …) after an optional `:line` or `#anchor`, and
+begin with `./`, `../` or a directory name that exists in the repository. It
+resolves from the root, from the document's directory, or as the tail of a file's
+path (`data/mcp/KoogMcpClient.kt`, written from the package root). Shorthand is
+left alone on purpose — an elision (`…`, `...`), a glob, a `<placeholder>`, build
+output, an absolute (device) path — and so are the spans of `CHANGELOG.md`,
+whose entries name the tree they were written against. The file index is a walk
+of the working tree, not the Git index, minus build output and the Git-ignored
+entries that exist only in a developer's checkout (internal notes, local agent
+rules, `local.properties`), so a local pass means a CI pass. Today that is about 220
+spans. A span that is deliberately not one file is written elided, or as the
+bare file name.
 
 **`:app:reportExternalDocLinks` is a report, and is not part of `check`.** An
 `http` link is a claim about somebody else's server; it can turn red while the
@@ -1146,7 +1164,10 @@ same corpus locally and in CI.
 Shortcut and collapsed reference usages (`[label]`, `[label][]`) are not
 resolved — `CHANGELOG.md` is full of them, and they are covered only in as much
 as their *definitions* are checked. A code span opened on one line and closed on
-the next keeps its links visible to the scanner. Anchors into a Markdown file
+the next keeps its links visible to the scanner, and its path is not read. A
+span naming a class, a package or a directory (no file extension) is not
+resolved: `data/tools/local/appfunctions/AgentAppFunctionService` names nothing
+the file system can answer for. Anchors into a Markdown file
 outside the scanned set are reported rather than skipped: that would mean the
 scan has a hole, which is a finding about the gate itself.
 
@@ -1165,8 +1186,12 @@ every time is the honest option, and it costs a fraction of a second.
 Watched red before being trusted, in three shapes: a link to a file that does
 not exist, a link to an anchor that does not exist, and both together **inside a
 brand-new untracked file** — the case the Git-index failure mode above would
-have missed. The pure logic is unit-tested in `buildSrc` (`MarkdownLinksTest`,
-`DocLinkCheckerTest`, `ExternalLinkReportTest`).
+have missed. The inline-code pass was watched red on the real tree before any
+document was touched — six spans, two of them dead references nobody had
+reported (the parser above, and a settings screen that had since been split) —
+and on a probe span naming a brand-new untracked file, which resolved once the
+file existed. The pure logic is unit-tested in `buildSrc` (`MarkdownLinksTest`,
+`DocLinkCheckerTest`, `RepositoryFilesTest`, `ExternalLinkReportTest`).
 
 ---
 
