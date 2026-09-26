@@ -194,16 +194,17 @@ class ToolInvocationGate @Inject constructor(
         // gate early (a failed risk lookup, the destructive hard block). The
         // record is one-shot: an early return that skipped the consumption
         // would leave an answer behind that outlives the gate it belonged to.
-        val parkedDecision = consumeParkedDecision(runId, resolvedToolName, resolvedToolArgs)
-        if (parkedDecision != null) {
+        val parkedAnswer = consumeParkedAnswer(runId, resolvedToolName, resolvedToolArgs)
+        if (parkedAnswer != null) {
             // Settles the gate this run parked on in an earlier process (which
             // counted itself then). Written here, before the risk and the policy
-            // are even read, because the answer was given and the gate ended on
-            // every path below — including the ones that refuse the call anyway.
+            // are even read, because the answer was given and that gate ended on
+            // every path below — including the ones that refuse the call anyway,
+            // and the one that asks a new question about a different call.
             recordTriggerHitlEvent(
                 runId,
                 TriggerHitlEvent.Resolved(
-                    if (parkedDecision == PendingDecision.APPROVED) {
+                    if (parkedAnswer.decision == PendingDecision.APPROVED) {
                         TriggerHitlResolution.APPROVED
                     } else {
                         TriggerHitlResolution.DENIED
@@ -266,18 +267,31 @@ class ToolInvocationGate @Inject constructor(
         // it. A pipeline file is a document that can be shared, and a node able
         // to declare "do not ask about this destructive call" would let
         // somebody else's document walk straight past the gate.
-        val needsApproval = alwaysConfirm || settingsRepository.toolApprovalPolicy.first().requiresApproval(risk)
+        //
+        // A recorded answer applies only to the call it answered. A denial
+        // authorises nothing, so it applies whatever the risk has become; an
+        // approval covers the card the user saw — the same arguments at the same
+        // risk. Anything else (other arguments, or an approval given at another
+        // risk) is a question still pending on this run, and it is asked again
+        // whatever the policy says: a quiet policy never gets to settle a
+        // question the user was already asked.
+        val appliedDecision = parkedAnswer?.takeIf { it.sameCall }?.decision?.takeIf { decision ->
+            decision == PendingDecision.DENIED || parkedAnswer.risk == risk
+        }
+        val askAgain = parkedAnswer != null && appliedDecision == null
+        val needsApproval =
+            askAgain || alwaysConfirm || settingsRepository.toolApprovalPolicy.first().requiresApproval(risk)
         var isApproved = true
 
-        if (parkedDecision != null) {
+        if (appliedDecision != null) {
             // A resumed run carries the user's one-shot decision for this exact
             // request snapshot — apply it without raising a new gate, and apply
-            // it whatever [needsApproval] says now. The policy and the risk are
-            // re-read on resume (the user may have relaxed either while the run
-            // was parked), but they only decide whether a NEW question must be
-            // asked; a recorded answer is the answer to one that was asked, and
-            // a later setting cannot un-ask it. A denial stays a denial.
-            isApproved = parkedDecision == PendingDecision.APPROVED
+            // it whatever the policy says now. The policy and the risk are re-read
+            // on resume (the user may have relaxed either while the run was
+            // parked), but they only decide whether a NEW question must be asked;
+            // a recorded answer is the answer to one that was asked, and a later
+            // setting cannot un-ask it. A denial stays a denial.
+            isApproved = appliedDecision == PendingDecision.APPROVED
         } else if (needsApproval) {
             // Journal the gate the moment it is raised, not when (or if) it
             // parks: the live waiting phase is a full minute by default, so a
@@ -432,41 +446,53 @@ class ToolInvocationGate @Inject constructor(
     }
 
     /**
+     * The answer the user gave to the approval request a resumed run parked on.
+     *
+     * @property decision What the user answered.
+     * @property risk The risk shown on the card the user answered; `null` only
+     *   for a record written without one, which no approval can then match.
+     * @property sameCall Whether the resumed run makes the same call — tool
+     *   name and arguments identical to the parked snapshot. A run that
+     *   regenerates its arguments makes a different call, which the answer
+     *   does not cover.
+     */
+    private data class ParkedAnswer(val decision: PendingDecision, val risk: ToolRisk?, val sameCall: Boolean)
+
+    /**
      * Consumes the parked approval record of a resumed run, one-shot.
      *
      * The record never survives its first consumption attempt: whatever the
      * outcome, it is deleted so a stale decision can never authorise a later
-     * call. The recorded decision applies only under the TOCTOU guard — the
-     * re-resolved tool name and arguments must match the parked snapshot
-     * exactly; the auto-select / argument-generation LLM passes are not
-     * deterministic, and a decision the user gave for one concrete call must
-     * not leak onto a different one.
+     * call. Whether the answer applies is decided by the caller, once the
+     * call's current risk is known: the auto-select / argument-generation LLM
+     * passes are not deterministic, and a decision the user gave for one
+     * concrete call must not leak onto a different one.
      *
      * @param runId Id of the executing run, or `null` for non-persisted runs.
      * @param resolvedToolName Tool name resolved by this execution.
      * @param resolvedToolArgs Argument string resolved by this execution.
-     * @return The user's decision when it may be applied, or `null` when a
-     *   fresh approval gate must be raised (no record, undecided record, or
-     *   TOCTOU mismatch).
+     * @return The user's answer with what it was given for, or `null` when the
+     *   run parked on nothing answered (no record, or one never decided).
      */
-    private suspend fun consumeParkedDecision(
+    private suspend fun consumeParkedAnswer(
         runId: String?,
         resolvedToolName: String,
         resolvedToolArgs: String,
-    ): PendingDecision? {
+    ): ParkedAnswer? {
         if (runId == null) return null
         val parked = pendingInteractionRepository.getForRun(runId) ?: return null
         if (parked.kind != PendingInteractionKind.APPROVAL) return null
         pendingInteractionRepository.delete(runId)
-        val argsMatch = parked.toolName == resolvedToolName && parked.toolArgs == resolvedToolArgs
-        if (!argsMatch) {
+        val decision = parked.decision ?: return null
+        val sameCall = parked.toolName == resolvedToolName && parked.toolArgs == resolvedToolArgs
+        if (!sameCall) {
             Timber.tag("PipelineDebug").w(
-                "Parked approval of run %s resolved to a different call (%s) — raising a fresh gate",
+                "Parked approval of run %s answered a different call than %s makes now — asking again",
                 runId,
                 resolvedToolName,
             )
         }
-        return parked.decision?.takeIf { argsMatch }
+        return ParkedAnswer(decision = decision, risk = parked.risk, sameCall = sameCall)
     }
 
     /**

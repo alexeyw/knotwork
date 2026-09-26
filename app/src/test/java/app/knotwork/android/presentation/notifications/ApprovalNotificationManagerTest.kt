@@ -238,6 +238,48 @@ class ApprovalNotificationManagerTest {
     }
 
     @Test
+    fun `given arguments the shade cannot show whole when posted then Approve is not offered`() {
+        // One-tap Approve authorises the whole argument string; the shade shows
+        // a bounded part of it. Past the budget the answer belongs in the chat,
+        // where the card expands every argument — Deny stays, denying needs no reading.
+        val longArgs = "{\"q\":\"" + "x".repeat(6_000) + "\"}"
+        val surfaces = listOf<Pair<String, () -> Unit>>(
+            "live" to { manager.sendApprovalRequest("s1", "req-s1", "t", longArgs, ToolRisk.SENSITIVE) },
+            "persistent" to {
+                manager.sendPersistentApprovalRequest("run-1", "s1", "req-run-1", "t", longArgs, ToolRisk.SENSITIVE)
+            },
+        )
+        val failures = mutableListOf<String>()
+        for ((surface, post) in surfaces) {
+            notificationManager().cancelAll()
+            post()
+
+            val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+            if (notification.approvesFromShade()) failures += "$surface: Approve offered for arguments the shade cuts"
+            val deny = notification.actions.orEmpty().any {
+                Shadows.shadowOf(it.actionIntent).savedIntent?.action == ApprovalAction.DENY.action
+            }
+            if (!deny) failures += "$surface: Deny missing"
+            val shown = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
+            if (shown.contains(longArgs)) failures += "$surface: the whole argument string was handed to the shade"
+            if (!shown.contains(context.getString(R.string.approval_notification_arguments_cut))) {
+                failures += "$surface: the cut is not said"
+            }
+        }
+        assertTrue(failures.joinToString(separator = "\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun `given arguments within the shade budget when a SENSITIVE request is posted then they are shown whole`() {
+        val args = "{\"q\":\"" + "x".repeat(ApprovalNotificationManager.SHADE_ARGUMENT_BUDGET - 8) + "\"}"
+        manager.sendApprovalRequest("s1", "req-s1", "t", args, ToolRisk.SENSITIVE)
+
+        val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        assertTrue(notification.approvesFromShade())
+        assertTrue(notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains(args))
+    }
+
+    @Test
     fun `given a parked request's notification when a later request of the same chat is posted then both show`() {
         // A parked run's ongoing notification is its primary way back. A later
         // request in the same chat (a scheduled task, a trigger, the next

@@ -59,6 +59,20 @@ class ApprovalNotificationManager @Inject constructor(
         private const val REPOST_OFFSET = 2
 
         /**
+         * Longest argument string, in characters, a notification shows whole and
+         * lets the user approve from the shade.
+         *
+         * One-tap Approve authorises the entire string, while the shade shows a
+         * bounded part of it: the platform caps every text a notification holds
+         * (1 024 characters) and the expanded view shows a limited number of
+         * lines below that. Past this budget the text is cut with a note and
+         * only Deny stays in the shade; the chat card expands every argument.
+         * The value is a judgement — about eight lines of a phone-width shade —
+         * not a measurement of any device's layout.
+         */
+        internal const val SHADE_ARGUMENT_BUDGET = 300
+
+        /**
          * Notification slot of request [requestId]: shared by its live and
          * persistent notification, so the park replaces the one with the other
          * and a single cancel clears whichever is showing — and distinct from
@@ -116,18 +130,18 @@ class ApprovalNotificationManager @Inject constructor(
             ToolRisk.SENSITIVE, ToolRisk.READ_ONLY -> context.getString(R.string.approval_notification_title_sensitive)
         }
         val contentText = context.getString(R.string.approval_notification_text, toolName)
-        val bigText = context.getString(R.string.approval_notification_big_text, toolName, arguments)
+        val shade = shadeText(toolName, arguments)
         val address = RequestAddress(sessionId, requestId)
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(smallIcon)
             .setContentTitle(title)
             .setContentText(contentText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(shade.text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .addDecisionActions(
-                risk = risk,
+                approvable = risk != ToolRisk.DESTRUCTIVE && shade.whole,
                 sessionId = sessionId,
                 approveIntent = { decisionPendingIntent(address, ApprovalAction.APPROVE, APPROVE_OFFSET) },
                 denyIntent = decisionPendingIntent(address, ApprovalAction.DENY, DENY_OFFSET),
@@ -184,7 +198,7 @@ class ApprovalNotificationManager @Inject constructor(
             ToolRisk.SENSITIVE, ToolRisk.READ_ONLY -> context.getString(R.string.approval_notification_title_sensitive)
         }
         val contentText = context.getString(R.string.approval_notification_waiting_text, toolName)
-        val bigText = context.getString(R.string.approval_notification_big_text, toolName, arguments)
+        val shade = shadeText(toolName, arguments)
         val deepLink = chatDeepLinkIntent(sessionId)
 
         val address = RequestAddress(sessionId, requestId, runId)
@@ -192,7 +206,7 @@ class ApprovalNotificationManager @Inject constructor(
             .setSmallIcon(smallIcon)
             .setContentTitle(title)
             .setContentText(contentText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(shade.text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(deepLink)
             .setOngoing(true)
@@ -200,7 +214,7 @@ class ApprovalNotificationManager @Inject constructor(
             .setAutoCancel(false)
             .setDeleteIntent(decisionPendingIntent(address, ApprovalAction.REPOST, REPOST_OFFSET))
             .addDecisionActions(
-                risk = risk,
+                approvable = risk != ToolRisk.DESTRUCTIVE && shade.whole,
                 sessionId = sessionId,
                 approveIntent = { decisionPendingIntent(address, ApprovalAction.APPROVE, APPROVE_OFFSET) },
                 denyIntent = decisionPendingIntent(address, ApprovalAction.DENY, DENY_OFFSET),
@@ -241,25 +255,28 @@ class ApprovalNotificationManager @Inject constructor(
      * that decides what can be answered from the shade, shared by both
      * waiting phases so they cannot drift apart.
      *
-     * [ToolRisk.DESTRUCTIVE] gets a "Review in chat" deep link in place of
-     * Approve: the in-chat card asks for a typed confirmation before a
-     * destructive call may run, and a notification action cannot collect one.
-     * [approveIntent] is a factory so that no Approve intent is even created
-     * for such a call. Deny is always offered — refusing needs no ceremony.
+     * A request that is not approvable from the shade gets a "Review in chat"
+     * deep link in place of Approve. Two kinds are not: [ToolRisk.DESTRUCTIVE],
+     * because the in-chat card asks for a typed confirmation before a
+     * destructive call may run and a notification action cannot collect one;
+     * and a request whose arguments the shade cannot show whole, because an
+     * Approve there would authorise text the user never saw. [approveIntent] is
+     * a factory so that no Approve intent is even created for either. Deny is
+     * always offered — refusing needs no ceremony.
      *
-     * @param risk Risk classification of the staged call.
+     * @param approvable Whether the request may be approved from the shade.
      * @param sessionId Chat session the "Review in chat" link opens.
-     * @param approveIntent Builds the Approve broadcast; not invoked for [ToolRisk.DESTRUCTIVE].
+     * @param approveIntent Builds the Approve broadcast; invoked only when [approvable].
      * @param denyIntent The Deny broadcast.
      * @return this builder, for chaining.
      */
     private fun NotificationCompat.Builder.addDecisionActions(
-        risk: ToolRisk,
+        approvable: Boolean,
         sessionId: String,
         approveIntent: () -> PendingIntent,
         denyIntent: PendingIntent,
     ): NotificationCompat.Builder {
-        if (risk == ToolRisk.DESTRUCTIVE) {
+        if (!approvable) {
             addAction(
                 R.drawable.ic_action_open,
                 context.getString(R.string.approval_notification_review_in_chat),
@@ -269,6 +286,37 @@ class ApprovalNotificationManager @Inject constructor(
             addAction(R.drawable.ic_notif_done, context.getString(R.string.chat_thought_approve), approveIntent())
         }
         return addAction(R.drawable.ic_action_deny, context.getString(R.string.chat_thought_deny), denyIntent)
+    }
+
+    /**
+     * What the shade shows of one request, and whether that is all of it.
+     *
+     * @property text The expanded text of the notification.
+     * @property whole `true` when [text] holds the complete argument string, so
+     *   an Approve in the shade authorises only what the user can read there.
+     */
+    private data class ShadeText(val text: String, val whole: Boolean)
+
+    /**
+     * Renders a request's expanded text, cutting the arguments at
+     * [SHADE_ARGUMENT_BUDGET] with a note that says so.
+     *
+     * @param toolName The tool the request is for.
+     * @param arguments The argument string the request would authorise.
+     * @return The text, and whether it carries the arguments whole.
+     */
+    private fun shadeText(toolName: String, arguments: String): ShadeText {
+        if (arguments.length <= SHADE_ARGUMENT_BUDGET) {
+            return ShadeText(context.getString(R.string.approval_notification_big_text, toolName, arguments), true)
+        }
+        // Never split a surrogate pair: a lone high surrogate renders as a box.
+        val end = if (arguments[SHADE_ARGUMENT_BUDGET - 1].isHighSurrogate()) {
+            SHADE_ARGUMENT_BUDGET - 1
+        } else {
+            SHADE_ARGUMENT_BUDGET
+        }
+        val shown = context.getString(R.string.approval_notification_big_text, toolName, arguments.take(end) + "…")
+        return ShadeText(shown + "\n\n" + context.getString(R.string.approval_notification_arguments_cut), false)
     }
 
     private fun ensureChannelsRegistered(notificationManager: NotificationManager) {

@@ -36,6 +36,14 @@ details.
 - **Wikipedia search can only reach Wikipedia.** The language code chosen for a
   search is checked before the request is built, so it can no longer point the
   request at another server.
+- **An approval covers only the call it was given for.** When a run that waited
+  in the background resumes, your answer is applied only if the call is the one
+  you answered — the same arguments at the same risk. If it has changed, you are
+  asked again, even if **Approve tool calls** is set to *Never*.
+- **Approving from a notification needs the whole call on screen.** A call whose
+  arguments are longer than a notification can show is cut there with a note and
+  approved in the chat, where every argument is visible. Deny still works from
+  the notification.
 - **Prompts of scheduled and background runs are encrypted on the phone.** A
   scheduled task's instruction, a trigger's prompt and a request from another app
   were kept by Android's background scheduler in its own unencrypted store, and
