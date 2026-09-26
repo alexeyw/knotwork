@@ -12,6 +12,7 @@
     <string name="approval_notification_big_text">Agent wants to use %1$s with args:\n%2$s</string>
     <string name="approval_notification_waiting_text">Waiting for your approval to use %1$s.</string>
     <string name="approval_notification_review_in_chat">Review in chat</string>
+    <string name="approval_notification_arguments_cut">The arguments are longer than this notification can show. Open the chat to read them all before approving.</string>
 
     <!-- Clarification notification (background waiting for the user's answer) -->
     <string name="clarification_channel_name">Agent Questions</string>

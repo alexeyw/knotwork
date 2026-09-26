@@ -38,13 +38,16 @@ import org.junit.Test
  * Unit tests for [ToolInvocationGate] driven through `dispatch` directly, for
  * the one property the executor-level suite (`ToolNodeExecutorTest`) crosses in
  * neither direction: **a decision the user recorded on a parked request is the
- * decision the resumed run applies**, whatever the approval policy, the tool's
- * risk or the node's `alwaysConfirm` switch say by the time it resumes.
+ * decision the resumed run applies** — to the call it answered — whatever the
+ * approval policy or the node's `alwaysConfirm` switch say by the time it resumes.
  *
  * The policy and the risk are re-evaluated on resume on purpose — they are the
- * user's current settings — but they decide only whether a *new* question has
- * to be asked. A recorded answer is the answer to a question that *was* asked,
- * and no later setting can un-ask it: a denial must stay a denial.
+ * user's current settings — but the policy decides only whether a *new* question
+ * has to be asked. A recorded answer is the answer to a question that *was*
+ * asked, and no later setting can un-ask it: a denial must stay a denial. The
+ * risk bounds what an approval covers: it was given for the card the user saw,
+ * so a call that now resolves to another risk, or to other arguments, is asked
+ * about again rather than handed to a quiet policy.
  */
 class ToolInvocationGateTest {
 
@@ -124,6 +127,87 @@ class ToolInvocationGateTest {
             }
             assertTrue(failures.joinToString(separator = "\n"), failures.isEmpty())
         }
+
+    @Test
+    fun `given an approval recorded for a SENSITIVE card when the call now resolves DESTRUCTIVE then it asks again`() =
+        runTest {
+            // The user approved the card they saw — one tap, SENSITIVE. While the
+            // run waited, the call started resolving DESTRUCTIVE (an MCP name now
+            // served by another server, or a risk override raised on the Tools
+            // screen). The answer covers the question that was asked, not this one.
+            val fixture = Fixture(
+                policy = ToolApprovalPolicy.SensitiveOrDestructive,
+                risk = ToolRisk.DESTRUCTIVE,
+                record = parkedRecord(PendingDecision.APPROVED, recordedRisk = ToolRisk.SENSITIVE),
+            )
+
+            val outputs = fixture.dispatch()
+
+            assertEquals("an approval given at another risk ran the call", 0, fixture.executions)
+            val raised = outputs.filterStates<AgentOrchestratorState.WaitingForApproval>().single()
+            assertEquals(ToolRisk.DESTRUCTIVE, raised.risk)
+        }
+
+    @Test
+    fun `given a call denied then its arguments regenerated differently under NeverPrompt when resumed then it asks`() =
+        runTest {
+            // The resumed run produced a different call than the one the user
+            // denied. The denial cannot be applied to it, but neither can the
+            // quiet policy: a question was pending on this run, so it is asked again.
+            val fixture = Fixture(
+                policy = ToolApprovalPolicy.NeverPrompt,
+                risk = ToolRisk.SENSITIVE,
+                record = parkedRecord(PendingDecision.DENIED, recordedRisk = ToolRisk.SENSITIVE)
+                    .copy(toolArgs = """{"path":"other.md"}"""),
+            )
+
+            val outputs = fixture.dispatch()
+
+            assertEquals("a call regenerated after a denial ran unasked", 0, fixture.executions)
+            assertEquals(1, outputs.filterStates<AgentOrchestratorState.WaitingForApproval>().size)
+        }
+
+    @Test
+    fun `given a recorded answer and any risk or arguments when resumed then it applies only to its call`() = runTest {
+        // Guard for the class: a recorded answer is applied only to the call
+        // it answered — same name, same arguments, same risk. A DENY is
+        // applied whatever the risk has become (a denial authorises nothing);
+        // an APPROVE at another risk, or any answer to other arguments, asks again.
+        val failures = mutableListOf<String>()
+        for (decision in PendingDecision.entries) {
+            for (recordedRisk in ToolRisk.entries) {
+                for (risk in ToolRisk.entries) {
+                    for (sameArgs in listOf(true, false)) {
+                        for (policy in ToolApprovalPolicy.entries) {
+                            val record = parkedRecord(decision, recordedRisk).let {
+                                if (sameArgs) it else it.copy(toolArgs = """{"path":"other.md"}""")
+                            }
+                            val fixture = Fixture(policy = policy, risk = risk, record = record)
+
+                            val outputs = fixture.dispatch()
+
+                            val asked = outputs.filterStates<AgentOrchestratorState.WaitingForApproval>().size
+                            val combo = "decision=$decision recorded=$recordedRisk now=$risk " +
+                                "sameArgs=$sameArgs policy=$policy"
+                            val applies = sameArgs &&
+                                (decision == PendingDecision.DENIED || recordedRisk == risk)
+                            val expectedRuns = if (applies && decision == PendingDecision.APPROVED) 1 else 0
+                            val expectedAsks = if (applies) 0 else 1
+                            if (fixture.executions != expectedRuns) {
+                                failures += "$combo: executed ${fixture.executions}x, expected ${expectedRuns}x"
+                            }
+                            if (asked !=
+                                expectedAsks
+                            ) {
+                                failures += "$combo: asked ${asked}x, expected ${expectedAsks}x"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(failures.joinToString(separator = "\n"), failures.isEmpty())
+    }
 
     @Test
     fun `given a DESTRUCTIVE call under NeverPrompt when dispatched then it asks before running`() = runTest {
