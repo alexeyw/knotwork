@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import app.knotwork.android.data.local.dao.BackgroundPromptDao
 import app.knotwork.android.data.local.dao.ChatDao
 import app.knotwork.android.data.local.dao.ChatHistorySummaryDao
 import app.knotwork.android.data.local.dao.ExternalAutomationJournalDao
@@ -22,6 +23,7 @@ import app.knotwork.android.data.local.dao.TraceStepDao
 import app.knotwork.android.data.local.dao.TriggerDao
 import app.knotwork.android.data.local.dao.TriggerJournalDao
 import app.knotwork.android.data.local.dao.UsageTelemetryDao
+import app.knotwork.android.data.local.models.BackgroundPromptEntity
 import app.knotwork.android.data.local.models.ChatHistorySummaryEntity
 import app.knotwork.android.data.local.models.ChatMessageEntity
 import app.knotwork.android.data.local.models.ChatSessionEntity
@@ -83,8 +85,9 @@ import app.knotwork.android.data.local.models.UsagePipelineDayEntity
         UsageActiveDayEntity::class,
         UsagePipelineDayEntity::class,
         OnboardingMilestoneEntity::class,
+        BackgroundPromptEntity::class,
     ],
-    version = 63,
+    version = 64,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -223,6 +226,14 @@ abstract class AppDatabase : RoomDatabase() {
      * @return The [ExternalAutomationJournalDao] instance.
      */
     abstract fun externalAutomationJournalDao(): ExternalAutomationJournalDao
+
+    /**
+     * Provides access to the [BackgroundPromptDao] backing the prompts of queued
+     * background runs (the `background_prompts` table).
+     *
+     * @return The [BackgroundPromptDao] instance.
+     */
+    abstract fun backgroundPromptDao(): BackgroundPromptDao
 
     companion object {
         /**
@@ -1550,6 +1561,21 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_62_63 = object : Migration(62, 63) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `imported` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
+         * v63 → v64: adds `background_prompts` — the prompts of queued background
+         * runs, which used to travel in the background runtime's own unencrypted
+         * store as the worker's input. Additive; nothing to back-fill: requests
+         * queued before the update still carry their prompt and are read as such.
+         */
+        val MIGRATION_63_64 = object : Migration(63, 64) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `background_prompts` " +
+                        "(`id` TEXT NOT NULL, `prompt` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                )
             }
         }
     }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.knotwork.android.domain.services.TaskScheduler
 import app.knotwork.android.domain.usecases.CleanupPipelineRunsUseCase
 import app.knotwork.android.domain.usecases.CleanupTriggerJournalUseCase
 import app.knotwork.android.domain.usecases.automation.CleanupExternalAutomationJournalUseCase
@@ -39,6 +40,8 @@ import timber.log.Timber
  * @property cleanupTriggerJournalUseCase The trigger-journal retention pass.
  * @property cleanupExternalAutomationJournalUseCase The external-request journal
  *   retention pass.
+ * @property taskScheduler Prunes the stored prompts of background runs cancelled
+ *   before they ran.
  */
 @HiltWorker
 class RunRetentionWorker @AssistedInject constructor(
@@ -47,6 +50,7 @@ class RunRetentionWorker @AssistedInject constructor(
     private val cleanupPipelineRunsUseCase: CleanupPipelineRunsUseCase,
     private val cleanupTriggerJournalUseCase: CleanupTriggerJournalUseCase,
     private val cleanupExternalAutomationJournalUseCase: CleanupExternalAutomationJournalUseCase,
+    private val taskScheduler: TaskScheduler,
 ) : CoroutineWorker(context, workerParams) {
 
     /**
@@ -61,13 +65,15 @@ class RunRetentionWorker @AssistedInject constructor(
         val outcome = cleanupPipelineRunsUseCase()
         val deletedJournalRows = cleanupTriggerJournalUseCase()
         val deletedExternalRows = cleanupExternalAutomationJournalUseCase()
+        val prunedPrompts = taskScheduler.pruneOrphanPrompts()
         Timber.tag(TAG).d(
             "Retention finished: %d runs deleted, %d legacy trace rows deleted, " +
-                "%d trigger-journal rows deleted, %d external-request rows deleted",
+                "%d trigger-journal rows deleted, %d external-request rows deleted, %d orphan prompts pruned",
             outcome.deletedRuns,
             outcome.deletedLegacyTraceRows,
             deletedJournalRows,
             deletedExternalRows,
+            prunedPrompts,
         )
         Result.success()
     } catch (e: CancellationException) {

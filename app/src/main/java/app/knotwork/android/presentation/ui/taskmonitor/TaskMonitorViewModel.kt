@@ -7,6 +7,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkQuery
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
+import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.ScheduledTaskTag
@@ -32,6 +33,7 @@ class TaskMonitorViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val taskQueueManager: TaskQueueManager,
     private val cancelScheduledTasks: CancelScheduledTasksUseCase,
+    backgroundPrompts: BackgroundPromptRepository,
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(TaskFilterType.ACTIVE)
@@ -58,11 +60,13 @@ class TaskMonitorViewModel @Inject constructor(
         // Archived sessions are included on purpose: a run in flight must not
         // disappear from the monitor because the user archived its chat.
         chatRepository.getSessionsFlow(includeArchived = true),
-        workInfosFlow,
+        // A task's label names its prompt by id; the text lives in the encrypted
+        // store, never in the runtime's tags, so the preview is looked up here.
+        combine(workInfosFlow, backgroundPrompts.observeAll()) { infos, prompts -> infos to prompts },
         taskQueueManager.activeSessionsState,
         _filter,
         combine(_detailTaskId, _confirmingCancelAll) { detailId, confirming -> detailId to confirming },
-    ) { sessions, workInfos, activeSessionsMap, filter, (detailId, confirmingCancelAll) ->
+    ) { sessions, (workInfos, prompts), activeSessionsMap, filter, (detailId, confirmingCancelAll) ->
         val sessionTasks = sessions.mapNotNull { session ->
             val orchestratorState = activeSessionsMap[session.id] ?: AgentOrchestratorState.Idle
 
@@ -102,7 +106,10 @@ class TaskMonitorViewModel @Inject constructor(
             val isPassedOutput = stage == "OUTPUT" || stage == "COMPLETED"
             // A queued task's input data is not readable, so everything the row
             // can say about it comes from the tag the scheduler attached.
-            val scheduled = ScheduledTaskTag.parse(info.tags)
+            val scheduled = ScheduledTaskTag.parse(info.tags)?.let { label ->
+                val prompt = label.promptId?.let(prompts::get)
+                if (prompt != null) label.copy(promptPreview = ScheduledTaskTag.preview(prompt)) else label
+            }
 
             TaskItem(
                 id = info.id.toString(),

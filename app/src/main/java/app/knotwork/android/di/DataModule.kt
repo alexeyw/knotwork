@@ -24,6 +24,7 @@ import app.knotwork.android.data.mcp.McpClientFactory
 import app.knotwork.android.data.network.AndroidModelDownloadManager
 import app.knotwork.android.data.repositories.AssetBundledDocumentationRepository
 import app.knotwork.android.data.repositories.AssetBundledSkillSource
+import app.knotwork.android.data.repositories.BackgroundPromptRepositoryImpl
 import app.knotwork.android.data.repositories.BundledSkillSource
 import app.knotwork.android.data.repositories.ChatRepositoryImpl
 import app.knotwork.android.data.repositories.ClarificationRepositoryImpl
@@ -58,6 +59,7 @@ import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.engine.TextEmbeddingEngine
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.BundledDocumentationRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.ClarificationRepository
@@ -239,6 +241,15 @@ abstract class DataModule {
     abstract fun bindPendingInteractionRepository(
         repository: PendingInteractionRepositoryImpl,
     ): PendingInteractionRepository
+
+    /**
+     * Binds the [BackgroundPromptRepositoryImpl] implementation to the
+     * [BackgroundPromptRepository] interface — the encrypted home of the prompts
+     * of queued background runs.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindBackgroundPromptRepository(repository: BackgroundPromptRepositoryImpl): BackgroundPromptRepository
 
     /**
      * Binds the [RunTraceRepositoryImpl] implementation to the
