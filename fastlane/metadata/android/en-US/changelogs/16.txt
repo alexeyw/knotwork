@@ -2,4 +2,4 @@ Fixes two crashes reported through Google Play.
 
 Stopping an on-device answer before its first words could close the app. The app now waits for the model to stop before releasing it; after a long request, the next local answer may take a few seconds to start.
 
-A model download running in the background for many hours could crash the app on Android 15 and later. It now pauses after five hours and says why; start it again to continue from where it stopped.
+A model download running in the background for many hours could crash the app on Android 15 and later. It now pauses after five hours; start it again to continue from where it stopped.
