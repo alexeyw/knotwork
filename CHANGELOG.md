@@ -20,8 +20,8 @@ details.
   state that a nested pipeline inherits from its parent now travel together as
   one value, instead of as separate arguments. Writing the console and the run
   trace, choosing the next node, running a queue's items, keeping the run
-  record up to date, and composing what each step sees are now parts of their
-  own. Every shipped pipeline still produces exactly the run it produced
+  record up to date, composing what each step sees, replaying a resumed run and
+  running a step live are now parts of their own. Every shipped pipeline still produces exactly the run it produced
   before: its golden trace is unchanged.
 
 - **Size and complexity exceptions can no longer pile up.** The code carried

@@ -255,6 +255,7 @@ Only Kotlin files appear inside the generated blocks.
     - `TransientCacheDirectory.kt` - Every directory the app creates under its cache to pass a file to another app, or to take one from it — and the one retention rule all of them share.
   - `engine/` - Engine interfaces and abstractions.
     - `ChatHistoryWindowPlanner.kt` - Pure, clock-free planner that decides, per node execution, how a session's chat history splits into a summarised prefix (`ChatHistoryView.earlierSummary`) and a verbatim live window; bounds the over-budget history to the last N messages and flags graceful truncation when no summary is ready. Hosts the shared `CHARS_PER_TOKEN` token estimate.
+    - `CheckpointReplay.kt` - Walks a resumed run's recorded prefix: for each node the interrupted run completed, hands back what it recorded instead of running it again.
     - `CloudClientUnavailability.kt` - Why a model client for a provider cannot be constructed right now.
     - `CloudErrorSanitizer.kt` - Strips credentials (secret-named query parameters, `Bearer` tokens) out of cloud-provider error text before it reaches the console, the run trace or logcat. Needed because providers that authenticate by query parameter quote the failing URL — key included — in ordinary transport errors.
     - `CloudLlmClientFactory.kt` - Domain interface for constructing cloud LLM clients (data-layer impl: `KoogClientFactory`).
@@ -280,6 +281,7 @@ Only Kotlin files appear inside the generated blocks.
     - `GraphExecutionEngine.kt` - Engine responsible for executing PipelineGraphs.
     - `GraphRouting.kt` - Decides where a run goes next, from the graph's edges and the verdict of the node that has just run.
     - `HardwareAccelerationProbe.kt` - Port answering whether the GPU compute path is plausibly usable on this device (LiteRT-LM exposes no availability API). A `true` answer means "worth trying with a fallback ready", never "will work".
+    - `LiveNodeStep.kt` - Runs one node live — its executor, not a checkpoint record — and accounts for it: forwards what the executor reports, records its duration, charges the run tree's ledger, and announces a soft ceiling crossing.
     - `LlmInferenceEngine.kt` - LLM engine interface.
     - `MemoryAccessLogFormatter.kt` - Pure formatter for the `MemoryAccess` console event. Renders the terse one-line summary (`query` + key source + hit count + scores) and, when verbose memory logging is on, the per-hit snippet/score expansion. Used by `GraphExecutionEngine`.
     - `MemoryRetrievalQueryResolver.kt` - Pure resolver of a run's long-term-memory search key from its `RunOrigin`: interactive runs key off the user prompt, background runs (trigger / scheduled / tile) prefer the pipeline's declared `memoryRetrievalQuery`, then the first memory-aware node's input. Also owns `RunOrigin.isInteractive` and the `RetrievalQuerySource` tag rendered in the console.
