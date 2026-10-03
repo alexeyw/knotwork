@@ -10,6 +10,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.RunGeneratingModel
+import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.usecases.LoadModelUseCase
@@ -71,7 +72,14 @@ class OutputNodeExecutorTest {
         val node = NodeModel("1", NodeType.OUTPUT, 0f, 0f, systemPrompt = null)
 
         val results = executor
-            .execute(node, "final text", "session-1", "prompt", runId = null, scope = ExecutionScope(depth = 1))
+            .execute(
+                node,
+                "final text",
+                "session-1",
+                "prompt",
+                runId = null,
+                scope = ExecutionScope(run = RunTreeContext.standalone().nested()),
+            )
             .toList()
             .unwrap()
 
@@ -93,7 +101,14 @@ class OutputNodeExecutorTest {
         val node = NodeModel("1", NodeType.OUTPUT, 0f, 0f, systemPrompt = "Format please:")
 
         val results = executor
-            .execute(node, "final text", "session-1", "prompt", runId = null, scope = ExecutionScope(depth = 1))
+            .execute(
+                node,
+                "final text",
+                "session-1",
+                "prompt",
+                runId = null,
+                scope = ExecutionScope(run = RunTreeContext.standalone().nested()),
+            )
             .toList()
             .unwrap()
 
@@ -136,7 +151,9 @@ class OutputNodeExecutorTest {
         coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
 
         // A CLOUD node recorded its provider label on the run holder.
-        val scope = ExecutionScope(generatingModel = RunGeneratingModel(cloudLabel = "openai"))
+        val scope = ExecutionScope(
+            run = RunTreeContext.standalone().copy(generatingModel = RunGeneratingModel(cloudLabel = "openai")),
+        )
         executor.execute(node, "answer", "session-1", "prompt", runId = null, scope = scope).toList().unwrap()
 
         assertEquals("openai", saved.captured.modelName)
@@ -162,7 +179,11 @@ class OutputNodeExecutorTest {
         val saved = slot<ChatMessage>()
         coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
 
-        val scope = ExecutionScope(generatingModel = RunGeneratingModel(localModelPath = "/models/m.litertlm"))
+        val scope = ExecutionScope(
+            run = RunTreeContext.standalone().copy(
+                generatingModel = RunGeneratingModel(localModelPath = "/models/m.litertlm"),
+            ),
+        )
         executor.execute(node, "answer", "session-1", "prompt", runId = null, scope = scope).toList().unwrap()
 
         assertEquals("Gemma 4 4B", saved.captured.modelName)

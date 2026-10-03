@@ -40,7 +40,7 @@ import javax.inject.Inject
  * [Completed][app.knotwork.android.domain.models.AgentOrchestratorState.Completed] to signal
  * the end of the pipeline run.
  *
- * The chat message is persisted **only for the root run** ([ExecutionScope.depth] == 0).
+ * The chat message is persisted **only for the root run** ([RunTreeContext.depth][app.knotwork.android.domain.models.RunTreeContext.depth] == 0).
  * A sub-pipeline's OUTPUT (depth > 0) returns its text to the parent `PIPELINE`
  * node as the node result (via `Completed`/`Result`) and does not write to chat,
  * so nested results never flood the conversation.
@@ -62,10 +62,10 @@ class OutputNodeExecutor @Inject constructor(
         // Resolve the model that actually produced this answer so it stays
         // attributed correctly even after the user switches the active model.
         // Preference: the cloud provider label or on-device model recorded by the
-        // answering node (scope.generatingModel), then the active model as a
+        // answering node (scope.run.generatingModel), then the active model as a
         // fallback for legacy graphs. Only computed for the root run, which is
         // the one that persists to chat.
-        val generatingModelName = if (scope.depth == 0) resolveGeneratingModelName(scope) else null
+        val generatingModelName = if (scope.run.depth == 0) resolveGeneratingModelName(scope) else null
         val nodeSystemPrompt = node.systemPrompt
         if (!nodeSystemPrompt.isNullOrBlank()) {
             val fullPrompt = DefaultPrompts.renderTemplate(
@@ -133,7 +133,7 @@ class OutputNodeExecutor @Inject constructor(
             // sub-pipeline OUTPUT (depth > 0) returns its text up to the parent
             // PIPELINE node via the Completed/Result below instead of flooding
             // the chat with every intermediate sub-pipeline result.
-            if (scope.depth == 0) {
+            if (scope.run.depth == 0) {
                 chatRepository.saveMessage(
                     ChatMessage(
                         sessionId = sessionId,
@@ -152,7 +152,7 @@ class OutputNodeExecutor @Inject constructor(
         } else {
             // See above: nested OUTPUTs return their text as the PIPELINE node
             // result rather than persisting a chat message.
-            if (scope.depth == 0) {
+            if (scope.run.depth == 0) {
                 chatRepository.saveMessage(
                     ChatMessage(
                         sessionId = sessionId,
@@ -183,9 +183,9 @@ class OutputNodeExecutor @Inject constructor(
      * @return The model display name, or `null` when none can be resolved.
      */
     private suspend fun resolveGeneratingModelName(scope: ExecutionScope): String? {
-        val generating = scope.generatingModel
-        generating?.cloudLabel?.let { return it }
-        generating?.localModelPath?.let { path ->
+        val generating = scope.run.generatingModel
+        generating.cloudLabel?.let { return it }
+        generating.localModelPath?.let { path ->
             localModelRepository.getAllModels().first().firstOrNull { it.path == path }?.name?.let { return it }
         }
         return localModelRepository.getActiveModel()?.name

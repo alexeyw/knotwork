@@ -153,7 +153,7 @@ class LiteRtNodeExecutor @Inject constructor(
         // the persisted chat message to it rather than to whatever model is active
         // at render time. The most-recent answering node wins (this is the last
         // LITE_RT before OUTPUT on the taken path).
-        scope.generatingModel?.let { gm ->
+        scope.run.generatingModel.let { gm ->
             gm.localModelPath = resolvedModelPath
             gm.cloudLabel = null
         }

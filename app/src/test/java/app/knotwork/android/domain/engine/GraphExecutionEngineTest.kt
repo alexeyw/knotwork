@@ -50,12 +50,16 @@ import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.Role
+import app.knotwork.android.domain.models.RunBudgetLedger
 import app.knotwork.android.domain.models.RunCeilingAxis
+import app.knotwork.android.domain.models.RunContextNotes
+import app.knotwork.android.domain.models.RunGeneratingModel
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTraceRecord
+import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
@@ -4631,6 +4635,27 @@ class GraphExecutionEngineTest {
     }
 
     @Test
+    fun `given the standalone tree when the engine runs a graph in it then it stops before the first step`() = runTest {
+        // The default a node executor gets outside any run must fail closed: an
+        // engine that inherits it charges a ledger already at its ceiling.
+        val states = engine(
+            sessionId,
+            "prompt",
+            repeatingChainGraph(count = 2),
+            null,
+            null,
+            tree = RunTreeContext.standalone(),
+        ).toList()
+
+        val error = states.last() as AgentOrchestratorState.Error
+        assertEquals(RunTerminationReason.StepCeiling(limit = 0, spent = 0), error.reason)
+        assertTrue(
+            "no node may run on a standalone tree",
+            states.none { it is AgentOrchestratorState.PipelineStage },
+        )
+    }
+
+    @Test
     fun `given a run that keeps saying the same thing then it is warned once and keeps going`() = runTest {
         // Only a nudge: the grace period is set beyond the length of the run,
         // so this proves the first stage does not end anything.
@@ -4641,7 +4666,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             repeatingChainGraph(count = 5),
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 99)),
         ).toList()
 
         assertTrue("a nudged run must still finish", states.last() is AgentOrchestratorState.Completed)
@@ -4669,7 +4696,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             repeatingChainGraph(count = 9),
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 1),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 1)),
         ).toList()
 
         val error = states.last() as AgentOrchestratorState.Error
@@ -4716,7 +4745,8 @@ class GraphExecutionEngineTest {
             "prompt",
             repeatingChainGraph(count = 9),
             "run-stuck-trace",
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 1),
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 1), "run-stuck-trace"),
         ).toList()
 
         val error = states.last() as AgentOrchestratorState.Error
@@ -4764,7 +4794,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             repeatingChainGraph(count = 5),
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 99)),
         ).toList()
 
         val nodeInputs = states.filterIsInstance<AgentOrchestratorState.NodeIO>().associate { it.nodeId to it.input }
@@ -4800,7 +4832,9 @@ class GraphExecutionEngineTest {
             // with a spare node in between, the note is consumed before OUTPUT
             // is ever reached and the assertion below cannot fail.
             repeatingChainGraph(count = 4),
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 99)),
         ).toList()
 
         // Positively: a notice must actually have been raised, or "the answer
@@ -4866,7 +4900,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             graph,
-            stuckDetector = GraphStuckDetector(staleStreak = 3, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 3, graceSteps = 99)),
         ).toList()
 
         val answer = states.filterIsInstance<AgentOrchestratorState.Completed>().last().finalResponse
@@ -4943,7 +4979,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             mainGraph,
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 99)),
         ).toList()
 
         assertTrue(
@@ -5013,7 +5051,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             graph,
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 99)),
         ).toList()
 
         // The router must actually have been handed the note, or the leak this
@@ -5048,7 +5088,9 @@ class GraphExecutionEngineTest {
             sessionId,
             "prompt",
             repeatingChainGraph(count = 6),
-            stuckDetector = GraphStuckDetector(staleStreak = 3, graceSteps = 99),
+            null,
+            null,
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 3, graceSteps = 99)),
         ).toList()
 
         val nodeInputs = states.filterIsInstance<AgentOrchestratorState.NodeIO>().associate { it.nodeId to it.input }
@@ -5123,7 +5165,8 @@ class GraphExecutionEngineTest {
                 "prompt",
                 mainGraph,
                 parentRunId,
-                stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 99),
+                null,
+                tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 99), parentRunId),
             ).toList()
 
             val inputs = states.filterIsInstance<AgentOrchestratorState.NodeIO>()
@@ -5167,7 +5210,7 @@ class GraphExecutionEngineTest {
             repeatingChainGraph(count = 9),
             "run-armed",
             resume,
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 1),
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 1), "run-armed"),
         ).toList()
 
         // Both halves, in order: the run IS stopped, and a live node was handed
@@ -5212,7 +5255,7 @@ class GraphExecutionEngineTest {
             graph,
             "run-stuck",
             resume,
-            stuckDetector = GraphStuckDetector(staleStreak = 2, graceSteps = 1),
+            tree = rootTreeWith(GraphStuckDetector(staleStreak = 2, graceSteps = 1), "run-stuck"),
         ).toList()
 
         assertTrue(
@@ -5228,5 +5271,33 @@ class GraphExecutionEngineTest {
         const val LEAKING_PROVIDER_ERROR =
             "Socket timeout has expired [url=https://generativelanguage.googleapis.com/v1beta/models/" +
                 "gemini:streamGenerateContent?alt=sse&key=$LEAKED_KEY]"
+    }
+
+    /**
+     * The tree the engine builds for a root run, with [detector] in place of the
+     * default one. A root run builds its own detector, so this is how a test tunes
+     * the thresholds; ceilings and the spend seed are resolved as for a root run.
+     *
+     * @param detector The detector the run observes into.
+     * @param runId The root run's id, whose recorded spend seeds the ledger.
+     * @return A depth-0 tree for the tree overload of the engine.
+     */
+    private suspend fun rootTreeWith(detector: GraphStuckDetector, runId: String? = null): RunTreeContext {
+        val spent = runId?.let { pipelineRunRepository.getSpend(it) } ?: RunSpend()
+        return RunTreeContext(
+            depth = 0,
+            budget = RunBudgetLedger(
+                ceilings = ResolveRunCeilingsUseCase(settingsRepository)(RunOrigin.CHAT),
+                rootRunId = runId,
+                stepsAlreadySpent = spent.steps,
+                tokensAlreadySpent = spent.tokens,
+            ),
+            stuckDetector = detector,
+            contextNotes = RunContextNotes(),
+            imageDelivery = null,
+            imagePresent = false,
+            generatingModel = RunGeneratingModel(),
+            origin = RunOrigin.CHAT,
+        )
     }
 }

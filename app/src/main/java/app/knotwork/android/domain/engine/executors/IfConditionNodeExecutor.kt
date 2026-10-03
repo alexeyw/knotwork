@@ -46,7 +46,7 @@ class IfConditionNodeExecutor @Inject constructor(private val evaluateIfConditio
         // PipelineRun.hadImage on a resumed one, so an IF node forks correctly on image
         // presence even when it executes live past a checkpoint resume — and whether or not
         // a downstream vision node has consumed the image yet.
-        val hasImage = scope.imagePresent
+        val hasImage = scope.run.imagePresent
         val outcome = evaluateIfConditionUseCase(node, inputText, hasImage, repairListener)
 
         // Surface each buffered repair attempt; the engine renders it and bumps

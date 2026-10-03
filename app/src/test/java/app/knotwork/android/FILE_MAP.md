@@ -283,6 +283,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RunBudgetLedgerTest.kt` - Unit tests for `RunBudgetLedger` — the run-tree spend ledger every autonomous ceiling is charged against.
     - `RunNoticeCauseTest.kt` - The live-only advisory raised while a run is still going.
     - `RunTerminationReasonTest.kt` - Unit tests for `RunTerminationReason` and its persisted discriminator.
+    - `RunTreeContextTest.kt` - Unit coverage for `RunTreeContext`.
     - `ToolApprovalPolicyTest.kt` - Unit tests for `ToolApprovalPolicy`.
     - `TriggerTelemetryTest.kt` - Pins the stable `telemetryKind` strings for every `TriggerCondition` variant.
   - `pipelineio/` - Tests for the pipeline import/export gateway.
