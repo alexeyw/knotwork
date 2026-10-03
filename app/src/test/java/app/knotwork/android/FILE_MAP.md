@@ -255,6 +255,7 @@ Only Kotlin files appear inside the generated blocks.
     - `PipelineSecurityContourTest.kt` - Cross-cutting security-contour test: drives the security guards of the file-workspace and outbound-HTTP tool surfaces through a **real** `GraphExecutionEngine` (only the LLM token stream is stubbed), proving they hold when wired into an executing pipeline rather than only in their isolated executor unit tests.
     - `retry/` - Tests for the retry observability seam.
       - `CollectingCloudRetryListenerTest.kt` - Unit tests for `CollectingCloudRetryListener` — the buffer that lets the cloud node executor drain retries into console lines after the call completes.
+    - `RunConsoleTest.kt` - Unit coverage for `RunConsole`.
     - `structured/` - Tests for the structured-output validate-and-repair layer.
       - `CollectingRepairListenerTest.kt` - Unit tests for `CollectingRepairListener`.
       - `EngineStructuredInferenceClientTest.kt` - Unit tests for `EngineStructuredInferenceClient`.

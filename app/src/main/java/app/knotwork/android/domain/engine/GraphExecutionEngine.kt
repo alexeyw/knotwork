@@ -11,7 +11,6 @@ import app.knotwork.android.domain.engine.stuck.StuckVerdict
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ConnectionModel
-import app.knotwork.android.domain.models.ConsoleEvent
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
@@ -36,7 +35,6 @@ import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationReason
-import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolInvocationResult
 import app.knotwork.android.domain.models.asCeilingBreach
@@ -296,60 +294,23 @@ constructor(
         val depth = entry.depth
         val imageInput = (entry as? RunEntry.Root)?.imageInput
 
-        // Buffer of console events accumulated for this run. The engine emits a
-        // fresh `ConsoleLog` snapshot on every append so the UI reactively
-        // updates the collapsed/expanded console panels.
-        val consoleEvents = mutableListOf<ConsoleEvent>()
-
-        // Monotonic position of the next trace record within this run, shared
-        // by console events and per-node I/O snapshots. Uniqueness per run is
-        // what lets the console deduplicate the replay/live seam by seq. A
+        // Console lines and trace records of this invocation, in one numbering. A
         // resumed run continues the interrupted run's numbering instead of
         // colliding with its persisted records.
-        var traceSeq = resume?.nextSeq ?: 0L
+        val console = RunConsole(
+            collector = this,
+            runTraceRepository = runTraceRepository,
+            sessionId = sessionId,
+            runId = runId,
+            depth = depth,
+            pipelineName = graph.name,
+            firstSeq = resume?.nextSeq ?: 0L,
+        )
 
         // Position of the next checkpoint record to replay; meaningful only
         // in resume mode. Once it reaches the end of the recorded prefix the
         // walk is live for the rest of the run.
         var replayCursor = 0
-
-        suspend fun pushConsole(type: ConsoleEventType, message: String) {
-            // A nested sub-pipeline run prefixes its console lines with the
-            // sub-pipeline name so the merged console reads as `[Translator] ▶ …`
-            // even before indentation; [depth] additionally drives the indented
-            // rendering. Top-level runs keep the bare message.
-            //
-            // Every console line is redacted here: it is shown, copied whole by *Copy
-            // all*, and persisted in the run trace, and an executor's own diagnostics
-            // may quote a provider error (see CloudErrorSanitizer).
-            val redacted = CloudErrorSanitizer.redactSecrets(message)
-            val displayMessage = if (depth > 0) "[${graph.name}] $redacted" else redacted
-            val event = ConsoleEvent(
-                timestamp = System.currentTimeMillis(),
-                type = type,
-                message = displayMessage,
-                seq = traceSeq++,
-                depth = depth,
-            )
-            consoleEvents += event
-            // Write-through into the persistent run trace. The repository
-            // buffers and batch-flushes, so this never costs a SQLCipher
-            // commit per streamed event.
-            if (runId != null) {
-                runTraceRepository.append(
-                    RunTraceRecord.ConsoleEntry(
-                        runId = runId,
-                        sessionId = sessionId,
-                        seq = event.seq,
-                        timestamp = event.timestamp,
-                        type = type,
-                        message = displayMessage,
-                        depth = depth,
-                    ),
-                )
-            }
-            emit(AgentOrchestratorState.ConsoleLog(consoleEvents.toList(), runId))
-        }
 
         if (!graph.isValidDAG()) {
             // Push the console event BEFORE the terminal Error so the Error
@@ -358,14 +319,14 @@ constructor(
             // its `finally` if the last value is anything other than
             // `Completed` / `Error`, so a trailing `ConsoleLog` would mask the
             // real failure for observers reading `stateFlow.value`.
-            pushConsole(ConsoleEventType.Error, "Pipeline graph contains cycles")
+            console.push(ConsoleEventType.Error, "Pipeline graph contains cycles")
             emit(AgentOrchestratorState.Error("Pipeline graph contains cycles and is invalid."))
             return@flow
         }
 
         val inputNode = graph.nodes.find { it.type == NodeType.INPUT }
         if (inputNode == null) {
-            pushConsole(ConsoleEventType.Error, "Pipeline has no INPUT node")
+            console.push(ConsoleEventType.Error, "Pipeline has no INPUT node")
             emit(AgentOrchestratorState.Error("Pipeline has no INPUT node"))
             return@flow
         }
@@ -387,7 +348,7 @@ constructor(
             // Round to the nearest KB with a 1 KB floor: a valid sub-1 KB image
             // must never read "0 KB" (which looks like a broken attachment).
             val sizeKb = maxOf(1L, (imageInput.sizeBytes + BYTES_PER_KB / 2) / BYTES_PER_KB)
-            pushConsole(
+            console.push(
                 ConsoleEventType.SystemMessage,
                 "Image input: ${imageInput.width}×${imageInput.height}, $sizeKb KB",
             )
@@ -423,7 +384,7 @@ constructor(
         // the tree-wide delivery was never consumed at any depth.
         suspend fun noteUndeliveredImage() {
             if (imageInput != null && tree.imageDelivery?.consumed == false) {
-                pushConsole(
+                console.push(
                     ConsoleEventType.SystemMessage,
                     "Image not used: this run took a path with no on-device step that reads images.",
                 )
@@ -501,7 +462,7 @@ constructor(
                 emptyList()
             }
             val verbose = settingsRepository.verboseMemoryLoggingEnabled.first()
-            pushConsole(
+            console.push(
                 ConsoleEventType.MemoryAccess,
                 MemoryAccessLogFormatter.format(
                     query = query.text,
@@ -524,17 +485,7 @@ constructor(
             // Persist the resolved chunks so a checkpoint resume of this run
             // can seed its memory from the snapshot instead of re-running
             // retrieval — the resumed context must be identical to this one.
-            if (runId != null) {
-                runTraceRepository.append(
-                    RunTraceRecord.MemorySnapshot(
-                        runId = runId,
-                        sessionId = sessionId,
-                        seq = traceSeq++,
-                        timestamp = System.currentTimeMillis(),
-                        entries = hits,
-                    ),
-                )
-            }
+            console.recordMemorySnapshot(hits)
             return hits.also { memoizedMemories = it }
         }
 
@@ -593,7 +544,7 @@ constructor(
             if (!historyCompressionLogged && (view.truncatedWithoutSummary || view.earlierSummary != null)) {
                 historyCompressionLogged = true
                 if (view.truncatedWithoutSummary) {
-                    pushConsole(
+                    console.push(
                         ConsoleEventType.HistoryCompression,
                         "Chat history over budget; summary not ready, kept the last " +
                             "${view.liveWindow.size} messages",
@@ -604,7 +555,7 @@ constructor(
                     } else {
                         ""
                     }
-                    pushConsole(
+                    console.push(
                         ConsoleEventType.HistoryCompression,
                         "Chat history compressed: summarized older turns, kept the last " +
                             "${view.liveWindow.size} messages$gap",
@@ -650,7 +601,7 @@ constructor(
                     // produce byte-identical console lines, and whoever greps
                     // this later cannot tell a run that ended from one that is
                     // still waiting.
-                    pushConsole(ConsoleEventType.RunCeiling, "${breach.diagnostic()} — paused")
+                    console.push(ConsoleEventType.RunCeiling, "${breach.diagnostic()} — paused")
                     val pause = AgentOrchestratorState.WaitingForCeilingRaise(
                         axis = ceiling.axis,
                         limit = ceiling.limit,
@@ -663,7 +614,7 @@ constructor(
                     // parent PIPELINE node to park the whole stack rather than
                     // settle this run.
                     emit(AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.CEILING))
-                    runTraceRepository.flush()
+                    console.flush()
                     return@flow
                 }
                 // Non-persisted runs (editor test runs) and storage failures
@@ -724,7 +675,7 @@ constructor(
                 // cannot serve as a checkpoint (corruption, or an edit that
                 // slipped past hash validation). Failing loudly beats silently
                 // executing a half-replayed run on inconsistent inputs.
-                pushConsole(
+                console.push(
                     ConsoleEventType.Error,
                     "Checkpoint trace diverged at ${currentNode.type.name}; resume aborted",
                 )
@@ -757,12 +708,12 @@ constructor(
                 )
                 executorInput = replayRecord.inputText
                 nodeDurationMs = replayRecord.durationMs
-                pushConsole(
+                console.push(
                     ConsoleEventType.NodeExecution,
                     "↻ ${currentNode.type.name} replayed from checkpoint",
                 )
             } else {
-                pushConsole(ConsoleEventType.NodeExecution, "▶ ${currentNode.type.name}")
+                console.push(ConsoleEventType.NodeExecution, "▶ ${currentNode.type.name}")
 
                 // Give UI time to render the stage before CPU-heavy inference starts
                 kotlinx.coroutines.delay(PipelineExecutionDefaults.LITE_RT_PREWARM_DELAY_MS)
@@ -949,7 +900,7 @@ constructor(
                                     // attempt additionally bumps the per-node repair
                                     // counter so the statistics surface reflects how
                                     // often this node's structured output stumbled.
-                                    pushConsole(output.type, output.message)
+                                    console.push(output.type, output.message)
                                     if (output.type == ConsoleEventType.StructuredOutputRepair) {
                                         metricsRepository.recordStructuredOutputRepair(nodeForExecution.label)
                                     }
@@ -964,11 +915,11 @@ constructor(
                     // another process. Flush the buffered trace first so the
                     // checkpoint is complete up to this exact node.
                     if (runParked) {
-                        pushConsole(
+                        console.push(
                             ConsoleEventType.NodeExecution,
                             "⏸ ${currentNode.type.name} parked awaiting user response",
                         )
-                        runTraceRepository.flush()
+                        console.flush()
                         return@flow
                     }
 
@@ -1003,7 +954,7 @@ constructor(
                     Timber.tag(
                         "PipelineDebug",
                     ).e(e, "[NODE_ERR] type=%s id=%s error=%s", currentNode.type.name, currentNode.id, safeMessage)
-                    pushConsole(
+                    console.push(
                         ConsoleEventType.Error,
                         "${currentNode.type.name}: $safeMessage",
                     )
@@ -1071,7 +1022,7 @@ constructor(
                             spent = soft.spent,
                             hardLimit = soft.hardLimit,
                         )
-                        pushConsole(ConsoleEventType.RunCeiling, cause.diagnostic())
+                        console.push(ConsoleEventType.RunCeiling, cause.diagnostic())
                         emit(AgentOrchestratorState.RunNotice(cause))
                         tree.contextNotes.add(SOFT_CEILING_CONTEXT_NOTE)
                     }
@@ -1088,7 +1039,7 @@ constructor(
                 Timber.tag(
                     "PipelineDebug",
                 ).e("[NODE_ERR] type=%s id=%s error=%s", currentNode.type.name, currentNode.id, nodeError)
-                pushConsole(
+                console.push(
                     ConsoleEventType.Error,
                     "${currentNode.type.name}: $nodeError",
                 )
@@ -1128,7 +1079,7 @@ constructor(
             // tail of the flow. Replayed nodes already pushed their compact
             // "↻ replayed" event instead.
             if (currentNode.type != NodeType.OUTPUT && replayRecord == null) {
-                pushConsole(
+                console.push(
                     ConsoleEventType.NodeExecution,
                     "✓ ${currentNode.type.name} in ${nodeDurationMs}ms",
                 )
@@ -1144,7 +1095,7 @@ constructor(
                     ?: currentNode.toolName?.takeUnless { it.equals("auto", ignoreCase = true) }
                     ?: currentNode.label
                 toolInvocationResults += ToolInvocationResult(toolName = toolName, output = toolOutput)
-                pushConsole(ConsoleEventType.ToolCall, toolName)
+                console.push(ConsoleEventType.ToolCall, toolName)
             }
 
             if (currentNode.type != NodeType.INPUT && currentNode.type != NodeType.OUTPUT) {
@@ -1158,51 +1109,11 @@ constructor(
                         depth = depth,
                     ),
                 )
-                // Write-through into the persistent run trace: the NodeIo
-                // record carries the full input/output pair so the Vars and
-                // Traces console tabs can be rebuilt for a finished run, and
-                // the checkpoint/resume path can substitute the recorded
-                // output for re-execution (the routing verdicts and tool
-                // attribution ride along for exactly that replay). A replayed
-                // node appends nothing — its record is already in the trace.
-                if (runId != null && replayRecord == null) {
-                    runTraceRepository.append(
-                        RunTraceRecord.NodeIo(
-                            runId = runId,
-                            sessionId = sessionId,
-                            seq = traceSeq++,
-                            timestamp = System.currentTimeMillis(),
-                            nodeId = currentNode.id,
-                            nodeType = currentNode.type.name,
-                            inputText = executorInput,
-                            outputText = outputText,
-                            durationMs = nodeDurationMs,
-                            tokenCount = nodeTokenCount,
-                            conditionResult = nodeResult?.conditionResult,
-                            routingKey = nodeResult?.routingKey,
-                            resolvedToolName = nodeResult?.resolvedToolName,
-                            depth = depth,
-                        ),
-                    )
-                    // A tool call is the one node whose re-execution is not free:
-                    // it acted on the world. The trace is write-buffered (flushed
-                    // on size, on a 500 ms timer, or at suspension points), so a
-                    // process death inside that window used to lose the record of
-                    // a tool that had already run — and the resume then called it
-                    // a second time. Measured on the reference device: killed
-                    // 112 ms after the tool returned, the resumed run re-invoked
-                    // it (second `tools/call` on the wire); killed 1.2 s after, it
-                    // replayed as designed. Flushing here closes the window at the
-                    // cost of one batch insert per tool call.
-                    // A CLOUD node earns the same treatment for a different reason:
-                    // re-running it is not free either, but the cost is money and the
-                    // provider's rate limit rather than a side effect on the world. The
-                    // original TOOL-only rule reasoned that for every other node type a
-                    // repeat is "lost time, not a side effect" — that holds for on-device
-                    // nodes and not for a billed API call.
-                    if (currentNode.type == NodeType.TOOL || currentNode.type == NodeType.CLOUD) {
-                        runTraceRepository.flush()
-                    }
+                // Write-through into the persistent run trace, which a checkpoint
+                // resume replays instead of re-running the node. A replayed node
+                // appends nothing — its record is already in the trace.
+                if (replayRecord == null) {
+                    console.recordNodeIo(currentNode, executorInput, outputText, nodeDurationMs, nodeResult)
                 }
                 emit(AgentOrchestratorState.PipelineTrace(traceSteps.toList()))
                 // Surface the per-node I/O pair for the Vars tab of the
@@ -1278,7 +1189,7 @@ constructor(
                         StuckVerdict.Healthy -> Unit
                         is StuckVerdict.Nudge -> {
                             val cause = RunNoticeCause.LooksStuck(verdict.signal)
-                            pushConsole(ConsoleEventType.StuckDetector, cause.diagnostic())
+                            console.push(ConsoleEventType.StuckDetector, cause.diagnostic())
                             emit(AgentOrchestratorState.RunNotice(cause))
                             tree.contextNotes.add(STUCK_CONTEXT_NOTE)
                         }
@@ -1288,7 +1199,7 @@ constructor(
                             // console line and the typed terminal state, so a
                             // protective stop is worded in exactly one place
                             // however it was decided.
-                            pushConsole(ConsoleEventType.StuckDetector, verdict.signal.diagnostic)
+                            console.push(ConsoleEventType.StuckDetector, verdict.signal.diagnostic)
                             terminationReason = RunTerminationReason.NoProgress
                             break
                         }
@@ -1393,11 +1304,11 @@ constructor(
             // hand-written English sentence here is what previously let one
             // event acquire four different wordings, two of which described
             // behaviour the engine never had.
-            pushConsole(consoleTypeFor(breach), breach.diagnostic())
+            console.push(consoleTypeFor(breach), breach.diagnostic())
             emit(AgentOrchestratorState.Error(breach.diagnostic(), reason = breach))
         } else {
             // Loop exited because currentNode became null before reaching OUTPUT
-            pushConsole(ConsoleEventType.Error, "Pipeline terminated without OUTPUT")
+            console.push(ConsoleEventType.Error, "Pipeline terminated without OUTPUT")
             emit(
                 AgentOrchestratorState.Error(
                     "Pipeline execution terminated unexpectedly without reaching OUTPUT node.",
