@@ -398,8 +398,7 @@ Pipelines are first-class. A `PipelineGraph` is a directed graph of typed
 runs them is `GraphExecutionEngine`, decomposed into per-type
 `NodeExecutor` strategies.
 
-The walk itself is being split into collaborators the engine delegates to,
-each covering one concern:
+The walk delegates to collaborators, each covering one concern:
 
 - **`RunTreeContext`** — what every invocation of one run tree shares: the
   spend ledger, the repetition detector, pending advice, the image, the
