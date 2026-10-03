@@ -48,7 +48,6 @@ class AboutCallbacks(
 fun noopAboutCallbacks(): AboutCallbacks = AboutCallbacks()
 
 /** Localised string bundle threaded into `AboutContent`. */
-@Suppress("LongParameterList")
 data class AboutStrings(
     val title: String = "About",
     val backCd: String = "Back",

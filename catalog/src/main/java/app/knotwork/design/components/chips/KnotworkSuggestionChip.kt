@@ -47,7 +47,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  * @param enabled `false` disables the click handler and greys the chip.
  */
 @Composable
-@Suppress("LongParameterList")
 fun KnotworkSuggestionChip(
     label: String,
     onClick: () -> Unit,

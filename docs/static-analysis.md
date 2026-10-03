@@ -61,6 +61,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest` (`SettingsHelpCatalogTest`) | Fails if a registered setting has no help decision, or its text is blank, over-long, duplicated or in a forbidden register (see below). |
 | `:app:verifyLintBaselineOverrides`            | Custom rule: fail if a lint baseline suppresses a check demoted to informational severity (see below). |
 | `:app:verifyDetektAnalysisMode`               | Custom rule: fail if `detekt.yml` activates a rule that only runs under type resolution (see below). |
+| `:app:verifySizeSuppressions`                 | Fails if a size or complexity suppression is missing from its committed list, or a listed one is gone from the sources. The list only shrinks (see below). |
 | `:app:testFullDebugUnitTest` (Konsist suite)      | Architecture guard: Clean-Architecture layer boundaries (see below).        |
 | `:app:testFullDebugUnitTest` (`TopBarInsetGuardTest`) | Fails if a bar at the top of a screen neither applies the status-bar inset nor names the parent that does (see below). |
 | `:app:testFullDebugUnitTest` (`BundledDocumentationRoutingGuardTest`) | Fails if a call that can open a document bundled into the app passes no in-app reader, and so sends it to the browser (see below). |
@@ -132,6 +133,12 @@ fun validate(): List<PipelineValidationError> { … }
 ```
 
 Bare `@Suppress("X")` without a reason comment is rejected in code review.
+
+**Not for the size and complexity rules.** `LargeClass`, `TooManyFunctions`,
+`LongMethod`, `CyclomaticComplexMethod` and `LongParameterList` cannot be
+suppressed by adding an annotation: the
+[size-suppression ratchet](#size-suppression-ratchet-verifysizesuppressions)
+fails the build. Split the code instead.
 
 **Reports**:
 - `app/build/reports/detekt/detekt.html` — visual checklist.
@@ -222,6 +229,71 @@ of naming and tuning actually runs.
 
 Implementation: `buildSrc/.../DetektAnalysisModeGuard.kt`, unit-tested via
 `./gradlew -p buildSrc test`.
+
+### Size-suppression ratchet (`verifySizeSuppressions`)
+
+Five rules measure how big or tangled a declaration is: `LargeClass`,
+`TooManyFunctions`, `LongMethod`, `CyclomaticComplexMethod` and
+`LongParameterList`. Suppressing one is a standing exception to a threshold.
+Each such exception was meant to be temporary, and nothing ever removed one.
+
+Nothing noticed when one stopped working either. When they were first counted,
+126 of the 155 suppressed no finding at all. There were three reasons:
+
+- The code had shrunk under the threshold.
+- The rule ignores that declaration anyway (`@Composable` functions,
+  `presentation/ui/**` for `LargeClass`).
+- The rule never runs on that source set.
+
+The dead ones were deleted. The 29 that remain are listed in
+[`config/detekt/size-suppressions.txt`](../config/detekt/size-suppressions.txt),
+one line per suppressed rule (32 lines):
+
+```text
+app/src/main/java/app/knotwork/android/data/local/SettingsManager.kt :: class SettingsManager :: LargeClass
+```
+
+`:app:verifySizeSuppressions` (wired into `check`) compares the sources with
+that list:
+
+- **A suppression that is not listed fails the build.** Split the code instead.
+  Moving a suppression to another declaration counts as a new one, because the
+  entry names the declaration, not a line number.
+- **A listed entry that is gone fails it too.** Delete the line in the same
+  change that removed the annotation. That is how the list shrinks.
+
+It reads `@Suppress` and `@SuppressWarnings` at any use-site target, including
+`@file:`. It recognises every rule-id spelling detekt accepts, such as
+`complexity:LongMethod` and `detekt.complexity.LongMethod`. Suppressing the
+whole `complexity` set, or `all`, counts as all five rules. Comments and string
+literals are skipped: the first count included an annotation that was really
+part of a test fixture's source text. An argument that is not a plain string
+literal fails the build instead of being guessed.
+
+It scans the sources and build scripts of every module, test sets included. A
+suppression where the rule never runs is exactly the dead kind.
+
+**What it cannot see:**
+
+- **A line added to the list.** The build cannot tell a new line from an old
+  one, so the list growing is caught in review, as a raised threshold would be.
+- **A listed suppression that has gone dead.** Telling live from dead means
+  running detekt with the annotation removed. That stays a manual probe:
+  rename the rule ids in all annotations, run every detekt task with
+  `--continue`, and match the findings to the annotations.
+- **A raised threshold or a new `excludes` path** in `config/detekt/`. Those are
+  configuration edits and are reviewed as such.
+
+**Where `LongParameterList` does not run.** It runs only in the type-resolution
+tasks of `:app`, and their source is `src/main`. It checks nothing in
+`:catalog`, `buildSrc` or any test set, suppressed or not.
+
+**Observed failing.** One suppression was added to `NodeContextBuilder.build`
+and one listed suppression was removed from `DefaultPipelineFactory.create`. The
+task named both: the first under "Not listed", the second under "Listed but
+gone". Implementation: `buildSrc/.../SizeSuppressionRatchet.kt`, unit-tested in
+`SizeSuppressionRatchetTest`. A test fails if string literals or the
+`detekt:` prefix stop being handled.
 
 ---
 

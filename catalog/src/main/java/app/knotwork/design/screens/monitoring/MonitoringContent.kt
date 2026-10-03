@@ -316,7 +316,6 @@ private fun LogLine(line: MonitoringLogLine) {
 }
 
 /** Localised string bundle threaded into [MonitoringContent]. */
-@Suppress("LongParameterList")
 data class MonitoringStrings(
     val title: String = "Live metrics",
     val backCd: String = "Back",

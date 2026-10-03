@@ -80,7 +80,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  */
 @Composable
 @ReadOnlyComposable
-@Suppress("LongParameterList") // Mirrors the upstream `markdownTypography(...)` signature.
 fun knotworkMarkdownTypography(
     // ── Headings ─────────────────────────────────────────────
     // Knotwork collapses M3 display tier — markdown headings live

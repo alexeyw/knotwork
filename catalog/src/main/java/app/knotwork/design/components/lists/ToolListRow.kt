@@ -73,7 +73,6 @@ enum class ConnectionStatus {
  * @param modifier optional layout modifier applied to the row root.
  */
 @Composable
-@Suppress("LongParameterList") // Stable API; collapsing into a `Row` data class hurts call-site clarity.
 fun ToolListRow(
     title: String,
     serverName: String,

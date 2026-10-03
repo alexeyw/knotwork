@@ -513,7 +513,6 @@ private fun RowSwitch(checked: Boolean, enabled: Boolean, onToggle: () -> Unit) 
 }
 
 /** Localised string bundle threaded into [TriggersContent]. */
-@Suppress("LongParameterList")
 data class TriggersStrings(
     val title: String = "Triggers",
     val backCd: String = "Back",

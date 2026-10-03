@@ -186,7 +186,6 @@ fun SaveAsPresetDialog(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("LongParameterList") // Fully hoisted form state; a config object would hide which field is which.
 fun SaveAsPresetDialogBody(
     ui: SaveAsPresetDialogUi,
     name: String,

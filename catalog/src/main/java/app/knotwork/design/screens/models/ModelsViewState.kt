@@ -119,7 +119,6 @@ data class ModelsViewState(
 }
 
 /** One-shot callbacks consumed by `ModelsContent`. */
-@Suppress("LongParameterList") // Documented public API.
 class ModelsCallbacks(
     val onBack: () -> Unit = {},
     val onDiscover: () -> Unit = {},

@@ -71,7 +71,6 @@ enum class BenchmarkPhase {
  * Localised strings for the Performance card. English defaults keep catalog
  * previews resource-free; the host passes localised values.
  */
-@Suppress("LongParameterList") // Hand-tuned default-arg list keeps catalog previews terse.
 data class PerformanceStrings(
     val title: String = "Performance",
     val ttftLabel: String = "Time to first token",

@@ -34,6 +34,7 @@ import app.knotwork.android.buildtools.VerifyMergedManifestTask
 import app.knotwork.android.buildtools.VerifyMermaidDiagramsTask
 import app.knotwork.android.buildtools.VerifyNoOrphanedKdocTask
 import app.knotwork.android.buildtools.VerifyNoSlf4jProviderTask
+import app.knotwork.android.buildtools.VerifySizeSuppressionsTask
 import app.knotwork.android.buildtools.VerifySupplyChainPinsTask
 import app.knotwork.android.buildtools.VerifyVersionSourcesTask
 import com.android.build.api.artifact.ScopedArtifact
@@ -984,6 +985,34 @@ val verifyNoOrphanedKdoc by tasks.registering(VerifyNoOrphanedKdocTask::class) {
     stampFile.set(layout.buildDirectory.file("reports/kdoc/no-orphans.txt"))
 }
 tasks.named("check") { dependsOn(verifyNoOrphanedKdoc) }
+
+// Size-suppression ratchet.
+//
+// Five detekt rules measure size and complexity, and a suppression of one is a
+// standing exception to its threshold. When they were first counted, 126 of the
+// 155 in the repository suppressed nothing: the code had shrunk, the rule ignored
+// the declaration anyway, or the rule never ran on that source set. Every
+// remaining one is listed in `config/detekt/size-suppressions.txt`; an unlisted
+// suppression fails the build, and so does a listed one that is gone, so the
+// list only shrinks. The comparison is `SizeSuppressionRatchet` (buildSrc, unit-
+// tested). Scans every module's sources and build scripts, test sets included:
+// a suppression where the rule does not run is exactly the dead kind.
+val verifySizeSuppressions by tasks.registering(VerifySizeSuppressionsTask::class) {
+    group = "verification"
+    description = "Fails the build if size/complexity suppressions differ from config/detekt/size-suppressions.txt."
+    repositoryRoot.set(rootProject.layout.projectDirectory)
+    sources.from(
+        fileTree(rootDir) {
+            include("*.kts")
+            listOf("app", "catalog", "buildSrc", "tools-probe").forEach { module ->
+                include("$module/*.kts", "$module/src/**/*.kt", "$module/src/**/*.kts")
+            }
+        },
+    )
+    listFile.set(file("$rootDir/config/detekt/size-suppressions.txt"))
+    stampFile.set(layout.buildDirectory.file("reports/detekt/size-suppressions.txt"))
+}
+tasks.named("check") { dependsOn(verifySizeSuppressions) }
 
 // Forbidden-vocabulary gate.
 //

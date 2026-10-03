@@ -95,7 +95,6 @@ data class TaskMonitorViewState(
 }
 
 /** One-shot callbacks consumed by `TaskMonitorContent`. */
-@Suppress("LongParameterList")
 class TaskMonitorCallbacks(
     val onBack: () -> Unit = {},
     val onFilterChanged: (TaskFilterKind) -> Unit = {},

@@ -77,7 +77,6 @@ data class ReportResponseDialogUi(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("LongParameterList") // A hoisted dialog; a config object would hide which callback is which.
 fun ReportResponseDialog(
     ui: ReportResponseDialogUi,
     selectedReasonId: String,
@@ -125,7 +124,6 @@ fun ReportResponseDialog(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("LongParameterList") // Mirrors the hoisted dialog above it.
 fun ReportResponseDialogBody(
     ui: ReportResponseDialogUi,
     selectedReasonId: String,

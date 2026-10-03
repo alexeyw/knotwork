@@ -85,7 +85,6 @@ import javax.inject.Inject
     // library screen via the `pipelines` nested nav graph. Tracked for a
     // future refactor; not in scope for the static-analysis enforcement task.
     "TooManyFunctions",
-    "LargeClass",
 )
 class OrchestratorViewModel
 @Inject

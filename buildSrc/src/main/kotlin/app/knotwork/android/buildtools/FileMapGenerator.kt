@@ -147,7 +147,6 @@ object FileMapGenerator {
      * previous hand-chosen order could not be reproduced from the repository
      * and so could not be verified.
      */
-    @Suppress("LongParameterList") // One accumulator per reported count; splitting them hides the reconciliation.
     private fun renderNodes(
         nodes: Map<String, Node>,
         prefix: String,

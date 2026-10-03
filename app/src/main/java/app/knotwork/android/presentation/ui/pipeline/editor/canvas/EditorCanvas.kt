@@ -81,7 +81,6 @@ import app.knotwork.design.theme.KnotworkTheme
  * @param modifier optional layout modifier applied to the canvas root.
  */
 @Composable
-@Suppress("LongParameterList", "LongMethod")
 internal fun EditorCanvas(
     graph: PipelineGraph,
     editor: EditorState,

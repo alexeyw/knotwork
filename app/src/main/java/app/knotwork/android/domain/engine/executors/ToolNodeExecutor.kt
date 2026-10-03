@@ -94,7 +94,6 @@ class ToolNodeExecutor @Inject constructor(
     @androidx.annotation.VisibleForTesting
     internal fun hasPendingApproval(sessionId: String): Boolean = toolInvocationGate.hasPendingApproval(sessionId)
 
-    @Suppress("LongMethod")
     override fun execute(
         node: NodeModel,
         inputText: String,

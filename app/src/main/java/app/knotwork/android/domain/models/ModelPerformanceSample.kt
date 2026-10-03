@@ -71,7 +71,6 @@ data class ModelPerformanceSample(
          * @param createdAt Epoch-millis to stamp the sample with.
          * @return The computed [ModelPerformanceSample].
          */
-        @Suppress("LongParameterList") // Pure timing factory; each value is a distinct measurement.
         fun fromTimings(
             modelPath: String,
             inferenceStartMs: Long,

@@ -40,7 +40,6 @@ import app.knotwork.design.theme.KnotworkTheme
  * @param destructive recolours the label with `extended.riskDestructive`.
  * @param leadingIcon optional leading glyph.
  */
-@Suppress("LongParameterList") // Brand-stable public API.
 @Composable
 fun KnotworkTextButton(
     text: String,

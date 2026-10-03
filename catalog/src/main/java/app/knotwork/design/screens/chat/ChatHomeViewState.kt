@@ -321,7 +321,6 @@ data class ChatHomeViewState(
  * composable signature so screen code can pass one parameter object and so
  * tests / previews can construct a single no-op default.
  */
-@Suppress("LongParameterList") // Mirrors the user-facing affordances; collapsing further hides intent.
 class ChatHomeCallbacks(
     val onComposerValueChange: (String) -> Unit = {},
     val onSend: () -> Unit = {},

@@ -60,7 +60,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("LongParameterList", "LongMethod")
 fun KnotworkChipsInput(
     values: List<String>,
     onValuesChange: (List<String>) -> Unit,

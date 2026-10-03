@@ -132,8 +132,8 @@ object PipelineBundleJsonSerializer {
     // Reason: parse is a single linear validation pipeline (envelope fields →
     // per-element delegation → duplicate-id check → referential integrity).
     // Each early return is one distinct, independently-messaged rejection;
-    // extracting them would scatter the contract without reducing branches.
-    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    // extracting them would scatter the contract without removing a return.
+    @Suppress("ReturnCount")
     fun parse(jsonText: String): PipelineBundleImportOutcome {
         val root = try {
             JSONObject(jsonText)

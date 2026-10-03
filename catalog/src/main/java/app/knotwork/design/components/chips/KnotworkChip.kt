@@ -66,7 +66,6 @@ enum class ChipStyle {
  * disabled tone.
  */
 @Composable
-@Suppress("LongParameterList") // Chip API has a stable shape — collapsing the params hides intent.
 fun KnotworkChip(
     label: String,
     modifier: Modifier = Modifier,

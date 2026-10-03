@@ -106,7 +106,6 @@ data class ChatArchiveViewState(
  * @property deleteConfirm destructive confirm label.
  * @property deleteCancel dismiss label.
  */
-@Suppress("LongParameterList") // Documented display-string bundle; folding it hides the copy.
 data class ChatArchiveStrings(
     val title: String = "Archived chats",
     val back: String = "Back",
@@ -130,7 +129,6 @@ data class ChatArchiveStrings(
 )
 
 /** One-shot callbacks consumed by `ChatArchiveContent`. */
-@Suppress("LongParameterList") // Documented public API; each entry is a distinct user affordance.
 class ChatArchiveCallbacks(
     val onBack: () -> Unit = {},
     /** Opens the archived chat read-only. Does **not** un-archive it. */

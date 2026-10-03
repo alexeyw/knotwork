@@ -93,7 +93,6 @@ private const val CHEVRON_COLLAPSED_DEGREES = 180f
  *        the surfaces whose rows are divider-separated.
  */
 @Composable
-@Suppress("LongParameterList") // Documented public slot API; collapsing hurts call-site clarity.
 fun KnotworkSectionHeader(
     title: String,
     modifier: Modifier = Modifier,

@@ -86,7 +86,7 @@ import java.time.LocalDate
  * nav-graph wiring needs no changes when the back arrow lands inside the
  * catalog surface.
  */
-@Suppress("UnusedParameter", "LongMethod") // onBack kept for nav-graph stability; body is a flat switch.
+@Suppress("UnusedParameter") // onBack kept for nav-graph stability.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PipelineLibraryScreen(

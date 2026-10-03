@@ -114,7 +114,6 @@ enum class PipelineSwipeAction {
  * swipe via horizontal drag.
  */
 @Composable
-@Suppress("LongParameterList") // Stable API; collapsing into a `Row` data class hurts call-site clarity.
 fun PipelineListRow(
     title: String,
     subtitle: String,

@@ -94,7 +94,6 @@ class MemorySettingsDelegate(
         state.update { it.copy(embeddingProviderOptions = options) }
     }
 
-    @Suppress("LongMethod")
     private fun observeMemoryPreferences() {
         memoryRepository.observeStats().onEach { stats ->
             state.update { it.copy(memoryStats = stats) }

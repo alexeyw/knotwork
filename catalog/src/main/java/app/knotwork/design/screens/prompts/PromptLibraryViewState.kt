@@ -88,7 +88,6 @@ data class PromptLibraryViewState(
 }
 
 /** One-shot callbacks consumed by `PromptLibraryContent`. */
-@Suppress("LongParameterList") // Documented public API.
 class PromptLibraryCallbacks(
     val onBack: () -> Unit = {},
     val onCategorySelected: (String) -> Unit = {},

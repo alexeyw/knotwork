@@ -179,7 +179,7 @@ class ToolInvocationGate @Inject constructor(
      *   one. Deliberately without a default: every node type that dispatches
      *   tools must pass its switch, so a new caller cannot silently drop it.
      */
-    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    @Suppress("LongMethod", "NestedBlockDepth")
     suspend fun dispatch(
         collector: FlowCollector<NodeOutput>,
         nodeType: String,

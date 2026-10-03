@@ -49,7 +49,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  * label-to-value pair never moves while the reader drags.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Suppress("LongParameterList") // Stable public API; each parameter maps to a row attribute.
 @Composable
 fun KnotworkParamSlider(
     label: String,

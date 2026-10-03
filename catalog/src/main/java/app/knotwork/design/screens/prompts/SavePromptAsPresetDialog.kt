@@ -150,7 +150,6 @@ fun SavePromptAsPresetDialog(
  * @param modifier Optional layout modifier.
  */
 @Composable
-@Suppress("LongParameterList") // Fully hoisted form state; a config object would hide which field is which.
 fun SavePromptAsPresetDialogBody(
     ui: SavePromptAsPresetDialogUi,
     name: String,

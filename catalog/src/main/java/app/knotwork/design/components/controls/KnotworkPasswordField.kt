@@ -40,7 +40,6 @@ import app.knotwork.design.icons.AppIcons
  *  fields where the token is the page's primary affordance.
  */
 @Composable
-@Suppress("LongParameterList")
 fun KnotworkPasswordField(
     value: String,
     onValueChange: (String) -> Unit,

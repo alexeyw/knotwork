@@ -204,7 +204,6 @@ private fun DestructiveButton(text: String, onClick: () -> Unit) {
 }
 
 /** Localised string bundle threaded into [SkillDeleteDialogContent]. */
-@Suppress("LongParameterList")
 data class SkillDeleteStrings(
     val titleFormat: String = "Delete \"%1\$s\"?",
     val bodyNoDependents: String =

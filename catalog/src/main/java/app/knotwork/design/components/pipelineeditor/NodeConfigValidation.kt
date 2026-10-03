@@ -137,8 +137,6 @@ object NodeConfigValidation {
      * @return a map of failing fields. Save should be disabled when the
      * map is non-empty.
      */
-    // 13-arm `when` mirrors 13 node types; further split would only hide structure.
-    @Suppress("CyclomaticComplexMethod")
     fun validate(config: NodeConfig, peerTitles: Set<String>): Map<FieldId, ValidationFailure> {
         val errors = mutableMapOf<FieldId, ValidationFailure>()
         validateTitle(config.title, peerTitles)?.let { errors[FieldId.TITLE] = it }

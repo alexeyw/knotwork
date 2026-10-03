@@ -1,5 +1,3 @@
-@file:Suppress("LongMethod")
-
 package app.knotwork.design.screens.settings
 
 import androidx.annotation.StringRes

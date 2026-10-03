@@ -55,7 +55,6 @@ private val LeadingIconSize = 22.dp
  * the chevron — typically a badge or status pill.
  */
 @Composable
-@Suppress("LongParameterList") // Documented public API; collapsing hurts call-site clarity.
 fun KnotworkNavListRow(
     title: String,
     leadingIcon: ImageVector,

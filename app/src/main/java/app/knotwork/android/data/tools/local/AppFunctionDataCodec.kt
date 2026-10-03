@@ -296,7 +296,6 @@ class AppFunctionDataCodec @Inject constructor() {
      * the observation log). Pure: callers pass closure-based getters, making the function
      * trivially testable without `AppFunctionData`.
      */
-    @Suppress("LongParameterList") // One getter per AppFunctionData typed accessor — by design.
     internal fun renderSuccess(
         qualifiedName: String,
         containsKey: (String) -> Boolean,

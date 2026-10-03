@@ -155,7 +155,6 @@ data class PipelineLibraryViewState(
  * of the composable signature so screen code can pass one parameter object
  * and tests / previews can construct a single no-op default.
  */
-@Suppress("LongParameterList") // Mirrors user-visible affordances; collapsing further hides intent.
 class PipelineLibraryCallbacks(
     val onFilterChange: (PipelineLibraryFilter) -> Unit = {},
     val onPipelineClick: (String) -> Unit = {},

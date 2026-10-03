@@ -54,7 +54,6 @@ import app.knotwork.design.theme.KnotworkTheme
  * @param leadingIcon optional vector rendered before the label
  *   (`IconSizeMd` / `IconSizeSm` depending on [size]).
  */
-@Suppress("LongParameterList") // Brand-stable public API.
 @Composable
 fun KnotworkPrimaryButton(
     text: String,

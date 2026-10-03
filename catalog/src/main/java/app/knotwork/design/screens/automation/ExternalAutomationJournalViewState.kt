@@ -227,7 +227,6 @@ data class ExternalAutomationJournalViewState(
  * reader auditing the wording should find all of it in one list rather than
  * spread across the composables that happen to render each piece.
  */
-@Suppress("LongParameterList") // Documented public copy surface; folding hides the request vocabulary.
 data class ExternalAutomationJournalStrings(
     val title: String = "External automation",
     val subtitle: String = "Request journal",

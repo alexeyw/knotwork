@@ -214,7 +214,6 @@ sealed interface ComposerAttachment {
  * @param onOpenSettings invoked from the [ComposerVoiceNotice.PermissionDenied] action.
  */
 @Composable
-@Suppress("LongParameterList", "LongMethod")
 fun ChatComposer(
     value: String,
     onValueChange: (String) -> Unit,
@@ -512,7 +511,6 @@ private val REMOVE_OFFSET = 6.dp
  * morph respects reduced motion (zero-duration fade when on).
  */
 @Composable
-@Suppress("LongParameterList")
 private fun ActionButton(
     state: ComposerState,
     value: String,
@@ -614,7 +612,6 @@ private val COMPOSER_ACTION_ICON_SIZE = 20.dp
  * even though the visual is a tight circle.
  */
 @Composable
-@Suppress("LongParameterList")
 private fun ComposerActionButton(
     icon: ImageVector,
     contentDescription: String,

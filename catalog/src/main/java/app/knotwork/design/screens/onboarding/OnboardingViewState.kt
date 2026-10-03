@@ -192,7 +192,6 @@ data class OnboardingViewState(
 /**
  * Stable callback bundle accepted by `OnboardingContent`.
  */
-@Suppress("LongParameterList") // Mirrors user-visible affordances; collapsing further hides intent.
 class OnboardingCallbacks(
     val onNext: () -> Unit = {},
     val onSkip: () -> Unit = {},

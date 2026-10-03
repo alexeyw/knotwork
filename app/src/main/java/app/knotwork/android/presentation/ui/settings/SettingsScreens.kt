@@ -428,7 +428,6 @@ private fun SettingsSurface(viewModel: SettingsViewModel, content: @Composable (
  * controls invoke.
  */
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun rememberSettingsCallbacks(
     viewModel: SettingsViewModel,
     nav: SettingsNavActions,

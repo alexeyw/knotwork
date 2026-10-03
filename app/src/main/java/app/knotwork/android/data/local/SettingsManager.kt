@@ -2132,7 +2132,6 @@ class SettingsManager @Inject constructor(
         dataStore.edit { preferences -> preferences.applySamplingDefaults() }
     }
 
-    @Suppress("LongMethod") // Flat list of independent key→default writes; splitting it would only obscure it.
     override suspend fun resetToRecommendedDefaults() {
         dataStore.edit { preferences ->
             // Sampling / generation + pipeline / structured output / cloud retry.

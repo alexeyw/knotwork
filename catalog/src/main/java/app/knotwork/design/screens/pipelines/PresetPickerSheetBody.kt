@@ -123,7 +123,6 @@ data class PresetPickerViewState(
  * @param modifier Optional layout modifier applied to the body root.
  */
 @Composable
-@Suppress("LongParameterList") // A picker seam; grouping the callbacks would hide the data flow.
 fun PresetPickerSheetBody(
     state: PresetPickerViewState,
     onTabSelected: (String) -> Unit,

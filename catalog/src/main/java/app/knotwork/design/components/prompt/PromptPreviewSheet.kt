@@ -227,7 +227,6 @@ private fun buildPreviewAnnotatedString(
  * disturb the surrounding line layout. The slot wraps a [TooltipBox].
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("LongParameterList") // Every value is a measured input to the placeholder size.
 private fun buildInlineContent(
     segments: List<PromptPreviewSegmentUi>,
     textStyle: TextStyle,

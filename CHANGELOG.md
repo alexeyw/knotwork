@@ -13,6 +13,17 @@ details.
 
 ## [Unreleased]
 
+### Changed
+
+- **Size and complexity exceptions can no longer pile up.** The code carried
+  155 suppressions of the detekt rules that limit how long or tangled a class or
+  function may be. 126 of them did nothing, and they have been removed. The 29
+  that remain are listed in `config/detekt/size-suppressions.txt`, one line per
+  suppressed rule (32 lines). The build now
+  fails on a suppression that is not listed, and on a listed one that is gone, so
+  the list can only shrink. See
+  [`docs/static-analysis.md`](docs/static-analysis.md#size-suppression-ratchet-verifysizesuppressions).
+
 ### Tests
 
 - **Every shipped pipeline now runs end to end in the test suite.** Each bundled

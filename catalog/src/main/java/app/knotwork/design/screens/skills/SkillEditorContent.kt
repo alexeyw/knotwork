@@ -660,7 +660,6 @@ private fun DangerButton(label: String, onClick: () -> Unit) {
 }
 
 /** Localised string bundle threaded into [SkillEditorContent]. */
-@Suppress("LongParameterList")
 data class SkillEditorStrings(
     val titleNew: String = "New skill",
     val titleEdit: String = "Edit skill",

@@ -52,7 +52,6 @@ private val DefaultIllustrationSize = 160.dp
  * [StripedPlaceholder] sized to [illustrationSize].
  */
 @Composable
-@Suppress("LongParameterList") // Stable API; collapsing into a `Row` data class hurts call-site clarity.
 fun EmptyState(
     title: String,
     subtitle: String,

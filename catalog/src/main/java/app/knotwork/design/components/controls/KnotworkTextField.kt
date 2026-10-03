@@ -88,7 +88,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  *  (e.g. inline rename, search bar).
  */
 @Composable
-@Suppress("LongParameterList", "LongMethod")
 fun KnotworkTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -228,7 +227,6 @@ private data class FieldVisuals(
 )
 
 @Composable
-@Suppress("LongParameterList")
 private fun resolveFieldVisuals(
     size: KnotworkFieldSize,
     search: Boolean,

@@ -1,4 +1,4 @@
-@file:Suppress("MatchingDeclarationName", "LongMethod", "TooManyFunctions")
+@file:Suppress("MatchingDeclarationName", "TooManyFunctions")
 // File hosts MemoryContent and its private section/row/dialog helpers.
 
 package app.knotwork.design.screens.memory

@@ -62,7 +62,6 @@ data class MemoryChunkEntity(
      * otherwise compare by reference in the data-class-generated `equals`,
      * making two identical rows unequal.
      */
-    @Suppress("CyclomaticComplexMethod")
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MemoryChunkEntity) return false

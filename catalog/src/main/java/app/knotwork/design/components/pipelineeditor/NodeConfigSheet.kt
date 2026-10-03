@@ -52,7 +52,6 @@ import app.knotwork.design.theme.KnotworkTheme
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("LongParameterList") // Sheet is the single configuration seam — every input is its own concern.
 fun NodeConfigSheet(
     config: NodeConfig,
     peerTitles: Set<String>,
@@ -110,7 +109,6 @@ fun NodeConfigSheet(
  * crash at measure time there.
  */
 @Composable
-@Suppress("LongParameterList") // Sheet body stays in lockstep with NodeConfigSheet's params.
 private fun ScrollableNodeConfigSheetBody(
     config: NodeConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -172,7 +170,6 @@ private fun ScrollableNodeConfigSheetBody(
  * @param onSave invoked on the Save action when [errors] is empty.
  */
 @Composable
-@Suppress("LongParameterList") // Body mirrors NodeConfigSheet's surface.
 fun NodeConfigSheetBody(
     config: NodeConfig,
     errors: Map<FieldId, ValidationFailure>,

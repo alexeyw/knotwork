@@ -59,7 +59,6 @@ internal enum class PromptPresetTab { BUNDLED, MINE }
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("LongMethod") // Single picker seam — splitting hides the state plumbing.
 fun PromptPresetPickerDialog(
     nodeType: NodeType,
     bundled: List<PromptPreset>,

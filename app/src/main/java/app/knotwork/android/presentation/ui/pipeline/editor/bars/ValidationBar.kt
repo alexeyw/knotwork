@@ -59,7 +59,6 @@ private val BAR_MIN_HEIGHT = 36.dp
  * @param modifier optional modifier applied to the bar root.
  */
 @Composable
-@Suppress("LongParameterList") // Single seam for the editor's validation surface.
 internal fun ValidationBar(
     graph: PipelineGraph,
     errors: List<PipelineValidationError>,

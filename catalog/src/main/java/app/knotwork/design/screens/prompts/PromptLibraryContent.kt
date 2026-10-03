@@ -376,7 +376,6 @@ private fun PromptsList(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun PromptCard(
     prompt: PromptRow,
     strings: PromptLibraryStrings,
@@ -483,7 +482,6 @@ private fun PromptCard(
  * @param onExport Writes the prompt out as a file.
  */
 @Composable
-@Suppress("LongParameterList") // Mirrors PromptCard's action set one-for-one.
 private fun PromptCardActions(
     prompt: PromptRow,
     strings: PromptLibraryStrings,
@@ -882,7 +880,6 @@ private fun FooterHint(text: String) {
 }
 
 /** Localised string bundle threaded into [PromptLibraryContent]. */
-@Suppress("LongParameterList")
 data class PromptLibraryStrings(
     val title: String = "Prompt library",
     val backCd: String = "Back",
@@ -908,7 +905,6 @@ data class PromptLibraryStrings(
 )
 
 /** Localised string bundle threaded into [PromptEditorSheetBody]. */
-@Suppress("LongParameterList")
 data class PromptEditorStrings(
     val titleNew: String = "New prompt",
     val titleEdit: String = "Edit prompt",
