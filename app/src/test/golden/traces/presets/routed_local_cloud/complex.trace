@@ -1,0 +1,170 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/routed_local_cloud
+scenario: complex
+about: The router sends a complex question to the cloud.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Compare how solar and wind power grew over the last decade.
+
+run.create golden pipeline=routed_local_cloud parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Compare how solar and wind power grew over the last decade.
+run.running golden pipeline=routed_local_cloud graphHash=a492db73179fc3865391449addca273f5a26a48b08d62939f2f1977119d8d3d0
+driver start
+crash.key active_pipeline_id=routed_local_cloud
+crash.key active_model=Golden Model
+visit golden routed_local_cloud/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden routed_local_cloud/router INTENT_ROUTER #1
+state Stage step=2 of=null INTENT_ROUTER
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=router call=1 temperature=default image=none
+    prompt:
+      | Classify the user's request. Output EXACTLY one keyword: Simple (greetings, small talk, single-step factual questions the on-device model can answer) or Complex (multi-step reasoning, research, code, anything that benefits from a larger model). Today is 15 September 2026. Reply with the single keyword and nothing else.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      | AGENT: ⏎
+    answer:
+      | Complex
+state Streaming thinking=1
+    text:
+      | Complex
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Complex
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | Complex
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=4)
+state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=4)
+visit golden routed_local_cloud/cloud CLOUD #1
+state Stage step=3 of=4 CLOUD
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLOUD
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+memory.retrieve limit=null threshold=null
+    query:
+      | Compare how solar and wind power grew over the last decade.
+trace.console seq=6 run=golden depth=0 MemoryAccess
+    message:
+      | Memory: query='Compare how solar and wind power grew over the last decade.' [user prompt] → 2 hits (0.91, 0.74)
+      |   1. [0.91] The user prefers short answers with one example.
+      |   2. [0.74] The user is planning a trip to Lisbon in October.
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+memory.used ids=[11, 12]
+trace.memory seq=7 run=golden chunks=[11, 12]
+network.outbound
+model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
+    prompt:
+      | [User] [golden prefix] Answer in plain words.
+      | You are a cloud assistant handling a request the on-device router flagged as Complex. The current date is 15 September 2026. Use the conversation history to keep continuity. Reason step by step internally, then reply with a thorough, well-structured answer.
+      |
+      | Reply in the user's language (en-US). Do not restate, quote or summarise the material you were given — the conversation history, the remembered entries, or your own reasoning. Reply with the answer only.
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Long-Term Memory ---
+      | 1. The user prefers short answers with one example.
+      | 2. The user is planning a trip to Lisbon in October.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      | AGENT: ⏎
+    answer:
+      | Cloud LLM answer, visit 1.
+network.outbound ×6
+metrics.update tokens=5
+state Streaming thinking=1 answering=4
+    text:
+      | Cloud LLM answer, visit 1.
+metrics.node CLOUD tokens=5
+run.spend golden steps=3 tokens=5
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLOUD in <ms>ms
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+trace.node seq=9 run=golden cloud CLOUD depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Long-Term Memory ---
+      | 1. The user prefers short answers with one example.
+      | 2. The user is planning a trip to Lisbon in October.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | Cloud LLM answer, visit 1.
+trace.flush
+state PipelineTrace steps=2 last=CLOUD depth=0 tokens=5 (= trace.node seq=9)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=9)
+visit golden routed_local_cloud/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=10 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=10)
+chat.save AGENT final=true model=openai
+    content:
+      | Cloud LLM answer, visit 1.
+end Completed
+    finalResponse:
+      | Cloud LLM answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=5
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

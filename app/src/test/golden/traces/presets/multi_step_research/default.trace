@@ -1,0 +1,302 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/multi_step_research
+scenario: default
+about: A two-item plan worked through a queue by a cloud node.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Compare how solar and wind power grew over the last decade.
+
+run.create golden pipeline=multi_step_research parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Compare how solar and wind power grew over the last decade.
+run.running golden pipeline=multi_step_research graphHash=43bab6f239413ed2f6b305d089093e3bdab047358fa994e7eea120a37dd2c68f
+driver start
+crash.key active_pipeline_id=multi_step_research
+crash.key active_model=Golden Model
+visit golden multi_step_research/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden multi_step_research/decomposition DECOMPOSITION #1
+state Stage step=2 of=null DECOMPOSITION
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ DECOMPOSITION
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=decomposition call=1 temperature=default image=none
+    prompt:
+      | You are a task decomposer. Break the user's request into a short ordered list of independent research subtasks (typically 2-5). Today is 15 September 2026. Output STRICTLY a JSON array of plain-text strings — no prose, no keys, no trailing commentary.
+      |
+      | Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | USER: --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      | AGENT: ⏎
+    answer:
+      | ["Decomposition: first part", "Decomposition: second part", "Decomposition: third part"]
+state Streaming thinking=9
+    text:
+      | ["Decomposition: first part", "Decomposition: second part", "Decomposition: third part"]
+metrics.node DECOMPOSITION tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ DECOMPOSITION in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden decomposition DECOMPOSITION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | ["Decomposition: first part","Decomposition: second part","Decomposition: third part"]
+state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=4)
+state NodeIO decomposition DECOMPOSITION depth=0 (= trace.node seq=4)
+visit golden multi_step_research/queue QUEUE_PROCESSOR #1
+state Stage step=3 of=null QUEUE_PROCESSOR
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ QUEUE_PROCESSOR
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+metrics.node QUEUE_PROCESSOR tokens=null
+run.spend golden steps=3 tokens=0
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ QUEUE_PROCESSOR in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.node seq=7 run=golden queue QUEUE_PROCESSOR depth=0 tokens=null
+    input:
+      | ["Decomposition: first part","Decomposition: second part","Decomposition: third part"]
+    output:
+      | ["Decomposition: first part","Decomposition: second part","Decomposition: third part"]
+state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=7)
+state NodeIO queue QUEUE_PROCESSOR depth=0 (= trace.node seq=7)
+visit golden multi_step_research/cloud CLOUD #1
+state Stage step=4 of=7 CLOUD
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLOUD
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+network.outbound
+model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
+    prompt:
+      | [User] [golden prefix] Answer in plain words.
+      | You are a research assistant working on ONE subtask at a time within a larger plan. Today is 15 September 2026. Investigate the current subtask thoroughly and return concrete findings in two or three short paragraphs. Previously completed subtask results, when present, appear above the current subtask — reuse them rather than restarting research.
+      |
+      | Work in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: first part
+      | AGENT: ⏎
+    answer:
+      | Researcher answer, visit 1.
+network.outbound ×5
+metrics.update tokens=4
+state Streaming thinking=1 answering=3
+    text:
+      | Researcher answer, visit 1.
+metrics.node CLOUD tokens=4
+run.spend golden steps=4 tokens=4
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLOUD in <ms>ms
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden cloud CLOUD depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: first part
+    output:
+      | Researcher answer, visit 1.
+trace.flush
+state PipelineTrace steps=3 last=CLOUD depth=0 tokens=4 (= trace.node seq=10)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=10)
+visit golden multi_step_research/cloud CLOUD #2
+state Stage step=5 of=7 CLOUD
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLOUD
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
+network.outbound
+model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
+    prompt:
+      | [User] [golden prefix] Answer in plain words.
+      | You are a research assistant working on ONE subtask at a time within a larger plan. Today is 15 September 2026. Investigate the current subtask thoroughly and return concrete findings in two or three short paragraphs. Previously completed subtask results, when present, appear above the current subtask — reuse them rather than restarting research.
+      |
+      | Work in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Researcher answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: second part
+      | AGENT: ⏎
+    answer:
+      | Researcher answer, visit 2.
+network.outbound ×5
+metrics.update tokens=4
+state Streaming thinking=1 answering=3
+    text:
+      | Researcher answer, visit 2.
+metrics.node CLOUD tokens=4
+run.spend golden steps=5 tokens=8
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLOUD in <ms>ms
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
+trace.node seq=13 run=golden cloud CLOUD depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Researcher answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: second part
+    output:
+      | Researcher answer, visit 2.
+trace.flush
+state PipelineTrace steps=4 last=CLOUD depth=0 tokens=4 (= trace.node seq=13)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=13)
+visit golden multi_step_research/cloud CLOUD #3
+state Stage step=6 of=7 CLOUD
+trace.console seq=14 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLOUD
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=14)
+network.outbound
+model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
+    prompt:
+      | [User] [golden prefix] Answer in plain words.
+      | You are a research assistant working on ONE subtask at a time within a larger plan. Today is 15 September 2026. Investigate the current subtask thoroughly and return concrete findings in two or three short paragraphs. Previously completed subtask results, when present, appear above the current subtask — reuse them rather than restarting research.
+      |
+      | Work in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Researcher answer, visit 1.
+      |
+      | Result of Subtask 2:
+      | Researcher answer, visit 2.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: third part
+      | AGENT: ⏎
+    answer:
+      | Researcher answer, visit 3.
+network.outbound ×5
+metrics.update tokens=4
+state Streaming thinking=1 answering=3
+    text:
+      | Researcher answer, visit 3.
+metrics.node CLOUD tokens=4
+run.spend golden steps=6 tokens=12
+trace.console seq=15 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLOUD in <ms>ms
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
+trace.node seq=16 run=golden cloud CLOUD depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Researcher answer, visit 1.
+      |
+      | Result of Subtask 2:
+      | Researcher answer, visit 2.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: third part
+    output:
+      | Researcher answer, visit 3.
+trace.flush
+state PipelineTrace steps=5 last=CLOUD depth=0 tokens=4 (= trace.node seq=16)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=16)
+visit golden multi_step_research/output OUTPUT #1
+state Stage step=7 of=7 OUTPUT
+trace.console seq=17 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=17)
+chat.save AGENT final=true model=openai
+    content:
+      | Queue execution completed.
+      | Results:
+      | 1. Researcher answer, visit 1.
+      | 2. Researcher answer, visit 2.
+      | 3. Researcher answer, visit 3.
+end Completed
+    finalResponse:
+      | Queue execution completed.
+      | Results:
+      | 1. Researcher answer, visit 1.
+      | 2. Researcher answer, visit 2.
+      | 3. Researcher answer, visit 3.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=7 tokens=12
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

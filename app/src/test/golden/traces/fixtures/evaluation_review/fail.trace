@@ -1,0 +1,173 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: fixtures/evaluation_review
+scenario: fail
+about: The reviewer fails the draft.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | What is the tallest mountain on Earth?
+
+run.create golden pipeline=fixture-evaluation-review parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=fixture-evaluation-review graphHash=6817c4bcf6de51d7da237aae8b01a1c2b4c78429a89fc3e5b4cdeb6ce749386d
+driver start
+crash.key active_pipeline_id=fixture-evaluation-review
+crash.key active_model=Golden Model
+visit golden fixture-evaluation-review/input INPUT #1
+state Stage step=1 of=6 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden fixture-evaluation-review/draft LITE_RT #1
+state Stage step=2 of=6 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=draft call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | Draft a short answer to the user's request.
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Draft answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Draft answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Draft answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=4)
+state NodeIO draft LITE_RT depth=0 (= trace.node seq=4)
+visit golden fixture-evaluation-review/review EVALUATION #1
+state Stage step=3 of=6 EVALUATION
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ EVALUATION
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+model.load path=null vision=false audio=false
+model local node=review call=1 temperature=default image=none
+    prompt:
+      | Pass the draft if it answers the request, ask for a Retry if it is close, Fail it otherwise.
+      |
+      | USER: --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | Draft answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | Fail
+state Streaming thinking=1
+    text:
+      | Fail
+metrics.node EVALUATION tokens=null
+run.spend golden steps=3 tokens=4
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ EVALUATION in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.node seq=7 run=golden review EVALUATION depth=0 tokens=null routingKey=Fail
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | Draft answer, visit 1.
+    output:
+      | Fail
+state PipelineTrace steps=2 last=EVALUATION depth=0 tokens=null (= trace.node seq=7)
+state NodeIO review EVALUATION depth=0 (= trace.node seq=7)
+visit golden fixture-evaluation-review/apology LITE_RT #1
+state Stage step=4 of=6 LITE_RT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+model.load path=null vision=false audio=false
+model local node=apology call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | Say plainly that no good answer was found.
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | Fail
+      | AGENT: ⏎
+    answer:
+      | Apologise answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Apologise answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=4 tokens=8
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden apology LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | Fail
+    output:
+      | Apologise answer, visit 1.
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=4 (= trace.node seq=10)
+state NodeIO apology LITE_RT depth=0 (= trace.node seq=10)
+visit golden fixture-evaluation-review/output OUTPUT #1
+state Stage step=5 of=6 OUTPUT
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Apologise answer, visit 1.
+end Completed
+    finalResponse:
+      | Apologise answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=5 tokens=8
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

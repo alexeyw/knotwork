@@ -128,6 +128,82 @@ change the test exists to catch.
   not: the privacy policy, the browser editor, the cookbook generator's sources
   and the screenshot baselines were each found that way.
 
+### Golden run traces
+
+`GoldenTraceTest` runs every bundled pipeline preset, every recipe in
+`docs/recipes/` and three test-only fixtures through the real
+`GraphExecutionEngine` and all of its node executors, and compares each run's
+trace with a file committed under `app/src/test/golden/traces/`. It is the
+safety net for refactoring the engine: a refactoring merges with no change to
+those files.
+
+- **What is real:** besides the engine and its executors, the approval gate,
+  the prompt variable providers (on a frozen clock, locale and device), the
+  clarification repository, and the whole path a user's answer takes — the
+  `Submit…UseCase`s, `ParkedRunResumer` and `ResumePipelineRunUseCase`. A
+  resume the app would refuse is refused in the trace too.
+- **What is faked:** the model (scripted per node and visit), tools (recorded
+  outputs — nothing executes), long-term memory (a fixed snapshot), chat
+  history, run storage (in memory, with the production store's guards: a
+  terminal status is written once, and a trace record is durable only after a
+  flush), metrics, the trigger journal, the network indicator, notifications,
+  the task queue (the harness plays it), and the user. Settings are a strict
+  stand-in: a setting the run path starts reading is a harness violation, and
+  every numeric value differs from the shipped default and reaches some
+  scenario — step and token ceilings per origin, nesting depth, the
+  tool-result budget, the `$MEMORY_SUMMARY` limit, the approval window — so a
+  read replaced by the default changes a trace. The token-ceiling scenarios
+  use values below the floor the settings store enforces on write, because
+  scripted answers are a few tokens long. The resume-age and background
+  approval windows are wall-clock and are not exercised.
+- **What a trace holds:** each node visit; each model call with its full
+  prompt and answer; each tool call with its arguments, the risk the gate
+  decided on and the output; each persisted trace record (sequence number,
+  input, output, routing verdict, tool, console line); run-record, chat,
+  metrics and journal writes; notifications; and the orchestrator states the
+  UI sees — streaming collapsed to one line per stream, and the console, the
+  trace panel and the per-node view checked against the persisted records they
+  must repeat. Times, durations and
+  random ids are left out — a request id appears as `#1`, `#2`, so the trace
+  still shows which surfaces carry the same request — and the duration in the
+  `✓ … in Nms` console line is masked.
+- **Scenarios** live in `GoldenScenarios`: at least one per pipeline file, plus
+  the branches, suspensions and settings the engine has to get right —
+  approve, deny, a clarification answered or parked, a step or token ceiling
+  pausing a chat or a background run, a resume from the checkpoint, nested
+  `PIPELINE`s up to the depth ceiling, each approval policy, blocked
+  destructive tools, a compressed chat history, a tool result over the read
+  budget.
+  Each scenario declares how it ends (completed, error or parked), and that is
+  checked before the trace is compared. `GoldenTraceCatalogueTest` fails when
+  a pipeline file has no scenario, when a node type appears in no trace (two
+  fixtures exist for the two node types no shipped pipeline uses; the third
+  nests itself up to the depth ceiling), or when a trace file belongs to no
+  scenario.
+- **A misused fake fails the run, it is not recorded.** An approval or a
+  clarification the scenario does not settle, or a call to a member no run
+  path uses, raises an `AssertionError` and is listed for the run to assert.
+  The engine catches `Exception` around every node on purpose, so a plain
+  exception from a fake would end the run as an ordinary error — and be
+  recorded as golden output. (A model call the scenario does not script gets
+  a default answer for its node type.)
+- **Every scenario runs twice**, and the two traces must match before either is
+  compared: a nondeterministic trace fails as such, never as a flaky diff. A
+  run still going after ten minutes of virtual time fails instead of hanging.
+
+A failure names the first differing line, writes the actual trace under
+`app/build/golden-traces/actual/` and prints the `git diff --no-index` command
+for the whole diff. When a trace changes on purpose, rewrite the files, read
+the diff, and explain it in the pull request:
+
+```bash
+./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+```
+
+Re-recording to turn a red run green without reading the diff defeats the gate.
+A new pipeline file needs a scenario; a new node type needs a scenario that
+visits it.
+
 ## Instrumented / Compose UI tests
 
 > **Note:** instrumented tests run in CI on emulators — see
@@ -178,7 +254,8 @@ being generated from a rule nobody checked.
 `check` is the task CI runs on every pull request. It executes
 detekt (including the type-resolution gate, `detektFullDebug` +
 `detektFossDebug`), ktlint, Android lint, the unit-test suite for both
-flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the `:catalog`
+flavours (`testFullDebugUnitTest` + `testFossDebugUnitTest`, which include the
+[golden run traces](#golden-run-traces)), the `:catalog`
 screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
 differs from its committed baseline beyond anti-aliasing fails the build; capture
 with `KnotworkRoborazziOptions`, which `SnapshotComparisonOptionsGuardTest`

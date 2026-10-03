@@ -1,0 +1,3 @@
+# Golden run traces and their fixtures are compared byte for byte by GoldenTraceTest
+# (docs/testing.md, "Golden run traces"): a checkout must not rewrite their line endings.
+app/src/test/golden/** text eol=lf

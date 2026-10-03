@@ -1,0 +1,186 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_lookup
+scenario: every-call-asks
+about: With the ask-for-every-call policy even a read-only lookup waits for approval.
+origin: CHAT
+outcome: COMPLETED
+settings: approvalPolicy=AllCalls
+prompt:
+  | What is the tallest mountain on Earth?
+
+run.create golden pipeline=subtask_lookup parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=subtask_lookup graphHash=7a41c81f07c0ad362d5e8f42080290eeac67532fabb5f8b5783ebf230bd7250d
+driver start
+crash.key active_pipeline_id=subtask_lookup
+crash.key active_model=Golden Model
+visit golden subtask_lookup/node-1 INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden subtask_lookup/node-2 LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.
+      |
+      | Write the search term in the user's language (en-US) so the lookup targets the matching Wikipedia edition.
+      |
+      | Rules:
+      | - Output ONLY the search term — a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels.
+      | - Ignore any surrounding workflow instructions (e.g. "execute a single subtask"). Extract only the real topic the subtask is about.
+      | - Strip imperative verbs and filler — keep just the subject. "Look up the population of France" → "France".
+      | - If several topics are mixed in, pick the single most central one.
+      |
+      | Output the search term only.
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Subtask Query Builder answer, visit 1.
+state Streaming thinking=1 answering=5
+    text:
+      | Subtask Query Builder answer, visit 1.
+metrics.update tokens=6
+modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+metrics.node LITE_RT tokens=6
+run.spend golden steps=2 tokens=6
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=6
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Subtask Query Builder answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=4)
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
+visit golden subtask_lookup/node-3 TOOL #1
+state Stage step=3 of=4 TOOL
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state Streaming thinking=1
+    text:
+      | Analyzing task for tool execution...
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: search_tool
+      | DESCRIPTION: Looks a topic up in an encyclopedia.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Subtask Query Builder answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "search_tool", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"query":"Wikipedia Lookup (subtask)"}
+journal.hitl golden Raised(kind=APPROVAL)
+run.status golden WAITING_APPROVAL
+trace.flush
+state WaitingForApproval tool=search_tool risk=READ_ONLY request=#1
+    arguments:
+      | {"query":"Wikipedia Lookup (subtask)"}
+notify.approval request=#1 tool=search_tool risk=READ_ONLY
+driver approval approve request=#1 → LiveResumed
+notify.approval.cancel request=#1
+journal.hitl golden Resolved(resolution=APPROVED)
+run.status golden RUNNING
+state ExecutingTool search_tool
+    arguments:
+      | {"query":"Wikipedia Lookup (subtask)"}
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Wikipedia Lookup (subtask)"}
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+state ObservationResult search_tool
+    result:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+metrics.node TOOL tokens=null
+run.spend golden steps=3 tokens=6
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.console seq=7 run=golden depth=0 ToolCall
+    message:
+      | search_tool
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
+trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | Subtask Query Builder answer, visit 1.
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+trace.flush
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
+state NodeIO node-3 TOOL depth=0 (= trace.node seq=8)
+visit golden subtask_lookup/node-4 OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+end Completed
+    finalResponse:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=6
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

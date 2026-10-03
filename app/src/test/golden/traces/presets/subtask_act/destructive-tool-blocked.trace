@@ -1,0 +1,102 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_act
+scenario: destructive-tool-blocked
+about: With destructive tools blocked, a destructive pick is refused without asking and the run stops.
+origin: CHAT
+outcome: ERROR
+settings: blockDestructiveTools=true
+prompt:
+  | Book a table for dinner.
+
+run.create golden pipeline=subtask_act parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Book a table for dinner.
+run.running golden pipeline=subtask_act graphHash=a716f52979ae506debaaed19b933005a82cfed0f3891f2de6cd93b7051c92bf7
+driver start
+crash.key active_pipeline_id=subtask_act
+crash.key active_model=Golden Model
+visit golden subtask_act/node-1 INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden subtask_act/node-2 TOOL #1
+state Stage step=2 of=3 TOOL
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+state Streaming thinking=1
+    text:
+      | Analyzing task for tool execution...
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that selects the best tool for a given task and generates arguments.
+      |
+      | AVAILABLE TOOLS:
+      | Tool: search_tool
+      | Description: Looks a topic up in an encyclopedia.
+      | Parameters: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | Tool: read_file
+      | Description: Reads a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | Tool: write_file
+      | Description: Writes a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: append_file
+      | Description: Appends to a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: delete_file
+      | Description: Deletes a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      |
+      | INSTRUCTIONS:
+      | Choose the most appropriate tool to solve the task. ⏎
+      | Generate strictly valid JSON with two fields: "tool" and "arguments".
+      | "tool" should be the exact name of the selected tool.
+      | "arguments" should contain the parameters matching the tool's schema.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"tool": "delete_file", "arguments": {"path": "plans/old.md"}}
+chat.save SYSTEM final=false model=null
+    content:
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+end Error reason=null
+    message:
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+metrics.node TOOL tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 Error
+    message:
+      | TOOL: Destructive tools are blocked by Settings — delete_file was not executed.
+after the terminal state:
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+after the terminal state:
+end Error reason=null
+    message:
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+trace.flush
+run.finish golden FAILED reason=null
+    error:
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+run.finish golden FAILED reason=null (ignored: terminal or unknown run)
+    error:
+      | Destructive tools are blocked by Settings — delete_file was not executed.

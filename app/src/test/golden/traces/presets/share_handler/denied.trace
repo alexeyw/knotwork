@@ -1,0 +1,173 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/share_handler
+scenario: denied
+about: The append is denied; the run continues with the refusal.
+origin: SHARE
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | https://example.org/article — Ten habits of calm people
+
+run.create golden pipeline=share_handler parent=null status=QUEUED origin=SHARE hadImage=false
+    userPrompt:
+      | https://example.org/article — Ten habits of calm people
+run.running golden pipeline=share_handler graphHash=b7295fa2ac0ae318d87cd9991e52e7d65fbdbf2c7a02d4975900eaee8b65a96a
+driver start
+crash.key active_pipeline_id=share_handler
+crash.key active_model=Golden Model
+visit golden share_handler/node-1 INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden share_handler/node-2 LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You capture shared content into the user's workspace. Read the shared text in your input. Output STRICTLY one JSON object and nothing else, with exactly two string keys. The first key is path and its value is exactly inbox/captures.md. The second key is content: a Markdown block that begins with a newline, then a level-two heading with a short descriptive title for the item, then 3 to 6 concise bullet points capturing the key information, and if the text implies any tasks, a line with the bold text 'Action items:' followed by those tasks as bullets, then a trailing newline. Use only what the input actually says; never invent facts. Write in the user's language (en-US). Output only the JSON object.
+      |
+      |
+      | --- Original Task ---
+      | https://example.org/article — Ten habits of calm people
+      |
+      | --- Previous Node Output ---
+      | https://example.org/article — Ten habits of calm people
+      | AGENT: ⏎
+    answer:
+      | Structure answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Structure answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | https://example.org/article — Ten habits of calm people
+      |
+      | --- Previous Node Output ---
+      | https://example.org/article — Ten habits of calm people
+    output:
+      | Structure answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=4)
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
+visit golden share_handler/node-3 TOOL #1
+state Stage step=3 of=4 TOOL
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state Streaming thinking=1
+    text:
+      | Analyzing task for tool execution...
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: append_file
+      | DESCRIPTION: Appends to a file in the agent workspace.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Structure answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "append_file", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"path":"notes/golden.md","content":"Save capture — recorded content."}
+journal.hitl golden Raised(kind=APPROVAL)
+run.status golden WAITING_APPROVAL
+trace.flush
+state WaitingForApproval tool=append_file risk=SENSITIVE request=#1
+    arguments:
+      | {"path":"notes/golden.md","content":"Save capture — recorded content."}
+notify.approval request=#1 tool=append_file risk=SENSITIVE
+driver approval deny request=#1 → LiveResumed
+notify.approval.cancel request=#1
+journal.hitl golden Resolved(resolution=DENIED)
+chat.save SYSTEM final=false model=null
+    content:
+      | User denied execution of tool: append_file
+run.status golden RUNNING
+state ObservationResult append_file
+    result:
+      | Execution denied by user
+metrics.node TOOL tokens=null
+run.spend golden steps=3 tokens=4
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.console seq=7 run=golden depth=0 ToolCall
+    message:
+      | append_file
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
+trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=append_file
+    input:
+      | --- Previous Node Output ---
+      | Structure answer, visit 1.
+    output:
+      | Execution denied by user
+trace.flush
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
+state NodeIO node-3 TOOL depth=0 (= trace.node seq=8)
+visit golden share_handler/node-4 OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+model.load path=null vision=false audio=false
+model local node=node-4 call=1 temperature=default image=none
+    prompt:
+      | Your input confirms text was appended to a file, like: Appended N bytes to 'inbox/captures.md'. Reply with one short line telling the user the shared item was captured to their workspace inbox. If the input is instead an error message, relay it plainly in one sentence. Add nothing else.
+      |
+      | Reply in the user's language (en-US).
+      |
+      | CRITICAL INSTRUCTION: Output ONLY the requested format. Do NOT include any conversational filler, explanations, or preambles (e.g., "Here is the formatted output:").
+      |
+      | INPUT: --- Previous Node Output ---
+      | Execution denied by user
+      | FORMATTED OUTPUT: ⏎
+    answer:
+      | Confirm answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Confirm answer, visit 1.
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Confirm answer, visit 1.
+end Completed
+    finalResponse:
+      | Confirm answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=4
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

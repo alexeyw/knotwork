@@ -1,0 +1,112 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: recipes/memory-aware-run
+scenario: trigger
+about: In a background run, memory is searched with the pipeline's declared query, $DATE rendered.
+origin: TRIGGER
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | What should I pack for my trip?
+
+run.create golden pipeline=recipe-memory-aware-run parent=null status=QUEUED origin=TRIGGER hadImage=false
+    userPrompt:
+      | What should I pack for my trip?
+run.running golden pipeline=recipe-memory-aware-run graphHash=b0479a36d16492bc6cbad471cb0ce760acd2b031ec216ec421ef24f43db86bfe
+driver start
+crash.key active_pipeline_id=recipe-memory-aware-run
+crash.key active_model=Golden Model
+visit golden recipe-memory-aware-run/input INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden recipe-memory-aware-run/recall LITE_RT #1
+state Stage step=2 of=3 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+memory.retrieve limit=null threshold=null
+    query:
+      | commitments, plans and preferences the user mentioned recently, around 15 September 2026
+trace.console seq=3 run=golden depth=0 MemoryAccess
+    message:
+      | Memory: query='commitments, plans and preferences the user mentioned recent…' [pipeline-declared] → 2 hits (0.91, 0.74)
+      |   1. [0.91] The user prefers short answers with one example.
+      |   2. [0.74] The user is planning a trip to Lisbon in October.
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+memory.used ids=[11, 12]
+trace.memory seq=4 run=golden chunks=[11, 12]
+model.load path=null vision=false audio=false
+model local node=recall call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are Anonymous's assistant. Today is 15 September 2026. Use the remembered entries you were given to answer, and say plainly when you do not have the information.
+      |
+      | Do not restate or summarise the remembered entries — reply with the answer only. Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | What should I pack for my trip?
+      |
+      | --- Long-Term Memory ---
+      | 1. The user prefers short answers with one example.
+      | 2. The user is planning a trip to Lisbon in October.
+      |
+      | --- Previous Node Output ---
+      | What should I pack for my trip?
+      | AGENT: ⏎
+    answer:
+      | Answer with memory answer, visit 1.
+state Streaming thinking=1 answering=5
+    text:
+      | Answer with memory answer, visit 1.
+metrics.update tokens=6
+modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+metrics.node LITE_RT tokens=6
+run.spend golden steps=2 tokens=6
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+trace.node seq=6 run=golden recall LITE_RT depth=0 tokens=6
+    input:
+      | --- Original Task ---
+      | What should I pack for my trip?
+      |
+      | --- Long-Term Memory ---
+      | 1. The user prefers short answers with one example.
+      | 2. The user is planning a trip to Lisbon in October.
+      |
+      | --- Previous Node Output ---
+      | What should I pack for my trip?
+    output:
+      | Answer with memory answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=6)
+state NodeIO recall LITE_RT depth=0 (= trace.node seq=6)
+visit golden recipe-memory-aware-run/output OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=7 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Answer with memory answer, visit 1.
+end Completed
+    finalResponse:
+      | Answer with memory answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=6
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

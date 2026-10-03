@@ -1,0 +1,226 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: recipes/intent-routing
+scenario: search
+about: The router looks the answer up first.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Compare how solar and wind power grew over the last decade.
+
+run.create golden pipeline=recipe-intent-routing parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Compare how solar and wind power grew over the last decade.
+run.running golden pipeline=recipe-intent-routing graphHash=2dd0f9fe0556dbe9275f04607da49514e28783e67195cf17478eb7ff593999b5
+driver start
+crash.key active_pipeline_id=recipe-intent-routing
+crash.key active_model=Golden Model
+visit golden recipe-intent-routing/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden recipe-intent-routing/router INTENT_ROUTER #1
+state Stage step=2 of=null INTENT_ROUTER
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=router call=1 temperature=default image=none
+    prompt:
+      | Classify the user's message. Output EXACTLY one keyword and nothing else: Answer (you can reply from what you already know), Search (the reply needs a fact you would have to look up), Ask (the message is too vague to act on). Today is 15 September 2026.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      | AGENT: ⏎
+    answer:
+      | Search
+state Streaming thinking=1
+    text:
+      | Search
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Search
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | Search
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=4)
+state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=4)
+visit golden recipe-intent-routing/search TOOL #1
+state Stage step=3 of=5 TOOL
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state Streaming thinking=1
+    text:
+      | Analyzing task for tool execution...
+model.load path=null vision=false audio=false
+model local node=search call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: search_tool
+      | DESCRIPTION: Looks a topic up in an encyclopedia.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "search_tool", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"query":"Look it up"}
+state ExecutingTool search_tool
+    arguments:
+      | {"query":"Look it up"}
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Look it up"}
+    output:
+      | Search results for "Look it up":
+      | 1. Look it up — a recorded encyclopedia summary.
+      | 2. Look it up — a second recorded source.
+state ObservationResult search_tool
+    result:
+      | Search results for "Look it up":
+      | 1. Look it up — a recorded encyclopedia summary.
+      | 2. Look it up — a second recorded source.
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Look it up":
+      | 1. Look it up — a recorded encyclopedia summary.
+      | 2. Look it up — a second recorded source.
+metrics.node TOOL tokens=null
+run.spend golden steps=3 tokens=0
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.console seq=7 run=golden depth=0 ToolCall
+    message:
+      | search_tool
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
+trace.node seq=8 run=golden search TOOL depth=0 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | Search results for "Look it up":
+      | 1. Look it up — a recorded encyclopedia summary.
+      | 2. Look it up — a second recorded source.
+trace.flush
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
+state NodeIO search TOOL depth=0 (= trace.node seq=8)
+visit golden recipe-intent-routing/from_search LITE_RT #1
+state Stage step=4 of=5 LITE_RT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+model.load path=null vision=false audio=false
+model local node=from_search call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are given the result of a lookup. Answer the user's question using only that result, in one short paragraph. If the result does not contain the answer, say so.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Tool Results ---
+      | 1. search_tool: Search results for "Look it up":
+      |   1. Look it up — a recorded encyclopedia summary.
+      |   2. Look it up — a second recorded source.
+      |
+      | --- Previous Node Output ---
+      | Search results for "Look it up":
+      | 1. Look it up — a recorded encyclopedia summary.
+      | 2. Look it up — a second recorded source.
+      | AGENT: ⏎
+    answer:
+      | Answer from the result answer, visit 1.
+state Streaming thinking=1 answering=6
+    text:
+      | Answer from the result answer, visit 1.
+metrics.update tokens=7
+modelPerformance.record path=/models/golden-model.litertlm tokens=7 benchmark=false
+metrics.node LITE_RT tokens=7
+run.spend golden steps=4 tokens=7
+trace.console seq=10 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=10)
+trace.node seq=11 run=golden from_search LITE_RT depth=0 tokens=7
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Tool Results ---
+      | 1. search_tool: Search results for "Look it up":
+      |   1. Look it up — a recorded encyclopedia summary.
+      |   2. Look it up — a second recorded source.
+      |
+      | --- Previous Node Output ---
+      | Search results for "Look it up":
+      | 1. Look it up — a recorded encyclopedia summary.
+      | 2. Look it up — a second recorded source.
+    output:
+      | Answer from the result answer, visit 1.
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=7 (= trace.node seq=11)
+state NodeIO from_search LITE_RT depth=0 (= trace.node seq=11)
+visit golden recipe-intent-routing/output OUTPUT #1
+state Stage step=5 of=5 OUTPUT
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Answer from the result answer, visit 1.
+end Completed
+    finalResponse:
+      | Answer from the result answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=5 tokens=7
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

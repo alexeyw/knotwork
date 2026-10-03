@@ -1,0 +1,119 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_clarify
+scenario: answered
+about: The clarifying sub-pipeline on its own.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Book a table for dinner.
+
+run.create golden pipeline=subtask_clarify parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Book a table for dinner.
+run.running golden pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c9772575bb0b6205eaac4a048dc5634c151c5233b
+driver start
+crash.key active_pipeline_id=subtask_clarify
+crash.key active_model=Golden Model
+visit golden subtask_clarify/node-1 INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden subtask_clarify/node-2 CLARIFICATION #1
+state Stage step=2 of=3 CLARIFICATION
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLARIFICATION
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
+      |
+      | Write the question in the user's language (en-US).
+      |
+      | Output STRICTLY a single JSON object and nothing else — no prose, no markdown code fence:
+      | {"question": "<the question to ask>", "options": ["<option>", "<option>"]}
+      |
+      | Rules:
+      | - Ask exactly one focused question — the single most important thing blocking this subtask. Do not bundle several asks.
+      | - If there is a small, clear set of likely answers, list them in "options" (2 to 5). Put the safest or most neutral choice FIRST — it is used as the default if the user does not reply in time.
+      | - If the answer is open-ended (a name, a date, free text), return "options": [] so the user can type a reply.
+      | - Keep the question self-contained: the user sees it without the internal subtask text, so do not refer to "the subtask" or "the step".
+      | - Do not answer the question yourself, and do not invent the user's preference.
+      |
+      | Output only the JSON object.
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+state Streaming thinking=14
+    text:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+journal.hitl golden Raised(kind=CLARIFICATION)
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification request=#1 timeoutMs=60000
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+driver clarification Answer(text=The first one) request=#1 → LiveResumed
+journal.hitl golden Resolved(resolution=ANSWERED)
+run.status golden RUNNING
+metrics.node CLARIFICATION tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLARIFICATION in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden node-2 CLARIFICATION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=4)
+state NodeIO node-2 CLARIFICATION depth=0 (= trace.node seq=4)
+visit golden subtask_clarify/node-3 OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+end Completed
+    finalResponse:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=0
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

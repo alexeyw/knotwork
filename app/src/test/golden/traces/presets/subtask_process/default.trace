@@ -1,0 +1,102 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_process
+scenario: default
+about: The processing sub-pipeline on its own.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Plan my Saturday evening in the city.
+
+run.create golden pipeline=subtask_process parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Plan my Saturday evening in the city.
+run.running golden pipeline=subtask_process graphHash=216d07192b353779781abc50ae4e2c2e589e21fd5f7efd7ff580cac3b6b872d2
+driver start
+crash.key active_pipeline_id=subtask_process
+crash.key active_model=Golden Model
+visit golden subtask_process/node-1 INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden subtask_process/node-2 LITE_RT #1
+state Stage step=2 of=3 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are completing ONE subtask from a larger plan. It is a reasoning, writing, transformation, calculation or composition step — everything it needs is already available to you; you are not searching for facts, using tools, or asking the user.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | How to work:
+      | - Do exactly what the current subtask asks — no more, no less. Ignore any surrounding workflow instructions and do not try to solve the overall task or future steps.
+      | - If results of earlier subtasks appear in your input, use them as the inputs to this step rather than redoing that work.
+      | - Produce the concrete result the subtask calls for (the rewritten text, the answer, the computed value, the drafted content) — not a description of how you would do it.
+      | - If the subtask genuinely cannot be completed from the information available, say so briefly and state what is missing, instead of inventing facts.
+      | - Output only the result of this subtask, as plain text, with no preamble, no restating of the subtask, and no commentary.
+      |
+      | Output the subtask result only.
+      |
+      |
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Plan my Saturday evening in the city.
+      | AGENT: ⏎
+    answer:
+      | Process answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Process answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Plan my Saturday evening in the city.
+    output:
+      | Process answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=4)
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
+visit golden subtask_process/node-3 OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Process answer, visit 1.
+end Completed
+    finalResponse:
+      | Process answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=4
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

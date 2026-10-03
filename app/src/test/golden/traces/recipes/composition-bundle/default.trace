@@ -1,0 +1,180 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: recipes/composition-bundle
+scenario: default
+about: A parent pipeline calls a second pipeline of the same bundle as one step.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | What is the tallest mountain on Earth?
+
+run.create golden pipeline=recipe-composition-parent parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=recipe-composition-parent graphHash=d937de71fdd05b40816608a45d82e7909e979cdb3397877bf0a3445d1fb94c7a
+driver start
+crash.key active_pipeline_id=recipe-composition-parent
+crash.key active_model=Golden Model
+visit golden recipe-composition-parent/input INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden recipe-composition-parent/answer LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=answer call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | Answer the user's question in one short paragraph. Today is 15 September 2026.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Answer answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Answer answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden answer LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Answer answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=4)
+state NodeIO answer LITE_RT depth=0 (= trace.node seq=4)
+visit golden recipe-composition-parent/tidy_call PIPELINE #1
+state Stage step=3 of=4 PIPELINE
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+run.create golden::tidy_call::0 pipeline=recipe-composition-tidy parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Answer answer, visit 1.
+run.running golden::tidy_call::0 pipeline=recipe-composition-tidy graphHash=d4a35fa81dd9bfb0dde63cbd81b80fea487b0f8c7acbe9ab07b081c8a5965d7b
+crash.key active_pipeline_id=recipe-composition-tidy
+crash.key active_model=Golden Model
+visit golden::tidy_call::0 recipe-composition-tidy/input INPUT #1
+trace.console seq=0 run=golden::tidy_call::0 depth=1 NodeExecution
+    message:
+      | [Recipe — tidy up (sub-pipeline)] ▶ INPUT
+state ConsoleLog run=golden::tidy_call::0 events=1 (= trace.console run=golden::tidy_call::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=3 tokens=4
+trace.console seq=1 run=golden::tidy_call::0 depth=1 NodeExecution
+    message:
+      | [Recipe — tidy up (sub-pipeline)] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::tidy_call::0 events=2 (= trace.console run=golden::tidy_call::0 seq=1)
+visit golden::tidy_call::0 recipe-composition-tidy/tidy LITE_RT #1
+trace.console seq=2 run=golden::tidy_call::0 depth=1 NodeExecution
+    message:
+      | [Recipe — tidy up (sub-pipeline)] ▶ LITE_RT
+state ConsoleLog run=golden::tidy_call::0 events=3 (= trace.console run=golden::tidy_call::0 seq=2)
+model.load path=null vision=false audio=false
+model local node=tidy call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | Rewrite the text you are given as clean prose: fix grammar and punctuation, keep every fact, change nothing else. Reply with the rewritten text only.
+      |
+      | Keep the text in its original language.
+      |
+      |
+      | --- Original Task ---
+      | Answer answer, visit 1.
+      |
+      | --- Previous Node Output ---
+      | Answer answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | Tidy answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=4 tokens=8
+trace.console seq=3 run=golden::tidy_call::0 depth=1 NodeExecution
+    message:
+      | [Recipe — tidy up (sub-pipeline)] ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden::tidy_call::0 events=4 (= trace.console run=golden::tidy_call::0 seq=3)
+trace.node seq=4 run=golden::tidy_call::0 tidy LITE_RT depth=1 tokens=4
+    input:
+      | --- Original Task ---
+      | Answer answer, visit 1.
+      |
+      | --- Previous Node Output ---
+      | Answer answer, visit 1.
+    output:
+      | Tidy answer, visit 1.
+state NodeIO tidy LITE_RT depth=1 (= trace.node seq=4)
+visit golden::tidy_call::0 recipe-composition-tidy/output OUTPUT #1
+trace.console seq=5 run=golden::tidy_call::0 depth=1 NodeExecution
+    message:
+      | [Recipe — tidy up (sub-pipeline)] ▶ OUTPUT
+state ConsoleLog run=golden::tidy_call::0 events=5 (= trace.console run=golden::tidy_call::0 seq=5)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=5 tokens=8
+trace.flush
+run.finish golden::tidy_call::0 COMPLETED reason=null
+    error:
+      (empty)
+metrics.node PIPELINE tokens=null
+run.spend golden steps=6 tokens=8
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.node seq=7 run=golden tidy_call PIPELINE depth=0 tokens=null
+    input:
+      | Answer answer, visit 1.
+    output:
+      | Tidy answer, visit 1.
+state PipelineTrace steps=2 last=PIPELINE depth=0 tokens=null (= trace.node seq=7)
+state NodeIO tidy_call PIPELINE depth=0 (= trace.node seq=7)
+visit golden recipe-composition-parent/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Tidy answer, visit 1.
+end Completed
+    finalResponse:
+      | Tidy answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=7 tokens=8
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

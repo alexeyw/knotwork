@@ -1,0 +1,142 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: recipes/intent-routing
+scenario: answer
+about: The router answers directly.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | What is the tallest mountain on Earth?
+
+run.create golden pipeline=recipe-intent-routing parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=recipe-intent-routing graphHash=2dd0f9fe0556dbe9275f04607da49514e28783e67195cf17478eb7ff593999b5
+driver start
+crash.key active_pipeline_id=recipe-intent-routing
+crash.key active_model=Golden Model
+visit golden recipe-intent-routing/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden recipe-intent-routing/router INTENT_ROUTER #1
+state Stage step=2 of=null INTENT_ROUTER
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=router call=1 temperature=default image=none
+    prompt:
+      | Classify the user's message. Output EXACTLY one keyword and nothing else: Answer (you can reply from what you already know), Search (the reply needs a fact you would have to look up), Ask (the message is too vague to act on). Today is 15 September 2026.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Answer
+state Streaming thinking=1
+    text:
+      | Answer
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Answer
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Answer
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=4)
+state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=4)
+visit golden recipe-intent-routing/answer LITE_RT #1
+state Stage step=3 of=4 LITE_RT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+model.load path=null vision=false audio=false
+model local node=answer call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are a concise assistant running on Golden Model. Today is 15 September 2026. Answer the user's question directly in one short paragraph.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Answer answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Answer answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=3 tokens=4
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.node seq=7 run=golden answer LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Answer answer, visit 1.
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=4 (= trace.node seq=7)
+state NodeIO answer LITE_RT depth=0 (= trace.node seq=7)
+visit golden recipe-intent-routing/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Answer answer, visit 1.
+end Completed
+    finalResponse:
+      | Answer answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=4
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

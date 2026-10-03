@@ -1,0 +1,1413 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/showcase_full_agent
+scenario: task-every-subpipeline
+about: A task planned into four subtasks, each routed to a different sub-pipeline.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Plan my Saturday evening in the city.
+
+run.create golden pipeline=showcase_full_agent parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Plan my Saturday evening in the city.
+run.running golden pipeline=showcase_full_agent graphHash=9a81ecec5af3f94e609ad55fddb08c4d1c7e3aac65a72481b2b09ecd2d984e3a
+driver start
+crash.key active_pipeline_id=showcase_full_agent
+crash.key active_model=Golden Model
+visit golden showcase_full_agent/node-1 INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden showcase_full_agent/node-23 LITE_RT #1
+state Stage step=2 of=null LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=node-23 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are the intake step of an agent pipeline. You receive the user's message and, sometimes, an attached image.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | Your only job is to make the request fully understandable to later steps that cannot see the image:
+      | - If an image is attached, look at it and write a faithful, detailed description of what it shows that is relevant to the user's message (objects, text, quantities, layout — whatever the request needs).
+      | - If there is no image, leave the description empty.
+      | - Do NOT answer, solve, or act on the request — only restate it and describe the image.
+      |
+      | Output plain text in exactly this shape and nothing else:
+      | Request: <the user's original request, unchanged>
+      | Image: <your description, or 'none'>
+      |
+      |
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Plan my Saturday evening in the city.
+      | AGENT: ⏎
+    answer:
+      | Vision intake answer, visit 1.
+state Streaming thinking=1 answering=4
+    text:
+      | Vision intake answer, visit 1.
+metrics.update tokens=5
+modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+metrics.node LITE_RT tokens=5
+run.spend golden steps=2 tokens=5
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden node-23 LITE_RT depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Plan my Saturday evening in the city.
+    output:
+      | Vision intake answer, visit 1.
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=4)
+state NodeIO node-23 LITE_RT depth=0 (= trace.node seq=4)
+visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
+state Stage step=3 of=null INTENT_ROUTER
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an Intent Router. Read the user's request and decide which single category it belongs to.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Chat — small talk, greetings, opinions, or anything that can be answered conversationally without looking up facts or performing an action.
+      | - Factual — an information need. The user wants to KNOW something; satisfying it may require recalling or searching for facts, but it is still a single question rather than a multi-step job.
+      | - Task — an actionable request. The user wants the agent to DO something that takes more than one answer: multiple steps, tool actions, or work that should be broken into subtasks.
+      |
+      | Decision rules, applied in order:
+      | 1. If the request asks the agent to perform or carry out something (create, schedule, send, organise, build, automate, "do this for me") — output Task.
+      | 2. Else if the request is a question or an information need — output Factual.
+      | 3. Otherwise — output Chat.
+      |
+      | If a message could fit two categories, prefer the more capable branch: Task over Factual, Factual over Chat.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | Task
+state Streaming thinking=1
+    text:
+      | Task
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=3 tokens=5
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.node seq=7 run=golden node-3 INTENT_ROUTER depth=0 tokens=null routingKey=Task
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+    output:
+      | Task
+state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=7)
+state NodeIO node-3 INTENT_ROUTER depth=0 (= trace.node seq=7)
+visit golden showcase_full_agent/node-13 DECOMPOSITION #1
+state Stage step=4 of=7 DECOMPOSITION
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ DECOMPOSITION
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+model.load path=null vision=false audio=false
+model local node=node-13 call=1 temperature=default image=none
+    prompt:
+      | You are planning how to carry out an actionable task the user has asked for. Break the task into an ordered list of concrete subtasks that, completed in sequence, accomplish it.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | Tools the agent can use right now (name — description):
+      | search_tool — Looks a topic up in an encyclopedia.
+      | read_file — Reads a file from the agent workspace.
+      | write_file — Writes a file in the agent workspace.
+      | append_file — Appends to a file in the agent workspace.
+      | delete_file — Deletes a file from the agent workspace.
+      |
+      | Output STRICTLY a JSON array of plain strings and nothing else — no prose, no keys, no markdown code fence.
+      | Example: ["first subtask", "second subtask", "third subtask"]
+      |
+      | Rules:
+      | - Between 2 and 10 subtasks. Merge trivial steps; do not pad.
+      | - Each subtask is a single, self-contained imperative instruction describing ONE action.
+      | - Order the subtasks by dependency: a later subtask may rely on the result of an earlier one.
+      | - Use the available tools above as your guide to what the agent can actually do. Prefer subtasks that map onto these capabilities, but treat the list as guidance, not a fixed checklist — it can change between runs, so do not hard-code specific tool names into the wording.
+      | - If a step needs a capability that is not in the list, do not invent it: plan instead to obtain the information from the user or to handle it by reasoning over what is already available.
+      | - If a subtask needs information that only the user can provide, phrase it as obtaining that information — do not invent the answer.
+      | - Do not solve the task here and do not include explanations — only the list of steps.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | ["Find the museum's opening hours", "Book a table for two", "Draft the evening plan", "Pick the restaurant"]
+state Streaming thinking=17
+    text:
+      | ["Find the museum's opening hours", "Book a table for two", "Draft the evening plan", "Pick the restaurant"]
+metrics.node DECOMPOSITION tokens=null
+run.spend golden steps=4 tokens=5
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ✓ DECOMPOSITION in <ms>ms
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden node-13 DECOMPOSITION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+    output:
+      | ["Find the museum's opening hours","Book a table for two","Draft the evening plan","Pick the restaurant"]
+state PipelineTrace steps=3 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=10)
+state NodeIO node-13 DECOMPOSITION depth=0 (= trace.node seq=10)
+visit golden showcase_full_agent/node-14 QUEUE_PROCESSOR #1
+state Stage step=5 of=7 QUEUE_PROCESSOR
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ▶ QUEUE_PROCESSOR
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
+metrics.node QUEUE_PROCESSOR tokens=null
+run.spend golden steps=5 tokens=5
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
+      | ✓ QUEUE_PROCESSOR in <ms>ms
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
+trace.node seq=13 run=golden node-14 QUEUE_PROCESSOR depth=0 tokens=null
+    input:
+      | ["Find the museum's opening hours","Book a table for two","Draft the evening plan","Pick the restaurant"]
+    output:
+      | ["Find the museum's opening hours","Book a table for two","Draft the evening plan","Pick the restaurant"]
+state PipelineTrace steps=4 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=13)
+state NodeIO node-14 QUEUE_PROCESSOR depth=0 (= trace.node seq=13)
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #1
+state Stage step=6 of=15 INTENT_ROUTER
+trace.console seq=14 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=14)
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+      | AGENT: ⏎
+    answer:
+      | Lookup
+state Streaming thinking=1
+    text:
+      | Lookup
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=6 tokens=5
+trace.console seq=15 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
+trace.node seq=16 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Lookup
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+    output:
+      | Lookup
+state PipelineTrace steps=5 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=16)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=16)
+visit golden showcase_full_agent/node-18 PIPELINE #1
+state Stage step=7 of=10 PIPELINE
+trace.console seq=17 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=17)
+run.create golden::node-18::0 pipeline=subtask_lookup parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+run.running golden::node-18::0 pipeline=subtask_lookup graphHash=7a41c81f07c0ad362d5e8f42080290eeac67532fabb5f8b5783ebf230bd7250d
+crash.key active_pipeline_id=subtask_lookup
+crash.key active_model=Golden Model
+visit golden::node-18::0 subtask_lookup/node-1 INPUT #1
+trace.console seq=0 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ▶ INPUT
+state ConsoleLog run=golden::node-18::0 events=1 (= trace.console run=golden::node-18::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=7 tokens=5
+trace.console seq=1 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::node-18::0 events=2 (= trace.console run=golden::node-18::0 seq=1)
+visit golden::node-18::0 subtask_lookup/node-2 LITE_RT #1
+trace.console seq=2 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ▶ LITE_RT
+state ConsoleLog run=golden::node-18::0 events=3 (= trace.console run=golden::node-18::0 seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.
+      |
+      | Write the search term in the user's language (en-US) so the lookup targets the matching Wikipedia edition.
+      |
+      | Rules:
+      | - Output ONLY the search term — a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels.
+      | - Ignore any surrounding workflow instructions (e.g. "execute a single subtask"). Extract only the real topic the subtask is about.
+      | - Strip imperative verbs and filler — keep just the subject. "Look up the population of France" → "France".
+      | - If several topics are mixed in, pick the single most central one.
+      |
+      | Output the search term only.
+      |
+      |
+      | --- Original Task ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+      | AGENT: ⏎
+    answer:
+      | Subtask Query Builder answer, visit 1.
+metrics.update tokens=6
+modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+metrics.node LITE_RT tokens=6
+run.spend golden steps=8 tokens=11
+trace.console seq=3 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden::node-18::0 events=4 (= trace.console run=golden::node-18::0 seq=3)
+trace.node seq=4 run=golden::node-18::0 node-2 LITE_RT depth=1 tokens=6
+    input:
+      | --- Original Task ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+    output:
+      | Subtask Query Builder answer, visit 1.
+state NodeIO node-2 LITE_RT depth=1 (= trace.node seq=4)
+visit golden::node-18::0 subtask_lookup/node-3 TOOL #1
+trace.console seq=5 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ▶ TOOL
+state ConsoleLog run=golden::node-18::0 events=5 (= trace.console run=golden::node-18::0 seq=5)
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: search_tool
+      | DESCRIPTION: Looks a topic up in an encyclopedia.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Subtask Query Builder answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "search_tool", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"query":"Wikipedia Lookup (subtask)"}
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Wikipedia Lookup (subtask)"}
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+metrics.node TOOL tokens=null
+run.spend golden steps=9 tokens=11
+trace.console seq=6 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ✓ TOOL in <ms>ms
+state ConsoleLog run=golden::node-18::0 events=6 (= trace.console run=golden::node-18::0 seq=6)
+trace.console seq=7 run=golden::node-18::0 depth=1 ToolCall
+    message:
+      | [Subtask — Lookup] search_tool
+state ConsoleLog run=golden::node-18::0 events=7 (= trace.console run=golden::node-18::0 seq=7)
+trace.node seq=8 run=golden::node-18::0 node-3 TOOL depth=1 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | Subtask Query Builder answer, visit 1.
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+trace.flush
+state NodeIO node-3 TOOL depth=1 (= trace.node seq=8)
+visit golden::node-18::0 subtask_lookup/node-4 OUTPUT #1
+trace.console seq=9 run=golden::node-18::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Lookup] ▶ OUTPUT
+state ConsoleLog run=golden::node-18::0 events=8 (= trace.console run=golden::node-18::0 seq=9)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=10 tokens=11
+trace.flush
+run.finish golden::node-18::0 COMPLETED reason=null
+    error:
+      (empty)
+metrics.node PIPELINE tokens=null
+run.spend golden steps=11 tokens=11
+trace.console seq=18 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=18)
+trace.node seq=19 run=golden node-18 PIPELINE depth=0 tokens=null
+    input:
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Find the museum's opening hours
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+state PipelineTrace steps=6 last=PIPELINE depth=0 tokens=null (= trace.node seq=19)
+state NodeIO node-18 PIPELINE depth=0 (= trace.node seq=19)
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #2
+state Stage step=8 of=10 INTENT_ROUTER
+trace.console seq=20 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=15 (= trace.console run=golden seq=20)
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Book a table for two
+      | AGENT: ⏎
+    answer:
+      | Act
+state Streaming thinking=1
+    text:
+      | Act
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=12 tokens=11
+trace.console seq=21 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=16 (= trace.console run=golden seq=21)
+trace.node seq=22 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Act
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Book a table for two
+    output:
+      | Act
+state PipelineTrace steps=7 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=22)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=22)
+visit golden showcase_full_agent/node-20 PIPELINE #1
+state Stage step=9 of=12 PIPELINE
+trace.console seq=23 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+state ConsoleLog run=golden events=17 (= trace.console run=golden seq=23)
+run.create golden::node-20::0 pipeline=subtask_act parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Book a table for two
+run.running golden::node-20::0 pipeline=subtask_act graphHash=a716f52979ae506debaaed19b933005a82cfed0f3891f2de6cd93b7051c92bf7
+crash.key active_pipeline_id=subtask_act
+crash.key active_model=Golden Model
+visit golden::node-20::0 subtask_act/node-1 INPUT #1
+trace.console seq=0 run=golden::node-20::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Act] ▶ INPUT
+state ConsoleLog run=golden::node-20::0 events=1 (= trace.console run=golden::node-20::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=13 tokens=11
+trace.console seq=1 run=golden::node-20::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Act] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::node-20::0 events=2 (= trace.console run=golden::node-20::0 seq=1)
+visit golden::node-20::0 subtask_act/node-2 TOOL #1
+trace.console seq=2 run=golden::node-20::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Act] ▶ TOOL
+state ConsoleLog run=golden::node-20::0 events=3 (= trace.console run=golden::node-20::0 seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that selects the best tool for a given task and generates arguments.
+      |
+      | AVAILABLE TOOLS:
+      | Tool: search_tool
+      | Description: Looks a topic up in an encyclopedia.
+      | Parameters: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | Tool: read_file
+      | Description: Reads a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | Tool: write_file
+      | Description: Writes a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: append_file
+      | Description: Appends to a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: delete_file
+      | Description: Deletes a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Book a table for two
+      |
+      | INSTRUCTIONS:
+      | Choose the most appropriate tool to solve the task. ⏎
+      | Generate strictly valid JSON with two fields: "tool" and "arguments".
+      | "tool" should be the exact name of the selected tool.
+      | "arguments" should contain the parameters matching the tool's schema.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"tool": "search_tool", "arguments": {"query":"Tool Action"}}
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Tool Action"}
+    output:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+metrics.node TOOL tokens=null
+run.spend golden steps=14 tokens=11
+trace.console seq=3 run=golden::node-20::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Act] ✓ TOOL in <ms>ms
+state ConsoleLog run=golden::node-20::0 events=4 (= trace.console run=golden::node-20::0 seq=3)
+trace.console seq=4 run=golden::node-20::0 depth=1 ToolCall
+    message:
+      | [Subtask — Act] search_tool
+state ConsoleLog run=golden::node-20::0 events=5 (= trace.console run=golden::node-20::0 seq=4)
+trace.node seq=5 run=golden::node-20::0 node-2 TOOL depth=1 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Book a table for two
+    output:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+trace.flush
+state NodeIO node-2 TOOL depth=1 (= trace.node seq=5)
+visit golden::node-20::0 subtask_act/node-3 OUTPUT #1
+trace.console seq=6 run=golden::node-20::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Act] ▶ OUTPUT
+state ConsoleLog run=golden::node-20::0 events=6 (= trace.console run=golden::node-20::0 seq=6)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=15 tokens=11
+trace.flush
+run.finish golden::node-20::0 COMPLETED reason=null
+    error:
+      (empty)
+metrics.node PIPELINE tokens=null
+run.spend golden steps=16 tokens=11
+trace.console seq=24 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+state ConsoleLog run=golden events=18 (= trace.console run=golden seq=24)
+trace.node seq=25 run=golden node-20 PIPELINE depth=0 tokens=null
+    input:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Book a table for two
+    output:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+state PipelineTrace steps=8 last=PIPELINE depth=0 tokens=null (= trace.node seq=25)
+state NodeIO node-20 PIPELINE depth=0 (= trace.node seq=25)
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #3
+state Stage step=10 of=12 INTENT_ROUTER
+trace.console seq=26 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=19 (= trace.console run=golden seq=26)
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+      | AGENT: ⏎
+    answer:
+      | Process
+state Streaming thinking=1
+    text:
+      | Process
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=17 tokens=11
+trace.console seq=27 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=20 (= trace.console run=golden seq=27)
+trace.node seq=28 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Process
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+    output:
+      | Process
+state PipelineTrace steps=9 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=28)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=28)
+visit golden showcase_full_agent/node-21 PIPELINE #1
+state Stage step=11 of=14 PIPELINE
+trace.console seq=29 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+state ConsoleLog run=golden events=21 (= trace.console run=golden seq=29)
+run.create golden::node-21::0 pipeline=subtask_process parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+run.running golden::node-21::0 pipeline=subtask_process graphHash=216d07192b353779781abc50ae4e2c2e589e21fd5f7efd7ff580cac3b6b872d2
+crash.key active_pipeline_id=subtask_process
+crash.key active_model=Golden Model
+visit golden::node-21::0 subtask_process/node-1 INPUT #1
+trace.console seq=0 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ▶ INPUT
+state ConsoleLog run=golden::node-21::0 events=1 (= trace.console run=golden::node-21::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=18 tokens=11
+trace.console seq=1 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::node-21::0 events=2 (= trace.console run=golden::node-21::0 seq=1)
+visit golden::node-21::0 subtask_process/node-2 LITE_RT #1
+trace.console seq=2 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ▶ LITE_RT
+state ConsoleLog run=golden::node-21::0 events=3 (= trace.console run=golden::node-21::0 seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are completing ONE subtask from a larger plan. It is a reasoning, writing, transformation, calculation or composition step — everything it needs is already available to you; you are not searching for facts, using tools, or asking the user.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | How to work:
+      | - Do exactly what the current subtask asks — no more, no less. Ignore any surrounding workflow instructions and do not try to solve the overall task or future steps.
+      | - If results of earlier subtasks appear in your input, use them as the inputs to this step rather than redoing that work.
+      | - Produce the concrete result the subtask calls for (the rewritten text, the answer, the computed value, the drafted content) — not a description of how you would do it.
+      | - If the subtask genuinely cannot be completed from the information available, say so briefly and state what is missing, instead of inventing facts.
+      | - Output only the result of this subtask, as plain text, with no preamble, no restating of the subtask, and no commentary.
+      |
+      | Output the subtask result only.
+      |
+      |
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+      | AGENT: ⏎
+    answer:
+      | Process answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
+run.spend golden steps=19 tokens=15
+trace.console seq=3 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden::node-21::0 events=4 (= trace.console run=golden::node-21::0 seq=3)
+trace.node seq=4 run=golden::node-21::0 node-2 LITE_RT depth=1 tokens=4
+    input:
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+    output:
+      | Process answer, visit 1.
+state NodeIO node-2 LITE_RT depth=1 (= trace.node seq=4)
+visit golden::node-21::0 subtask_process/node-3 OUTPUT #1
+trace.console seq=5 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ▶ OUTPUT
+state ConsoleLog run=golden::node-21::0 events=5 (= trace.console run=golden::node-21::0 seq=5)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=20 tokens=15
+trace.flush
+run.finish golden::node-21::0 COMPLETED reason=null
+    error:
+      (empty)
+metrics.node PIPELINE tokens=null
+run.spend golden steps=21 tokens=15
+trace.console seq=30 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+state ConsoleLog run=golden events=22 (= trace.console run=golden seq=30)
+trace.node seq=31 run=golden node-21 PIPELINE depth=0 tokens=null
+    input:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Draft the evening plan
+    output:
+      | Process answer, visit 1.
+state PipelineTrace steps=10 last=PIPELINE depth=0 tokens=null (= trace.node seq=31)
+state NodeIO node-21 PIPELINE depth=0 (= trace.node seq=31)
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #4
+state Stage step=12 of=14 INTENT_ROUTER
+trace.console seq=32 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=23 (= trace.console run=golden seq=32)
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+      | AGENT: ⏎
+    answer:
+      | Clarify
+state Streaming thinking=1
+    text:
+      | Clarify
+metrics.node INTENT_ROUTER tokens=null
+run.spend golden steps=22 tokens=15
+trace.console seq=33 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+state ConsoleLog run=golden events=24 (= trace.console run=golden seq=33)
+trace.node seq=34 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Clarify
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+    output:
+      | Clarify
+state PipelineTrace steps=11 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=34)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=34)
+visit golden showcase_full_agent/node-17 PIPELINE #1
+state Stage step=13 of=15 PIPELINE
+trace.console seq=35 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+state ConsoleLog run=golden events=25 (= trace.console run=golden seq=35)
+run.create golden::node-17::0 pipeline=subtask_clarify parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+run.running golden::node-17::0 pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c9772575bb0b6205eaac4a048dc5634c151c5233b
+crash.key active_pipeline_id=subtask_clarify
+crash.key active_model=Golden Model
+visit golden::node-17::0 subtask_clarify/node-1 INPUT #1
+trace.console seq=0 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ INPUT
+state ConsoleLog run=golden::node-17::0 events=1 (= trace.console run=golden::node-17::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=23 tokens=15
+trace.console seq=1 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::node-17::0 events=2 (= trace.console run=golden::node-17::0 seq=1)
+visit golden::node-17::0 subtask_clarify/node-2 CLARIFICATION #1
+trace.console seq=2 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ CLARIFICATION
+state ConsoleLog run=golden::node-17::0 events=3 (= trace.console run=golden::node-17::0 seq=2)
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
+      |
+      | Write the question in the user's language (en-US).
+      |
+      | Output STRICTLY a single JSON object and nothing else — no prose, no markdown code fence:
+      | {"question": "<the question to ask>", "options": ["<option>", "<option>"]}
+      |
+      | Rules:
+      | - Ask exactly one focused question — the single most important thing blocking this subtask. Do not bundle several asks.
+      | - If there is a small, clear set of likely answers, list them in "options" (2 to 5). Put the safest or most neutral choice FIRST — it is used as the default if the user does not reply in time.
+      | - If the answer is open-ended (a name, a date, free text), return "options": [] so the user can type a reply.
+      | - Keep the question self-contained: the user sees it without the internal subtask text, so do not refer to "the subtask" or "the step".
+      | - Do not answer the question yourself, and do not invent the user's preference.
+      |
+      | Output only the JSON object.
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+journal.hitl golden Raised(kind=CLARIFICATION)
+run.status golden::node-17::0 WAITING_CLARIFICATION
+trace.flush
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification request=#1 timeoutMs=60000
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+driver clarification Answer(text=The first one) request=#1 → LiveResumed
+journal.hitl golden Resolved(resolution=ANSWERED)
+run.status golden::node-17::0 RUNNING
+metrics.node CLARIFICATION tokens=null
+run.spend golden steps=24 tokens=15
+trace.console seq=3 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ✓ CLARIFICATION in <ms>ms
+state ConsoleLog run=golden::node-17::0 events=4 (= trace.console run=golden::node-17::0 seq=3)
+trace.node seq=4 run=golden::node-17::0 node-2 CLARIFICATION depth=1 tokens=null
+    input:
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+state NodeIO node-2 CLARIFICATION depth=1 (= trace.node seq=4)
+visit golden::node-17::0 subtask_clarify/node-3 OUTPUT #1
+trace.console seq=5 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ OUTPUT
+state ConsoleLog run=golden::node-17::0 events=5 (= trace.console run=golden::node-17::0 seq=5)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=25 tokens=15
+trace.flush
+run.finish golden::node-17::0 COMPLETED reason=null
+    error:
+      (empty)
+run.status golden RUNNING
+metrics.node PIPELINE tokens=null
+run.spend golden steps=26 tokens=15
+trace.console seq=36 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+state ConsoleLog run=golden events=26 (= trace.console run=golden seq=36)
+trace.node seq=37 run=golden node-17 PIPELINE depth=0 tokens=null
+    input:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      |
+      | Result of Subtask 2:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      |
+      | Result of Subtask 3:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Pick the restaurant
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+state PipelineTrace steps=12 last=PIPELINE depth=0 tokens=null (= trace.node seq=37)
+state NodeIO node-17 PIPELINE depth=0 (= trace.node seq=37)
+visit golden showcase_full_agent/node-16 SUMMARY #1
+state Stage step=14 of=15 SUMMARY
+trace.console seq=38 run=golden depth=0 NodeExecution
+    message:
+      | ▶ SUMMARY
+state ConsoleLog run=golden events=27 (= trace.console run=golden seq=38)
+model.load path=null vision=false audio=false
+model local node=node-16 call=1 temperature=default image=none
+    prompt:
+      | You are writing the final response to the user after an actionable task has been carried out. The task was broken into subtasks, each completed separately — some produced content, some gathered information, some performed actions through tools, some collected the user's own input. Their results are provided to you.
+      |
+      | Today is 15 September 2026. Reply in en-US.
+      |
+      | How to respond:
+      | - Pull the subtask results together into ONE coherent response that delivers the outcome of the original task. Do not list the subtasks or narrate the process — give the user the result.
+      | - If the task produced content (a draft, a plan, an answer, a computed value), present that content as the substance of your reply.
+      | - If actions were performed through tools, state clearly and accurately what was done — but claim an action succeeded ONLY if its result actually confirms it. Never report an action as completed if the result shows it was denied, blocked, failed, or is missing.
+      | - Be honest about gaps: if part of the task could not be completed, say so plainly and, where useful, tell the user what is needed to finish it. Do not paper over failures or invent outcomes.
+      | - Ground every statement in the provided results — do not add facts or assume results.
+      | - Lead with the outcome, then the supporting detail that matters. Plain conversational prose; add structure only if the content genuinely needs it.
+      | - Do not mention "subtasks", "tools", "the plan" or the pipeline. Speak as the assistant reporting back.
+      |
+      | Output only the final response for the user.
+      |
+      | CRITICAL INSTRUCTION: You must synthesize the provided results into a coherent final answer for the original task. Do not just list what each task did. Answer the original task using the data from the results.
+      |
+      | ORIGINAL TASK: Plan my Saturday evening in the city.
+      |
+      | RESULTS OF SUBTASKS:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Queue execution completed.
+      | Results:
+      | 1. Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      | 2. Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      | 3. Process answer, visit 1.
+      | 4. Q: Clarify: which one do you mean?
+      | A: The first one
+      |
+      | FINAL ANSWER: ⏎
+    answer:
+      | Task Synthesis answer, visit 1.
+state Streaming thinking=1 answering=4
+    text:
+      | Task Synthesis answer, visit 1.
+metrics.node SUMMARY tokens=null
+run.spend golden steps=27 tokens=15
+trace.console seq=39 run=golden depth=0 NodeExecution
+    message:
+      | ✓ SUMMARY in <ms>ms
+state ConsoleLog run=golden events=28 (= trace.console run=golden seq=39)
+trace.node seq=40 run=golden node-16 SUMMARY depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Queue execution completed.
+      | Results:
+      | 1. Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+      | 2. Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+      | 3. Process answer, visit 1.
+      | 4. Q: Clarify: which one do you mean?
+      | A: The first one
+    output:
+      | Task Synthesis answer, visit 1.
+state PipelineTrace steps=13 last=SUMMARY depth=0 tokens=null (= trace.node seq=40)
+state NodeIO node-16 SUMMARY depth=0 (= trace.node seq=40)
+visit golden showcase_full_agent/node-2 OUTPUT #1
+state Stage step=15 of=15 OUTPUT
+trace.console seq=41 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=29 (= trace.console run=golden seq=41)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Task Synthesis answer, visit 1.
+end Completed
+    finalResponse:
+      | Task Synthesis answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=28 tokens=15
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)

@@ -118,7 +118,11 @@ running `check` alone is a narrower gate than the one that decides the merge.
 - **Android lint** (`lintFullDebug` + `lintFossDebug`, plus `:catalog:lint`).
 - **Unit tests** (`testFullDebugUnitTest` + `testFossDebugUnitTest`) — including
   the **Konsist** architecture guard (Clean-Architecture layer boundaries; see
-  [`docs/static-analysis.md`](docs/static-analysis.md)).
+  [`docs/static-analysis.md`](docs/static-analysis.md)) and the **golden run
+  traces** — every shipped pipeline run through the real engine and compared
+  with its committed trace (see
+  [`docs/testing.md`](docs/testing.md#golden-run-traces) for how to rewrite one
+  on purpose).
 - **Screenshot tests** — the design-system renders compared with their
   committed baselines (`:catalog:verifyRoborazziDebug`).
 - **Kover** coverage verification (`koverVerifyFullDebug`).

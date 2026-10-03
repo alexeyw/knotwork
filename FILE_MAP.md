@@ -34,6 +34,7 @@
 - `CODE_OF_CONDUCT.md` - Contributor Covenant 2.1 community standards and enforcement guidelines.
 - `gradle/` - Gradle wrapper and global dependency versions configuration.
 - `.editorconfig` - Cross-IDE Kotlin coding-style rules consumed by ktlint.
+- `.gitattributes` - Pins LF line endings for the golden run traces and their fixtures, which `GoldenTraceTest` compares byte for byte.
 - `.gitignore` - Specifies intentionally untracked files to ignore for Git.
 - `.gitleaks.toml` - Configuration of the CI secret scan: gitleaks' default rules, no allowlist; a waiver covers one line — an inline `gitleaks:allow`, or a `.gitleaksignore` fingerprint once the commit is pushed (see `docs/static-analysis.md`).
 - `.gitleaksignore` - Commit-bound fingerprints (`commit:file:rule:line`) of secret-scan findings that are not secrets and already sit in a pushed commit.

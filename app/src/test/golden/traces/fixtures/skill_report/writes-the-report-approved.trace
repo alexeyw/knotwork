@@ -1,0 +1,116 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: fixtures/skill_report
+scenario: writes-the-report-approved
+about: The skill calls write_file, which its allowlist permits, and the user approves.
+origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
+prompt:
+  | Compare how solar and wind power grew over the last decade.
+
+run.create golden pipeline=fixture-skill-report parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Compare how solar and wind power grew over the last decade.
+run.running golden pipeline=fixture-skill-report graphHash=967a87cec91d49e0fbb002e97e4ae5b8d1c72005b83394feb94ed704d1382227
+driver start
+crash.key active_pipeline_id=fixture-skill-report
+crash.key active_model=Golden Model
+visit golden fixture-skill-report/input INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden fixture-skill-report/report SKILL #1
+state Stage step=2 of=3 SKILL
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ SKILL
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+model.load path=null vision=false audio=false
+model local node=report call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are a report writer. Use the information the user gives you to write a clear, well-structured report in plain prose. Start with a short overview, then cover the key points one paragraph at a time, and end with a brief conclusion. Keep the language simple and factual. When the report is ready, save it to a file using the write_file tool, then tell the user the name of the file you saved. Today is 15 September 2026.
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      | AGENT: ⏎
+    answer:
+      | {"tool": "write_file", "arguments": {"path": "reports/golden.md", "content": "# Report\nThe findings."}}
+state Streaming thinking=1 answering=8
+    text:
+      | {"tool": "write_file", "arguments": {"path": "reports/golden.md", "content": "# Report\nThe findings."}}
+metrics.update tokens=9
+modelPerformance.record path=/models/golden-model.litertlm tokens=9 benchmark=false
+journal.hitl golden Raised(kind=APPROVAL)
+run.status golden WAITING_APPROVAL
+trace.flush
+state WaitingForApproval tool=write_file risk=SENSITIVE request=#1
+    arguments:
+      | {"path":"reports/golden.md","content":"# Report\nThe findings."}
+notify.approval request=#1 tool=write_file risk=SENSITIVE
+driver approval approve request=#1 → LiveResumed
+notify.approval.cancel request=#1
+journal.hitl golden Resolved(resolution=APPROVED)
+run.status golden RUNNING
+state ExecutingTool write_file
+    arguments:
+      | {"path":"reports/golden.md","content":"# Report\nThe findings."}
+tool.execute write_file risk=SENSITIVE session=golden-session
+    arguments:
+      | {"path":"reports/golden.md","content":"# Report\nThe findings."}
+    output:
+      | Wrote 22 characters to reports/golden.md.
+state ObservationResult write_file
+    result:
+      | Wrote 22 characters to reports/golden.md.
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from write_file: Wrote 22 characters to reports/golden.md.
+metrics.node SKILL tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ SKILL in <ms>ms
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+trace.node seq=4 run=golden report SKILL depth=0 tokens=null tool=write_file
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | Wrote 22 characters to reports/golden.md.
+state PipelineTrace steps=1 last=SKILL depth=0 tokens=null (= trace.node seq=4)
+state NodeIO report SKILL depth=0 (= trace.node seq=4)
+visit golden fixture-skill-report/output OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Wrote 22 characters to reports/golden.md.
+end Completed
+    finalResponse:
+      | Wrote 22 characters to reports/golden.md.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=0
+trace.flush
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)
