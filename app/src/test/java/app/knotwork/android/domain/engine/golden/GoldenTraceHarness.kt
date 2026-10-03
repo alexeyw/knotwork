@@ -76,6 +76,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import java.time.Clock
 import java.time.Instant
@@ -100,17 +101,27 @@ import javax.inject.Provider
  * - run records, trace and parked interactions — in-memory, recording stores;
  * - the notifiers, and the user (the scenario's approvals, answers and grants).
  *
- * Settings are a strict mock: a setting the run path starts reading fails every scenario until
- * the harness gives it a value, so a new read cannot change behaviour unnoticed.
+ * Settings are a strict mock: an unstubbed read throws, so a setting the run path starts
+ * reading shows up in every scenario that reaches it instead of silently taking a default.
  *
  * **The driver** plays the task queue and the user. It runs an attempt on virtual time,
  * settles each live approval as the scenario says, and when an attempt parks it applies the
  * scenario's resolution to the parked record and resumes the root run from the checkpoint the
  * trace holds — as `TaskQueueManagerImpl` does.
  *
+ * An attempt that is still running after [attemptLimitMs] of virtual time fails the scenario:
+ * the driver loop has no suspension point, so `runTest`'s own timeout could not end it, and a
+ * run waiting on something nothing will answer — the failure a refactoring of a suspension is
+ * most likely to introduce — would hang the test task instead of failing it.
+ *
  * @param scenario The scenario to run.
+ * @param attemptLimitMs Virtual time one engine invocation may take; far above any scenario's
+ *   real need (the longest waits out one 30-second approval window).
  */
-internal class GoldenTraceHarness(private val scenario: GoldenScenario) {
+internal class GoldenTraceHarness(
+    private val scenario: GoldenScenario,
+    private val attemptLimitMs: Long = ATTEMPT_LIMIT_MS,
+) {
 
     private val log = GoldenEventLog()
     private val library: Map<String, PipelineGraph> = GoldenPipelineSources.library()
@@ -195,7 +206,14 @@ internal class GoldenTraceHarness(private val scenario: GoldenScenario) {
             }
         }
         var answeredRequest: String? = null
+        val deadline = currentTime + attemptLimitMs
         while (job.isActive) {
+            if (currentTime > deadline) {
+                job.cancel()
+                error(
+                    "Scenario $scenario did not finish within $attemptLimitMs ms of virtual time: it waits on something nothing answers",
+                )
+            }
             runCurrent()
             val request = engine.pendingApprovalFor(SESSION_ID)
             if (request != null && request.requestId != answeredRequest) {
@@ -539,6 +557,9 @@ internal class GoldenTraceHarness(private val scenario: GoldenScenario) {
 
         /** The live approval window; a scenario that lets an approval park waits this long. */
         private const val APPROVAL_WINDOW_MS = 30_000L
+
+        /** Default virtual-time limit of one engine invocation. */
+        private const val ATTEMPT_LIMIT_MS = 10 * 60 * 1_000L
 
         /** Virtual-time step of the driver loop — below every delay the engine uses. */
         private const val STEP_MS = 100L

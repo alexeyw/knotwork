@@ -142,8 +142,9 @@ those files.
   executes), long-term memory (a fixed snapshot), chat history, run storage,
   notifications, and the user (approvals, answers, ceiling grants). Prompt
   variables are rendered by the real providers on a frozen clock, locale and
-  device. Settings are a strict mock: a setting the run path starts reading
-  fails every scenario until the harness gives it a value.
+  device. Settings are a strict mock: an unstubbed read throws, so a setting
+  the run path starts reading shows up in every scenario that reaches it
+  instead of silently taking a default.
 - **What a trace holds:** each node visit; each model call with its full
   prompt and answer; each tool call with its arguments, the risk the gate
   decided on and the output; each persisted trace record (sequence number,

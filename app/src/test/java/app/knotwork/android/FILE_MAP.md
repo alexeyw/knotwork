@@ -241,6 +241,7 @@ Only Kotlin files appear inside the generated blocks.
       - `GoldenTraceCatalogueTest.kt` - Keeps the golden-trace catalogue complete, so the gate cannot quietly stop covering what ships.
       - `GoldenTraceDiff.kt` - Explains a golden-trace mismatch in a few lines: where the first difference is, what both sides say around it, and how to see the whole diff.
       - `GoldenTraceHarness.kt` - Runs one `GoldenScenario` through the production `GraphExecutionEngine` and returns its normal-form trace.
+      - `GoldenTraceHarnessTest.kt` - Pins the one harness behaviour no golden trace can show: a run that does not finish fails the scenario instead of hanging the test task.
       - `GoldenTraceRenderer.kt` - Renders the normal form of a golden trace — the exact text committed under `app/src/test/golden/traces/`.
       - `GoldenTraceRendererTest.kt` - Pins the parts of the golden-trace format a reviewer relies on when reading a diff: blocks, trailing whitespace, chunking, the failure message, and how a script resolves an answer.
       - `GoldenTraceTest.kt` - Golden-trace regression gate: every shipped pipeline, run through the real engine under a scripted model, must produce exactly the trace committed for it.

@@ -24,7 +24,7 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.RouteLabels
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flow
 import org.json.JSONObject
 
 /**
@@ -73,10 +73,10 @@ internal class GoldenModel(
         override fun transcribe(audioPath: String, prompt: String): Flow<String> =
             error("No golden scenario sends audio")
 
-        override fun generateResponseStream(prompt: String, imagePath: String?, temperature: Float?): Flow<String> {
-            val answer = answer("local", prompt, temperature, imagePath)
-            return chunks(answer).asFlow()
-        }
+        // Cold, as the real engine's stream is: the call happens — and is recorded — when a
+        // node collects the stream, not when it builds it.
+        override fun generateResponseStream(prompt: String, imagePath: String?, temperature: Float?): Flow<String> =
+            flow { chunks(answer("local", prompt, temperature, imagePath)).forEach { emit(it) } }
 
         override fun close() = Unit
 
@@ -115,13 +115,14 @@ internal class GoldenModel(
         override suspend fun execute(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Message.Assistant =
             error("CLOUD nodes stream; nothing calls execute")
 
-        override fun executeStreaming(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Flow<StreamFrame> {
-            val text = prompt.messages.joinToString("\n") { it.textContent() }
-            val answer = answer("cloud ${provider.id} model=${model.id}", text, temperature = null, imagePath = null)
-            val frames = chunks(answer).map<String, StreamFrame> { StreamFrame.TextDelta(it) } +
-                StreamFrame.End(finishReason = "stop", metaInfo = ResponseMetaInfo.Empty)
-            return frames.asFlow()
-        }
+        override fun executeStreaming(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Flow<StreamFrame> =
+            flow {
+                val text = prompt.messages.joinToString("\n") { it.textContent() }
+                val answer =
+                    answer("cloud ${provider.id} model=${model.id}", text, temperature = null, imagePath = null)
+                chunks(answer).forEach { emit(StreamFrame.TextDelta(it)) }
+                emit(StreamFrame.End(finishReason = "stop", metaInfo = ResponseMetaInfo.Empty))
+            }
 
         override suspend fun moderate(prompt: Prompt, model: LLModel): ModerationResult =
             error("Nothing moderates in a golden run")
