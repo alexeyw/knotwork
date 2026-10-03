@@ -12,7 +12,6 @@ import app.knotwork.android.data.repositories.RunTraceRepositoryImpl
 import app.knotwork.android.data.repositories.TriggerJournalRepositoryImpl
 import app.knotwork.android.data.repositories.TriggerRepositoryImpl
 import app.knotwork.android.domain.engine.ChatHistoryWindowPlanner
-import app.knotwork.android.domain.engine.GraphExecutionEngine
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.NodeContextBuilder
 import app.knotwork.android.domain.engine.executors.ClarificationNodeExecutor
@@ -31,6 +30,7 @@ import app.knotwork.android.domain.engine.executors.ToolInvocationGate
 import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
+import app.knotwork.android.domain.engine.testGraphExecutionEngine
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ConnectionModel
@@ -557,7 +557,7 @@ class TriggerBackgroundRunIntegrationTest {
             ),
             mockk<SkillNodeExecutor>(relaxed = true),
         )
-        val engine = GraphExecutionEngine(
+        val engine = testGraphExecutionEngine(
             nodeExecutorFactory,
             toolNodeExecutor,
             chatRepository,

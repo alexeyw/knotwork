@@ -235,7 +235,7 @@ class PipelineSecurityContourTest {
             mockk<SkillNodeExecutor>(relaxed = true),
         )
 
-        engine = GraphExecutionEngine(
+        engine = testGraphExecutionEngine(
             nodeExecutorFactory,
             toolNodeExecutor,
             chatRepository,

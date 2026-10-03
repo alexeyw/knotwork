@@ -285,7 +285,7 @@ class GraphExecutionEngineTest {
 
         promptTemplateEngine = PromptTemplateEngine()
         promptVariableProviders = emptySet()
-        engine = GraphExecutionEngine(
+        engine = testGraphExecutionEngine(
             nodeExecutorFactory,
             toolNodeExecutor,
             chatRepository,
@@ -911,7 +911,7 @@ class GraphExecutionEngineTest {
         val mockFactory = mockk<NodeExecutorFactory>()
         val mockSettings = mockk<SettingsRepository>(relaxed = true)
         every { mockSettings.pipelineMaxSteps } returns flowOf(15)
-        val engineWithMock = GraphExecutionEngine(
+        val engineWithMock = testGraphExecutionEngine(
             mockFactory,
             mockToolNodeExecutor,
             mockk(relaxed = true),
@@ -1531,7 +1531,7 @@ class GraphExecutionEngineTest {
             ),
             mockk<SkillNodeExecutor>(relaxed = true),
         )
-        val engineWithProvider = GraphExecutionEngine(
+        val engineWithProvider = testGraphExecutionEngine(
             realFactory,
             ToolNodeExecutor(
                 llmEngine,
@@ -1747,7 +1747,7 @@ class GraphExecutionEngineTest {
                 ),
                 mockk<SkillNodeExecutor>(relaxed = true),
             )
-            val engineWithRealRepo = GraphExecutionEngine(
+            val engineWithRealRepo = testGraphExecutionEngine(
                 realFactory,
                 ToolNodeExecutor(
                     llmEngine,
@@ -3892,7 +3892,7 @@ class GraphExecutionEngineTest {
         coEvery { dateProvider.resolve() } returns "01 May 2026"
         // Same collaborators, only the provider set differs — the declared
         // query is a prompt template like any other.
-        val engineWithProviders = GraphExecutionEngine(
+        val engineWithProviders = testGraphExecutionEngine(
             nodeExecutorFactory,
             toolNodeExecutor,
             chatRepository,

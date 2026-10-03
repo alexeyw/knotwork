@@ -19,8 +19,8 @@ details.
   what it does.** The shared spending limit, loop detector, image and other
   state that a nested pipeline inherits from its parent now travel together as
   one value, instead of as separate arguments. Writing the console and the run
-  trace, choosing the next node, and running a queue's items are now parts of
-  their own. Every shipped pipeline still produces exactly the run it produced
+  trace, choosing the next node, running a queue's items, and keeping the run
+  record up to date are now parts of their own. Every shipped pipeline still produces exactly the run it produced
   before: its golden trace is unchanged.
 
 - **Size and complexity exceptions can no longer pile up.** The code carried

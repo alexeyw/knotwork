@@ -29,6 +29,7 @@ import app.knotwork.android.domain.engine.executors.SystemNodeExecutor
 import app.knotwork.android.domain.engine.executors.ToolInvocationGate
 import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
+import app.knotwork.android.domain.engine.testGraphExecutionEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTask
 import app.knotwork.android.domain.models.ChatHistorySummary
@@ -580,7 +581,7 @@ internal class GoldenTraceHarness(
             PipelineNodeExecutor(libraryRepository(), settings, runs, trace, Provider { engine }),
             SkillNodeExecutor(skillRepository(), PromptTemplateEngine(), providers, tools, liteRt, cloud, gate),
         )
-        engine = GraphExecutionEngine(
+        engine = testGraphExecutionEngine(
             factory,
             toolNode,
             chatRepository,
