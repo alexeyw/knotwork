@@ -260,8 +260,7 @@ that list:
   Moving a suppression to another declaration counts as a new one, because the
   entry names the declaration, not a line number.
 - **A listed entry that is gone fails it too.** Delete the line in the same
-  change that removed the annotation. That is how the list shrinks, and the only
-  way it changes.
+  change that removed the annotation. That is how the list shrinks.
 
 It reads `@Suppress` and `@SuppressWarnings` at any use-site target, including
 `@file:`. It recognises every rule-id spelling detekt accepts, such as
@@ -276,6 +275,8 @@ suppression where the rule never runs is exactly the dead kind.
 
 **What it cannot see:**
 
+- **A line added to the list.** The build cannot tell a new line from an old
+  one, so the list growing is caught in review, as a raised threshold would be.
 - **A listed suppression that has gone dead.** Telling live from dead means
   running detekt with the annotation removed. That stays a manual probe:
   rename the rule ids in all annotations, run every detekt task with
