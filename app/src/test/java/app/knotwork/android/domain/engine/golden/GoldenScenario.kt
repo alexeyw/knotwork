@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.engine.golden
 
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.models.ToolApprovalPolicy
 
 /**
  * One scripted run of one shipped pipeline through the real `GraphExecutionEngine`, and the
@@ -22,7 +23,9 @@ import app.knotwork.android.domain.models.RunOrigin
  * @property clarifications How to answer each clarification request, in order.
  * @property parkResolutions What the user does about each parked run before it is resumed,
  *   in order. A run that parks with no resolution left ends the scenario parked.
- * @property maxSteps Step ceiling for this run, when the scenario exercises the ceiling.
+ * @property outcome How the scenario must end; checked before the trace is compared, so a
+ *   run that fails for a reason nobody intended can never be recorded as golden output.
+ * @property settings The settings values that differ from the harness's own.
  */
 internal data class GoldenScenario(
     val source: GoldenPipelineSource,
@@ -34,7 +37,8 @@ internal data class GoldenScenario(
     val approvals: List<ApprovalAction> = emptyList(),
     val clarifications: List<ClarificationAction> = emptyList(),
     val parkResolutions: List<ParkResolution> = emptyList(),
-    val maxSteps: Int? = null,
+    val outcome: GoldenOutcome = GoldenOutcome.COMPLETED,
+    val settings: GoldenSettings = GoldenSettings(),
 ) {
     /** Path of the golden file relative to the traces directory. */
     val goldenPath: String get() = "${source.kind.directory}/${source.fileStem}/$name.trace"
@@ -79,6 +83,63 @@ internal enum class GoldenSourceKind(val directory: String) {
     FIXTURE("fixtures"),
 }
 
+/** How a golden scenario must end. */
+internal enum class GoldenOutcome {
+    /** The last attempt ends in `Completed`. */
+    COMPLETED,
+
+    /** The last attempt ends in `Error`. */
+    ERROR,
+
+    /** The last attempt ends parked, with no resolution left. */
+    PARKED,
+}
+
+/**
+ * The settings a scenario runs with. The harness defaults are deliberately **not** the app's
+ * defaults (`SettingsDefaults`): a refactoring that replaced a settings read with the shipped
+ * default would otherwise leave every trace unchanged.
+ *
+ * @property approvalPolicy Which tool risks ask for approval.
+ * @property blockDestructiveTools Whether destructive tools are refused outright.
+ * @property maxSteps Step ceiling of an interactive run.
+ * @property maxStepsBackground Step ceiling of a background run; different from [maxSteps] so
+ *   a run that picks the wrong ceiling for its origin shows.
+ * @property verboseMemoryLogging Whether the memory console line lists every hit.
+ * @property compressedHistory Enables chat-history compression and seeds a 40-message
+ *   conversation with a stored summary of its older turns, so the window planner compresses.
+ */
+internal data class GoldenSettings(
+    val approvalPolicy: ToolApprovalPolicy = ToolApprovalPolicy.SensitiveOrDestructive,
+    val blockDestructiveTools: Boolean = false,
+    val maxSteps: Int = 60,
+    val maxStepsBackground: Int = 40,
+    val verboseMemoryLogging: Boolean = true,
+    val compressedHistory: Boolean = false,
+) {
+    /**
+     * The values that differ from the harness defaults, for the golden file header.
+     *
+     * @return `harness defaults`, or the differing values.
+     */
+    fun describe(): String {
+        val defaults = GoldenSettings()
+        val changed = listOfNotNull(
+            "approvalPolicy=$approvalPolicy".takeIf { approvalPolicy != defaults.approvalPolicy },
+            "blockDestructiveTools=$blockDestructiveTools".takeIf {
+                blockDestructiveTools != defaults.blockDestructiveTools
+            },
+            "maxSteps=$maxSteps".takeIf { maxSteps != defaults.maxSteps },
+            "maxStepsBackground=$maxStepsBackground".takeIf { maxStepsBackground != defaults.maxStepsBackground },
+            "verboseMemoryLogging=$verboseMemoryLogging".takeIf {
+                verboseMemoryLogging != defaults.verboseMemoryLogging
+            },
+            "compressedHistory=$compressedHistory".takeIf { compressedHistory != defaults.compressedHistory },
+        )
+        return changed.joinToString(", ").ifEmpty { "harness defaults" }
+    }
+}
+
 /** How the scenario settles a live approval request. */
 internal enum class ApprovalAction {
     /** The user approves while the run is still waiting. */
@@ -104,7 +165,12 @@ internal sealed interface ClarificationAction {
     data object TimeOut : ClarificationAction
 }
 
-/** What the user does about a parked run before it is resumed from its checkpoint. */
+/**
+ * What the user does about a parked run. Each answer goes through the app's own use case
+ * (`SubmitApprovalDecisionUseCase`, `SubmitClarificationAnswerUseCase`,
+ * `SubmitCeilingDecisionUseCase`), which records it and asks `ResumePipelineRunUseCase` to
+ * resume — so a resume the app would refuse is refused in the trace too.
+ */
 internal sealed interface ParkResolution {
     /** Approves the parked tool call. */
     data object Approve : ParkResolution
@@ -119,17 +185,17 @@ internal sealed interface ParkResolution {
      */
     data class Answer(val text: String) : ParkResolution
 
-    /** Grants one more portion of the step ceiling. */
-    data object GrantSteps : ParkResolution
+    /** Continues past the ceiling the run paused on: one more portion of that ceiling. */
+    data object Continue : ParkResolution
 }
 
 /**
  * Model answers that override the harness defaults, keyed by pipeline, node, visit and call.
  *
- * A visit is one execution of a node within one engine invocation (a queue loop visits its
- * item node several times); a call is one model request within a visit (a structured-output
- * repair is a second call). When a visit has fewer scripted calls than it makes, the last
- * scripted answer repeats.
+ * A visit is one execution of a node within one run of one engine invocation (a queue loop
+ * visits its item node several times; each run of a sub-pipeline counts its own visits); a
+ * call is one model request within a visit (a structured-output repair is a second call). When
+ * a visit has fewer scripted calls than it makes, the last scripted answer repeats.
  *
  * @property answers `"<pipelineId>/<nodeId>"` to visits to calls; a `null` pipeline id in the
  *   key, written as [ROOT], means the scenario's root pipeline.

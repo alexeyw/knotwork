@@ -49,6 +49,55 @@ internal class GoldenTraceRendererTest {
     }
 
     @Test
+    fun `given repeated payload-free events when coalesced then they collapse but events with payloads do not`() {
+        val ping = GoldenEvent("network.outbound")
+        val withPayload = GoldenEvent("model local", listOf("prompt" to "p"))
+
+        val grouped = GoldenTraceRenderer.coalesce(listOf(ping, ping, ping, withPayload, withPayload, ping))
+
+        assertEquals(listOf(ping to 3, withPayload to 1, withPayload to 1, ping to 1), grouped)
+    }
+
+    @Test
+    fun `given random ids when aliased then each gets a stable alias in order of first appearance`() {
+        val log = GoldenEventLog()
+
+        assertEquals("#1", log.alias("f3c1"))
+        assertEquals("#2", log.alias("09ab"))
+        assertEquals("#1", log.alias("f3c1"))
+        assertEquals("none", log.alias(null))
+    }
+
+    @Test
+    fun `given streaming states when another event is recorded then they collapse into one event first`() {
+        val log = GoldenEventLog()
+
+        log.stream("Thinking", "Hel")
+        log.stream("Answering", "Hello")
+        log.stream("Answering", "Hello there")
+        log.record("end Completed")
+
+        assertEquals(
+            listOf(
+                GoldenEvent("state Streaming thinking=1 answering=2", listOf("text" to "Hello there")),
+                GoldenEvent("end Completed"),
+            ),
+            log.events,
+        )
+    }
+
+    @Test
+    fun `given a violation when raised then it is an Error the engine's Exception handlers cannot swallow`() {
+        val log = GoldenEventLog()
+
+        val thrown = runCatching { log.violation("unscripted call") }.exceptionOrNull()
+
+        assertTrue(thrown is AssertionError)
+        assertTrue(thrown !is Exception)
+        assertEquals(listOf("unscripted call"), log.violations)
+    }
+
+    @Test
     fun `given a script when a visit makes more calls than scripted then the last answer repeats`() {
         val script = GoldenScript.of { onCalls("router", "first", "second") }
 

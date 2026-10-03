@@ -15,17 +15,22 @@ import app.knotwork.android.domain.repositories.RunTraceRepository
  * `✓ TYPE in Nms` console line, which is masked. Any other number left in that line fails the
  * run rather than slipping a wall-clock value into a golden file.
  *
- * The store also rebuilds a run's checkpoint exactly as the task queue does, so a resumed
- * scenario replays the records the interrupted attempt wrote.
+ * **Durability is modelled, not assumed.** The production store buffers appends and reads
+ * back only what reached the database, so here too an append is durable only after the next
+ * [flush], [getTraceForRun] returns durable records only, and the harness drops whatever is
+ * still unflushed when an attempt ends — the process can die while a run is parked. A
+ * refactoring that lost a flush before a suspension therefore changes what the resumed run
+ * replays, instead of changing one line.
  *
  * @param log The run's event log.
  */
 internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTraceRepository {
 
-    private val records = mutableListOf<RunTraceRecord>()
+    private val durable = mutableListOf<RunTraceRecord>()
+    private val buffered = mutableListOf<RunTraceRecord>()
 
     override suspend fun append(record: RunTraceRecord) {
-        records += record
+        buffered += record
         when (record) {
             is RunTraceRecord.NodeIo -> log.record(
                 buildString {
@@ -49,16 +54,39 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
     }
 
     override suspend fun flush() {
+        durable += buffered
+        buffered.clear()
         log.record("trace.flush")
     }
 
-    override suspend fun getTraceForRun(runId: String): List<RunTraceRecord> = records.filter { it.runId == runId }
+    override suspend fun getTraceForRun(runId: String): List<RunTraceRecord> = durable.filter { it.runId == runId }
 
     override suspend fun deleteLegacyTraceBefore(cutoffEpochMs: Long): Int =
-        error("RunTraceRepository.deleteLegacyTraceBefore is not on any golden run path")
+        log.violation("RunTraceRepository.deleteLegacyTraceBefore is not on any golden run path")
 
     /**
-     * Rebuilds the checkpoint of [runId] from its persisted records, as
+     * Forgets the records no flush made durable, as a process that dies while its run is
+     * parked would. Records the loss only when there is one.
+     */
+    fun dropUnflushed() {
+        if (buffered.isEmpty()) return
+        log.record("trace.lost unflushed=${buffered.size} (the attempt ended before they were flushed)")
+        buffered.clear()
+    }
+
+    /**
+     * The most recent `NodeIo` appended for [nodeId] at [depth], flushed or not.
+     *
+     * @param nodeId The node.
+     * @param depth Its nesting depth.
+     * @return The record, or `null`.
+     */
+    fun lastNodeIo(nodeId: String, depth: Int): RunTraceRecord.NodeIo? = (durable + buffered)
+        .filterIsInstance<RunTraceRecord.NodeIo>()
+        .lastOrNull { it.nodeId == nodeId && it.depth == depth }
+
+    /**
+     * Rebuilds the checkpoint of [runId] from its durable records, as
      * `TaskQueueManagerImpl.processResumeTask` does: the seq-ordered `NodeIo` prefix, the
      * latest memory snapshot, and the first free sequence number.
      *
@@ -66,7 +94,7 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
      * @return The checkpoint.
      */
     fun resumeContextFor(runId: String): ResumeContext {
-        val trace = records.filter { it.runId == runId }
+        val trace = durable.filter { it.runId == runId }
         return ResumeContext(
             records = trace.filterIsInstance<RunTraceRecord.NodeIo>().sortedBy { it.seq },
             memorySnapshot = trace.filterIsInstance<RunTraceRecord.MemorySnapshot>().maxByOrNull { it.seq }?.entries,
@@ -77,8 +105,10 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
     private fun maskDuration(type: ConsoleEventType, message: String): String {
         if (type != ConsoleEventType.NodeExecution) return message
         val masked = message.replace(DURATION, " in <ms>ms")
-        check(!RESIDUAL_DURATION.containsMatchIn(masked)) {
-            "A NodeExecution console line carries a duration the golden mask does not recognise: $message"
+        if (RESIDUAL_DURATION.containsMatchIn(masked)) {
+            log.violation(
+                "A NodeExecution console line carries a duration the golden mask does not recognise: $message",
+            )
         }
         return masked
     }

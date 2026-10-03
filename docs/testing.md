@@ -137,29 +137,46 @@ trace with a file committed under `app/src/test/golden/traces/`. It is the
 safety net for refactoring the engine: a refactoring merges with no change to
 those files.
 
-- **What is faked** is only what leaves the process or reads the clock: the
-  model (scripted per node and visit), tools (recorded outputs — nothing
-  executes), long-term memory (a fixed snapshot), chat history, run storage,
-  notifications, and the user (approvals, answers, ceiling grants). Prompt
-  variables are rendered by the real providers on a frozen clock, locale and
-  device. Settings are a strict mock: an unstubbed read throws, so a setting
-  the run path starts reading shows up in every scenario that reaches it
-  instead of silently taking a default.
+- **What is real:** besides the engine and its executors, the approval gate,
+  the prompt variable providers (on a frozen clock, locale and device), the
+  clarification repository, and the whole path a user's answer takes — the
+  `Submit…UseCase`s, `ParkedRunResumer` and `ResumePipelineRunUseCase`. A
+  resume the app would refuse is refused in the trace too.
+- **What is faked:** the model (scripted per node and visit), tools (recorded
+  outputs — nothing executes), long-term memory (a fixed snapshot), chat
+  history, run storage (in memory, with the production store's guards: a
+  terminal status is written once, and a trace record is durable only after a
+  flush), metrics, the trigger journal, the network indicator, notifications,
+  the task queue (the harness plays it), and the user. Settings are a strict
+  mock whose values differ from the shipped defaults: an unstubbed read
+  throws, and a read replaced by the default changes the trace.
 - **What a trace holds:** each node visit; each model call with its full
   prompt and answer; each tool call with its arguments, the risk the gate
   decided on and the output; each persisted trace record (sequence number,
-  input, output, routing verdict, tool, console line); run-record and chat
-  writes; suspension states and the terminal state. Times, durations and random
-  ids are left out, and the duration in the `✓ … in Nms` console line is masked.
+  input, output, routing verdict, tool, console line); run-record, chat,
+  metrics and journal writes; notifications; and the orchestrator states the
+  UI sees, streaming collapsed to one line per stream. Times, durations and
+  random ids are left out — a request id appears as `#1`, `#2`, so the trace
+  still shows which surfaces carry the same request — and the duration in the
+  `✓ … in Nms` console line is masked.
 - **Scenarios** live in `GoldenScenarios`: at least one per pipeline file, plus
-  the branches and suspensions the engine has to get right — approve, deny, a
-  clarification answered or parked, the step ceiling pausing and being raised,
-  a resume from the checkpoint, a nested `PIPELINE`. `GoldenTraceCatalogueTest`
-  fails when a pipeline file has no scenario, when a node type appears in no
-  trace (the fixtures exist for the two no shipped pipeline uses), or when a
-  trace file belongs to no scenario.
+  the branches, suspensions and settings the engine has to get right —
+  approve, deny, a clarification answered or parked, a step ceiling pausing a
+  chat or a background run, a resume from the checkpoint, a nested `PIPELINE`,
+  each approval policy, blocked destructive tools, a compressed chat history.
+  Each scenario declares how it ends (completed, error or parked), and that is
+  checked before the trace is compared. `GoldenTraceCatalogueTest` fails when
+  a pipeline file has no scenario, when a node type appears in no trace (the
+  fixtures exist for the two no shipped pipeline uses), or when a trace file
+  belongs to no scenario.
+- **A misused fake fails the run, it is not recorded.** An unscripted
+  approval, answer or model call raises an `AssertionError`. The engine
+  catches `Exception` around every node on purpose, so a plain exception from a
+  fake would end the run as an ordinary error — and be recorded as golden
+  output.
 - **Every scenario runs twice**, and the two traces must match before either is
-  compared: a nondeterministic trace fails as such, never as a flaky diff.
+  compared: a nondeterministic trace fails as such, never as a flaky diff. A
+  run still going after ten minutes of virtual time fails instead of hanging.
 
 A failure names the first differing line, writes the actual trace under
 `app/build/golden-traces/actual/` and prints the `git diff --no-index` command

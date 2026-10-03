@@ -1,11 +1,11 @@
 # Golden run trace — written by GoldenTraceTest, never by hand.
 # Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
 pipeline: presets/subtask_lookup
-scenario: default
-about: The lookup sub-pipeline on its own.
+scenario: every-call-asks
+about: With the ask-for-every-call policy even a read-only lookup waits for approval.
 origin: CHAT
 outcome: COMPLETED
-settings: harness defaults
+settings: approvalPolicy=AllCalls
 prompt:
   | What is the tallest mountain on Earth?
 
@@ -110,6 +110,17 @@ model local node=node-3 call=1 temperature=default image=none
       | JSON OUTPUT: ⏎
     answer:
       | {"query":"Wikipedia Lookup (subtask)"}
+journal.hitl golden Raised(kind=APPROVAL)
+run.status golden WAITING_APPROVAL
+trace.flush
+state WaitingForApproval tool=search_tool risk=READ_ONLY request=#1
+    arguments:
+      | {"query":"Wikipedia Lookup (subtask)"}
+notify.approval request=#1 tool=search_tool risk=READ_ONLY
+driver approval approve request=#1 → LiveResumed
+notify.approval.cancel request=#1
+journal.hitl golden Resolved(resolution=APPROVED)
+run.status golden RUNNING
 state ExecutingTool search_tool
     arguments:
       | {"query":"Wikipedia Lookup (subtask)"}

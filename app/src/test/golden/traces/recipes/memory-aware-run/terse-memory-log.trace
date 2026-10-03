@@ -1,11 +1,11 @@
 # Golden run trace — written by GoldenTraceTest, never by hand.
 # Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
 pipeline: recipes/memory-aware-run
-scenario: chat
-about: In a chat, memory is searched with the user's message.
+scenario: terse-memory-log
+about: With verbose memory logging off, the console names the hits without their text.
 origin: CHAT
 outcome: COMPLETED
-settings: harness defaults
+settings: verboseMemoryLogging=false
 prompt:
   | What should I pack for my trip?
 
@@ -40,8 +40,6 @@ memory.retrieve limit=null threshold=null
 trace.console seq=3 run=golden depth=0 MemoryAccess
     message:
       | Memory: query='What should I pack for my trip?' [user prompt] → 2 hits (0.91, 0.74)
-      |   1. [0.91] The user prefers short answers with one example.
-      |   2. [0.74] The user is planning a trip to Lisbon in October.
 state ConsoleLog run=golden events=4
 memory.used ids=[11, 12]
 trace.memory seq=4 run=golden chunks=[11, 12]

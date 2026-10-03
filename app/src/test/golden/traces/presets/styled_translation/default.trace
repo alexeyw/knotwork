@@ -4,24 +4,36 @@ pipeline: presets/styled_translation
 scenario: default
 about: One on-device translation.
 origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
 prompt:
   | Translate 'good morning' into French.
 
+run.create golden pipeline=styled_translation parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Translate 'good morning' into French.
+run.running golden pipeline=styled_translation graphHash=6556985d5139497c30f7bf02941af905e20d3c7008ef6cd27f39eb08b988bb88
 driver start
+crash.key active_pipeline_id=styled_translation
+crash.key active_model=Golden Model
 visit golden styled_translation/node-1 INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
+state ConsoleLog run=golden events=1
+metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2
 visit golden styled_translation/node-2 LITE_RT #1
 state Stage step=2 of=3 LITE_RT
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
+state ConsoleLog run=golden events=3
 model.load path=null vision=false audio=false
 model local node=node-2 call=1 temperature=default image=none
     prompt:
@@ -36,27 +48,40 @@ model local node=node-2 call=1 temperature=default image=none
       | AGENT: ⏎
     answer:
       | Translate answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Translate answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
 run.spend golden steps=2 tokens=4
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4
 trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
     input:
       | --- Previous Node Output ---
       | Translate 'good morning' into French.
     output:
       | Translate answer, visit 1.
-state NodeIO node-2 LITE_RT depth=0
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
 visit golden styled_translation/node-3 OUTPUT #1
 state Stage step=3 of=3 OUTPUT
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
+state ConsoleLog run=golden events=5
 chat.save AGENT final=true model=Golden Model
     content:
       | Translate answer, visit 1.
 end Completed
     finalResponse:
       | Translate answer, visit 1.
-run.spend golden steps=3 tokens=4
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=4 (ignored: terminal or unknown run)
 trace.flush

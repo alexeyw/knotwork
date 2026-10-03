@@ -4,24 +4,39 @@ pipeline: presets/subtask_act
 scenario: picks-a-sensitive-tool-denied
 about: The model picks a tool that needs approval, and the user denies it.
 origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
 prompt:
   | Book a table for dinner.
 
+run.create golden pipeline=subtask_act parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Book a table for dinner.
+run.running golden pipeline=subtask_act graphHash=a716f52979ae506debaaed19b933005a82cfed0f3891f2de6cd93b7051c92bf7
 driver start
+crash.key active_pipeline_id=subtask_act
+crash.key active_model=Golden Model
 visit golden subtask_act/node-1 INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
+state ConsoleLog run=golden events=1
+metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2
 visit golden subtask_act/node-2 TOOL #1
 state Stage step=2 of=3 TOOL
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
+state ConsoleLog run=golden events=3
+state Streaming thinking=1
+    text:
+      | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
 model local node=node-2 call=1 temperature=default image=none
     prompt:
@@ -61,26 +76,33 @@ model local node=node-2 call=1 temperature=default image=none
       | JSON OUTPUT: ⏎
     answer:
       | {"tool": "write_file", "arguments": {"path": "plans/booking.md", "content": "Table for two at eight."}}
+journal.hitl golden Raised(kind=APPROVAL)
 run.status golden WAITING_APPROVAL
 trace.flush
-state WaitingForApproval tool=write_file risk=SENSITIVE
+state WaitingForApproval tool=write_file risk=SENSITIVE request=#1
     arguments:
       | {"path":"plans/booking.md","content":"Table for two at eight."}
-notify.approval tool=write_file risk=SENSITIVE
-driver approval deny
-notify.approval.cancel
+notify.approval request=#1 tool=write_file risk=SENSITIVE
+driver approval deny request=#1 → LiveResumed
+notify.approval.cancel request=#1
+journal.hitl golden Resolved(resolution=DENIED)
 chat.save SYSTEM final=false model=null
     content:
       | User denied execution of tool: write_file
 run.status golden RUNNING
 state ObservationResult write_file
+    result:
+      | Execution denied by user
+metrics.node TOOL tokens=null
 run.spend golden steps=2 tokens=0
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
+state ConsoleLog run=golden events=4
 trace.console seq=4 run=golden depth=0 ToolCall
     message:
       | write_file
+state ConsoleLog run=golden events=5
 trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=write_file
     input:
       | --- Previous Node Output ---
@@ -88,17 +110,23 @@ trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=write_file
     output:
       | Execution denied by user
 trace.flush
-state NodeIO node-2 TOOL depth=0
+state PipelineTrace steps=1 last=TOOL depth=0 tokens=null
+state NodeIO node-2 TOOL depth=0 (= trace.node seq=5)
 visit golden subtask_act/node-3 OUTPUT #1
 state Stage step=3 of=3 OUTPUT
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
+state ConsoleLog run=golden events=6
 chat.save AGENT final=true model=Golden Model
     content:
       | Execution denied by user
 end Completed
     finalResponse:
       | Execution denied by user
-run.spend golden steps=3 tokens=0
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=0 (ignored: terminal or unknown run)
 trace.flush

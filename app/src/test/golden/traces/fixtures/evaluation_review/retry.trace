@@ -4,24 +4,36 @@ pipeline: fixtures/evaluation_review
 scenario: retry
 about: The reviewer asks for another go; the draft is revised.
 origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
 prompt:
   | What is the tallest mountain on Earth?
 
+run.create golden pipeline=fixture-evaluation-review parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=fixture-evaluation-review graphHash=6817c4bcf6de51d7da237aae8b01a1c2b4c78429a89fc3e5b4cdeb6ce749386d
 driver start
+crash.key active_pipeline_id=fixture-evaluation-review
+crash.key active_model=Golden Model
 visit golden fixture-evaluation-review/input INPUT #1
 state Stage step=1 of=6 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
+state ConsoleLog run=golden events=1
+metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2
 visit golden fixture-evaluation-review/draft LITE_RT #1
 state Stage step=2 of=6 LITE_RT
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
+state ConsoleLog run=golden events=3
 model.load path=null vision=false audio=false
 model local node=draft call=1 temperature=default image=none
     prompt:
@@ -37,10 +49,17 @@ model local node=draft call=1 temperature=default image=none
       | AGENT: ⏎
     answer:
       | Draft answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Draft answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
 run.spend golden steps=2 tokens=4
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4
 trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=4
     input:
       | --- Original Task ---
@@ -50,12 +69,14 @@ trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=4
       | What is the tallest mountain on Earth?
     output:
       | Draft answer, visit 1.
-state NodeIO draft LITE_RT depth=0
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4
+state NodeIO draft LITE_RT depth=0 (= trace.node seq=4)
 visit golden fixture-evaluation-review/review EVALUATION #1
 state Stage step=3 of=6 EVALUATION
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ EVALUATION
+state ConsoleLog run=golden events=5
 model.load path=null vision=false audio=false
 model local node=review call=1 temperature=default image=none
     prompt:
@@ -69,10 +90,15 @@ model local node=review call=1 temperature=default image=none
       | AGENT: ⏎
     answer:
       | Retry
+state Streaming thinking=1
+    text:
+      | Retry
+metrics.node EVALUATION tokens=null
 run.spend golden steps=3 tokens=4
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ EVALUATION in <ms>ms
+state ConsoleLog run=golden events=6
 trace.node seq=7 run=golden review EVALUATION depth=0 tokens=null routingKey=Retry
     input:
       | --- Original Task ---
@@ -82,12 +108,14 @@ trace.node seq=7 run=golden review EVALUATION depth=0 tokens=null routingKey=Ret
       | Draft answer, visit 1.
     output:
       | Retry
-state NodeIO review EVALUATION depth=0
+state PipelineTrace steps=2 last=EVALUATION depth=0 tokens=null
+state NodeIO review EVALUATION depth=0 (= trace.node seq=7)
 visit golden fixture-evaluation-review/revise LITE_RT #1
 state Stage step=4 of=6 LITE_RT
 trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
+state ConsoleLog run=golden events=7
 model.load path=null vision=false audio=false
 model local node=revise call=1 temperature=default image=none
     prompt:
@@ -103,10 +131,17 @@ model local node=revise call=1 temperature=default image=none
       | AGENT: ⏎
     answer:
       | Revise answer, visit 1.
+state Streaming thinking=1 answering=3
+    text:
+      | Revise answer, visit 1.
+metrics.update tokens=4
+modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+metrics.node LITE_RT tokens=4
 run.spend golden steps=4 tokens=8
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=8
 trace.node seq=10 run=golden revise LITE_RT depth=0 tokens=4
     input:
       | --- Original Task ---
@@ -116,17 +151,23 @@ trace.node seq=10 run=golden revise LITE_RT depth=0 tokens=4
       | Retry
     output:
       | Revise answer, visit 1.
-state NodeIO revise LITE_RT depth=0
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=4
+state NodeIO revise LITE_RT depth=0 (= trace.node seq=10)
 visit golden fixture-evaluation-review/output OUTPUT #1
 state Stage step=5 of=6 OUTPUT
 trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
+state ConsoleLog run=golden events=9
 chat.save AGENT final=true model=Golden Model
     content:
       | Revise answer, visit 1.
 end Completed
     finalResponse:
       | Revise answer, visit 1.
-run.spend golden steps=5 tokens=8
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=5 tokens=8 (ignored: terminal or unknown run)
 trace.flush

@@ -14,19 +14,23 @@ import app.knotwork.android.domain.models.PipelineGraph
  * deterministic `"<parentRunId>::<nodeId>::<visitIndex>"` the `PIPELINE` executor mints, which
  * is how the tracker finds the sub-pipeline's graph.
  *
- * Visits are counted per pipeline and node and reset at the start of every engine invocation:
- * a resumed attempt replays its prefix and then re-executes a node with the same visit number
- * the interrupted attempt gave it, so the model answers it identically — which a re-raised
- * approval needs, since a recorded decision applies only to a byte-identical call.
+ * Visits are counted per run and node, and reset at the start of every engine invocation. A
+ * resumed attempt replays its prefix and re-enters a parked sub-pipeline under the same child
+ * run id, so every node it re-executes gets the visit number the interrupted attempt gave it
+ * and the model answers it identically — which a re-raised approval needs, since a recorded
+ * decision applies only to a byte-identical call. (Counting per pipeline instead would number
+ * a resumed child from one even when the same sub-pipeline had run before it.)
  *
  * @param rootRunId The run id the harness gives the top-level run.
  * @param root The scenario's root pipeline.
  * @param library Every pipeline a `PIPELINE` node may name, keyed by id.
+ * @param log Receives violations (a node the graph does not have).
  */
 internal class GoldenNodeTracker(
     private val rootRunId: String,
     private val root: PipelineGraph,
     private val library: Map<String, PipelineGraph>,
+    private val log: GoldenEventLog,
 ) {
 
     /**
@@ -35,7 +39,7 @@ internal class GoldenNodeTracker(
      * @property runId The (root or nested) run executing the node.
      * @property pipeline The graph the node belongs to.
      * @property node The node.
-     * @property visit One-based visit number of the node in this engine invocation.
+     * @property visit One-based visit number of the node within [runId] in this engine invocation.
      */
     data class Position(val runId: String, val pipeline: PipelineGraph, val node: NodeModel, val visit: Int)
 
@@ -61,8 +65,8 @@ internal class GoldenNodeTracker(
     fun enter(runId: String, nodeId: String): Position {
         val pipeline = pipelineOf(runId)
         val node = pipeline.nodes.singleOrNull { it.id == nodeId }
-            ?: error("Run $runId entered node $nodeId, which pipeline ${pipeline.id} does not have")
-        val key = "${pipeline.id}/$nodeId"
+            ?: log.violation("Run $runId entered node $nodeId, which pipeline ${pipeline.id} does not have")
+        val key = "$runId/$nodeId"
         val visit = (visits[key] ?: 0) + 1
         visits[key] = visit
         return Position(runId, pipeline, node, visit).also { current = it }
@@ -84,7 +88,7 @@ internal class GoldenNodeTracker(
         val pipelineNodeId = runId.substring(nodeSeparator + SEPARATOR.length, visitSeparator)
         val pipelineNode = pipelineOf(parentRunId).nodes.single { it.id == pipelineNodeId }
         val targetId = requireNotNull(pipelineNode.targetPipelineId) { "Node $pipelineNodeId names no pipeline" }
-        return library[targetId] ?: error("Pipeline $targetId is not in the golden library")
+        return library[targetId] ?: log.violation("Pipeline $targetId is not in the golden library")
     }
 
     private companion object {

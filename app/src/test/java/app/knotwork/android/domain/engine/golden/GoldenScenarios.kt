@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.engine.golden
 
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.models.ToolApprovalPolicy
 
 /**
  * The catalogue of golden scenarios: every bundled preset, every published recipe and every
@@ -26,16 +27,34 @@ internal object GoldenScenarios {
             parkResolutions = listOf(ParkResolution.Answer("The first one"))
         },
         preset("cloud_assist", "default", "A cloud answer that sees chat history and long-term memory.", TRIP),
+        preset(
+            "cloud_assist",
+            "compressed-history",
+            "A long conversation reaches the cloud node as a stored summary plus the most recent turns.",
+            TRIP,
+        ) {
+            settings = GoldenSettings(compressedHistory = true)
+        },
         preset("local_only_qa", "default", "The shortest shipped path: one on-device answer.", MOUNTAIN),
         preset("multi_step_research", "default", "A two-item plan worked through a queue by a cloud node.", RESEARCH),
         preset(
             "multi_step_research",
-            "step-ceiling-paused-then-granted",
-            "The step ceiling binds inside the queue, the run pauses, the user grants more steps and it resumes.",
+            "step-ceiling-paused-then-continued",
+            "The interactive step ceiling binds inside the queue; the user continues and the run resumes.",
             RESEARCH,
         ) {
-            maxSteps = 4
-            parkResolutions = listOf(ParkResolution.GrantSteps)
+            settings = GoldenSettings(maxSteps = 4)
+            parkResolutions = listOf(ParkResolution.Continue)
+        },
+        preset(
+            "multi_step_research",
+            "background-step-ceiling",
+            "A background run pauses on the background ceiling, not the interactive one; continuing resumes it.",
+            RESEARCH,
+        ) {
+            origin = RunOrigin.TRIGGER
+            settings = GoldenSettings(maxStepsBackground = 4)
+            parkResolutions = listOf(ParkResolution.Continue)
         },
         preset("routed_local_cloud", "simple", "The router keeps a simple question on the device.", MOUNTAIN),
         preset("routed_local_cloud", "complex", "The router sends a complex question to the cloud.", RESEARCH) {
@@ -105,7 +124,7 @@ internal object GoldenScenarios {
         ) {
             answers {
                 on("node-3", "Task")
-                on("node-15", "Clarify", "Process")
+                on("node-15", "Clarify", "Process", "Lookup")
             }
             clarifications = listOf(ClarificationAction.TimeOut)
             parkResolutions = listOf(ParkResolution.Answer("The second one"))
@@ -120,6 +139,18 @@ internal object GoldenScenarios {
         },
         preset("styled_translation", "default", "One on-device translation.", "Translate 'good morning' into French."),
         preset("subtask_act", "default", "An auto-selected read-only tool runs without asking.", BOOK_TABLE),
+        preset(
+            "subtask_act",
+            "destructive-tool-blocked",
+            "With destructive tools blocked, a destructive pick is refused without asking and the run stops.",
+            BOOK_TABLE,
+        ) {
+            settings = GoldenSettings(blockDestructiveTools = true)
+            outcome = GoldenOutcome.ERROR
+            answers {
+                on("node-2", "{\"tool\": \"delete_file\", \"arguments\": {\"path\": \"plans/old.md\"}}")
+            }
+        },
         preset(
             "subtask_act",
             "picks-a-sensitive-tool-denied",
@@ -139,6 +170,15 @@ internal object GoldenScenarios {
             clarifications = listOf(ClarificationAction.Answer("The first one"))
         },
         preset("subtask_lookup", "default", "The lookup sub-pipeline on its own.", MOUNTAIN),
+        preset(
+            "subtask_lookup",
+            "every-call-asks",
+            "With the ask-for-every-call policy even a read-only lookup waits for approval.",
+            MOUNTAIN,
+        ) {
+            settings = GoldenSettings(approvalPolicy = ToolApprovalPolicy.AllCalls)
+            approvals = listOf(ApprovalAction.APPROVE)
+        },
         preset("subtask_process", "default", "The processing sub-pipeline on its own.", PLAN_EVENING),
         preset("tool_using_react", "needs-a-lookup", "The condition asks for a lookup: tool, then summary.", MOUNTAIN),
         preset("tool_using_react", "answers-directly", "The condition says no lookup is needed.", MOUNTAIN) {
@@ -180,6 +220,14 @@ internal object GoldenScenarios {
         recipe("memory-aware-run", "chat", "In a chat, memory is searched with the user's message.", TRIP),
         recipe(
             "memory-aware-run",
+            "terse-memory-log",
+            "With verbose memory logging off, the console names the hits without their text.",
+            TRIP,
+        ) {
+            settings = GoldenSettings(verboseMemoryLogging = false)
+        },
+        recipe(
+            "memory-aware-run",
             "trigger",
             "In a background run, memory is searched with the pipeline's declared query, \$DATE rendered.",
             TRIP,
@@ -191,6 +239,14 @@ internal object GoldenScenarios {
         },
         recipe("tool-with-approval", "denied", "The write is denied.", NOTE) {
             approvals = listOf(ApprovalAction.DENY)
+        },
+        recipe(
+            "tool-with-approval",
+            "never-prompt",
+            "With the never-prompt policy a sensitive write runs without asking.",
+            NOTE,
+        ) {
+            settings = GoldenSettings(approvalPolicy = ToolApprovalPolicy.NeverPrompt)
         },
         recipe(
             "tool-with-approval",
@@ -326,8 +382,11 @@ internal object GoldenScenarios {
         /** Resolutions of parked runs, in order. */
         var parkResolutions: List<ParkResolution> = emptyList()
 
-        /** Step ceiling, when the scenario exercises it. */
-        var maxSteps: Int? = null
+        /** Settings that differ from the harness's own. */
+        var settings: GoldenSettings = GoldenSettings()
+
+        /** How the scenario must end. */
+        var outcome: GoldenOutcome = GoldenOutcome.COMPLETED
 
         /**
          * Scripts model answers with the [GoldenScript.Builder] DSL.
@@ -349,7 +408,8 @@ internal object GoldenScenarios {
             approvals = approvals,
             clarifications = clarifications,
             parkResolutions = parkResolutions,
-            maxSteps = maxSteps,
+            outcome = outcome,
+            settings = settings,
         )
     }
 }

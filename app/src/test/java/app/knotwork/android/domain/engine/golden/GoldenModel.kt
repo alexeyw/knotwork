@@ -56,13 +56,22 @@ internal class GoldenModel(
 
     private val callsPerVisit = mutableMapOf<String, Int>()
 
+    /**
+     * Forgets the previous attempt's call counts, as [GoldenNodeTracker.startAttempt] forgets
+     * its visits: the first call of a re-executed visit is call 1 again, so a scripted repair
+     * sequence replays from its start.
+     */
+    fun startAttempt() {
+        callsPerVisit.clear()
+    }
+
     /** The on-device engine every local node calls. */
     val localEngine: LlmInferenceEngine = object : LlmInferenceEngine {
         override suspend fun initialize(
             modelPath: String,
             enableVision: Boolean,
             enableAudio: Boolean,
-        ): Result<Unit, AppError> = error("The golden harness loads no model; LoadModelUseCase is stubbed")
+        ): Result<Unit, AppError> = log.violation("The golden harness loads no model; LoadModelUseCase is a fake")
 
         override val isInitialized: Boolean = true
         override val currentModelPath: String = MODEL_PATH
@@ -71,7 +80,7 @@ internal class GoldenModel(
         override val activeBackend: LocalBackend = LocalBackend.CPU
 
         override fun transcribe(audioPath: String, prompt: String): Flow<String> =
-            error("No golden scenario sends audio")
+            log.violation("No golden scenario sends audio")
 
         // Cold, as the real engine's stream is: the call happens — and is recorded — when a
         // node collects the stream, not when it builds it.
@@ -113,25 +122,31 @@ internal class GoldenModel(
         override fun llmProvider(): LLMProvider = LLMProvider.OpenAI
 
         override suspend fun execute(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Message.Assistant =
-            error("CLOUD nodes stream; nothing calls execute")
+            log.violation("CLOUD nodes stream; nothing calls execute")
 
         override fun executeStreaming(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Flow<StreamFrame> =
             flow {
-                val text = prompt.messages.joinToString("\n") { it.textContent() }
-                val answer =
-                    answer("cloud ${provider.id} model=${model.id}", text, temperature = null, imagePath = null)
+                // Roles, parameters and the tool list are part of the call: a refactoring that
+                // moved the instruction into a system message, or set a temperature, shows.
+                val text = prompt.messages.joinToString("\n") { "[${it.role}] ${it.textContent()}" }
+                val answer = answer(
+                    "cloud ${provider.id} model=${model.id} prompt=${prompt.id} tools=${tools.size}",
+                    text,
+                    temperature = prompt.params.temperature?.toFloat(),
+                    imagePath = null,
+                )
                 chunks(answer).forEach { emit(StreamFrame.TextDelta(it)) }
                 emit(StreamFrame.End(finishReason = "stop", metaInfo = ResponseMetaInfo.Empty))
             }
 
         override suspend fun moderate(prompt: Prompt, model: LLModel): ModerationResult =
-            error("Nothing moderates in a golden run")
+            log.violation("Nothing moderates in a golden run")
 
         override fun close() = Unit
     }
 
     private fun answer(seam: String, prompt: String, temperature: Float?, imagePath: String?): String {
-        val position = tracker.current ?: error("A model was called outside any node ($seam)")
+        val position = tracker.current ?: log.violation("A model was called outside any node ($seam)")
         val visitKey = "${position.runId}/${position.node.id}/${position.visit}"
         val call = (callsPerVisit[visitKey] ?: 0) + 1
         callsPerVisit[visitKey] = call

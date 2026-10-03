@@ -5,52 +5,30 @@ import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 
 /**
- * In-memory store of parked interactions for the golden harness; records what the engine
- * parks and deletes.
+ * In-memory store of parked interactions for the golden harness; records what is parked,
+ * answered and deleted.
  *
- * The request id and the time a request was raised are random and wall-clock respectively,
- * so neither enters the trace. The user's side — a decision or an answer recorded on a parked
- * request before the run is resumed — is applied by the harness through [decide] and
- * [answer], unrecorded, exactly as the app's answering surfaces write it.
+ * Its writes keep the guards of the production DAO, because the answering use cases rely on
+ * them: a decision is recorded only while none is (`decision IS NULL`), an approval decision
+ * only for the request it names (`requestId = :requestId`), an answer only while none is, and
+ * the session lookup returns the most recent request. The request id is random, so the trace
+ * shows it as a stable alias (`#1`); the time a request was raised is wall-clock and is left
+ * out.
  *
  * @param log The run's event log.
  */
 internal class GoldenPendingInteractionRepository(private val log: GoldenEventLog) : PendingInteractionRepository {
 
-    private val byRun = mutableMapOf<String, PendingInteraction>()
-
-    /**
-     * The interactions currently parked, keyed by run id.
-     *
-     * @return A snapshot of the store.
-     */
-    fun parked(): Map<String, PendingInteraction> = byRun.toMap()
-
-    /**
-     * Records the user's decision on the parked approval of [runId].
-     *
-     * @param runId The run the approval is parked on.
-     * @param decision The decision.
-     */
-    fun decide(runId: String, decision: PendingDecision) {
-        byRun[runId] = requireNotNull(byRun[runId]) { "No parked approval on $runId" }.copy(decision = decision)
-    }
-
-    /**
-     * Records the user's answer to the parked clarification of [runId].
-     *
-     * @param runId The run the clarification is parked on.
-     * @param text The answer.
-     */
-    fun answer(runId: String, text: String) {
-        byRun[runId] = requireNotNull(byRun[runId]) { "No parked clarification on $runId" }.copy(answer = text)
-    }
+    private val byRun = linkedMapOf<String, PendingInteraction>()
 
     override suspend fun save(interaction: PendingInteraction): Boolean {
+        byRun.remove(interaction.runId)
         byRun[interaction.runId] = interaction
         log.record(
             buildString {
-                append("pending.save ${interaction.runId} ${interaction.kind}")
+                append(
+                    "pending.save ${interaction.runId} ${interaction.kind} request=${log.alias(interaction.requestId)}",
+                )
                 interaction.toolName?.let { append(" tool=$it") }
                 interaction.risk?.let { append(" risk=$it") }
                 interaction.ceilingAxis?.let { append(" axis=$it limit=${interaction.ceilingLimit}") }
@@ -67,27 +45,41 @@ internal class GoldenPendingInteractionRepository(private val log: GoldenEventLo
 
     override suspend fun getForRun(runId: String): PendingInteraction? = byRun[runId]
 
+    override suspend fun getForSession(sessionId: String): PendingInteraction? =
+        byRun.values.lastOrNull { it.sessionId == sessionId }
+
+    override suspend fun getForRequest(requestId: String): PendingInteraction? =
+        byRun.values.firstOrNull { it.requestId == requestId }
+
+    override suspend fun recordDecision(runId: String, decision: PendingDecision): Boolean =
+        update(runId, "decision $decision") { it.takeIf { it.decision == null }?.copy(decision = decision) }
+
+    override suspend fun recordApprovalDecision(runId: String, requestId: String, decision: PendingDecision): Boolean =
+        update(runId, "approval $decision request=${log.alias(requestId)}") { pending ->
+            pending.takeIf { it.requestId == requestId && it.decision == null }?.copy(decision = decision)
+        }
+
+    override suspend fun recordAnswer(runId: String, answer: String): Boolean =
+        update(runId, "answer") { it.takeIf { it.answer == null }?.copy(answer = answer) }
+
     override suspend fun delete(runId: String) {
         val removed = byRun.remove(runId)
         log.record("pending.delete $runId kind=${removed?.kind}")
     }
-
-    override suspend fun getForSession(sessionId: String): PendingInteraction? = unused("getForSession")
-
-    override suspend fun getForRequest(requestId: String): PendingInteraction? = unused("getForRequest")
-
-    override suspend fun recordDecision(runId: String, decision: PendingDecision): Boolean = unused("recordDecision")
-
-    override suspend fun recordApprovalDecision(runId: String, requestId: String, decision: PendingDecision): Boolean =
-        unused("recordApprovalDecision")
-
-    override suspend fun recordAnswer(runId: String, answer: String): Boolean = unused("recordAnswer")
 
     override suspend fun getRequestedAtOrBefore(cutoffEpochMillis: Long): List<PendingInteraction> =
         unused("getRequestedAtOrBefore")
 
     override suspend fun getAllRunIds(): Set<String> = unused("getAllRunIds")
 
-    private fun unused(method: String): Nothing =
-        error("PendingInteractionRepository.$method is not on any golden run path; extend the harness deliberately")
+    private fun update(runId: String, what: String, change: (PendingInteraction) -> PendingInteraction?): Boolean {
+        val updated = byRun[runId]?.let(change)
+        if (updated != null) byRun[runId] = updated
+        log.record("pending.record $runId $what applied=${updated != null}")
+        return updated != null
+    }
+
+    private fun unused(method: String): Nothing = log.violation(
+        "PendingInteractionRepository.$method is not on any golden run path; extend the harness deliberately",
+    )
 }

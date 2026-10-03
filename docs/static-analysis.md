@@ -742,10 +742,18 @@ what makes it a gate.
   itself. The golden directory is declared as a test input, so the task is
   `UP-TO-DATE` when nothing changed and re-runs when a golden file is edited
   (measured both ways).
-- **The trace is wider than routing.** It carries every prompt the model receives
-  and every write to run records and chat, so a refactoring that stops applying
-  a setting, renders a variable differently or flushes the trace at a different
-  point shows as a diff even when every route is unchanged.
+- **The trace is wider than routing.** It carries every prompt the model receives,
+  every write to run records, chat, metrics and the trigger journal, and the
+  states the UI sees. A refactoring that stops applying a setting, renders a
+  variable differently, drops a metric or flushes the trace at a different point
+  shows as a diff even when every route is unchanged. Settings values differ from
+  the shipped defaults, so a read replaced by the default shows as well.
+- **The fakes cannot lie for the engine.** The stores keep the production guards
+  (a terminal status is written once; a trace record is durable only after a
+  flush, and what was never flushed is gone when an attempt ends). A user's answer
+  to a parked run goes through the app's own use cases. A misused fake raises an
+  `AssertionError`, which the engine's `catch (Exception)` around every node
+  cannot turn into an ordinary run error, and every scenario declares how it ends.
 - **Determinism is checked, not assumed.** Each scenario runs twice and the
   traces must match before either is compared.
 - **Completeness is a test.** `GoldenTraceCatalogueTest` fails on a pipeline file
@@ -755,22 +763,27 @@ what makes it a gate.
   produces.
 
 **What it cannot see:** anything behind the fakes — the real model, a real tool's
-side effect, Room, notifications on a device — and the copy of each tool's
-description, which is a fixture. A behaviour the 44 scenarios never reach is
+side effect, Room's SQL (only its guards are modelled), notifications on a device,
+the settings layer itself (its defaults and migrations never run) — and the copy
+of each tool's description, which is a fixture. A behaviour no scenario reaches is
 not pinned either; a new branch needs a scenario.
 
 ### Observed failing
 
-Two mutations of `GraphExecutionEngine`, each restored in the same command, against
-the 44 scenarios the guard shipped with:
+Three mutations, each restored in the same command, against the 50 scenarios the
+guard shipped with:
 
-- `IF_CONDITION` routing with the True and False labels swapped fails **4 of 44**
-  scenarios — exactly the four whose pipelines contain an `IF` node.
+- `IF_CONDITION` routing with the True and False labels swapped fails **4 of 50**
+  scenarios — exactly the four whose run passes through an `IF` node.
 - `stepQueue` taking the **last** remaining item instead of the first fails
-  **6 of 44** — exactly the six that run a queue. The first version of the
-  harness caught only one of them: its default plan had two items, and the
-  engine takes a queue's first item itself, so `stepQueue` only ever saw a
-  one-item list. The default plan has three items for that reason.
+  **7 of 50** — exactly the seven that run a queue. An early version caught only
+  one: its default plan had two items, and the engine takes a queue's first item
+  itself, so `stepQueue` only ever saw a one-item list. The default plan has three
+  items for that reason.
+- `ResolveRunCeilingsUseCase` choosing the interactive ceiling for a background
+  run and vice versa fails **2 of 50** — the two ceiling scenarios, one per
+  origin. The first version could not have seen it: its only ceiling scenario set
+  the same limit for both origins (by construction; not measured).
 
 A golden file edited by one character makes the next run execute and fail; the
 same run without the edit is `UP-TO-DATE`.

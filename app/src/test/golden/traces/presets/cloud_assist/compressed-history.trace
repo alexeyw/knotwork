@@ -1,11 +1,11 @@
 # Golden run trace — written by GoldenTraceTest, never by hand.
 # Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
 pipeline: presets/cloud_assist
-scenario: default
-about: A cloud answer that sees chat history and long-term memory.
+scenario: compressed-history
+about: A long conversation reaches the cloud node as a stored summary plus the most recent turns.
 origin: CHAT
 outcome: COMPLETED
-settings: harness defaults
+settings: compressedHistory=true
 prompt:
   | What should I pack for my trip?
 
@@ -45,6 +45,10 @@ trace.console seq=3 run=golden depth=0 MemoryAccess
 state ConsoleLog run=golden events=4
 memory.used ids=[11, 12]
 trace.memory seq=4 run=golden chunks=[11, 12]
+trace.console seq=5 run=golden depth=0 HistoryCompression
+    message:
+      | Chat history compressed: summarized older turns, kept the last 6 messages (4 recent messages not yet summarized)
+state ConsoleLog run=golden events=5
 network.outbound
 model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
     prompt:
@@ -57,9 +61,16 @@ model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud ca
       | --- Original Task ---
       | What should I pack for my trip?
       |
+      | --- Earlier conversation (summarized) ---
+      | Earlier, the user asked about golden tests and planned a trip.
+      |
       | --- Chat History ---
-      | 1. USER: Earlier: what is a golden test?
-      | 2. AGENT: A test that compares output with a recorded reference.
+      | 1. USER: Turn 35: a sentence long enough to cost a handful of tokens in the window.
+      | 2. AGENT: Turn 36: a sentence long enough to cost a handful of tokens in the window.
+      | 3. USER: Turn 37: a sentence long enough to cost a handful of tokens in the window.
+      | 4. AGENT: Turn 38: a sentence long enough to cost a handful of tokens in the window.
+      | 5. USER: Turn 39: a sentence long enough to cost a handful of tokens in the window.
+      | 6. AGENT: Turn 40: a sentence long enough to cost a handful of tokens in the window.
       |
       | --- Long-Term Memory ---
       | 1. The user prefers short answers with one example.
@@ -77,18 +88,25 @@ state Streaming thinking=1 answering=4
       | Cloud LLM answer, visit 1.
 metrics.node CLOUD tokens=5
 run.spend golden steps=2 tokens=5
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ CLOUD in <ms>ms
-state ConsoleLog run=golden events=5
-trace.node seq=6 run=golden cloud CLOUD depth=0 tokens=5
+state ConsoleLog run=golden events=6
+trace.node seq=7 run=golden cloud CLOUD depth=0 tokens=5
     input:
       | --- Original Task ---
       | What should I pack for my trip?
       |
+      | --- Earlier conversation (summarized) ---
+      | Earlier, the user asked about golden tests and planned a trip.
+      |
       | --- Chat History ---
-      | 1. USER: Earlier: what is a golden test?
-      | 2. AGENT: A test that compares output with a recorded reference.
+      | 1. USER: Turn 35: a sentence long enough to cost a handful of tokens in the window.
+      | 2. AGENT: Turn 36: a sentence long enough to cost a handful of tokens in the window.
+      | 3. USER: Turn 37: a sentence long enough to cost a handful of tokens in the window.
+      | 4. AGENT: Turn 38: a sentence long enough to cost a handful of tokens in the window.
+      | 5. USER: Turn 39: a sentence long enough to cost a handful of tokens in the window.
+      | 6. AGENT: Turn 40: a sentence long enough to cost a handful of tokens in the window.
       |
       | --- Long-Term Memory ---
       | 1. The user prefers short answers with one example.
@@ -100,13 +118,13 @@ trace.node seq=6 run=golden cloud CLOUD depth=0 tokens=5
       | Cloud LLM answer, visit 1.
 trace.flush
 state PipelineTrace steps=1 last=CLOUD depth=0 tokens=5
-state NodeIO cloud CLOUD depth=0 (= trace.node seq=6)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=7)
 visit golden cloud_assist/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=7 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=7
 chat.save AGENT final=true model=openai
     content:
       | Cloud LLM answer, visit 1.

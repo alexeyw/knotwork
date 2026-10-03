@@ -4,24 +4,36 @@ pipeline: presets/routed_local_cloud
 scenario: router-gives-up
 about: Every routing answer fails the gate; after its repairs the run takes the declared fallback class.
 origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
 prompt:
   | What is the tallest mountain on Earth?
 
+run.create golden pipeline=routed_local_cloud parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=routed_local_cloud graphHash=a492db73179fc3865391449addca273f5a26a48b08d62939f2f1977119d8d3d0
 driver start
+crash.key active_pipeline_id=routed_local_cloud
+crash.key active_model=Golden Model
 visit golden routed_local_cloud/input INPUT #1
 state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
+state ConsoleLog run=golden events=1
+metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2
 visit golden routed_local_cloud/router INTENT_ROUTER #1
 state Stage step=2 of=null INTENT_ROUTER
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
+state ConsoleLog run=golden events=3
 model.load path=null vision=false audio=false
 model local node=router call=1 temperature=default image=none
     prompt:
@@ -40,6 +52,9 @@ model local node=router call=1 temperature=default image=none
       | What is the tallest mountain on Earth?
       | AGENT: ⏎
     answer:
+      | I would rather not say.
+state Streaming thinking=5
+    text:
       | I would rather not say.
 model local node=router call=2 temperature=0.1 image=none
     prompt:
@@ -67,6 +82,9 @@ model local node=router call=2 temperature=0.1 image=none
       | Output ONLY the corrected result, with no explanation, no commentary, and no markdown code fences.
     answer:
       | I would rather not say.
+state Streaming thinking=5
+    text:
+      | I would rather not say.
 model local node=router call=3 temperature=0.1 image=none
     prompt:
       | Your previous output was invalid: Output did not contain one of: Simple, Complex
@@ -93,20 +111,64 @@ model local node=router call=3 temperature=0.1 image=none
       | Output ONLY the corrected result, with no explanation, no commentary, and no markdown code fences.
     answer:
       | I would rather not say.
+state Streaming thinking=5
+    text:
+      | I would rather not say.
+model local node=router call=4 temperature=0.1 image=none
+    prompt:
+      | Your previous output was invalid: Output did not contain one of: Simple, Complex
+      |
+      | Here is the original request again:
+      | Classify the user's request. Output EXACTLY one keyword: Simple (greetings, small talk, single-step factual questions the on-device model can answer) or Complex (multi-step reasoning, research, code, anything that benefits from a larger model). Today is 15 September 2026. Reply with the single keyword and nothing else.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+      |
+      | Your invalid output was:
+      | I would rather not say.
+      |
+      | Output ONLY the corrected result, with no explanation, no commentary, and no markdown code fences.
+    answer:
+      | I would rather not say.
+state Streaming thinking=5
+    text:
+      | I would rather not say.
 trace.console seq=3 run=golden depth=0 StructuredOutputRepair
     message:
-      | Output repair 1/2 for node Router
+      | Output repair 1/3 for node Router
+state ConsoleLog run=golden events=4
+metrics.repair Router
 trace.console seq=4 run=golden depth=0 StructuredOutputRepair
     message:
-      | Output repair 2/2 for node Router
-trace.console seq=5 run=golden depth=0 Error
+      | Output repair 2/3 for node Router
+state ConsoleLog run=golden events=5
+metrics.repair Router
+trace.console seq=5 run=golden depth=0 StructuredOutputRepair
     message:
-      | INTENT_ROUTER 'Router' did not select a known route after 2 repair attempt(s); routing to the default branch
+      | Output repair 3/3 for node Router
+state ConsoleLog run=golden events=6
+metrics.repair Router
+trace.console seq=6 run=golden depth=0 Error
+    message:
+      | INTENT_ROUTER 'Router' did not select a known route after 3 repair attempt(s); routing to the default branch
+state ConsoleLog run=golden events=7
+metrics.node INTENT_ROUTER tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=7 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-trace.node seq=7 run=golden router INTENT_ROUTER depth=0 tokens=null
+state ConsoleLog run=golden events=8
+trace.node seq=8 run=golden router INTENT_ROUTER depth=0 tokens=null
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -119,12 +181,14 @@ trace.node seq=7 run=golden router INTENT_ROUTER depth=0 tokens=null
       | What is the tallest mountain on Earth?
     output:
       | I would rather not say.
-state NodeIO router INTENT_ROUTER depth=0
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null
+state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=8)
 visit golden routed_local_cloud/lite_rt LITE_RT #1
 state Stage step=3 of=4 LITE_RT
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
+state ConsoleLog run=golden events=9
 model.load path=null vision=false audio=false
 model local node=lite_rt call=1 temperature=default image=none
     prompt:
@@ -142,11 +206,18 @@ model local node=lite_rt call=1 temperature=default image=none
       | AGENT: ⏎
     answer:
       | Local LLM answer, visit 1.
+state Streaming thinking=1 answering=4
+    text:
+      | Local LLM answer, visit 1.
+metrics.update tokens=5
+modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+metrics.node LITE_RT tokens=5
 run.spend golden steps=3 tokens=5
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-trace.node seq=10 run=golden lite_rt LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=10
+trace.node seq=11 run=golden lite_rt LITE_RT depth=0 tokens=5
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -155,17 +226,23 @@ trace.node seq=10 run=golden lite_rt LITE_RT depth=0 tokens=5
       | What is the tallest mountain on Earth?
     output:
       | Local LLM answer, visit 1.
-state NodeIO lite_rt LITE_RT depth=0
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5
+state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=11)
 visit golden routed_local_cloud/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=11 run=golden depth=0 NodeExecution
+trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
+state ConsoleLog run=golden events=11
 chat.save AGENT final=true model=Golden Model
     content:
       | Local LLM answer, visit 1.
 end Completed
     finalResponse:
       | Local LLM answer, visit 1.
-run.spend golden steps=4 tokens=5
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=5 (ignored: terminal or unknown run)
 trace.flush

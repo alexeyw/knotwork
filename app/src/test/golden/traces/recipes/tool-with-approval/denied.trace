@@ -4,24 +4,36 @@ pipeline: recipes/tool-with-approval
 scenario: denied
 about: The write is denied.
 origin: CHAT
+outcome: COMPLETED
+settings: harness defaults
 prompt:
   | Note that the boiler service is due in March.
 
+run.create golden pipeline=recipe-tool-with-approval parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | Note that the boiler service is due in March.
+run.running golden pipeline=recipe-tool-with-approval graphHash=dcece86c951d8b8b22b3fac53c3df203f4045d48d3a47b3ace0d0deb8d4f6aa6
 driver start
+crash.key active_pipeline_id=recipe-tool-with-approval
+crash.key active_model=Golden Model
 visit golden recipe-tool-with-approval/input INPUT #1
 state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
+state ConsoleLog run=golden events=1
+metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2
 visit golden recipe-tool-with-approval/draft LITE_RT #1
 state Stage step=2 of=4 LITE_RT
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
+state ConsoleLog run=golden events=3
 model.load path=null vision=false audio=false
 model local node=draft call=1 temperature=default image=none
     prompt:
@@ -39,10 +51,17 @@ model local node=draft call=1 temperature=default image=none
       | AGENT: ⏎
     answer:
       | Draft the note answer, visit 1.
+state Streaming thinking=1 answering=5
+    text:
+      | Draft the note answer, visit 1.
+metrics.update tokens=6
+modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+metrics.node LITE_RT tokens=6
 run.spend golden steps=2 tokens=6
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=4
 trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -52,12 +71,17 @@ trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=6
       | Note that the boiler service is due in March.
     output:
       | Draft the note answer, visit 1.
-state NodeIO draft LITE_RT depth=0
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6
+state NodeIO draft LITE_RT depth=0 (= trace.node seq=4)
 visit golden recipe-tool-with-approval/save TOOL #1
 state Stage step=3 of=4 TOOL
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
+state ConsoleLog run=golden events=5
+state Streaming thinking=1
+    text:
+      | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
 model local node=save call=1 temperature=default image=none
     prompt:
@@ -78,26 +102,33 @@ model local node=save call=1 temperature=default image=none
       | JSON OUTPUT: ⏎
     answer:
       | {"path":"notes/golden.md","content":"Save it — recorded content."}
+journal.hitl golden Raised(kind=APPROVAL)
 run.status golden WAITING_APPROVAL
 trace.flush
-state WaitingForApproval tool=write_file risk=SENSITIVE
+state WaitingForApproval tool=write_file risk=SENSITIVE request=#1
     arguments:
       | {"path":"notes/golden.md","content":"Save it — recorded content."}
-notify.approval tool=write_file risk=SENSITIVE
-driver approval deny
-notify.approval.cancel
+notify.approval request=#1 tool=write_file risk=SENSITIVE
+driver approval deny request=#1 → LiveResumed
+notify.approval.cancel request=#1
+journal.hitl golden Resolved(resolution=DENIED)
 chat.save SYSTEM final=false model=null
     content:
       | User denied execution of tool: write_file
 run.status golden RUNNING
 state ObservationResult write_file
+    result:
+      | Execution denied by user
+metrics.node TOOL tokens=null
 run.spend golden steps=3 tokens=6
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
+state ConsoleLog run=golden events=6
 trace.console seq=7 run=golden depth=0 ToolCall
     message:
       | write_file
+state ConsoleLog run=golden events=7
 trace.node seq=8 run=golden save TOOL depth=0 tokens=null tool=write_file
     input:
       | --- Previous Node Output ---
@@ -105,17 +136,23 @@ trace.node seq=8 run=golden save TOOL depth=0 tokens=null tool=write_file
     output:
       | Execution denied by user
 trace.flush
-state NodeIO save TOOL depth=0
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null
+state NodeIO save TOOL depth=0 (= trace.node seq=8)
 visit golden recipe-tool-with-approval/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
+state ConsoleLog run=golden events=8
 chat.save AGENT final=true model=Golden Model
     content:
       | Execution denied by user
 end Completed
     finalResponse:
       | Execution denied by user
-run.spend golden steps=4 tokens=6
+run.finish golden COMPLETED reason=null
+    error:
+      (empty)
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=6 (ignored: terminal or unknown run)
 trace.flush

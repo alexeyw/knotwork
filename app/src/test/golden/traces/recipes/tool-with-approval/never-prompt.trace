@@ -1,11 +1,11 @@
 # Golden run trace — written by GoldenTraceTest, never by hand.
 # Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
 pipeline: recipes/tool-with-approval
-scenario: approved
-about: The note is written once approved.
+scenario: never-prompt
+about: With the never-prompt policy a sensitive write runs without asking.
 origin: CHAT
 outcome: COMPLETED
-settings: harness defaults
+settings: approvalPolicy=NeverPrompt
 prompt:
   | Note that the boiler service is due in March.
 
@@ -102,17 +102,6 @@ model local node=save call=1 temperature=default image=none
       | JSON OUTPUT: ⏎
     answer:
       | {"path":"notes/golden.md","content":"Save it — recorded content."}
-journal.hitl golden Raised(kind=APPROVAL)
-run.status golden WAITING_APPROVAL
-trace.flush
-state WaitingForApproval tool=write_file risk=SENSITIVE request=#1
-    arguments:
-      | {"path":"notes/golden.md","content":"Save it — recorded content."}
-notify.approval request=#1 tool=write_file risk=SENSITIVE
-driver approval approve request=#1 → LiveResumed
-notify.approval.cancel request=#1
-journal.hitl golden Resolved(resolution=APPROVED)
-run.status golden RUNNING
 state ExecutingTool write_file
     arguments:
       | {"path":"notes/golden.md","content":"Save it — recorded content."}

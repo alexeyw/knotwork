@@ -1,11 +1,11 @@
 # Golden run trace — written by GoldenTraceTest, never by hand.
 # Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
 pipeline: presets/subtask_act
-scenario: default
-about: An auto-selected read-only tool runs without asking.
+scenario: destructive-tool-blocked
+about: With destructive tools blocked, a destructive pick is refused without asking and the run stops.
 origin: CHAT
-outcome: COMPLETED
-settings: harness defaults
+outcome: ERROR
+settings: blockDestructiveTools=true
 prompt:
   | Book a table for dinner.
 
@@ -75,67 +75,28 @@ model local node=node-2 call=1 temperature=default image=none
       |
       | JSON OUTPUT: ⏎
     answer:
-      | {"tool": "search_tool", "arguments": {"query":"Tool Action"}}
-state ExecutingTool search_tool
-    arguments:
-      | {"query":"Tool Action"}
-tool.execute search_tool risk=READ_ONLY session=golden-session
-    arguments:
-      | {"query":"Tool Action"}
-    output:
-      | Search results for "Tool Action":
-      | 1. Tool Action — a recorded encyclopedia summary.
-      | 2. Tool Action — a second recorded source.
-state ObservationResult search_tool
-    result:
-      | Search results for "Tool Action":
-      | 1. Tool Action — a recorded encyclopedia summary.
-      | 2. Tool Action — a second recorded source.
+      | {"tool": "delete_file", "arguments": {"path": "plans/old.md"}}
 chat.save SYSTEM final=false model=null
     content:
-      | Observation from search_tool: Search results for "Tool Action":
-      | 1. Tool Action — a recorded encyclopedia summary.
-      | 2. Tool Action — a second recorded source.
-metrics.node TOOL tokens=null
-run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+end Error reason=null
     message:
-      | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=4
-trace.console seq=4 run=golden depth=0 ToolCall
-    message:
-      | search_tool
-state ConsoleLog run=golden events=5
-trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=search_tool
-    input:
-      | --- Previous Node Output ---
-      | Book a table for dinner.
-    output:
-      | Search results for "Tool Action":
-      | 1. Tool Action — a recorded encyclopedia summary.
-      | 2. Tool Action — a second recorded source.
-trace.flush
-state PipelineTrace steps=1 last=TOOL depth=0 tokens=null
-state NodeIO node-2 TOOL depth=0 (= trace.node seq=5)
-visit golden subtask_act/node-3 OUTPUT #1
-state Stage step=3 of=3 OUTPUT
-trace.console seq=6 run=golden depth=0 NodeExecution
-    message:
-      | ▶ OUTPUT
-state ConsoleLog run=golden events=6
-chat.save AGENT final=true model=Golden Model
-    content:
-      | Search results for "Tool Action":
-      | 1. Tool Action — a recorded encyclopedia summary.
-      | 2. Tool Action — a second recorded source.
-end Completed
-    finalResponse:
-      | Search results for "Tool Action":
-      | 1. Tool Action — a recorded encyclopedia summary.
-      | 2. Tool Action — a second recorded source.
-run.finish golden COMPLETED reason=null
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+run.finish golden FAILED reason=null
     error:
-      (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=0 (ignored: terminal or unknown run)
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+metrics.node TOOL tokens=null
+run.spend golden steps=2 tokens=0 (ignored: terminal or unknown run)
+trace.console seq=3 run=golden depth=0 Error
+    message:
+      | TOOL: Destructive tools are blocked by Settings — delete_file was not executed.
+after the terminal state:
+state ConsoleLog run=golden events=4
+after the terminal state:
+end Error reason=null
+    message:
+      | Destructive tools are blocked by Settings — delete_file was not executed.
+run.finish golden FAILED reason=null (ignored: terminal or unknown run)
+    error:
+      | Destructive tools are blocked by Settings — delete_file was not executed.
 trace.flush

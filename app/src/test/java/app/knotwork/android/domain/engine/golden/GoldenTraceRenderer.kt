@@ -36,12 +36,34 @@ internal object GoldenTraceRenderer {
         appendLine("scenario: ${scenario.name}")
         appendLine("about: ${scenario.description}")
         appendLine("origin: ${scenario.origin.name}")
+        appendLine("outcome: ${scenario.outcome.name}")
+        appendLine("settings: ${scenario.settings.describe()}")
         appendBlock("prompt", scenario.prompt, indent = "")
         appendLine()
-        events.forEach { event ->
-            appendLine(event.header)
+        coalesce(events).forEach { (event, repeats) ->
+            appendLine(if (repeats > 1) "${event.header} ×$repeats" else event.header)
             event.blocks.forEach { (name, text) -> appendBlock(name, text, indent = "    ") }
         }
+    }
+
+    /**
+     * Groups consecutive identical events that carry no payload (a cloud stream reports
+     * network activity once per frame) into one line with a count.
+     *
+     * @param events The recorded events.
+     * @return Each event with the number of times it repeats in a row.
+     */
+    fun coalesce(events: List<GoldenEvent>): List<Pair<GoldenEvent, Int>> {
+        val result = mutableListOf<Pair<GoldenEvent, Int>>()
+        events.forEach { event ->
+            val last = result.lastOrNull()
+            if (last != null && event.blocks.isEmpty() && last.first == event) {
+                result[result.lastIndex] = last.first to last.second + 1
+            } else {
+                result += event to 1
+            }
+        }
+        return result
     }
 
     /**
