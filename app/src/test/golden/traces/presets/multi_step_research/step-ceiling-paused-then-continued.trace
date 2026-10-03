@@ -5,7 +5,7 @@ scenario: step-ceiling-paused-then-continued
 about: The interactive step ceiling binds inside the queue; the user continues and the run resumes.
 origin: CHAT
 outcome: COMPLETED
-settings: maxSteps=4
+settings: maxSteps=5
 prompt:
   | Compare how solar and wind power grew over the last decade.
 
@@ -79,9 +79,9 @@ metrics.node QUEUE_PROCESSOR tokens=null
 run.spend golden steps=3 tokens=0
 trace.console seq=6 run=golden depth=0 RunCeiling
     message:
-      | soft-ceiling: 3/4 steps
+      | soft-ceiling: 3/5 steps
 state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-state RunNotice ApproachingCeiling(axis=STEPS, spent=3, hardLimit=4)
+state RunNotice ApproachingCeiling(axis=STEPS, spent=3, hardLimit=5)
 trace.console seq=7 run=golden depth=0 NodeExecution
     message:
       | ✓ QUEUE_PROCESSOR in <ms>ms
@@ -149,74 +149,12 @@ trace.node seq=11 run=golden cloud CLOUD depth=0 tokens=4
 trace.flush
 state PipelineTrace steps=3 last=CLOUD depth=0 tokens=4 (= trace.node seq=11)
 state NodeIO cloud CLOUD depth=0 (= trace.node seq=11)
-pending.save golden CEILING request=none axis=STEPS limit=4 spent=4
-notify.ceiling run=golden breach=HardCeilingBreach(axis=STEPS, limit=4, spent=4)
-trace.console seq=12 run=golden depth=0 RunCeiling
-    message:
-      | step-ceiling: 4/4 steps — paused
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
-run.status golden WAITING_CEILING
-trace.flush
-state WaitingForCeilingRaise axis=STEPS limit=4 spent=4
-state SuspendedInBackground CEILING
-trace.flush ×2
-notify.ceiling.cancel
-pending.record golden decision APPROVED applied=true
-run.extendCeiling golden STEPS
-run.resumed golden from=WAITING_CEILING applied=true
-queue.enqueue golden resume=true session=golden-session origin=CHAT pipeline=multi_step_research
-    prompt:
-      | Compare how solar and wind power grew over the last decade.
-driver resolve Continue → Resumed
-queue.resume golden
-run.running golden pipeline=multi_step_research graphHash=43bab6f239413ed2f6b305d089093e3bdab047358fa994e7eea120a37dd2c68f
-driver attempt resumed
-crash.key active_pipeline_id=multi_step_research
-crash.key active_model=Golden Model
-pending.delete golden kind=CEILING
-notify.ceiling.cancel
-visit golden multi_step_research/input INPUT #1
-state Stage step=1 of=null INPUT
-trace.console seq=13 run=golden depth=0 NodeExecution
-    message:
-      | ▶ INPUT
-state ConsoleLog run=golden events=1 (= trace.console run=golden seq=13)
-metrics.node INPUT tokens=null
-run.spend golden steps=4 tokens=4
-trace.console seq=14 run=golden depth=0 NodeExecution
-    message:
-      | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2 (= trace.console run=golden seq=14)
-visit golden multi_step_research/decomposition DECOMPOSITION #1
-state Stage step=2 of=null DECOMPOSITION
-trace.console seq=15 run=golden depth=0 NodeExecution
-    message:
-      | ↻ DECOMPOSITION replayed from checkpoint
-state ConsoleLog run=golden events=3 (= trace.console run=golden seq=15)
-state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=4)
-state NodeIO decomposition DECOMPOSITION depth=0 (= trace.node seq=4)
-visit golden multi_step_research/queue QUEUE_PROCESSOR #1
-state Stage step=3 of=null QUEUE_PROCESSOR
-trace.console seq=16 run=golden depth=0 NodeExecution
-    message:
-      | ↻ QUEUE_PROCESSOR replayed from checkpoint
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=16)
-state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=8)
-state NodeIO queue QUEUE_PROCESSOR depth=0 (= trace.node seq=8)
-visit golden multi_step_research/cloud CLOUD #1
-state Stage step=4 of=7 CLOUD
-trace.console seq=17 run=golden depth=0 NodeExecution
-    message:
-      | ↻ CLOUD replayed from checkpoint
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=17)
-state PipelineTrace steps=3 last=CLOUD depth=0 tokens=4 (= trace.node seq=11)
-state NodeIO cloud CLOUD depth=0 (= trace.node seq=11)
 visit golden multi_step_research/cloud CLOUD #2
 state Stage step=5 of=7 CLOUD
-trace.console seq=18 run=golden depth=0 NodeExecution
+trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ▶ CLOUD
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=18)
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
 network.outbound
 model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
     prompt:
@@ -250,11 +188,11 @@ state Streaming thinking=1 answering=3
       | Researcher answer, visit 2.
 metrics.node CLOUD tokens=4
 run.spend golden steps=5 tokens=8
-trace.console seq=19 run=golden depth=0 NodeExecution
+trace.console seq=13 run=golden depth=0 NodeExecution
     message:
       | ✓ CLOUD in <ms>ms
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=19)
-trace.node seq=20 run=golden cloud CLOUD depth=0 tokens=4
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=13)
+trace.node seq=14 run=golden cloud CLOUD depth=0 tokens=4
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -273,14 +211,97 @@ trace.node seq=20 run=golden cloud CLOUD depth=0 tokens=4
     output:
       | Researcher answer, visit 2.
 trace.flush
-state PipelineTrace steps=4 last=CLOUD depth=0 tokens=4 (= trace.node seq=20)
-state NodeIO cloud CLOUD depth=0 (= trace.node seq=20)
-visit golden multi_step_research/cloud CLOUD #3
-state Stage step=6 of=7 CLOUD
+state PipelineTrace steps=4 last=CLOUD depth=0 tokens=4 (= trace.node seq=14)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=14)
+pending.save golden CEILING request=none axis=STEPS limit=5 spent=5
+notify.ceiling run=golden breach=HardCeilingBreach(axis=STEPS, limit=5, spent=5)
+trace.console seq=15 run=golden depth=0 RunCeiling
+    message:
+      | step-ceiling: 5/5 steps — paused
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
+run.status golden WAITING_CEILING
+trace.flush
+state WaitingForCeilingRaise axis=STEPS limit=5 spent=5
+state SuspendedInBackground CEILING
+trace.flush ×2
+notify.ceiling.cancel
+pending.record golden decision APPROVED applied=true
+run.extendCeiling golden STEPS
+run.resumed golden from=WAITING_CEILING applied=true
+queue.enqueue golden resume=true session=golden-session origin=CHAT pipeline=multi_step_research
+    prompt:
+      | Compare how solar and wind power grew over the last decade.
+driver resolve Continue → Resumed
+queue.resume golden
+run.running golden pipeline=multi_step_research graphHash=43bab6f239413ed2f6b305d089093e3bdab047358fa994e7eea120a37dd2c68f
+driver attempt resumed
+crash.key active_pipeline_id=multi_step_research
+crash.key active_model=Golden Model
+pending.delete golden kind=CEILING
+notify.ceiling.cancel
+visit golden multi_step_research/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=16 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=16)
+metrics.node INPUT tokens=null
+run.spend golden steps=5 tokens=8
+trace.console seq=17 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=17)
+visit golden multi_step_research/decomposition DECOMPOSITION #1
+state Stage step=2 of=null DECOMPOSITION
+trace.console seq=18 run=golden depth=0 NodeExecution
+    message:
+      | ↻ DECOMPOSITION replayed from checkpoint
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=18)
+state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=4)
+state NodeIO decomposition DECOMPOSITION depth=0 (= trace.node seq=4)
+visit golden multi_step_research/queue QUEUE_PROCESSOR #1
+state Stage step=3 of=null QUEUE_PROCESSOR
+trace.console seq=19 run=golden depth=0 NodeExecution
+    message:
+      | ↻ QUEUE_PROCESSOR replayed from checkpoint
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=19)
+state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=8)
+state NodeIO queue QUEUE_PROCESSOR depth=0 (= trace.node seq=8)
+visit golden multi_step_research/cloud CLOUD #1
+state Stage step=4 of=7 CLOUD
+trace.console seq=20 run=golden depth=0 NodeExecution
+    message:
+      | ↻ CLOUD replayed from checkpoint
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=20)
+state PipelineTrace steps=3 last=CLOUD depth=0 tokens=4 (= trace.node seq=11)
+state NodeIO cloud CLOUD depth=0 (differs from its trace record)
+    input:
+      | SYSTEM NOTICE: this run is close to its resource limit and may be stopped before it finishes. Wrap up now: produce the best answer you can from what you already have, and do not start new sub-tasks or additional tool calls.
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Decomposition: first part
+    output:
+      | Researcher answer, visit 1.
+visit golden multi_step_research/cloud CLOUD #2
+state Stage step=5 of=7 CLOUD
 trace.console seq=21 run=golden depth=0 NodeExecution
     message:
+      | ↻ CLOUD replayed from checkpoint
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=21)
+state PipelineTrace steps=4 last=CLOUD depth=0 tokens=4 (= trace.node seq=14)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=14)
+visit golden multi_step_research/cloud CLOUD #3
+state Stage step=6 of=7 CLOUD
+trace.console seq=22 run=golden depth=0 NodeExecution
+    message:
       | ▶ CLOUD
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=21)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=22)
 network.outbound
 model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
     prompt:
@@ -317,15 +338,10 @@ state Streaming thinking=1 answering=3
       | Researcher answer, visit 3.
 metrics.node CLOUD tokens=4
 run.spend golden steps=6 tokens=12
-trace.console seq=22 run=golden depth=0 RunCeiling
-    message:
-      | soft-ceiling: 6/8 steps
-state ConsoleLog run=golden events=9 (= trace.console run=golden seq=22)
-state RunNotice ApproachingCeiling(axis=STEPS, spent=6, hardLimit=8)
 trace.console seq=23 run=golden depth=0 NodeExecution
     message:
       | ✓ CLOUD in <ms>ms
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=23)
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=23)
 trace.node seq=24 run=golden cloud CLOUD depth=0 tokens=4
     input:
       | --- Original Task ---
@@ -355,7 +371,7 @@ state Stage step=7 of=7 OUTPUT
 trace.console seq=25 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=11 (= trace.console run=golden seq=25)
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=25)
 chat.save AGENT final=true model=openai
     content:
       | Queue execution completed.

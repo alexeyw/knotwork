@@ -107,7 +107,10 @@ internal enum class GoldenOutcome {
  * @property maxSteps Step ceiling of an interactive run.
  * @property maxStepsBackground Step ceiling of a background run; different from [maxSteps] so
  *   a run that picks the wrong ceiling for its origin shows.
- * @property maxTokens Token ceiling of an interactive run.
+ * @property maxTokens Token ceiling of an interactive run. A token-ceiling scenario sets it far
+ *   below the floor the settings store enforces on write (10 000): scripted answers are a few
+ *   tokens long, and the engine applies whatever value the store returns. A floor moved into the
+ *   ceiling resolver would turn those scenarios red, which is a change worth explaining.
  * @property maxTokensBackground Token ceiling of a background run, different from [maxTokens].
  * @property verboseMemoryLogging Whether the memory console line lists every hit.
  * @property compressedHistory Enables chat-history compression and seeds a 40-message

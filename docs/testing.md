@@ -131,7 +131,7 @@ change the test exists to catch.
 ### Golden run traces
 
 `GoldenTraceTest` runs every bundled pipeline preset, every recipe in
-`docs/recipes/` and two test-only fixtures through the real
+`docs/recipes/` and three test-only fixtures through the real
 `GraphExecutionEngine` and all of its node executors, and compares each run's
 trace with a file committed under `app/src/test/golden/traces/`. It is the
 safety net for refactoring the engine: a refactoring merges with no change to
@@ -152,7 +152,9 @@ those files.
   every numeric value differs from the shipped default and reaches some
   scenario — step and token ceilings per origin, nesting depth, the
   tool-result budget, the `$MEMORY_SUMMARY` limit, the approval window — so a
-  read replaced by the default changes a trace. The resume-age and background
+  read replaced by the default changes a trace. The token-ceiling scenarios
+  use values below the floor the settings store enforces on write, because
+  scripted answers are a few tokens long. The resume-age and background
   approval windows are wall-clock and are not exercised.
 - **What a trace holds:** each node visit; each model call with its full
   prompt and answer; each tool call with its arguments, the risk the gate
@@ -174,9 +176,10 @@ those files.
   budget.
   Each scenario declares how it ends (completed, error or parked), and that is
   checked before the trace is compared. `GoldenTraceCatalogueTest` fails when
-  a pipeline file has no scenario, when a node type appears in no trace (the
-  fixtures exist for the two no shipped pipeline uses), or when a trace file
-  belongs to no scenario.
+  a pipeline file has no scenario, when a node type appears in no trace (two
+  fixtures exist for the two node types no shipped pipeline uses; the third
+  nests itself up to the depth ceiling), or when a trace file belongs to no
+  scenario.
 - **A misused fake fails the run, it is not recorded.** An approval or a
   clarification the scenario does not settle, or a call to a member no run
   path uses, raises an `AssertionError` and is listed for the run to assert.

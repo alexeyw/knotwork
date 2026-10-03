@@ -87,9 +87,9 @@ internal class GoldenModel(
         override fun generateResponseStream(prompt: String, imagePath: String?, temperature: Float?): Flow<String> =
             flow { chunks(answer("local", prompt, temperature, imagePath)).forEach { emit(it) } }
 
-        override fun close() = Unit
+        override fun close() = log.record("model.close")
 
-        override suspend fun unload() = Unit
+        override suspend fun unload() = log.record("model.unload")
     }
 
     /** The cloud client factory a `CLOUD` node asks for its provider's client. */

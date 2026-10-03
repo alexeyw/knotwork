@@ -40,6 +40,7 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySummary
 import app.knotwork.android.domain.models.ModelPerformanceSample
 import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
@@ -109,7 +110,8 @@ import javax.inject.Provider
  * **What is a fake.** What reaches outside the process or the clock, each one recording:
  * - the model at all three seams ([GoldenModel]);
  * - tools ([GoldenToolRepository] — recorded outputs, no side effects);
- * - long-term memory — a fixed snapshot of two chunks, recency scoring not involved;
+ * - long-term memory — a fixed snapshot of six chunks, of which a retrieval returns two, recency
+ *   scoring not involved;
  * - chat history — a fixed conversation plus whatever the run writes;
  * - run records, trace and parked interactions — in-memory, with the production guards;
  * - metrics, model-performance samples, crash keys, the network indicator, the trigger
@@ -302,6 +304,7 @@ internal class GoldenTraceHarness(
         model.startAttempt()
         log.record(if (resume == null) "driver start" else "driver attempt resumed")
         var ending: GoldenOutcome? = null
+        var parkedKind: PendingInteractionKind? = null
         val terminalStates = mutableListOf<AgentOrchestratorState>()
         val job = launch {
             engine(
@@ -320,7 +323,10 @@ internal class GoldenTraceHarness(
                 when (state) {
                     is AgentOrchestratorState.Completed -> ending = GoldenOutcome.COMPLETED
                     is AgentOrchestratorState.Error -> ending = GoldenOutcome.ERROR
-                    is AgentOrchestratorState.SuspendedInBackground -> ending = GoldenOutcome.PARKED
+                    is AgentOrchestratorState.SuspendedInBackground -> {
+                        ending = GoldenOutcome.PARKED
+                        parkedKind = state.kind
+                    }
                     else -> Unit
                 }
                 if (state is AgentOrchestratorState.Completed || state is AgentOrchestratorState.Error) {
@@ -344,8 +350,7 @@ internal class GoldenTraceHarness(
             val approval = engine.pendingApprovalFor(task.sessionId)
             if (approval != null && approval.requestId != answeredApproval) {
                 answeredApproval = approval.requestId
-                approvalRaisedAt = currentTime
-                settleLiveApproval(approval.requestId)
+                if (settleLiveApproval(approval.requestId) == ApprovalAction.LET_IT_PARK) approvalRaisedAt = currentTime
             }
             clarificationRepository.pendingRequests.first()
                 .filter { answeredClarifications.add(it.id) }
@@ -354,7 +359,7 @@ internal class GoldenTraceHarness(
         }
         // The live window the gate waited before parking: virtual time, so deterministic, and
         // the one place the approval timeout setting is visible.
-        if (ending == GoldenOutcome.PARKED && approvalRaisedAt != null) {
+        if (parkedKind == PendingInteractionKind.APPROVAL && approvalRaisedAt != null) {
             log.record(
                 "driver the approval waited ${(currentTime - approvalRaisedAt) / STEP_MS * STEP_MS} ms before parking",
             )
@@ -370,7 +375,7 @@ internal class GoldenTraceHarness(
         return ending ?: log.violation("Scenario $scenario ended without a terminal state or a park")
     }
 
-    private suspend fun settleLiveApproval(requestId: String) {
+    private suspend fun settleLiveApproval(requestId: String): ApprovalAction {
         val action = approvals.removeFirstOrNull()
             ?: log.violation("Scenario $scenario raised an approval it does not settle; add an ApprovalAction")
         val outcome = when (action) {
@@ -379,6 +384,7 @@ internal class GoldenTraceHarness(
             ApprovalAction.LET_IT_PARK -> null
         }
         log.record("driver approval ${action.name.lowercase()} request=${log.alias(requestId)} → ${outcome ?: "-"}")
+        return action
     }
 
     private suspend fun settleLiveClarification(requestId: String) {

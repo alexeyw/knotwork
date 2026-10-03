@@ -52,7 +52,7 @@ internal object GoldenScenarios {
             "The interactive step ceiling binds inside the queue; the user continues and the run resumes.",
             RESEARCH,
         ) {
-            settings = GoldenSettings(maxSteps = 4)
+            settings = GoldenSettings(maxSteps = 5)
             parkResolutions = listOf(ParkResolution.Continue)
         },
         preset(
@@ -62,7 +62,7 @@ internal object GoldenScenarios {
             RESEARCH,
         ) {
             origin = RunOrigin.TRIGGER
-            settings = GoldenSettings(maxStepsBackground = 4)
+            settings = GoldenSettings(maxStepsBackground = 5)
             parkResolutions = listOf(ParkResolution.Continue)
         },
         preset("routed_local_cloud", "simple", "The router keeps a simple question on the device.", MOUNTAIN),
@@ -181,6 +181,14 @@ internal object GoldenScenarios {
         preset("subtask_lookup", "default", "The lookup sub-pipeline on its own.", MOUNTAIN),
         preset(
             "subtask_lookup",
+            "tool-arguments-give-up",
+            "Every argument answer fails the gate; after its repairs the tool runs on the last raw answer.",
+            MOUNTAIN,
+        ) {
+            answers { onCalls("node-3", "Search for the mountain, please.") }
+        },
+        preset(
+            "subtask_lookup",
             "every-call-asks",
             "With the ask-for-every-call policy even a read-only lookup waits for approval.",
             MOUNTAIN,
@@ -192,6 +200,14 @@ internal object GoldenScenarios {
         preset("tool_using_react", "needs-a-lookup", "The condition asks for a lookup: tool, then summary.", MOUNTAIN),
         preset("tool_using_react", "answers-directly", "The condition says no lookup is needed.", MOUNTAIN) {
             answers { on("needs_tool", "False") }
+        },
+        preset(
+            "tool_using_react",
+            "condition-gives-up",
+            "Every condition answer fails the gate; after its repairs the run takes the False branch.",
+            MOUNTAIN,
+        ) {
+            answers { onCalls("needs_tool", "It depends.") }
         },
         preset(
             "tool_using_react",

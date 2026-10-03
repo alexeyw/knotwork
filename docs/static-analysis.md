@@ -731,7 +731,7 @@ capture call with its options removed fails the guard.
 The engine's behaviour was pinned path by path — one unit test per branch, per
 suspension, per executor. Nothing pinned it end to end: "this pipeline, on this
 input, visits these nodes with these inputs and outputs". `GoldenTraceTest` does,
-for every bundled preset, every cookbook recipe and two test-only fixtures. The
+for every bundled preset, every cookbook recipe and three test-only fixtures. The
 harness, what it fakes and how to rewrite a trace are in
 [`testing.md` § Golden run traces](testing.md#golden-run-traces); this section is
 what makes it a gate.
@@ -761,7 +761,7 @@ what makes it a gate.
   traces must match before either is compared.
 - **Completeness is a test.** `GoldenTraceCatalogueTest` fails on a pipeline file
   without a scenario, on a `NodeType` no committed trace visits — `EVALUATION`
-  and `SKILL` are in no shipped pipeline, so two fixtures under
+  and `SKILL` are in no shipped pipeline, so two of the fixtures under
   `app/src/test/golden/fixtures/` run them — and on a golden file no scenario
   produces.
 
@@ -774,16 +774,17 @@ scenario.
 
 ### Observed failing
 
-Five mutations, each restored in the same command, against the 54 scenarios the
+Six mutations, each restored in the same command, against the 56 scenarios the
 guard shipped with:
 
 | Mutation | Red scenarios |
 |---|---|
-| `IF_CONDITION` routing with True and False swapped | **5 of 54** — exactly those whose run passes an `IF` node |
-| `stepQueue` taking the **last** remaining item instead of the first | **7 of 54** — exactly those that run a queue |
-| `ResolveRunCeilingsUseCase` giving a background run the interactive ceilings and vice versa | **4 of 54** — the four ceiling scenarios (steps and tokens, one per origin) |
-| the same, on the token axis only | **2 of 54** — the two token-ceiling scenarios |
-| `PipelineNodeExecutor` reading the shipped default instead of the nesting-depth setting | **1 of 54** — the self-nesting fixture |
+| `IF_CONDITION` routing with True and False swapped | **6 of 56** — exactly those whose run passes an `IF` node |
+| `stepQueue` taking the **last** remaining item instead of the first | **7 of 56** — exactly those that run a queue |
+| `ResolveRunCeilingsUseCase` giving a background run the interactive ceilings and vice versa | **4 of 56** — the four ceiling scenarios (steps and tokens, one per origin) |
+| the same, on the token axis only | **2 of 56** — the two token-ceiling scenarios |
+| `PipelineNodeExecutor` reading the shipped default instead of the nesting-depth setting | **1 of 56** — the self-nesting fixture |
+| `ToolNodeExecutor` reading the shipped default instead of the repair-limit setting | **1 of 56** — the tool-arguments give-up scenario |
 
 An early version of the harness caught one queue scenario instead of seven: its
 default plan had two items, and the engine takes a queue's first item itself, so
