@@ -324,7 +324,7 @@ flowchart TB
     end
 
     subgraph Retrieval["Retrieval (next session, longTermMemory node)"]
-        Engine[GraphExecutionEngine<br/>resolveMemoriesOnce · once per run] --> Key[MemoryRetrievalQueryResolver<br/>interactive → userPrompt<br/>background → declared query<br/>→ node input → userPrompt]
+        Engine[NodeInputComposer<br/>memory retrieved once per run] --> Key[MemoryRetrievalQueryResolver<br/>interactive → userPrompt<br/>background → declared query<br/>→ node input → userPrompt]
         Key --> Retrieve[RetrieveRelevantMemoryUseCase]
         Retrieve --> Search[findSimilarMemories<br/>cosine over the full table]
         Store --> Search
@@ -423,6 +423,13 @@ The walk delegates to collaborators, each covering one concern:
   run resumes. The task queue still owns the RUNNING transition and every
   terminal status. For a run that is not persisted it writes nothing, so a
   ceiling stops that run instead of pausing it.
+- **`NodeInputComposer`** — what each node sees: its system prompt with
+  `$VARIABLE`s rendered, its input composed from the context blocks it opted
+  into, and — for one node in the whole tree — the run's image. Memory is
+  retrieved by the first node that renders it, and only once; chat-history
+  settings are read once; the message list is re-read for each node that
+  replays it. Pending advice reaches the next prompt-composing node, never
+  OUTPUT.
 
 ### 3.1. Node types
 

@@ -50,17 +50,9 @@ fun testGraphExecutionEngine(
 ): GraphExecutionEngine = GraphExecutionEngine(
     nodeExecutorFactory = nodeExecutorFactory,
     toolNodeExecutor = toolNodeExecutor,
-    chatRepository = chatRepository,
-    settingsRepository = settingsRepository,
     metricsRepository = metricsRepository,
-    promptTemplateEngine = promptTemplateEngine,
-    promptVariableProviders = promptVariableProviders,
-    nodeContextBuilder = nodeContextBuilder,
-    chatHistoryWindowPlanner = chatHistoryWindowPlanner,
-    retrieveRelevantMemoryUseCase = retrieveRelevantMemoryUseCase,
     crashReportingRepository = crashReportingRepository,
     localModelRepository = localModelRepository,
-    memoryRepository = memoryRepository,
     runTraceRepository = runTraceRepository,
     resolveRunCeilingsUseCase = resolveRunCeilingsUseCase,
     runRecords = RunRecordWriter.Factory(
@@ -68,5 +60,15 @@ fun testGraphExecutionEngine(
         pendingInteractionRepository = pendingInteractionRepository,
         ceilingNotifier = ceilingNotifier,
         runTraceRepository = runTraceRepository,
+    ),
+    nodeInputs = NodeInputComposer.Factory(
+        chatRepository = chatRepository,
+        settingsRepository = settingsRepository,
+        promptTemplateEngine = promptTemplateEngine,
+        promptVariableProviders = promptVariableProviders,
+        nodeContextBuilder = nodeContextBuilder,
+        chatHistoryWindowPlanner = chatHistoryWindowPlanner,
+        retrieveRelevantMemoryUseCase = retrieveRelevantMemoryUseCase,
+        memoryRepository = memoryRepository,
     ),
 )

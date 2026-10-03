@@ -7,11 +7,9 @@ import app.knotwork.android.domain.engine.stuck.GraphStuckDetector
 import app.knotwork.android.domain.engine.stuck.RunStepObservation
 import app.knotwork.android.domain.engine.stuck.StuckVerdict
 import app.knotwork.android.domain.models.AgentOrchestratorState
-import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
-import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
@@ -19,7 +17,6 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.ResumeContext
-import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunBudgetLedger
 import app.knotwork.android.domain.models.RunContextNotes
 import app.knotwork.android.domain.models.RunGeneratingModel
@@ -31,21 +28,13 @@ import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolInvocationResult
 import app.knotwork.android.domain.models.asCeilingBreach
 import app.knotwork.android.domain.models.diagnostic
-import app.knotwork.android.domain.models.usesContextConfig
-import app.knotwork.android.domain.prompt.PromptTemplateEngine
-import app.knotwork.android.domain.prompt.PromptVariableProvider
-import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
-import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
-import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.withContext
@@ -67,30 +56,16 @@ import javax.inject.Singleton
 @Singleton
 class GraphExecutionEngine
 @Inject
-// LongParameterList is suppressed on the constructor rather than on the class:
-// every parameter here is a collaborator Hilt injects, so the list is assembled
-// by the container and never written out by hand, and it shrinks only when the
-// class is decomposed — the future work named above. Suppressing it class-wide
-// would also silence the acknowledged finding on `invoke` below, and every
-// future one in a 3k-line file.
-@Suppress("LongParameterList")
 constructor(
     private val nodeExecutorFactory: NodeExecutorFactory,
     private val toolNodeExecutor: ToolNodeExecutor,
-    private val chatRepository: ChatRepository,
-    private val settingsRepository: SettingsRepository,
     private val metricsRepository: MetricsRepository,
-    private val promptTemplateEngine: PromptTemplateEngine,
-    private val promptVariableProviders: Set<@JvmSuppressWildcards PromptVariableProvider>,
-    private val nodeContextBuilder: NodeContextBuilder,
-    private val chatHistoryWindowPlanner: ChatHistoryWindowPlanner,
-    private val retrieveRelevantMemoryUseCase: RetrieveRelevantMemoryUseCase,
     private val crashReportingRepository: CrashReportingRepository,
     private val localModelRepository: LocalModelRepository,
-    private val memoryRepository: MemoryRepository,
     private val runTraceRepository: RunTraceRepository,
     private val resolveRunCeilingsUseCase: ResolveRunCeilingsUseCase,
     private val runRecords: RunRecordWriter.Factory,
+    private val nodeInputs: NodeInputComposer.Factory,
 ) {
 
     /**
@@ -387,154 +362,8 @@ constructor(
         val queue = QueueCursor(graph)
         val traceSteps = mutableListOf<AgentOrchestratorState.TraceStep>()
 
-        // Long-term memory is retrieved lazily and at most once per run. Only
-        // the first *executed* node that actually opts into the
-        // `--- Long-Term Memory ---` block (`contextConfig.longTermMemory`)
-        // triggers the query embedding — and that same node decides the
-        // retrieval key (see [MemoryRetrievalQueryResolver]): an interactive run
-        // keys off the immutable userPrompt as it always has, a background run
-        // prefers the pipeline's declared query, then the node's own input,
-        // because a trigger's prompt is authored once and describes no
-        // particular firing. A graph where no executed node requests memory
-        // never embeds anything at all — sparing avoidable embedding-provider
-        // latency/cost and not shipping the prompt to a cloud embedding backend
-        // the user did not ask memory for. A resumed run is seeded from the
-        // interrupted run's persisted snapshot, so it neither re-runs retrieval
-        // (the context must be identical to the interrupted one) nor re-counts
-        // usage.
-        var memoizedMemories: List<MemoryChunk>? = resume?.memorySnapshot
-        suspend fun resolveMemoriesOnce(nodeInput: String): List<MemoryChunk> {
-            memoizedMemories?.let { return it }
-            // The declared query is a prompt template like any other, so `$DATE`
-            // and friends resolve per run instead of being frozen at authoring
-            // time. Rendering happens only when a declared query exists and only
-            // on the one node that triggers retrieval.
-            val declaredQuery = graph.memoryRetrievalQuery
-                ?.takeIf { it.isNotBlank() }
-                ?.let { promptTemplateEngine.render(it, promptVariableProviders.toList()) }
-            val query = MemoryRetrievalQueryResolver.resolve(
-                origin = tree.origin,
-                declaredQuery = declaredQuery,
-                nodeInput = nodeInput,
-                userPrompt = userPrompt,
-            )
-            val scored: List<Pair<MemoryChunk, Float>> = try {
-                retrieveRelevantMemoryUseCase.retrieveScored(query.text)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // Memory retrieval suspends (embedding + DB lookup). Swallowing
-                // cancellation here would let the parent flow keep running after
-                // the caller cancelled, breaking structured concurrency.
-                throw e
-            } catch (e: Exception) {
-                Timber.tag("PipelineDebug").w(e, "Failed to retrieve long-term memories; continuing without them")
-                emptyList()
-            }
-            val verbose = settingsRepository.verboseMemoryLoggingEnabled.first()
-            console.push(
-                ConsoleEventType.MemoryAccess,
-                MemoryAccessLogFormatter.format(
-                    query = query.text,
-                    source = query.source,
-                    hits = scored,
-                    verbose = verbose,
-                ),
-            )
-            val hits = scored.map { it.first }
-            // Record that these chunks were injected into this run so the
-            // Memory detail sheet can show "Used in N replies". Best-effort:
-            // a failure here must never break the pipeline run.
-            try {
-                memoryRepository.recordUsage(hits.map { it.id }, System.currentTimeMillis())
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Timber.tag("PipelineDebug").w(e, "Failed to record memory usage; continuing")
-            }
-            // Persist the resolved chunks so a checkpoint resume of this run
-            // can seed its memory from the snapshot instead of re-running
-            // retrieval — the resumed context must be identical to this one.
-            console.recordMemorySnapshot(hits)
-            return hits.also { memoizedMemories = it }
-        }
-
-        // Chat-history compression splits into a run-stable part and a per-node
-        // part:
-        //  - The cached summary and the compression settings are resolved at most
-        //    once per run. They are safe to memoize because the background
-        //    compressor is gated off while a pipeline is active (see
-        //    ChatHistoryCompressionCoordinator), so the `chat_history_summaries`
-        //    row and the settings cannot change mid-run.
-        //  - The live message list is re-read on EVERY call and is NOT memoized.
-        //    Message-writing nodes mutate it mid-run — in particular a TOOL node's
-        //    observation is persisted as an `isFinal = false` SYSTEM chat message
-        //    (ToolInvocationGate) — and a later history-enabled node must see it,
-        //    so freezing the list here would hide in-run messages until the next
-        //    user turn.
-        // Not snapshotted for resume — chat history was never resume-stable.
-        var chatCompressionResolved = false
-        var chatCompressionEnabled = false
-        var chatHistorySummary: ChatHistorySummary? = null
-        var chatHistoryThresholdTokens = 0
-        var chatHistoryLiveWindow = 0
-        // The console note fires once per run, the first time compression actually
-        // changes what a node sees.
-        var historyCompressionLogged = false
-        suspend fun resolveChatHistoryView(): ChatHistoryView {
-            if (!chatCompressionResolved) {
-                chatCompressionEnabled = settingsRepository.chatHistoryCompressionEnabled.first()
-                chatHistorySummary = if (chatCompressionEnabled) {
-                    try {
-                        chatRepository.getHistorySummary(sessionId)
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Timber.tag("PipelineDebug").w(e, "Failed to load chat-history summary; continuing without it")
-                        null
-                    }
-                } else {
-                    null
-                }
-                chatHistoryThresholdTokens = settingsRepository.chatHistoryCompressionThresholdTokens.first()
-                chatHistoryLiveWindow = settingsRepository.chatHistoryLiveWindowSize.first()
-                chatCompressionResolved = true
-            }
-            // Re-read fresh: the list grows as message-writing nodes append rows.
-            val messages = chatRepository.getMessagesForSession(sessionId).first()
-            val view = chatHistoryWindowPlanner.plan(
-                messages = messages,
-                summary = chatHistorySummary,
-                compressionEnabled = chatCompressionEnabled,
-                thresholdTokens = chatHistoryThresholdTokens,
-                liveWindowSize = chatHistoryLiveWindow,
-            )
-            // Surface the compression only when it actually changed what the node
-            // sees — a within-budget run stays silent — and only once per run.
-            if (!historyCompressionLogged && (view.truncatedWithoutSummary || view.earlierSummary != null)) {
-                historyCompressionLogged = true
-                if (view.truncatedWithoutSummary) {
-                    console.push(
-                        ConsoleEventType.HistoryCompression,
-                        "Chat history over budget; summary not ready, kept the last " +
-                            "${view.liveWindow.size} messages",
-                    )
-                } else {
-                    val gap = if (view.droppedUncoveredCount > 0) {
-                        " (${view.droppedUncoveredCount} recent messages not yet summarized)"
-                    } else {
-                        ""
-                    }
-                    console.push(
-                        ConsoleEventType.HistoryCompression,
-                        "Chat history compressed: summarized older turns, kept the last " +
-                            "${view.liveWindow.size} messages$gap",
-                    )
-                }
-            }
-            return view
-        }
-        // Tool invocations are accumulated as TOOL nodes complete and surfaced
-        // via the `--- Tool Results ---` block on later nodes that opt in.
-        val toolInvocationResults = mutableListOf<ToolInvocationResult>()
+        // What each node sees: rendered prompt, composed context, the image.
+        val inputs = nodeInputs.open(console, graph, sessionId, userPrompt, tree, resume?.memorySnapshot)
 
         // Set the moment a ceiling refuses to let the walk continue, so the
         // post-loop branch can say which one bound instead of re-deriving it.
@@ -686,103 +515,11 @@ constructor(
                         "input=${currentInputText.take(PipelineExecutionDefaults.NODE_IO_LOG_CHAR_LIMIT)}",
                 )
 
-                // Render `$VARIABLE` placeholders in the node's system prompt before the LLM
-                // sees it. We only touch nodes whose system prompt is actually fed into an LLM
-                // engine — the others (TOOL, IF_CONDITION, INPUT, QUEUE_PROCESSOR) either ignore
-                // `systemPrompt` or use it for non-LLM logic where placeholders are not expected.
-                val nodeForExecution = renderNodeSystemPrompt(currentNode)
-
-                // Compose the executor input by selecting only the context blocks the node
-                // opted into via its [NodeContextConfig]. Control-flow nodes (INPUT,
-                // IF_CONDITION, QUEUE_PROCESSOR) keep their raw passthrough semantics —
-                // wrapping them would corrupt routing/queue state. OUTPUT in echo mode
-                // (no systemPrompt) is also passed through so it forwards the upstream
-                // result verbatim instead of leaking context headers to the user.
-                executorInput = if (shouldComposeContext(currentNode)) {
-                    // Embed + search only when this node actually renders the
-                    // memory block; otherwise pass an empty list so retrieval is
-                    // never triggered on its behalf.
-                    val memoryEntries = if (currentNode.contextConfig.longTermMemory) {
-                        // `currentInputText` is what this node actually executes
-                        // on (the upstream node's output, or the run prompt for a
-                        // node right behind INPUT) — the background run's
-                        // second-choice retrieval key.
-                        resolveMemoriesOnce(currentInputText)
-                    } else {
-                        emptyList()
-                    }
-                    // Only nodes that render chat history pay for loading +
-                    // planning it; others get the empty view (no DB read). The
-                    // view is recomputed per node (fresh message read) so in-run
-                    // message writes — e.g. TOOL observations — are visible to
-                    // later history-enabled nodes.
-                    val chatHistoryView = if (currentNode.contextConfig.chatHistory) {
-                        resolveChatHistoryView()
-                    } else {
-                        ChatHistoryView.EMPTY
-                    }
-                    // Read only when the node feeds the on-device model and
-                    // there is tool text to cut: a result of this run, or an
-                    // observation row (SYSTEM) in the history it replays.
-                    val hasToolText = toolInvocationResults.isNotEmpty() ||
-                        chatHistoryView.liveWindow.any { it.role == Role.SYSTEM }
-                    val toolResultCharBudget = if (hasToolText && feedsOnDeviceModel(currentNode)) {
-                        settingsRepository.workspaceReadTokenBudget.first() * ChatHistoryWindowPlanner.CHARS_PER_TOKEN
-                    } else {
-                        null
-                    }
-                    val executionContext = PipelineExecutionContext(
-                        originalUserMessage = userPrompt,
-                        chatHistory = chatHistoryView.liveWindow,
-                        previousNodeOutput = currentInputText,
-                        toolResults = toolInvocationResults.toList(),
-                        memoryEntries = memoryEntries,
-                        earlierSummary = chatHistoryView.earlierSummary,
-                        toolResultCharBudget = toolResultCharBudget,
-                    )
-                    // No fallback to currentInputText: an empty result is the
-                    // intended outcome of a sparse config (e.g. only toolResults=true
-                    // before any tool has run). Step 3/6 forbids the all-flags-false
-                    // case at the validation layer, so we will not silently leak
-                    // previous-node output back into a node that opted out.
-                    val composed = nodeContextBuilder.build(currentNode.contextConfig, executionContext)
-                    // Deliver a soft warning raised by an earlier node into this
-                    // node's *composed prompt*, so the model can wind the task up
-                    // rather than discovering the hard stop by walking into it.
-                    //
-                    // Into `executorInput`, never into `currentInputText`. The
-                    // latter is the text that travels between nodes, and for a
-                    // node that does not compose a prompt it is *data*: a
-                    // pass-through OUTPUT persists it verbatim as the agent's
-                    // chat message, `QUEUE_PROCESSOR` parses it as a list,
-                    // `IF_CONDITION` branches on it. Writing the notice there
-                    // printed the engine's internals to the user as their
-                    // answer — and guarding only the node it was handed to was
-                    // not enough, because `INTENT_ROUTER` composes a prompt but
-                    // deliberately forwards `currentInputText` unchanged, so the
-                    // pollution outlived the router and reached OUTPUT anyway.
-                    // Scoping it to one node's input makes that structurally
-                    // impossible rather than conditionally avoided.
-                    // A crossing or a stuck verdict announces itself on the
-                    // console where it happens, but reaches the model only
-                    // here, on the next node that composes a prompt.
-                    //
-                    // Except OUTPUT, which composes one and must still never be
-                    // handed a note. Two reasons, and the second is the one
-                    // that bites: advice to wrap up has no reader at the node
-                    // that *is* the wrapping up; and `OutputNodeExecutor` falls
-                    // back to persisting its own input verbatim when the model
-                    // returns nothing, so a note delivered here becomes the
-                    // agent's chat message on any empty generation. That is the
-                    // third shape of the same defect — the first two were
-                    // writing the note to `currentInputText`, and letting it
-                    // survive an `INTENT_ROUTER` — and it is why the exclusion
-                    // is on the node type rather than on the executor.
-                    val notes = if (currentNode.type == NodeType.OUTPUT) null else tree.contextNotes.drain()
-                    if (notes != null) "$notes\n\n$composed" else composed
-                } else {
-                    currentInputText
-                }
+                // The node with its system prompt rendered, and the input composed
+                // from the context blocks it opted into.
+                val prepared = inputs.prepare(currentNode, currentInputText)
+                val nodeForExecution = prepared.node
+                executorInput = prepared.input
 
                 val nodeStartMs = System.currentTimeMillis()
                 var runParked = false
@@ -790,22 +527,8 @@ constructor(
                 // outgoing edges — surfaced through the scope so the executor can
                 // constrain (and repair towards) a key that matches a branch.
                 val routingChoices = GraphRouting.routingChoices(currentNode, graph)
-                // Deliver the run's image to the FIRST vision-eligible node only:
-                // a LITE_RT node whose context includes the original task (so the
-                // image accompanies the user's prompt). Consumption is tracked on
-                // the tree-shared delivery, so once any node at any depth takes
-                // the image, every later node — and every CLOUD node — sees text only.
-                val imagePathForNode = tree.imageDelivery
-                    ?.takeIf {
-                        !it.consumed &&
-                            currentNode.type == NodeType.LITE_RT &&
-                            currentNode.contextConfig.originalTask
-                    }
-                    ?.image
-                    ?.absolutePath
-                if (imagePathForNode != null) {
-                    tree.imageDelivery?.consumed = true
-                }
+                // The run's image goes to the first vision-eligible node of the tree only.
+                val imagePathForNode = inputs.takeImage(currentNode)
                 // Note an undelivered image *before* the terminal OUTPUT node runs:
                 // OUTPUT's executor emits the terminal `Completed`, after which the
                 // engine must not push any further console line (it would shift the
@@ -1030,7 +753,7 @@ constructor(
                 val toolName = nodeResult?.resolvedToolName
                     ?: currentNode.toolName?.takeUnless { it.equals("auto", ignoreCase = true) }
                     ?: currentNode.label
-                toolInvocationResults += ToolInvocationResult(toolName = toolName, output = toolOutput)
+                inputs.recordToolResult(ToolInvocationResult(toolName = toolName, output = toolOutput))
                 console.push(ConsoleEventType.ToolCall, toolName)
             }
 
@@ -1283,35 +1006,6 @@ constructor(
     }
 
     /**
-     * Decides whether [node]'s input string should be assembled by
-     * [NodeContextBuilder] (true) or passed through as the raw
-     * `currentInputText` (false). Delegates to [NodeModel.usesContextConfig],
-     * the single source of truth shared with `PipelineGraph.validate()` so
-     * the validator only flags empty configs on nodes that actually consume
-     * them.
-     */
-    private fun shouldComposeContext(node: NodeModel): Boolean = node.usesContextConfig()
-
-    /**
-     * Whether [node]'s composed input is a prompt for the on-device model, so
-     * tool text in it is cut to the user's single-read budget.
-     *
-     * A CLOUD node, and any node given a cloud provider, runs on a provider's
-     * window the user does not size here — it gets tool text whole, bounded by
-     * the response budget only. A TOOL node counts like any other: its input
-     * never reaches the tool as it is, it is the prompt the model turns into the
-     * tool's arguments, on the local model unless the node names a provider.
-     *
-     * @param node a node whose context is being composed.
-     * @return `true` when the node's executor prompts the local model.
-     */
-    private fun feedsOnDeviceModel(node: NodeModel): Boolean = when (node.type) {
-        NodeType.LITE_RT -> true
-        NodeType.CLOUD -> false
-        else -> node.cloudProvider.isNullOrBlank()
-    }
-
-    /**
      * Which console channel a protective stop belongs on.
      *
      * The walk exits through one seam whatever decided to end it, so the choice
@@ -1346,22 +1040,6 @@ constructor(
         RunTerminationReason.DiscardedByUser,
         RunTerminationReason.NotResumable,
         -> ConsoleEventType.SystemMessage
-    }
-
-    /**
-     * Returns a copy of [node] with its `systemPrompt` rendered through
-     * [PromptTemplateEngine], substituting all `$VARIABLE` placeholders using the
-     * injected [PromptVariableProvider] set. For nodes whose `systemPrompt` is
-     * not consumed by an LLM (e.g. [NodeType.TOOL], [NodeType.IF_CONDITION]) the
-     * original [node] instance is returned unchanged to avoid wasted work and
-     * accidental substitution inside fields that happen to share the syntax.
-     */
-    private suspend fun renderNodeSystemPrompt(node: NodeModel): NodeModel {
-        val rawPrompt = node.systemPrompt
-        if (rawPrompt.isNullOrEmpty() || node.type !in LLM_NODE_TYPES) return node
-        val rendered = promptTemplateEngine.render(rawPrompt, promptVariableProviders.toList())
-        if (rendered === rawPrompt || rendered == rawPrompt) return node
-        return node.copy(systemPrompt = rendered)
     }
 
     /**
@@ -1409,24 +1087,6 @@ constructor(
                 "same result more than once, and the run will be stopped if that continues. Change " +
                 "approach or finish: give the best answer you can from what you already have, and do " +
                 "not repeat a step you have already taken."
-
-        /**
-         * Node types whose `systemPrompt` is forwarded to an LLM engine and
-         * therefore needs `$VARIABLE` placeholders resolved before execution.
-         * Includes [NodeType.LITE_RT], [NodeType.CLOUD], [NodeType.OUTPUT] from
-         * the explicit task spec plus the other LLM-driven node types in this
-         * codebase (`SUMMARY`, `INTENT_ROUTER`, `DECOMPOSITION`, `EVALUATION`).
-         */
-        private val LLM_NODE_TYPES: Set<NodeType> = setOf(
-            NodeType.LITE_RT,
-            NodeType.CLOUD,
-            NodeType.OUTPUT,
-            NodeType.SUMMARY,
-            NodeType.INTENT_ROUTER,
-            NodeType.DECOMPOSITION,
-            NodeType.EVALUATION,
-            NodeType.CLARIFICATION,
-        )
 
         /** Crashlytics custom key for the id of the pipeline currently executing. */
         const val CRASH_KEY_PIPELINE_ID: String = "active_pipeline_id"

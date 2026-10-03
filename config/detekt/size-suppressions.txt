@@ -17,7 +17,6 @@ app/src/main/java/app/knotwork/android/di/AppModule.kt :: object AppModule :: To
 app/src/main/java/app/knotwork/android/di/DataModule.kt :: class DataModule :: TooManyFunctions
 app/src/main/java/app/knotwork/android/domain/engine/DefaultPipelineFactory.kt :: fun create :: LongMethod
 app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: class GraphExecutionEngine :: LargeClass
-app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: constructor :: LongParameterList
 app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: fun invoke :: CyclomaticComplexMethod
 app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: fun invoke :: LongMethod
 app/src/main/java/app/knotwork/android/domain/engine/executors/ToolInvocationGate.kt :: fun dispatch :: LongMethod
