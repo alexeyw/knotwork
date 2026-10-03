@@ -27,6 +27,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -335,6 +336,72 @@ class PipelineNodeExecutorTest {
         assertTrue(states.any { it is AgentOrchestratorState.WaitingForApproval })
         assertTrue(states.none { it is AgentOrchestratorState.Thinking })
     }
+
+    @Test
+    fun `given loading the target throws when execute then the node fails naming the target`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } throws IllegalStateException("db closed")
+
+        val result = runExecutor(pipelineNode()).singleResult()
+
+        assertEquals("Failed to load target pipeline 'sub': db closed", result.error)
+        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
+    }
+
+    @Test
+    fun `given the child engine throws in a non-persisted run when execute then the node fails with its message`() =
+        runTest {
+            coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+            stubEngine(flow { throw IllegalStateException("child blew up") })
+
+            val result = runExecutor(pipelineNode()).singleResult()
+
+            assertEquals("child blew up", result.error)
+        }
+
+    @Test
+    fun `given the child engine throws in a persisted run when execute then the child settles failed`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+        coEvery { pipelineRunRepository.getRun(any()) } returns null
+        stubEngine(flow { throw IllegalStateException("child blew up") })
+
+        val result = runExecutor(pipelineNode(), runId = "root").singleResult()
+
+        assertEquals("child blew up", result.error)
+        coVerify { pipelineRunRepository.finishRun("root::p::0", PipelineRunStatus.FAILED, "child blew up", null) }
+    }
+
+    @Test
+    fun `given a persisted child that ends without an answer when execute then the child settles failed`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+        coEvery { pipelineRunRepository.getRun(any()) } returns null
+        stubEngine(flowOf(AgentOrchestratorState.Loading))
+
+        val result = runExecutor(pipelineNode(), runId = "root").singleResult()
+
+        assertTrue(result.error!!.contains("no output"))
+        coVerify {
+            pipelineRunRepository.finishRun(
+                "root::p::0",
+                PipelineRunStatus.FAILED,
+                "Sub-pipeline 'Sub Pipeline' produced no output",
+            )
+        }
+    }
+
+    @Test
+    fun `given a persisted child in a status it cannot resume from when execute then fails without running it`() =
+        runTest {
+            coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+            coEvery { pipelineRunRepository.getRun("root::p::0") } returns childRun(
+                status = PipelineRunStatus.COMPLETED,
+                hash = subGraph.contentHash(),
+            )
+
+            val result = runExecutor(pipelineNode(), runId = "root").singleResult()
+
+            assertTrue(result.error!!.contains("unexpected state (COMPLETED)"))
+            verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
+        }
 
     @Test
     fun `given a non-zero visit index when execute then the child run id encodes the visit`() = runTest {
