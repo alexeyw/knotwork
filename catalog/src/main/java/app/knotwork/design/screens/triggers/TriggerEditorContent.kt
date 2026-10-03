@@ -827,7 +827,6 @@ private fun DangerButton(label: String, onClick: () -> Unit) {
 }
 
 /** Localised string bundle threaded into [TriggerEditorContent]. */
-@Suppress("LongParameterList")
 data class TriggerEditorStrings(
     val titleNew: String = "New trigger",
     val titleEdit: String = "Edit trigger",

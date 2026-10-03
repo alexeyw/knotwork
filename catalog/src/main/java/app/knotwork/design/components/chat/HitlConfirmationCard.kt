@@ -91,7 +91,6 @@ private const val JSON_COLLAPSED_MAX_LINES = 2
  * @param modifier optional layout modifier applied to the card root.
  */
 @Composable
-@Suppress("LongParameterList", "LongMethod") // Stable HITL API + 6-section spec mandates this shape.
 fun HitlConfirmationCard(
     model: HitlConfirmationModel,
     pendingTypedConfirm: String,

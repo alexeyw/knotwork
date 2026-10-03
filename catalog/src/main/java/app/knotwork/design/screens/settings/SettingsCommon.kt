@@ -1,9 +1,3 @@
-@file:Suppress(
-    "TooManyFunctions",
-    "LongMethod",
-    "LongParameterList",
-)
-
 package app.knotwork.design.screens.settings
 
 import androidx.compose.animation.AnimatedVisibility

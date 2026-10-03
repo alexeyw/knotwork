@@ -34,7 +34,6 @@ object BezierEdge {
      *
      * @return canvas-space coordinate at the parameter value.
      */
-    @Suppress("LongParameterList") // Pure math — collapsing into a struct would only obscure.
     fun pointAt(
         t: Float,
         x0: Float,
@@ -63,7 +62,6 @@ object BezierEdge {
      * dot speed (`40 dp/s` per spec) yields the cycle duration so the dot moves at a
      * visually constant velocity regardless of edge length.
      */
-    @Suppress("LongParameterList") // Pure math — symmetric with pointAt.
     fun approximateArcLength(
         x0: Float,
         y0: Float,

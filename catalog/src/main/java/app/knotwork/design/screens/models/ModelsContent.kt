@@ -502,7 +502,6 @@ private fun CustomUrlRow(state: ModelsViewState, strings: ModelsStrings, callbac
 }
 
 @Composable
-@Suppress("LongParameterList") // Private layout helper; collapsing hurts call-site clarity.
 private fun InlineFieldRow(
     leadingIcon: (@Composable () -> Unit)?,
     value: String,
@@ -748,7 +747,6 @@ private fun PresetOverflowMenu(
  * class` with English defaults so design-side previews compile without
  * resource lookups; the app-side mapper passes localised values.
  */
-@Suppress("LongParameterList") // Hand-tuned default-arg list keeps catalog previews terse.
 data class ModelsStrings(
     val title: String = "Models",
     val backCd: String = "Back",

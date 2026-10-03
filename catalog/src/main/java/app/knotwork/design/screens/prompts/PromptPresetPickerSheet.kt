@@ -134,7 +134,6 @@ data class PromptPresetPickerStrings(
 )
 
 /** One-shot callbacks consumed by [PromptPresetPickerSheet]. */
-@Suppress("LongParameterList") // Public DTO — fields kept explicit on purpose.
 class PromptPresetPickerCallbacks(
     val onTabSelected: (PromptPresetPickerTab) -> Unit = {},
     val onTagSelected: (String?) -> Unit = {},
@@ -163,7 +162,6 @@ class PromptPresetPickerCallbacks(
  * @param modifier optional layout modifier applied to the body root.
  */
 @Composable
-@Suppress("LongMethod") // Single picker seam — splitting hides the data flow.
 fun PromptPresetPickerSheet(
     state: PromptPresetPickerViewState,
     modifier: Modifier = Modifier,
@@ -448,7 +446,6 @@ private fun BodyList(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun PresetRow(
     row: PromptPresetPickerRow,
     nodeType: NodeType,

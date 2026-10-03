@@ -123,7 +123,6 @@ private const val LONG_PRESS_SCALE_DURATION_MS = 60
  * [ChatContent.RunCeilingPause] card.
  */
 @Composable
-@Suppress("LongParameterList") // Public chat-message API — collapsing into a single config object hides intent.
 fun ChatMessage(
     role: ChatRole,
     content: ChatContent,
@@ -191,7 +190,6 @@ fun ChatMessage(
 
 /** Bubble-style renderer for [ChatRole.User], [ChatRole.Assistant], and [ChatRole.Tool]. */
 @Composable
-@Suppress("LongParameterList")
 private fun BubbleMessage(
     role: ChatRole,
     content: ChatContent,
@@ -333,7 +331,6 @@ private fun StatusGlyph(status: ChatMessageStatus) {
 
 /** Dispatch over [ChatContent] variants, applying the bubble chrome where appropriate. */
 @Composable
-@Suppress("LongParameterList", "LongMethod")
 private fun BubbleBody(
     role: ChatRole,
     content: ChatContent,

@@ -27,7 +27,6 @@ import app.knotwork.design.components.pipelineeditor.SkillOption
  * ViewModel for persistence.
  */
 @Composable
-@Suppress("LongParameterList") // Sheet adapter forwards every catalog seam plus the production extras.
 internal fun NodeConfigSheetHost(
     config: NodeConfig,
     peerTitles: Set<String>,

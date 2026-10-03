@@ -24,7 +24,6 @@ import app.knotwork.design.screens.chat.ReportResponseDialog as CatalogReportRes
  * @param onDismiss Closes the dialog without reporting anything.
  */
 @Composable
-@Suppress("LongParameterList") // Mirrors the hoisted catalog dialog it binds.
 internal fun ReportResponseDialog(
     reason: ContentReportReason,
     onReasonChange: (ContentReportReason) -> Unit,

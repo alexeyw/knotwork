@@ -116,12 +116,6 @@ import org.junit.Test
  *  - Drawer / overflow / model-picker callbacks
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress(
-    // Reason: chat home tests cover a 12-method ViewModel surface — every
-    // public entry-point gets at least one happy-path assertion.
-    "LargeClass",
-    "LongMethod",
-)
 class ChatHomeViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()

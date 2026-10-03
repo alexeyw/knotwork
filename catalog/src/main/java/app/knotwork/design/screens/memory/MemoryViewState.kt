@@ -204,7 +204,6 @@ data class MemoryViewState(
 )
 
 /** Callbacks emitted by `MemoryContent`. */
-@Suppress("LongParameterList")
 class MemoryCallbacks(
     val onBack: () -> Unit = {},
     val onSearchOpen: () -> Unit = {},

@@ -756,7 +756,6 @@ class AppFunctionDataCodecTest {
      * Test helper that exercises [AppFunctionDataCodec.renderSuccess] with all-null defaults,
      * letting each test supply only the getters relevant to the scenario under test.
      */
-    @Suppress("LongParameterList")
     private fun renderResult(
         qualifiedName: String = "com.example.Result",
         containsKey: (String) -> Boolean = { true },

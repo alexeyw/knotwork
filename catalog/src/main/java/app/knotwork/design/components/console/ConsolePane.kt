@@ -145,7 +145,6 @@ private val ConsoleNestingIndent = 14.dp
  * @param modifier optional layout modifier applied to the pane root.
  */
 @Composable
-@Suppress("LongParameterList") // Stable public API.
 fun ConsolePane(
     tab: ConsoleTab,
     onTabChange: (ConsoleTab) -> Unit,
@@ -199,7 +198,6 @@ fun ConsolePane(
 
 /** Tab strip + trailing actions row. */
 @Composable
-@Suppress("LongParameterList")
 private fun ConsolePaneHeader(
     tab: ConsoleTab,
     onTabChange: (ConsoleTab) -> Unit,
@@ -325,7 +323,6 @@ private fun ConsoleHeaderIcon(icon: ImageVector, contentDescription: String, onC
  * renders the localised "no matches" empty-state row.
  */
 @Composable
-@Suppress("LongParameterList") // Six knobs — collapsing into a config object would just shuffle the params.
 private fun ConsoleLogsBody(
     logs: List<ConsoleLine>,
     filter: ConsoleFilter,

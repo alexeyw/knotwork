@@ -94,7 +94,6 @@ internal class ChatHomeMockHandles(
  * `initialThreadRows = listOf(...)`) for the values they actually care
  * about; everything else stays on the boring defaults.
  */
-@Suppress("LongParameterList")
 internal fun mockChatHomeViewModel(
     initialState: ChatHomeUiState = ChatHomeUiState.Idle,
     initialThreadTitle: String = "Test chat",

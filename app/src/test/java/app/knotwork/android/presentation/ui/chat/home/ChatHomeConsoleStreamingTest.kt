@@ -59,7 +59,6 @@ import org.junit.Test
  * every step.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("LongMethod")
 class ChatHomeConsoleStreamingTest {
 
     private val testDispatcher = StandardTestDispatcher()

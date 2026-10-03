@@ -59,7 +59,6 @@ import app.knotwork.design.components.pipelineeditor.NodeError
  *   above the [ValidationBar], which a host at the bottom of the screen used to cover.
  */
 @Composable
-@Suppress("LongParameterList")
 internal fun PipelineEditorContent(
     graph: PipelineGraph,
     editor: EditorState,

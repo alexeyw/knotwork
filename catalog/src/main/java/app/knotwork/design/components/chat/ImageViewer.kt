@@ -55,7 +55,6 @@ import coil3.compose.AsyncImage
  *   or when [isMissing].
  */
 @Composable
-@Suppress("LongParameterList")
 fun ImageViewer(
     model: Any?,
     fileName: String,

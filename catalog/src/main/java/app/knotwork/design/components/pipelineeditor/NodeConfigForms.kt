@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "TooManyFunctions") // 13 forms by spec; splitting per-file would only add ceremony.
+@file:Suppress("TooManyFunctions") // 13 forms by spec; splitting per-file would only add ceremony.
 
 package app.knotwork.design.components.pipelineeditor
 
@@ -87,7 +87,6 @@ object NodeConfigForms {
      * name/description/tags fields. `null` (the default) hides the save button entirely.
      */
     @Composable
-    @Suppress("LongParameterList")
     fun Body(
         config: NodeConfig,
         errors: Map<FieldId, ValidationFailure>,
@@ -306,7 +305,6 @@ private fun TitleField(title: String, error: ValidationFailure?, onChange: (Stri
  * of which field is prose vs identifier vs prompt.
  */
 @Composable
-@Suppress("LongParameterList") // Adding the optional library hook here keeps every prompt field DRY.
 private fun TextField(
     label: String,
     value: String,
@@ -383,7 +381,6 @@ private fun TextField(
 private const val LIBRARY_BUTTON_TARGET_DP: Float = 32f
 
 /** Float field rendered as a slider plus the resolved numeric value. */
-@Suppress("LongParameterList") // Slider field has a stable contract; collapsing the params hides intent.
 @Composable
 private fun FloatSliderField(
     label: String,
@@ -548,7 +545,6 @@ private fun OutputFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun LiteRtFormBody(
     config: LiteRtConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -586,7 +582,6 @@ private fun LiteRtFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun CloudFormBody(
     config: CloudConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -638,7 +633,6 @@ private fun CloudFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun IntentRouterFormBody(
     config: IntentRouterConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -752,7 +746,6 @@ private fun IntentRouterFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun IfConditionFormBody(
     config: IfConditionConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -812,7 +805,6 @@ private fun IfConditionFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun ClarificationFormBody(
     config: ClarificationConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -1187,7 +1179,6 @@ private fun ToolFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun DecompositionFormBody(
     config: DecompositionConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -1229,7 +1220,6 @@ private fun QueueProcessorFormBody(config: QueueProcessorConfig, onChange: (Node
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun EvaluationFormBody(
     config: EvaluationConfig,
     errors: Map<FieldId, ValidationFailure>,
@@ -1261,7 +1251,6 @@ private fun EvaluationFormBody(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun SummaryFormBody(
     config: SummaryConfig,
     errors: Map<FieldId, ValidationFailure>,

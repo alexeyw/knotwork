@@ -5,7 +5,6 @@ package app.knotwork.design.screens.settings
  * sub-screen. Kept as a single class so call sites stay compact; each screen
  * wires only the subset of callbacks its controls use.
  */
-@Suppress("LongParameterList")
 class SettingsCallbacks(
     // ─── Navigation ──────────────────────────────────────────────────────────
     /** Back / up from the current screen. */

@@ -372,7 +372,6 @@ private fun TaskRowStatus.toCatalogStatus(): Status = when (this) {
 }
 
 /** Localised string bundle threaded into [TaskMonitorContent]. */
-@Suppress("LongParameterList")
 data class TaskMonitorStrings(
     val title: String = "Active tasks",
     val backCd: String = "Back",

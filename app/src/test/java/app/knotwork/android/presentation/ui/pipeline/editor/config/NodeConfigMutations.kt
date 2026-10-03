@@ -79,7 +79,6 @@ internal object NodeConfigMutations {
      * test is to state, in code a reviewer can read, what "changed" means for
      * each field.
      */
-    @Suppress("CyclomaticComplexMethod") // One arm per node type; each is a literal.
     fun mutatedConfig(type: NodeType): NodeConfig = when (type) {
         NodeType.INPUT -> InputConfig(title = TITLE, description = NOTE)
 

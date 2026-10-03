@@ -500,7 +500,6 @@ private fun ToolPillContent(
 }
 
 /** Localised string bundle threaded into [SkillLibraryContent]. */
-@Suppress("LongParameterList")
 data class SkillLibraryStrings(
     val title: String = "Skill library",
     val backCd: String = "Back",

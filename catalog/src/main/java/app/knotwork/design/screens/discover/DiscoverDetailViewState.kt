@@ -82,7 +82,6 @@ data class DiscoverDetailViewState(
 /**
  * Stable callback bundle accepted by `DiscoverDetailContent`.
  */
-@Suppress("LongParameterList") // Mirrors user-visible affordances.
 class DiscoverDetailCallbacks(
     val onBack: () -> Unit = {},
     val onRetry: () -> Unit = {},

@@ -88,7 +88,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  *  `$NAME` at the current cursor position.
  */
 @Composable
-@Suppress("LongParameterList", "LongMethod")
 fun KnotworkTextArea(
     value: String,
     onValueChange: (String) -> Unit,

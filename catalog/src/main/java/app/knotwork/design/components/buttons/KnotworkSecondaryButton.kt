@@ -54,7 +54,6 @@ import app.knotwork.design.theme.KnotworkTheme
  *   dialog (see `HitlConfirmationCard`).
  * @param leadingIcon optional leading glyph.
  */
-@Suppress("LongParameterList") // Brand-stable public API.
 @Composable
 fun KnotworkSecondaryButton(
     text: String,

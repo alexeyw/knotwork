@@ -147,7 +147,6 @@ internal object MemoryPreview {
         MemoryCategoryChip(MemoryCategory.Compaction, 2),
     )
 
-    @Suppress("LongParameterList")
     private fun row(
         id: String,
         title: String,

@@ -63,7 +63,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  *  filter bars.
  */
 @Composable
-@Suppress("LongParameterList")
 fun KnotworkFilterChip(
     label: String,
     selected: Boolean,

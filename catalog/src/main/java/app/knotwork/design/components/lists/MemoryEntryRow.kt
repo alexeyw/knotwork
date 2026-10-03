@@ -56,7 +56,6 @@ private val MEMORY_PIN_GLYPH_SIZE = 16.dp
  * title to signal that the user pinned this entry.
  */
 @Composable
-@Suppress("LongParameterList") // Stable API; collapsing into a `Row` data class hurts call-site clarity.
 fun MemoryEntryRow(
     title: String,
     body: String,

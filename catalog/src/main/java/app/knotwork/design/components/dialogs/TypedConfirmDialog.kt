@@ -60,7 +60,6 @@ data class TypedConfirmDialogState(
  * @param fieldTestTag Test tag applied to the typed-confirm text field.
  * @param confirmTestTag Test tag applied to the confirm button.
  */
-@Suppress("LongParameterList") // Brand-stable public API mirroring the other Knotwork components.
 @Composable
 fun TypedConfirmDialog(
     state: TypedConfirmDialogState,

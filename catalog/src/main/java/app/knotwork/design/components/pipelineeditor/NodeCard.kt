@@ -113,7 +113,6 @@ private const val HEADER_LABEL_TRACKING_EM = 0.08f
  * @param modifier optional layout modifier applied to the card root.
  */
 @Composable
-@Suppress("LongMethod", "LongParameterList") // Spec mandates the parameter shape; layout is intentionally inlined.
 fun NodeCard(
     type: NodeType,
     title: String,

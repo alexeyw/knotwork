@@ -356,7 +356,6 @@ internal object NodeConfigCodec {
      *   prompt then shows the registered default, and the title falls back to
      *   the node type's name rather than to the envelope's title.
      */
-    @Suppress("CyclomaticComplexMethod", "LongMethod") // One arm per node type; each is a literal.
     private fun decodeFrom(node: NodeModel, payload: JSONObject, legacyRow: Boolean): NodeConfig {
         val title = node.label.ifBlank { payload.optString(TITLE_KEY).ifBlank { node.type.name } }
         val description = payload.optStringOrNull(DESCRIPTION_KEY)

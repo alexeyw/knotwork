@@ -102,7 +102,6 @@ import kotlinx.coroutines.launch
  * this lambda.
  */
 @Composable
-@Suppress("LongMethod") // The editor screen is the orchestration seam; splitting would hide the data flow.
 fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val editor: EditorState = rememberEditorState()

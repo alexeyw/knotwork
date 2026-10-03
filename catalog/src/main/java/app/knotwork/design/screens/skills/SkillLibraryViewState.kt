@@ -189,7 +189,6 @@ data class SkillLibraryViewState(
 }
 
 /** One-shot callbacks consumed by `SkillLibraryContent`. */
-@Suppress("LongParameterList") // Documented public API.
 class SkillLibraryCallbacks(
     val onBack: () -> Unit = {},
     val onTabSelected: (SkillLibraryTab) -> Unit = {},
@@ -208,7 +207,6 @@ class SkillLibraryCallbacks(
 fun noopSkillLibraryCallbacks(): SkillLibraryCallbacks = SkillLibraryCallbacks()
 
 /** One-shot callbacks consumed by `SkillEditorContent`. */
-@Suppress("LongParameterList") // Documented public API.
 class SkillEditorCallbacks(
     val onClose: () -> Unit = {},
     val onSave: () -> Unit = {},

@@ -101,7 +101,6 @@ data class OllamaProviderInputs(
  * @param modifier optional layout modifier applied to the outer surface.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("LongParameterList") // Stable public API; provider rows have many distinct attributes by design.
 @Composable
 fun KnotworkProviderRow(
     title: String,

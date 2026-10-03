@@ -75,7 +75,6 @@ object SettingsHelpDocsGenerator {
      * @throws GenerationException when any source fails to parse, or the rows do
      *   not cover the registry exactly.
      */
-    @Suppress("LongParameterList") // One parameter per source file; each is a distinct input.
     fun render(
         markdown: String,
         registrySource: String,
@@ -93,7 +92,6 @@ object SettingsHelpDocsGenerator {
      *
      * @return `true` when the committed block differs from a freshly rendered one.
      */
-    @Suppress("LongParameterList") // Mirrors [render]'s inputs exactly.
     fun drift(
         markdown: String,
         registrySource: String,
@@ -117,7 +115,6 @@ object SettingsHelpDocsGenerator {
      *   no display name, when a referenced string resource is missing or blank,
      *   or when the row count does not match the registry's.
      */
-    @Suppress("LongParameterList") // Mirrors [render]'s inputs exactly.
     fun buildRows(
         registrySource: String,
         helpCatalogSource: String,

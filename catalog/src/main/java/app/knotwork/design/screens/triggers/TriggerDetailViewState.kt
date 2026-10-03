@@ -223,7 +223,6 @@ data class TriggerDetailViewState(
  * final English copy (used by previews / snapshots); the app overrides each with
  * a `stringResource`.
  */
-@Suppress("LongParameterList") // Documented public copy surface; folding hides the journal vocabulary.
 data class TriggerDetailStrings(
     val backCd: String = "Back",
     val subtitle: String = "Trigger detail",

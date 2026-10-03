@@ -151,7 +151,6 @@ internal fun buildModelsViewState(uiState: SettingsUiState, context: Context): M
 
 /** Builds the Memory category state (lifecycle toggles, tuning sliders, data actions). */
 @Composable
-@Suppress("LongMethod")
 internal fun buildMemoryViewState(uiState: SettingsUiState, context: Context): MemorySettingsViewState {
     val locale = LocalConfiguration.current.locales[0]
     return MemorySettingsViewState(

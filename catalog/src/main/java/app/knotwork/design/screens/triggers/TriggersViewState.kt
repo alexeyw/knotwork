@@ -109,7 +109,6 @@ data class TriggerPipelineOptionUi(val id: String, val name: String)
  * @property canSave whether Save is enabled (name non-blank and a valid
  *   condition).
  */
-@Suppress("LongParameterList") // Documented public view-state; folding fields hides the editor shape.
 data class TriggerEditorUi(
     val id: String?,
     val name: String,
@@ -166,7 +165,6 @@ data class TriggersViewState(
 }
 
 /** One-shot callbacks consumed by `TriggersContent`. */
-@Suppress("LongParameterList") // Documented public API.
 class TriggersCallbacks(
     val onBack: () -> Unit = {},
     val onNewTrigger: () -> Unit = {},
@@ -191,7 +189,6 @@ class TriggersCallbacks(
 fun noopTriggersCallbacks(): TriggersCallbacks = TriggersCallbacks()
 
 /** One-shot callbacks consumed by `TriggerEditorContent`. */
-@Suppress("LongParameterList") // Documented public API.
 class TriggerEditorCallbacks(
     val onClose: () -> Unit = {},
     val onSave: () -> Unit = {},

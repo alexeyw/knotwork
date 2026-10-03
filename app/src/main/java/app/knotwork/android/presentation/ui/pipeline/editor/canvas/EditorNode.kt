@@ -97,7 +97,6 @@ private const val DRAG_PICKUP_DURATION_MS = 100
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-@Suppress("LongParameterList") // The canvas node needs every input as a single seam.
 internal fun EditorNode(
     node: NodeModel,
     transform: CanvasTransform,

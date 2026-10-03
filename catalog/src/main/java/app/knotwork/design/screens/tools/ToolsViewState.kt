@@ -220,7 +220,6 @@ data class ToolsViewState(
     }
 }
 
-@Suppress("LongParameterList")
 class ToolsCallbacks(
     val onToolToggle: (toolId: String, enabled: Boolean) -> Unit = { _, _ -> },
     val onToolClick: (toolId: String) -> Unit = {},
@@ -300,7 +299,6 @@ fun noopToolDetailCallbacks(): ToolDetailCallbacks = ToolDetailCallbacks()
  * Callback bundle for the standalone MCP server configuration screen.
  * Mirrors the per-field shape of [AddMcpServerForm].
  */
-@Suppress("LongParameterList")
 class McpServerConfigCallbacks(
     val onUrlChange: (String) -> Unit = {},
     val onNameChange: (String) -> Unit = {},
