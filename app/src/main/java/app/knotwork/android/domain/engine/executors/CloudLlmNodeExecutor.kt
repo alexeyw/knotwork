@@ -271,9 +271,9 @@ class CloudLlmNodeExecutor @Inject constructor(
         // model happens to be active. selectedProvider is non-null on this success
         // path (a null provider returns early above).
         selectedProvider?.let { provider ->
-            scope.run.generatingModel.let { gm ->
-                gm.cloudLabel = provider.id
-                gm.localModelPath = null
+            scope.run.generatingModel.apply {
+                cloudLabel = provider.id
+                localModelPath = null
             }
         }
 
