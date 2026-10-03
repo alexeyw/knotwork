@@ -79,7 +79,6 @@ import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitCeilingDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitClarificationAnswerUseCase
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,8 +119,13 @@ import javax.inject.Provider
  *   enqueues;
  * - the user — the scenario's approvals, answers and ceiling grants.
  *
- * Settings are a strict mock with values chosen to differ from `SettingsDefaults`: an
- * unstubbed read throws, and a read replaced by the shipped default changes the trace.
+ * Two use cases stay MockK mocks (classes, not interfaces): `LoadModelUseCase` and
+ * `RetrieveRelevantMemoryUseCase`, each answering the one method a run calls.
+ *
+ * Every interface a run reaches is answered by a [goldenStrict] stand-in, so a member no run
+ * path uses is a harness violation rather than a silent default. Settings are one of them; their
+ * numeric values differ from `SettingsDefaults` and each reaches some scenario, so a read
+ * replaced by the shipped default changes a trace.
  *
  * An attempt that is still running after [attemptLimitMs] of virtual time fails the scenario:
  * the driver loop has no suspension point, so `runTest`'s own timeout could not end it, and a
@@ -190,102 +194,142 @@ internal class GoldenTraceHarness(
      */
     suspend fun run(scope: TestScope): String {
         chatMessages += seededHistory()
-        startFreshTask()
+        var task = startFreshTask()
+        var graph = root
         var resume: ResumeContext? = null
         var ending: GoldenOutcome
         while (true) {
-            ending = scope.attempt(resume)
+            ending = scope.attempt(task, graph, resume)
             trace.dropUnflushed()
             if (ending != GoldenOutcome.PARKED) break
             val resolution = parkResolutions.removeFirstOrNull() ?: break
             resolve(resolution)
-            val task = enqueued.removeFirstOrNull()
-            if (task == null) {
+            task = enqueued.removeFirstOrNull() ?: run {
                 log.record("driver nothing to resume")
                 break
             }
-            resume = processResumeTask(task)
+            val resumed = processResumeTask(task)
+            graph = resumed.first
+            resume = resumed.second
         }
         check(log.violations.isEmpty()) { "Scenario $scenario violated the harness: ${log.violations}" }
         check(approvals.isEmpty()) { "Scenario $scenario scripted approvals the run never raised: $approvals" }
         check(clarifications.isEmpty()) { "Scenario $scenario scripted answers nobody asked for: $clarifications" }
         check(parkResolutions.isEmpty()) { "Scenario $scenario scripted resolutions for parks that never happened" }
         check(ending == scenario.outcome) { "Scenario $scenario declares ${scenario.outcome} but ended $ending" }
+        val status = runs.getRun(ROOT_RUN_ID)?.status
+        check(statusMatches(ending, status)) { "Scenario $scenario ended $ending, but its run record says $status" }
         return GoldenTraceRenderer.render(scenario, log.events)
     }
 
-    /** The task queue creating the run record of a fresh task before the engine starts. */
-    private suspend fun startFreshTask() {
+    /** Whether the root run's record agrees with how the scenario ended. */
+    private fun statusMatches(ending: GoldenOutcome, status: PipelineRunStatus?): Boolean = when (ending) {
+        GoldenOutcome.COMPLETED -> status == PipelineRunStatus.COMPLETED
+        GoldenOutcome.ERROR -> status == PipelineRunStatus.FAILED
+        GoldenOutcome.PARKED -> status in WAITING_STATUSES
+    }
+
+    /**
+     * The task queue accepting a fresh task: it creates the run record and marks it running
+     * before the engine starts.
+     *
+     * @return The task, which every later attempt is driven from.
+     */
+    private suspend fun startFreshTask(): AgentTask {
+        val task = AgentTask(
+            id = ROOT_RUN_ID,
+            sessionId = SESSION_ID,
+            prompt = scenario.prompt,
+            timestamp = 0L,
+            pipelineId = root.id,
+            origin = scenario.origin,
+        )
         runs.createRun(
             PipelineRun(
-                id = ROOT_RUN_ID,
-                sessionId = SESSION_ID,
+                id = task.id,
+                sessionId = task.sessionId,
                 pipelineId = root.id,
-                origin = scenario.origin,
+                origin = task.origin,
                 status = PipelineRunStatus.QUEUED,
                 currentNodeId = null,
                 startedAt = 0L,
                 finishedAt = null,
                 errorMessage = null,
                 graphContentHash = root.contentHash(),
-                userPrompt = scenario.prompt,
+                userPrompt = task.prompt,
             ),
         )
-        runs.markRunning(ROOT_RUN_ID, root.id, root.contentHash())
+        runs.markRunning(task.id, root.id, root.contentHash())
+        return task
     }
 
     /**
      * The task queue picking up a resume task, as `TaskQueueManagerImpl.processResumeTask`
-     * does: the graph must still hash as recorded, the checkpoint comes from the durable trace,
-     * and the run is marked running before the engine starts.
+     * does: the graph is the one the run record names and must still hash as recorded, the
+     * checkpoint comes from the durable trace, and the run is marked running before the
+     * engine starts.
+     *
+     * @return The graph to run and the checkpoint to resume from.
      */
-    private suspend fun processResumeTask(task: AgentTask): ResumeContext {
-        log.record("queue.resume ${task.id} resume=${task.isResume} origin=${task.origin}")
+    private suspend fun processResumeTask(task: AgentTask): Pair<PipelineGraph, ResumeContext> {
+        log.record("queue.resume ${task.id}")
         val run = runs.getRun(task.id) ?: log.violation("Resume task for an unknown run ${task.id}")
-        val graph = library[run.pipelineId] ?: log.violation("Resume task for an unknown pipeline ${run.pipelineId}")
+        val graph = run.pipelineId?.let { library[it] }
+            ?: log.violation("Resume task for an unknown pipeline ${run.pipelineId}")
         val recordedHash = run.graphContentHash ?: log.violation("Run ${task.id} carries no graph hash")
         if (graph.contentHash() != recordedHash) log.violation("The graph of ${task.id} changed before its resume")
         val resume = trace.resumeContextFor(task.id)
         runs.markRunning(task.id, graph.id, recordedHash)
-        return resume
+        return graph to resume
     }
 
-    /** Runs one engine invocation; returns how it ended. */
-    private suspend fun TestScope.attempt(resume: ResumeContext?): GoldenOutcome {
+    /**
+     * Runs one engine invocation from [task], as the queue's `executeRun` does, and returns how
+     * it ended.
+     *
+     * Terminal states are mirrored into the run record after the engine's flow completes. The
+     * queue does it inside its collector, but its collector reads through a buffered
+     * `channelFlow` (`failIfStalled`), so in the app the engine usually runs past the terminal
+     * state — and makes its last writes — before the record is settled. Settling it here only
+     * at the end follows that order instead of pinning the other side of the race.
+     */
+    private suspend fun TestScope.attempt(
+        task: AgentTask,
+        graph: PipelineGraph,
+        resume: ResumeContext?,
+    ): GoldenOutcome {
         tracker.startAttempt()
         model.startAttempt()
         log.record(if (resume == null) "driver start" else "driver attempt resumed")
         var ending: GoldenOutcome? = null
+        val terminalStates = mutableListOf<AgentOrchestratorState>()
         val job = launch {
             engine(
-                sessionId = SESSION_ID,
-                userPrompt = scenario.prompt,
-                graph = root,
-                runId = ROOT_RUN_ID,
+                sessionId = task.sessionId,
+                userPrompt = task.prompt,
+                graph = graph,
+                runId = task.id,
                 resume = resume,
-                origin = scenario.origin,
+                runHadImage = runs.getRun(task.id)?.hadImage == true,
+                origin = task.origin,
             ).collect { state ->
                 if (ending == GoldenOutcome.COMPLETED || ending == GoldenOutcome.ERROR) {
                     log.record("after the terminal state:")
                 }
                 recordState(state)
-                // The queue mirrors terminal states into the record inside its collector,
-                // before the engine resumes past the emit — and so before its last writes.
                 when (state) {
-                    is AgentOrchestratorState.Completed -> {
-                        ending = GoldenOutcome.COMPLETED
-                        runs.finishRun(ROOT_RUN_ID, PipelineRunStatus.COMPLETED)
-                    }
-                    is AgentOrchestratorState.Error -> {
-                        ending = GoldenOutcome.ERROR
-                        runs.finishRun(ROOT_RUN_ID, PipelineRunStatus.FAILED, state.message, state.reason)
-                    }
+                    is AgentOrchestratorState.Completed -> ending = GoldenOutcome.COMPLETED
+                    is AgentOrchestratorState.Error -> ending = GoldenOutcome.ERROR
                     is AgentOrchestratorState.SuspendedInBackground -> ending = GoldenOutcome.PARKED
                     else -> Unit
+                }
+                if (state is AgentOrchestratorState.Completed || state is AgentOrchestratorState.Error) {
+                    terminalStates += state
                 }
             }
         }
         var answeredApproval: String? = null
+        var approvalRaisedAt: Long? = null
         val answeredClarifications = mutableSetOf<String>()
         val deadline = currentTime + attemptLimitMs
         while (job.isActive) {
@@ -297,15 +341,31 @@ internal class GoldenTraceHarness(
                 )
             }
             runCurrent()
-            val approval = engine.pendingApprovalFor(SESSION_ID)
+            val approval = engine.pendingApprovalFor(task.sessionId)
             if (approval != null && approval.requestId != answeredApproval) {
                 answeredApproval = approval.requestId
+                approvalRaisedAt = currentTime
                 settleLiveApproval(approval.requestId)
             }
             clarificationRepository.pendingRequests.first()
                 .filter { answeredClarifications.add(it.id) }
                 .forEach { settleLiveClarification(it.id) }
             if (job.isActive) advanceTimeBy(STEP_MS)
+        }
+        // The live window the gate waited before parking: virtual time, so deterministic, and
+        // the one place the approval timeout setting is visible.
+        if (ending == GoldenOutcome.PARKED && approvalRaisedAt != null) {
+            log.record(
+                "driver the approval waited ${(currentTime - approvalRaisedAt) / STEP_MS * STEP_MS} ms before parking",
+            )
+        }
+        terminalStates.forEach { state ->
+            when (state) {
+                is AgentOrchestratorState.Completed -> runs.finishRun(task.id, PipelineRunStatus.COMPLETED)
+                is AgentOrchestratorState.Error ->
+                    runs.finishRun(task.id, PipelineRunStatus.FAILED, state.message, state.reason)
+                else -> Unit
+            }
         }
         return ending ?: log.violation("Scenario $scenario ended without a terminal state or a park")
     }
@@ -369,14 +429,8 @@ internal class GoldenTraceHarness(
             is AgentOrchestratorState.PipelineStage -> log.record(
                 "state Stage step=${state.stepInfo.stepIndex} of=${state.stepInfo.totalSteps} ${state.stepInfo.nodeName}",
             )
-            is AgentOrchestratorState.PipelineTrace -> state.steps.lastOrNull().let { last ->
-                log.record(
-                    "state PipelineTrace steps=${state.steps.size} last=${last?.nodeName} depth=${last?.depth} " +
-                        "tokens=${last?.tokenCount}",
-                )
-            }
-            is AgentOrchestratorState.ConsoleLog ->
-                log.record("state ConsoleLog run=${state.runId} events=${state.events.size}")
+            is AgentOrchestratorState.PipelineTrace -> recordPipelineTrace(state)
+            is AgentOrchestratorState.ConsoleLog -> recordConsoleLog(state)
             is AgentOrchestratorState.NodeIO -> recordNodeIo(state)
             is AgentOrchestratorState.ExecutingTool ->
                 log.record("state ExecutingTool ${state.toolName}", "arguments" to state.arguments)
@@ -389,6 +443,50 @@ internal class GoldenTraceHarness(
             )
             AgentOrchestratorState.Idle, AgentOrchestratorState.Loading, AgentOrchestratorState.Queued ->
                 log.record("state $state")
+        }
+    }
+
+    /**
+     * The trace panel's newest step normally repeats a trace record of the same node type, depth
+     * and output — the one just written, or on a resume the one the replayed step came from;
+     * only a step no record matches is spelled out.
+     */
+    private fun recordPipelineTrace(state: AgentOrchestratorState.PipelineTrace) {
+        val last = state.steps.lastOrNull()
+        val header = "state PipelineTrace steps=${state.steps.size} last=${last?.nodeName} depth=${last?.depth} " +
+            "tokens=${last?.tokenCount}"
+        if (last == null) {
+            log.record(header)
+            return
+        }
+        val record = trace.matchingNodeIo(last.nodeName, last.depth, last.outputText)
+        if (record != null) {
+            log.record("$header (= trace.node seq=${record.seq})")
+        } else {
+            log.record("$header (no trace record has this output)", "output" to last.outputText)
+        }
+    }
+
+    /**
+     * The live console's newest line normally repeats a persisted console record; only a
+     * divergence is spelled out.
+     */
+    private fun recordConsoleLog(state: AgentOrchestratorState.ConsoleLog) {
+        val last = state.events.lastOrNull()
+        val header = "state ConsoleLog run=${state.runId} events=${state.events.size}"
+        val record = last?.let { trace.consoleEntry(seq = it.seq, depth = it.depth) }
+        if (last == null || (record != null && record.type == last.type && record.message == last.message)) {
+            log.record(
+                if (record ==
+                    null
+                ) {
+                    header
+                } else {
+                    "$header (= trace.console run=${record.runId} seq=${record.seq})"
+                },
+            )
+        } else {
+            log.record("$header (differs from its trace record) ${last.type}", "message" to last.message)
         }
     }
 
@@ -413,7 +511,7 @@ internal class GoldenTraceHarness(
         val chatRepository = recordingChatRepository()
         val memoryRepository = recordingMemoryRepository()
         val metrics = recordingMetrics()
-        val network = object : NetworkActivityTracker by mockk<NetworkActivityTracker>() {
+        val network = object : NetworkActivityTracker by goldenStrict(log) {
             override fun recordOutbound() = log.record("network.outbound")
         }
         val localModels = localModelRepository()
@@ -499,27 +597,34 @@ internal class GoldenTraceHarness(
         return engine
     }
 
-    /** Every value differs from `SettingsDefaults`, so a read replaced by the default shows. */
-    private fun strictSettings(): SettingsRepository = mockk<SettingsRepository>().also { s ->
+    /**
+     * The settings every golden run reads. Numeric values differ from `SettingsDefaults`, so a
+     * read replaced by the shipped default changes the trace wherever the value reaches; a
+     * member no run path reads is a violation, not a silent default.
+     */
+    private fun strictSettings(): SettingsRepository {
         val chosen = scenario.settings
-        every { s.systemPromptPrefix } returns flowOf("[golden prefix] Answer in plain words.")
-        every { s.structuredOutputMaxRepairs } returns flowOf(3)
-        every { s.toolApprovalPolicy } returns flowOf(chosen.approvalPolicy)
-        every { s.blockDestructiveTools } returns flowOf(chosen.blockDestructiveTools)
-        every { s.toolCallTimeoutMs } returns flowOf(APPROVAL_WINDOW_MS)
-        every { s.pipelineMaxNestingDepth } returns flowOf(4)
-        every { s.pipelineMaxSteps } returns flowOf(chosen.maxSteps)
-        every { s.pipelineMaxStepsBackground } returns flowOf(chosen.maxStepsBackground)
-        every { s.runMaxTokens } returns flowOf(900_000)
-        every { s.runMaxTokensBackground } returns flowOf(150_000)
-        every { s.verboseMemoryLoggingEnabled } returns flowOf(chosen.verboseMemoryLogging)
-        every { s.chatHistoryCompressionEnabled } returns flowOf(chosen.compressedHistory)
-        every { s.chatHistoryCompressionThresholdTokens } returns flowOf(if (chosen.compressedHistory) 500 else 4_000)
-        every { s.chatHistoryLiveWindowSize } returns flowOf(if (chosen.compressedHistory) 6 else 20)
-        every { s.workspaceReadTokenBudget } returns flowOf(1_500)
-        every { s.memorySummaryDefaultLimit } returns flowOf(3)
-        every { s.backgroundApprovalWindowHours } returns flowOf(6)
-        every { s.resumeMaxAgeHours } returns flowOf(12)
+        val compressed = chosen.compressedHistory
+        return object : SettingsRepository by goldenStrict(log) {
+            override val systemPromptPrefix = flowOf("[golden prefix] Answer in plain words.")
+            override val structuredOutputMaxRepairs = flowOf(3)
+            override val toolApprovalPolicy = flowOf(chosen.approvalPolicy)
+            override val blockDestructiveTools = flowOf(chosen.blockDestructiveTools)
+            override val toolCallTimeoutMs = flowOf(APPROVAL_WINDOW_MS)
+            override val pipelineMaxNestingDepth = flowOf(4)
+            override val pipelineMaxSteps = flowOf(chosen.maxSteps)
+            override val pipelineMaxStepsBackground = flowOf(chosen.maxStepsBackground)
+            override val runMaxTokens = flowOf(chosen.maxTokens)
+            override val runMaxTokensBackground = flowOf(chosen.maxTokensBackground)
+            override val verboseMemoryLoggingEnabled = flowOf(chosen.verboseMemoryLogging)
+            override val chatHistoryCompressionEnabled = flowOf(compressed)
+            override val chatHistoryCompressionThresholdTokens = flowOf(if (compressed) 500 else 4_000)
+            override val chatHistoryLiveWindowSize = flowOf(if (compressed) 6 else 20)
+            override val workspaceReadTokenBudget = flowOf(1_500)
+            override val memorySummaryDefaultLimit = flowOf(3)
+            override val backgroundApprovalWindowHours = flowOf(6)
+            override val resumeMaxAgeHours = flowOf(12)
+        }
     }
 
     private fun promptVariableProviders(
@@ -527,8 +632,9 @@ internal class GoldenTraceHarness(
         memoryRepository: MemoryRepository,
     ): Set<PromptVariableProvider> {
         val clock = Clock.fixed(Instant.parse(FROZEN_INSTANT), ZoneOffset.UTC)
-        val identity = mockk<IdentityRepository>()
-        coEvery { identity.getIdentity(any()) } answers { Identity(firstArg(), "golden-device", true) }
+        val identity = object : IdentityRepository by goldenStrict(log) {
+            override suspend fun getIdentity(anonymousLabel: String) = Identity(anonymousLabel, "golden-device", true)
+        }
         return linkedSetOf(
             DateVariableProvider({ clock }, { Locale.US }),
             TimeVariableProvider { clock },
@@ -542,11 +648,13 @@ internal class GoldenTraceHarness(
         )
     }
 
-    private fun playedTaskQueue(): TaskQueueManager = object : TaskQueueManager by mockk<TaskQueueManager>() {
+    private fun playedTaskQueue(): TaskQueueManager = object : TaskQueueManager by goldenStrict(log) {
         override fun enqueueTask(task: AgentTask) {
             enqueued += task
             log.record(
-                "queue.enqueue ${task.id} resume=${task.isResume} origin=${task.origin} pipeline=${task.pipelineId}",
+                "queue.enqueue ${task.id} resume=${task.isResume} session=${task.sessionId} origin=${task.origin} " +
+                    "pipeline=${task.pipelineId}",
+                "prompt" to task.prompt,
             )
         }
 
@@ -554,7 +662,7 @@ internal class GoldenTraceHarness(
             engine.resumeWithApproval(sessionId, requestId, isApproved)
     }
 
-    private fun recordingChatRepository(): ChatRepository = object : ChatRepository by mockk<ChatRepository>() {
+    private fun recordingChatRepository(): ChatRepository = object : ChatRepository by goldenStrict(log) {
         override suspend fun saveMessage(message: ChatMessage) {
             chatMessages += message
             log.record(
@@ -574,7 +682,7 @@ internal class GoldenTraceHarness(
         ).takeIf { scenario.settings.compressedHistory }
     }
 
-    private fun recordingMemoryRepository(): MemoryRepository = object : MemoryRepository by mockk<MemoryRepository>() {
+    private fun recordingMemoryRepository(): MemoryRepository = object : MemoryRepository by goldenStrict(log) {
         override suspend fun recordUsage(ids: List<Long>, atMillis: Long) {
             log.record("memory.used ids=$ids")
         }
@@ -589,11 +697,11 @@ internal class GoldenTraceHarness(
                 "memory.retrieve limit=${secondArg<Int?>()} threshold=${thirdArg<Float?>()}",
                 "query" to firstArg<String>(),
             )
-            MEMORY.zip(listOf(0.91f, 0.74f))
+            MEMORY.take(RETRIEVED_CHUNKS).zip(listOf(0.91f, 0.74f))
         }
     }
 
-    private fun recordingMetrics(): MetricsRepository = object : MetricsRepository by mockk<MetricsRepository>() {
+    private fun recordingMetrics(): MetricsRepository = object : MetricsRepository by goldenStrict(log) {
         override fun updateMetrics(timeMs: Long, tokensProcessed: Int) {
             log.record("metrics.update tokens=$tokensProcessed")
         }
@@ -608,7 +716,7 @@ internal class GoldenTraceHarness(
     }
 
     private fun recordingModelPerformance(): ModelPerformanceRepository =
-        object : ModelPerformanceRepository by mockk<ModelPerformanceRepository>() {
+        object : ModelPerformanceRepository by goldenStrict(log) {
             override suspend fun record(sample: ModelPerformanceSample) {
                 log.record(
                     "modelPerformance.record path=${sample.modelPath} tokens=${sample.tokenCount} " +
@@ -618,7 +726,7 @@ internal class GoldenTraceHarness(
         }
 
     private fun recordingCrashReporting(): CrashReportingRepository =
-        object : CrashReportingRepository by mockk<CrashReportingRepository>() {
+        object : CrashReportingRepository by goldenStrict(log) {
             override suspend fun setCustomKey(key: String, value: String) {
                 log.record("crash.key $key=$value")
             }
@@ -628,12 +736,11 @@ internal class GoldenTraceHarness(
             }
         }
 
-    private fun recordingJournal(): TriggerJournalRepository =
-        object : TriggerJournalRepository by mockk<TriggerJournalRepository>() {
-            override suspend fun recordHitlEvent(runId: String, event: TriggerHitlEvent) {
-                log.record("journal.hitl $runId $event")
-            }
+    private fun recordingJournal(): TriggerJournalRepository = object : TriggerJournalRepository by goldenStrict(log) {
+        override suspend fun recordHitlEvent(runId: String, event: TriggerHitlEvent) {
+            log.record("journal.hitl $runId $event")
         }
+    }
 
     private fun recordingLoadModel(): LoadModelUseCase = mockk<LoadModelUseCase>().also {
         coEvery { it(any(), any(), any()) } answers {
@@ -644,7 +751,7 @@ internal class GoldenTraceHarness(
         }
     }
 
-    private fun localModelRepository(): LocalModelRepository = mockk<LocalModelRepository>().also {
+    private fun localModelRepository(): LocalModelRepository {
         val active = LocalModel(
             id = 1,
             name = GoldenModel.MODEL_NAME,
@@ -652,23 +759,30 @@ internal class GoldenTraceHarness(
             size = 0,
             isActive = true,
         )
-        coEvery { it.getActiveModel() } returns active
-        every { it.getAllModels() } returns MutableStateFlow(listOf(active))
+        return object : LocalModelRepository by goldenStrict(log) {
+            override suspend fun getActiveModel(): LocalModel = active
+
+            override fun getAllModels(): Flow<List<LocalModel>> = MutableStateFlow(listOf(active))
+        }
     }
 
-    private fun apiKeys(): ApiKeyRepository = mockk<ApiKeyRepository>().also {
-        every { it.getGoogleKey() } returns flowOf(null)
-        every { it.getAnthropicKey() } returns flowOf(null)
-        every { it.getOpenAIKey() } returns flowOf("golden-openai-key")
-        every { it.getDeepSeekKey() } returns flowOf(null)
+    /** Only an OpenAI key is set, so an `auto` cloud node resolves to OpenAI. */
+    private fun apiKeys(): ApiKeyRepository = object : ApiKeyRepository by goldenStrict(log) {
+        override fun getGoogleKey(): Flow<String?> = flowOf(null)
+
+        override fun getAnthropicKey(): Flow<String?> = flowOf(null)
+
+        override fun getOpenAIKey(): Flow<String?> = flowOf("golden-openai-key")
+
+        override fun getDeepSeekKey(): Flow<String?> = flowOf(null)
     }
 
-    private fun libraryRepository(): PipelineRepository = mockk<PipelineRepository>().also {
-        coEvery { it.getPipelineById(any()) } answers { library[firstArg()] }
+    private fun libraryRepository(): PipelineRepository = object : PipelineRepository by goldenStrict(log) {
+        override suspend fun getPipelineById(pipelineId: String): PipelineGraph? = library[pipelineId]
     }
 
-    private fun skillRepository(): SkillRepository = mockk<SkillRepository>().also {
-        coEvery { it.getSkillById(any()) } answers { skills[firstArg()] }
+    private fun skillRepository(): SkillRepository = object : SkillRepository by goldenStrict(log) {
+        override suspend fun getSkillById(id: String): Skill? = skills[id]
     }
 
     private fun recordingApprovalNotifier(): ApprovalNotifier = object : ApprovalNotifier {
@@ -743,6 +857,13 @@ internal class GoldenTraceHarness(
         /** Run id of every scenario's root run. */
         const val ROOT_RUN_ID: String = "golden"
 
+        /** The statuses a parked run's record holds. */
+        private val WAITING_STATUSES = setOf(
+            PipelineRunStatus.WAITING_APPROVAL,
+            PipelineRunStatus.WAITING_CLARIFICATION,
+            PipelineRunStatus.WAITING_CEILING,
+        )
+
         /** Default virtual-time limit of one engine invocation. */
         private const val ATTEMPT_LIMIT_MS = 10 * 60 * 1_000L
 
@@ -761,20 +882,22 @@ internal class GoldenTraceHarness(
         /** How many of those messages the stored summary covers. */
         private const val SUMMARISED_MESSAGES = 30
 
-        /** The long-term memory snapshot every retrieval returns. */
+        /** How many chunks a retrieval returns — the two most relevant of [MEMORY]. */
+        private const val RETRIEVED_CHUNKS = 2
+
+        /**
+         * The long-term memory every golden run sees. Six chunks: more than the harness's
+         * `$MEMORY_SUMMARY` limit (3) and than the shipped one (5), so the limit shows.
+         */
         private val MEMORY = listOf(
-            MemoryChunk(
-                id = 11,
-                text = "The user prefers short answers with one example.",
-                embedding = FloatArray(0),
-                timestamp = 1L,
-            ),
-            MemoryChunk(
-                id = 12,
-                text = "The user is planning a trip to Lisbon in October.",
-                embedding = FloatArray(0),
-                timestamp = 2L,
-            ),
-        )
+            "The user prefers short answers with one example.",
+            "The user is planning a trip to Lisbon in October.",
+            "The user's sister is called Ana.",
+            "The user works on a night shift on Thursdays.",
+            "The user is learning Portuguese.",
+            "The user does not drink coffee after noon.",
+        ).mapIndexed { index, text ->
+            MemoryChunk(id = 11L + index, text = text, embedding = FloatArray(0), timestamp = 1L + index)
+        }
     }
 }

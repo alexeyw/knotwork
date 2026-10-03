@@ -746,14 +746,17 @@ what makes it a gate.
   every write to run records, chat, metrics and the trigger journal, and the
   states the UI sees. A refactoring that stops applying a setting, renders a
   variable differently, drops a metric or flushes the trace at a different point
-  shows as a diff even when every route is unchanged. Settings values differ from
-  the shipped defaults, so a read replaced by the default shows as well.
+  shows as a diff even when every route is unchanged. Every numeric setting differs
+  from its shipped default and reaches some scenario, so a read replaced by the
+  default shows as well.
 - **The fakes cannot lie for the engine.** The stores keep the production guards
   (a terminal status is written once; a trace record is durable only after a
   flush, and what was never flushed is gone when an attempt ends). A user's answer
-  to a parked run goes through the app's own use cases. A misused fake raises an
-  `AssertionError`, which the engine's `catch (Exception)` around every node
-  cannot turn into an ordinary run error, and every scenario declares how it ends.
+  to a parked run goes through the app's own use cases, and the resumed attempt is
+  driven from the task they enqueue. A misused fake — including an interface member
+  no run path uses — raises an `AssertionError`, which the engine's
+  `catch (Exception)` around every node cannot turn into an ordinary run error.
+  Every scenario declares how it ends, and the run record must agree.
 - **Determinism is checked, not assumed.** Each scenario runs twice and the
   traces must match before either is compared.
 - **Completeness is a test.** `GoldenTraceCatalogueTest` fails on a pipeline file
@@ -764,26 +767,30 @@ what makes it a gate.
 
 **What it cannot see:** anything behind the fakes — the real model, a real tool's
 side effect, Room's SQL (only its guards are modelled), notifications on a device,
-the settings layer itself (its defaults and migrations never run) — and the copy
-of each tool's description, which is a fixture. A behaviour no scenario reaches is
-not pinned either; a new branch needs a scenario.
+the settings layer itself (its defaults and migrations never run), the wall-clock
+resume and approval windows — and the copy of each tool's description, which is a
+fixture. A behaviour no scenario reaches is not pinned either; a new branch needs a
+scenario.
 
 ### Observed failing
 
-Three mutations, each restored in the same command, against the 50 scenarios the
+Five mutations, each restored in the same command, against the 54 scenarios the
 guard shipped with:
 
-- `IF_CONDITION` routing with the True and False labels swapped fails **4 of 50**
-  scenarios — exactly the four whose run passes through an `IF` node.
-- `stepQueue` taking the **last** remaining item instead of the first fails
-  **7 of 50** — exactly the seven that run a queue. An early version caught only
-  one: its default plan had two items, and the engine takes a queue's first item
-  itself, so `stepQueue` only ever saw a one-item list. The default plan has three
-  items for that reason.
-- `ResolveRunCeilingsUseCase` choosing the interactive ceiling for a background
-  run and vice versa fails **2 of 50** — the two ceiling scenarios, one per
-  origin. The first version could not have seen it: its only ceiling scenario set
-  the same limit for both origins (by construction; not measured).
+| Mutation | Red scenarios |
+|---|---|
+| `IF_CONDITION` routing with True and False swapped | **5 of 54** — exactly those whose run passes an `IF` node |
+| `stepQueue` taking the **last** remaining item instead of the first | **7 of 54** — exactly those that run a queue |
+| `ResolveRunCeilingsUseCase` giving a background run the interactive ceilings and vice versa | **4 of 54** — the four ceiling scenarios (steps and tokens, one per origin) |
+| the same, on the token axis only | **2 of 54** — the two token-ceiling scenarios |
+| `PipelineNodeExecutor` reading the shipped default instead of the nesting-depth setting | **1 of 54** — the self-nesting fixture |
+
+An early version of the harness caught one queue scenario instead of seven: its
+default plan had two items, and the engine takes a queue's first item itself, so
+`stepQueue` only ever saw a one-item list. The default plan has three items for
+that reason. The ceiling and nesting mutations were invisible to it as well: its
+only ceiling scenario set the same limit for both origins, and nothing nested
+deeper than one level (by construction; not measured).
 
 A golden file edited by one character makes the next run execute and fail; the
 same run without the edit is `UP-TO-DATE`.

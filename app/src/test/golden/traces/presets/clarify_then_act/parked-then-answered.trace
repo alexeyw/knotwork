@@ -21,19 +21,19 @@ state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden clarify_then_act/clarify CLARIFICATION #1
 state Stage step=2 of=4 CLARIFICATION
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ CLARIFICATION
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=clarify call=1 temperature=default image=none
     prompt:
@@ -79,14 +79,16 @@ state SuspendedInBackground CLARIFICATION
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ⏸ CLARIFICATION parked awaiting user response
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.flush ×2
 notify.clarification.cancel
 pending.record golden answer applied=true
 run.resumed golden from=WAITING_CLARIFICATION applied=true
-queue.enqueue golden resume=true origin=CHAT pipeline=clarify_then_act
+queue.enqueue golden resume=true session=golden-session origin=CHAT pipeline=clarify_then_act
+    prompt:
+      | Book a table for dinner.
 driver resolve Answer(text=The first one) → Resumed
-queue.resume golden resume=true origin=CHAT
+queue.resume golden
 run.running golden pipeline=clarify_then_act graphHash=2c9f886b7dafc3d8aea6250bdf51deab4859985c688aa3091555f07c3c0f010c
 driver attempt resumed
 crash.key active_pipeline_id=clarify_then_act
@@ -96,19 +98,19 @@ state Stage step=1 of=4 INPUT
 trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=4)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=5)
 visit golden clarify_then_act/clarify CLARIFICATION #1
 state Stage step=2 of=4 CLARIFICATION
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ CLARIFICATION
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=6)
 pending.delete golden kind=CLARIFICATION
 journal.hitl golden Resolved(resolution=ANSWERED)
 metrics.node CLARIFICATION tokens=null
@@ -116,7 +118,7 @@ run.spend golden steps=2 tokens=0
 trace.console seq=7 run=golden depth=0 NodeExecution
     message:
       | ✓ CLARIFICATION in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=7)
 trace.node seq=8 run=golden clarify CLARIFICATION depth=0 tokens=null
     input:
       | --- Original Task ---
@@ -127,14 +129,14 @@ trace.node seq=8 run=golden clarify CLARIFICATION depth=0 tokens=null
     output:
       | Q: Clarify: which one do you mean?
       | A: The first one
-state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null
+state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=8)
 state NodeIO clarify CLARIFICATION depth=0 (= trace.node seq=8)
 visit golden clarify_then_act/lite_rt LITE_RT #1
 state Stage step=3 of=4 LITE_RT
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=9)
 model.load path=null vision=false audio=false
 model local node=lite_rt call=1 temperature=default image=none
     prompt:
@@ -163,7 +165,7 @@ run.spend golden steps=3 tokens=5
 trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=10)
 trace.node seq=11 run=golden lite_rt LITE_RT depth=0 tokens=5
     input:
       | --- Original Task ---
@@ -174,23 +176,23 @@ trace.node seq=11 run=golden lite_rt LITE_RT depth=0 tokens=5
       | A: The first one
     output:
       | Local LLM answer, visit 1.
-state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=11)
 state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=11)
 visit golden clarify_then_act/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
 trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=12)
 chat.save AGENT final=true model=Golden Model
     content:
       | Local LLM answer, visit 1.
 end Completed
     finalResponse:
       | Local LLM answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=5
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=5 (ignored: terminal or unknown run)
-trace.flush

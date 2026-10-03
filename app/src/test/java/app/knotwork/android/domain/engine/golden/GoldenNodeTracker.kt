@@ -83,11 +83,15 @@ internal class GoldenNodeTracker(
         if (runId == rootRunId) return root
         val visitSeparator = runId.lastIndexOf(SEPARATOR)
         val nodeSeparator = runId.lastIndexOf(SEPARATOR, startIndex = visitSeparator - 1)
-        require(visitSeparator > 0 && nodeSeparator > 0) { "Run id $runId is neither the root nor a child id" }
+        if (visitSeparator <= 0 || nodeSeparator <= 0) {
+            log.violation("Run id $runId is neither the root nor a child id the PIPELINE executor mints")
+        }
         val parentRunId = runId.substring(0, nodeSeparator)
         val pipelineNodeId = runId.substring(nodeSeparator + SEPARATOR.length, visitSeparator)
-        val pipelineNode = pipelineOf(parentRunId).nodes.single { it.id == pipelineNodeId }
-        val targetId = requireNotNull(pipelineNode.targetPipelineId) { "Node $pipelineNodeId names no pipeline" }
+        val pipelineNode = pipelineOf(parentRunId).nodes.firstOrNull { it.id == pipelineNodeId }
+            ?: log.violation("Run id $runId names node $pipelineNodeId, which its parent pipeline does not have")
+        val targetId = pipelineNode.targetPipelineId
+            ?: log.violation("Node $pipelineNodeId names no pipeline")
         return library[targetId] ?: log.violation("Pipeline $targetId is not in the golden library")
     }
 

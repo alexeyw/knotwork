@@ -21,19 +21,19 @@ state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden recipe-decompose-and-queue/plan DECOMPOSITION #1
 state Stage step=2 of=null DECOMPOSITION
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ DECOMPOSITION
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=plan call=1 temperature=default image=none
     prompt:
@@ -57,7 +57,7 @@ run.spend golden steps=2 tokens=0
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ DECOMPOSITION in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.node seq=4 run=golden plan DECOMPOSITION depth=0 tokens=null
     input:
       | --- Original Task ---
@@ -67,33 +67,33 @@ trace.node seq=4 run=golden plan DECOMPOSITION depth=0 tokens=null
       | Compare how solar and wind power grew over the last decade.
     output:
       | ["Plan: first part","Plan: second part","Plan: third part"]
-state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null
+state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=4)
 state NodeIO plan DECOMPOSITION depth=0 (= trace.node seq=4)
 visit golden recipe-decompose-and-queue/queue QUEUE_PROCESSOR #1
 state Stage step=3 of=null QUEUE_PROCESSOR
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ QUEUE_PROCESSOR
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 metrics.node QUEUE_PROCESSOR tokens=null
 run.spend golden steps=3 tokens=0
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ QUEUE_PROCESSOR in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 trace.node seq=7 run=golden queue QUEUE_PROCESSOR depth=0 tokens=null
     input:
       | ["Plan: first part","Plan: second part","Plan: third part"]
     output:
       | ["Plan: first part","Plan: second part","Plan: third part"]
-state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null
+state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=7)
 state NodeIO queue QUEUE_PROCESSOR depth=0 (= trace.node seq=7)
 visit golden recipe-decompose-and-queue/work LITE_RT #1
 state Stage step=4 of=8 LITE_RT
 trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
 model.load path=null vision=false audio=false
 model local node=work call=1 temperature=default image=none
     prompt:
@@ -124,7 +124,7 @@ run.spend golden steps=4 tokens=6
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=8
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
 trace.node seq=10 run=golden work LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -137,14 +137,14 @@ trace.node seq=10 run=golden work LITE_RT depth=0 tokens=6
       | Plan: first part
     output:
       | Do the subtask answer, visit 1.
-state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=6
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=6 (= trace.node seq=10)
 state NodeIO work LITE_RT depth=0 (= trace.node seq=10)
 visit golden recipe-decompose-and-queue/work LITE_RT #2
 state Stage step=5 of=8 LITE_RT
 trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=9
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
 model.load path=null vision=false audio=false
 model local node=work call=1 temperature=default image=none
     prompt:
@@ -181,7 +181,7 @@ run.spend golden steps=5 tokens=12
 trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=10
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
 trace.node seq=13 run=golden work LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -200,14 +200,14 @@ trace.node seq=13 run=golden work LITE_RT depth=0 tokens=6
       | Plan: second part
     output:
       | Do the subtask answer, visit 2.
-state PipelineTrace steps=4 last=LITE_RT depth=0 tokens=6
+state PipelineTrace steps=4 last=LITE_RT depth=0 tokens=6 (= trace.node seq=13)
 state NodeIO work LITE_RT depth=0 (= trace.node seq=13)
 visit golden recipe-decompose-and-queue/work LITE_RT #3
 state Stage step=6 of=8 LITE_RT
 trace.console seq=14 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=11
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=14)
 model.load path=null vision=false audio=false
 model local node=work call=1 temperature=default image=none
     prompt:
@@ -247,7 +247,7 @@ run.spend golden steps=6 tokens=18
 trace.console seq=15 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=12
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
 trace.node seq=16 run=golden work LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -269,14 +269,14 @@ trace.node seq=16 run=golden work LITE_RT depth=0 tokens=6
       | Plan: third part
     output:
       | Do the subtask answer, visit 3.
-state PipelineTrace steps=5 last=LITE_RT depth=0 tokens=6
+state PipelineTrace steps=5 last=LITE_RT depth=0 tokens=6 (= trace.node seq=16)
 state NodeIO work LITE_RT depth=0 (= trace.node seq=16)
 visit golden recipe-decompose-and-queue/collect SUMMARY #1
 state Stage step=7 of=8 SUMMARY
 trace.console seq=17 run=golden depth=0 NodeExecution
     message:
       | ▶ SUMMARY
-state ConsoleLog run=golden events=13
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=17)
 model.load path=null vision=false audio=false
 model local node=collect call=1 temperature=default image=none
     prompt:
@@ -310,7 +310,7 @@ run.spend golden steps=7 tokens=18
 trace.console seq=18 run=golden depth=0 NodeExecution
     message:
       | ✓ SUMMARY in <ms>ms
-state ConsoleLog run=golden events=14
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=18)
 trace.node seq=19 run=golden collect SUMMARY depth=0 tokens=null
     input:
       | --- Original Task ---
@@ -324,23 +324,23 @@ trace.node seq=19 run=golden collect SUMMARY depth=0 tokens=null
       | 3. Do the subtask answer, visit 3.
     output:
       | Put it together answer, visit 1.
-state PipelineTrace steps=6 last=SUMMARY depth=0 tokens=null
+state PipelineTrace steps=6 last=SUMMARY depth=0 tokens=null (= trace.node seq=19)
 state NodeIO collect SUMMARY depth=0 (= trace.node seq=19)
 visit golden recipe-decompose-and-queue/output OUTPUT #1
 state Stage step=8 of=8 OUTPUT
 trace.console seq=20 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=15
+state ConsoleLog run=golden events=15 (= trace.console run=golden seq=20)
 chat.save AGENT final=true model=Golden Model
     content:
       | Put it together answer, visit 1.
 end Completed
     finalResponse:
       | Put it together answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=8 tokens=18
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=8 tokens=18 (ignored: terminal or unknown run)
-trace.flush

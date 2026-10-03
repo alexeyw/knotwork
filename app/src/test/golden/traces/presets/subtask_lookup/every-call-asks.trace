@@ -21,19 +21,19 @@ state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden subtask_lookup/node-2 LITE_RT #1
 state Stage step=2 of=4 LITE_RT
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=node-2 call=1 temperature=default image=none
     prompt:
@@ -69,7 +69,7 @@ run.spend golden steps=2 tokens=6
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -79,14 +79,14 @@ trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=6
       | What is the tallest mountain on Earth?
     output:
       | Subtask Query Builder answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=4)
 state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
 visit golden subtask_lookup/node-3 TOOL #1
 state Stage step=3 of=4 TOOL
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
@@ -146,11 +146,11 @@ run.spend golden steps=3 tokens=6
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 trace.console seq=7 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
 trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=search_tool
     input:
       | --- Previous Node Output ---
@@ -160,14 +160,14 @@ trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=search_tool
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
 trace.flush
-state PipelineTrace steps=2 last=TOOL depth=0 tokens=null
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
 state NodeIO node-3 TOOL depth=0 (= trace.node seq=8)
 visit golden subtask_lookup/node-4 OUTPUT #1
 state Stage step=4 of=4 OUTPUT
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=8
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
 chat.save AGENT final=true model=Golden Model
     content:
       | Search results for "Wikipedia Lookup (subtask)":
@@ -178,9 +178,9 @@ end Completed
       | Search results for "Wikipedia Lookup (subtask)":
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=4 tokens=6
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=4 tokens=6 (ignored: terminal or unknown run)
-trace.flush

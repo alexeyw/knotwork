@@ -36,6 +36,15 @@ internal object GoldenScenarios {
             settings = GoldenSettings(compressedHistory = true)
         },
         preset("local_only_qa", "default", "The shortest shipped path: one on-device answer.", MOUNTAIN),
+        preset(
+            "local_only_qa",
+            "token-ceiling-paused-then-continued",
+            "The interactive token ceiling binds after the answer; the user continues and the run finishes.",
+            MOUNTAIN,
+        ) {
+            settings = GoldenSettings(maxTokens = 3)
+            parkResolutions = listOf(ParkResolution.Continue)
+        },
         preset("multi_step_research", "default", "A two-item plan worked through a queue by a cloud node.", RESEARCH),
         preset(
             "multi_step_research",
@@ -185,6 +194,16 @@ internal object GoldenScenarios {
             answers { on("needs_tool", "False") }
         },
         preset(
+            "tool_using_react",
+            "reads-a-long-file",
+            "A tool result longer than the read budget reaches the summary cut to that budget.",
+            MOUNTAIN,
+        ) {
+            answers {
+                on("tool", "{\"tool\": \"read_file\", \"arguments\": {\"path\": \"notes/long.md\"}}")
+            }
+        },
+        preset(
             "virtual_companion_mood_router",
             "casual",
             "The companion reads memory, triages the mood and answers casually.",
@@ -225,6 +244,16 @@ internal object GoldenScenarios {
             TRIP,
         ) {
             settings = GoldenSettings(verboseMemoryLogging = false)
+        },
+        recipe(
+            "memory-aware-run",
+            "background-token-ceiling",
+            "A background run pauses on the background token ceiling; continuing resumes it.",
+            TRIP,
+        ) {
+            origin = RunOrigin.TRIGGER
+            settings = GoldenSettings(maxTokensBackground = 4)
+            parkResolutions = listOf(ParkResolution.Continue)
         },
         recipe(
             "memory-aware-run",
@@ -269,6 +298,14 @@ internal object GoldenScenarios {
     )
 
     private fun fixtures(): List<GoldenScenario> = listOf(
+        fixture(
+            "nesting_limit",
+            "stops-at-the-ceiling",
+            "A pipeline that runs itself goes as deep as the nesting ceiling allows, then fails.",
+            MOUNTAIN,
+        ) {
+            outcome = GoldenOutcome.ERROR
+        },
         fixture("evaluation_review", "pass", "The reviewer passes the draft.", MOUNTAIN),
         fixture("evaluation_review", "retry", "The reviewer asks for another go; the draft is revised.", MOUNTAIN) {
             answers { on("review", "Retry") }

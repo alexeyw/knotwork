@@ -21,19 +21,19 @@ state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden cloud_assist/cloud CLOUD #1
 state Stage step=2 of=3 CLOUD
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ CLOUD
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 memory.retrieve limit=null threshold=null
     query:
       | What should I pack for my trip?
@@ -42,13 +42,13 @@ trace.console seq=3 run=golden depth=0 MemoryAccess
       | Memory: query='What should I pack for my trip?' [user prompt] → 2 hits (0.91, 0.74)
       |   1. [0.91] The user prefers short answers with one example.
       |   2. [0.74] The user is planning a trip to Lisbon in October.
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 memory.used ids=[11, 12]
 trace.memory seq=4 run=golden chunks=[11, 12]
 trace.console seq=5 run=golden depth=0 HistoryCompression
     message:
       | Chat history compressed: summarized older turns, kept the last 6 messages (4 recent messages not yet summarized)
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 network.outbound
 model cloud openai model=golden-cloud-model prompt=default tools=0 node=cloud call=1 temperature=default image=none
     prompt:
@@ -91,7 +91,7 @@ run.spend golden steps=2 tokens=5
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ CLOUD in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 trace.node seq=7 run=golden cloud CLOUD depth=0 tokens=5
     input:
       | --- Original Task ---
@@ -117,23 +117,23 @@ trace.node seq=7 run=golden cloud CLOUD depth=0 tokens=5
     output:
       | Cloud LLM answer, visit 1.
 trace.flush
-state PipelineTrace steps=1 last=CLOUD depth=0 tokens=5
+state PipelineTrace steps=1 last=CLOUD depth=0 tokens=5 (= trace.node seq=7)
 state NodeIO cloud CLOUD depth=0 (= trace.node seq=7)
 visit golden cloud_assist/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
 trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
 chat.save AGENT final=true model=openai
     content:
       | Cloud LLM answer, visit 1.
 end Completed
     finalResponse:
       | Cloud LLM answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=5
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=5 (ignored: terminal or unknown run)
-trace.flush

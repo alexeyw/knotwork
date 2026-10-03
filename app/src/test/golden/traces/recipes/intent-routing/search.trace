@@ -21,19 +21,19 @@ state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden recipe-intent-routing/router INTENT_ROUTER #1
 state Stage step=2 of=null INTENT_ROUTER
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=router call=1 temperature=default image=none
     prompt:
@@ -61,7 +61,7 @@ run.spend golden steps=2 tokens=0
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Search
     input:
       | --- Original Task ---
@@ -75,14 +75,14 @@ trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=
       | Compare how solar and wind power grew over the last decade.
     output:
       | Search
-state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=4)
 state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=4)
 visit golden recipe-intent-routing/search TOOL #1
 state Stage step=3 of=5 TOOL
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
@@ -131,11 +131,11 @@ run.spend golden steps=3 tokens=0
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 trace.console seq=7 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
 trace.node seq=8 run=golden search TOOL depth=0 tokens=null tool=search_tool
     input:
       | --- Previous Node Output ---
@@ -145,14 +145,14 @@ trace.node seq=8 run=golden search TOOL depth=0 tokens=null tool=search_tool
       | 1. Look it up — a recorded encyclopedia summary.
       | 2. Look it up — a second recorded source.
 trace.flush
-state PipelineTrace steps=2 last=TOOL depth=0 tokens=null
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
 state NodeIO search TOOL depth=0 (= trace.node seq=8)
 visit golden recipe-intent-routing/from_search LITE_RT #1
 state Stage step=4 of=5 LITE_RT
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=8
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
 model.load path=null vision=false audio=false
 model local node=from_search call=1 temperature=default image=none
     prompt:
@@ -187,7 +187,7 @@ run.spend golden steps=4 tokens=7
 trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=9
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=10)
 trace.node seq=11 run=golden from_search LITE_RT depth=0 tokens=7
     input:
       | --- Original Task ---
@@ -204,23 +204,23 @@ trace.node seq=11 run=golden from_search LITE_RT depth=0 tokens=7
       | 2. Look it up — a second recorded source.
     output:
       | Answer from the result answer, visit 1.
-state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=7
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=7 (= trace.node seq=11)
 state NodeIO from_search LITE_RT depth=0 (= trace.node seq=11)
 visit golden recipe-intent-routing/output OUTPUT #1
 state Stage step=5 of=5 OUTPUT
 trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=10
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
 chat.save AGENT final=true model=Golden Model
     content:
       | Answer from the result answer, visit 1.
 end Completed
     finalResponse:
       | Answer from the result answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=5 tokens=7
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=5 tokens=7 (ignored: terminal or unknown run)
-trace.flush

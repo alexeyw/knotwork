@@ -21,19 +21,19 @@ state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden recipe-intent-routing/router INTENT_ROUTER #1
 state Stage step=2 of=null INTENT_ROUTER
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=router call=1 temperature=default image=none
     prompt:
@@ -61,7 +61,7 @@ run.spend golden steps=2 tokens=0
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Ask
     input:
       | --- Original Task ---
@@ -75,14 +75,14 @@ trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=
       | Book a table for dinner.
     output:
       | Ask
-state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=4)
 state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=4)
 visit golden recipe-intent-routing/clarify CLARIFICATION #1
 state Stage step=3 of=5 CLARIFICATION
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ CLARIFICATION
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 model.load path=null vision=false audio=false
 model local node=clarify call=1 temperature=default image=none
     prompt:
@@ -119,7 +119,7 @@ run.spend golden steps=3 tokens=0
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ CLARIFICATION in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 trace.node seq=7 run=golden clarify CLARIFICATION depth=0 tokens=null
     input:
       | --- Original Task ---
@@ -130,14 +130,14 @@ trace.node seq=7 run=golden clarify CLARIFICATION depth=0 tokens=null
     output:
       | Q: Ask one question: which one do you mean?
       | A: The second one
-state PipelineTrace steps=2 last=CLARIFICATION depth=0 tokens=null
+state PipelineTrace steps=2 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=7)
 state NodeIO clarify CLARIFICATION depth=0 (= trace.node seq=7)
 visit golden recipe-intent-routing/answer LITE_RT #1
 state Stage step=4 of=5 LITE_RT
 trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
 model.load path=null vision=false audio=false
 model local node=answer call=1 temperature=default image=none
     prompt:
@@ -166,7 +166,7 @@ run.spend golden steps=4 tokens=4
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=8
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
 trace.node seq=10 run=golden answer LITE_RT depth=0 tokens=4
     input:
       | --- Original Task ---
@@ -177,23 +177,23 @@ trace.node seq=10 run=golden answer LITE_RT depth=0 tokens=4
       | A: The second one
     output:
       | Answer answer, visit 1.
-state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=4
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=4 (= trace.node seq=10)
 state NodeIO answer LITE_RT depth=0 (= trace.node seq=10)
 visit golden recipe-intent-routing/output OUTPUT #1
 state Stage step=5 of=5 OUTPUT
 trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=9
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
 chat.save AGENT final=true model=Golden Model
     content:
       | Answer answer, visit 1.
 end Completed
     finalResponse:
       | Answer answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=5 tokens=4
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=5 tokens=4 (ignored: terminal or unknown run)
-trace.flush

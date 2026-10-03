@@ -21,19 +21,19 @@ state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden fixture-skill-report/report SKILL #1
 state Stage step=2 of=3 SKILL
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ SKILL
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=report call=1 temperature=default image=none
     prompt:
@@ -59,7 +59,7 @@ run.spend golden steps=2 tokens=6
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ SKILL in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.node seq=4 run=golden report SKILL depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -69,23 +69,23 @@ trace.node seq=4 run=golden report SKILL depth=0 tokens=6
       | Compare how solar and wind power grew over the last decade.
     output:
       | Write the report answer, visit 1.
-state PipelineTrace steps=1 last=SKILL depth=0 tokens=6
+state PipelineTrace steps=1 last=SKILL depth=0 tokens=6 (= trace.node seq=4)
 state NodeIO report SKILL depth=0 (= trace.node seq=4)
 visit golden fixture-skill-report/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 chat.save AGENT final=true model=Golden Model
     content:
       | Write the report answer, visit 1.
 end Completed
     finalResponse:
       | Write the report answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=6
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=6 (ignored: terminal or unknown run)
-trace.flush

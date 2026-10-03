@@ -1,0 +1,182 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: fixtures/nesting_limit
+scenario: stops-at-the-ceiling
+about: A pipeline that runs itself goes as deep as the nesting ceiling allows, then fails.
+origin: CHAT
+outcome: ERROR
+settings: harness defaults
+prompt:
+  | What is the tallest mountain on Earth?
+
+run.create golden pipeline=fixture-nesting-limit parent=null status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden pipeline=fixture-nesting-limit graphHash=c7fbdc4a0335626d18938119aa4349855eb624dae87d4af9ae25a05615ae1dfc
+driver start
+crash.key active_pipeline_id=fixture-nesting-limit
+crash.key active_model=Golden Model
+visit golden fixture-nesting-limit/input INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
+visit golden fixture-nesting-limit/again PIPELINE #1
+state Stage step=2 of=3 PIPELINE
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
+run.create golden::again::0 pipeline=fixture-nesting-limit parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden::again::0 pipeline=fixture-nesting-limit graphHash=c7fbdc4a0335626d18938119aa4349855eb624dae87d4af9ae25a05615ae1dfc
+crash.key active_pipeline_id=fixture-nesting-limit
+crash.key active_model=Golden Model
+visit golden::again::0 fixture-nesting-limit/input INPUT #1
+trace.console seq=0 run=golden::again::0 depth=1 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ INPUT
+state ConsoleLog run=golden::again::0 events=1 (= trace.console run=golden::again::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=2 tokens=0
+trace.console seq=1 run=golden::again::0 depth=1 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::again::0 events=2 (= trace.console run=golden::again::0 seq=1)
+visit golden::again::0 fixture-nesting-limit/again PIPELINE #1
+trace.console seq=2 run=golden::again::0 depth=1 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ PIPELINE
+state ConsoleLog run=golden::again::0 events=3 (= trace.console run=golden::again::0 seq=2)
+run.create golden::again::0::again::0 pipeline=fixture-nesting-limit parent=golden::again::0 status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden::again::0::again::0 pipeline=fixture-nesting-limit graphHash=c7fbdc4a0335626d18938119aa4349855eb624dae87d4af9ae25a05615ae1dfc
+crash.key active_pipeline_id=fixture-nesting-limit
+crash.key active_model=Golden Model
+visit golden::again::0::again::0 fixture-nesting-limit/input INPUT #1
+trace.console seq=0 run=golden::again::0::again::0 depth=2 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ INPUT
+state ConsoleLog run=golden::again::0::again::0 events=1 (= trace.console run=golden::again::0::again::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=3 tokens=0
+trace.console seq=1 run=golden::again::0::again::0 depth=2 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::again::0::again::0 events=2 (= trace.console run=golden::again::0::again::0 seq=1)
+trace.console seq=2 run=golden::again::0::again::0 depth=2 StuckDetector
+    message:
+      | [Fixture — a pipeline that calls itself] looks-stuck: repeated-step
+state ConsoleLog run=golden::again::0::again::0 events=3 (= trace.console run=golden::again::0::again::0 seq=2)
+state RunNotice LooksStuck(signal=REPEATED_STEP)
+visit golden::again::0::again::0 fixture-nesting-limit/again PIPELINE #1
+trace.console seq=3 run=golden::again::0::again::0 depth=2 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ PIPELINE
+state ConsoleLog run=golden::again::0::again::0 events=4 (= trace.console run=golden::again::0::again::0 seq=3)
+run.create golden::again::0::again::0::again::0 pipeline=fixture-nesting-limit parent=golden::again::0::again::0 status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden::again::0::again::0::again::0 pipeline=fixture-nesting-limit graphHash=c7fbdc4a0335626d18938119aa4349855eb624dae87d4af9ae25a05615ae1dfc
+crash.key active_pipeline_id=fixture-nesting-limit
+crash.key active_model=Golden Model
+visit golden::again::0::again::0::again::0 fixture-nesting-limit/input INPUT #1
+trace.console seq=0 run=golden::again::0::again::0::again::0 depth=3 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ INPUT
+state ConsoleLog run=golden::again::0::again::0::again::0 events=1 (= trace.console run=golden::again::0::again::0::again::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=4 tokens=0
+trace.console seq=1 run=golden::again::0::again::0::again::0 depth=3 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::again::0::again::0::again::0 events=2 (= trace.console run=golden::again::0::again::0::again::0 seq=1)
+visit golden::again::0::again::0::again::0 fixture-nesting-limit/again PIPELINE #1
+trace.console seq=2 run=golden::again::0::again::0::again::0 depth=3 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ PIPELINE
+state ConsoleLog run=golden::again::0::again::0::again::0 events=3 (= trace.console run=golden::again::0::again::0::again::0 seq=2)
+run.create golden::again::0::again::0::again::0::again::0 pipeline=fixture-nesting-limit parent=golden::again::0::again::0::again::0 status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | What is the tallest mountain on Earth?
+run.running golden::again::0::again::0::again::0::again::0 pipeline=fixture-nesting-limit graphHash=c7fbdc4a0335626d18938119aa4349855eb624dae87d4af9ae25a05615ae1dfc
+crash.key active_pipeline_id=fixture-nesting-limit
+crash.key active_model=Golden Model
+visit golden::again::0::again::0::again::0::again::0 fixture-nesting-limit/input INPUT #1
+trace.console seq=0 run=golden::again::0::again::0::again::0::again::0 depth=4 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ INPUT
+state ConsoleLog run=golden::again::0::again::0::again::0::again::0 events=1 (= trace.console run=golden::again::0::again::0::again::0::again::0 seq=0)
+metrics.node INPUT tokens=null
+run.spend golden steps=5 tokens=0
+trace.console seq=1 run=golden::again::0::again::0::again::0::again::0 depth=4 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::again::0::again::0::again::0::again::0 events=2 (= trace.console run=golden::again::0::again::0::again::0::again::0 seq=1)
+visit golden::again::0::again::0::again::0::again::0 fixture-nesting-limit/again PIPELINE #1
+trace.console seq=2 run=golden::again::0::again::0::again::0::again::0 depth=4 NodeExecution
+    message:
+      | [Fixture — a pipeline that calls itself] ▶ PIPELINE
+state ConsoleLog run=golden::again::0::again::0::again::0::again::0 events=3 (= trace.console run=golden::again::0::again::0::again::0::again::0 seq=2)
+metrics.node PIPELINE tokens=null
+run.spend golden steps=6 tokens=0
+trace.console seq=3 run=golden::again::0::again::0::again::0::again::0 depth=4 Error
+    message:
+      | [Fixture — a pipeline that calls itself] PIPELINE: Pipeline nesting depth exceeded the limit of 4
+state ConsoleLog run=golden::again::0::again::0::again::0::again::0 events=4 (= trace.console run=golden::again::0::again::0::again::0::again::0 seq=3)
+trace.flush
+run.finish golden::again::0::again::0::again::0::again::0 FAILED reason=null
+    error:
+      | Pipeline nesting depth exceeded the limit of 4
+metrics.node PIPELINE tokens=null
+run.spend golden steps=7 tokens=0
+trace.console seq=3 run=golden::again::0::again::0::again::0 depth=3 Error
+    message:
+      | [Fixture — a pipeline that calls itself] PIPELINE: Pipeline nesting depth exceeded the limit of 4
+state ConsoleLog run=golden::again::0::again::0::again::0 events=4 (= trace.console run=golden::again::0::again::0::again::0 seq=3)
+trace.flush
+run.finish golden::again::0::again::0::again::0 FAILED reason=null
+    error:
+      | Pipeline nesting depth exceeded the limit of 4
+metrics.node PIPELINE tokens=null
+run.spend golden steps=8 tokens=0
+trace.console seq=4 run=golden::again::0::again::0 depth=2 Error
+    message:
+      | [Fixture — a pipeline that calls itself] PIPELINE: Pipeline nesting depth exceeded the limit of 4
+state ConsoleLog run=golden::again::0::again::0 events=5 (= trace.console run=golden::again::0::again::0 seq=4)
+trace.flush
+run.finish golden::again::0::again::0 FAILED reason=null
+    error:
+      | Pipeline nesting depth exceeded the limit of 4
+metrics.node PIPELINE tokens=null
+run.spend golden steps=9 tokens=0
+trace.console seq=3 run=golden::again::0 depth=1 Error
+    message:
+      | [Fixture — a pipeline that calls itself] PIPELINE: Pipeline nesting depth exceeded the limit of 4
+state ConsoleLog run=golden::again::0 events=4 (= trace.console run=golden::again::0 seq=3)
+trace.flush
+run.finish golden::again::0 FAILED reason=null
+    error:
+      | Pipeline nesting depth exceeded the limit of 4
+metrics.node PIPELINE tokens=null
+run.spend golden steps=10 tokens=0
+trace.console seq=3 run=golden depth=0 Error
+    message:
+      | PIPELINE: Pipeline nesting depth exceeded the limit of 4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+end Error reason=null
+    message:
+      | Pipeline nesting depth exceeded the limit of 4
+trace.flush
+run.finish golden FAILED reason=null
+    error:
+      | Pipeline nesting depth exceeded the limit of 4

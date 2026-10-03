@@ -21,19 +21,19 @@ state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden subtask_act/node-2 TOOL #1
 state Stage step=2 of=3 TOOL
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
@@ -98,11 +98,11 @@ run.spend golden steps=2 tokens=0
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.console seq=4 run=golden depth=0 ToolCall
     message:
       | write_file
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=4)
 trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=write_file
     input:
       | --- Previous Node Output ---
@@ -110,23 +110,23 @@ trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=write_file
     output:
       | Execution denied by user
 trace.flush
-state PipelineTrace steps=1 last=TOOL depth=0 tokens=null
+state PipelineTrace steps=1 last=TOOL depth=0 tokens=null (= trace.node seq=5)
 state NodeIO node-2 TOOL depth=0 (= trace.node seq=5)
 visit golden subtask_act/node-3 OUTPUT #1
 state Stage step=3 of=3 OUTPUT
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 chat.save AGENT final=true model=Golden Model
     content:
       | Execution denied by user
 end Completed
     finalResponse:
       | Execution denied by user
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=0
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=0 (ignored: terminal or unknown run)
-trace.flush

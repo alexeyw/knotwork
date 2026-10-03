@@ -50,7 +50,13 @@ internal class GoldenToolRepository(private val log: GoldenEventLog) : ToolRepos
                 "2. ${args.optString("query")} — a second recorded source."
             WRITE -> "Wrote ${args.optString("content").length} characters to ${args.optString("path")}."
             APPEND -> "Appended ${args.optString("content").length} characters to ${args.optString("path")}."
-            READ -> "Contents of ${args.optString("path")}: a recorded file body."
+            // Longer than the harness's tool-result budget (1 500 tokens ≈ 6 000 characters)
+            // and shorter than the shipped default's (8 000), so the cut point shows which
+            // budget a node was given.
+            READ -> "Contents of ${args.optString("path")}:\n" +
+                (1..LONG_FILE_LINES).joinToString("\n") {
+                    "Line $it of the recorded file: a note long enough to count."
+                }
             else -> "$name finished."
         }
     }
@@ -70,6 +76,9 @@ internal class GoldenToolRepository(private val log: GoldenEventLog) : ToolRepos
         private const val WRITE = "write_file"
         private const val APPEND = "append_file"
         private const val DELETE = "delete_file"
+
+        /** Lines in the recorded `read_file` body: about 7 000 characters. */
+        private const val LONG_FILE_LINES = 115
 
         /** The harness catalogue, in the order the agent sees it. */
         val CATALOGUE: List<Entry> = listOf(

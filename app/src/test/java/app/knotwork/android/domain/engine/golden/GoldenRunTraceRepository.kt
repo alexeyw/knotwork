@@ -86,6 +86,30 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
         .lastOrNull { it.nodeId == nodeId && it.depth == depth }
 
     /**
+     * The most recent `NodeIo` of [nodeType] at [depth] whose output is [outputText], flushed or
+     * not.
+     *
+     * @param nodeType The node type name.
+     * @param depth The nesting depth.
+     * @param outputText The output to match.
+     * @return The record, or `null`.
+     */
+    fun matchingNodeIo(nodeType: String, depth: Int, outputText: String): RunTraceRecord.NodeIo? = (durable + buffered)
+        .filterIsInstance<RunTraceRecord.NodeIo>()
+        .lastOrNull { it.nodeType == nodeType && it.depth == depth && it.outputText == outputText }
+
+    /**
+     * The most recent console record with sequence number [seq] at [depth], flushed or not.
+     *
+     * @param seq The console event's sequence number within its run.
+     * @param depth Its nesting depth.
+     * @return The record, or `null`.
+     */
+    fun consoleEntry(seq: Long, depth: Int): RunTraceRecord.ConsoleEntry? = (durable + buffered)
+        .filterIsInstance<RunTraceRecord.ConsoleEntry>()
+        .lastOrNull { it.seq == seq && it.depth == depth }
+
+    /**
      * Rebuilds the checkpoint of [runId] from its durable records, as
      * `TaskQueueManagerImpl.processResumeTask` does: the seq-ordered `NodeIo` prefix, the
      * latest memory snapshot, and the first free sequence number.

@@ -96,15 +96,19 @@ internal enum class GoldenOutcome {
 }
 
 /**
- * The settings a scenario runs with. The harness defaults are deliberately **not** the app's
- * defaults (`SettingsDefaults`): a refactoring that replaced a settings read with the shipped
- * default would otherwise leave every trace unchanged.
+ * The settings a scenario runs with. The harness's numeric values are deliberately **not** the
+ * app's defaults (`SettingsDefaults`), so a refactoring that replaced a settings read with the
+ * shipped default changes the trace of every scenario the value reaches. The two switches
+ * ([approvalPolicy], [blockDestructiveTools]) do take the app's defaults; dedicated scenarios
+ * run the other values.
  *
  * @property approvalPolicy Which tool risks ask for approval.
  * @property blockDestructiveTools Whether destructive tools are refused outright.
  * @property maxSteps Step ceiling of an interactive run.
  * @property maxStepsBackground Step ceiling of a background run; different from [maxSteps] so
  *   a run that picks the wrong ceiling for its origin shows.
+ * @property maxTokens Token ceiling of an interactive run.
+ * @property maxTokensBackground Token ceiling of a background run, different from [maxTokens].
  * @property verboseMemoryLogging Whether the memory console line lists every hit.
  * @property compressedHistory Enables chat-history compression and seeds a 40-message
  *   conversation with a stored summary of its older turns, so the window planner compresses.
@@ -114,6 +118,8 @@ internal data class GoldenSettings(
     val blockDestructiveTools: Boolean = false,
     val maxSteps: Int = 60,
     val maxStepsBackground: Int = 40,
+    val maxTokens: Int = 900_000,
+    val maxTokensBackground: Int = 150_000,
     val verboseMemoryLogging: Boolean = true,
     val compressedHistory: Boolean = false,
 ) {
@@ -131,6 +137,8 @@ internal data class GoldenSettings(
             },
             "maxSteps=$maxSteps".takeIf { maxSteps != defaults.maxSteps },
             "maxStepsBackground=$maxStepsBackground".takeIf { maxStepsBackground != defaults.maxStepsBackground },
+            "maxTokens=$maxTokens".takeIf { maxTokens != defaults.maxTokens },
+            "maxTokensBackground=$maxTokensBackground".takeIf { maxTokensBackground != defaults.maxTokensBackground },
             "verboseMemoryLogging=$verboseMemoryLogging".takeIf {
                 verboseMemoryLogging != defaults.verboseMemoryLogging
             },

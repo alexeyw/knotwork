@@ -1,11 +1,11 @@
 # Golden run trace — written by GoldenTraceTest, never by hand.
 # Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
 pipeline: recipes/memory-aware-run
-scenario: trigger
-about: In a background run, memory is searched with the pipeline's declared query, $DATE rendered.
+scenario: background-token-ceiling
+about: A background run pauses on the background token ceiling; continuing resumes it.
 origin: TRIGGER
 outcome: COMPLETED
-settings: harness defaults
+settings: maxTokensBackground=4
 prompt:
   | What should I pack for my trip?
 
@@ -73,11 +73,16 @@ metrics.update tokens=6
 modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
 metrics.node LITE_RT tokens=6
 run.spend golden steps=2 tokens=6
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=5 run=golden depth=0 RunCeiling
+    message:
+      | soft-ceiling: 6/4 tokens
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state RunNotice ApproachingCeiling(axis=TOKENS, spent=6, hardLimit=4)
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
-trace.node seq=6 run=golden recall LITE_RT depth=0 tokens=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+trace.node seq=7 run=golden recall LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
       | What should I pack for my trip?
@@ -90,14 +95,65 @@ trace.node seq=6 run=golden recall LITE_RT depth=0 tokens=6
       | What should I pack for my trip?
     output:
       | Answer with memory answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=6)
-state NodeIO recall LITE_RT depth=0 (= trace.node seq=6)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=7)
+state NodeIO recall LITE_RT depth=0 (= trace.node seq=7)
+pending.save golden CEILING request=none axis=TOKENS limit=4 spent=6
+notify.ceiling run=golden breach=HardCeilingBreach(axis=TOKENS, limit=4, spent=6)
+trace.console seq=8 run=golden depth=0 RunCeiling
+    message:
+      | token-ceiling: 6/4 tokens — paused
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+run.status golden WAITING_CEILING
+trace.flush
+state WaitingForCeilingRaise axis=TOKENS limit=4 spent=6
+state SuspendedInBackground CEILING
+trace.flush ×2
+notify.ceiling.cancel
+pending.record golden decision APPROVED applied=true
+run.extendCeiling golden TOKENS
+run.resumed golden from=WAITING_CEILING applied=true
+queue.enqueue golden resume=true session=golden-session origin=TRIGGER pipeline=recipe-memory-aware-run
+    prompt:
+      | What should I pack for my trip?
+driver resolve Continue → Resumed
+queue.resume golden
+run.running golden pipeline=recipe-memory-aware-run graphHash=b0479a36d16492bc6cbad471cb0ce760acd2b031ec216ec421ef24f43db86bfe
+driver attempt resumed
+crash.key active_pipeline_id=recipe-memory-aware-run
+crash.key active_model=Golden Model
+pending.delete golden kind=CEILING
+notify.ceiling.cancel
+visit golden recipe-memory-aware-run/input INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=9)
+metrics.node INPUT tokens=null
+run.spend golden steps=2 tokens=6
+trace.console seq=10 run=golden depth=0 RunCeiling
+    message:
+      | soft-ceiling: 6/8 tokens
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=10)
+state RunNotice ApproachingCeiling(axis=TOKENS, spent=6, hardLimit=8)
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=11)
+visit golden recipe-memory-aware-run/recall LITE_RT #1
+state Stage step=2 of=3 LITE_RT
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
+      | ↻ LITE_RT replayed from checkpoint
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=12)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=7)
+state NodeIO recall LITE_RT depth=0 (= trace.node seq=7)
 visit golden recipe-memory-aware-run/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=7 run=golden depth=0 NodeExecution
+trace.console seq=13 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=13)
 chat.save AGENT final=true model=Golden Model
     content:
       | Answer with memory answer, visit 1.
@@ -105,7 +161,7 @@ end Completed
     finalResponse:
       | Answer with memory answer, visit 1.
 metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=6
+run.spend golden steps=2 tokens=6
 trace.flush
 run.finish golden COMPLETED reason=null
     error:

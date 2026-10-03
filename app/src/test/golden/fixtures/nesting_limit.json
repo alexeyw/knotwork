@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-nesting-limit",
+  "name": "Fixture — a pipeline that calls itself",
+  "description": "Test-only. Runs itself as a sub-pipeline until the runtime nesting ceiling stops it, so the ceiling the run was given shows in how deep it got.",
+  "updatedAt": 1759449600000,
+  "nodes": [
+    {
+      "id": "input",
+      "type": "INPUT",
+      "position": {
+        "x": 80,
+        "y": 200
+      },
+      "label": "Input",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": false,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "again",
+      "type": "PIPELINE",
+      "position": {
+        "x": 300,
+        "y": 200
+      },
+      "label": "Run myself again",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": "fixture-nesting-limit",
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": false,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "position": {
+        "x": 520,
+        "y": 200
+      },
+      "label": "Reply",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": false,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "fromNodeId": "input",
+      "toNodeId": "again",
+      "label": null
+    },
+    {
+      "id": "c2",
+      "fromNodeId": "again",
+      "toNodeId": "output",
+      "label": null
+    }
+  ]
+}

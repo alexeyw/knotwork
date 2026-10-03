@@ -237,6 +237,7 @@ Only Kotlin files appear inside the generated blocks.
       - `GoldenRunTraceRepository.kt` - In-memory persistent run trace of the golden harness; records every append and flush.
       - `GoldenScenario.kt` - One scripted run of one shipped pipeline through the real `GraphExecutionEngine`, and the name of the golden file its trace is compared with.
       - `GoldenScenarios.kt` - The catalogue of golden scenarios: every bundled preset, every published recipe and every fixture, each with at least one scenario, plus the branch and suspension scenarios the engine's control flow needs pinned.
+      - `GoldenStrict.kt` - Strict stand-in for an interface whose members a golden run must not reach: every call raises a harness violation.
       - `GoldenToolRepository.kt` - Tool catalogue of the golden harness: a fixed set of the app's built-in tool names, each answering with a recorded output instead of acting on the world.
       - `GoldenTraceCatalogueTest.kt` - Keeps the golden-trace catalogue complete, so the gate cannot quietly stop covering what ships.
       - `GoldenTraceDiff.kt` - Explains a golden-trace mismatch in a few lines: where the first difference is, what both sides say around it, and how to see the whole diff.

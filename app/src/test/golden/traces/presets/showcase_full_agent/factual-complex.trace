@@ -21,19 +21,19 @@ state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden showcase_full_agent/node-23 LITE_RT #1
 state Stage step=2 of=null LITE_RT
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
 model local node=node-23 call=1 temperature=default image=none
     prompt:
@@ -70,7 +70,7 @@ run.spend golden steps=2 tokens=5
 trace.console seq=3 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 trace.node seq=4 run=golden node-23 LITE_RT depth=0 tokens=5
     input:
       | --- Original Task ---
@@ -80,14 +80,14 @@ trace.node seq=4 run=golden node-23 LITE_RT depth=0 tokens=5
       | Compare how solar and wind power grew over the last decade.
     output:
       | Vision intake answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=4)
 state NodeIO node-23 LITE_RT depth=0 (= trace.node seq=4)
 visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
 state Stage step=3 of=null INTENT_ROUTER
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 model.load path=null vision=false audio=false
 model local node=node-3 call=1 temperature=default image=none
     prompt:
@@ -128,7 +128,7 @@ run.spend golden steps=3 tokens=5
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
 trace.node seq=7 run=golden node-3 INTENT_ROUTER depth=0 tokens=null routingKey=Factual
     input:
       | --- Original Task ---
@@ -142,14 +142,14 @@ trace.node seq=7 run=golden node-3 INTENT_ROUTER depth=0 tokens=null routingKey=
       | Vision intake answer, visit 1.
     output:
       | Factual
-state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null
+state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=7)
 state NodeIO node-3 INTENT_ROUTER depth=0 (= trace.node seq=7)
 visit golden showcase_full_agent/node-5 IF_CONDITION #1
 state Stage step=4 of=7 IF_CONDITION
 trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ IF_CONDITION
-state ConsoleLog run=golden events=7
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
 model local node=node-5 call=1 temperature=default image=none
     prompt:
       | Evaluate the following text against the condition: "You are a complexity classifier inside a factual-question pipeline. The input is a question the user wants answered with facts. Your only job: decide whether answering it well requires splitting the question into several separate lookups, or whether a single search can cover it.
@@ -175,20 +175,20 @@ run.spend golden steps=4 tokens=5
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ✓ IF_CONDITION in <ms>ms
-state ConsoleLog run=golden events=8
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
 trace.node seq=10 run=golden node-5 IF_CONDITION depth=0 tokens=null condition=true
     input:
       | Vision intake answer, visit 1.
     output:
       | Vision intake answer, visit 1.
-state PipelineTrace steps=3 last=IF_CONDITION depth=0 tokens=null
+state PipelineTrace steps=3 last=IF_CONDITION depth=0 tokens=null (= trace.node seq=10)
 state NodeIO node-5 IF_CONDITION depth=0 (= trace.node seq=10)
 visit golden showcase_full_agent/node-9 DECOMPOSITION #1
 state Stage step=5 of=7 DECOMPOSITION
 trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ DECOMPOSITION
-state ConsoleLog run=golden events=9
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
 model.load path=null vision=false audio=false
 model local node=node-9 call=1 temperature=default image=none
     prompt:
@@ -221,7 +221,7 @@ run.spend golden steps=5 tokens=5
 trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ✓ DECOMPOSITION in <ms>ms
-state ConsoleLog run=golden events=10
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
 trace.node seq=13 run=golden node-9 DECOMPOSITION depth=0 tokens=null
     input:
       | --- Original Task ---
@@ -231,33 +231,33 @@ trace.node seq=13 run=golden node-9 DECOMPOSITION depth=0 tokens=null
       | Vision intake answer, visit 1.
     output:
       | ["Query Decomposer: first part","Query Decomposer: second part","Query Decomposer: third part"]
-state PipelineTrace steps=4 last=DECOMPOSITION depth=0 tokens=null
+state PipelineTrace steps=4 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=13)
 state NodeIO node-9 DECOMPOSITION depth=0 (= trace.node seq=13)
 visit golden showcase_full_agent/node-10 QUEUE_PROCESSOR #1
 state Stage step=6 of=7 QUEUE_PROCESSOR
 trace.console seq=14 run=golden depth=0 NodeExecution
     message:
       | ▶ QUEUE_PROCESSOR
-state ConsoleLog run=golden events=11
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=14)
 metrics.node QUEUE_PROCESSOR tokens=null
 run.spend golden steps=6 tokens=5
 trace.console seq=15 run=golden depth=0 NodeExecution
     message:
       | ✓ QUEUE_PROCESSOR in <ms>ms
-state ConsoleLog run=golden events=12
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
 trace.node seq=16 run=golden node-10 QUEUE_PROCESSOR depth=0 tokens=null
     input:
       | ["Query Decomposer: first part","Query Decomposer: second part","Query Decomposer: third part"]
     output:
       | ["Query Decomposer: first part","Query Decomposer: second part","Query Decomposer: third part"]
-state PipelineTrace steps=5 last=QUEUE_PROCESSOR depth=0 tokens=null
+state PipelineTrace steps=5 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=16)
 state NodeIO node-10 QUEUE_PROCESSOR depth=0 (= trace.node seq=16)
 visit golden showcase_full_agent/node-11 TOOL #1
 state Stage step=7 of=12 TOOL
 trace.console seq=17 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=13
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=17)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
@@ -309,11 +309,11 @@ run.spend golden steps=7 tokens=5
 trace.console seq=18 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=14
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=18)
 trace.console seq=19 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=15
+state ConsoleLog run=golden events=15 (= trace.console run=golden seq=19)
 trace.node seq=20 run=golden node-11 TOOL depth=0 tokens=null tool=search_tool
     input:
       | --- Previous Node Output ---
@@ -326,14 +326,14 @@ trace.node seq=20 run=golden node-11 TOOL depth=0 tokens=null tool=search_tool
       | 1. Wikipedia Lookup (research) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (research) — a second recorded source.
 trace.flush
-state PipelineTrace steps=6 last=TOOL depth=0 tokens=null
+state PipelineTrace steps=6 last=TOOL depth=0 tokens=null (= trace.node seq=20)
 state NodeIO node-11 TOOL depth=0 (= trace.node seq=20)
 visit golden showcase_full_agent/node-11 TOOL #2
 state Stage step=8 of=12 TOOL
 trace.console seq=21 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=16
+state ConsoleLog run=golden events=16 (= trace.console run=golden seq=21)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
@@ -393,11 +393,11 @@ run.spend golden steps=8 tokens=5
 trace.console seq=22 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=17
+state ConsoleLog run=golden events=17 (= trace.console run=golden seq=22)
 trace.console seq=23 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=18
+state ConsoleLog run=golden events=18 (= trace.console run=golden seq=23)
 trace.node seq=24 run=golden node-11 TOOL depth=0 tokens=null tool=search_tool
     input:
       | --- Previous Node Output ---
@@ -418,14 +418,14 @@ trace.node seq=24 run=golden node-11 TOOL depth=0 tokens=null tool=search_tool
       | 1. Wikipedia Lookup (research) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (research) — a second recorded source.
 trace.flush
-state PipelineTrace steps=7 last=TOOL depth=0 tokens=null
+state PipelineTrace steps=7 last=TOOL depth=0 tokens=null (= trace.node seq=24)
 state NodeIO node-11 TOOL depth=0 (= trace.node seq=24)
 visit golden showcase_full_agent/node-11 TOOL #3
 state Stage step=9 of=12 TOOL
 trace.console seq=25 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=19
+state ConsoleLog run=golden events=19 (= trace.console run=golden seq=25)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
@@ -490,11 +490,11 @@ run.spend golden steps=9 tokens=5
 trace.console seq=26 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=20
+state ConsoleLog run=golden events=20 (= trace.console run=golden seq=26)
 trace.console seq=27 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=21
+state ConsoleLog run=golden events=21 (= trace.console run=golden seq=27)
 trace.node seq=28 run=golden node-11 TOOL depth=0 tokens=null tool=search_tool
     input:
       | --- Previous Node Output ---
@@ -520,14 +520,14 @@ trace.node seq=28 run=golden node-11 TOOL depth=0 tokens=null tool=search_tool
       | 1. Wikipedia Lookup (research) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (research) — a second recorded source.
 trace.flush
-state PipelineTrace steps=8 last=TOOL depth=0 tokens=null
+state PipelineTrace steps=8 last=TOOL depth=0 tokens=null (= trace.node seq=28)
 state NodeIO node-11 TOOL depth=0 (= trace.node seq=28)
 visit golden showcase_full_agent/node-22 LITE_RT #1
 state Stage step=10 of=12 LITE_RT
 trace.console seq=29 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=22
+state ConsoleLog run=golden events=22 (= trace.console run=golden seq=29)
 model.load path=null vision=false audio=false
 model local node=node-22 call=1 temperature=default image=none
     prompt:
@@ -574,7 +574,7 @@ run.spend golden steps=10 tokens=10
 trace.console seq=30 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=23
+state ConsoleLog run=golden events=23 (= trace.console run=golden seq=30)
 trace.node seq=31 run=golden node-22 LITE_RT depth=0 tokens=5
     input:
       | --- Original Task ---
@@ -594,14 +594,14 @@ trace.node seq=31 run=golden node-22 LITE_RT depth=0 tokens=5
       | 2. Wikipedia Lookup (research) — a second recorded source.
     output:
       | Research Distiller answer, visit 1.
-state PipelineTrace steps=9 last=LITE_RT depth=0 tokens=5
+state PipelineTrace steps=9 last=LITE_RT depth=0 tokens=5 (= trace.node seq=31)
 state NodeIO node-22 LITE_RT depth=0 (= trace.node seq=31)
 visit golden showcase_full_agent/node-12 SUMMARY #1
 state Stage step=11 of=12 SUMMARY
 trace.console seq=32 run=golden depth=0 NodeExecution
     message:
       | ▶ SUMMARY
-state ConsoleLog run=golden events=24
+state ConsoleLog run=golden events=24 (= trace.console run=golden seq=32)
 model.load path=null vision=false audio=false
 model local node=node-12 call=1 temperature=default image=none
     prompt:
@@ -645,7 +645,7 @@ run.spend golden steps=11 tokens=10
 trace.console seq=33 run=golden depth=0 NodeExecution
     message:
       | ✓ SUMMARY in <ms>ms
-state ConsoleLog run=golden events=25
+state ConsoleLog run=golden events=25 (= trace.console run=golden seq=33)
 trace.node seq=34 run=golden node-12 SUMMARY depth=0 tokens=null
     input:
       | --- Original Task ---
@@ -655,23 +655,23 @@ trace.node seq=34 run=golden node-12 SUMMARY depth=0 tokens=null
       | Research Distiller answer, visit 1.
     output:
       | Research Synthesis answer, visit 1.
-state PipelineTrace steps=10 last=SUMMARY depth=0 tokens=null
+state PipelineTrace steps=10 last=SUMMARY depth=0 tokens=null (= trace.node seq=34)
 state NodeIO node-12 SUMMARY depth=0 (= trace.node seq=34)
 visit golden showcase_full_agent/node-2 OUTPUT #1
 state Stage step=12 of=12 OUTPUT
 trace.console seq=35 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=26
+state ConsoleLog run=golden events=26 (= trace.console run=golden seq=35)
 chat.save AGENT final=true model=Golden Model
     content:
       | Research Synthesis answer, visit 1.
 end Completed
     finalResponse:
       | Research Synthesis answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=12 tokens=10
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=12 tokens=10 (ignored: terminal or unknown run)
-trace.flush

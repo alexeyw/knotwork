@@ -21,26 +21,26 @@ state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=0)
 metrics.node INPUT tokens=null
 run.spend golden steps=1 tokens=0
 trace.console seq=1 run=golden depth=0 NodeExecution
     message:
       | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=1)
 visit golden recipe-memory-aware-run/recall LITE_RT #1
 state Stage step=2 of=3 LITE_RT
 trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=3
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 memory.retrieve limit=null threshold=null
     query:
       | What should I pack for my trip?
 trace.console seq=3 run=golden depth=0 MemoryAccess
     message:
       | Memory: query='What should I pack for my trip?' [user prompt] → 2 hits (0.91, 0.74)
-state ConsoleLog run=golden events=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
 memory.used ids=[11, 12]
 trace.memory seq=4 run=golden chunks=[11, 12]
 model.load path=null vision=false audio=false
@@ -74,7 +74,7 @@ run.spend golden steps=2 tokens=6
 trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
 trace.node seq=6 run=golden recall LITE_RT depth=0 tokens=6
     input:
       | --- Original Task ---
@@ -88,23 +88,23 @@ trace.node seq=6 run=golden recall LITE_RT depth=0 tokens=6
       | What should I pack for my trip?
     output:
       | Answer with memory answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=6)
 state NodeIO recall LITE_RT depth=0 (= trace.node seq=6)
 visit golden recipe-memory-aware-run/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
 trace.console seq=7 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=6
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
 chat.save AGENT final=true model=Golden Model
     content:
       | Answer with memory answer, visit 1.
 end Completed
     finalResponse:
       | Answer with memory answer, visit 1.
+metrics.node OUTPUT tokens=null
+run.spend golden steps=3 tokens=6
+trace.flush
 run.finish golden COMPLETED reason=null
     error:
       (empty)
-metrics.node OUTPUT tokens=null
-run.spend golden steps=3 tokens=6 (ignored: terminal or unknown run)
-trace.flush
