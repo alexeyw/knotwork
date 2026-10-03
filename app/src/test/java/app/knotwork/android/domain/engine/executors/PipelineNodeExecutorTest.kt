@@ -13,22 +13,27 @@ import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunTerminationReason
+import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import io.mockk.MockKMatcherScope
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -72,7 +77,7 @@ class PipelineNodeExecutorTest {
         NodeModel(id = "p", type = NodeType.PIPELINE, x = 0f, y = 0f, targetPipelineId = targetPipelineId)
 
     private fun stubEngine(result: Flow<AgentOrchestratorState>) {
-        every { engine.invoke(any(), any(), any(), any(), any(), any(), any()) } returns result
+        every { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) } returns result
     }
 
     private suspend fun runExecutor(
@@ -86,6 +91,11 @@ class PipelineNodeExecutorTest {
     fun setUp() {
         every { settingsRepository.pipelineMaxNestingDepth } returns flowOf(3)
     }
+
+    /** Matches the tree a sub-pipeline is handed, by its nesting depth. */
+    private fun MockKMatcherScope.atDepth(depth: Int) = match<RunTreeContext> { it.depth == depth }
+
+    private fun scopeAtDepth(depth: Int) = ExecutionScope(run = RunTreeContext.standalone().copy(depth = depth))
 
     private fun List<NodeOutput>.singleResult() = filterIsInstance<NodeOutput.Result>().single().result
 
@@ -111,11 +121,32 @@ class PipelineNodeExecutorTest {
             runExecutor(pipelineNode(), input = "carried input")
 
             // userPrompt = the node's input; runId = null (non-persisted);
-            // depth = parent + 1; budget threaded through (null here).
+            // the tree one level deeper.
             verify {
-                engine.invoke("session", "carried input", subGraph, null, null, 1, null)
+                engine.invoke("session", "carried input", subGraph, null, null, atDepth(1))
             }
         }
+
+    @Test
+    fun `given a parent tree when execute then the child receives the same holders one level deeper`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+        val parent = RunTreeContext.standalone().copy(depth = 1, imagePresent = true, origin = RunOrigin.TRIGGER)
+        val handed = slot<RunTreeContext>()
+        every { engine.invoke(any(), any(), any(), any(), any(), capture(handed)) } returns
+            flowOf(AgentOrchestratorState.Completed("ok"))
+
+        runExecutor(pipelineNode(), scope = ExecutionScope(run = parent))
+
+        // One level deeper, and every holder the same instance — a copy would
+        // give the sub-pipeline a private allowance, window or answer holder.
+        assertEquals(2, handed.captured.depth)
+        assertSame(parent.budget, handed.captured.budget)
+        assertSame(parent.stuckDetector, handed.captured.stuckDetector)
+        assertSame(parent.contextNotes, handed.captured.contextNotes)
+        assertSame(parent.generatingModel, handed.captured.generatingModel)
+        assertEquals(true, handed.captured.imagePresent)
+        assertEquals(RunOrigin.TRIGGER, handed.captured.origin)
+    }
 
     @Test
     fun `given blank target when execute then fails without touching repository`() = runTest {
@@ -123,7 +154,7 @@ class PipelineNodeExecutorTest {
 
         assertNull(result.outputText)
         assertTrue(result.error!!.contains("no target pipeline"))
-        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
     }
 
     @Test
@@ -133,7 +164,7 @@ class PipelineNodeExecutorTest {
         val result = runExecutor(pipelineNode()).singleResult()
 
         assertTrue(result.error!!.contains("not found"))
-        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
     }
 
     @Test
@@ -142,19 +173,19 @@ class PipelineNodeExecutorTest {
         coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
         stubEngine(flowOf(AgentOrchestratorState.Completed("deep ok")))
 
-        val result = runExecutor(pipelineNode(), scope = ExecutionScope(depth = 2)).singleResult()
+        val result = runExecutor(pipelineNode(), scope = scopeAtDepth(2)).singleResult()
 
         assertEquals("deep ok", result.outputText)
-        verify { engine.invoke(any(), any(), any(), any(), any(), 3, any()) }
+        verify { engine.invoke(any(), any(), any(), any(), any(), atDepth(3)) }
     }
 
     @Test
     fun `given depth at the limit when execute then refuses and does not recurse`() = runTest {
         // limit = 3, current depth = 3 -> child depth = 4 -> refused.
-        val result = runExecutor(pipelineNode(), scope = ExecutionScope(depth = 3)).singleResult()
+        val result = runExecutor(pipelineNode(), scope = scopeAtDepth(3)).singleResult()
 
         assertTrue(result.error!!.contains("nesting depth"))
-        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
         coVerify(exactly = 0) { pipelineRepository.getPipelineById(any()) }
     }
 
@@ -199,7 +230,16 @@ class PipelineNodeExecutorTest {
                 pipelineRunRepository.markRunning("root::p::0", "sub", subGraph.contentHash())
             }
             // Engine driven with the child run id, fresh (no resume), depth 1.
-            verify { engine.invoke("session", "hello", subGraph, "root::p::0", null, 1, null) }
+            verify {
+                engine.invoke(
+                    "session",
+                    "hello",
+                    subGraph,
+                    "root::p::0",
+                    null,
+                    atDepth(1),
+                )
+            }
             // Child settled COMPLETED by the executor (the engine never does).
             coVerify { pipelineRunRepository.finishRun("root::p::0", PipelineRunStatus.COMPLETED, null) }
         }
@@ -221,7 +261,16 @@ class PipelineNodeExecutorTest {
             coVerify { pipelineRunRepository.markResumed("root::p::0", PipelineRunStatus.INTERRUPTED) }
             coVerify(exactly = 0) { pipelineRunRepository.createRun(any()) }
             // Engine driven with a (non-null) resume payload.
-            verify { engine.invoke("session", "hello", subGraph, "root::p::0", match { it != null }, 1, null) }
+            verify {
+                engine.invoke(
+                    "session",
+                    "hello",
+                    subGraph,
+                    "root::p::0",
+                    isNull(inverse = true),
+                    atDepth(1),
+                )
+            }
         }
 
     @Test
@@ -235,7 +284,7 @@ class PipelineNodeExecutorTest {
         val result = runExecutor(pipelineNode(), runId = "root").singleResult()
 
         assertTrue(result.error!!.contains("edited since it was interrupted"))
-        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
         // The child settles with the same typed cause its top-level counterpart
         // uses, so a sub-pipeline invalidated by an edit is not reported as an
         // ordinary failure just because it happened one level down.
@@ -289,6 +338,72 @@ class PipelineNodeExecutorTest {
     }
 
     @Test
+    fun `given loading the target throws when execute then the node fails naming the target`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } throws IllegalStateException("db closed")
+
+        val result = runExecutor(pipelineNode()).singleResult()
+
+        assertEquals("Failed to load target pipeline 'sub': db closed", result.error)
+        verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
+    }
+
+    @Test
+    fun `given the child engine throws in a non-persisted run when execute then the node fails with its message`() =
+        runTest {
+            coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+            stubEngine(flow { throw IllegalStateException("child blew up") })
+
+            val result = runExecutor(pipelineNode()).singleResult()
+
+            assertEquals("child blew up", result.error)
+        }
+
+    @Test
+    fun `given the child engine throws in a persisted run when execute then the child settles failed`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+        coEvery { pipelineRunRepository.getRun(any()) } returns null
+        stubEngine(flow { throw IllegalStateException("child blew up") })
+
+        val result = runExecutor(pipelineNode(), runId = "root").singleResult()
+
+        assertEquals("child blew up", result.error)
+        coVerify { pipelineRunRepository.finishRun("root::p::0", PipelineRunStatus.FAILED, "child blew up", null) }
+    }
+
+    @Test
+    fun `given a persisted child that ends without an answer when execute then the child settles failed`() = runTest {
+        coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+        coEvery { pipelineRunRepository.getRun(any()) } returns null
+        stubEngine(flowOf(AgentOrchestratorState.Loading))
+
+        val result = runExecutor(pipelineNode(), runId = "root").singleResult()
+
+        assertTrue(result.error!!.contains("no output"))
+        coVerify {
+            pipelineRunRepository.finishRun(
+                "root::p::0",
+                PipelineRunStatus.FAILED,
+                "Sub-pipeline 'Sub Pipeline' produced no output",
+            )
+        }
+    }
+
+    @Test
+    fun `given a persisted child in a status it cannot resume from when execute then fails without running it`() =
+        runTest {
+            coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
+            coEvery { pipelineRunRepository.getRun("root::p::0") } returns childRun(
+                status = PipelineRunStatus.COMPLETED,
+                hash = subGraph.contentHash(),
+            )
+
+            val result = runExecutor(pipelineNode(), runId = "root").singleResult()
+
+            assertTrue(result.error!!.contains("unexpected state (COMPLETED)"))
+            verify(exactly = 0) { engine.invoke(any(), any(), any(), any(), any(), any<RunTreeContext>()) }
+        }
+
+    @Test
     fun `given a non-zero visit index when execute then the child run id encodes the visit`() = runTest {
         coEvery { pipelineRepository.getPipelineById("sub") } returns subGraph
         coEvery { pipelineRunRepository.getRun(any()) } returns null
@@ -296,7 +411,9 @@ class PipelineNodeExecutorTest {
 
         runExecutor(pipelineNode(), runId = "root", scope = ExecutionScope(pipelineVisitIndex = 2))
 
-        verify { engine.invoke("session", "hello", subGraph, "root::p::2", null, 1, null) }
+        verify {
+            engine.invoke("session", "hello", subGraph, "root::p::2", null, atDepth(1))
+        }
     }
 
     private fun childRun(status: PipelineRunStatus, hash: String) = PipelineRun(

@@ -646,9 +646,10 @@ into a run is deliberately narrow so the rest of the engine stays text-only:
 2. **Announce.** At run start the engine emits one `Image input: W×H, N KB`
    console line (`SystemMessage`).
 3. **Deliver to exactly one node, anywhere in the tree.** Delivery state is a
-   tree-shared `RunImageDelivery` holder (mirroring the shared `RunBudgetLedger`):
-   a `PIPELINE` node threads it into its sub-pipeline's engine invocation via
-   `ExecutionScope.imageDelivery`. The engine hands the image to the **first
+   tree-shared `RunImageDelivery` holder (mirroring the shared `RunBudgetLedger`).
+   It is part of the run tree's `RunTreeContext`, which every node receives in
+   `ExecutionScope.run` and a `PIPELINE` node hands whole to its sub-pipeline's
+   engine invocation. The engine hands the image to the **first
    `LITE_RT` node whose context includes the original task** in execution order
    *across the whole run tree* — including a node nested inside a sub-pipeline —
    via `ExecutionScope.imagePath`, then marks the holder consumed. Every other
@@ -1610,15 +1611,17 @@ Key invariants:
   the **root** of the tree (resolved by walking `parentRunId` up). A
   child's trace records carry a nesting `depth` so the console renders
   them indented under the spawning node. The autonomous-run ceilings are
-  charged against a single `RunBudgetLedger` threaded (via
-  `ExecutionScope`) through the whole tree, so a sub-pipeline charges the
+  charged against a single `RunBudgetLedger` shared by the whole tree — it
+  is part of `RunTreeContext`, which every node receives in
+  `ExecutionScope.run` and a `PIPELINE` node hands whole to the sub-pipeline
+  it starts (one level deeper) — so a sub-pipeline charges the
   parent's allowance and a breach at any depth fails the entire stack
   with a typed `RunTerminationReason`. The ledger is seeded from — and
   written back to — the root run record, so a ceiling keeps binding across
   a park and resume instead of restarting; work already replayed from the
   checkpoint is never charged twice.
 
-  A second tree-shared guard rides the same `ExecutionScope` seam and
+  A second tree-shared guard rides the same `RunTreeContext` and
   answers a different question. The ledger bounds what a run **spends**;
   `GraphStuckDetector` (`domain/engine/stuck/`) bounds what it
   **repeats** — a sliding window over executed steps, observed at the

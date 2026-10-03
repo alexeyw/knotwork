@@ -90,7 +90,7 @@ class SystemNodeExecutor @Inject constructor(
         // share this executor and must not have their prompts mutated by an attachment
         // they never act on.
         val imageNote =
-            if (node.type == NodeType.INTENT_ROUTER && scope.imagePresent) {
+            if (node.type == NodeType.INTENT_ROUTER && scope.run.imagePresent) {
                 "\n\n${DefaultPrompts.System.IMAGE_PRESENT_NOTE}"
             } else {
                 ""

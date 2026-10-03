@@ -8,7 +8,7 @@ package app.knotwork.android.domain.models
  * `LITE_RT` node whose context includes the original task — and exactly that one
  * node. Because sub-pipelines run on fresh engine invocations, the *same*
  * [RunImageDelivery] instance is threaded into a `PIPELINE` node's child run (via
- * [ExecutionScope.imageDelivery]), just like [RunBudgetLedger]: a vision sink
+ * [RunTreeContext.imageDelivery]), just like [RunBudgetLedger]: a vision sink
  * nested inside a sub-pipeline can therefore consume the image, and once it does
  * [consumed] flips so no later node — at any depth — receives it again.
  *

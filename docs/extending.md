@@ -116,10 +116,11 @@ fresh class.
 **Detecting an image attachment.** Only text travels the graph — the picture
 itself reaches a single on-device vision step. If your executor needs to know
 *whether* the run carries an image (e.g. to branch on it), read
-`scope.imageDelivery != null` from the `ExecutionScope` passed to `execute`. The
-holder is non-null for the whole run tree whenever the input has an image,
-regardless of whether the vision step has consumed it yet, so it is a stable
-"the user sent a picture" signal that never leaks the pixels. `IF_CONDITION`
+`scope.run.imagePresent` from the `ExecutionScope` passed to `execute`. It is
+`true` for the whole run tree whenever the input had an image — whether or not
+the vision step has consumed it yet, and on a resumed run too, which never
+re-delivers the image — so it is a stable "the user sent a picture" signal
+that never leaks the pixels. `IF_CONDITION`
 (via its `Branch True when input has an image` toggle) and `INTENT_ROUTER`
 (which appends `DefaultPrompts.System.IMAGE_PRESENT_NOTE` to its prompt) both
 use it.

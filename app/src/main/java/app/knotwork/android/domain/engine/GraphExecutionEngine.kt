@@ -37,6 +37,7 @@ import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTraceRecord
+import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolInvocationResult
 import app.knotwork.android.domain.models.asCeilingBreach
 import app.knotwork.android.domain.models.diagnostic
@@ -138,7 +139,7 @@ constructor(
         toolNodeExecutor.pendingApprovalFor(sessionId)
 
     /**
-     * Executes the graph by processing nodes sequentially.
+     * Runs [graph] as the root of a new run tree.
      *
      * @param sessionId Id of the chat session the run belongs to.
      * @param userPrompt The user message that started the run.
@@ -163,101 +164,138 @@ constructor(
      *   contract on [ResumeContext]). Requires a non-null [runId] — resuming
      *   without the persistent record/trace to continue makes no sense.
      *   `null` (the default) is a normal fresh run.
-     * @param depth Pipeline-nesting depth of this run: `0` for a top-level run,
-     *   and `parentDepth + 1` when `PipelineNodeExecutor` re-enters the engine to
-     *   run a sub-pipeline. The value is forwarded to every node executor (inside
-     *   [ExecutionScope]); only the PIPELINE executor consumes it (to enforce the
-     *   runtime nesting ceiling and to thread the next depth into its own
-     *   recursive call). It also stamps every console/trace record so the console
-     *   can render nested sub-pipeline output as a hierarchy.
-     * @param budget The spend ledger shared across the whole run tree. `null`
-     *   (the default, used by top-level callers) makes the engine build one:
-     *   ceilings resolved from [origin], counters seeded from whatever the run
-     *   record already holds — which is zero for a fresh run and the previous
-     *   attempt's spend for a resumed one, so the ceiling binds across a park
-     *   and resume instead of restarting. A sub-pipeline invocation passes the
-     *   parent's ledger so the nested run charges the same ceiling instead of
-     *   getting a private allowance. A breach at any depth fails the run with a
-     *   typed [RunTerminationReason], which propagates up the stack as the
-     *   parent PIPELINE node's error.
-     * @param stuckDetector The repetition detector shared across the whole run
-     *   tree, on the same terms as [budget] and for the same reason: a parent
-     *   that calls one sub-pipeline five times with the same input is one loop,
-     *   not five unrelated runs. `null` (the default) makes the engine build
-     *   one. Unlike the ledger it is **not** seeded from storage — it is
-     *   rebuilt from the replayed prefix instead, because what it needs is the
-     *   sequence of steps, which the run trace already holds and the run record
-     *   does not.
-     * @param contextNotes Advice raised for the run but not yet delivered to a
-     *   model, shared across the whole tree for the same reason [stuckDetector]
-     *   is: the detector's grace period counts steps at every depth, so a note
-     *   held in one invocation could have its clock run down by a sub-pipeline
-     *   it could never reach. `null` (the default) makes the engine build one.
-     * @param imageInput The **top-level** run's single image attachment, already
-     *   resolved to an absolute path + dimensions + byte size, or `null` for a
-     *   text-only run (and always `null` for a sub-pipeline invocation, which
-     *   instead receives [imageDelivery]). The engine emits an `Image input: W×H,
-     *   N KB` console line at run start and seeds the tree-shared delivery state
-     *   from it. `null` on resume — a replayed run never re-delivers.
-     * @param imageDelivery The run tree's shared single-image delivery state,
-     *   passed by a `PIPELINE` node into its sub-pipeline invocation so a vision
-     *   sink nested inside the sub-pipeline can consume the image. `null` for a
-     *   top-level run (which seeds it from [imageInput]) and for a text-only run.
-     *   The image reaches the **first** `LITE_RT` node whose context includes the
-     *   original task in execution order *anywhere in the tree* (via
-     *   [ExecutionScope.imagePath]) and exactly that node; every other node — and
-     *   every `CLOUD` node — sees only text, realising the "attachment belongs to
-     *   `userPrompt`, the graph carries text" contract. The send-time pre-flight
-     *   verifies such a sink is *reachable* (recursing into sub-pipelines) before
-     *   enqueuing; branch-dependent routing can still skip it, in which case the
-     *   top-level run emits an "Image not used" console note.
+     * @param imageInput The run's single image attachment, already resolved to
+     *   an absolute path + dimensions + byte size, or `null` for a text-only run
+     *   and on resume (a replayed run never re-delivers). The engine emits an
+     *   `Image input: W×H, N KB` console line at run start and seeds the tree's
+     *   [RunTreeContext.imageDelivery] from it: the image reaches the **first**
+     *   `LITE_RT` node whose context includes the original task in execution
+     *   order *anywhere in the tree* (via [ExecutionScope.imagePath]) and exactly
+     *   that node; every other node — and every `CLOUD` node — sees only text,
+     *   realising the "attachment belongs to `userPrompt`, the graph carries
+     *   text" contract. The send-time pre-flight verifies such a sink is
+     *   *reachable* (recursing into sub-pipelines) before enqueuing;
+     *   branch-dependent routing can still skip it, in which case the run emits
+     *   an "Image not used" console note.
      * @param runHadImage Presence-only signal for a resumed run: `true` when the
      *   interrupted run's originating message carried an image (from the persisted
      *   `PipelineRun.hadImage`). A fresh run leaves this `false` and derives presence
-     *   from [imageDelivery] instead. Threaded into [ExecutionScope.imagePresent] so a
-     *   live-executed IF/router node past the resume point can still branch on "the user
-     *   sent a picture" even though the image itself is never re-delivered on resume.
+     *   from [imageInput] instead. Becomes [RunTreeContext.imagePresent], so a
+     *   live-executed IF/router node past the resume point can still branch on "the
+     *   user sent a picture" even though the image itself is never re-delivered.
      * @param origin What started this run. Interactive origins ([RunOrigin.CHAT],
      *   [RunOrigin.SHARE]) key long-term-memory retrieval off [userPrompt] as before;
      *   background ones (trigger / scheduler / tile) prefer the pipeline's declared
      *   `memoryRetrievalQuery`, then the first memory-aware node's input — see
      *   [MemoryRetrievalQueryResolver] and `DESCRIPTION.md` §6.10.1. Defaults to
      *   [RunOrigin.CHAT] (the interactive, unchanged behaviour) so editor test runs and
-     *   any caller that does not care keep the old semantics. A sub-pipeline invocation
-     *   receives the parent's origin via [ExecutionScope.runOrigin].
+     *   any caller that does not care keep the old semantics. Every sub-pipeline of
+     *   the run inherits it through [RunTreeContext.origin].
      * @return A cold flow of orchestrator states describing the run.
      */
-    // Reason: this is the agent's core orchestrator. It is a long single
-    // state machine that walks the DAG, dispatches per node type, manages
-    // queue/clarification/approval suspensions, emits typed orchestrator
-    // states, and surfaces console events. Decomposition into helpers
-    // historically obscured the linear flow; the method body is structured
-    // and well-commented in place.
-    // LongParameterList is a real signal here and is suppressed knowingly, not
-    // dismissed: unlike the constructor, this is a hand-written call site,
-    // and 14 parameters is past what a reader can hold. Most of them travel
-    // together as one run's context (budget, stuck detector, notes, image
-    // delivery, generating model, origin) and belong in a parameter object.
-    // Doing that reshapes every call site including the recursive sub-pipeline
-    // one, so it is deliberately not smuggled into the change that first made
-    // this rule run.
-    @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList")
     operator fun invoke(
         sessionId: String,
         userPrompt: String,
         graph: PipelineGraph,
         runId: String? = null,
         resume: ResumeContext? = null,
-        depth: Int = 0,
-        budget: RunBudgetLedger? = null,
-        stuckDetector: GraphStuckDetector? = null,
-        contextNotes: RunContextNotes? = null,
         imageInput: EngineImageInput? = null,
-        imageDelivery: RunImageDelivery? = null,
         runHadImage: Boolean = false,
-        generatingModel: RunGeneratingModel? = null,
         origin: RunOrigin = RunOrigin.CHAT,
+    ): Flow<AgentOrchestratorState> =
+        invoke(sessionId, userPrompt, graph, runId, resume, RunEntry.Root(imageInput, runHadImage, origin))
+
+    /**
+     * Runs [graph] inside an existing run tree — the sub-pipeline a `PIPELINE`
+     * node starts.
+     *
+     * Nothing about the tree is rebuilt: the ledger, the detector, the pending
+     * notes, the image, the generating model and the origin are [tree]'s, so the
+     * sub-pipeline charges the parent's ceilings and is observed as part of the
+     * parent's run. No "Image input" line is emitted — the root announced it.
+     *
+     * @param sessionId Id of the chat session the run belongs to.
+     * @param userPrompt The text the sub-pipeline runs on — the `PIPELINE` node's
+     *   input, which becomes this graph's prompt.
+     * @param graph The sub-pipeline's graph.
+     * @param runId Id of the child run record, or `null` when the parent run is
+     *   not persisted. See the root overload.
+     * @param resume The child's checkpoint, when the parent died inside it.
+     * @param tree The parent's run tree one level deeper
+     *   ([RunTreeContext.nested]); its [RunTreeContext.depth] stamps this run's
+     *   console and trace records.
+     * @return A cold flow of orchestrator states describing the sub-pipeline run.
+     */
+    operator fun invoke(
+        sessionId: String,
+        userPrompt: String,
+        graph: PipelineGraph,
+        runId: String?,
+        resume: ResumeContext?,
+        tree: RunTreeContext,
+    ): Flow<AgentOrchestratorState> = invoke(sessionId, userPrompt, graph, runId, resume, RunEntry.Nested(tree))
+
+    /**
+     * How an invocation obtains its run tree: built at the root, inherited below.
+     *
+     * @property depth Nesting depth of the invocation, known before the tree is:
+     *   the root's tree is built only after the graph has been validated.
+     */
+    private sealed interface RunEntry {
+        val depth: Int
+
+        /**
+         * A root run; the engine builds its tree from these.
+         *
+         * @property imageInput See the root overload's `imageInput`.
+         * @property runHadImage See the root overload's `runHadImage`.
+         * @property origin See the root overload's `origin`.
+         */
+        class Root(val imageInput: EngineImageInput?, val runHadImage: Boolean, val origin: RunOrigin) : RunEntry {
+            override val depth: Int get() = 0
+        }
+
+        /**
+         * A sub-pipeline running inside [tree].
+         *
+         * @property tree The run tree it belongs to, already one level deeper.
+         */
+        class Nested(val tree: RunTreeContext) : RunEntry {
+            override val depth: Int get() = tree.depth
+        }
+    }
+
+    /**
+     * The walk both overloads share: validates [graph], obtains the run tree from
+     * [entry], then executes nodes from INPUT until OUTPUT, a suspension, an error
+     * or a protective stop.
+     *
+     * @param sessionId See the root overload.
+     * @param userPrompt See the root overload.
+     * @param graph See the root overload.
+     * @param runId See the root overload.
+     * @param resume See the root overload.
+     * @param entry Where the run tree comes from.
+     * @return A cold flow of orchestrator states describing the run.
+     */
+    // Reason: this is the agent's core orchestrator. It is a long single
+    // state machine that walks the DAG, dispatches per node type, manages
+    // queue/clarification/approval suspensions, emits typed orchestrator
+    // states, and surfaces console events. Its decomposition into collaborators
+    // is under way; each one that lands shortens this body, and the suppression
+    // goes when it fits the thresholds.
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
+    private fun invoke(
+        sessionId: String,
+        userPrompt: String,
+        graph: PipelineGraph,
+        runId: String?,
+        resume: ResumeContext?,
+        entry: RunEntry,
     ): Flow<AgentOrchestratorState> = flow {
+        val depth = entry.depth
+        val imageInput = (entry as? RunEntry.Root)?.imageInput
+
         // Buffer of console events accumulated for this run. The engine emits a
         // fresh `ConsoleLog` snapshot on every append so the UI reactively
         // updates the collapsed/expanded console panels.
@@ -313,38 +351,6 @@ constructor(
             emit(AgentOrchestratorState.ConsoleLog(consoleEvents.toList(), runId))
         }
 
-        // The run tree's shared single-image delivery state. A top-level run seeds
-        // it from [imageInput]; a sub-pipeline run reuses the parent's instance
-        // (threaded in via [imageDelivery]) so a vision sink nested inside a
-        // sub-pipeline can consume the image, tracked once across the whole tree.
-        val delivery = imageDelivery ?: imageInput?.let { RunImageDelivery(it) }
-
-        // Presence-only signal threaded to every node: true when this run carried an
-        // image. A fresh run knows from [delivery]; a resumed run (delivery == null,
-        // never re-delivers) carries it forward via [runHadImage] from the persisted
-        // PipelineRun. Lets an IF/router node branch on image presence on either path.
-        val imagePresent = delivery != null || runHadImage
-
-        // The run tree's shared "which model produced the answer" holder. A
-        // top-level run seeds a fresh one; a sub-pipeline reuses the parent's
-        // instance (threaded in via [generatingModel]) so an answer produced
-        // inside a sub-pipeline still attributes at the root OUTPUT.
-        val genModel = generatingModel ?: RunGeneratingModel()
-
-        // Honesty note for a run that carried an image but routed down a path with
-        // no vision sink: the send-time pre-flight guarantees such a node *exists*,
-        // but branch-dependent routing can still skip it. Emitted only at the
-        // top-level run (which owns the "Image input" announcement) and only when
-        // the tree-wide delivery was never consumed at any depth.
-        suspend fun noteUndeliveredImage() {
-            if (imageInput != null && delivery?.consumed == false) {
-                pushConsole(
-                    ConsoleEventType.SystemMessage,
-                    "Image not used: this run took a path with no on-device step that reads images.",
-                )
-            }
-        }
-
         if (!graph.isValidDAG()) {
             // Push the console event BEFORE the terminal Error so the Error
             // remains the last value of the orchestrator state flow.
@@ -373,8 +379,8 @@ constructor(
             localModelRepository.getActiveModel()?.name ?: ACTIVE_MODEL_NONE,
         )
 
-        // Announce the image attachment once, at the top-level run start (a
-        // sub-run has [imageDelivery] but no [imageInput]), so the console shows
+        // Announce the image attachment once, at the root run's start (a
+        // sub-pipeline run has no [imageInput]), so the console shows
         // the multimodal input before any node executes. The image itself is
         // delivered to a single LITE_RT node below; this line is informational.
         if (imageInput != null) {
@@ -402,40 +408,28 @@ constructor(
             }
         }
 
-        // Spend ledger shared across the whole run tree. A sub-pipeline run
-        // reuses the parent's instance (threaded in via [budget]) so nested
-        // execution cannot side-step the parent's ceilings; a top-level run
-        // builds one, resolving the ceilings from its own origin and seeding
-        // the counters from what the run record already holds.
-        //
-        // The seed is what makes the ceiling bind across a resume. Every
-        // answered background approval comes back through the resume path, and
-        // a run may park an unbounded number of times — a ledger that started
-        // at zero on each attempt would hand a nightly loop a fresh ceiling
-        // after every answer, which is the one scenario these ceilings exist
-        // for.
-        val runBudget = budget ?: run {
-            val ceilings = resolveRunCeilingsUseCase(origin)
-            val spent = runId?.let { pipelineRunRepository.getSpend(it) } ?: RunSpend()
-            RunBudgetLedger(
-                ceilings = ceilings,
-                rootRunId = runId,
-                stepsAlreadySpent = spent.steps,
-                tokensAlreadySpent = spent.tokens,
-                stepCeilingExtensions = spent.stepCeilingExtensions,
-                tokenCeilingExtensions = spent.tokenCeilingExtensions,
-            )
+        // The state the whole run tree shares. A sub-pipeline inherits its
+        // parent's; the root builds one here, after the checks above, because
+        // building it reads the run record (see [rootTree]).
+        val tree = when (entry) {
+            is RunEntry.Nested -> entry.tree
+            is RunEntry.Root -> rootTree(runId, entry)
         }
-        // The repetition detector for this tree. Built fresh rather than seeded
-        // from storage: its state is a *sequence* of steps, and the sequence
-        // lives in the run trace, which the walk below re-reads anyway on a
-        // resume. Every replayed record is fed back through `replay(...)` as it
-        // passes, so a resumed run rebuilds the window it had rather than
-        // starting blind — which matters precisely because a run that parks
-        // often is a run in a loop.
-        val runStuckDetector = stuckDetector ?: GraphStuckDetector()
-        // Shared for the same reason the detector is — see the parameter doc.
-        val runContextNotes = contextNotes ?: RunContextNotes()
+
+        // Honesty note for a run that carried an image but routed down a path with
+        // no vision sink: the send-time pre-flight guarantees such a node *exists*,
+        // but branch-dependent routing can still skip it. Emitted only at the
+        // root run (which owns the "Image input" announcement) and only when
+        // the tree-wide delivery was never consumed at any depth.
+        suspend fun noteUndeliveredImage() {
+            if (imageInput != null && tree.imageDelivery?.consumed == false) {
+                pushConsole(
+                    ConsoleEventType.SystemMessage,
+                    "Image not used: this run took a path with no on-device step that reads images.",
+                )
+            }
+        }
+
         // Per-`PIPELINE`-node visit counter. A PIPELINE node inside a loop
         // (QUEUE_PROCESSOR) executes once per item; the index disambiguates the
         // child run id of each visit and is re-derived deterministically on
@@ -490,7 +484,7 @@ constructor(
                 ?.takeIf { it.isNotBlank() }
                 ?.let { promptTemplateEngine.render(it, promptVariableProviders.toList()) }
             val query = MemoryRetrievalQueryResolver.resolve(
-                origin = origin,
+                origin = tree.origin,
                 declaredQuery = declaredQuery,
                 nodeInput = nodeInput,
                 userPrompt = userPrompt,
@@ -636,7 +630,7 @@ constructor(
             // Ask the ledger before charging, so a node that is refused is never
             // counted: a run stopped at the ceiling has spent exactly the
             // ceiling, not one more than it.
-            val breach = runBudget.hardBreach()
+            val breach = tree.budget.hardBreach()
             if (breach != null) {
                 // A ceiling is a number the user chose, and reaching it says
                 // nothing went wrong — so the run asks whether it may carry on
@@ -873,7 +867,7 @@ constructor(
                     // writing the note to `currentInputText`, and letting it
                     // survive an `INTENT_ROUTER` — and it is why the exclusion
                     // is on the node type rather than on the executor.
-                    val notes = if (currentNode.type == NodeType.OUTPUT) null else runContextNotes.drain()
+                    val notes = if (currentNode.type == NodeType.OUTPUT) null else tree.contextNotes.drain()
                     if (notes != null) "$notes\n\n$composed" else composed
                 } else {
                     currentInputText
@@ -896,9 +890,9 @@ constructor(
                 // Deliver the run's image to the FIRST vision-eligible node only:
                 // a LITE_RT node whose context includes the original task (so the
                 // image accompanies the user's prompt). Consumption is tracked on
-                // the tree-shared [delivery], so once any node at any depth takes
+                // the tree-shared delivery, so once any node at any depth takes
                 // the image, every later node — and every CLOUD node — sees text only.
-                val imagePathForNode = delivery
+                val imagePathForNode = tree.imageDelivery
                     ?.takeIf {
                         !it.consumed &&
                             currentNode.type == NodeType.LITE_RT &&
@@ -907,7 +901,7 @@ constructor(
                     ?.image
                     ?.absolutePath
                 if (imagePathForNode != null) {
-                    delivery?.consumed = true
+                    tree.imageDelivery?.consumed = true
                 }
                 // Note an undelivered image *before* the terminal OUTPUT node runs:
                 // OUTPUT's executor emits the terminal `Completed`, after which the
@@ -926,17 +920,10 @@ constructor(
                         userPrompt,
                         runId,
                         ExecutionScope(
-                            depth = depth,
-                            budget = runBudget,
-                            stuckDetector = runStuckDetector,
-                            contextNotes = runContextNotes,
+                            run = tree,
                             pipelineVisitIndex = pipelineVisitIndex,
                             routingChoices = routingChoices,
                             imagePath = imagePathForNode,
-                            imageDelivery = delivery,
-                            imagePresent = imagePresent,
-                            generatingModel = genModel,
-                            runOrigin = origin,
                             inputWrittenByModel = currentInputByModel,
                         ),
                     )
@@ -1055,11 +1042,11 @@ constructor(
                     (currentNode.type == NodeType.INPUT || currentNode.type == NodeType.OUTPUT)
                 val chargeableStep = !replayedPassThrough && nodeResult?.terminationReason == null
                 if (chargeableStep) {
-                    runBudget.chargeStep()
+                    tree.budget.chargeStep()
                 }
-                runBudget.chargeTokens(nodeResult?.tokenCount, approximate = nodeResult?.tokensEstimated != false)
+                tree.budget.chargeTokens(nodeResult?.tokenCount, approximate = nodeResult?.tokensEstimated != false)
                 if (runId != null) {
-                    persistSpend(runBudget)
+                    persistSpend(tree.budget)
                 }
                 // Announce a soft crossing where it happens, not at the top of
                 // the next iteration: a run whose last node crosses the
@@ -1073,7 +1060,7 @@ constructor(
                 // lost — a warning that the run is approaching its limit has no
                 // reader once the answer has been delivered.
                 if (currentNode.type != NodeType.OUTPUT) {
-                    runBudget.claimSoftBreach()?.let { soft ->
+                    tree.budget.claimSoftBreach()?.let { soft ->
                         // The cause is typed at the source. The console gets the
                         // terse diagnostic; the sentence the user reads is
                         // resolved from this same value in the presentation
@@ -1086,7 +1073,7 @@ constructor(
                         )
                         pushConsole(ConsoleEventType.RunCeiling, cause.diagnostic())
                         emit(AgentOrchestratorState.RunNotice(cause))
-                        runContextNotes.add(SOFT_CEILING_CONTEXT_NOTE)
+                        tree.contextNotes.add(SOFT_CEILING_CONTEXT_NOTE)
                     }
                 }
             }
@@ -1283,17 +1270,17 @@ constructor(
                     // are not repeated: they were emitted when the verdict was
                     // actually reached, and a warning re-shown on every resume
                     // is one the reader learns to skip.
-                    if (runStuckDetector.replay(observation)) {
-                        runContextNotes.add(STUCK_CONTEXT_NOTE)
+                    if (tree.stuckDetector.replay(observation)) {
+                        tree.contextNotes.add(STUCK_CONTEXT_NOTE)
                     }
                 } else {
-                    when (val verdict = runStuckDetector.observe(observation)) {
+                    when (val verdict = tree.stuckDetector.observe(observation)) {
                         StuckVerdict.Healthy -> Unit
                         is StuckVerdict.Nudge -> {
                             val cause = RunNoticeCause.LooksStuck(verdict.signal)
                             pushConsole(ConsoleEventType.StuckDetector, cause.diagnostic())
                             emit(AgentOrchestratorState.RunNotice(cause))
-                            runContextNotes.add(STUCK_CONTEXT_NOTE)
+                            tree.contextNotes.add(STUCK_CONTEXT_NOTE)
                         }
                         is StuckVerdict.Stop -> {
                             // Same seam the ceilings use: set the reason and
@@ -1428,6 +1415,53 @@ constructor(
                 runTraceRepository.flush()
             }
         }
+    }
+
+    /**
+     * Builds the run tree of a root run.
+     *
+     * The ledger's ceilings are resolved from the run's origin and its counters
+     * seeded from what the run record already holds. The seed is what makes a
+     * ceiling bind across a resume: every answered background approval comes
+     * back through the resume path, and a run may park any number of times — a
+     * ledger that started at zero on each attempt would hand a nightly loop a
+     * fresh ceiling after every answer, which is the one scenario these
+     * ceilings exist for.
+     *
+     * The repetition detector is built fresh rather than seeded from storage:
+     * its state is a *sequence* of steps, and the sequence lives in the run
+     * trace, which the walk re-reads anyway on a resume. Every replayed record
+     * is fed back through `replay(...)` as it passes, so a resumed run rebuilds
+     * the window it had rather than starting blind — which matters precisely
+     * because a run that parks often is a run in a loop.
+     *
+     * @param runId Id of the root run record, or `null` for a non-persisted run.
+     * @param root The root overload's image and origin arguments.
+     * @return The tree at depth `0`.
+     */
+    private suspend fun rootTree(runId: String?, root: RunEntry.Root): RunTreeContext {
+        val ceilings = resolveRunCeilingsUseCase(root.origin)
+        val spent = runId?.let { pipelineRunRepository.getSpend(it) } ?: RunSpend()
+        val delivery = root.imageInput?.let { RunImageDelivery(it) }
+        return RunTreeContext(
+            depth = 0,
+            budget = RunBudgetLedger(
+                ceilings = ceilings,
+                rootRunId = runId,
+                stepsAlreadySpent = spent.steps,
+                tokensAlreadySpent = spent.tokens,
+                stepCeilingExtensions = spent.stepCeilingExtensions,
+                tokenCeilingExtensions = spent.tokenCeilingExtensions,
+            ),
+            stuckDetector = GraphStuckDetector(),
+            contextNotes = RunContextNotes(),
+            imageDelivery = delivery,
+            // A fresh run knows from the attachment; a resumed one (which never
+            // re-delivers) from the persisted PipelineRun.hadImage.
+            imagePresent = delivery != null || root.runHadImage,
+            generatingModel = RunGeneratingModel(),
+            origin = root.origin,
+        )
     }
 
     /**

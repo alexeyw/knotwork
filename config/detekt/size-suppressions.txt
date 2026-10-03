@@ -20,7 +20,6 @@ app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: 
 app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: constructor :: LongParameterList
 app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: fun invoke :: CyclomaticComplexMethod
 app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: fun invoke :: LongMethod
-app/src/main/java/app/knotwork/android/domain/engine/GraphExecutionEngine.kt :: fun invoke :: LongParameterList
 app/src/main/java/app/knotwork/android/domain/engine/executors/ToolInvocationGate.kt :: fun dispatch :: LongMethod
 app/src/main/java/app/knotwork/android/domain/models/PipelineGraph.kt :: fun validate :: CyclomaticComplexMethod
 app/src/main/java/app/knotwork/android/domain/repositories/SettingsRepository.kt :: interface SettingsRepository :: TooManyFunctions

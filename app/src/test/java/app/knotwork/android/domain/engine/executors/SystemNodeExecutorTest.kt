@@ -12,6 +12,7 @@ import app.knotwork.android.domain.models.ExecutionScope
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.LoadModelUseCase
@@ -117,7 +118,7 @@ class SystemNodeExecutorTest {
             "input",
             "session-1",
             "prompt",
-            scope = ExecutionScope(imagePresent = true),
+            scope = ExecutionScope(run = RunTreeContext.standalone().copy(imagePresent = true)),
         ).toList()
 
         assertTrue(
@@ -151,7 +152,7 @@ class SystemNodeExecutorTest {
             "input",
             "session-1",
             "prompt",
-            scope = ExecutionScope(imagePresent = true),
+            scope = ExecutionScope(run = RunTreeContext.standalone().copy(imagePresent = true)),
         ).toList()
 
         assertFalse(promptSlot.captured.contains(DefaultPrompts.System.IMAGE_PRESENT_NOTE))

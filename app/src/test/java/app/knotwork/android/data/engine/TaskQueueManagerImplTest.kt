@@ -232,9 +232,6 @@ class TaskQueueManagerImplTest {
                 graph = any(),
                 runId = any(),
                 resume = any(),
-                depth = any(),
-                budget = any(),
-                stuckDetector = any(),
                 imageInput = capture(imageSlot),
             )
         } returns flowOf(AgentOrchestratorState.Completed("ok"))
@@ -253,14 +250,38 @@ class TaskQueueManagerImplTest {
     @Test
     fun `enqueueTask without an attachment passes a null image input to the engine`() = testScope.runTest {
         every {
-            graphExecutionEngine.invoke(any(), any(), any(), any(), any(), any(), any(), isNull())
+            // Named, for the reason given above: this stub was positional, and its
+            // eighth matcher had been aimed at `stuckDetector` rather than the image
+            // input since parameters were added ahead of it — so it asserted nothing
+            // about the image until the signature changed again and it failed.
+            graphExecutionEngine.invoke(
+                sessionId = any(),
+                userPrompt = any(),
+                graph = any(),
+                runId = any(),
+                resume = any(),
+                imageInput = isNull(),
+                runHadImage = any(),
+                origin = any(),
+            )
         } returns flowOf(AgentOrchestratorState.Completed("ok"))
 
         taskQueueManager.enqueueTask(AgentTask(sessionId = "s1", prompt = "hi"))
         advanceUntilIdle()
 
         // A text-only run resolves no image input; the engine is invoked with null.
-        verify { graphExecutionEngine.invoke(any(), any(), any(), any(), any(), any(), any(), isNull()) }
+        verify {
+            graphExecutionEngine.invoke(
+                sessionId = any(),
+                userPrompt = any(),
+                graph = any(),
+                runId = any(),
+                resume = any(),
+                imageInput = isNull(),
+                runHadImage = any(),
+                origin = any(),
+            )
+        }
     }
 
     /**
@@ -828,11 +849,7 @@ class TaskQueueManagerImplTest {
                 graph = any(),
                 runId = any(),
                 resume = any(),
-                depth = any(),
-                budget = any(),
-                stuckDetector = any(),
                 imageInput = any(),
-                imageDelivery = any(),
                 runHadImage = capture(hadImageSlot),
             )
         } returns flowOf(AgentOrchestratorState.Completed("ok"))

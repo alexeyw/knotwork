@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.ExecutionScope
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -56,7 +57,7 @@ class IfConditionNodeExecutorTest {
         coEvery {
             evaluateIfConditionUseCase(node, "test input", capture(hasImageSlot), any())
         } returns EvaluateIfConditionUseCase.Outcome(value = true)
-        val scope = ExecutionScope(imagePresent = true)
+        val scope = ExecutionScope(run = RunTreeContext.standalone().copy(imagePresent = true))
 
         executor.execute(node, "test input", "session-1", "prompt", null, scope).toList()
 

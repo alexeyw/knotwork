@@ -60,17 +60,15 @@ import javax.inject.Provider
  * states are intentionally not forwarded — only the sub-pipeline's final
  * response is the parent node's output.
  *
- * **Shared spend ledger.** [ExecutionScope.budget] is threaded into the
- * child engine invocation, so the sub-pipeline decrements the same tree-wide
- * `MAX_STEPS` ceiling instead of getting a private allowance; exhaustion in
- * depth fails the child, which becomes this node's error and terminates the
- * whole stack.
- *
- * **Shared image delivery.** [ExecutionScope.imageDelivery] is likewise threaded
- * into the child run, so a run's single image attachment reaches the first vision
- * sink in execution order *anywhere in the tree* — including a `LITE_RT` node
- * nested inside this sub-pipeline — and is consumed exactly once across the whole
- * stack.
+ * **One run tree.** The child engine invocation receives the parent's
+ * [RunTreeContext][app.knotwork.android.domain.models.RunTreeContext] whole, one
+ * level deeper ([RunTreeContext.nested][app.knotwork.android.domain.models.RunTreeContext.nested]).
+ * So the sub-pipeline charges the same step and token ceilings instead of getting
+ * a private allowance — exhaustion in depth fails the child, which becomes this
+ * node's error and terminates the whole stack. It observes into the same
+ * repetition window, can receive the parent's pending advice, delivers the run's
+ * single image to the first vision sink *anywhere in the tree* exactly once,
+ * attributes its answer to the root OUTPUT, and keeps the parent's origin.
  *
  * **Human-in-the-loop.** When the child parks in its persistent waiting phase
  * (its TOOL/CLARIFICATION node timed out into a durable pending-interaction
@@ -93,8 +91,8 @@ import javax.inject.Provider
  * the stack — a sub-pipeline edited since the interruption fails the resume
  * loudly rather than replaying onto a mismatched graph.
  *
- * **Depth safety.** [ExecutionScope.depth] carries the current nesting level;
- * the recursive call uses `depth + 1`. The authoritative protection against
+ * **Depth safety.** The scope's tree carries the current nesting level; the
+ * recursive call runs one level deeper. The authoritative protection against
  * runaway nesting and cycles is *static* — `PipelineCompositionValidator`
  * rejects such compositions before any run starts. The runtime ceiling here
  * ([SettingsRepository.pipelineMaxNestingDepth]) is only the safety net for a
@@ -125,7 +123,7 @@ class PipelineNodeExecutor @Inject constructor(
         }
 
         val maxDepth = settingsRepository.pipelineMaxNestingDepth.first()
-        if (scope.depth + 1 > maxDepth) {
+        if (scope.run.depth + 1 > maxDepth) {
             emit(failure("Pipeline nesting depth exceeded the limit of $maxDepth"))
             return@flow
         }
@@ -179,24 +177,7 @@ class PipelineNodeExecutor @Inject constructor(
                 graph = targetGraph,
                 runId = null,
                 resume = null,
-                depth = scope.depth + 1,
-                budget = scope.budget,
-                // Shared for the same reason the budget is: a parent that calls
-                // this child repeatedly with the same input is one loop, and a
-                // child with a private window would see several fresh runs
-                // where the tree has one going in circles.
-                stuckDetector = scope.stuckDetector,
-                // And the notes with it: the detector's grace period is spent
-                // by the child's steps, so a nudge the parent raised has to be
-                // able to reach the child that is spending it.
-                contextNotes = scope.contextNotes,
-                imageDelivery = scope.imageDelivery,
-                runHadImage = scope.imagePresent,
-                generatingModel = scope.generatingModel,
-                // The whole run tree shares one origin: a sub-pipeline of a
-                // trigger run is still a trigger run, and must classify its
-                // memory-retrieval key the same way (DESCRIPTION.md §6.10.1).
-                origin = scope.runOrigin,
+                tree = scope.run.nested(),
             ).collect { state ->
                 when (state) {
                     is AgentOrchestratorState.Completed -> finalResponse = state.finalResponse
@@ -243,24 +224,7 @@ class PipelineNodeExecutor @Inject constructor(
                 graph = targetGraph,
                 runId = childRunId,
                 resume = childResume,
-                depth = scope.depth + 1,
-                budget = scope.budget,
-                // Shared for the same reason the budget is: a parent that calls
-                // this child repeatedly with the same input is one loop, and a
-                // child with a private window would see several fresh runs
-                // where the tree has one going in circles.
-                stuckDetector = scope.stuckDetector,
-                // And the notes with it: the detector's grace period is spent
-                // by the child's steps, so a nudge the parent raised has to be
-                // able to reach the child that is spending it.
-                contextNotes = scope.contextNotes,
-                imageDelivery = scope.imageDelivery,
-                runHadImage = scope.imagePresent,
-                generatingModel = scope.generatingModel,
-                // The whole run tree shares one origin: a sub-pipeline of a
-                // trigger run is still a trigger run, and must classify its
-                // memory-retrieval key the same way (DESCRIPTION.md §6.10.1).
-                origin = scope.runOrigin,
+                tree = scope.run.nested(),
             ).collect { state ->
                 when (state) {
                     is AgentOrchestratorState.Completed -> finalResponse = state.finalResponse
