@@ -834,9 +834,10 @@ constructor(
                             when (output) {
                                 is NodeOutput.State -> {
                                     if (output.state is AgentOrchestratorState.SuspendedInBackground) {
-                                        // Not mirrored: a suspended record would
-                                        // flip back to RUNNING, but a parked run
-                                        // must keep its WAITING_* status.
+                                        // Not mirrored: while the record is
+                                        // WAITING_*, mirroring any other state
+                                        // flips it back to RUNNING, and a parked
+                                        // run must keep its WAITING_* status.
                                         runParked = true
                                     } else {
                                         records.mirror(output.state)
