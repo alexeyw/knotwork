@@ -11,16 +11,13 @@ import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
-import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.NodeType
-import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineGraph
-import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunBudgetLedger
@@ -29,7 +26,6 @@ import app.knotwork.android.domain.models.RunGeneratingModel
 import app.knotwork.android.domain.models.RunImageDelivery
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunOrigin
-import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolInvocationResult
@@ -43,11 +39,8 @@ import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
-import app.knotwork.android.domain.repositories.PendingInteractionRepository
-import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
-import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
 import kotlinx.coroutines.NonCancellable
@@ -95,11 +88,9 @@ constructor(
     private val crashReportingRepository: CrashReportingRepository,
     private val localModelRepository: LocalModelRepository,
     private val memoryRepository: MemoryRepository,
-    private val pipelineRunRepository: PipelineRunRepository,
     private val runTraceRepository: RunTraceRepository,
     private val resolveRunCeilingsUseCase: ResolveRunCeilingsUseCase,
-    private val pendingInteractionRepository: PendingInteractionRepository,
-    private val ceilingNotifier: CeilingNotifier,
+    private val runRecords: RunRecordWriter.Factory,
 ) {
 
     /**
@@ -299,6 +290,8 @@ constructor(
             pipelineName = graph.name,
             firstSeq = resume?.nextSeq ?: 0L,
         )
+        // This invocation's run record: current node, spend, WAITING_* status.
+        val records = runRecords.open(runId, sessionId)
 
         // Position of the next checkpoint record to replay; meaningful only
         // in resume mode. Once it reaches the end of the recorded prefix the
@@ -348,26 +341,15 @@ constructor(
         }
 
         // A run resumed from a ceiling pause still holds the record of the
-        // question it parked on. Nothing else will consume it — the other two
-        // kinds are consumed by the node executor that raised them, and a
-        // ceiling belongs to no node — so it is consumed here, at the one point
-        // every attempt of every run in the tree passes through. Leaving it
-        // would hand the maintenance sweep a park whose run is happily running
-        // again, and the sweep's job is to fail exactly those.
-        if (runId != null) {
-            val parkedCeiling = pendingInteractionRepository.getForRun(runId)
-            if (parkedCeiling?.kind == PendingInteractionKind.CEILING) {
-                pendingInteractionRepository.delete(runId)
-                ceilingNotifier.cancelCeilingNotification(sessionId)
-            }
-        }
+        // question it parked on; this is the one point every attempt passes.
+        records.consumeParkedCeiling()
 
         // The state the whole run tree shares. A sub-pipeline inherits its
         // parent's; the root builds one here, after the checks above, because
         // building it reads the run record (see [rootTree]).
         val tree = when (entry) {
             is RunEntry.Nested -> entry.tree
-            is RunEntry.Root -> rootTree(runId, entry)
+            is RunEntry.Root -> rootTree(runId, entry, records)
         }
 
         // Honesty note for a run that carried an image but routed down a path with
@@ -554,11 +536,6 @@ constructor(
         // via the `--- Tool Results ---` block on later nodes that opt in.
         val toolInvocationResults = mutableListOf<ToolInvocationResult>()
 
-        // Tracks whether the persistent run record currently sits in a
-        // WAITING_* suspension status, so the first state forwarded after
-        // the suspension resolves flips the record back to RUNNING.
-        var runSuspended = false
-
         // Set the moment a ceiling refuses to let the walk continue, so the
         // post-loop branch can say which one bound instead of re-deriving it.
         var terminationReason: RunTerminationReason? = null
@@ -581,7 +558,7 @@ constructor(
                 // checkpoint already holds everything, so a live wait would
                 // hold the foreground service open buying nothing.
                 val ceiling = breach.asCeilingBreach()
-                if (runId != null && ceiling != null && parkOnCeiling(runId, sessionId, ceiling)) {
+                if (ceiling != null && records.parkOnCeiling(ceiling)) {
                     // The diagnostic plus one stable word, not a sentence. The
                     // suffix is load-bearing: without it a pause and a stop
                     // produce byte-identical console lines, and whoever greps
@@ -593,7 +570,7 @@ constructor(
                         limit = ceiling.limit,
                         spent = ceiling.spent,
                     )
-                    persistSuspensionTransition(runId, pause, runSuspended)
+                    records.mirror(pause)
                     emit(pause)
                     // Ends the walk without a terminal state, exactly as an
                     // approval park does — and, from a sub-pipeline, tells the
@@ -625,11 +602,8 @@ constructor(
             }
 
             // Record the node about to execute so an interrupted run can
-            // report where it stopped. The repository is best-effort by
-            // contract — a storage failure never aborts the run itself.
-            if (runId != null) {
-                pipelineRunRepository.updateCurrentNode(runId, currentNode.id)
-            }
+            // report where it stopped.
+            records.enterNode(currentNode.id)
 
             // Emit current step with dynamically estimated total (null = still unknown).
             emit(
@@ -860,14 +834,12 @@ constructor(
                             when (output) {
                                 is NodeOutput.State -> {
                                     if (output.state is AgentOrchestratorState.SuspendedInBackground) {
-                                        // Bypass persistSuspensionTransition: its
-                                        // wasSuspended branch would flip the record
-                                        // back to RUNNING, but a parked run must
-                                        // keep its WAITING_* status.
+                                        // Not mirrored: a suspended record would
+                                        // flip back to RUNNING, but a parked run
+                                        // must keep its WAITING_* status.
                                         runParked = true
-                                    } else if (runId != null) {
-                                        runSuspended =
-                                            persistSuspensionTransition(runId, output.state, runSuspended)
+                                    } else {
+                                        records.mirror(output.state)
                                     }
                                     emit(output.state.withRedactedError())
                                 }
@@ -902,15 +874,8 @@ constructor(
                     }
 
                     // The executor flow completing means any HITL suspension of
-                    // this node is definitively resolved — flip the record back
-                    // to RUNNING here instead of waiting for the next forwarded
-                    // state (a clarification node, for instance, emits no state
-                    // after its answer arrives, which would otherwise leave the
-                    // record stale-WAITING through the next node's model load).
-                    if (runId != null && runSuspended) {
-                        pipelineRunRepository.updateStatus(runId, PipelineRunStatus.RUNNING)
-                        runSuspended = false
-                    }
+                    // this node is definitively resolved.
+                    records.endSuspension()
 
                     Timber.tag(
                         "PipelineDebug",
@@ -974,9 +939,7 @@ constructor(
                     tree.budget.chargeStep()
                 }
                 tree.budget.chargeTokens(nodeResult?.tokenCount, approximate = nodeResult?.tokensEstimated != false)
-                if (runId != null) {
-                    persistSpend(tree.budget)
-                }
+                records.recordSpend(tree.budget)
                 // Announce a soft crossing where it happens, not at the top of
                 // the next iteration: a run whose last node crosses the
                 // threshold would otherwise never say so, because there is no
@@ -1290,11 +1253,12 @@ constructor(
      *
      * @param runId Id of the root run record, or `null` for a non-persisted run.
      * @param root The root overload's image and origin arguments.
+     * @param records The run's record, whose spend seeds the ledger.
      * @return The tree at depth `0`.
      */
-    private suspend fun rootTree(runId: String?, root: RunEntry.Root): RunTreeContext {
+    private suspend fun rootTree(runId: String?, root: RunEntry.Root, records: RunRecordWriter): RunTreeContext {
         val ceilings = resolveRunCeilingsUseCase(root.origin)
-        val spent = runId?.let { pipelineRunRepository.getSpend(it) } ?: RunSpend()
+        val spent = records.spendSoFar()
         val delivery = root.imageInput?.let { RunImageDelivery(it) }
         return RunTreeContext(
             depth = 0,
@@ -1315,116 +1279,6 @@ constructor(
             generatingModel = RunGeneratingModel(),
             origin = root.origin,
         )
-    }
-
-    /**
-     * Mirrors a human-in-the-loop suspension (and its resolution) into the
-     * persistent run record. [AgentOrchestratorState.WaitingForApproval] and
-     * [AgentOrchestratorState.AwaitingClarification] move the record to the
-     * matching WAITING_* status; the first state forwarded *after* a
-     * suspension flips it back to [PipelineRunStatus.RUNNING] (the node-end
-     * flip in the main loop covers executors that emit no state after
-     * resolution). All other states leave the record untouched — the RUNNING
-     * transition itself and every terminal status are owned by the task
-     * queue. The repository is best-effort by contract, so no guard is
-     * needed here.
-     *
-     * @param runId Id of the persistent run record.
-     * @param state The orchestrator state about to be forwarded downstream.
-     * @param wasSuspended Whether the record currently sits in a WAITING_* status.
-     * @return The new suspension flag to carry into the next forwarded state.
-     */
-    private suspend fun persistSuspensionTransition(
-        runId: String,
-        state: AgentOrchestratorState,
-        wasSuspended: Boolean,
-    ): Boolean = when {
-        state is AgentOrchestratorState.WaitingForApproval -> {
-            pipelineRunRepository.updateStatus(runId, PipelineRunStatus.WAITING_APPROVAL)
-            // Suspension flush: the run may now wait indefinitely (and the
-            // process may die waiting), so the trace must be durable up to
-            // this exact point.
-            runTraceRepository.flush()
-            true
-        }
-        state is AgentOrchestratorState.AwaitingClarification -> {
-            pipelineRunRepository.updateStatus(runId, PipelineRunStatus.WAITING_CLARIFICATION)
-            runTraceRepository.flush()
-            true
-        }
-        state is AgentOrchestratorState.WaitingForCeilingRaise -> {
-            // Reached twice for one pause, and both are wanted. The engine that
-            // raised it calls this directly, before parking. A *parent* engine
-            // reaches it when a sub-pipeline forwards the pause upwards, which
-            // is what puts the whole stack into WAITING_CEILING rather than
-            // leaving the root RUNNING behind a child that is waiting — the
-            // shape of a defect found on device, which made every answer to a nested
-            // park bounce off the resume guard.
-            pipelineRunRepository.updateStatus(runId, PipelineRunStatus.WAITING_CEILING)
-            runTraceRepository.flush()
-            true
-        }
-        // Console lines, node-I/O snapshots and run notices are observations
-        // *about* the run, not progress of it: they keep arriving while a HITL
-        // gate is waiting (a sub-pipeline forwards its child's console traffic
-        // upwards). Letting them fall through to the branch below made the first
-        // such line read as "the wait ended" and flip the record back to RUNNING
-        // while the gate was still open. For a nested pipeline that left the root
-        // RUNNING and the child WAITING_APPROVAL, so `ResumePipelineRunUseCase`
-        // — which requires a resumable *root* — rejected every attempt to answer
-        // the parked notification.
-        //
-        // A notice is only ever raised just after a node is charged, so today it
-        // cannot coincide with an open gate. It is classified here anyway: the
-        // guarantee should rest on what the state *means*, not on an ordering
-        // argument that a later change could quietly invalidate.
-        state is AgentOrchestratorState.ConsoleLog ||
-            state is AgentOrchestratorState.NodeIO ||
-            state is AgentOrchestratorState.RunNotice -> wasSuspended
-        wasSuspended -> {
-            pipelineRunRepository.updateStatus(runId, PipelineRunStatus.RUNNING)
-            false
-        }
-        else -> false
-    }
-
-    /**
-     * Makes a ceiling pause durable and, unless the user is already looking at
-     * the session, tells them about it.
-     *
-     * The record is what the pause *is*: the engine coroutine ends immediately
-     * after this returns, so from here on the question exists only in the
-     * pending-interaction store. It carries the axis and both numbers because
-     * the card that asks it has to state the limit **this run** was stopped at —
-     * the setting behind that number may well have been edited by the time the
-     * answer comes, hours later and in another process.
-     *
-     * @param runId Id of the run being parked. For a sub-pipeline this is the
-     *   child's id: the park sits where the pause happened, while the grant it
-     *   buys lands on the tree's root, which the submission path resolves.
-     * @param sessionId Id of the owning chat session.
-     * @param ceiling Which ceiling bound, and by how much.
-     * @return `true` when the park is durable and the caller may end the walk;
-     *   `false` when the store refused it and the run must stop instead — a
-     *   question recorded nowhere would leave the run waiting for an answer no
-     *   surface could ever offer.
-     */
-    private suspend fun parkOnCeiling(runId: String, sessionId: String, ceiling: HardCeilingBreach): Boolean {
-        val saved = pendingInteractionRepository.save(
-            PendingInteraction(
-                runId = runId,
-                sessionId = sessionId,
-                kind = PendingInteractionKind.CEILING,
-                ceilingAxis = ceiling.axis,
-                ceilingLimit = ceiling.limit,
-                ceilingSpent = ceiling.spent,
-                requestedAt = System.currentTimeMillis(),
-            ),
-        )
-        if (saved) {
-            ceilingNotifier.sendCeilingPauseRequest(runId, sessionId, ceiling)
-        }
-        return saved
     }
 
     /**
@@ -1507,31 +1361,6 @@ constructor(
         val rendered = promptTemplateEngine.render(rawPrompt, promptVariableProviders.toList())
         if (rendered === rawPrompt || rendered == rawPrompt) return node
         return node.copy(systemPrompt = rendered)
-    }
-
-    /**
-     * Writes the tree's accumulated spend onto the root run record.
-     *
-     * Called once per executed node, from whatever depth is running. Two things
-     * make that cadence the right one rather than an extravagance: the walk
-     * already writes to `pipeline_runs` on every node entry (`updateCurrentNode`),
-     * so this adds no new class of traffic; and the counter has to be exact at
-     * every park, because a parked run resumes by reading it back. Nodes are
-     * seconds apart — they are LLM calls — so the write is never hot.
-     *
-     * Best-effort by the repository's contract: losing the write loses accuracy,
-     * never the run, and an under-count makes the ceiling bind late rather than
-     * early.
-     *
-     * @param ledger The run tree's spend ledger.
-     */
-    private suspend fun persistSpend(ledger: RunBudgetLedger) {
-        val rootId = ledger.rootRunId ?: return
-        pipelineRunRepository.recordSpend(
-            rootRunId = rootId,
-            stepsSpent = ledger.stepsSpent,
-            tokensSpent = ledger.tokensSpent,
-        )
     }
 
     /**

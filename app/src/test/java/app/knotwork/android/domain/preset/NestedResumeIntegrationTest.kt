@@ -22,6 +22,7 @@ import app.knotwork.android.domain.engine.executors.ToolInvocationGate
 import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
+import app.knotwork.android.domain.engine.testGraphExecutionEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ClarificationOutcome
 import app.knotwork.android.domain.models.ConnectionModel
@@ -425,7 +426,7 @@ class NestedResumeIntegrationTest {
             mockk<SkillNodeExecutor>(relaxed = true),
         )
 
-        return GraphExecutionEngine(
+        return testGraphExecutionEngine(
             factory,
             toolNodeExecutor,
             chatRepository,

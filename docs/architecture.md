@@ -417,6 +417,12 @@ The walk delegates to collaborators, each covering one concern:
 - **`QueueCursor`** — one QUEUE_PROCESSOR loop: it reads the item list, hands
   each item the results before it, survives a failed item when the queue's
   `stopOnError` is off, and leaves by the `Done` edge with a summary.
+- **`RunRecordWriter`** — the run record's mid-run writes: the node the run is
+  on, what the tree has spent, and the WAITING_* status while a gate waits for
+  an answer. It parks a run on a ceiling and consumes that question when the
+  run resumes. The task queue still owns the RUNNING transition and every
+  terminal status. For a run that is not persisted it writes nothing, so a
+  ceiling stops that run instead of pausing it.
 
 ### 3.1. Node types
 

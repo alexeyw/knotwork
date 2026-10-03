@@ -258,6 +258,7 @@ Only Kotlin files appear inside the generated blocks.
     - `retry/` - Tests for the retry observability seam.
       - `CollectingCloudRetryListenerTest.kt` - Unit tests for `CollectingCloudRetryListener` — the buffer that lets the cloud node executor drain retries into console lines after the call completes.
     - `RunConsoleTest.kt` - Unit coverage for `RunConsole`.
+    - `RunRecordWriterTest.kt` - Unit coverage for `RunRecordWriter`.
     - `structured/` - Tests for the structured-output validate-and-repair layer.
       - `CollectingRepairListenerTest.kt` - Unit tests for `CollectingRepairListener`.
       - `EngineStructuredInferenceClientTest.kt` - Unit tests for `EngineStructuredInferenceClient`.
@@ -266,6 +267,7 @@ Only Kotlin files appear inside the generated blocks.
       - `StructuredOutputGateTest.kt` - Unit tests for `StructuredOutputGate`: each output form (JSON object, JSON array, constrained token), extraction from every payload packaging, the repair loop fixing on a later attempt, exhaustion producing a fully-populated `GateResult.Failed`, the lowered repair temperature, repair-listener notifications, and cancellation propagation.
     - `stuck/` - Tests for the graph stuck-detector.
       - `GraphStuckDetectorTest.kt` - Unit tests for `GraphStuckDetector`.
+    - `TestGraphExecutionEngine.kt` - Builds a `GraphExecutionEngine` for a test from the flat list of dependencies the test fakes.
   - `memoryio/` - Tests for the long-term-memory export/import gateway.
     - `MemoryJsonSerializerTest.kt` - Unit tests for `MemoryJsonSerializer` — the serialize → parse round-trip, the provenance / tag fidelity, and the never-throwing failure paths.
     - `MemorySourceJsonTest.kt` - Unit tests for `MemorySourceJson` — the shared `MemorySource` ↔ JSON codec used by both the Room column converter and the memory export file.
