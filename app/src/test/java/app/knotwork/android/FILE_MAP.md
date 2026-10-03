@@ -209,6 +209,7 @@ Only Kotlin files appear inside the generated blocks.
     - `TimeAndIdConstantsTest.kt` - Pins the time-unit and notification-id constants exposed by `TimeAndIdConstants`.
   - `engine/` - Tests for the graph execution engine and its supporting abstractions.
     - `ChatHistoryWindowPlannerTest.kt` - Unit tests for `ChatHistoryWindowPlanner` — the pure planner that decides how a session's chat history is split into a summarised prefix and a verbatim live window.
+    - `CheckpointReplayTest.kt` - Unit coverage for `CheckpointReplay`.
     - `CloudClientUnavailabilityTest.kt` - Unit tests for `CloudClientUnavailability.message` — each cause must name the setting that resolves it and must not borrow another cause's remedy.
     - `CloudErrorSanitizerTest.kt` - Unit tests for `CloudErrorSanitizer`.
     - `DefaultPipelineFactoryTest.kt` - Unit tests for `DefaultPipelineFactory`.
@@ -248,6 +249,7 @@ Only Kotlin files appear inside the generated blocks.
       - `GoldenTraceTest.kt` - Golden-trace regression gate: every shipped pipeline, run through the real engine under a scripted model, must produce exactly the trace committed for it.
     - `GraphExecutionEngineTest.kt` - Tests for GraphExecutionEngine.
     - `GraphRoutingTest.kt` - Unit coverage for `GraphRouting`.
+    - `LiveNodeStepTest.kt` - Unit coverage for `LiveNodeStep`.
     - `MemoryAccessLogFormatterTest.kt` - Unit tests for `MemoryAccessLogFormatter` — the pure formatter behind the `MemoryAccess` console event.
     - `MemoryRetrievalQueryResolverTest.kt` - Unit tests for `MemoryRetrievalQueryResolver` — the `RunOrigin` × declared-query matrix of the retrieval-key contract (`docs/architecture.md`).
     - `ModelAuthorshipTest.kt` - `ModelAuthorship`: which text a run carries forward was written by a model.

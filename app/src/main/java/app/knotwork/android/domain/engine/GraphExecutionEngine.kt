@@ -1,6 +1,5 @@
 package app.knotwork.android.domain.engine
 
-import app.knotwork.android.domain.constants.PipelineExecutionDefaults
 import app.knotwork.android.domain.engine.executors.NodeExecutorFactory
 import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
 import app.knotwork.android.domain.engine.stuck.GraphStuckDetector
@@ -12,7 +11,6 @@ import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
 import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
-import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineGraph
@@ -47,12 +45,6 @@ import javax.inject.Singleton
  * It traverses nodes starting from [NodeType.INPUT], evaluates conditions,
  * executes LLM inference, triggers tools, and reaches [NodeType.OUTPUT].
  */
-// LargeClass is suppressed deliberately: this is the central pipeline
-// orchestrator, and the run-walk logic (node traversal, lazy memory and
-// chat-history resolution, HITL suspension, checkpoint/resume, sub-pipeline
-// fan-out) is most readable as one cohesive state machine. Decomposing it into
-// collaborators is tracked as future work rather than forced here.
-@Suppress("LargeClass")
 @Singleton
 class GraphExecutionEngine
 @Inject
@@ -268,10 +260,8 @@ constructor(
         // This invocation's run record: current node, spend, WAITING_* status.
         val records = runRecords.open(runId, sessionId)
 
-        // Position of the next checkpoint record to replay; meaningful only
-        // in resume mode. Once it reaches the end of the recorded prefix the
-        // walk is live for the rest of the run.
-        var replayCursor = 0
+        // A resumed run's recorded prefix, replayed instead of re-run.
+        val replay = CheckpointReplay(resume)
 
         if (!graph.isValidDAG()) {
             // Push the console event BEFORE the terminal Error so the Error
@@ -364,6 +354,20 @@ constructor(
 
         // What each node sees: rendered prompt, composed context, the image.
         val inputs = nodeInputs.open(console, graph, sessionId, userPrompt, tree, resume?.memorySnapshot)
+        // Runs a node's executor and accounts for it.
+        val live = LiveNodeStep(
+            nodeExecutorFactory = nodeExecutorFactory,
+            metricsRepository = metricsRepository,
+            collector = this,
+            console = console,
+            records = records,
+            inputs = inputs,
+            tree = tree,
+            graph = graph,
+            call = LiveNodeStep.NodeCall(sessionId, userPrompt, runId),
+            resuming = replay.resuming,
+            beforeOutput = { noteUndeliveredImage() },
+        )
 
         // Set the moment a ceiling refuses to let the walk continue, so the
         // post-loop branch can say which one bound instead of re-deriving it.
@@ -444,253 +448,47 @@ constructor(
                     ),
                 ),
             )
-            // Checkpoint replay decision: while the resume cursor still holds
-            // records, the recorded snapshot of this node substitutes for
-            // execution. INPUT and OUTPUT nodes are never recorded (the trace
-            // skips them by design), so they always run their executors even
-            // mid-replay — INPUT is a pure passthrough, and a recorded OUTPUT
-            // cannot exist for an interrupted run.
-            val replayRecord = if (resume != null &&
-                replayCursor < resume.records.size &&
-                currentNode.type != NodeType.INPUT &&
-                currentNode.type != NodeType.OUTPUT
-            ) {
-                resume.records[replayCursor]
-            } else {
-                null
-            }
-            if (replayRecord != null && replayRecord.nodeId != currentNode.id) {
-                // The persisted prefix diverged from the graph walk: the trace
-                // cannot serve as a checkpoint (corruption, or an edit that
-                // slipped past hash validation). Failing loudly beats silently
-                // executing a half-replayed run on inconsistent inputs.
-                console.push(
-                    ConsoleEventType.Error,
-                    "Checkpoint trace diverged at ${currentNode.type.name}; resume aborted",
-                )
-                emit(
-                    AgentOrchestratorState.Error(
-                        "Recorded checkpoint no longer matches the pipeline graph. Restart the task instead.",
-                        reason = RunTerminationReason.GraphChanged,
-                    ),
-                )
-                return@flow
+            // A node the interrupted run completed is replayed from its record:
+            // its recorded output and routing verdicts drive the same control flow
+            // a live result would. No executor call, no metrics, no new NodeIo
+            // record; the compact console line is the only addition to the trace.
+            val replayed = when (val step = replay.take(currentNode)) {
+                ReplayStep.Diverged -> {
+                    console.push(
+                        ConsoleEventType.Error,
+                        "Checkpoint trace diverged at ${currentNode.type.name}; resume aborted",
+                    )
+                    emit(
+                        AgentOrchestratorState.Error(
+                            "Recorded checkpoint no longer matches the pipeline graph. Restart the task instead.",
+                            reason = RunTerminationReason.GraphChanged,
+                        ),
+                    )
+                    return@flow
+                }
+                is ReplayStep.Replayed -> step
+                ReplayStep.Live -> null
             }
 
-            var nodeResult: NodeExecutionResult? = null
+            val nodeResult: NodeExecutionResult?
             val executorInput: String
             val nodeDurationMs: Long
-
-            if (replayRecord != null) {
-                // Replay branch: the node completed before the interruption —
-                // its recorded output (and routing verdicts) feed the same
-                // control flow a live result would. No executor call, no
-                // metrics, no new NodeIo trace record; the compact console
-                // event below is the only addition to the persisted trace.
-                replayCursor++
-                nodeResult = NodeExecutionResult(
-                    outputText = replayRecord.outputText,
-                    conditionResult = replayRecord.conditionResult,
-                    routingKey = replayRecord.routingKey,
-                    tokenCount = replayRecord.tokenCount,
-                    resolvedToolName = replayRecord.resolvedToolName,
-                )
-                executorInput = replayRecord.inputText
-                nodeDurationMs = replayRecord.durationMs
+            if (replayed != null) {
+                nodeResult = replayed.result
+                executorInput = replayed.input
+                nodeDurationMs = replayed.durationMs
                 console.push(
                     ConsoleEventType.NodeExecution,
                     "↻ ${currentNode.type.name} replayed from checkpoint",
                 )
             } else {
-                console.push(ConsoleEventType.NodeExecution, "▶ ${currentNode.type.name}")
-
-                // Give UI time to render the stage before CPU-heavy inference starts
-                kotlinx.coroutines.delay(PipelineExecutionDefaults.LITE_RT_PREWARM_DELAY_MS)
-
-                val executor = nodeExecutorFactory.getExecutor(currentNode.type)
-                Timber.tag(
-                    "PipelineDebug",
-                ).d(
-                    "[NODE_IN] type=${currentNode.type.name} id=${currentNode.id} " +
-                        "input=${currentInputText.take(PipelineExecutionDefaults.NODE_IO_LOG_CHAR_LIMIT)}",
-                )
-
-                // The node with its system prompt rendered, and the input composed
-                // from the context blocks it opted into.
-                val prepared = inputs.prepare(currentNode, currentInputText)
-                val nodeForExecution = prepared.node
-                executorInput = prepared.input
-
-                val nodeStartMs = System.currentTimeMillis()
-                var runParked = false
-                // A routing node validates its key against the labels of its own
-                // outgoing edges — surfaced through the scope so the executor can
-                // constrain (and repair towards) a key that matches a branch.
-                val routingChoices = GraphRouting.routingChoices(currentNode, graph)
-                // The run's image goes to the first vision-eligible node of the tree only.
-                val imagePathForNode = inputs.takeImage(currentNode)
-                // Note an undelivered image *before* the terminal OUTPUT node runs:
-                // OUTPUT's executor emits the terminal `Completed`, after which the
-                // engine must not push any further console line (it would shift the
-                // last orchestrator state away from `Completed`). By the OUTPUT
-                // iteration every upstream node — including any vision sink — has
-                // already run, so the delivery state is final here.
-                if (currentNode.type == NodeType.OUTPUT) {
-                    noteUndeliveredImage()
-                }
-                try {
-                    executor.execute(
-                        nodeForExecution,
-                        executorInput,
-                        sessionId,
-                        userPrompt,
-                        runId,
-                        ExecutionScope(
-                            run = tree,
-                            pipelineVisitIndex = pipelineVisitIndex,
-                            routingChoices = routingChoices,
-                            imagePath = imagePathForNode,
-                            inputWrittenByModel = currentInputByModel,
-                        ),
-                    )
-                        .collect { output ->
-                            when (output) {
-                                is NodeOutput.State -> {
-                                    if (output.state is AgentOrchestratorState.SuspendedInBackground) {
-                                        // Not mirrored: while the record is
-                                        // WAITING_*, mirroring any other state
-                                        // flips it back to RUNNING, and a parked
-                                        // run must keep its WAITING_* status.
-                                        runParked = true
-                                    } else {
-                                        records.mirror(output.state)
-                                    }
-                                    emit(output.state.withRedactedError())
-                                }
-                                is NodeOutput.Result -> nodeResult = output.result
-                                is NodeOutput.Console -> {
-                                    // The node has no console sink of its own; the
-                                    // engine owns `seq`/`depth` stamping. A repair
-                                    // attempt additionally bumps the per-node repair
-                                    // counter so the statistics surface reflects how
-                                    // often this node's structured output stumbled.
-                                    console.push(output.type, output.message)
-                                    if (output.type == ConsoleEventType.StructuredOutputRepair) {
-                                        metricsRepository.recordStructuredOutputRepair(nodeForExecution.label)
-                                    }
-                                }
-                            }
-                        }
-
-                    // A parked run ends the walk without a terminal state: the
-                    // executor made the pending request durable and the run
-                    // record keeps its WAITING_* status — the user's response
-                    // resumes the run from its checkpoint later, possibly in
-                    // another process. Flush the buffered trace first so the
-                    // checkpoint is complete up to this exact node.
-                    if (runParked) {
-                        console.push(
-                            ConsoleEventType.NodeExecution,
-                            "⏸ ${currentNode.type.name} parked awaiting user response",
-                        )
-                        console.flush()
-                        return@flow
+                when (val outcome = live.run(currentNode, currentInputText, currentInputByModel, pipelineVisitIndex)) {
+                    is LiveOutcome.Ran -> {
+                        nodeResult = outcome.result
+                        executorInput = outcome.input
+                        nodeDurationMs = outcome.durationMs
                     }
-
-                    // The executor flow completing means any HITL suspension of
-                    // this node is definitively resolved.
-                    records.endSuspension()
-
-                    Timber.tag(
-                        "PipelineDebug",
-                    ).d(
-                        "[NODE_OUT] type=${currentNode.type.name} id=${currentNode.id} " +
-                            "output=${nodeResult?.outputText?.take(PipelineExecutionDefaults.NODE_IO_LOG_CHAR_LIMIT)}",
-                    )
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    // Node executors suspend; collapsing a cancelled run into
-                    // an `Error` emission would both surface a false error and
-                    // keep the flow alive past its collector's cancellation.
-                    throw e
-                } catch (e: Exception) {
-                    // The exception may be a provider's, quoting its key. The throwable
-                    // still goes to Timber for its stack trace — the crash-reporting tree
-                    // redacts every record it forwards — but the text surfaced and
-                    // persisted from here is redacted at this line.
-                    val safeMessage = CloudErrorSanitizer.redactSecrets(e.message ?: "Unknown error")
-                    Timber.tag(
-                        "PipelineDebug",
-                    ).e(e, "[NODE_ERR] type=%s id=%s error=%s", currentNode.type.name, currentNode.id, safeMessage)
-                    console.push(
-                        ConsoleEventType.Error,
-                        "${currentNode.type.name}: $safeMessage",
-                    )
-                    emit(AgentOrchestratorState.Error(safeMessage))
-                    return@flow
-                }
-                nodeDurationMs = System.currentTimeMillis() - nodeStartMs
-                metricsRepository.recordNodeExecution(currentNode.type, nodeDurationMs, nodeResult?.tokenCount)
-                // Charge the tree only for work actually done. A replayed node
-                // was charged when it really ran; charging it again would make a
-                // run that parks often die earlier than one that never parks —
-                // the inverse of what the persisted ledger is for. That is why
-                // this sits in the live branch, beside the metrics write and the
-                // trace append, which are guarded the same way.
-                //
-                // Two further exclusions keep the *step* counter stable across
-                // attempts, which is the property a persisted counter has to have
-                // and the one a per-attempt budget never needed:
-                //
-                //  - INPUT and OUTPUT are never written to the trace, so they are
-                //    never replayed and run their executors again on every
-                //    resumed attempt. On a fresh attempt they are ordinary steps
-                //    and are charged; on a resume they were already charged the
-                //    first time, and charging them again would let a run that
-                //    parks fifteen times exhaust a fifteen-step ceiling on
-                //    pass-through nodes alone — which is the very scenario the
-                //    persisted counter exists to bound.
-                //  - A node whose result carries a termination reason is a
-                //    `PIPELINE` node whose child already charged this same tree
-                //    and stopped it; charging the parent node on top would
-                //    persist one more than the ceiling it just reported.
-                //
-                // Tokens are charged unconditionally: INPUT produces none, and
-                // OUTPUT is terminal, so neither can be double-counted later.
-                val replayedPassThrough = resume != null &&
-                    (currentNode.type == NodeType.INPUT || currentNode.type == NodeType.OUTPUT)
-                val chargeableStep = !replayedPassThrough && nodeResult?.terminationReason == null
-                if (chargeableStep) {
-                    tree.budget.chargeStep()
-                }
-                tree.budget.chargeTokens(nodeResult?.tokenCount, approximate = nodeResult?.tokensEstimated != false)
-                records.recordSpend(tree.budget)
-                // Announce a soft crossing where it happens, not at the top of
-                // the next iteration: a run whose last node crosses the
-                // threshold would otherwise never say so, because there is no
-                // next iteration to say it in.
-                //
-                // OUTPUT is excluded for the reason the `✓` event and the
-                // `NodeIO` emission below are: its executor has already emitted
-                // `Completed`, and a console line pushed after that would shift
-                // the terminal state away from the tail of the flow. Nothing is
-                // lost — a warning that the run is approaching its limit has no
-                // reader once the answer has been delivered.
-                if (currentNode.type != NodeType.OUTPUT) {
-                    tree.budget.claimSoftBreach()?.let { soft ->
-                        // The cause is typed at the source. The console gets the
-                        // terse diagnostic; the sentence the user reads is
-                        // resolved from this same value in the presentation
-                        // layer, so the crossing is worded once rather than once
-                        // per surface.
-                        val cause = RunNoticeCause.ApproachingCeiling(
-                            axis = soft.axis,
-                            spent = soft.spent,
-                            hardLimit = soft.hardLimit,
-                        )
-                        console.push(ConsoleEventType.RunCeiling, cause.diagnostic())
-                        emit(AgentOrchestratorState.RunNotice(cause))
-                        tree.contextNotes.add(SOFT_CEILING_CONTEXT_NOTE)
-                    }
+                    LiveOutcome.Parked, LiveOutcome.Failed -> return@flow
                 }
             }
             val nodeTokenCount = nodeResult?.tokenCount
@@ -737,7 +535,7 @@ constructor(
             // after Completed would shift the terminal state away from the
             // tail of the flow. Replayed nodes already pushed their compact
             // "↻ replayed" event instead.
-            if (currentNode.type != NodeType.OUTPUT && replayRecord == null) {
+            if (currentNode.type != NodeType.OUTPUT && replayed == null) {
                 console.push(
                     ConsoleEventType.NodeExecution,
                     "✓ ${currentNode.type.name} in ${nodeDurationMs}ms",
@@ -771,7 +569,7 @@ constructor(
                 // Write-through into the persistent run trace, which a checkpoint
                 // resume replays instead of re-running the node. A replayed node
                 // appends nothing — its record is already in the trace.
-                if (replayRecord == null) {
+                if (replayed == null) {
                     console.recordNodeIo(currentNode, executorInput, outputText, nodeDurationMs, nodeResult)
                 }
                 emit(AgentOrchestratorState.PipelineTrace(traceSteps.toList()))
@@ -824,7 +622,7 @@ constructor(
                     // and the step reads as the pass-through it is.
                     outputFingerprint = GraphStuckDetector.fingerprint(nodeResult?.outputText ?: executorInput),
                 )
-                if (replayRecord != null) {
+                if (replayed != null) {
                     // Rebuild the window from history without re-deciding it:
                     // the attempt that actually ran this prefix did not stop on
                     // it, and reaching a different verdict now would be the app
@@ -1042,35 +840,7 @@ constructor(
         -> ConsoleEventType.SystemMessage
     }
 
-    /**
-     * Returns this state with a credential quoted in its error message masked, and
-     * any other state unchanged.
-     *
-     * An executor forwards its own `Error` straight to the engine's collector, and from
-     * there it becomes the run record's message — the one the chat export and the
-     * trigger-journal export share. Redacting here covers the executors that scrub
-     * their provider errors and the ones that do not.
-     */
-    private fun AgentOrchestratorState.withRedactedError(): AgentOrchestratorState =
-        if (this is AgentOrchestratorState.Error) copy(message = CloudErrorSanitizer.redactSecrets(message)) else this
-
     private companion object {
-        /**
-         * Injected into the run's own context the first time an axis crosses its
-         * soft threshold, so the model driving the next node can bring the task
-         * to a close on its own terms instead of discovering the hard stop by
-         * walking into it.
-         *
-         * Deliberately says what to do rather than quoting a number: the numbers
-         * are in the console line a person reads, and a budget figure inside the
-         * prompt invites the model to reason about arithmetic instead of about
-         * the task.
-         */
-        const val SOFT_CEILING_CONTEXT_NOTE: String =
-            "SYSTEM NOTICE: this run is close to its resource limit and may be stopped before it " +
-                "finishes. Wrap up now: produce the best answer you can from what you already have, " +
-                "and do not start new sub-tasks or additional tool calls."
-
         /**
          * Injected into the run's own context the first time the stuck-detector
          * decides the run is going in circles, so the model gets a chance to

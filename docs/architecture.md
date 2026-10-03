@@ -430,6 +430,15 @@ The walk delegates to collaborators, each covering one concern:
   settings are read once; the message list is re-read for each node that
   replays it. Pending advice reaches the next prompt-composing node, never
   OUTPUT.
+- **`CheckpointReplay`** — a resumed run's recorded prefix: each node the
+  interrupted run completed gets its recorded output and routing verdicts back
+  instead of running again. INPUT and OUTPUT always run live. A record naming
+  another node stops the resume as `GraphChanged`.
+- **`LiveNodeStep`** — one node run live: its executor's states are forwarded and
+  mirrored into the run record, its console lines are stamped, and its duration
+  is recorded. The tree's ledger is charged for it — but not again for INPUT and
+  OUTPUT on a resumed attempt — and a soft ceiling crossing is announced. A node
+  that parks the run or throws ends the walk.
 
 ### 3.1. Node types
 
