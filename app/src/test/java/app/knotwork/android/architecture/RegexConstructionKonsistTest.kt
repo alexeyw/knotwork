@@ -48,8 +48,11 @@ class RegexConstructionKonsistTest {
         assertTrue("only $constructions regex constructions recognised", constructions >= MIN_KNOWN_CONSTRUCTIONS)
         val sanitizer = ProductionSources.code.entries.single { it.key.endsWith("/CloudErrorSanitizer.kt") }.value
         assertTrue(constructionsIn(sanitizer).isNotEmpty())
-        val engine = ProductionSources.code.entries.single { it.key.endsWith("/GraphExecutionEngine.kt") }.value
-        assertEquals(emptyList<String>(), offendersIn(engine))
+        // The router's word match splices an escaped label into a literal: recognised
+        // as a construction, and not as an offender.
+        val routing = ProductionSources.code.entries.single { it.key.endsWith("/GraphRouting.kt") }.value
+        assertTrue(constructionsIn(routing).isNotEmpty())
+        assertEquals(emptyList<String>(), offendersIn(routing))
     }
 
     @Test

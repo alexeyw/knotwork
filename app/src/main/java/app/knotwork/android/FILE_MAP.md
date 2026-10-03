@@ -278,6 +278,7 @@ Only Kotlin files appear inside the generated blocks.
       - `ToolInvocationGate.kt` - Shared `@Singleton` Human-in-the-Loop tool-dispatch gate (risk lookup → destructive-block → approval/park → execute → observation) used by both `ToolNodeExecutor` and `SkillNodeExecutor`; mints each request's `requestId`, owns the per-session approval-deferred map, settles a live request only when the answer names it, and exposes the `pendingApprovalFor` reattach surface.
       - `ToolNodeExecutor.kt` - Executor for `TOOL` nodes; resolves which tool to run (explicit or LLM auto-select) through the `StructuredOutputGate` (validates the `{tool, arguments}` envelope for auto-select, the arguments object for a fixed tool, repairing malformed JSON), then hands the call to the shared `ToolInvocationGate`.
     - `GraphExecutionEngine.kt` - Engine responsible for executing PipelineGraphs.
+    - `GraphRouting.kt` - Decides where a run goes next, from the graph's edges and the verdict of the node that has just run.
     - `HardwareAccelerationProbe.kt` - Port answering whether the GPU compute path is plausibly usable on this device (LiteRT-LM exposes no availability API). A `true` answer means "worth trying with a fallback ready", never "will work".
     - `LlmInferenceEngine.kt` - LLM engine interface.
     - `MemoryAccessLogFormatter.kt` - Pure formatter for the `MemoryAccess` console event. Renders the terse one-line summary (`query` + key source + hit count + scores) and, when verbose memory logging is on, the per-hit snippet/score expansion. Used by `GraphExecutionEngine`.
@@ -286,6 +287,7 @@ Only Kotlin files appear inside the generated blocks.
     - `NodeContextBuilder.kt` - Assembles a node's executor input by concatenating only the context blocks enabled by its `NodeContextConfig` (Original Task, Chat History, Long-Term Memory, Tool Results, Previous Node Output).
     - `PeakHeapSampler.kt` - Per-run helper tracking the peak native-heap reading across an inference window; reads `NativeMemorySampler` at a throttled (~150 ms) cadence. Used by `StreamInferenceMeter`.
     - `PipelineExecutionContext.kt` - Immutable per-iteration snapshot of pipeline-scoped data (original user message, chat history, previous node output, tool invocation results, memory entries) consumed by `NodeContextBuilder`.
+    - `QueueCursor.kt` - Where one QUEUE_PROCESSOR loop of a run stands: the items still to run, the results so far, and which node the loop belongs to.
     - `retry/` - Cloud-call transient-failure retry observability (the retry itself is Koog's `RetryingLLMClient`).
       - `CloudRetryListener.kt` - `fun interface` fired before each retry of a transient cloud failure; consumers emit a `CloudRetry` console line. Initial call is not a retry.
       - `CollectingCloudRetryListener.kt` - `CloudRetryListener` that buffers retries so the cloud node executor can drain them into one `NodeOutput.Console` per retry after the call; carries the per-retry console message.

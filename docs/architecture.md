@@ -409,6 +409,14 @@ The walk delegates to collaborators, each covering one concern:
   single `seq` numbering that a resumed run continues. It shows console lines
   as they are pushed, and records each node's input and output for the
   checkpoint replay. A TOOL or CLOUD node's record is flushed at once.
+- **`GraphRouting`** — where the run goes after a node, from the graph's edges
+  and the node's verdict: IF_CONDITION's `True`/`False` edge, INTENT_ROUTER's
+  labelled edge or its fallback, EVALUATION's verdict port, otherwise the first
+  edge. It also gives a routing node its choices and estimates the steps ahead
+  for the progress indicator.
+- **`QueueCursor`** — one QUEUE_PROCESSOR loop: it reads the item list, hands
+  each item the results before it, survives a failed item when the queue's
+  `stopOnError` is off, and leaves by the `Done` edge with a summary.
 
 ### 3.1. Node types
 

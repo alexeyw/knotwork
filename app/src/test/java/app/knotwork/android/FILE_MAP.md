@@ -247,12 +247,14 @@ Only Kotlin files appear inside the generated blocks.
       - `GoldenTraceRendererTest.kt` - Pins the parts of the golden-trace format a reviewer relies on when reading a diff: blocks, trailing whitespace, chunking, the failure message, and how a script resolves an answer.
       - `GoldenTraceTest.kt` - Golden-trace regression gate: every shipped pipeline, run through the real engine under a scripted model, must produce exactly the trace committed for it.
     - `GraphExecutionEngineTest.kt` - Tests for GraphExecutionEngine.
+    - `GraphRoutingTest.kt` - Unit coverage for `GraphRouting`.
     - `MemoryAccessLogFormatterTest.kt` - Unit tests for `MemoryAccessLogFormatter` — the pure formatter behind the `MemoryAccess` console event.
     - `MemoryRetrievalQueryResolverTest.kt` - Unit tests for `MemoryRetrievalQueryResolver` — the `RunOrigin` × declared-query matrix of the retrieval-key contract (`docs/architecture.md`).
     - `ModelAuthorshipTest.kt` - `ModelAuthorship`: which text a run carries forward was written by a model.
     - `NodeContextBuilderTest.kt` - Exhaustive test for `NodeContextBuilder` — the single source of truth for how pipeline context blocks are concatenated into a node's executor input.
     - `PeakHeapSamplerTest.kt` - Unit tests for `PeakHeapSampler`.
     - `PipelineSecurityContourTest.kt` - Cross-cutting security-contour test: drives the security guards of the file-workspace and outbound-HTTP tool surfaces through a **real** `GraphExecutionEngine` (only the LLM token stream is stubbed), proving they hold when wired into an executing pipeline rather than only in their isolated executor unit tests.
+    - `QueueCursorTest.kt` - Unit coverage for `QueueCursor`.
     - `retry/` - Tests for the retry observability seam.
       - `CollectingCloudRetryListenerTest.kt` - Unit tests for `CollectingCloudRetryListener` — the buffer that lets the cloud node executor drain retries into console lines after the call completes.
     - `RunConsoleTest.kt` - Unit coverage for `RunConsole`.
