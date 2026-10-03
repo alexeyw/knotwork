@@ -1,0 +1,98 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: fixtures/evaluation_review
+scenario: pass
+about: The reviewer passes the draft.
+origin: CHAT
+prompt:
+  | What is the tallest mountain on Earth?
+
+driver start
+visit golden fixture-evaluation-review/input INPUT #1
+state Stage step=1 of=6 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden fixture-evaluation-review/draft LITE_RT #1
+state Stage step=2 of=6 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=draft call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | Draft a short answer to the user's request.
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Draft answer, visit 1.
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Draft answer, visit 1.
+state NodeIO draft LITE_RT depth=0
+visit golden fixture-evaluation-review/review EVALUATION #1
+state Stage step=3 of=6 EVALUATION
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ EVALUATION
+model.load path=null vision=false audio=false
+model local node=review call=1 temperature=default image=none
+    prompt:
+      | Pass the draft if it answers the request, ask for a Retry if it is close, Fail it otherwise.
+      |
+      | USER: --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | Draft answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | Pass
+run.spend golden steps=3 tokens=4
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ EVALUATION in <ms>ms
+trace.node seq=7 run=golden review EVALUATION depth=0 tokens=null routingKey=Pass
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | Draft answer, visit 1.
+    output:
+      | Pass
+state NodeIO review EVALUATION depth=0
+visit golden fixture-evaluation-review/output OUTPUT #1
+state Stage step=4 of=6 OUTPUT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Pass
+end Completed
+    finalResponse:
+      | Pass
+run.spend golden steps=4 tokens=4
+trace.flush

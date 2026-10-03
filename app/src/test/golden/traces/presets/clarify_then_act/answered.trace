@@ -1,0 +1,118 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/clarify_then_act
+scenario: answered
+about: A clarification answered while the run waits.
+origin: CHAT
+prompt:
+  | Book a table for dinner.
+
+driver start
+visit golden clarify_then_act/input INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden clarify_then_act/clarify CLARIFICATION #1
+state Stage step=2 of=4 CLARIFICATION
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLARIFICATION
+model.load path=null vision=false audio=false
+model local node=clarify call=1 temperature=default image=none
+    prompt:
+      | Inspect the user's request. If anything important is ambiguous, craft ONE concise clarifying question and propose 2-3 short, mutually exclusive options. Today is 15 September 2026. Output STRICTLY valid JSON of shape: {"question": "...", "options": ["...", "..."]}. If nothing needs clarifying, output an empty options array and a question that confirms intent in one line.
+      |
+      | Write the question and every option in the user's language (en-US).
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification timeoutMs=60000
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+driver clarification Answer(text=The second one)
+run.status golden RUNNING
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLARIFICATION in <ms>ms
+trace.node seq=4 run=golden clarify CLARIFICATION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+state NodeIO clarify CLARIFICATION depth=0
+visit golden clarify_then_act/lite_rt LITE_RT #1
+state Stage step=3 of=4 LITE_RT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=lite_rt call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are an on-device assistant running on Golden Model. Today is 15 September 2026. The user's clarified request appears below; answer it directly in one or two short paragraphs.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      | AGENT: ⏎
+    answer:
+      | Local LLM answer, visit 1.
+run.spend golden steps=3 tokens=5
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=7 run=golden lite_rt LITE_RT depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+    output:
+      | Local LLM answer, visit 1.
+state NodeIO lite_rt LITE_RT depth=0
+visit golden clarify_then_act/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Local LLM answer, visit 1.
+end Completed
+    finalResponse:
+      | Local LLM answer, visit 1.
+run.spend golden steps=4 tokens=5
+trace.flush

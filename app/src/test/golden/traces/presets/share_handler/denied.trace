@@ -1,0 +1,133 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/share_handler
+scenario: denied
+about: The append is denied; the run continues with the refusal.
+origin: SHARE
+prompt:
+  | https://example.org/article — Ten habits of calm people
+
+driver start
+visit golden share_handler/node-1 INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden share_handler/node-2 LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You capture shared content into the user's workspace. Read the shared text in your input. Output STRICTLY one JSON object and nothing else, with exactly two string keys. The first key is path and its value is exactly inbox/captures.md. The second key is content: a Markdown block that begins with a newline, then a level-two heading with a short descriptive title for the item, then 3 to 6 concise bullet points capturing the key information, and if the text implies any tasks, a line with the bold text 'Action items:' followed by those tasks as bullets, then a trailing newline. Use only what the input actually says; never invent facts. Write in the user's language (en-US). Output only the JSON object.
+      |
+      |
+      | --- Original Task ---
+      | https://example.org/article — Ten habits of calm people
+      |
+      | --- Previous Node Output ---
+      | https://example.org/article — Ten habits of calm people
+      | AGENT: ⏎
+    answer:
+      | Structure answer, visit 1.
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | https://example.org/article — Ten habits of calm people
+      |
+      | --- Previous Node Output ---
+      | https://example.org/article — Ten habits of calm people
+    output:
+      | Structure answer, visit 1.
+state NodeIO node-2 LITE_RT depth=0
+visit golden share_handler/node-3 TOOL #1
+state Stage step=3 of=4 TOOL
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: append_file
+      | DESCRIPTION: Appends to a file in the agent workspace.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Structure answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "append_file", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"path":"notes/golden.md","content":"Save capture — recorded content."}
+run.status golden WAITING_APPROVAL
+trace.flush
+state WaitingForApproval tool=append_file risk=SENSITIVE
+    arguments:
+      | {"path":"notes/golden.md","content":"Save capture — recorded content."}
+notify.approval tool=append_file risk=SENSITIVE
+driver approval deny
+notify.approval.cancel
+chat.save SYSTEM final=false model=null
+    content:
+      | User denied execution of tool: append_file
+run.status golden RUNNING
+state ObservationResult append_file
+run.spend golden steps=3 tokens=4
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+trace.console seq=7 run=golden depth=0 ToolCall
+    message:
+      | append_file
+trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=append_file
+    input:
+      | --- Previous Node Output ---
+      | Structure answer, visit 1.
+    output:
+      | Execution denied by user
+trace.flush
+state NodeIO node-3 TOOL depth=0
+visit golden share_handler/node-4 OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+model.load path=null vision=false audio=false
+model local node=node-4 call=1 temperature=default image=none
+    prompt:
+      | Your input confirms text was appended to a file, like: Appended N bytes to 'inbox/captures.md'. Reply with one short line telling the user the shared item was captured to their workspace inbox. If the input is instead an error message, relay it plainly in one sentence. Add nothing else.
+      |
+      | Reply in the user's language (en-US).
+      |
+      | CRITICAL INSTRUCTION: Output ONLY the requested format. Do NOT include any conversational filler, explanations, or preambles (e.g., "Here is the formatted output:").
+      |
+      | INPUT: --- Previous Node Output ---
+      | Execution denied by user
+      | FORMATTED OUTPUT: ⏎
+    answer:
+      | Confirm answer, visit 1.
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Confirm answer, visit 1.
+end Completed
+    finalResponse:
+      | Confirm answer, visit 1.
+run.spend golden steps=4 tokens=4
+trace.flush

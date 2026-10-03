@@ -1,0 +1,62 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/styled_translation
+scenario: default
+about: One on-device translation.
+origin: CHAT
+prompt:
+  | Translate 'good morning' into French.
+
+driver start
+visit golden styled_translation/node-1 INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden styled_translation/node-2 LITE_RT #1
+state Stage step=2 of=3 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You translate the user's input text. TARGET: translate into Chilean Spanish (Spanish as actually spoken in Chile). REGISTER: use the everyday, casual register — natural, colloquial Chilean speech. To translate formally instead, replace the previous sentence with: use the official, formal register. To translate into a different language, change the TARGET line. Preserve the meaning, tone and politeness level of the original; keep names, numbers and line breaks. Do not add notes, alternatives or explanations. Output only the translated text.
+      |
+      | If the input carries no translatable text — it is empty, or only punctuation, digits or symbols — return it unchanged and add nothing.
+      |
+      |
+      | --- Previous Node Output ---
+      | Translate 'good morning' into French.
+      | AGENT: ⏎
+    answer:
+      | Translate answer, visit 1.
+run.spend golden steps=2 tokens=4
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
+    input:
+      | --- Previous Node Output ---
+      | Translate 'good morning' into French.
+    output:
+      | Translate answer, visit 1.
+state NodeIO node-2 LITE_RT depth=0
+visit golden styled_translation/node-3 OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Translate answer, visit 1.
+end Completed
+    finalResponse:
+      | Translate answer, visit 1.
+run.spend golden steps=3 tokens=4
+trace.flush

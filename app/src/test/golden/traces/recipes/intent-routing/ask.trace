@@ -1,0 +1,158 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: recipes/intent-routing
+scenario: ask
+about: The router asks one question before answering.
+origin: CHAT
+prompt:
+  | Book a table for dinner.
+
+driver start
+visit golden recipe-intent-routing/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden recipe-intent-routing/router INTENT_ROUTER #1
+state Stage step=2 of=null INTENT_ROUTER
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+model.load path=null vision=false audio=false
+model local node=router call=1 temperature=default image=none
+    prompt:
+      | Classify the user's message. Output EXACTLY one keyword and nothing else: Answer (you can reply from what you already know), Search (the reply needs a fact you would have to look up), Ask (the message is too vague to act on). Today is 15 September 2026.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      | AGENT: ⏎
+    answer:
+      | Ask
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Ask
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+    output:
+      | Ask
+state NodeIO router INTENT_ROUTER depth=0
+visit golden recipe-intent-routing/clarify CLARIFICATION #1
+state Stage step=3 of=5 CLARIFICATION
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLARIFICATION
+model.load path=null vision=false audio=false
+model local node=clarify call=1 temperature=default image=none
+    prompt:
+      | The user's message is too vague to act on. Ask exactly one short question that would make it actionable. Ask in the user's language (en-US).
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Ask one question: which one do you mean?", "options": ["The first one", "The second one"]}
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification timeoutMs=60000
+    question:
+      | Ask one question: which one do you mean?
+    options:
+      | The first one
+      | The second one
+driver clarification Answer(text=The second one)
+run.status golden RUNNING
+run.spend golden steps=3 tokens=0
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLARIFICATION in <ms>ms
+trace.node seq=7 run=golden clarify CLARIFICATION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+    output:
+      | Q: Ask one question: which one do you mean?
+      | A: The second one
+state NodeIO clarify CLARIFICATION depth=0
+visit golden recipe-intent-routing/answer LITE_RT #1
+state Stage step=4 of=5 LITE_RT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=answer call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are a concise assistant running on Golden Model. Today is 15 September 2026. Answer the user's question directly in one short paragraph.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Q: Ask one question: which one do you mean?
+      | A: The second one
+      | AGENT: ⏎
+    answer:
+      | Answer answer, visit 1.
+run.spend golden steps=4 tokens=4
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=10 run=golden answer LITE_RT depth=0 tokens=4
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Q: Ask one question: which one do you mean?
+      | A: The second one
+    output:
+      | Answer answer, visit 1.
+state NodeIO answer LITE_RT depth=0
+visit golden recipe-intent-routing/output OUTPUT #1
+state Stage step=5 of=5 OUTPUT
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Answer answer, visit 1.
+end Completed
+    finalResponse:
+      | Answer answer, visit 1.
+run.spend golden steps=5 tokens=4
+trace.flush

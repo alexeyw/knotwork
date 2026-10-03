@@ -227,6 +227,23 @@ Only Kotlin files appear inside the generated blocks.
       - `ToolCallParserTest.kt` - Unit tests for `ToolCallParser`, the non-repair tool-call parser used by `SkillNodeExecutor`.
       - `ToolInvocationGateTest.kt` - Unit tests for `ToolInvocationGate`: a decision recorded on a parked request is the one the resumed run applies, whatever the policy, risk or `alwaysConfirm` say on resume; the record is consumed before any early exit.
       - `ToolNodeExecutorTest.kt` - Tests for ToolNodeExecutor.
+    - `golden/` - Golden-trace harness: runs every bundled preset, published recipe and test fixture through the real `GraphExecutionEngine` and all node executors under a scripted model, and compares the normal-form trace with the files under `app/src/test/golden/traces/` (`docs/testing.md` § Golden run traces).
+      - `GoldenEvent.kt` - One entry of a golden run trace: a single header line plus named multi-line text blocks.
+      - `GoldenModel.kt` - The scripted model of the golden harness, behind every seam a node can reach a model through: the on-device `LlmInferenceEngine`, the cloud client a `CLOUD` node streams from, and the cloud structured-inference client a router or tool node may use.
+      - `GoldenNodeTracker.kt` - Knows which node of which pipeline the engine is executing right now, so the scripted model can answer "per node and per visit" although the model seam receives nothing but a prompt.
+      - `GoldenPendingInteractionRepository.kt` - In-memory store of parked interactions for the golden harness; records what the engine parks and deletes.
+      - `GoldenPipelineRunRepository.kt` - In-memory run store of the golden harness that records every write the engine and the `PIPELINE` executor make to run records.
+      - `GoldenPipelineSources.kt` - Loads the pipelines and skills the golden harness runs, through the same parsers the app uses for each format.
+      - `GoldenRunTraceRepository.kt` - In-memory persistent run trace of the golden harness; records every append and flush.
+      - `GoldenScenario.kt` - One scripted run of one shipped pipeline through the real `GraphExecutionEngine`, and the name of the golden file its trace is compared with.
+      - `GoldenScenarios.kt` - The catalogue of golden scenarios: every bundled preset, every published recipe and every fixture, each with at least one scenario, plus the branch and suspension scenarios the engine's control flow needs pinned.
+      - `GoldenToolRepository.kt` - Tool catalogue of the golden harness: a fixed set of the app's built-in tool names, each answering with a recorded output instead of acting on the world.
+      - `GoldenTraceCatalogueTest.kt` - Keeps the golden-trace catalogue complete, so the gate cannot quietly stop covering what ships.
+      - `GoldenTraceDiff.kt` - Explains a golden-trace mismatch in a few lines: where the first difference is, what both sides say around it, and how to see the whole diff.
+      - `GoldenTraceHarness.kt` - Runs one `GoldenScenario` through the production `GraphExecutionEngine` and returns its normal-form trace.
+      - `GoldenTraceRenderer.kt` - Renders the normal form of a golden trace — the exact text committed under `app/src/test/golden/traces/`.
+      - `GoldenTraceRendererTest.kt` - Pins the parts of the golden-trace format a reviewer relies on when reading a diff: blocks, trailing whitespace, chunking, the failure message, and how a script resolves an answer.
+      - `GoldenTraceTest.kt` - Golden-trace regression gate: every shipped pipeline, run through the real engine under a scripted model, must produce exactly the trace committed for it.
     - `GraphExecutionEngineTest.kt` - Tests for GraphExecutionEngine.
     - `MemoryAccessLogFormatterTest.kt` - Unit tests for `MemoryAccessLogFormatter` — the pure formatter behind the `MemoryAccess` console event.
     - `MemoryRetrievalQueryResolverTest.kt` - Unit tests for `MemoryRetrievalQueryResolver` — the `RunOrigin` × declared-query matrix of the retrieval-key contract (`docs/architecture.md`).

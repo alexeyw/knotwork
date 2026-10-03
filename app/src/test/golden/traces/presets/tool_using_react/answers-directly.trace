@@ -1,0 +1,98 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/tool_using_react
+scenario: answers-directly
+about: The condition says no lookup is needed.
+origin: CHAT
+prompt:
+  | What is the tallest mountain on Earth?
+
+driver start
+visit golden tool_using_react/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden tool_using_react/needs_tool IF_CONDITION #1
+state Stage step=2 of=null IF_CONDITION
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ IF_CONDITION
+model local node=needs_tool call=1 temperature=default image=none
+    prompt:
+      | Evaluate the following text against the condition: "Answering the user's request well requires looking something up in an external source — a fact, a figure, a date, a definition, or anything about a specific person, place, work, event or organisation that the assistant should not answer from memory alone.
+      |
+      | Answer false when the request can be fulfilled with reasoning alone and needs no outside information: arithmetic and other calculations, rewriting or translating text the user supplied, formatting, opinions, or simple conversation.
+      |
+      | Judge the user's original request, not the wording of any intermediate step. When genuinely unsure, answer true — a needless lookup is cheaper than a confidently wrong answer.
+      |
+      | Output exactly one word — true or false — in lowercase, with no punctuation, quotation marks or explanation.".
+      | Text: "What is the tallest mountain on Earth?"
+      | Reply strictly with 'true' or 'false'.
+    answer:
+      | False
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ IF_CONDITION in <ms>ms
+trace.node seq=4 run=golden needs_tool IF_CONDITION depth=0 tokens=null condition=false
+    input:
+      | What is the tallest mountain on Earth?
+    output:
+      | What is the tallest mountain on Earth?
+state NodeIO needs_tool IF_CONDITION depth=0
+visit golden tool_using_react/direct_answer LITE_RT #1
+state Stage step=3 of=4 LITE_RT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=direct_answer call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are an on-device assistant running on Golden Model. Today is 15 September 2026. The previous step established that this request needs no external lookup — answer it yourself.
+      |
+      | Be as brief as the question allows: when a single value or one sentence is the complete answer, that is the answer. Do not narrate intermediate steps, do not show your working, and do not pad the reply with a derivation you were not asked for — an explanation invented after the fact is where mistakes creep in. Write numbers as digits. Use at most two short paragraphs, and only when the question genuinely needs them. If you cannot answer, say so plainly in one sentence.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Direct Answer answer, visit 1.
+run.spend golden steps=3 tokens=5
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=7 run=golden direct_answer LITE_RT depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Direct Answer answer, visit 1.
+state NodeIO direct_answer LITE_RT depth=0
+visit golden tool_using_react/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Direct Answer answer, visit 1.
+end Completed
+    finalResponse:
+      | Direct Answer answer, visit 1.
+run.spend golden steps=4 tokens=5
+trace.flush

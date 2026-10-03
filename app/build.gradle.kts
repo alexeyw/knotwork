@@ -1943,6 +1943,17 @@ tasks.withType<Test>().configureEach {
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))
         .withPropertyName("appBuildScript")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `GoldenTraceTest` compares every shipped pipeline's run trace with a committed golden
+    // file under `src/test/golden/`, which is on no classpath — the Roborazzi baselines of
+    // `:catalog` are declared for the same reason. `-PrecordGoldenTraces` switches the test
+    // from comparing to rewriting; a system property is a task input, so a record run is
+    // never answered from a cached comparison.
+    inputs.dir(layout.projectDirectory.dir("src/test/golden"))
+        .withPropertyName("goldenTraces")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    if (providers.gradleProperty("recordGoldenTraces").isPresent) {
+        systemProperty("knotwork.goldenTraces.record", "true")
+    }
 }
 
 // Hilt/Dagger reads Kotlin metadata via `kotlin-metadata-jvm`, which is unshaded

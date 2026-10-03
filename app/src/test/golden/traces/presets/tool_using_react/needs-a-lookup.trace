@@ -1,0 +1,227 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/tool_using_react
+scenario: needs-a-lookup
+about: The condition asks for a lookup: tool, then summary.
+origin: CHAT
+prompt:
+  | What is the tallest mountain on Earth?
+
+driver start
+visit golden tool_using_react/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden tool_using_react/needs_tool IF_CONDITION #1
+state Stage step=2 of=null IF_CONDITION
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ IF_CONDITION
+model local node=needs_tool call=1 temperature=default image=none
+    prompt:
+      | Evaluate the following text against the condition: "Answering the user's request well requires looking something up in an external source — a fact, a figure, a date, a definition, or anything about a specific person, place, work, event or organisation that the assistant should not answer from memory alone.
+      |
+      | Answer false when the request can be fulfilled with reasoning alone and needs no outside information: arithmetic and other calculations, rewriting or translating text the user supplied, formatting, opinions, or simple conversation.
+      |
+      | Judge the user's original request, not the wording of any intermediate step. When genuinely unsure, answer true — a needless lookup is cheaper than a confidently wrong answer.
+      |
+      | Output exactly one word — true or false — in lowercase, with no punctuation, quotation marks or explanation.".
+      | Text: "What is the tallest mountain on Earth?"
+      | Reply strictly with 'true' or 'false'.
+    answer:
+      | True
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ IF_CONDITION in <ms>ms
+trace.node seq=4 run=golden needs_tool IF_CONDITION depth=0 tokens=null condition=true
+    input:
+      | What is the tallest mountain on Earth?
+    output:
+      | What is the tallest mountain on Earth?
+state NodeIO needs_tool IF_CONDITION depth=0
+visit golden tool_using_react/query_builder LITE_RT #1
+state Stage step=3 of=6 LITE_RT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=query_builder call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | The user's request needs a factual lookup, and the search runs in the very next step. Your output becomes the search term.
+      |
+      | Write the search term in the user's language (en-US) so the lookup targets the matching edition.
+      |
+      | Output ONLY the search term: a short noun phrase naming the main topic or entity, the way an encyclopedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels. Strip imperative verbs and filler — keep just the subject. If several topics are mixed in, pick the single most central one.
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Query Builder answer, visit 1.
+run.spend golden steps=3 tokens=5
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=7 run=golden query_builder LITE_RT depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Query Builder answer, visit 1.
+state NodeIO query_builder LITE_RT depth=0
+visit golden tool_using_react/tool TOOL #1
+state Stage step=4 of=6 TOOL
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+model.load path=null vision=false audio=false
+model local node=tool call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that selects the best tool for a given task and generates arguments.
+      |
+      | AVAILABLE TOOLS:
+      | Tool: search_tool
+      | Description: Looks a topic up in an encyclopedia.
+      | Parameters: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | Tool: read_file
+      | Description: Reads a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | Tool: write_file
+      | Description: Writes a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: append_file
+      | Description: Appends to a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: delete_file
+      | Description: Deletes a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Query Builder answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Choose the most appropriate tool to solve the task. ⏎
+      | Generate strictly valid JSON with two fields: "tool" and "arguments".
+      | "tool" should be the exact name of the selected tool.
+      | "arguments" should contain the parameters matching the tool's schema.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"tool": "search_tool", "arguments": {"query":"Tool"}}
+state ExecutingTool search_tool
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Tool"}
+    output:
+      | Search results for "Tool":
+      | 1. Tool — a recorded encyclopedia summary.
+      | 2. Tool — a second recorded source.
+state ObservationResult search_tool
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Tool":
+      | 1. Tool — a recorded encyclopedia summary.
+      | 2. Tool — a second recorded source.
+run.spend golden steps=4 tokens=5
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+trace.console seq=10 run=golden depth=0 ToolCall
+    message:
+      | search_tool
+trace.node seq=11 run=golden tool TOOL depth=0 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | Query Builder answer, visit 1.
+    output:
+      | Search results for "Tool":
+      | 1. Tool — a recorded encyclopedia summary.
+      | 2. Tool — a second recorded source.
+trace.flush
+state NodeIO tool TOOL depth=0
+visit golden tool_using_react/summary SUMMARY #1
+state Stage step=5 of=6 SUMMARY
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
+      | ▶ SUMMARY
+model.load path=null vision=false audio=false
+model local node=summary call=1 temperature=default image=none
+    prompt:
+      | You synthesise the result of a tool invocation into a final reply for the user. Quote the concrete facts the tool returned and answer the user's original question directly. If the tool failed or returned nothing useful, say so plainly.
+      |
+      | Reply in the user's language (en-US).
+      |
+      | CRITICAL INSTRUCTION: You must synthesize the provided results into a coherent final answer for the original task. Do not just list what each task did. Answer the original task using the data from the results.
+      |
+      | ORIGINAL TASK: What is the tallest mountain on Earth?
+      |
+      | RESULTS OF SUBTASKS:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Tool Results ---
+      | 1. search_tool: Search results for "Tool":
+      |   1. Tool — a recorded encyclopedia summary.
+      |   2. Tool — a second recorded source.
+      |
+      | --- Previous Node Output ---
+      | Search results for "Tool":
+      | 1. Tool — a recorded encyclopedia summary.
+      | 2. Tool — a second recorded source.
+      |
+      | FINAL ANSWER: ⏎
+    answer:
+      | Summariser answer, visit 1.
+run.spend golden steps=5 tokens=5
+trace.console seq=13 run=golden depth=0 NodeExecution
+    message:
+      | ✓ SUMMARY in <ms>ms
+trace.node seq=14 run=golden summary SUMMARY depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Tool Results ---
+      | 1. search_tool: Search results for "Tool":
+      |   1. Tool — a recorded encyclopedia summary.
+      |   2. Tool — a second recorded source.
+      |
+      | --- Previous Node Output ---
+      | Search results for "Tool":
+      | 1. Tool — a recorded encyclopedia summary.
+      | 2. Tool — a second recorded source.
+    output:
+      | Summariser answer, visit 1.
+state NodeIO summary SUMMARY depth=0
+visit golden tool_using_react/output OUTPUT #1
+state Stage step=6 of=6 OUTPUT
+trace.console seq=15 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Summariser answer, visit 1.
+end Completed
+    finalResponse:
+      | Summariser answer, visit 1.
+run.spend golden steps=6 tokens=5
+trace.flush

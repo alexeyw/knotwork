@@ -1,0 +1,111 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_act
+scenario: default
+about: An auto-selected read-only tool runs without asking.
+origin: CHAT
+prompt:
+  | Book a table for dinner.
+
+driver start
+visit golden subtask_act/node-1 INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden subtask_act/node-2 TOOL #1
+state Stage step=2 of=3 TOOL
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that selects the best tool for a given task and generates arguments.
+      |
+      | AVAILABLE TOOLS:
+      | Tool: search_tool
+      | Description: Looks a topic up in an encyclopedia.
+      | Parameters: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | Tool: read_file
+      | Description: Reads a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | Tool: write_file
+      | Description: Writes a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: append_file
+      | Description: Appends to a file in the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | Tool: delete_file
+      | Description: Deletes a file from the agent workspace.
+      | Parameters: {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      |
+      | INSTRUCTIONS:
+      | Choose the most appropriate tool to solve the task. ⏎
+      | Generate strictly valid JSON with two fields: "tool" and "arguments".
+      | "tool" should be the exact name of the selected tool.
+      | "arguments" should contain the parameters matching the tool's schema.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"tool": "search_tool", "arguments": {"query":"Tool Action"}}
+state ExecutingTool search_tool
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Tool Action"}
+    output:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+state ObservationResult search_tool
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+trace.console seq=4 run=golden depth=0 ToolCall
+    message:
+      | search_tool
+trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+    output:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+trace.flush
+state NodeIO node-2 TOOL depth=0
+visit golden subtask_act/node-3 OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+end Completed
+    finalResponse:
+      | Search results for "Tool Action":
+      | 1. Tool Action — a recorded encyclopedia summary.
+      | 2. Tool Action — a second recorded source.
+run.spend golden steps=3 tokens=0
+trace.flush

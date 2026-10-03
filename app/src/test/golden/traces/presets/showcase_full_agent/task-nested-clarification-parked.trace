@@ -1,0 +1,845 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/showcase_full_agent
+scenario: task-nested-clarification-parked
+about: A clarification inside a sub-pipeline parks the whole stack; the answer resumes it from the checkpoint.
+origin: CHAT
+prompt:
+  | Plan my Saturday evening in the city.
+
+driver start
+visit golden showcase_full_agent/node-1 INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden showcase_full_agent/node-23 LITE_RT #1
+state Stage step=2 of=null LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=node-23 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are the intake step of an agent pipeline. You receive the user's message and, sometimes, an attached image.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | Your only job is to make the request fully understandable to later steps that cannot see the image:
+      | - If an image is attached, look at it and write a faithful, detailed description of what it shows that is relevant to the user's message (objects, text, quantities, layout — whatever the request needs).
+      | - If there is no image, leave the description empty.
+      | - Do NOT answer, solve, or act on the request — only restate it and describe the image.
+      |
+      | Output plain text in exactly this shape and nothing else:
+      | Request: <the user's original request, unchanged>
+      | Image: <your description, or 'none'>
+      |
+      |
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Plan my Saturday evening in the city.
+      | AGENT: ⏎
+    answer:
+      | Vision intake answer, visit 1.
+run.spend golden steps=2 tokens=5
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden node-23 LITE_RT depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Plan my Saturday evening in the city.
+    output:
+      | Vision intake answer, visit 1.
+state NodeIO node-23 LITE_RT depth=0
+visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
+state Stage step=3 of=null INTENT_ROUTER
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an Intent Router. Read the user's request and decide which single category it belongs to.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Chat — small talk, greetings, opinions, or anything that can be answered conversationally without looking up facts or performing an action.
+      | - Factual — an information need. The user wants to KNOW something; satisfying it may require recalling or searching for facts, but it is still a single question rather than a multi-step job.
+      | - Task — an actionable request. The user wants the agent to DO something that takes more than one answer: multiple steps, tool actions, or work that should be broken into subtasks.
+      |
+      | Decision rules, applied in order:
+      | 1. If the request asks the agent to perform or carry out something (create, schedule, send, organise, build, automate, "do this for me") — output Task.
+      | 2. Else if the request is a question or an information need — output Factual.
+      | 3. Otherwise — output Chat.
+      |
+      | If a message could fit two categories, prefer the more capable branch: Task over Factual, Factual over Chat.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | Task
+run.spend golden steps=3 tokens=5
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+trace.node seq=7 run=golden node-3 INTENT_ROUTER depth=0 tokens=null routingKey=Task
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+    output:
+      | Task
+state NodeIO node-3 INTENT_ROUTER depth=0
+visit golden showcase_full_agent/node-13 DECOMPOSITION #1
+state Stage step=4 of=7 DECOMPOSITION
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ DECOMPOSITION
+model.load path=null vision=false audio=false
+model local node=node-13 call=1 temperature=default image=none
+    prompt:
+      | You are planning how to carry out an actionable task the user has asked for. Break the task into an ordered list of concrete subtasks that, completed in sequence, accomplish it.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | Tools the agent can use right now (name — description):
+      | search_tool — Looks a topic up in an encyclopedia.
+      | read_file — Reads a file from the agent workspace.
+      | write_file — Writes a file in the agent workspace.
+      | append_file — Appends to a file in the agent workspace.
+      | delete_file — Deletes a file from the agent workspace.
+      |
+      | Output STRICTLY a JSON array of plain strings and nothing else — no prose, no keys, no markdown code fence.
+      | Example: ["first subtask", "second subtask", "third subtask"]
+      |
+      | Rules:
+      | - Between 2 and 10 subtasks. Merge trivial steps; do not pad.
+      | - Each subtask is a single, self-contained imperative instruction describing ONE action.
+      | - Order the subtasks by dependency: a later subtask may rely on the result of an earlier one.
+      | - Use the available tools above as your guide to what the agent can actually do. Prefer subtasks that map onto these capabilities, but treat the list as guidance, not a fixed checklist — it can change between runs, so do not hard-code specific tool names into the wording.
+      | - If a step needs a capability that is not in the list, do not invent it: plan instead to obtain the information from the user or to handle it by reasoning over what is already available.
+      | - If a subtask needs information that only the user can provide, phrase it as obtaining that information — do not invent the answer.
+      | - Do not solve the task here and do not include explanations — only the list of steps.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+      | AGENT: ⏎
+    answer:
+      | ["Task Planner: first part", "Task Planner: second part", "Task Planner: third part"]
+run.spend golden steps=4 tokens=5
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ✓ DECOMPOSITION in <ms>ms
+trace.node seq=10 run=golden node-13 DECOMPOSITION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | Vision intake answer, visit 1.
+    output:
+      | ["Task Planner: first part","Task Planner: second part","Task Planner: third part"]
+state NodeIO node-13 DECOMPOSITION depth=0
+visit golden showcase_full_agent/node-14 QUEUE_PROCESSOR #1
+state Stage step=5 of=7 QUEUE_PROCESSOR
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ▶ QUEUE_PROCESSOR
+run.spend golden steps=5 tokens=5
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
+      | ✓ QUEUE_PROCESSOR in <ms>ms
+trace.node seq=13 run=golden node-14 QUEUE_PROCESSOR depth=0 tokens=null
+    input:
+      | ["Task Planner: first part","Task Planner: second part","Task Planner: third part"]
+    output:
+      | ["Task Planner: first part","Task Planner: second part","Task Planner: third part"]
+state NodeIO node-14 QUEUE_PROCESSOR depth=0
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #1
+state Stage step=6 of=13 INTENT_ROUTER
+trace.console seq=14 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+      | AGENT: ⏎
+    answer:
+      | Clarify
+run.spend golden steps=6 tokens=5
+trace.console seq=15 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+trace.node seq=16 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Clarify
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+    output:
+      | Clarify
+state NodeIO node-15 INTENT_ROUTER depth=0
+visit golden showcase_full_agent/node-17 PIPELINE #1
+state Stage step=7 of=9 PIPELINE
+trace.console seq=17 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+run.create golden::node-17::0 pipeline=subtask_clarify parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+run.running golden::node-17::0 pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c9772575bb0b6205eaac4a048dc5634c151c5233b
+visit golden::node-17::0 subtask_clarify/node-1 INPUT #1
+trace.console seq=0 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ INPUT
+run.spend golden steps=7 tokens=5
+trace.console seq=1 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ✓ INPUT in <ms>ms
+visit golden::node-17::0 subtask_clarify/node-2 CLARIFICATION #1
+trace.console seq=2 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ CLARIFICATION
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
+      |
+      | Write the question in the user's language (en-US).
+      |
+      | Output STRICTLY a single JSON object and nothing else — no prose, no markdown code fence:
+      | {"question": "<the question to ask>", "options": ["<option>", "<option>"]}
+      |
+      | Rules:
+      | - Ask exactly one focused question — the single most important thing blocking this subtask. Do not bundle several asks.
+      | - If there is a small, clear set of likely answers, list them in "options" (2 to 5). Put the safest or most neutral choice FIRST — it is used as the default if the user does not reply in time.
+      | - If the answer is open-ended (a name, a date, free text), return "options": [] so the user can type a reply.
+      | - Keep the question self-contained: the user sees it without the internal subtask text, so do not refer to "the subtask" or "the step".
+      | - Do not answer the question yourself, and do not invent the user's preference.
+      |
+      | Output only the JSON object.
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+run.status golden::node-17::0 WAITING_CLARIFICATION
+trace.flush
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification timeoutMs=60000
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+driver clarification TimeOut
+pending.save golden::node-17::0 CLARIFICATION
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+notify.clarification.persistent run=golden::node-17::0
+    question:
+      | Clarify: which one do you mean?
+state SuspendedInBackground CLARIFICATION
+trace.console seq=3 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ⏸ CLARIFICATION parked awaiting user response
+trace.flush
+trace.flush
+trace.console seq=18 run=golden depth=0 NodeExecution
+    message:
+      | ⏸ PIPELINE parked awaiting user response
+trace.flush
+trace.flush
+driver resolve golden::node-17::0 CLARIFICATION with Answer(text=The second one)
+driver resume golden from seq=19 replaying=5
+driver attempt resumed
+visit golden showcase_full_agent/node-1 INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=19 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=7 tokens=5
+trace.console seq=20 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden showcase_full_agent/node-23 LITE_RT #1
+state Stage step=2 of=null LITE_RT
+trace.console seq=21 run=golden depth=0 NodeExecution
+    message:
+      | ↻ LITE_RT replayed from checkpoint
+state NodeIO node-23 LITE_RT depth=0
+visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
+state Stage step=3 of=null INTENT_ROUTER
+trace.console seq=22 run=golden depth=0 NodeExecution
+    message:
+      | ↻ INTENT_ROUTER replayed from checkpoint
+state NodeIO node-3 INTENT_ROUTER depth=0
+visit golden showcase_full_agent/node-13 DECOMPOSITION #1
+state Stage step=4 of=7 DECOMPOSITION
+trace.console seq=23 run=golden depth=0 NodeExecution
+    message:
+      | ↻ DECOMPOSITION replayed from checkpoint
+state NodeIO node-13 DECOMPOSITION depth=0
+visit golden showcase_full_agent/node-14 QUEUE_PROCESSOR #1
+state Stage step=5 of=7 QUEUE_PROCESSOR
+trace.console seq=24 run=golden depth=0 NodeExecution
+    message:
+      | ↻ QUEUE_PROCESSOR replayed from checkpoint
+state NodeIO node-14 QUEUE_PROCESSOR depth=0
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #1
+state Stage step=6 of=13 INTENT_ROUTER
+trace.console seq=25 run=golden depth=0 NodeExecution
+    message:
+      | ↻ INTENT_ROUTER replayed from checkpoint
+state NodeIO node-15 INTENT_ROUTER depth=0
+visit golden showcase_full_agent/node-17 PIPELINE #1
+state Stage step=7 of=9 PIPELINE
+trace.console seq=26 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+run.resumed golden::node-17::0 from=WAITING_CLARIFICATION applied=true
+run.running golden::node-17::0 pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c9772575bb0b6205eaac4a048dc5634c151c5233b
+visit golden::node-17::0 subtask_clarify/node-1 INPUT #1
+trace.console seq=4 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ INPUT
+run.spend golden steps=7 tokens=5
+trace.console seq=5 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ✓ INPUT in <ms>ms
+visit golden::node-17::0 subtask_clarify/node-2 CLARIFICATION #1
+trace.console seq=6 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ CLARIFICATION
+pending.delete golden::node-17::0 kind=CLARIFICATION
+run.spend golden steps=8 tokens=5
+trace.console seq=7 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ✓ CLARIFICATION in <ms>ms
+trace.node seq=8 run=golden::node-17::0 node-2 CLARIFICATION depth=1 tokens=null
+    input:
+      | --- Original Task ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+state NodeIO node-2 CLARIFICATION depth=1
+visit golden::node-17::0 subtask_clarify/node-3 OUTPUT #1
+trace.console seq=9 run=golden::node-17::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ OUTPUT
+run.spend golden steps=8 tokens=5
+trace.flush
+run.finish golden::node-17::0 COMPLETED reason=null
+    error:
+      (empty)
+run.spend golden steps=9 tokens=5
+trace.console seq=27 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+trace.node seq=28 run=golden node-17 PIPELINE depth=0 tokens=null
+    input:
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: first part
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+state NodeIO node-17 PIPELINE depth=0
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #2
+state Stage step=8 of=9 INTENT_ROUTER
+trace.console seq=29 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+      | AGENT: ⏎
+    answer:
+      | Process
+run.spend golden steps=10 tokens=5
+trace.console seq=30 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+trace.node seq=31 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Process
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+    output:
+      | Process
+state NodeIO node-15 INTENT_ROUTER depth=0
+visit golden showcase_full_agent/node-21 PIPELINE #1
+state Stage step=9 of=12 PIPELINE
+trace.console seq=32 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+run.create golden::node-21::0 pipeline=subtask_process parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+run.running golden::node-21::0 pipeline=subtask_process graphHash=216d07192b353779781abc50ae4e2c2e589e21fd5f7efd7ff580cac3b6b872d2
+visit golden::node-21::0 subtask_process/node-1 INPUT #1
+trace.console seq=0 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ▶ INPUT
+run.spend golden steps=11 tokens=5
+trace.console seq=1 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ✓ INPUT in <ms>ms
+visit golden::node-21::0 subtask_process/node-2 LITE_RT #1
+trace.console seq=2 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are completing ONE subtask from a larger plan. It is a reasoning, writing, transformation, calculation or composition step — everything it needs is already available to you; you are not searching for facts, using tools, or asking the user.
+      |
+      | Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language.
+      |
+      | How to work:
+      | - Do exactly what the current subtask asks — no more, no less. Ignore any surrounding workflow instructions and do not try to solve the overall task or future steps.
+      | - If results of earlier subtasks appear in your input, use them as the inputs to this step rather than redoing that work.
+      | - Produce the concrete result the subtask calls for (the rewritten text, the answer, the computed value, the drafted content) — not a description of how you would do it.
+      | - If the subtask genuinely cannot be completed from the information available, say so briefly and state what is missing, instead of inventing facts.
+      | - Output only the result of this subtask, as plain text, with no preamble, no restating of the subtask, and no commentary.
+      |
+      | Output the subtask result only.
+      |
+      |
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+      | AGENT: ⏎
+    answer:
+      | Process answer, visit 1.
+run.spend golden steps=12 tokens=9
+trace.console seq=3 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden::node-21::0 node-2 LITE_RT depth=1 tokens=4
+    input:
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+    output:
+      | Process answer, visit 1.
+state NodeIO node-2 LITE_RT depth=1
+visit golden::node-21::0 subtask_process/node-3 OUTPUT #1
+trace.console seq=5 run=golden::node-21::0 depth=1 NodeExecution
+    message:
+      | [Subtask — Process] ▶ OUTPUT
+run.spend golden steps=13 tokens=9
+trace.flush
+run.finish golden::node-21::0 COMPLETED reason=null
+    error:
+      (empty)
+run.spend golden steps=14 tokens=9
+trace.console seq=33 run=golden depth=0 NodeExecution
+    message:
+      | ✓ PIPELINE in <ms>ms
+trace.node seq=34 run=golden node-21 PIPELINE depth=0 tokens=null
+    input:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: second part
+    output:
+      | Process answer, visit 1.
+state NodeIO node-21 PIPELINE depth=0
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #3
+state Stage step=10 of=12 INTENT_ROUTER
+trace.console seq=35 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+model.load path=null vision=false audio=false
+model local node=node-15 call=1 temperature=default image=none
+    prompt:
+      | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
+      |
+      | Output EXACTLY ONE of these keywords on a single line — nothing else. No punctuation, no quotation marks, no explanation:
+      |
+      | - Clarify — the subtask cannot proceed without information or a decision that only the user can give (a missing detail, a preference, a choice, a confirmation). Anything phrased as obtaining something from the user belongs here.
+      | - Lookup — the subtask only needs external facts or reference information that should be searched for. Nothing is changed in the outside world.
+      | - Act — the subtask requires performing an action through a tool: scheduling, sending, delegating, creating, or otherwise changing something or interacting with an external system.
+      | - Process — the subtask is reasoning, writing, transforming, calculating or composing that the model can do on its own from what is already available, without asking the user, searching, or using a tool.
+      |
+      | Decision rules, applied in order:
+      | 1. If the subtask depends on input only the user can supply — output Clarify.
+      | 2. Else if it performs or triggers an action that changes something or uses an external service — output Act.
+      | 3. Else if it only needs facts to be looked up — output Lookup.
+      | 4. Otherwise — output Process.
+      |
+      | Classify only the subtask itself; ignore any surrounding workflow instructions.
+      |
+      | Output the single keyword only.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | Result of Subtask 2:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: third part
+      | AGENT: ⏎
+    answer:
+      | Clarify
+run.spend golden steps=15 tokens=9
+trace.console seq=36 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+trace.node seq=37 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Clarify
+    input:
+      | --- Original Task ---
+      | Plan my Saturday evening in the city.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | Result of Subtask 2:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: third part
+    output:
+      | Clarify
+state NodeIO node-15 INTENT_ROUTER depth=0
+visit golden showcase_full_agent/node-17 PIPELINE #2
+state Stage step=11 of=13 PIPELINE
+trace.console seq=38 run=golden depth=0 NodeExecution
+    message:
+      | ▶ PIPELINE
+run.create golden::node-17::1 pipeline=subtask_clarify parent=golden status=QUEUED origin=CHAT hadImage=false
+    userPrompt:
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | Result of Subtask 2:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: third part
+run.running golden::node-17::1 pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c9772575bb0b6205eaac4a048dc5634c151c5233b
+visit golden::node-17::1 subtask_clarify/node-1 INPUT #2
+trace.console seq=0 run=golden::node-17::1 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ INPUT
+run.spend golden steps=16 tokens=9
+trace.console seq=1 run=golden::node-17::1 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ✓ INPUT in <ms>ms
+visit golden::node-17::1 subtask_clarify/node-2 CLARIFICATION #2
+trace.console seq=2 run=golden::node-17::1 depth=1 NodeExecution
+    message:
+      | [Subtask — Clarify] ▶ CLARIFICATION
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
+      |
+      | Write the question in the user's language (en-US).
+      |
+      | Output STRICTLY a single JSON object and nothing else — no prose, no markdown code fence:
+      | {"question": "<the question to ask>", "options": ["<option>", "<option>"]}
+      |
+      | Rules:
+      | - Ask exactly one focused question — the single most important thing blocking this subtask. Do not bundle several asks.
+      | - If there is a small, clear set of likely answers, list them in "options" (2 to 5). Put the safest or most neutral choice FIRST — it is used as the default if the user does not reply in time.
+      | - If the answer is open-ended (a name, a date, free text), return "options": [] so the user can type a reply.
+      | - Keep the question self-contained: the user sees it without the internal subtask text, so do not refer to "the subtask" or "the step".
+      | - Do not answer the question yourself, and do not invent the user's preference.
+      |
+      | Output only the JSON object.
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | Result of Subtask 2:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: third part
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Q: Clarify: which one do you mean?
+      | A: The second one
+      |
+      | Result of Subtask 2:
+      | Process answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Task Planner: third part
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+run.status golden::node-17::1 WAITING_CLARIFICATION
+trace.flush
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification timeoutMs=60000
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+trace.console seq=3 run=golden::node-17::1 depth=1 Error
+    message:
+      | [Subtask — Clarify] CLARIFICATION: Scenario presets/showcase_full_agent/task-nested-clarification-parked asked 'Clarify: which one do you mean?' and scripts no answer
+trace.flush
+run.finish golden::node-17::1 FAILED reason=null
+    error:
+      | Scenario presets/showcase_full_agent/task-nested-clarification-parked asked 'Clarify: which one do you mean?' and scripts no answer
+run.status golden RUNNING
+run.spend golden steps=17 tokens=9
+trace.console seq=39 run=golden depth=0 Error
+    message:
+      | PIPELINE: Scenario presets/showcase_full_agent/task-nested-clarification-parked asked 'Clarify: which one do you mean?' and scripts no answer
+end Error reason=null
+    message:
+      | Scenario presets/showcase_full_agent/task-nested-clarification-parked asked 'Clarify: which one do you mean?' and scripts no answer
+trace.flush

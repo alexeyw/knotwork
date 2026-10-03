@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-skill-report",
+  "name": "Fixture — a bundled skill as one step",
+  "description": "Test-only. No shipped pipeline uses SKILL; this one runs the bundled report_writer skill, whose allowlist holds write_file.",
+  "updatedAt": 1759449600000,
+  "nodes": [
+    {
+      "id": "input",
+      "type": "INPUT",
+      "position": {
+        "x": 80,
+        "y": 200
+      },
+      "label": "Input",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "report",
+      "type": "SKILL",
+      "position": {
+        "x": 300,
+        "y": 200
+      },
+      "label": "Write the report",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": "report_writer"
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "position": {
+        "x": 520,
+        "y": 200
+      },
+      "label": "Reply",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "fromNodeId": "input",
+      "toNodeId": "report",
+      "label": null
+    },
+    {
+      "id": "c2",
+      "fromNodeId": "report",
+      "toNodeId": "output",
+      "label": null
+    }
+  ]
+}

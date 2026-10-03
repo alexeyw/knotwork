@@ -1,0 +1,66 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: fixtures/skill_report
+scenario: text-answer
+about: The skill answers in text and calls no tool.
+origin: CHAT
+prompt:
+  | Compare how solar and wind power grew over the last decade.
+
+driver start
+visit golden fixture-skill-report/input INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden fixture-skill-report/report SKILL #1
+state Stage step=2 of=3 SKILL
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ SKILL
+model.load path=null vision=false audio=false
+model local node=report call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are a report writer. Use the information the user gives you to write a clear, well-structured report in plain prose. Start with a short overview, then cover the key points one paragraph at a time, and end with a brief conclusion. Keep the language simple and factual. When the report is ready, save it to a file using the write_file tool, then tell the user the name of the file you saved. Today is 15 September 2026.
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+      | AGENT: ⏎
+    answer:
+      | Write the report answer, visit 1.
+run.spend golden steps=2 tokens=6
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ SKILL in <ms>ms
+trace.node seq=4 run=golden report SKILL depth=0 tokens=6
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | Compare how solar and wind power grew over the last decade.
+    output:
+      | Write the report answer, visit 1.
+state NodeIO report SKILL depth=0
+visit golden fixture-skill-report/output OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Write the report answer, visit 1.
+end Completed
+    finalResponse:
+      | Write the report answer, visit 1.
+run.spend golden steps=3 tokens=6
+trace.flush

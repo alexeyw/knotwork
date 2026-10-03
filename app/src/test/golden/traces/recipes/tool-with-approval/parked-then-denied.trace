@@ -1,0 +1,173 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: recipes/tool-with-approval
+scenario: parked-then-denied
+about: Nobody answers in time, the run parks, and a denial given later resumes it.
+origin: CHAT
+prompt:
+  | Note that the boiler service is due in March.
+
+driver start
+visit golden recipe-tool-with-approval/input INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden recipe-tool-with-approval/draft LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=draft call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | Turn the user's message into the exact text of a short note. Reply with the note text only — no title, no commentary.
+      |
+      | Write the note in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Note that the boiler service is due in March.
+      |
+      | --- Previous Node Output ---
+      | Note that the boiler service is due in March.
+      | AGENT: ⏎
+    answer:
+      | Draft the note answer, visit 1.
+run.spend golden steps=2 tokens=6
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=6
+    input:
+      | --- Original Task ---
+      | Note that the boiler service is due in March.
+      |
+      | --- Previous Node Output ---
+      | Note that the boiler service is due in March.
+    output:
+      | Draft the note answer, visit 1.
+state NodeIO draft LITE_RT depth=0
+visit golden recipe-tool-with-approval/save TOOL #1
+state Stage step=3 of=4 TOOL
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+model.load path=null vision=false audio=false
+model local node=save call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: write_file
+      | DESCRIPTION: Writes a file in the agent workspace.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Draft the note answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "write_file", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"path":"notes/golden.md","content":"Save it — recorded content."}
+run.status golden WAITING_APPROVAL
+trace.flush
+state WaitingForApproval tool=write_file risk=SENSITIVE
+    arguments:
+      | {"path":"notes/golden.md","content":"Save it — recorded content."}
+notify.approval tool=write_file risk=SENSITIVE
+driver approval let_it_park
+pending.save golden APPROVAL tool=write_file risk=SENSITIVE
+    arguments:
+      | {"path":"notes/golden.md","content":"Save it — recorded content."}
+notify.approval.persistent run=golden tool=write_file risk=SENSITIVE
+state SuspendedInBackground APPROVAL
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ⏸ TOOL parked awaiting user response
+trace.flush
+trace.flush
+driver resolve golden APPROVAL with Deny
+driver resume golden from seq=7 replaying=1
+driver attempt resumed
+visit golden recipe-tool-with-approval/input INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=7 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=2 tokens=6
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden recipe-tool-with-approval/draft LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ↻ LITE_RT replayed from checkpoint
+state NodeIO draft LITE_RT depth=0
+visit golden recipe-tool-with-approval/save TOOL #1
+state Stage step=3 of=4 TOOL
+trace.console seq=10 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+model.load path=null vision=false audio=false
+model local node=save call=2 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: write_file
+      | DESCRIPTION: Writes a file in the agent workspace.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Draft the note answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "write_file", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"path":"notes/golden.md","content":"Save it — recorded content."}
+pending.delete golden kind=APPROVAL
+chat.save SYSTEM final=false model=null
+    content:
+      | User denied execution of tool: write_file
+state ObservationResult write_file
+run.spend golden steps=3 tokens=6
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+trace.console seq=12 run=golden depth=0 ToolCall
+    message:
+      | write_file
+trace.node seq=13 run=golden save TOOL depth=0 tokens=null tool=write_file
+    input:
+      | --- Previous Node Output ---
+      | Draft the note answer, visit 1.
+    output:
+      | Execution denied by user
+trace.flush
+state NodeIO save TOOL depth=0
+visit golden recipe-tool-with-approval/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=14 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Execution denied by user
+end Completed
+    finalResponse:
+      | Execution denied by user
+run.spend golden steps=3 tokens=6
+trace.flush

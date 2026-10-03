@@ -1,0 +1,94 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_clarify
+scenario: answered
+about: The clarifying sub-pipeline on its own.
+origin: CHAT
+prompt:
+  | Book a table for dinner.
+
+driver start
+visit golden subtask_clarify/node-1 INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden subtask_clarify/node-2 CLARIFICATION #1
+state Stage step=2 of=3 CLARIFICATION
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLARIFICATION
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
+      |
+      | Write the question in the user's language (en-US).
+      |
+      | Output STRICTLY a single JSON object and nothing else — no prose, no markdown code fence:
+      | {"question": "<the question to ask>", "options": ["<option>", "<option>"]}
+      |
+      | Rules:
+      | - Ask exactly one focused question — the single most important thing blocking this subtask. Do not bundle several asks.
+      | - If there is a small, clear set of likely answers, list them in "options" (2 to 5). Put the safest or most neutral choice FIRST — it is used as the default if the user does not reply in time.
+      | - If the answer is open-ended (a name, a date, free text), return "options": [] so the user can type a reply.
+      | - Keep the question self-contained: the user sees it without the internal subtask text, so do not refer to "the subtask" or "the step".
+      | - Do not answer the question yourself, and do not invent the user's preference.
+      |
+      | Output only the JSON object.
+      |
+      | CONTEXT FROM PREVIOUS NODE:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+      |
+      | RESPONSE (JSON only):
+      |
+    answer:
+      | {"question": "Clarify: which one do you mean?", "options": ["The first one", "The second one"]}
+run.status golden WAITING_CLARIFICATION
+trace.flush
+state AwaitingClarification timeoutMs=60000
+    question:
+      | Clarify: which one do you mean?
+    options:
+      | The first one
+      | The second one
+driver clarification Answer(text=The first one)
+run.status golden RUNNING
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLARIFICATION in <ms>ms
+trace.node seq=4 run=golden node-2 CLARIFICATION depth=0 tokens=null
+    input:
+      | --- Original Task ---
+      | Book a table for dinner.
+      |
+      | --- Previous Node Output ---
+      | Book a table for dinner.
+    output:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+state NodeIO node-2 CLARIFICATION depth=0
+visit golden subtask_clarify/node-3 OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+end Completed
+    finalResponse:
+      | Q: Clarify: which one do you mean?
+      | A: The first one
+run.spend golden steps=3 tokens=0
+trace.flush

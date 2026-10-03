@@ -13,6 +13,17 @@ details.
 
 ## [Unreleased]
 
+### Tests
+
+- **Every shipped pipeline now runs end to end in the test suite.** Each bundled
+  preset and cookbook recipe goes through the real pipeline engine and all its
+  node executors under a scripted model, with recorded tool outputs, and the run's
+  full trace — node by node, with every prompt, tool call, routing decision and
+  approval — is compared with a committed reference. Approvals, clarifications,
+  the step ceiling, resuming a paused run and nested pipelines are covered. This is
+  the safety net for restructuring the engine without changing what it does. See
+  [`docs/testing.md`](docs/testing.md#golden-run-traces).
+
 ## [0.11.1] - 2026-10-02
 
 ### Changed

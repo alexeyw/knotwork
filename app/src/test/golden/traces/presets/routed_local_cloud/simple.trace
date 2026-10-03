@@ -1,0 +1,110 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/routed_local_cloud
+scenario: simple
+about: The router keeps a simple question on the device.
+origin: CHAT
+prompt:
+  | What is the tallest mountain on Earth?
+
+driver start
+visit golden routed_local_cloud/input INPUT #1
+state Stage step=1 of=null INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden routed_local_cloud/router INTENT_ROUTER #1
+state Stage step=2 of=null INTENT_ROUTER
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INTENT_ROUTER
+model.load path=null vision=false audio=false
+model local node=router call=1 temperature=default image=none
+    prompt:
+      | Classify the user's request. Output EXACTLY one keyword: Simple (greetings, small talk, single-step factual questions the on-device model can answer) or Complex (multi-step reasoning, research, code, anything that benefits from a larger model). Today is 15 September 2026. Reply with the single keyword and nothing else.
+      |
+      | The keywords above are English literals: output the keyword exactly as written, in English, whatever language the user writes in.
+      |
+      | USER: --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Simple
+run.spend golden steps=2 tokens=0
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INTENT_ROUTER in <ms>ms
+trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Simple
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Simple
+state NodeIO router INTENT_ROUTER depth=0
+visit golden routed_local_cloud/lite_rt LITE_RT #1
+state Stage step=3 of=4 LITE_RT
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=lite_rt call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are a concise on-device assistant running on Golden Model. Today is 15 September 2026. Answer the user's question directly in one short paragraph.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Local LLM answer, visit 1.
+run.spend golden steps=3 tokens=5
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=7 run=golden lite_rt LITE_RT depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Local LLM answer, visit 1.
+state NodeIO lite_rt LITE_RT depth=0
+visit golden routed_local_cloud/output OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=8 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Local LLM answer, visit 1.
+end Completed
+    finalResponse:
+      | Local LLM answer, visit 1.
+run.spend golden steps=4 tokens=5
+trace.flush

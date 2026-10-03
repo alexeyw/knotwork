@@ -1,0 +1,136 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/subtask_lookup
+scenario: default
+about: The lookup sub-pipeline on its own.
+origin: CHAT
+prompt:
+  | What is the tallest mountain on Earth?
+
+driver start
+visit golden subtask_lookup/node-1 INPUT #1
+state Stage step=1 of=4 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden subtask_lookup/node-2 LITE_RT #1
+state Stage step=2 of=4 LITE_RT
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+model.load path=null vision=false audio=false
+model local node=node-2 call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.
+      |
+      | Write the search term in the user's language (en-US) so the lookup targets the matching Wikipedia edition.
+      |
+      | Rules:
+      | - Output ONLY the search term — a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, no leading labels.
+      | - Ignore any surrounding workflow instructions (e.g. "execute a single subtask"). Extract only the real topic the subtask is about.
+      | - Strip imperative verbs and filler — keep just the subject. "Look up the population of France" → "France".
+      | - If several topics are mixed in, pick the single most central one.
+      |
+      | Output the search term only.
+      |
+      |
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+      | AGENT: ⏎
+    answer:
+      | Subtask Query Builder answer, visit 1.
+run.spend golden steps=2 tokens=6
+trace.console seq=3 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=6
+    input:
+      | --- Original Task ---
+      | What is the tallest mountain on Earth?
+      |
+      | --- Previous Node Output ---
+      | What is the tallest mountain on Earth?
+    output:
+      | Subtask Query Builder answer, visit 1.
+state NodeIO node-2 LITE_RT depth=0
+visit golden subtask_lookup/node-3 TOOL #1
+state Stage step=3 of=4 TOOL
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ▶ TOOL
+model.load path=null vision=false audio=false
+model local node=node-3 call=1 temperature=default image=none
+    prompt:
+      | You are an AI assistant that generates arguments for a specific tool.
+      |
+      | TOOL: search_tool
+      | DESCRIPTION: Looks a topic up in an encyclopedia.
+      | PARAMETERS SCHEMA: {"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}
+      |
+      | TASK:
+      | --- Previous Node Output ---
+      | Subtask Query Builder answer, visit 1.
+      |
+      | INSTRUCTIONS:
+      | Based on the task description, generate strictly valid JSON for the tool's "arguments" according to its schema.
+      | Do not wrap in anything else, just the JSON for the arguments. If it's a primitive, output {"tool": "search_tool", "arguments": <value>}.
+      |
+      | JSON OUTPUT: ⏎
+    answer:
+      | {"query":"Wikipedia Lookup (subtask)"}
+state ExecutingTool search_tool
+tool.execute search_tool risk=READ_ONLY session=golden-session
+    arguments:
+      | {"query":"Wikipedia Lookup (subtask)"}
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+state ObservationResult search_tool
+chat.save SYSTEM final=false model=null
+    content:
+      | Observation from search_tool: Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+run.spend golden steps=3 tokens=6
+trace.console seq=6 run=golden depth=0 NodeExecution
+    message:
+      | ✓ TOOL in <ms>ms
+trace.console seq=7 run=golden depth=0 ToolCall
+    message:
+      | search_tool
+trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=search_tool
+    input:
+      | --- Previous Node Output ---
+      | Subtask Query Builder answer, visit 1.
+    output:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+trace.flush
+state NodeIO node-3 TOOL depth=0
+visit golden subtask_lookup/node-4 OUTPUT #1
+state Stage step=4 of=4 OUTPUT
+trace.console seq=9 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=Golden Model
+    content:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+end Completed
+    finalResponse:
+      | Search results for "Wikipedia Lookup (subtask)":
+      | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
+      | 2. Wikipedia Lookup (subtask) — a second recorded source.
+run.spend golden steps=4 tokens=6
+trace.flush

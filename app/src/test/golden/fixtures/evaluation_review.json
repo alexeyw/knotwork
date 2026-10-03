@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-evaluation-review",
+  "name": "Fixture — draft, review, and act on the verdict",
+  "description": "Test-only. No shipped pipeline uses EVALUATION; this one pins its three branches. A verdict can only route forward: the graph validator accepts a back-edge only into a queue.",
+  "updatedAt": 1759449600000,
+  "nodes": [
+    {
+      "id": "input",
+      "type": "INPUT",
+      "position": {
+        "x": 80,
+        "y": 200
+      },
+      "label": "Input",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "draft",
+      "type": "LITE_RT",
+      "position": {
+        "x": 300,
+        "y": 200
+      },
+      "label": "Draft",
+      "config": {
+        "systemPrompt": "Draft a short answer to the user's request.",
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "review",
+      "type": "EVALUATION",
+      "position": {
+        "x": 520,
+        "y": 200
+      },
+      "label": "Review",
+      "config": {
+        "systemPrompt": "Pass the draft if it answers the request, ask for a Retry if it is close, Fail it otherwise.",
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "revise",
+      "type": "LITE_RT",
+      "position": {
+        "x": 740,
+        "y": 200
+      },
+      "label": "Revise",
+      "config": {
+        "systemPrompt": "Improve the draft so it answers the request.",
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "apology",
+      "type": "LITE_RT",
+      "position": {
+        "x": 740,
+        "y": 200
+      },
+      "label": "Apologise",
+      "config": {
+        "systemPrompt": "Say plainly that no good answer was found.",
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "position": {
+        "x": 960,
+        "y": 200
+      },
+      "label": "Reply",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "fromNodeId": "input",
+      "toNodeId": "draft",
+      "label": null
+    },
+    {
+      "id": "c2",
+      "fromNodeId": "draft",
+      "toNodeId": "review",
+      "label": null
+    },
+    {
+      "id": "c3",
+      "fromNodeId": "review",
+      "toNodeId": "output",
+      "label": "Pass"
+    },
+    {
+      "id": "c4",
+      "fromNodeId": "review",
+      "toNodeId": "revise",
+      "label": "Retry"
+    },
+    {
+      "id": "c5",
+      "fromNodeId": "review",
+      "toNodeId": "apology",
+      "label": "Fail"
+    },
+    {
+      "id": "c6",
+      "fromNodeId": "revise",
+      "toNodeId": "output",
+      "label": null
+    },
+    {
+      "id": "c7",
+      "fromNodeId": "apology",
+      "toNodeId": "output",
+      "label": null
+    }
+  ]
+}

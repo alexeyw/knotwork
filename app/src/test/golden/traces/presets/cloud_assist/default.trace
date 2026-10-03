@@ -1,0 +1,92 @@
+# Golden run trace — written by GoldenTraceTest, never by hand.
+# Rewrite: ./gradlew :app:testFullDebugUnitTest --tests '*GoldenTraceTest*' -PrecordGoldenTraces
+pipeline: presets/cloud_assist
+scenario: default
+about: A cloud answer that sees chat history and long-term memory.
+origin: CHAT
+prompt:
+  | What should I pack for my trip?
+
+driver start
+visit golden cloud_assist/input INPUT #1
+state Stage step=1 of=3 INPUT
+trace.console seq=0 run=golden depth=0 NodeExecution
+    message:
+      | ▶ INPUT
+run.spend golden steps=1 tokens=0
+trace.console seq=1 run=golden depth=0 NodeExecution
+    message:
+      | ✓ INPUT in <ms>ms
+visit golden cloud_assist/cloud CLOUD #1
+state Stage step=2 of=3 CLOUD
+trace.console seq=2 run=golden depth=0 NodeExecution
+    message:
+      | ▶ CLOUD
+memory.retrieve
+    query:
+      | What should I pack for my trip?
+trace.console seq=3 run=golden depth=0 MemoryAccess
+    message:
+      | Memory: query='What should I pack for my trip?' [user prompt] → 2 hits (0.91, 0.74)
+memory.used ids=[11, 12]
+trace.memory seq=4 run=golden chunks=[11, 12]
+model cloud openai model=golden-cloud-model node=cloud call=1 temperature=default image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are a knowledgeable cloud assistant available to the user on their Android device. The current date is 15 September 2026 and the local time is 09:30. Use the conversation history above to keep continuity across turns. Reply in well-structured prose; cite concrete facts and explain reasoning when it helps the user.
+      |
+      | Reply in the user's language (en-US). Do not restate, quote or summarise the material you were given — the conversation history, the remembered entries, or your own reasoning. Reply with the answer only.
+      |
+      |
+      | --- Original Task ---
+      | What should I pack for my trip?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Long-Term Memory ---
+      | 1. The user prefers short answers with one example.
+      | 2. The user is planning a trip to Lisbon in October.
+      |
+      | --- Previous Node Output ---
+      | What should I pack for my trip?
+      | AGENT: ⏎
+    answer:
+      | Cloud LLM answer, visit 1.
+run.spend golden steps=2 tokens=5
+trace.console seq=5 run=golden depth=0 NodeExecution
+    message:
+      | ✓ CLOUD in <ms>ms
+trace.node seq=6 run=golden cloud CLOUD depth=0 tokens=5
+    input:
+      | --- Original Task ---
+      | What should I pack for my trip?
+      |
+      | --- Chat History ---
+      | 1. USER: Earlier: what is a golden test?
+      | 2. AGENT: A test that compares output with a recorded reference.
+      |
+      | --- Long-Term Memory ---
+      | 1. The user prefers short answers with one example.
+      | 2. The user is planning a trip to Lisbon in October.
+      |
+      | --- Previous Node Output ---
+      | What should I pack for my trip?
+    output:
+      | Cloud LLM answer, visit 1.
+trace.flush
+state NodeIO cloud CLOUD depth=0
+visit golden cloud_assist/output OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=7 run=golden depth=0 NodeExecution
+    message:
+      | ▶ OUTPUT
+chat.save AGENT final=true model=openai
+    content:
+      | Cloud LLM answer, visit 1.
+end Completed
+    finalResponse:
+      | Cloud LLM answer, visit 1.
+run.spend golden steps=3 tokens=5
+trace.flush

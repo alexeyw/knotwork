@@ -65,6 +65,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest` (`TopBarInsetGuardTest`) | Fails if a bar at the top of a screen neither applies the status-bar inset nor names the parent that does (see below). |
 | `:app:testFullDebugUnitTest` (`BundledDocumentationRoutingGuardTest`) | Fails if a call that can open a document bundled into the app passes no in-app reader, and so sends it to the browser (see below). |
 | `:app:testFullDebugUnitTest` (`ShippedPipelineLayoutTest`) | Fails if two node cards overlap in a bundled pipeline preset or a cookbook recipe (see below). |
+| `:app:testFullDebugUnitTest` (`GoldenTraceTest`, `GoldenTraceCatalogueTest`) | Fails if running a bundled preset, a cookbook recipe or a test fixture through the real engine produces a trace that differs from its committed golden file, or a pipeline file, a node type or a golden file falls out of the catalogue (see below). |
 | `:catalog:verifyRoborazziDebug`               | Fails if a design-system screenshot differs from its committed baseline (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
@@ -722,6 +723,57 @@ same replacement passed from the up-to-date check. With CI's Linux render of the
 settings hub put in place of its baseline, the run passes at 0.02 and fails at
 Roborazzi's default 0.007 — the tolerance absorbs exactly the observed noise. A
 capture call with its options removed fails the guard.
+
+---
+
+## Golden trace guard (`GoldenTraceTest`)
+
+The engine's behaviour was pinned path by path — one unit test per branch, per
+suspension, per executor. Nothing pinned it end to end: "this pipeline, on this
+input, visits these nodes with these inputs and outputs". `GoldenTraceTest` does,
+for every bundled preset, every cookbook recipe and two test-only fixtures. The
+harness, what it fakes and how to rewrite a trace are in
+[`testing.md` § Golden run traces](testing.md#golden-run-traces); this section is
+what makes it a gate.
+
+- **The comparison lives in the test, not in a `buildSrc` task.** Build logic
+  cannot run app code, so a task there could only compare files the test wrote —
+  a second place to fail and a stale-output risk, for a diff the test can print
+  itself. The golden directory is declared as a test input, so the task is
+  `UP-TO-DATE` when nothing changed and re-runs when a golden file is edited
+  (measured both ways).
+- **The trace is wider than routing.** It carries every prompt the model receives
+  and every write to run records and chat, so a refactoring that stops applying
+  a setting, renders a variable differently or flushes the trace at a different
+  point shows as a diff even when every route is unchanged.
+- **Determinism is checked, not assumed.** Each scenario runs twice and the
+  traces must match before either is compared.
+- **Completeness is a test.** `GoldenTraceCatalogueTest` fails on a pipeline file
+  without a scenario, on a `NodeType` no committed trace visits — `EVALUATION`
+  and `SKILL` are in no shipped pipeline, so two fixtures under
+  `app/src/test/golden/fixtures/` run them — and on a golden file no scenario
+  produces.
+
+**What it cannot see:** anything behind the fakes — the real model, a real tool's
+side effect, Room, notifications on a device — and the copy of each tool's
+description, which is a fixture. A behaviour the 44 scenarios never reach is
+not pinned either; a new branch needs a scenario.
+
+### Observed failing
+
+Two mutations of `GraphExecutionEngine`, each restored in the same command, against
+the 44 scenarios the guard shipped with:
+
+- `IF_CONDITION` routing with the True and False labels swapped fails **4 of 44**
+  scenarios — exactly the four whose pipelines contain an `IF` node.
+- `stepQueue` taking the **last** remaining item instead of the first fails
+  **6 of 44** — exactly the six that run a queue. The first version of the
+  harness caught only one of them: its default plan had two items, and the
+  engine takes a queue's first item itself, so `stepQueue` only ever saw a
+  one-item list. The default plan has three items for that reason.
+
+A golden file edited by one character makes the next run execute and fail; the
+same run without the edit is `UP-TO-DATE`.
 
 ---
 
