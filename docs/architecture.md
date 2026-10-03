@@ -398,6 +398,19 @@ Pipelines are first-class. A `PipelineGraph` is a directed graph of typed
 runs them is `GraphExecutionEngine`, decomposed into per-type
 `NodeExecutor` strategies.
 
+The walk itself is being split into collaborators the engine delegates to,
+each covering one concern:
+
+- **`RunTreeContext`** — what every invocation of one run tree shares: the
+  spend ledger, the repetition detector, pending advice, the image, the
+  generating model and the origin. The engine builds it for the root run;
+  each node receives it in `ExecutionScope.run`, and a `PIPELINE` node hands it
+  to its sub-pipeline one level deeper.
+- **`RunConsole`** — one invocation's console lines and trace records, in a
+  single `seq` numbering that a resumed run continues. It shows console lines
+  as they are pushed, and records each node's input and output for the
+  checkpoint replay. A TOOL or CLOUD node's record is flushed at once.
+
 ### 3.1. Node types
 
 | `NodeType`         | Purpose                                                                                       |

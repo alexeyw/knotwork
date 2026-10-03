@@ -35,7 +35,7 @@ sealed class NodeOutput {
      *
      * An executor has no direct access to the engine's console sink, so it emits
      * this variant and [app.knotwork.android.domain.engine.GraphExecutionEngine]
-     * translates it into a `pushConsole(type, message)` call (assigning the run's
+     * translates it into a `RunConsole.push(type, message)` call (assigning the run's
      * monotonic `seq` and nesting `depth`). The structured-output gate uses it to
      * announce each repair attempt
      * ([ConsoleEventType.StructuredOutputRepair][ConsoleEventType.StructuredOutputRepair])
