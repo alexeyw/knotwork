@@ -98,7 +98,7 @@ class TaskQueueManagerImplTest {
         taskQueueManager = TaskQueueManagerImpl(
             chatRepository = chatRepository,
             pipelineRepository = pipelineRepository,
-            settingsRepository = settingsRepository,
+            entryPointSettings = settingsRepository,
             graphExecutionEngine = graphExecutionEngine,
             pipelineRunRepository = pipelineRunRepository,
             runTraceRepository = runTraceRepository,
@@ -361,7 +361,7 @@ class TaskQueueManagerImplTest {
 
     /**
      * When the task carries no `pipelineId`, the queue uses the
-     * user-marked default from `SettingsRepository.defaultPipelineId` —
+     * user-marked default from `EntryPointSettings.defaultPipelineId` —
      * never "whatever the repository returned first". The default sits
      * last in the library to prove the order does not matter.
      */

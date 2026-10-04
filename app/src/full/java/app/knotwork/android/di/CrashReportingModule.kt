@@ -34,7 +34,7 @@ abstract class CrashReportingModule {
     /**
      * Binds the Firebase-backed [FirebaseCrashReportingRepositoryImpl] to the
      * domain-level [CrashReportingRepository]. The implementation gates every
-     * method on [app.knotwork.android.domain.repositories.SettingsRepository.crashReportingEnabled],
+     * method on [app.knotwork.android.domain.repositories.PrivacySettings.crashReportingEnabled],
      * so the binding is safe to provide unconditionally — no data leaves the
      * device until the user opts in.
      */

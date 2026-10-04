@@ -13,7 +13,7 @@ import app.knotwork.android.domain.models.PipelineRunTally
 import app.knotwork.android.domain.models.UsagePipelineDay
 import app.knotwork.android.domain.models.UsageRetention
 import app.knotwork.android.domain.models.UsageTelemetrySummary
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.PrivacySettings
 import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.usecases.CalculateUsageRetentionUseCase
 import kotlinx.coroutines.CoroutineDispatcher
@@ -56,7 +56,7 @@ import javax.inject.Singleton
  * DAO/SQLCipher error — rather than surfacing the exception to the screen.
  *
  * @property dao The telemetry DAO.
- * @property settingsRepository Source of the [SettingsRepository.usageTelemetryEnabled]
+ * @property privacySettings Source of the [PrivacySettings.usageTelemetryEnabled]
  *   opt-in flag that gates every write.
  * @property calculateRetention Pure domain calculator folding the activity set
  *   into the weekly-retention aggregate.
@@ -68,7 +68,7 @@ import javax.inject.Singleton
 @Singleton
 class UsageTelemetryRepositoryImpl internal constructor(
     private val dao: UsageTelemetryDao,
-    private val settingsRepository: SettingsRepository,
+    private val privacySettings: PrivacySettings,
     private val calculateRetention: CalculateUsageRetentionUseCase,
     private val clockProvider: () -> Clock,
 ) : UsageTelemetryRepository {
@@ -81,11 +81,11 @@ class UsageTelemetryRepositoryImpl internal constructor(
     @Inject
     constructor(
         dao: UsageTelemetryDao,
-        settingsRepository: SettingsRepository,
+        privacySettings: PrivacySettings,
         calculateRetention: CalculateUsageRetentionUseCase,
     ) : this(
         dao = dao,
-        settingsRepository = settingsRepository,
+        privacySettings = privacySettings,
         calculateRetention = calculateRetention,
         clockProvider = { Clock.systemDefaultZone() },
     )
@@ -124,7 +124,7 @@ class UsageTelemetryRepositoryImpl internal constructor(
 
     override suspend fun isEnabled(): Boolean =
         absorbingStoreFailure({ "Failed to read the usage-telemetry opt-in flag; treating as disabled" }) {
-            settingsRepository.usageTelemetryEnabled.first()
+            privacySettings.usageTelemetryEnabled.first()
         } ?: false
 
     override suspend fun recordPipelineRunOutcome(pipelineId: String?, status: PipelineRunStatus, atMillis: Long) {

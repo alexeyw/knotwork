@@ -3,8 +3,8 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
@@ -51,7 +51,7 @@ enum class EntryInferenceKind {
  *
  * Pipeline resolution mirrors the orchestrator's enqueue-time chain
  * (`TaskQueueManagerImpl`): the session's bound pipeline id first, then the
- * application-wide [SettingsRepository.defaultPipelineId]. Classification:
+ * application-wide [EntryPointSettings.defaultPipelineId]. Classification:
  *
  * - the `INPUT` node's immediate successor is a `CLOUD` node ⇒ [EntryInferenceKind.CLOUD]
  *   (the run unconditionally begins off-device);
@@ -66,7 +66,7 @@ enum class EntryInferenceKind {
  */
 class ResolveEntryInferenceUseCase @Inject constructor(
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
 ) {
 
     /**
@@ -151,7 +151,7 @@ class ResolveEntryInferenceUseCase @Inject constructor(
      */
     private suspend fun resolveGraph(sessionPipelineId: String?): PipelineGraph? {
         sessionPipelineId?.let { id -> pipelineRepository.getPipelineById(id)?.let { return it } }
-        val defaultId = settingsRepository.defaultPipelineId.firstOrNull() ?: return null
+        val defaultId = entryPointSettings.defaultPipelineId.firstOrNull() ?: return null
         return pipelineRepository.getPipelineById(defaultId)
     }
 }

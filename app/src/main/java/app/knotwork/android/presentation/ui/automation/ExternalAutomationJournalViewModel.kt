@@ -2,9 +2,9 @@ package app.knotwork.android.presentation.ui.automation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.automation.ExportExternalAutomationJournalUseCase
 import app.knotwork.android.presentation.ui.common.EXTERNAL_REQUESTS_EXPORT_STEM
 import app.knotwork.android.presentation.ui.common.JournalExportDelegate
@@ -34,14 +34,14 @@ import javax.inject.Inject
  * the opposite of widening an attack surface: it is what lets the owner of a
  * silent automation profile prove what reached the app.
  *
- * @param settingsRepository Source of the master switch and the surface binding.
+ * @param entryPointSettings Source of the master switch and the surface binding.
  * @param pipelineRepository Resolves the bound pipeline id to its display name.
  * @param journal The external-request journal store.
  * @param exportJournal Renders the journal into its export document.
  */
 @HiltViewModel
 class ExternalAutomationJournalViewModel @Inject constructor(
-    settingsRepository: SettingsRepository,
+    entryPointSettings: EntryPointSettings,
     pipelineRepository: PipelineRepository,
     journal: ExternalAutomationJournalRepository,
     exportJournal: ExportExternalAutomationJournalUseCase,
@@ -68,7 +68,7 @@ class ExternalAutomationJournalViewModel @Inject constructor(
     val journalExportEvents: SharedFlow<JournalExportEvent> get() = journalExport.events
 
     init {
-        settingsRepository.externalAutomationEnabled
+        entryPointSettings.externalAutomationEnabled
             .onEach { enabled -> _uiState.update { it.copy(contractEnabled = enabled) } }
             .launchIn(viewModelScope)
 
@@ -76,7 +76,7 @@ class ExternalAutomationJournalViewModel @Inject constructor(
         // deleted reads as unbound here exactly as the authorizer already treats
         // it — the screen never claims a pipeline the app could not actually run.
         combine(
-            settingsRepository.externalAutomationPipelineId,
+            entryPointSettings.externalAutomationPipelineId,
             pipelineRepository.observePipelineNames(),
         ) { boundId, names -> boundId?.let(names::get) }
             .onEach { name -> _uiState.update { it.copy(boundPipelineName = name) } }

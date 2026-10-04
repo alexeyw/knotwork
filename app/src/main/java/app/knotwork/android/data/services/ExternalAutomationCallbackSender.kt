@@ -5,7 +5,7 @@ import android.content.Intent
 import app.knotwork.android.domain.constants.ExternalAutomationContract
 import app.knotwork.android.domain.models.ExternalAutomationRejectionReason
 import app.knotwork.android.domain.models.ExternalAutomationStatus
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.services.ExternalAutomationCallbackNotifier
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
@@ -49,12 +49,12 @@ import javax.inject.Singleton
  * that way, so a second path cannot skip these two rules unnoticed.
  *
  * @property context Application context the broadcast is sent from.
- * @property settingsRepository Source of the contract's master switch.
+ * @property entryPointSettings Source of the contract's master switch.
  */
 @Singleton
 class ExternalAutomationCallbackSender @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
 ) : ExternalAutomationCallbackNotifier {
 
     override suspend fun notifyOutcome(
@@ -63,7 +63,7 @@ class ExternalAutomationCallbackSender @Inject constructor(
         requestId: String,
         status: ExternalAutomationStatus,
     ) {
-        if (!settingsRepository.externalAutomationEnabled.first()) {
+        if (!entryPointSettings.externalAutomationEnabled.first()) {
             Timber.tag(TAG).d("External automation is switched off; callback withheld")
             return
         }

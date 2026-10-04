@@ -66,7 +66,7 @@ class ChatHomeConsoleDelegateTest {
         return ChatHomeConsoleDelegate(
             scope = this,
             state = state,
-            settingsRepository = settingsRepository,
+            appStateSettings = settingsRepository,
             runTraceRepository = runTraceRepository,
             pipelineRunRepository = pipelineRunRepository,
             traceProjectionDispatcher = { testDispatcher },

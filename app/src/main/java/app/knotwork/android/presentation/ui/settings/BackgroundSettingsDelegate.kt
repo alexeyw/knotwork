@@ -1,9 +1,10 @@
 package app.knotwork.android.presentation.ui.settings
 
 import app.knotwork.android.domain.models.EntrySurface
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.usecases.SetSurfacePipelineUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,8 @@ import kotlinx.coroutines.launch
  * background-approval windows, and the per-surface entry-point pipeline bindings
  * (share target, Quick Settings tile, external automation) plus the
  * bindable-pipeline list backing their pickers. Observes the persisted flows into
- * the shared [state] and routes edits back through [settingsRepository]. Shares
+ * the shared [state] and routes edits back through [runSettings] and
+ * [entryPointSettings]. Shares
  * the ViewModel's [scope] and single [SettingsUiState] reducer.
  *
  * The external-automation switch is the one setting here that does not write
@@ -31,7 +33,9 @@ import kotlinx.coroutines.launch
  *
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.
- * @property settingsRepository Persistence for the notification + window + binding settings.
+ * @property runSettings Persistence for the notification toggle and the two windows.
+ * @property entryPointSettings Persistence for the surface bindings, share reuse and the
+ *   external-automation switch.
  * @property pipelineRepository Source of the bindable-pipeline list for the pickers.
  * @property setSurfacePipelineUseCase Single dispatch point for writing a surface binding.
  * @property externalAutomationJournal Source of the newest inbound external
@@ -40,42 +44,43 @@ import kotlinx.coroutines.launch
 class BackgroundSettingsDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<SettingsUiState>,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
+    private val entryPointSettings: EntryPointSettings,
     private val pipelineRepository: PipelineRepository,
     private val setSurfacePipelineUseCase: SetSurfacePipelineUseCase,
     private val externalAutomationJournal: ExternalAutomationJournalRepository,
 ) {
 
     init {
-        settingsRepository.scheduledTaskNotificationsEnabled.onEach { value ->
+        runSettings.scheduledTaskNotificationsEnabled.onEach { value ->
             state.update { it.copy(scheduledTaskNotificationsEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.resumeMaxAgeHours.onEach { value ->
+        runSettings.resumeMaxAgeHours.onEach { value ->
             state.update { it.copy(resumeMaxAgeHours = value) }
         }.launchIn(scope)
 
-        settingsRepository.backgroundApprovalWindowHours.onEach { value ->
+        runSettings.backgroundApprovalWindowHours.onEach { value ->
             state.update { it.copy(backgroundApprovalWindowHours = value) }
         }.launchIn(scope)
 
-        settingsRepository.shareTargetPipelineId.onEach { value ->
+        entryPointSettings.shareTargetPipelineId.onEach { value ->
             state.update { it.copy(shareTargetPipelineId = value) }
         }.launchIn(scope)
 
-        settingsRepository.shareReuseSession.onEach { value ->
+        entryPointSettings.shareReuseSession.onEach { value ->
             state.update { it.copy(shareReuseSession = value) }
         }.launchIn(scope)
 
-        settingsRepository.quickSettingsTilePipelineId.onEach { value ->
+        entryPointSettings.quickSettingsTilePipelineId.onEach { value ->
             state.update { it.copy(quickSettingsTilePipelineId = value) }
         }.launchIn(scope)
 
-        settingsRepository.externalAutomationEnabled.onEach { value ->
+        entryPointSettings.externalAutomationEnabled.onEach { value ->
             state.update { it.copy(externalAutomationEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.externalAutomationPipelineId.onEach { value ->
+        entryPointSettings.externalAutomationPipelineId.onEach { value ->
             state.update { it.copy(externalAutomationPipelineId = value) }
         }.launchIn(scope)
 
@@ -106,7 +111,7 @@ class BackgroundSettingsDelegate(
 
     /** Persists the "notify me when a scheduled task fires" toggle. */
     fun setScheduledTaskNotificationsEnabled(enabled: Boolean) {
-        scope.launch { settingsRepository.setScheduledTaskNotificationsEnabled(enabled) }
+        scope.launch { runSettings.setScheduledTaskNotificationsEnabled(enabled) }
     }
 
     /**
@@ -127,14 +132,14 @@ class BackgroundSettingsDelegate(
             state.update { it.copy(pendingExternalAutomationConsent = true) }
         } else {
             state.update { it.copy(pendingExternalAutomationConsent = false) }
-            scope.launch { settingsRepository.setExternalAutomationEnabled(false) }
+            scope.launch { entryPointSettings.setExternalAutomationEnabled(false) }
         }
     }
 
     /** Persists the switched-on state the user has just consented to. */
     fun confirmExternalAutomationConsent() {
         state.update { it.copy(pendingExternalAutomationConsent = false) }
-        scope.launch { settingsRepository.setExternalAutomationEnabled(true) }
+        scope.launch { entryPointSettings.setExternalAutomationEnabled(true) }
     }
 
     /** Drops the staged consent; the contract stays exactly as it was. */
@@ -144,7 +149,7 @@ class BackgroundSettingsDelegate(
 
     /** Persists the "keep every share in one Shared chat" toggle. */
     fun setShareReuseSession(reuse: Boolean) {
-        scope.launch { settingsRepository.setShareReuseSession(reuse) }
+        scope.launch { entryPointSettings.setShareReuseSession(reuse) }
     }
 
     /**
@@ -154,7 +159,7 @@ class BackgroundSettingsDelegate(
      * @param hours The new window picked on the slider.
      */
     fun setResumeMaxAgeHours(hours: Int) {
-        scope.launch { settingsRepository.setResumeMaxAgeHours(hours) }
+        scope.launch { runSettings.setResumeMaxAgeHours(hours) }
     }
 
     /**
@@ -165,6 +170,6 @@ class BackgroundSettingsDelegate(
      * @param hours The new window picked on the slider.
      */
     fun setBackgroundApprovalWindowHours(hours: Int) {
-        scope.launch { settingsRepository.setBackgroundApprovalWindowHours(hours) }
+        scope.launch { runSettings.setBackgroundApprovalWindowHours(hours) }
     }
 }

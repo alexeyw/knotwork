@@ -1,6 +1,6 @@
 package app.knotwork.android.presentation.ui.settings
 
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.PrivacySettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
  *
  * Owns crash-reporting consent and the two trace retention windows. Observes
  * their persisted flows into the shared [state] and routes edits back through
- * [settingsRepository]. Crash-reporting consent is **only** persisted here: the
+ * [privacySettings]. Crash-reporting consent is **only** persisted here: the
  * app's observer (`App.observeCrashReportingOptIn`, installed in release builds of
  * the `full` flavour alone) mirrors the flag into the live collector. Flipping the
  * collector from here as well turned Crashlytics on in debug builds, which the
@@ -22,24 +22,24 @@ import kotlinx.coroutines.launch
  *
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.
- * @property settingsRepository Persistence for the privacy settings.
+ * @property privacySettings Persistence for the privacy settings.
  */
 class PrivacySettingsDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<SettingsUiState>,
-    private val settingsRepository: SettingsRepository,
+    private val privacySettings: PrivacySettings,
 ) {
 
     init {
-        settingsRepository.crashReportingEnabled.onEach { value ->
+        privacySettings.crashReportingEnabled.onEach { value ->
             state.update { it.copy(crashReportingEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.traceRetentionRunsPerSession.onEach { value ->
+        privacySettings.traceRetentionRunsPerSession.onEach { value ->
             state.update { it.copy(traceRetentionRunsPerSession = value) }
         }.launchIn(scope)
 
-        settingsRepository.traceRetentionMaxAgeDays.onEach { value ->
+        privacySettings.traceRetentionMaxAgeDays.onEach { value ->
             state.update { it.copy(traceRetentionMaxAgeDays = value) }
         }.launchIn(scope)
     }
@@ -51,7 +51,7 @@ class PrivacySettingsDelegate(
      * @param enabled Whether the user consents to crash reports.
      */
     fun setCrashReportingEnabled(enabled: Boolean) {
-        scope.launch { settingsRepository.setCrashReportingEnabled(enabled) }
+        scope.launch { privacySettings.setCrashReportingEnabled(enabled) }
     }
 
     /**
@@ -62,7 +62,7 @@ class PrivacySettingsDelegate(
      * @param runs The new per-session count picked on the slider.
      */
     fun setTraceRetentionRunsPerSession(runs: Int) {
-        scope.launch { settingsRepository.setTraceRetentionRunsPerSession(runs) }
+        scope.launch { privacySettings.setTraceRetentionRunsPerSession(runs) }
     }
 
     /**
@@ -73,6 +73,6 @@ class PrivacySettingsDelegate(
      * @param days The new age limit picked on the slider.
      */
     fun setTraceRetentionMaxAgeDays(days: Int) {
-        scope.launch { settingsRepository.setTraceRetentionMaxAgeDays(days) }
+        scope.launch { privacySettings.setTraceRetentionMaxAgeDays(days) }
     }
 }

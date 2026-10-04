@@ -1,7 +1,7 @@
 package app.knotwork.android.data.repositories
 
 import app.knotwork.android.domain.repositories.CrashReportingRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.PrivacySettings
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -12,7 +12,7 @@ import javax.inject.Singleton
  * Firebase-backed implementation of [CrashReportingRepository].
  *
  * Every method reads the current value of
- * [SettingsRepository.crashReportingEnabled] before touching the Firebase
+ * [PrivacySettings.crashReportingEnabled] before touching the Firebase
  * SDK; when the flag is `false` the call short-circuits to a no-op so no
  * data leaves the device. This matches the project's opt-in privacy
  * contract: the manifest disables auto-collection at boot, and the runtime
@@ -29,13 +29,13 @@ import javax.inject.Singleton
  * build at all, which is what makes the guarantee structural rather than a
  * promise to remember.
  *
- * @property settingsRepository Single source of truth for the user's
+ * @property privacySettings Single source of truth for the user's
  *                              opt-in flag.
  * @property crashlytics Firebase Crashlytics singleton (injected for tests).
  */
 @Singleton
 class FirebaseCrashReportingRepositoryImpl @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val privacySettings: PrivacySettings,
     private val crashlytics: FirebaseCrashlytics,
 ) : CrashReportingRepository {
 
@@ -48,7 +48,7 @@ class FirebaseCrashReportingRepositoryImpl @Inject constructor(
     }
 
     override suspend fun recordException(throwable: Throwable, extras: Map<String, String>) {
-        if (!settingsRepository.crashReportingEnabled.first()) return
+        if (!privacySettings.crashReportingEnabled.first()) return
         runCatching {
             // Extras are attached as Crashlytics log breadcrumbs (not custom keys) so they
             // appear in the report's log trail without persisting into the session-wide
@@ -63,7 +63,7 @@ class FirebaseCrashReportingRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setCustomKey(key: String, value: String) {
-        if (!settingsRepository.crashReportingEnabled.first()) return
+        if (!privacySettings.crashReportingEnabled.first()) return
         runCatching {
             crashlytics.setCustomKey(key, value)
         }.onFailure { error ->

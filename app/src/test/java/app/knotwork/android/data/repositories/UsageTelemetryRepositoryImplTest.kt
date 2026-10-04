@@ -63,7 +63,7 @@ class UsageTelemetryRepositoryImplTest {
 
     private fun repository(nowMillis: Long = day1): UsageTelemetryRepositoryImpl = UsageTelemetryRepositoryImpl(
         dao = dao,
-        settingsRepository = settingsRepository,
+        privacySettings = settingsRepository,
         calculateRetention = CalculateUsageRetentionUseCase(),
         clockProvider = { Clock.fixed(Instant.ofEpochMilli(nowMillis), zone) },
     ).apply { dispatcher = Dispatchers.Unconfined }

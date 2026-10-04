@@ -4,9 +4,9 @@ import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ConsoleEvent
 import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.RunTraceRecord
+import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.design.components.console.ConsoleFilter
 import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleSource
@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
  *   with the ViewModel so the preferred-tab observer never outlives it.
  * @property state The ViewModel's single source-of-truth state flow, shared as
  *   the common reducer for the `console` slice.
- * @property settingsRepository Persists / hydrates the preferred console tab.
+ * @property appStateSettings Persists / hydrates the preferred console tab.
  * @property runTraceRepository Loads the persisted run trace replayed on session
  *   open ([replayTrace]).
  * @property pipelineRunRepository Resolves descendant (sub-pipeline) runs so the
@@ -61,7 +61,7 @@ import kotlinx.coroutines.withContext
 class ChatHomeConsoleDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<ChatHomeScreenState>,
-    private val settingsRepository: SettingsRepository,
+    private val appStateSettings: AppStateSettings,
     private val runTraceRepository: RunTraceRepository,
     private val pipelineRunRepository: PipelineRunRepository,
     private val traceProjectionDispatcher: () -> CoroutineDispatcher,
@@ -137,7 +137,7 @@ class ChatHomeConsoleDelegate(
      */
     fun startObservers() {
         scope.launch {
-            settingsRepository.consolePreferredConsoleTabName.collect { name ->
+            appStateSettings.consolePreferredConsoleTabName.collect { name ->
                 val tab = ConsoleTab.entries.firstOrNull { it.name == name } ?: ConsoleTab.Logs
                 state.update { it.copy(console = it.console.copy(tab = tab)) }
             }
@@ -205,7 +205,7 @@ class ChatHomeConsoleDelegate(
         if (state.value.console.tab == tab) return
         state.update { it.copy(console = it.console.copy(tab = tab)) }
         scope.launch {
-            settingsRepository.setConsolePreferredConsoleTabName(tab.name)
+            appStateSettings.setConsolePreferredConsoleTabName(tab.name)
         }
     }
 

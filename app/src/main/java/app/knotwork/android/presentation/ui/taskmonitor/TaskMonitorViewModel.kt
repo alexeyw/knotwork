@@ -7,9 +7,9 @@ import androidx.work.WorkManager
 import androidx.work.WorkQuery
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
+import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.ScheduledTaskTag
 import app.knotwork.android.domain.usecases.CancelScheduledTasksUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +30,7 @@ import javax.inject.Inject
 class TaskMonitorViewModel @Inject constructor(
     chatRepository: ChatRepository,
     private val workManager: WorkManager,
-    private val settingsRepository: SettingsRepository,
+    private val appStateSettings: AppStateSettings,
     private val taskQueueManager: TaskQueueManager,
     private val cancelScheduledTasks: CancelScheduledTasksUseCase,
     backgroundPrompts: BackgroundPromptRepository,
@@ -229,7 +229,7 @@ class TaskMonitorViewModel @Inject constructor(
      */
     fun onOpenChatClicked(sessionId: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            settingsRepository.setCurrentChatSessionId(sessionId)
+            appStateSettings.setCurrentChatSessionId(sessionId)
             onComplete()
         }
     }

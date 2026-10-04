@@ -255,7 +255,7 @@ constructor(
     val console: ChatHomeConsoleDelegate = ChatHomeConsoleDelegate(
         scope = viewModelScope,
         state = _state,
-        settingsRepository = settingsRepository,
+        appStateSettings = settingsRepository,
         runTraceRepository = runTraceRepository,
         pipelineRunRepository = pipelineRunRepository,
         traceProjectionDispatcher = { traceProjectionDispatcher },
@@ -312,7 +312,7 @@ constructor(
     val pipelineBinding: ChatHomePipelineBindingDelegate = ChatHomePipelineBindingDelegate(
         scope = viewModelScope,
         state = _state,
-        settingsRepository = settingsRepository,
+        entryPointSettings = settingsRepository,
         pipelineRepository = pipelineRepository,
         chatRepository = chatRepository,
         pipelineRunRepository = pipelineRunRepository,
@@ -925,7 +925,7 @@ constructor(
     /**
      * Loads or restores the active chat session, mirroring legacy
      * `ChatViewModel.initializeSession`. Either reuses the id persisted
-     * in [SettingsRepository.currentChatSessionId] or generates a fresh
+     * in [AppStateSettings.currentChatSessionId] or generates a fresh
      * one and creates an empty [ChatSession] for it.
      */
     private fun initializeSession() {

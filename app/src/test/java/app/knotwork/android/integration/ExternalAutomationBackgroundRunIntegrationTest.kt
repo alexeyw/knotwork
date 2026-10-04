@@ -212,7 +212,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
     private fun buildHandler(process: ProcessHarness) = HandleExternalAutomationRequestUseCase(
         parseRequest = ParseExternalAutomationRequestUseCase(),
         authorizeRequest = AuthorizeExternalAutomationRequestUseCase(),
-        settingsRepository = settingsRepository,
+        entryPointSettings = settingsRepository,
         pipelineRepository = pipelineRepository,
         journal = process.externalJournal,
         taskScheduler = process.scheduler,
@@ -521,7 +521,7 @@ class ExternalAutomationBackgroundRunIntegrationTest {
         val taskQueueManager = TaskQueueManagerImpl(
             chatRepository = chatRepository,
             pipelineRepository = pipelineRepository,
-            settingsRepository = settingsRepository,
+            entryPointSettings = settingsRepository,
             graphExecutionEngine = engine,
             pipelineRunRepository = runRepository,
             runTraceRepository = traceRepository,

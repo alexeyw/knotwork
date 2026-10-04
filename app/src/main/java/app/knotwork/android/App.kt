@@ -5,7 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import app.knotwork.android.data.logging.CrashlyticsTimberTree
 import app.knotwork.android.domain.repositories.CrashReportingRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.PrivacySettings
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
 import app.knotwork.android.presentation.theme.KnotworkFontsBootstrap
 import dagger.hilt.android.HiltAndroidApp
@@ -33,7 +33,7 @@ import javax.inject.Inject
  * domain, and data layers of our Clean Architecture.
  *
  * Also owns the Crashlytics opt-in lifecycle: in release builds the app observes
- * [SettingsRepository.crashReportingEnabled] and plants / uproots
+ * [PrivacySettings.crashReportingEnabled] and plants / uproots
  * [CrashlyticsTimberTree] in response to the user's choice. Debug builds plant
  * only [Timber.DebugTree] and never touch Crashlytics, so local development
  * never accidentally uploads logs.
@@ -47,7 +47,7 @@ class App :
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var settingsRepository: SettingsRepository
+    lateinit var privacySettings: PrivacySettings
 
     @Inject
     lateinit var crashReportingRepository: CrashReportingRepository
@@ -92,7 +92,7 @@ class App :
      * restarts.
      */
     private fun observeCrashReportingOptIn() {
-        settingsRepository.crashReportingEnabled
+        privacySettings.crashReportingEnabled
             .distinctUntilChanged()
             .onEach { enabled ->
                 crashReportingRepository.setEnabled(enabled)

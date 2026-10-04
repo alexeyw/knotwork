@@ -408,7 +408,7 @@ abstract class AppDatabase : RoomDatabase() {
          *
          * Adds the nullable `pipelineId` column to `chat_sessions`. `NULL` means the
          * chat uses the application-wide default pipeline (the user-marked
-         * `SettingsRepository.defaultPipelineId`), preserving the prior
+         * `EntryPointSettings.defaultPipelineId`), preserving the prior
          * default for every existing row without requiring a data backfill.
          */
         val MIGRATION_18_19 = object : Migration(18, 19) {

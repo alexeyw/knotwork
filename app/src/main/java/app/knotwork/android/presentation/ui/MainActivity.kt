@@ -20,7 +20,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import app.knotwork.android.data.services.AgentForegroundService
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.presentation.startup.StartupMaintenance
 import app.knotwork.android.presentation.state.ChatEntryRequestRelay
 import app.knotwork.android.presentation.state.TransientMessageRelay
@@ -43,7 +43,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var appStateSettings: AppStateSettings
 
     @Inject lateinit var transientMessageRelay: TransientMessageRelay
 
@@ -173,7 +173,7 @@ class MainActivity : ComponentActivity() {
                 // the brief read window; on a fresh install, the splash
                 // screen blocks long enough for DataStore to emit the
                 // real `false` value before the navigation decision.
-                val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding
+                val hasCompletedOnboarding by appStateSettings.hasCompletedOnboarding
                     .collectAsState(initial = false)
 
                 AppShellScaffold(

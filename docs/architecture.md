@@ -1504,7 +1504,11 @@ and `SettingsReset` for the two resets that span several of them. A consumer
 depends on the section it reads. `SettingsRepository` is the union of all
 sections, kept while existing consumers move off it;
 `SettingsCompositeConsumersTest` refuses a new production dependency on it.
-Every section is bound to one instance, which is a class-level `@Singleton`
+Each section is implemented by a store in `data/local/settings/`
+(`AppStateSettingsStore`, …) over the same DataStore; the sections not yet
+moved there are still implemented by `SettingsManager`, which delegates to the
+stores, and both resets write every section's part in one atomic edit. Every
+section is bound to one instance, which is a class-level `@Singleton`
 (`SettingsSingletonScopeTest`): a scope on each binding alone would build one
 instance per binding, each with its own in-memory credential cache.
 

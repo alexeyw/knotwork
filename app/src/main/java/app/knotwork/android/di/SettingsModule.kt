@@ -1,6 +1,9 @@
 package app.knotwork.android.di
 
 import app.knotwork.android.data.local.SettingsManager
+import app.knotwork.android.data.local.settings.AppStateSettingsStore
+import app.knotwork.android.data.local.settings.EntryPointSettingsStore
+import app.knotwork.android.data.local.settings.PrivacySettingsStore
 import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.GenerationSettings
@@ -20,12 +23,13 @@ import javax.inject.Singleton
 /**
  * Hilt bindings of the settings sections and of the transitional [SettingsRepository] composite.
  *
- * Every binding resolves to the one [SettingsManager] instance. That holds because the class itself
- * is `@Singleton`: a scope on a `@Binds` method caches per binding, so ten scoped bindings of an
- * unscoped class would build ten managers, each with its own copy of the in-memory MCP credential
- * cache, the mutex serialising server edits, and the Hugging Face token flow — an edit made through
- * one section would then be invisible to a read through another. `SettingsSingletonScopeTest` keeps
- * the scope on every class that implements a section.
+ * A section split out into its own store is bound to that store; the rest are bound to the one
+ * [SettingsManager], which delegates to the same store instances. Every class here is a class-level
+ * `@Singleton`: a scope on a `@Binds` method caches per binding, so several scoped bindings of an
+ * unscoped class would each build their own instance, each with its own copy of the in-memory MCP
+ * credential cache, the mutex serialising server edits, and the Hugging Face token flow — an edit
+ * made through one section would then be invisible to a read through another.
+ * `SettingsSingletonScopeTest` keeps the scope on every class that implements a section.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -61,20 +65,20 @@ abstract class SettingsModule {
     @Singleton
     abstract fun bindRunSettings(settingsManager: SettingsManager): RunSettings
 
-    /** Binds the entry-point bindings section. */
+    /** Binds the entry-point bindings section to its store. */
     @Binds
     @Singleton
-    abstract fun bindEntryPointSettings(settingsManager: SettingsManager): EntryPointSettings
+    abstract fun bindEntryPointSettings(store: EntryPointSettingsStore): EntryPointSettings
 
-    /** Binds the privacy section. */
+    /** Binds the privacy section to its store. */
     @Binds
     @Singleton
-    abstract fun bindPrivacySettings(settingsManager: SettingsManager): PrivacySettings
+    abstract fun bindPrivacySettings(store: PrivacySettingsStore): PrivacySettings
 
-    /** Binds the app-state section. */
+    /** Binds the app-state section to its store. */
     @Binds
     @Singleton
-    abstract fun bindAppStateSettings(settingsManager: SettingsManager): AppStateSettings
+    abstract fun bindAppStateSettings(store: AppStateSettingsStore): AppStateSettings
 
     /** Binds the cross-section resets. */
     @Binds

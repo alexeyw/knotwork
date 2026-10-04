@@ -17,10 +17,10 @@ import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -59,7 +59,7 @@ import javax.inject.Singleton
 class TaskQueueManagerImpl @Inject constructor(
     private val chatRepository: ChatRepository,
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
     private val graphExecutionEngine: GraphExecutionEngine,
     private val pipelineRunRepository: PipelineRunRepository,
     private val runTraceRepository: RunTraceRepository,
@@ -450,7 +450,7 @@ class TaskQueueManagerImpl @Inject constructor(
         // depends on the order pipelines come back from the repository:
         //   1. `task.pipelineId` — the session binding captured at enqueue
         //      time, when it still resolves to an existing pipeline;
-        //   2. `SettingsRepository.defaultPipelineId` — the user-marked
+        //   2. `EntryPointSettings.defaultPipelineId` — the user-marked
         //      default, when set and still existing;
         //   3. explicit `Error` — no silent "whatever the DAO returned
         //      first" substitution.
@@ -471,7 +471,7 @@ class TaskQueueManagerImpl @Inject constructor(
         // The default is resolved lazily — reading the settings flow is a
         // suspend call that a successfully resolved binding never needs.
         val activePipeline = boundPipeline
-            ?: settingsRepository.defaultPipelineId.firstOrNull()
+            ?: entryPointSettings.defaultPipelineId.firstOrNull()
                 ?.let { id -> pipelines.firstOrNull { it.id == id } }
 
         if (activePipeline == null) {

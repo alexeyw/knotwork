@@ -129,6 +129,7 @@ class SettingsViewModel @Inject constructor(
             viewModelScope,
             _uiState,
             settingsRepository,
+            settingsRepository,
             pipelineRepository,
             setSurfacePipelineUseCase,
             externalAutomationJournal,
@@ -137,7 +138,7 @@ class SettingsViewModel @Inject constructor(
     private val privacy = PrivacySettingsDelegate(
         scope = viewModelScope,
         state = _uiState,
-        settingsRepository = settingsRepository,
+        privacySettings = settingsRepository,
     )
 
     private val about = AboutSettingsDelegate(

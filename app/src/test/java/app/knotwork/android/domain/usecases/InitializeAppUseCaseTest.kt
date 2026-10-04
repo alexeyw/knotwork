@@ -31,12 +31,14 @@ class InitializeAppUseCaseTest {
     }
     private val seedBundledSkillsUseCase: SeedBundledSkillsUseCase = mockk(relaxed = true)
     private val useCase = InitializeAppUseCase(
-        settingsRepository,
-        pipelineRepository,
-        loadPipelineFromPresetUseCase,
-        pipelineRunRepository,
-        pendingInteractionRepository,
-        seedBundledSkillsUseCase,
+        appStateSettings = settingsRepository,
+        entryPointSettings = settingsRepository,
+        generationSettings = settingsRepository,
+        pipelineRepository = pipelineRepository,
+        loadPipelineFromPresetUseCase = loadPipelineFromPresetUseCase,
+        pipelineRunRepository = pipelineRunRepository,
+        pendingInteractionRepository = pendingInteractionRepository,
+        seedBundledSkillsUseCase = seedBundledSkillsUseCase,
     )
 
     @Test

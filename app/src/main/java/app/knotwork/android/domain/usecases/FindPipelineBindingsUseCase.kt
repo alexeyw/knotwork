@@ -3,8 +3,8 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.models.EntrySurface
 import app.knotwork.android.domain.models.PipelineBindings
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.TriggerRepository
 import app.knotwork.android.domain.services.findDependentPipelines
 import kotlinx.coroutines.flow.first
@@ -22,7 +22,7 @@ import javax.inject.Inject
  * that this use case does not account for.
  */
 class FindPipelineBindingsUseCase @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
     private val resolveSurfacePipelineUseCase: ResolveSurfacePipelineUseCase,
     private val triggerRepository: TriggerRepository,
     private val chatRepository: ChatRepository,
@@ -38,7 +38,7 @@ class FindPipelineBindingsUseCase @Inject constructor(
      */
     suspend operator fun invoke(pipelineIds: Collection<String>): Map<String, PipelineBindings> {
         if (pipelineIds.isEmpty()) return emptyMap()
-        val defaultId = settingsRepository.defaultPipelineId.first()
+        val defaultId = entryPointSettings.defaultPipelineId.first()
         val surfaceIds = EntrySurface.entries.associateWith { resolveSurfacePipelineUseCase(it) }
         val triggers = triggerRepository.observeTriggers().first()
         val chats = chatRepository.getSessionsFlow(includeArchived = true).first()

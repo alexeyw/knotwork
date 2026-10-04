@@ -1,8 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.OnboardingScenarioCatalog
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
@@ -20,7 +20,7 @@ import javax.inject.Inject
  *     curated scenarios are single graphs, so sub-pipeline seeding is a no-op
  *     today — but routing through the same use case keeps a future composed
  *     scenario runnable for free.
- *  2. [SettingsRepository.setDefaultPipelineId] points the first chat at the
+ *  2. [EntryPointSettings.setDefaultPipelineId] points the first chat at the
  *     new pipeline (`ChatHomePipelineBindingDelegate` resolves this default).
  *  3. [SetSurfacePipelineUseCase] binds the scenario's [EntrySurface] when it
  *     declares one (Share Handler → the system Share sheet), leaving inert
@@ -32,13 +32,13 @@ import javax.inject.Inject
  *
  * @property loadPipelineFromPresetUseCase Materialises + persists the preset.
  * @property setSurfacePipelineUseCase Binds the scenario's entry surface.
- * @property settingsRepository Persists the default-pipeline pointer.
+ * @property entryPointSettings Persists the default-pipeline pointer.
  * @property pipelineRepository Read back the saved graph for the recap projection.
  */
 class SetUpScenarioUseCase @Inject constructor(
     private val loadPipelineFromPresetUseCase: LoadPipelineFromPresetUseCase,
     private val setSurfacePipelineUseCase: SetSurfacePipelineUseCase,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
     private val pipelineRepository: PipelineRepository,
 ) {
     /**
@@ -56,7 +56,7 @@ class SetUpScenarioUseCase @Inject constructor(
         val pipelineId = loadPipelineFromPresetUseCase(spec.presetId)
             .getOrElse { return Result.failure(it) }
 
-        settingsRepository.setDefaultPipelineId(pipelineId)
+        entryPointSettings.setDefaultPipelineId(pipelineId)
         spec.entrySurface?.let { surface -> setSurfacePipelineUseCase(surface, pipelineId) }
 
         val graph = pipelineRepository.getPipelineById(pipelineId)

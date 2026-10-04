@@ -40,7 +40,7 @@ class SetUpScenarioUseCaseTest {
         useCase = SetUpScenarioUseCase(
             loadPipelineFromPresetUseCase = loadPipelineFromPreset,
             setSurfacePipelineUseCase = setSurfacePipeline,
-            settingsRepository = settingsRepository,
+            entryPointSettings = settingsRepository,
             pipelineRepository = pipelineRepository,
         )
     }
