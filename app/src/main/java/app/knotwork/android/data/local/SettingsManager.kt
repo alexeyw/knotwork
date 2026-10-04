@@ -1,6 +1,5 @@
 package app.knotwork.android.data.local
 
-import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -12,6 +11,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.knotwork.android.data.local.crypto.SecretStore
 import app.knotwork.android.data.local.crypto.SecureValueUnreadableException
+import app.knotwork.android.data.local.settings.AppStateSettingsStore
+import app.knotwork.android.data.local.settings.EntryPointSettingsStore
+import app.knotwork.android.data.local.settings.PrivacySettingsStore
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.LocalBackend
@@ -22,6 +24,9 @@ import app.knotwork.android.domain.models.TestProbeResult
 import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.models.UpdateMcpServerResult
+import app.knotwork.android.domain.repositories.AppStateSettings
+import app.knotwork.android.domain.repositories.EntryPointSettings
+import app.knotwork.android.domain.repositories.PrivacySettings
 import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -52,23 +57,35 @@ import javax.inject.Singleton
  * plain DataStore (the HuggingFace token, inline MCP auth) are migrated into the secret store on
  * the first read and removed from DataStore.
  *
- * Scoped `@Singleton` on the class, not only on its bindings: every settings section is bound to this
- * one instance (`SettingsModule`), and the in-memory MCP credential cache, the mutex serialising
- * server edits and the Hugging Face token flow must exist once.
+ * The sections already split out into their own stores ([AppStateSettingsStore],
+ * [PrivacySettingsStore], [EntryPointSettingsStore]) are delegated to; the rest is still implemented
+ * here and moves out section by section. Both resets stay here until every section has moved, and
+ * write each split-out section's part through its store, in the same atomic edit.
+ *
+ * Scoped `@Singleton` on the class, not only on its bindings: the sections not yet split out are
+ * bound to this one instance (`SettingsModule`), and the in-memory MCP credential cache, the mutex
+ * serialising server edits and the Hugging Face token flow must exist once.
  *
  * @property dataStore The underlying DataStore instance for persistence.
  * @property secretsStore The encrypted store backing every secret payload.
+ * @param appState The store of the app-state section.
+ * @property privacy The store of the privacy section; writes its part of a reset.
+ * @property entryPoints The store of the entry-point section; writes its part of a reset.
  */
 @Singleton
-@Suppress("LargeClass") // 31-field DataStore facade by design; per-section split planned post-v0.1.
+@Suppress("LargeClass") // Shrinks as each settings section moves out to its own store.
 class SettingsManager @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val secretsStore: SecretStore,
-) : SettingsRepository {
+    appState: AppStateSettingsStore,
+    private val privacy: PrivacySettingsStore,
+    private val entryPoints: EntryPointSettingsStore,
+) : SettingsRepository,
+    AppStateSettings by appState,
+    PrivacySettings by privacy,
+    EntryPointSettings by entryPoints {
 
     private object PreferencesKeys {
-        val IS_FIRST_LAUNCH = booleanPreferencesKey("is_first_launch")
-        val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val HUGGING_FACE_TOKEN = stringPreferencesKey("hugging_face_token")
         val MAX_CONTEXT_LENGTH = intPreferencesKey("max_context_length")
         val TEMPERATURE = androidx.datastore.preferences.core.floatPreferencesKey("temperature")
@@ -93,7 +110,6 @@ class SettingsManager @Inject constructor(
         // would silently drop every override a user had already set. The Kotlin
         // surface (`toolRiskOverrides`) is the honest name; this string is history.
         val TOOL_RISK_OVERRIDES = stringPreferencesKey("app_function_risk_overrides")
-        val CURRENT_CHAT_SESSION_ID = stringPreferencesKey("current_chat_session_id")
         val MEMORY_LAST_COMPACTED_AT =
             androidx.datastore.preferences.core.longPreferencesKey("memory_last_compacted_at")
         val MEMORY_SEARCH_TOP_K = intPreferencesKey("memory_search_top_k")
@@ -149,23 +165,7 @@ class SettingsManager @Inject constructor(
             androidx.datastore.preferences.core.longPreferencesKey("cloud_retry_base_delay_ms")
         val RESUME_MAX_AGE_HOURS = intPreferencesKey("resume_max_age_hours")
         val BACKGROUND_APPROVAL_WINDOW_HOURS = intPreferencesKey("background_approval_window_hours")
-        val TRACE_RETENTION_RUNS_PER_SESSION = intPreferencesKey("trace_retention_runs_per_session")
-        val TRACE_RETENTION_MAX_AGE_DAYS = intPreferencesKey("trace_retention_max_age_days")
         val MEMORY_SUMMARY_DEFAULT_LIMIT = intPreferencesKey("memory_summary_default_limit")
-        val DEFAULT_PIPELINE_ID = stringPreferencesKey("default_pipeline_id")
-
-        // Per-surface entry-point pipeline bindings. User bindings (like
-        // DEFAULT_PIPELINE_ID), so excluded from resetToRecommendedDefaults.
-        val SHARE_TARGET_PIPELINE_ID = stringPreferencesKey("share_target_pipeline_id")
-        val QUICK_SETTINGS_TILE_PIPELINE_ID = stringPreferencesKey("quick_settings_tile_pipeline_id")
-        val EXTERNAL_AUTOMATION_PIPELINE_ID = stringPreferencesKey("external_automation_pipeline_id")
-
-        // Tunable behaviour preference (reset by resetToRecommendedDefaults).
-        val SHARE_REUSE_SESSION = booleanPreferencesKey("share_reuse_session")
-        val EXTERNAL_AUTOMATION_ENABLED = booleanPreferencesKey("external_automation_enabled")
-        val CRASH_REPORTING_ENABLED = booleanPreferencesKey("crash_reporting_enabled")
-        val USAGE_TELEMETRY_ENABLED = booleanPreferencesKey("usage_telemetry_enabled")
-        val CONSOLE_PREFERRED_TAB = stringPreferencesKey("console_preferred_tab")
 
         // Settings redesign.
         val TOOL_APPROVAL_POLICY = stringPreferencesKey("tool_approval_policy")
@@ -222,44 +222,6 @@ class SettingsManager @Inject constructor(
         private fun sha256Hex(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
-    }
-
-    override val isFirstLaunch: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.IS_FIRST_LAUNCH] ?: true
-        }
-
-    override suspend fun setFirstLaunch(isFirstLaunch: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.IS_FIRST_LAUNCH] = isFirstLaunch
-        }
-    }
-
-    override val hasCompletedOnboarding: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.HAS_COMPLETED_ONBOARDING] ?: false
-        }
-
-    override suspend fun setHasCompletedOnboarding(completed: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.HAS_COMPLETED_ONBOARDING] = completed
-        }
     }
 
     /**
@@ -943,48 +905,6 @@ class SettingsManager @Inject constructor(
         return json.toString()
     }
 
-    override val currentChatSessionId: Flow<String?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.CURRENT_CHAT_SESSION_ID]
-        }
-
-    override suspend fun setCurrentChatSessionId(sessionId: String?) {
-        dataStore.edit { preferences ->
-            if (sessionId == null) {
-                preferences.remove(PreferencesKeys.CURRENT_CHAT_SESSION_ID)
-            } else {
-                preferences[PreferencesKeys.CURRENT_CHAT_SESSION_ID] = sessionId
-            }
-        }
-    }
-
-    override val consolePreferredConsoleTabName: Flow<String> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.CONSOLE_PREFERRED_TAB] ?: CONSOLE_PREFERRED_TAB_DEFAULT
-        }
-
-    override suspend fun setConsolePreferredConsoleTabName(name: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.CONSOLE_PREFERRED_TAB] = name
-        }
-    }
-
     override val memoryLastCompactedAt: Flow<Long> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -1141,138 +1061,6 @@ class SettingsManager @Inject constructor(
     override suspend fun setMemoryRecencyHalfLifeDays(days: Int) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.MEMORY_RECENCY_HALF_LIFE_DAYS] = days
-        }
-    }
-
-    override val defaultPipelineId: Flow<String?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.DEFAULT_PIPELINE_ID]
-        }
-
-    override suspend fun setDefaultPipelineId(pipelineId: String?) {
-        dataStore.edit { preferences ->
-            if (pipelineId == null) {
-                preferences.remove(PreferencesKeys.DEFAULT_PIPELINE_ID)
-            } else {
-                preferences[PreferencesKeys.DEFAULT_PIPELINE_ID] = pipelineId
-            }
-        }
-    }
-
-    override val shareTargetPipelineId: Flow<String?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.SHARE_TARGET_PIPELINE_ID]
-        }
-
-    override suspend fun setShareTargetPipelineId(pipelineId: String?) {
-        dataStore.edit { preferences ->
-            if (pipelineId == null) {
-                preferences.remove(PreferencesKeys.SHARE_TARGET_PIPELINE_ID)
-            } else {
-                preferences[PreferencesKeys.SHARE_TARGET_PIPELINE_ID] = pipelineId
-            }
-        }
-    }
-
-    override val shareReuseSession: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.SHARE_REUSE_SESSION]
-                ?: SettingsDefaults.SHARE_REUSE_SESSION_DEFAULT
-        }
-
-    override suspend fun setShareReuseSession(reuse: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SHARE_REUSE_SESSION] = reuse
-        }
-    }
-
-    override val quickSettingsTilePipelineId: Flow<String?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.QUICK_SETTINGS_TILE_PIPELINE_ID]
-        }
-
-    override suspend fun setQuickSettingsTilePipelineId(pipelineId: String?) {
-        dataStore.edit { preferences ->
-            if (pipelineId == null) {
-                preferences.remove(PreferencesKeys.QUICK_SETTINGS_TILE_PIPELINE_ID)
-            } else {
-                preferences[PreferencesKeys.QUICK_SETTINGS_TILE_PIPELINE_ID] = pipelineId
-            }
-        }
-    }
-
-    override val externalAutomationPipelineId: Flow<String?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.EXTERNAL_AUTOMATION_PIPELINE_ID]
-        }
-
-    override suspend fun setExternalAutomationPipelineId(pipelineId: String?) {
-        dataStore.edit { preferences ->
-            if (pipelineId == null) {
-                preferences.remove(PreferencesKeys.EXTERNAL_AUTOMATION_PIPELINE_ID)
-            } else {
-                preferences[PreferencesKeys.EXTERNAL_AUTOMATION_PIPELINE_ID] = pipelineId
-            }
-        }
-    }
-
-    override val externalAutomationEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.EXTERNAL_AUTOMATION_ENABLED]
-                ?: SettingsDefaults.EXTERNAL_AUTOMATION_ENABLED_DEFAULT
-        }
-
-    override suspend fun setExternalAutomationEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.EXTERNAL_AUTOMATION_ENABLED] = enabled
         }
     }
 
@@ -1886,92 +1674,6 @@ class SettingsManager @Inject constructor(
         }
     }
 
-    override val traceRetentionRunsPerSession: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.TRACE_RETENTION_RUNS_PER_SESSION]
-                ?: SettingsDefaults.TRACE_RETENTION_RUNS_PER_SESSION_DEFAULT
-        }
-
-    override suspend fun setTraceRetentionRunsPerSession(runs: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TRACE_RETENTION_RUNS_PER_SESSION] = runs.coerceIn(
-                SettingsDefaults.TRACE_RETENTION_RUNS_PER_SESSION_MIN,
-                SettingsDefaults.TRACE_RETENTION_RUNS_PER_SESSION_MAX,
-            )
-        }
-    }
-
-    override val traceRetentionMaxAgeDays: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.TRACE_RETENTION_MAX_AGE_DAYS]
-                ?: SettingsDefaults.TRACE_RETENTION_MAX_AGE_DAYS_DEFAULT
-        }
-
-    override suspend fun setTraceRetentionMaxAgeDays(days: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TRACE_RETENTION_MAX_AGE_DAYS] = days.coerceIn(
-                SettingsDefaults.TRACE_RETENTION_MAX_AGE_DAYS_MIN,
-                SettingsDefaults.TRACE_RETENTION_MAX_AGE_DAYS_MAX,
-            )
-        }
-    }
-
-    override val crashReportingEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.CRASH_REPORTING_ENABLED]
-                ?: SettingsDefaults.CRASH_REPORTING_ENABLED_DEFAULT
-        }
-
-    override suspend fun setCrashReportingEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.CRASH_REPORTING_ENABLED] = enabled
-        }
-    }
-
-    override val usageTelemetryEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.USAGE_TELEMETRY_ENABLED]
-                ?: SettingsDefaults.USAGE_TELEMETRY_ENABLED_DEFAULT
-        }
-
-    override suspend fun setUsageTelemetryEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.USAGE_TELEMETRY_ENABLED] = enabled
-        }
-    }
-
     override val memorySummaryDefaultLimit: Flow<Int> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -2156,10 +1858,6 @@ class SettingsManager @Inject constructor(
             preferences[PreferencesKeys.RESUME_MAX_AGE_HOURS] = SettingsDefaults.RESUME_MAX_AGE_HOURS_DEFAULT
             preferences[PreferencesKeys.BACKGROUND_APPROVAL_WINDOW_HOURS] =
                 SettingsDefaults.BACKGROUND_APPROVAL_WINDOW_HOURS_DEFAULT
-            preferences[PreferencesKeys.TRACE_RETENTION_RUNS_PER_SESSION] =
-                SettingsDefaults.TRACE_RETENTION_RUNS_PER_SESSION_DEFAULT
-            preferences[PreferencesKeys.TRACE_RETENTION_MAX_AGE_DAYS] =
-                SettingsDefaults.TRACE_RETENTION_MAX_AGE_DAYS_DEFAULT
             // Audio.
             preferences[PreferencesKeys.AUDIO_MAX_DURATION_SEC] = SettingsDefaults.AUDIO_MAX_DURATION_SEC_DEFAULT
             // Memory tuning.
@@ -2191,36 +1889,14 @@ class SettingsManager @Inject constructor(
                 SettingsDefaults.BLOCK_DESTRUCTIVE_TOOLS_DEFAULT
             preferences[PreferencesKeys.BLOCK_NETWORK_FROM_LOCAL_MODEL] =
                 SettingsDefaults.BLOCK_NETWORK_FROM_LOCAL_MODEL_DEFAULT
-            // Notifications + privacy.
+            // Notifications.
             preferences[PreferencesKeys.SCHEDULED_TASK_NOTIFICATIONS] =
                 SettingsDefaults.SCHEDULED_TASK_NOTIFICATIONS_ENABLED_DEFAULT
-            preferences[PreferencesKeys.SHARE_REUSE_SESSION] =
-                SettingsDefaults.SHARE_REUSE_SESSION_DEFAULT
-            preferences[PreferencesKeys.CRASH_REPORTING_ENABLED] =
-                SettingsDefaults.CRASH_REPORTING_ENABLED_DEFAULT
-            preferences[PreferencesKeys.USAGE_TELEMETRY_ENABLED] =
-                SettingsDefaults.USAGE_TELEMETRY_ENABLED_DEFAULT
-            // Security-relevant switch: reset returns it to off, the safe
-            // direction. The pipeline *binding* beside it is a user binding and
-            // stays untouched, exactly like the other two surface bindings.
-            preferences[PreferencesKeys.EXTERNAL_AUTOMATION_ENABLED] =
-                SettingsDefaults.EXTERNAL_AUTOMATION_ENABLED_DEFAULT
+            // The sections already split out write their own part, in this same edit.
+            privacy.writeRecommendedDefaults(preferences)
+            entryPoints.writeRecommendedDefaults(preferences)
         }
     }
-
-    /**
-     * Reflectively enumerates the wire names of every preference declared in
-     * [PreferencesKeys]. Exposed only so the test-suite can assert that every
-     * persistable key is either restored by [resetToRecommendedDefaults] or
-     * listed among the deliberately-excluded user-data keys — catching the case
-     * where a future setting is added but silently escapes the reset.
-     */
-    @VisibleForTesting
-    internal fun knownPreferenceKeyNames(): Set<String> =
-        PreferencesKeys::class.java.declaredFields.mapNotNull { field ->
-            field.isAccessible = true
-            (field.get(PreferencesKeys) as? Preferences.Key<*>)?.name
-        }.toSet()
 
     private fun encodeTestProbeResult(result: TestProbeResult): String = JSONObject().apply {
         put("tokens", result.tokensGenerated)
@@ -2245,16 +1921,5 @@ class SettingsManager @Inject constructor(
             Timber.w(e, "Failed to parse last_test_probe_result — clearing")
             null
         }
-    }
-
-    private companion object {
-        /**
-         * Default value for [PreferencesKeys.CONSOLE_PREFERRED_TAB] on a
-         * fresh install. Mirrors the enum name of
-         * `app.knotwork.design.components.console.ConsoleTab.Logs` — kept as
-         * a raw string so this data-layer constant stays free of the
-         * `:catalog` dependency.
-         */
-        const val CONSOLE_PREFERRED_TAB_DEFAULT = "Logs"
     }
 }

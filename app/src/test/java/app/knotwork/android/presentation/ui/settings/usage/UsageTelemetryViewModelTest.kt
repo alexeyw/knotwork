@@ -59,7 +59,7 @@ class UsageTelemetryViewModelTest {
         every { pipelineRepository.observePipelineNames() } returns flowOf(mapOf("pipe-1" to "Daily digest"))
         viewModel = UsageTelemetryViewModel(
             usageTelemetry = usageTelemetry,
-            settingsRepository = settingsRepository,
+            privacySettings = settingsRepository,
             pipelineRepository = pipelineRepository,
             buildExport = BuildUsageTelemetryExportUseCase(),
         )

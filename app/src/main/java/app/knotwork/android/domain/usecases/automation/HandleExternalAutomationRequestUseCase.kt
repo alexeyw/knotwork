@@ -9,9 +9,9 @@ import app.knotwork.android.domain.models.ExternalAutomationRequest
 import app.knotwork.android.domain.models.ExternalAutomationStatus
 import app.knotwork.android.domain.models.ExternalAutomationTarget
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.ScheduledTaskConstraints
 import app.knotwork.android.domain.services.TaskScheduler
 import app.knotwork.android.domain.usecases.RunRateCeiling
@@ -48,7 +48,7 @@ import javax.inject.Inject
  *
  * @property parseRequest Pure syntax validation of the raw call.
  * @property authorizeRequest Pure policy decision over a parsed request.
- * @property settingsRepository Source of the master switch and the surface binding.
+ * @property entryPointSettings Source of the master switch and the surface binding.
  * @property pipelineRepository Resolves the bound pipeline, whose name completes
  *   the binding a by-name request is matched against.
  * @property journal The request journal — also the ledger the rate ceiling counts.
@@ -57,7 +57,7 @@ import javax.inject.Inject
 class HandleExternalAutomationRequestUseCase @Inject constructor(
     private val parseRequest: ParseExternalAutomationRequestUseCase,
     private val authorizeRequest: AuthorizeExternalAutomationRequestUseCase,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
     private val pipelineRepository: PipelineRepository,
     private val journal: ExternalAutomationJournalRepository,
     private val taskScheduler: TaskScheduler,
@@ -107,7 +107,7 @@ class HandleExternalAutomationRequestUseCase @Inject constructor(
         val binding = resolveBinding()
         val decision = authorizeRequest(
             request = parsed,
-            contractEnabled = settingsRepository.externalAutomationEnabled.first(),
+            contractEnabled = entryPointSettings.externalAutomationEnabled.first(),
             binding = binding,
         )
         if (decision is ExternalAutomationStatus.Rejected) {
@@ -131,7 +131,7 @@ class HandleExternalAutomationRequestUseCase @Inject constructor(
      *   has been deleted.
      */
     private suspend fun resolveBinding(): ExternalAutomationBinding? {
-        val pipelineId = settingsRepository.externalAutomationPipelineId.first() ?: return null
+        val pipelineId = entryPointSettings.externalAutomationPipelineId.first() ?: return null
         val pipeline = pipelineRepository.getPipelineById(pipelineId) ?: return null
         return ExternalAutomationBinding(pipelineId = pipeline.id, pipelineName = pipeline.name)
     }

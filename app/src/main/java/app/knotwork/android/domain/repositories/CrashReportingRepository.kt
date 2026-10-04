@@ -6,7 +6,7 @@ package app.knotwork.android.domain.repositories
  * The project ships an on-device-first privacy posture, so every method
  * below must be a strict no-op until the user has explicitly opted in
  * through the in-app consent dialog. The opt-in flag lives in
- * [SettingsRepository.crashReportingEnabled]; the production implementation
+ * [PrivacySettings.crashReportingEnabled]; the production implementation
  * reads that flag and short-circuits the entire surface to a no-op when it
  * is `false`.
  *

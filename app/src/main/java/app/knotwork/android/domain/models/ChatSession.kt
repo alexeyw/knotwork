@@ -10,7 +10,7 @@ import java.util.UUID
  * @property updatedAt The timestamp of the last activity in this session.
  * @property pipelineId Identifier of the pipeline bound to this chat. `null` means
  *   the session uses the application-wide default pipeline (the user-marked
- *   `SettingsRepository.defaultPipelineId`), preserving the default
+ *   `EntryPointSettings.defaultPipelineId`), preserving the default
  *   behaviour for legacy sessions and any chat that does not explicitly
  *   opt into a specific pipeline.
  * @property isStarred Whether the user has favorited this chat. Favorited

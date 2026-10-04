@@ -94,7 +94,7 @@ import app.knotwork.design.screens.settings.SettingsCategoryId
  *        [AppShellScaffold] for bottom-nav visibility / highlight.
  * @param showOnboarding Read once at composition. When `true`, the splash
  *        completion handler routes to onboarding; otherwise it goes to
- *        Chat. Sourced from `SettingsRepository.hasCompletedOnboarding`
+ *        Chat. Sourced from `AppStateSettings.hasCompletedOnboarding`
  *        (inverted) — a flag that survives `InitializeAppUseCase` and so
  *        is the right gate for the UI surface, unlike `isFirstLaunch`
  *        which is cleared during cold-start init.

@@ -8,9 +8,9 @@ import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.CustomModelLink
 import app.knotwork.android.domain.models.DownloadState
 import app.knotwork.android.domain.models.OnboardingMilestone
+import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.ModelDownloadManager
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.usecases.PrepareInferenceBackendUseCase
 import app.knotwork.android.domain.usecases.SetUpScenarioUseCase
@@ -61,7 +61,7 @@ import javax.inject.Inject
  * failure on the first `sendMessage`. On a first-time install the same step also
  * settles which execution backend the device will use.
  *
- * @property settingsRepository persists the `hasCompletedOnboarding` flag.
+ * @property appStateSettings persists the `hasCompletedOnboarding` flag.
  * @property localModelRepository detects previously-installed models and persists
  * freshly-downloaded ones.
  * @property downloadManager streams `DownloadState` updates folded into
@@ -80,7 +80,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val appStateSettings: AppStateSettings,
     private val localModelRepository: LocalModelRepository,
     private val downloadManager: ModelDownloadManager,
     private val prepareInferenceBackendUseCase: PrepareInferenceBackendUseCase,
@@ -248,7 +248,7 @@ class OnboardingViewModel @Inject constructor(
      */
     fun startFromScratch() {
         transientMessageRelay.post(SKIP_SNACKBAR_MESSAGE)
-        viewModelScope.launch { settingsRepository.setHasCompletedOnboarding(true) }
+        viewModelScope.launch { appStateSettings.setHasCompletedOnboarding(true) }
     }
 
     /**
@@ -353,7 +353,7 @@ class OnboardingViewModel @Inject constructor(
      * user can tap it.
      */
     fun finishOnboarding() {
-        viewModelScope.launch { settingsRepository.setHasCompletedOnboarding(true) }
+        viewModelScope.launch { appStateSettings.setHasCompletedOnboarding(true) }
     }
 
     /**
@@ -371,7 +371,7 @@ class OnboardingViewModel @Inject constructor(
             SKIP_SNACKBAR_MESSAGE
         }
         transientMessageRelay.post(message)
-        viewModelScope.launch { settingsRepository.setHasCompletedOnboarding(true) }
+        viewModelScope.launch { appStateSettings.setHasCompletedOnboarding(true) }
     }
 
     private fun checkIfPickedModelAlreadyInstalled(model: OnboardingLiteRtModel) {

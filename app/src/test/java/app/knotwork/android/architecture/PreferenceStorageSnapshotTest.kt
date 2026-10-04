@@ -1,5 +1,7 @@
 package app.knotwork.android.architecture
 
+import app.knotwork.android.architecture.PreferenceKeyCensus.KEY_CALL
+import app.knotwork.android.architecture.PreferenceKeyCensus.KEY_DECLARATION
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -44,9 +46,7 @@ class PreferenceStorageSnapshotTest {
 
     @Test
     fun `the preference keys and their types match the snapshot`() {
-        val declared = ProductionSources.code.values
-            .flatMap { code -> KEY_DECLARATION.findAll(code).map { it.groupValues[2] to it.groupValues[1] }.toList() }
-            .toSet()
+        val declared = PreferenceKeyCensus.declared
         val expected = EXPECTED_KEYS.toList().toSet()
 
         assertEquals(
@@ -113,13 +113,6 @@ class PreferenceStorageSnapshotTest {
         Regex("""\bconst\s+val\s+${Regex.escape(name)}\s*=\s*"([^"]*)"""").find(this)?.groupValues?.get(1)
 
     private companion object {
-
-        /** A preference-key factory call of any type, whatever its argument. */
-        val KEY_CALL = Regex("""\b\w*PreferencesKey\s*\(""")
-
-        /** A preference-key factory call with a literal, template-free name: type in group 1, name in 2. */
-        val KEY_DECLARATION =
-            Regex("""\b(boolean|int|long|float|double|string|stringSet|byteArray)PreferencesKey\(\s*"([^"$]*)"\s*\)""")
 
         /** Where a Preferences DataStore file is named: a literal name in group 1, or a constant in 2. */
         val DATA_STORE_FILE = Regex("""\bpreferencesDataStore(?:File)?\s*\(\s*(?:name\s*=\s*)?(?:"([^"]*)"|(\w+))""")

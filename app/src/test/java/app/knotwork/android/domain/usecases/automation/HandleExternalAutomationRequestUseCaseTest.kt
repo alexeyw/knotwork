@@ -60,7 +60,7 @@ class HandleExternalAutomationRequestUseCaseTest {
         useCase = HandleExternalAutomationRequestUseCase(
             parseRequest = ParseExternalAutomationRequestUseCase(),
             authorizeRequest = AuthorizeExternalAutomationRequestUseCase(),
-            settingsRepository = settings,
+            entryPointSettings = settings,
             pipelineRepository = pipelines,
             journal = journal,
             taskScheduler = scheduler,

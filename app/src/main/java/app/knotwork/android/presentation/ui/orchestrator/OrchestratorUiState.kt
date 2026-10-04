@@ -54,15 +54,15 @@ import app.knotwork.android.presentation.ui.common.UiText
  * dragging the user into the editor with the previously active pipeline.
  * Cleared via `consumePendingEditorNavigation()` once acted upon.
  * @property defaultPipelineId Id of the pipeline the user has marked as
- * default in the library, observed from `SettingsRepository.defaultPipelineId`.
+ * default in the library, observed from `EntryPointSettings.defaultPipelineId`.
  * `null` means no explicit choice — unbound chats then refuse to run
  * until a default is marked or the chat is bound explicitly. Drives the
  * "Default" badge and the menu item state in `PipelineLibraryScreen`.
  * @property shareTargetPipelineId Id of the pipeline bound to the OS Share
- * target, observed from `SettingsRepository.shareTargetPipelineId`. `null` =
+ * target, observed from `EntryPointSettings.shareTargetPipelineId`. `null` =
  * the surface is inert. Drives the outlined "SHARE" pill on the matching row.
  * @property quickSettingsTilePipelineId Id of the pipeline bound to the Quick
- * Settings tile, observed from `SettingsRepository.quickSettingsTilePipelineId`.
+ * Settings tile, observed from `EntryPointSettings.quickSettingsTilePipelineId`.
  * `null` = the surface is inert. Drives the outlined "TILE" pill on the row.
  */
 data class OrchestratorUiState(

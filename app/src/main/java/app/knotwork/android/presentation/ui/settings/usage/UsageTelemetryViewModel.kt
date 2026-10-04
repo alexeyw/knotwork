@@ -3,7 +3,7 @@ package app.knotwork.android.presentation.ui.settings.usage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.PrivacySettings
 import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.usecases.BuildUsageTelemetryExportUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,14 +34,14 @@ import javax.inject.Inject
  * export simply renders the local figures the user already has.
  *
  * @property usageTelemetry Source of the on-device statistics + reset action.
- * @property settingsRepository Owns the recording opt-in flag.
+ * @property privacySettings Owns the recording opt-in flag.
  * @property pipelineRepository Resolves `pipelineId → name` for the rows/export.
  * @property buildExport Pure renderer of the text / JSON export documents.
  */
 @HiltViewModel
 class UsageTelemetryViewModel @Inject constructor(
     private val usageTelemetry: UsageTelemetryRepository,
-    private val settingsRepository: SettingsRepository,
+    private val privacySettings: PrivacySettings,
     private val pipelineRepository: PipelineRepository,
     private val buildExport: BuildUsageTelemetryExportUseCase,
 ) : ViewModel() {
@@ -49,7 +49,7 @@ class UsageTelemetryViewModel @Inject constructor(
     /** Live screen state aggregated from the counters, the opt-in and pipeline names. */
     val uiState: StateFlow<UsageTelemetryUiState> = combine(
         usageTelemetry.summary,
-        settingsRepository.usageTelemetryEnabled,
+        privacySettings.usageTelemetryEnabled,
         pipelineRepository.observePipelineNames(),
     ) { summary, recordingEnabled, pipelineNames ->
         UsageTelemetryUiState(
@@ -78,7 +78,7 @@ class UsageTelemetryViewModel @Inject constructor(
      * @param enabled `true` to record local usage counters, `false` to stop.
      */
     fun setRecordingEnabled(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setUsageTelemetryEnabled(enabled) }
+        viewModelScope.launch { privacySettings.setUsageTelemetryEnabled(enabled) }
     }
 
     /** Renders the current statistics to text and emits a share event. */

@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.Flow
  * out of the local (SQLCipher-encrypted) store.
  *
  * **Opt-in gating.** Recording is gated by the
- * [SettingsRepository.usageTelemetryEnabled] flag. When the user has turned
+ * [PrivacySettings.usageTelemetryEnabled] flag. When the user has turned
  * local statistics off, every `record…` method — counters and onboarding markers
  * alike — is a silent no-op (implementations check the flag), so nothing advances.
  * [reset] and [summary] are not gated — the user can always inspect or clear
@@ -48,7 +48,7 @@ interface UsageTelemetryRepository {
 
     /**
      * Whether local statistics recording is currently enabled (mirrors
-     * [SettingsRepository.usageTelemetryEnabled]). Exposed so a hot recording
+     * [PrivacySettings.usageTelemetryEnabled]). Exposed so a hot recording
      * chokepoint can skip the work it would otherwise do to gather the data for
      * a recording that would then be discarded.
      *

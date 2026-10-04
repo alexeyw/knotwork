@@ -1,8 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.repositories.PipelineRunRepository
+import app.knotwork.android.domain.repositories.PrivacySettings
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -38,12 +38,12 @@ import javax.inject.Inject
  * @property pipelineRunRepository Store the terminal runs are deleted from.
  * @property runTraceRepository Store the legacy (pre-run) trace rows are
  *   deleted from.
- * @property settingsRepository Source of the two retention limits.
+ * @property privacySettings Source of the two retention limits.
  */
 class CleanupPipelineRunsUseCase @Inject constructor(
     private val pipelineRunRepository: PipelineRunRepository,
     private val runTraceRepository: RunTraceRepository,
-    private val settingsRepository: SettingsRepository,
+    private val privacySettings: PrivacySettings,
 ) {
 
     /**
@@ -53,8 +53,8 @@ class CleanupPipelineRunsUseCase @Inject constructor(
      *   deletion (or the store failed and the repositories absorbed it).
      */
     suspend operator fun invoke(): Outcome {
-        val keepPerSession = settingsRepository.traceRetentionRunsPerSession.first()
-        val maxAgeDays = settingsRepository.traceRetentionMaxAgeDays.first()
+        val keepPerSession = privacySettings.traceRetentionRunsPerSession.first()
+        val maxAgeDays = privacySettings.traceRetentionMaxAgeDays.first()
         val cutoff = System.currentTimeMillis() - maxAgeDays * MILLIS_PER_DAY
         val deletedRuns = pipelineRunRepository.applyRetention(
             keepPerSession = keepPerSession,

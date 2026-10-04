@@ -1,7 +1,7 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.EntrySurface
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -13,9 +13,9 @@ import javax.inject.Inject
  * inert and the caller must not launch anything. Centralising the
  * surface → setting mapping here keeps every entry point (share activity, Quick
  * Settings tile) reading the binding the same way and makes the resolution
- * trivially unit-testable against a fake [SettingsRepository].
+ * trivially unit-testable against a fake [EntryPointSettings].
  */
-class ResolveSurfacePipelineUseCase @Inject constructor(private val settingsRepository: SettingsRepository) {
+class ResolveSurfacePipelineUseCase @Inject constructor(private val entryPointSettings: EntryPointSettings) {
 
     /**
      * Reads the current pipeline binding for [surface].
@@ -24,8 +24,8 @@ class ResolveSurfacePipelineUseCase @Inject constructor(private val settingsRepo
      * @return The bound pipeline id, or `null` when the surface is unbound.
      */
     suspend operator fun invoke(surface: EntrySurface): String? = when (surface) {
-        EntrySurface.SHARE -> settingsRepository.shareTargetPipelineId.first()
-        EntrySurface.QUICK_TILE -> settingsRepository.quickSettingsTilePipelineId.first()
-        EntrySurface.EXTERNAL_AUTOMATION -> settingsRepository.externalAutomationPipelineId.first()
+        EntrySurface.SHARE -> entryPointSettings.shareTargetPipelineId.first()
+        EntrySurface.QUICK_TILE -> entryPointSettings.quickSettingsTilePipelineId.first()
+        EntrySurface.EXTERNAL_AUTOMATION -> entryPointSettings.externalAutomationPipelineId.first()
     }
 }

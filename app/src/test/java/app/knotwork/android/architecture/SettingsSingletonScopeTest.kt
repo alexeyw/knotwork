@@ -55,12 +55,16 @@ class SettingsSingletonScopeTest {
     }
 
     @Test
-    fun `the guard sees the settings implementation`() {
-        // Keeps the scope rule from passing vacuously on a renamed composite or implementation.
-        assertTrue(
-            "found implementations: ${settingsImplementations().map { it.name }}",
-            settingsImplementations().any { it.name == "SettingsManager" },
-        )
+    fun `the guard sees the settings implementations`() {
+        // Keeps the scope rule from passing vacuously on a renamed composite, or on a section store
+        // whose parent the census fails to resolve.
+        val found = settingsImplementations().mapTo(sortedSetOf()) { it.name }
+        val stores = ArchitectureScope.production.classes()
+            .filter { it.name.endsWith("SettingsStore") }
+            .mapTo(sortedSetOf()) { it.name }
+
+        assertTrue("found implementations: $found", "SettingsManager" in found)
+        assertEquals("section stores the census does not see", sortedSetOf<String>(), stores - found)
     }
 
     private fun sectionNames(): Set<String> = ArchitectureScope.production.interfaces()

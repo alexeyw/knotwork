@@ -170,7 +170,7 @@ constructor(
     }
 
     /**
-     * Mirrors `SettingsRepository.defaultPipelineId` into [OrchestratorUiState]
+     * Mirrors `EntryPointSettings.defaultPipelineId` into [OrchestratorUiState]
      * so the library screen can render the "Default" badge / menu state in
      * real time after [setDefaultPipeline] is invoked.
      */
@@ -184,7 +184,7 @@ constructor(
 
     /**
      * Mirrors the two OS-entry-surface bindings
-     * (`SettingsRepository.shareTargetPipelineId` /
+     * (`EntryPointSettings.shareTargetPipelineId` /
      * `quickSettingsTilePipelineId`) into [OrchestratorUiState] so the library
      * renders the outlined "SHARE" / "TILE" pills on the bound rows and they
      * update live the moment the user (re)binds a surface — from this screen's

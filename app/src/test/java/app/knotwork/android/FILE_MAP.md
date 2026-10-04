@@ -39,6 +39,7 @@ Only Kotlin files appear inside the generated blocks.
   - `PersistentStorageInventoryGuardTest.kt` - Every place the app keeps data between runs is in `StorageRoot`, with two decisions written down: nothing of it leaves the device through Android backup or device transfer, and whether the recovery wipe (*Erase data*) erases it.
   - `PipelineBindingCensusTest.kt` - Census of every place the domain stores a pipeline id, each with a decision: is it a binding the Replace confirmation must list, or not, and why.
   - `PolicyDocumentClaimsTest.kt` - Sentences of the privacy policy, the threat model and the bundled FAQ that the code once contradicted, pinned to what the code does now.
+  - `PreferenceKeyCensus.kt` - Every preference key the production code declares, read from the sources: the name and value type of each `<type>PreferencesKey("name")` call (`ProductionSources`, comments removed).
   - `PreferenceStorageSnapshotTest.kt` - Snapshot of what the app keeps in its preferences storage: the name and value type of every DataStore key, and the names of the files the settings live in.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
@@ -95,8 +96,11 @@ Only Kotlin files appear inside the generated blocks.
     - `ImageCaptureStoreImplTest.kt` - Verifies `ImageCaptureStoreImpl`: the camera's full-resolution original — the only copy that keeps its EXIF — is deleted on every way out of the store, and a URI that is not one of its captures can reach no file.
     - `McpServerCollisionCheckTest.kt` - Pure-Kotlin unit coverage for `McpServerCollisionCheck.detectCollision`.
     - `PathContainmentTest.kt` - Verifies `PathContainment` on a real filesystem: `..`, a sibling sharing the root's name as a prefix, and a symlink out are all refused — the three ways a prefix test on the string as written lets a path escape.
+    - `settings/` - Tests of the settings section stores' shared read helper.
+      - `PreferencesOrEmptyTest.kt` - `preferencesOrEmpty`: readable preferences pass through, an `IOException` becomes empty preferences, any other failure propagates.
     - `SettingsManagerTest.kt` - Tests for SettingsManager.
     - `TagsCsvTest.kt` - Unit tests for the shared `TagsCsv` codec.
+    - `TestSettingsManager.kt` - Builds a `SettingsManager` from its section stores over `dataStore`, the way Hilt wires it: one instance of each store, shared by the composite.
     - `TransientCacheSweeperImplTest.kt` - Verifies `TransientCacheSweeperImpl` on a real filesystem: every registered handoff directory is swept, only past the shared retention, a share slot counts as fresh while its copy is, and nothing outside the registry is touched.
     - `WorkspaceShareCopiesTest.kt` - Unit tests for `WorkspaceShareCopies` on its own, for what the workspace tests cannot reach: a copy that fails half-way leaves nothing staged.
     - `WorkspaceTreeTest.kt` - Unit tests for `WorkspaceTree.isRealEntry` — the link check behind every walk of the workspace (listing, quota, pruning).

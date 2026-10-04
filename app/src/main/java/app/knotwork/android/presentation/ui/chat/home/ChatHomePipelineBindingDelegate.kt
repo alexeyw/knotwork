@@ -2,9 +2,9 @@ package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
  *
  * @property scope The ViewModel's [androidx.lifecycle.viewModelScope].
  * @property state The ViewModel's single source-of-truth state flow.
- * @property settingsRepository Source of the user-set default pipeline id.
+ * @property entryPointSettings Source of the user-set default pipeline id.
  * @property pipelineRepository Source of the pipeline library.
  * @property chatRepository Rebinds a session to the default when its pipeline is gone.
  * @property pipelineRunRepository Source of the session's runs, used to name the
@@ -50,7 +50,7 @@ import kotlinx.coroutines.launch
 class ChatHomePipelineBindingDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<ChatHomeScreenState>,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
     private val pipelineRepository: PipelineRepository,
     private val chatRepository: ChatRepository,
     private val pipelineRunRepository: PipelineRunRepository,
@@ -146,7 +146,7 @@ class ChatHomePipelineBindingDelegate(
     /** Observes the user-set default pipeline id and refreshes the subtitle when it changes. */
     private fun observeDefaultPipelineId() {
         scope.launch {
-            settingsRepository.defaultPipelineId.collect { id ->
+            entryPointSettings.defaultPipelineId.collect { id ->
                 defaultPipelineId = id
                 state.update { pipelineNameRefreshed(it) }
             }

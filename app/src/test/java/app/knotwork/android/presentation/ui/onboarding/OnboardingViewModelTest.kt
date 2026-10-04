@@ -102,7 +102,7 @@ class OnboardingViewModelTest {
     }
 
     private fun newViewModel(): OnboardingViewModel = OnboardingViewModel(
-        settingsRepository = settingsRepository,
+        appStateSettings = settingsRepository,
         localModelRepository = localModelRepository,
         downloadManager = downloadManager,
         prepareInferenceBackendUseCase = prepareInferenceBackendUseCase,

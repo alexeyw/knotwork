@@ -4,10 +4,12 @@ import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.DefaultPipelineFactory
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunTerminationReason
+import app.knotwork.android.domain.repositories.AppStateSettings
+import app.knotwork.android.domain.repositories.EntryPointSettings
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -33,7 +35,9 @@ import javax.inject.Inject
  * instead of failing app initialization.
  */
 class InitializeAppUseCase @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val appStateSettings: AppStateSettings,
+    private val entryPointSettings: EntryPointSettings,
+    private val generationSettings: GenerationSettings,
     private val pipelineRepository: PipelineRepository,
     private val loadPipelineFromPresetUseCase: LoadPipelineFromPresetUseCase,
     private val pipelineRunRepository: PipelineRunRepository,
@@ -61,11 +65,11 @@ class InitializeAppUseCase @Inject constructor(
         // receive the bundled catalogue. Upsert-by-stable-id makes repeats safe.
         seedBundledSkillsUseCase()
 
-        val isFirstLaunch = settingsRepository.isFirstLaunch.first()
+        val isFirstLaunch = appStateSettings.isFirstLaunch.first()
 
         if (isFirstLaunch) {
             // Save the default prompt to settings so the user can edit it later.
-            settingsRepository.setSystemPromptPrefix(DefaultPrompts.SYSTEM_PROMPT_PREFIX)
+            generationSettings.setSystemPromptPrefix(DefaultPrompts.SYSTEM_PROMPT_PREFIX)
 
             // Materialise the bundled showcase pipeline as the seed; fall back
             // to the code-level factory if the preset asset is unavailable.
@@ -77,10 +81,10 @@ class InitializeAppUseCase @Inject constructor(
             // chat surfaces ("Use default pipeline (…)" label, TopAppBar
             // subtitle) show a concrete name from the very first launch
             // instead of relying on the implicit "first in library" fallback.
-            settingsRepository.setDefaultPipelineId(seededPipelineId)
+            entryPointSettings.setDefaultPipelineId(seededPipelineId)
 
             // Mark first launch as complete
-            settingsRepository.setFirstLaunch(false)
+            appStateSettings.setFirstLaunch(false)
         }
     }
 

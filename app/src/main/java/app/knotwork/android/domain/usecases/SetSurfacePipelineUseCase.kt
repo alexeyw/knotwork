@@ -1,7 +1,7 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.EntrySurface
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import javax.inject.Inject
 
 /**
@@ -12,7 +12,7 @@ import javax.inject.Inject
  * compile error here and in the resolver until both are updated — no entry
  * point can silently end up bindable-but-unresolvable (or vice versa).
  */
-class SetSurfacePipelineUseCase @Inject constructor(private val settingsRepository: SettingsRepository) {
+class SetSurfacePipelineUseCase @Inject constructor(private val entryPointSettings: EntryPointSettings) {
 
     /**
      * Persists the binding for [surface].
@@ -23,9 +23,9 @@ class SetSurfacePipelineUseCase @Inject constructor(private val settingsReposito
      */
     suspend operator fun invoke(surface: EntrySurface, pipelineId: String?) {
         when (surface) {
-            EntrySurface.SHARE -> settingsRepository.setShareTargetPipelineId(pipelineId)
-            EntrySurface.QUICK_TILE -> settingsRepository.setQuickSettingsTilePipelineId(pipelineId)
-            EntrySurface.EXTERNAL_AUTOMATION -> settingsRepository.setExternalAutomationPipelineId(pipelineId)
+            EntrySurface.SHARE -> entryPointSettings.setShareTargetPipelineId(pipelineId)
+            EntrySurface.QUICK_TILE -> entryPointSettings.setQuickSettingsTilePipelineId(pipelineId)
+            EntrySurface.EXTERNAL_AUTOMATION -> entryPointSettings.setExternalAutomationPipelineId(pipelineId)
         }
     }
 }

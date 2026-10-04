@@ -6,8 +6,8 @@ import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.SharedPayload
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ShareAdmissionRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.text.toSingleLineTitle
@@ -24,7 +24,7 @@ import javax.inject.Inject
  * the session it ran in so the caller can deep-link the user straight into the
  * live run.
  *
- * **Session reuse.** When [SettingsRepository.shareReuseSession] is `true` (the
+ * **Session reuse.** When [EntryPointSettings.shareReuseSession] is `true` (the
  * default) every share accumulates in one reusable **Shared** chat
  * ([SHARED_INBOX_SESSION_ID]) — new shares are appended, keeping the history in
  * one legible place. When it is `false` a fresh, auto-named session is created
@@ -59,7 +59,7 @@ class LaunchSharePipelineUseCase @Inject constructor(
     private val attachmentStore: AttachmentStore,
     private val checkImageAttachment: CheckImageAttachmentUseCase,
     private val agentOrchestrator: AgentOrchestratorUseCase,
-    private val settingsRepository: SettingsRepository,
+    private val entryPointSettings: EntryPointSettings,
     private val pendingInteractionRepository: PendingInteractionRepository,
     private val shareAdmissions: ShareAdmissionRepository,
 ) {
@@ -179,7 +179,7 @@ class LaunchSharePipelineUseCase @Inject constructor(
         imageSessionName: String,
         contentSessionName: String,
     ): ChatSession {
-        val reuse = settingsRepository.shareReuseSession.first() &&
+        val reuse = entryPointSettings.shareReuseSession.first() &&
             pendingInteractionRepository.getForSession(SHARED_INBOX_SESSION_ID) == null
         if (reuse) {
             return chatRepository.getSessionById(SHARED_INBOX_SESSION_ID)
