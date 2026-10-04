@@ -39,9 +39,24 @@ class SettingsSingletonScopeTest {
     }
 
     @Test
-    fun `the guard sees the settings implementation and the sections`() {
-        // Keeps the guard from passing vacuously on a renamed composite or an empty census.
-        assertTrue("found sections: ${sectionNames()}", sectionNames().size >= MIN_SECTIONS)
+    fun `every settings section is part of the composite`() {
+        // A section left out of the composite escapes the scope rule above: a class implementing
+        // only that section has no parent this guard looks for.
+        val sections = ArchitectureScope.production.interfaces()
+            .filter { it.name.endsWith("Settings") || it.name == "SettingsReset" }
+            .mapTo(sortedSetOf()) { it.name }
+
+        assertTrue("no settings section found — the census is broken", sections.isNotEmpty())
+        assertEquals(
+            "add these sections to SettingsRepository's supertype list",
+            sortedSetOf<String>(),
+            sections - sectionNames(),
+        )
+    }
+
+    @Test
+    fun `the guard sees the settings implementation`() {
+        // Keeps the scope rule from passing vacuously on a renamed composite or implementation.
         assertTrue(
             "found implementations: ${settingsImplementations().map { it.name }}",
             settingsImplementations().any { it.name == "SettingsManager" },
@@ -58,8 +73,5 @@ class SettingsSingletonScopeTest {
 
     private companion object {
         const val COMPOSITE = "SettingsRepository"
-
-        /** The sections the composite was split into; it may gain sections, not lose them silently. */
-        const val MIN_SECTIONS = 9
     }
 }

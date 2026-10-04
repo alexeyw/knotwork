@@ -682,8 +682,8 @@ settings section it belongs to (`MemorySettings`, `ToolSettings`, … in
 `domain/repositories/`) with a default in
 [`SettingsDefaults`](../app/src/main/java/app/knotwork/android/domain/constants/SettingsDefaults.kt),
 add the new key to `PreferenceStorageSnapshotTest`, and render the control
-in that category's `*SettingsContent` (plus its delegate, which takes the
-section, not `SettingsRepository`). The hub, sub-screen placement and search index pick it up from
+in that category's `*SettingsContent` (plus its delegate). Code that reads the
+new setting depends on its section, not on `SettingsRepository`. The hub, sub-screen placement and search index pick it up from
 the registry entry.
 
 The catalog composables that power these screens:
