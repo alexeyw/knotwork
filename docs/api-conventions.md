@@ -180,19 +180,29 @@ interface Tool {
 
 ---
 
-## Cloud LLM APIs (OpenAI / Anthropic / Google / DeepSeek / Ollama)
+## Cloud LLM APIs (OpenAI / Anthropic / Google / DeepSeek / OpenRouter / Groq / Ollama / OpenAI-compatible server)
 
 - All cloud providers implement the domain interface
   `CloudLlmClientFactory` (data-layer impl: `KoogClientFactory`).
 - **Every client that carries model traffic asks `ModelNetworkGate` before it is
   built** — the chat clients in `KoogClientFactory` and the network embedding
   providers alike. The gate applies the *Block network from local model*
-  restriction (hosted providers refused; Ollama only at `localhost` or a private
-  IPv4 literal, whatever the scheme — see [architecture.md](architecture.md) §4.4)
-  and, for Ollama, the cleartext rule. A model client that skips it breaks the
+  restriction (hosted providers refused; a server the user runs — Ollama, an
+  OpenAI-compatible server — only at `localhost` or a private IPv4 literal,
+  whatever the scheme — see [architecture.md](architecture.md) §4.4) and, for such a
+  server, the cleartext rule. A model client that skips it breaks the
   restriction silently: the Ollama chat client and both embedding providers once
   did. Name the cause of a `null` client with
   `CloudLlmClientFactory.unavailabilityOf`, never by re-reading settings.
+- **Every model client runs on `KoogTransportFactory`**, which applies the same
+  two rules to every hop the client sends — redirects included — and records the
+  `Retry-After` of an error answer for the retry policy. Build a new client on the
+  `http` factory `KoogClientFactory` passes in, never on a Ktor client of its own:
+  the gate judges only the address the user entered, and a server can redirect.
+- **A provider reached through the OpenAI API is Koog's own OpenAI client**, built
+  in `OpenAiCompatibleClients` — OpenRouter and Groq at fixed addresses, a server
+  the user runs at the address they enter (with `/v1`; paths relative to it) and
+  with no `Authorization` header when it has no key. No further Koog module.
 - **The gate also owns one tool.** `search_tool` asks
   `ModelNetworkGate.networkToolRefusal` before it opens its connection, and
   `ToolRepositoryImpl` withholds it from the catalogue while the restriction is
@@ -213,8 +223,9 @@ interface Tool {
   (OkHttp drops `Authorization` on a host change), and a pasted URL for any other
   host never gets it. Discovery browsing and metadata calls are anonymous.
 - **Every cloud client carries an explicit `ConnectionTimeoutConfig`** — one shared
-  value, `CloudClientTimeouts.CONFIG`, passed by `KoogClientFactory` (chat) and
-  `DefaultKoogEmbedderFactory` (embeddings), and required at every construction site
+  value, `CloudClientTimeouts.CONFIG`, passed by `KoogClientFactory` and
+  `OpenAiCompatibleClients` (chat) and `DefaultKoogEmbedderFactory` (embeddings), and
+  required at every construction site
   by `KoogClientTimeoutKonsistTest`: 60 s socket, 30 s connect, 900 s request. The socket value
   is the load-bearing one because Ktor applies it *per read* — it bounds how long
   the provider may stay **silent**, not how long a healthy answer may take, so a

@@ -1,5 +1,6 @@
 package app.knotwork.android.data.services.embedding
 
+import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.data.engine.koogTimeoutsOf
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
 import app.knotwork.android.domain.repositories.SettingsRepository
@@ -25,9 +26,15 @@ class DefaultKoogEmbedderFactoryTest {
     private val settingsRepository = mockk<SettingsRepository> {
         // Retries off, so the factory hands back the raw provider client to inspect.
         every { cloudRetryMaxAttempts } returns flowOf(1)
+        // Read by the transport's hop rule when a client is built.
+        every { approvedCleartextOrigins } returns flowOf(emptySet())
+        every { blockNetworkFromLocalModel } returns flowOf(false)
     }
 
-    private val factory = DefaultKoogEmbedderFactory(CloudRetryWrapper(settingsRepository))
+    private val factory = DefaultKoogEmbedderFactory(
+        retryWrapper = CloudRetryWrapper(settingsRepository),
+        modelNetworkGate = ModelNetworkGate(settingsRepository),
+    )
 
     @Test
     fun `given an OpenAI embedding client when built then provider silence is bounded like chat`() = runTest {

@@ -6,7 +6,6 @@ import app.knotwork.android.data.mcp.McpConnectionPool
 import app.knotwork.android.data.tools.local.LocalAppFunctionManager
 import app.knotwork.android.data.tools.local.SearchTool
 import app.knotwork.android.domain.models.AgentTool
-import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.models.ToolRisk
@@ -113,11 +112,10 @@ class McpRoutingMatrixTest {
         coEvery { appFunctions.getAvailableFunctions() } returns emptyList()
         coEvery { appFunctions.isDiscovered(any()) } returns false
         val apiKeys: ApiKeyRepository = mockk()
-        every { apiKeys.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
-        every { apiKeys.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf(null)
-        every { apiKeys.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
-        every { apiKeys.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
-        every { apiKeys.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(null)
+        // No provider set up by default; a test saves what it needs.
+        every { apiKeys.getApiKey(any()) } returns flowOf(null)
+        every { apiKeys.getBaseUrl(any()) } returns flowOf(null)
+        every { apiKeys.getModel(any()) } returns flowOf(null)
         val searchTool: SearchTool = mockk(relaxed = true)
         every { searchTool.asAgentTool() } returns AgentTool("search_tool", "desc", "{}")
         return ToolRepositoryImpl(

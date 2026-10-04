@@ -43,7 +43,7 @@ class CloudRetryWrapper @Inject constructor(private val networkSettings: Network
      *   [CloudRetryListener.NONE] for off-graph callers (embeddings, the
      *   delegate-task tool) that do not surface console lines.
      * @param retryAfter Where [client]'s transport records the `Retry-After` header of an
-     *   error answer ([RetryAfterCapturingHttpClientFactory]); `null` for a client built
+     *   error answer ([app.knotwork.android.data.engine.KoogTransportFactory]); `null` for a client built
      *   without capture, which still honours a wait named in the error text.
      * @return The retry-wrapped client, or [client] itself when retries are off.
      */

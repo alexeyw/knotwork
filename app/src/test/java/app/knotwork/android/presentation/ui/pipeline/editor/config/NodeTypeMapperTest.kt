@@ -98,4 +98,23 @@ class NodeTypeMapperTest {
             assertEquals(provider, CloudProviderMapper.fromWireId(CloudProviderMapper.toWireId(provider)))
         }
     }
+
+    @Test
+    fun `given a provider without a tile of its own when its node is saved unchanged then its id is kept`() {
+        // Until the node sheet names every provider, OpenRouter, Groq and a user's server sit
+        // on the Compatible tile; opening and saving such a node must not rewrite it to
+        // DeepSeek — that would send its prompts to a different company.
+        listOf("openrouter", "groq", "openai_compatible").forEach { id ->
+            assertEquals(CatalogCloudProvider.COMPATIBLE, CloudProviderMapper.fromWireId(id))
+            assertEquals(id, CloudProviderMapper.toWireIdPreserving(CatalogCloudProvider.COMPATIBLE, id))
+        }
+    }
+
+    @Test
+    fun `given every domain provider when mapped to a tile then each has one`() {
+        DomainCloudProvider.entries.forEach { provider ->
+            val tile = CloudProviderMapper.toCatalog(provider)
+            assertEquals(provider.id, CloudProviderMapper.toWireIdPreserving(tile, provider.id))
+        }
+    }
 }

@@ -23,7 +23,7 @@ import kotlin.time.Duration.Companion.milliseconds
  *   call fails and says how long the provider asked for ([RetryDecision.WaitTooLong]).
  * - **The `Retry-After` header was never read**, because Koog's exception carries no headers.
  *   The caller now hands the header in ([decide]'s `retryAfterHeader`), captured on the
- *   transport by [RetryAfterCapturingHttpClientFactory].
+ *   transport by [app.knotwork.android.data.engine.KoogTransportFactory].
  *
  * A failure with no HTTP status — a dropped connection, a timeout — keeps Koog's rules exactly
  * as they were: [IncompleteStreamException], or a message matching [RetryConfig.DEFAULT_PATTERNS].

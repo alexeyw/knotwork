@@ -2,6 +2,7 @@ package app.knotwork.android.domain.repositories
 
 import app.knotwork.android.domain.models.CloudProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 
 /**
  * Credentials and per-provider configuration of the external LLM providers: the API key, the
@@ -54,7 +55,8 @@ interface ApiKeyRepository {
     suspend fun setModel(provider: CloudProvider, model: String?)
 
     /**
-     * The server address of a provider reached at an address the user enters (today: Ollama).
+     * The server address of a provider reached at an address the user enters
+     * ([CloudProvider.usesBaseUrl]: Ollama, an OpenAI-compatible server).
      *
      * @param provider The provider whose address is read.
      * @return A Flow emitting the address (e.g. `http://192.168.1.100:11434`), or `null` when
@@ -89,12 +91,28 @@ interface ApiKeyRepository {
  * The credential that decides whether [provider] is set up at all: its server address when it
  * is reached at one ([CloudProvider.usesBaseUrl]), otherwise its API key.
  *
- * One definition for every place that asks "is this provider configured" — the list of
- * providers offered to `delegate_task` and the provider rows in Settings — so the two cannot
- * disagree about a provider that has both an address and a key.
+ * One definition for every place that asks which credential a provider cannot do without —
+ * [isConfigured] and the provider rows in Settings — so they cannot disagree about a provider
+ * that has both an address and a key.
  *
  * @param provider The provider asked about.
  * @return A Flow emitting the deciding credential, or `null` when it is not saved.
  */
 fun ApiKeyRepository.requiredCredential(provider: CloudProvider): Flow<String?> =
     if (provider.usesBaseUrl) getBaseUrl(provider) else getApiKey(provider)
+
+/**
+ * Whether [provider] is set up on this device: its deciding credential ([requiredCredential])
+ * is saved and, for a provider without a default model ([CloudProvider.requiresModel]), so is
+ * a model id. A provider that is not configured cannot be used, whatever else is true.
+ *
+ * The "Block network from local model" restriction is deliberately not part of it: that is a
+ * rule about where traffic may go, not the provider's own configuration, and it is named
+ * where a call is refused.
+ *
+ * @param provider The provider asked about.
+ * @return `true` when nothing the provider itself needs is missing.
+ */
+suspend fun ApiKeyRepository.isConfigured(provider: CloudProvider): Boolean =
+    !requiredCredential(provider).firstOrNull().isNullOrBlank() &&
+        (!provider.requiresModel || !getModel(provider).firstOrNull().isNullOrBlank())

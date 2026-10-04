@@ -331,10 +331,16 @@ class CloudLlmNodeExecutor @Inject constructor(
      * - `ANTHROPIC` — **excluded pending measurement**. The harness could not produce a
      *   stream its parser accepts, so there is no evidence either way, and a guess here
      *   is exactly the failure mode this task exists to avoid.
+     * - `OPENROUTER` / `GROQ` / `OPENAI_COMPATIBLE` — **excluded pending measurement**. The
+     *   stream parser is OpenAI's, but the signal is the server's: a server that omits the
+     *   finish reason would have every healthy answer discarded as cut off.
      */
     private fun providerReportsFinishReason(provider: CloudProvider): Boolean = when (provider) {
         CloudProvider.OPENAI, CloudProvider.DEEPSEEK, CloudProvider.GOOGLE -> true
         CloudProvider.ANTHROPIC, CloudProvider.OLLAMA -> false
+        // Same client as OpenAI, but whether each *server* sends the finish reason is what
+        // matters, and none has been measured yet; off until the device check says otherwise.
+        CloudProvider.OPENROUTER, CloudProvider.GROQ, CloudProvider.OPENAI_COMPATIBLE -> false
     }
 
     private companion object {

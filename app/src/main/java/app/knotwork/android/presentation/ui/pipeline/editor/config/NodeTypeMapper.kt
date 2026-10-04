@@ -127,8 +127,9 @@ internal object CloudProviderMapper {
     }
 
     /**
-     * Translates a domain wire-id into the matching catalog selection. Both [DomainCloudProvider.DEEPSEEK]
-     * and [DomainCloudProvider.OLLAMA] map to the catalog's `COMPATIBLE` tile.
+     * Translates a domain wire-id into the matching catalog selection. Every provider without a
+     * tile of its own — DeepSeek, Ollama, OpenRouter, Groq, an OpenAI-compatible server — maps to
+     * the catalog's `COMPATIBLE` tile, and [toWireIdPreserving] keeps the id a node already has.
      *
      * @return the catalog enum entry the form should pre-select; defaults to [CatalogCloudProvider.OPEN_AI]
      * when [provider] is `null` (legacy CLOUD nodes saved by older app versions with no explicit provider).
@@ -139,6 +140,9 @@ internal object CloudProviderMapper {
         DomainCloudProvider.GOOGLE -> CatalogCloudProvider.GOOGLE
         DomainCloudProvider.DEEPSEEK,
         DomainCloudProvider.OLLAMA,
+        DomainCloudProvider.OPENROUTER,
+        DomainCloudProvider.GROQ,
+        DomainCloudProvider.OPENAI_COMPATIBLE,
         -> CatalogCloudProvider.COMPATIBLE
         null -> CatalogCloudProvider.OPEN_AI
     }

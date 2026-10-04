@@ -92,11 +92,16 @@ from the first launch.
 
 ### 3.1 Cloud model providers (opt-in, your own key)
 
-If a pipeline step runs on a cloud provider and you have entered your own API
-key, the text that step processes — the prompt and the relevant conversation
-context — is sent to the provider you selected (OpenAI, Anthropic, Google
-Gemini, DeepSeek, or an Ollama endpoint you name). Attachments are never sent
-to a cloud provider (section 4).
+If a pipeline step runs on a cloud provider and you have set it up, the text
+that step processes — the prompt and the relevant conversation context — is sent
+to the provider you selected: OpenAI, Anthropic, Google Gemini, DeepSeek,
+OpenRouter or Groq with your own API key, or a server you run and name by its
+address — Ollama, or any server that speaks the OpenAI API (vLLM, LM Studio,
+llama.cpp). Attachments are never sent to a cloud provider (section 4).
+
+OpenRouter forwards a request to the company behind the model you chose there;
+its own policy and the routing settings of your OpenRouter account decide which
+one, and what they may keep.
 That step is a **Cloud** node, or a router, condition, decomposition,
 evaluation, tool or skill node whose engine is set to a cloud provider.
 
@@ -121,9 +126,11 @@ Apart from those two, a pipeline contacts a cloud provider only through a step
 that runs on one. A node's settings show its engine, so you can see which do.
 
 **Block network from local model** (Settings → Tools & workspace) keeps every
-path in this section on your own network: no cloud provider is contacted — memory uses the
-on-device embedding model instead — and an Ollama endpoint is used only at
-`localhost` or a private IP address on your own network. It also withholds the
+path in this section on your own network: no hosted provider is contacted — memory uses the
+on-device embedding model instead — and a server you run (Ollama, or one that speaks the
+OpenAI API) is used only at `localhost` or a private IP address on your own network. The
+check applies to every hop of a request: a server that answers with a redirect elsewhere
+does not take the request with it. It also withholds the
 built-in `search_tool` (3.4), which is the one tool it covers. It does not
 affect MCP servers (3.2), model downloads (3.3) or the `http_request` tool
 (3.4) — each of those is something you set up, and each has its own control.
@@ -335,9 +342,10 @@ The app contacts a third party only along the paths in section 3. Depending on
 what you configure — and, for the first entry below, on nothing at all — those
 may be:
 
-- The cloud model provider whose key you entered (OpenAI, Anthropic, Google,
-  DeepSeek, or an Ollama endpoint you name), for pipeline steps, memory
-  embeddings or `delegate_task`.
+- The cloud model provider you set up (OpenAI, Anthropic, Google, DeepSeek,
+  OpenRouter — and the model company it routes to — or Groq, with your key; or a
+  server you run and name by its address), for pipeline steps, memory embeddings
+  (OpenAI or Ollama only) or `delegate_task`.
 - Hugging Face, or any host you paste a model URL for.
 - MCP servers you add.
 - The Wikimedia Foundation, for the built-in `search_tool` lookup described in

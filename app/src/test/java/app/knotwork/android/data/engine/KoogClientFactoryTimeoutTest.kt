@@ -43,6 +43,7 @@ class KoogClientFactoryTimeoutTest {
         every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf("k")
         every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf("k")
         every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(false)
+        every { settingsRepository.approvedCleartextOrigins } returns flowOf(emptySet())
         // Retries off, so `createClient` hands back the raw provider client to inspect.
         every { settingsRepository.cloudRetryMaxAttempts } returns flowOf(1)
 

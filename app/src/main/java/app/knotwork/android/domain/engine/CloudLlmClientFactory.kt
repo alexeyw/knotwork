@@ -27,8 +27,10 @@ interface CloudLlmClientFactory {
      *   surface retry attempts in the console. Defaults to
      *   [CloudRetryListener.NONE] for callers that do not observe retries.
      * @return The constructed client, or `null` exactly when [unavailabilityOf] reports a
-     *         cause — missing credentials / base URL, the "Block network from local model"
-     *         restriction, or an address the network rules refuse.
+     *         cause — the API key of a hosted provider or the address of a server the user
+     *         runs, a model the provider has no default for, the "Block network from local
+     *         model" restriction, or an address the network rules refuse. A server the user
+     *         runs may have no key: its absence is not a cause.
      */
     suspend fun createClient(
         provider: CloudProvider,

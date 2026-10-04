@@ -473,7 +473,7 @@ The collaborators, each covering one concern:
 |--------------------|-----------------------------------------------------------------------------------------------|
 | `INPUT`            | Entry point. Echoes the user's original message downstream. Exactly one per graph.            |
 | `LITE_RT`          | On-device LLM call via LiteRT-LM. Streams tokens as `Flow<String>`.                           |
-| `CLOUD`            | Cloud LLM call. Provider (OpenAI / Anthropic / Google / DeepSeek / Ollama) selected by param. |
+| `CLOUD`            | Cloud LLM call. Provider (OpenAI / Anthropic / Google / DeepSeek / OpenRouter / Groq / Ollama / OpenAI-compatible server) selected by param. |
 | `OUTPUT`           | Final answer to the user. Optionally wraps upstream text with a system prompt.                |
 | `SUMMARY`          | Condenses tool results / multi-turn output into a single message.                             |
 | `INTENT_ROUTER`    | Routes execution down one branch based on classified intent.                                  |
@@ -1122,7 +1122,7 @@ Enforcement points, one per stack:
 
 | Stack | Gate |
 |---|---|
-| Koog/Ktor — Ollama (chat and embeddings) | `ModelNetworkGate.ollamaRefusal()`, asked by `KoogClientFactory` and `OllamaEmbeddingProvider` |
+| Koog/Ktor — a server the user runs: Ollama, an OpenAI-compatible server (chat and embeddings) | `ModelNetworkGate.endpointRefusal()`, asked by `KoogClientFactory` and `OllamaEmbeddingProvider`; then `KoogTransportFactory` on every hop of every model client |
 | Ktor — MCP | `McpConnectionPool` (the only place a connection is opened) |
 | Shared OkHttp | `CleartextGuardInterceptor`, on every request |
 
@@ -1139,15 +1139,22 @@ with a leading zero is not private (`inet_aton` reads `010` as octal).
 `LocalOnlyPolicyParserAgreementTest` checks adversarial URLs against Ktor itself.
 
 The interceptor runs per request rather than per connection, so it also catches
-a redirect trying to downgrade `https` to `http`. The residual exposure — a
-cleartext redirect inside the third-party Koog / Ktor clients, which the
-platform used to block app-wide — is a deliberate trade recorded in the
-project's decision log.
+a redirect trying to downgrade `https` to `http`. The Koog / Ktor model clients,
+which the platform used to cover app-wide and the move left open, are covered by
+`KoogTransportFactory`: a Ktor send hook that sits inside Ktor's redirect
+handling and applies `ModelHopRule` — the cleartext rule, and the local-only
+restriction while it is on — to every hop before it is sent.
 
 ### 4.4. Cloud LLM providers
 
-Cloud providers (`openai`, `anthropic`, `google`, `deepseek`, `ollama`)
-implement the `CloudLlmProvider` interface in `domain`. They are
+Cloud providers (`openai`, `anthropic`, `google`, `deepseek`, `openrouter`,
+`groq`, `ollama`, `openai_compatible`) implement the `CloudLlmProvider` interface
+in `domain`. OpenRouter, Groq and a server the user runs are Koog's own OpenAI
+client with other settings (`data/engine/OpenAiCompatibleClients`): OpenRouter and
+Groq at fixed addresses, the user's server at the address they enter (with `/v1`,
+paths relative to it), and without an `Authorization` header when it has no key.
+None of the three has a default model; the factory refuses a client until one is
+chosen (`CloudClientUnavailability.MissingModel`). They are
 dispatched by the single unified `CLOUD` node, which takes the
 provider id as a parameter — there is no provider-specific node type,
 and adding a new provider does not require touching the pipeline
@@ -1159,7 +1166,8 @@ and are never serialized into DataStore or git.
 traffic asks before it is built: the chat clients in `KoogClientFactory` (Cloud
 nodes, structured output, `delegate_task`) and both network embedding providers
 (memory search and writes). While the restriction is on, hosted providers are
-refused and Ollama is admitted only when its host is `localhost` or a loopback /
+refused and a server the user runs (Ollama, an OpenAI-compatible server) is
+admitted only when its host is `localhost` or a loopback /
 RFC-1918 IPv4 literal (`domain/services/LocalOnlyPolicy`) — **whatever the
 scheme**, because `CleartextPolicy` answers whether traffic may be unencrypted
 and waves every `https://` address through. Host names are refused: a name says
@@ -1191,7 +1199,7 @@ status alone (429 / 500 / 502 / 503 / 504 / 529 retried, anything else not — K
 searched the message text, body included, for the number); a failure with no
 status keeps Koog's text rules unchanged, so a socket timeout is still not
 retried. The wait is the one the provider asked for — the `Retry-After` header,
-which `RetryAfterCapturingHttpClientFactory` records on the transport because
+which `KoogTransportFactory` records on the transport because
 Koog's exceptions carry no headers, or a wait named in the error text (Groq's
 `1m2.5s` included) — or else exponential backoff with jitter. A requested wait
 over the 30 s ceiling fails the call with `RetryAfterExceededException` instead

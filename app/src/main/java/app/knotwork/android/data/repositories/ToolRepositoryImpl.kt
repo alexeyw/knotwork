@@ -23,12 +23,11 @@ import app.knotwork.android.domain.repositories.LocalToolExecutor
 import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.repositories.ToolSettings
-import app.knotwork.android.domain.repositories.requiredCredential
+import app.knotwork.android.domain.repositories.isConfigured
 import app.knotwork.android.domain.services.HttpRequestPolicy
 import app.knotwork.android.domain.services.McpToolRouting
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
 import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
@@ -60,11 +59,10 @@ class ToolRepositoryImpl @Inject constructor(
 ) : ToolRepository {
 
     private suspend fun getBuiltinTools(): List<AgentTool> {
-        // Every provider whose deciding credential is saved, in enum order — the order the
-        // `delegate_task` schema lists them in and takes its default from.
-        val availableModels = CloudProvider.entries.filter {
-            !apiKeyRepository.requiredCredential(it).firstOrNull().isNullOrBlank()
-        }
+        // Every provider set up on this device, in enum order — the order the `delegate_task`
+        // schema lists them in and takes its default from. "Set up" includes a model for a
+        // provider without a default one: offering it without would only produce an error.
+        val availableModels = CloudProvider.entries.filter { apiKeyRepository.isConfigured(it) }
 
         val scheduleTool = AgentTool(
             name = "schedule_task",

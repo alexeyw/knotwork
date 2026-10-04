@@ -175,6 +175,35 @@ class EvaluateIfConditionUseCaseTest {
     }
 
     @Test
+    fun `given a cloud provider that cannot be used when invoke then the local engine answers and it is named`() =
+        runTest {
+            // The factory has no client (no key, restriction, unknown id): the local engine
+            // decides, and the outcome carries the provider so the executor can say so — it
+            // used to fall back in silence.
+            every { llmInferenceEngine.generateResponseStream(any(), any(), any()) } returns flowOf("True")
+            val useCase = EvaluateIfConditionUseCase(
+                llmInferenceEngine,
+                StructuredOutputGate(),
+                settingsRepository,
+                CloudStructuredInferenceClientFactory { _, _ -> null },
+            )
+
+            val outcome = useCase(ifNode(prompt = "Is this a question?").copy(cloudProvider = "groq"), "How are you?")
+
+            assertTrue(outcome.value)
+            assertEquals("groq", outcome.unavailableProvider)
+        }
+
+    @Test
+    fun `given a node without a cloud provider when invoke then no fallback is reported`() = runTest {
+        every { llmInferenceEngine.generateResponseStream(any(), any(), any()) } returns flowOf("True")
+
+        val outcome = evaluateIfConditionUseCase(ifNode(prompt = "Is this a question?"), "How are you?")
+
+        assertEquals(null, outcome.unavailableProvider)
+    }
+
+    @Test
     fun `given LLM emits False when invoke then returns false`() = runTest {
         every { llmInferenceEngine.generateResponseStream(any(), any(), any()) } returns flowOf("False")
 

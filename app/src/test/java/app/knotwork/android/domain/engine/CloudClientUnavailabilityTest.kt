@@ -28,6 +28,24 @@ class CloudClientUnavailabilityTest {
     }
 
     @Test
+    fun `given missing credentials for a server the user runs when worded then it asks for the address`() {
+        // Its key is optional, so asking for one would send the user to the wrong field.
+        val message = CloudClientUnavailability.MissingCredentials.message(CloudProvider.OPENAI_COMPATIBLE)
+
+        assertTrue(message, message.contains("no server address"))
+        assertTrue(message, message.contains("'openai_compatible'"))
+    }
+
+    @Test
+    fun `given no model chosen when worded then it names the provider and where to choose one`() {
+        val message = CloudClientUnavailability.MissingModel.message(CloudProvider.GROQ)
+
+        assertTrue(message, message.contains("'groq'"))
+        assertTrue(message, message.contains("no model selected"))
+        assertTrue(message, message.contains("Settings"))
+    }
+
+    @Test
     fun `given the restriction when worded then it names the setting to turn off`() {
         val message = CloudClientUnavailability.BlockedByLocalOnlyMode.message(CloudProvider.OPENAI)
 

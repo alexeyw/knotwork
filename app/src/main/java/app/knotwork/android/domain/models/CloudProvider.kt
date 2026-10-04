@@ -22,7 +22,11 @@ enum class CloudProvider(
      * `<id>_base_url`), so it can never change once shipped.
      */
     val id: String,
-    /** Whether the provider is reached with an API key the user saves. */
+    /**
+     * Whether the provider is reached with an API key the user saves. The key is required
+     * unless the provider is also reached at an address the user enters ([usesBaseUrl]): a
+     * server of the user's own may run without authentication.
+     */
     val usesApiKey: Boolean,
     /**
      * Whether the provider is reached at a server address the user enters, rather than at
@@ -30,21 +34,40 @@ enum class CloudProvider(
      * what decides whether it is set up at all.
      */
     val usesBaseUrl: Boolean,
+    /**
+     * Whether a model id must be chosen before the provider can be used. The providers that
+     * ship with a default model in the app do not need one; the ones whose catalogue the app
+     * cannot know — an aggregator, a fast-moving host, a server of the user's own — do, since
+     * a hard-coded default would go stale without anyone noticing.
+     */
+    val requiresModel: Boolean,
 ) {
     /** OpenAI (GPT family). */
-    OPENAI("openai", usesApiKey = true, usesBaseUrl = false),
+    OPENAI("openai", usesApiKey = true, usesBaseUrl = false, requiresModel = false),
 
     /** Anthropic (Claude family). */
-    ANTHROPIC("anthropic", usesApiKey = true, usesBaseUrl = false),
+    ANTHROPIC("anthropic", usesApiKey = true, usesBaseUrl = false, requiresModel = false),
 
     /** Google AI Studio / Gemini family. */
-    GOOGLE("google", usesApiKey = true, usesBaseUrl = false),
+    GOOGLE("google", usesApiKey = true, usesBaseUrl = false, requiresModel = false),
 
     /** DeepSeek hosted API. */
-    DEEPSEEK("deepseek", usesApiKey = true, usesBaseUrl = false),
+    DEEPSEEK("deepseek", usesApiKey = true, usesBaseUrl = false, requiresModel = false),
+
+    /** OpenRouter — one key for many hosted models, reached through its OpenAI-compatible API. */
+    OPENROUTER("openrouter", usesApiKey = true, usesBaseUrl = false, requiresModel = true),
+
+    /** Groq hosted API, reached through its OpenAI-compatible API. */
+    GROQ("groq", usesApiKey = true, usesBaseUrl = false, requiresModel = true),
 
     /** Self-hosted Ollama instance (typically over Wi-Fi); no key. */
-    OLLAMA("ollama", usesApiKey = false, usesBaseUrl = true),
+    OLLAMA("ollama", usesApiKey = false, usesBaseUrl = true, requiresModel = false),
+
+    /**
+     * A server of the user's own that speaks the OpenAI API — vLLM, LM Studio, llama.cpp, a
+     * VPS. One per device; the key is optional, because such a server often runs without one.
+     */
+    OPENAI_COMPATIBLE("openai_compatible", usesApiKey = true, usesBaseUrl = true, requiresModel = true),
     ;
 
     /** Owns the wire-id ↔ enum parsing rules (including the legacy `"gemini"` alias). */
@@ -75,7 +98,10 @@ enum class CloudProvider(
             "anthropic" -> ANTHROPIC
             "google", "gemini" -> GOOGLE
             "deepseek" -> DEEPSEEK
+            "openrouter" -> OPENROUTER
+            "groq" -> GROQ
             "ollama" -> OLLAMA
+            "openai_compatible" -> OPENAI_COMPATIBLE
             else -> null
         }
     }

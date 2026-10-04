@@ -602,11 +602,13 @@ Add a constant to
 [`domain/models/CloudProvider.kt`](../app/src/main/java/app/knotwork/android/domain/models/CloudProvider.kt)
 with a stable wire-id (the lowercase string used in pipeline JSON,
 e.g. `"mistral"`). Existing values are
-`OPENAI`, `ANTHROPIC`, `GOOGLE`, `DEEPSEEK`, `OLLAMA`.
+`OPENAI`, `ANTHROPIC`, `GOOGLE`, `DEEPSEEK`, `OPENROUTER`, `GROQ`, `OLLAMA`,
+`OPENAI_COMPATIBLE`.
 
 The constant also declares how the provider is reached: `usesApiKey` (a key
-the user saves) and `usesBaseUrl` (a server address the user enters, as for
-Ollama). The credential store, the settings screens, the stored-key scan of
+the user saves), `usesBaseUrl` (a server address the user enters, as for
+Ollama; a key is then optional) and `requiresModel` (no default model ships
+with the app, so one must be chosen). The credential store, the settings screens, the stored-key scan of
 `http_request` and the provider list of `delegate_task` read that shape
 instead of naming providers, so a new constant reaches all of them. The
 wire-id also names the provider's stored entries (3.4), so it can never
@@ -630,7 +632,12 @@ Add a branch in
 that constructs the Koog executor for the new provider. If the
 provider's SDK needs extra configuration (base URL, organization id),
 keep all of that inside the helper method — `CloudLlmNodeExecutor`
-should remain provider-agnostic.
+should remain provider-agnostic. A provider that speaks the OpenAI API
+needs no new Koog module: add it to
+[`OpenAiCompatibleClients`](../app/src/main/java/app/knotwork/android/data/engine/OpenAiCompatibleClients.kt),
+as OpenRouter and Groq are. Build the client on the `http` factory the
+factory passes in: that transport checks every hop, redirects included,
+and records `Retry-After` for the retry policy.
 
 ### 3.3. Teach the model resolver
 

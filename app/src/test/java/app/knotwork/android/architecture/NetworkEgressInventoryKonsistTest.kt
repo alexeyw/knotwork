@@ -443,14 +443,13 @@ class NetworkEgressInventoryKonsistTest {
                     "3.1",
                     Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("RetryingCloudLlmClient")),
                 ),
-            "$MAIN/data/engine/retry/RetryAfterCapturingHttpClientFactory.kt" to
+            "$MAIN/data/engine/KoogTransportFactory.kt" to
                 Egress.Opens(
                     "3.1",
-                    Indicator.RecordedBy(
-                        CHAT_CALLERS + EMBEDDING_CALLERS,
-                        listOf("RetryAfterCapturingHttpClientFactory"),
-                    ),
+                    Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("KoogTransportFactory")),
                 ),
+            "$MAIN/data/engine/OpenAiCompatibleClients.kt" to
+                Egress.Opens("3.1", Indicator.RecordedBy(CHAT_CALLERS, listOf("OpenAiCompatibleClients"))),
             "$MAIN/data/engine/retry/CloudRetryPolicy.kt" to
                 Egress.None("reads the status and the requested wait of a failed call; sends nothing"),
             "$MAIN/domain/engine/executors/CloudLlmNodeExecutor.kt" to

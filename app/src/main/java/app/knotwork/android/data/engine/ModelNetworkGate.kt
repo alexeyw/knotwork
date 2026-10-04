@@ -38,8 +38,9 @@ import javax.inject.Singleton
 class ModelNetworkGate @Inject constructor(private val networkSettings: NetworkSettings) {
 
     /**
-     * Decides whether a hosted cloud provider (OpenAI, Anthropic, Google, DeepSeek) may be
-     * reached. Credentials are the caller's concern; this answers only the policy question.
+     * Decides whether a hosted cloud provider (OpenAI, Anthropic, Google, DeepSeek, OpenRouter,
+     * Groq) may be reached. Credentials are the caller's concern; this answers only the policy
+     * question.
      *
      * @return [CloudClientUnavailability.BlockedByLocalOnlyMode] while the restriction is
      *   on, otherwise `null`.
@@ -51,26 +52,42 @@ class ModelNetworkGate @Inject constructor(private val networkSettings: NetworkS
     }
 
     /**
-     * Decides whether the user's Ollama server at [url] may be reached, applying both
-     * rules that concern it: while the restriction is on the host must be local
-     * ([LocalOnlyPolicy]), whatever the scheme; and unencrypted traffic must go only to an
-     * approved private address ([CleartextPolicy]).
+     * Decides whether a server the user runs, at the address [url] they entered — Ollama, or
+     * an OpenAI-compatible server — may be reached, applying both rules that concern it: while
+     * the restriction is on the host must be local ([LocalOnlyPolicy]), whatever the scheme;
+     * and unencrypted traffic must go only to an approved private address ([CleartextPolicy]).
      *
-     * @param url The configured, non-blank Ollama base URL.
+     * @param url The configured, non-blank server address.
      * @return The refusal, or `null` when a connection may be opened.
      */
-    suspend fun ollamaRefusal(url: String): CloudClientUnavailability? {
+    suspend fun endpointRefusal(url: String): CloudClientUnavailability? {
         if (isLocalOnlyMode() && !LocalOnlyPolicy.isLocalEndpoint(url)) {
             val host = CleartextPolicy.hostOf(url)
-            Timber.w("ModelNetworkGate: Ollama at %s refused — not a local address in local-only mode", host)
+            Timber.w("ModelNetworkGate: server at %s refused — not a local address in local-only mode", host)
             return CloudClientUnavailability.EndpointNotLocal(host)
         }
         val verdict = CleartextPolicy.classify(url, networkSettings.approvedCleartextOrigins.first())
         return CleartextPolicy.refusalMessage(verdict)?.let { reason ->
-            Timber.w("ModelNetworkGate: Ollama refused — %s", reason)
+            Timber.w("ModelNetworkGate: server refused — %s", reason)
             CloudClientUnavailability.CleartextRefused(reason)
         }
     }
+
+    /**
+     * The rule every request of a model client must pass on its way out — the first one and
+     * every redirect after it — taken from the settings as they are now.
+     *
+     * [endpointRefusal] judges the address the user entered, once, before a client is built.
+     * A server can then redirect; inside the Koog/Ktor stack nothing used to look at where to,
+     * so an approved LAN address could forward the prompt anywhere (the residual risk the
+     * cleartext rule's move into the app named). The transport applies this rule to every hop.
+     *
+     * @return A snapshot of the restriction flag and the approved unencrypted origins.
+     */
+    suspend fun hopRule(): ModelHopRule = ModelHopRule(
+        approvedCleartextOrigins = networkSettings.approvedCleartextOrigins.first(),
+        localOnly = isLocalOnlyMode(),
+    )
 
     /**
      * Decides whether a built-in tool that reaches the network on its own may run.
