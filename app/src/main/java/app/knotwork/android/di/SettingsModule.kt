@@ -31,11 +31,11 @@ import javax.inject.Singleton
  *
  * Every section is bound to its store in `data/local/settings/`, the resets to `SettingsResetStore`,
  * and the composite to [SettingsManager], which delegates each section to the same instance. Every
- * class here is a class-level
- * `@Singleton`: a scope on a `@Binds` method caches per binding, so several scoped bindings of an
- * unscoped class would each build their own instance, each with its own copy of the in-memory MCP
- * credential cache, the mutex serialising server edits, and the Hugging Face token flow — an edit
- * made through one section would then be invisible to a read through another.
+ * class here is a class-level `@Singleton`: a scope on a `@Binds` method caches per binding, so
+ * several scoped bindings of an unscoped class would each build their own instance, each with its
+ * own copy of the in-memory MCP credential cache, the mutex serialising server edits, and the
+ * Hugging Face token flow — an edit made through one section would then be invisible to a read
+ * through another.
  * `SettingsSingletonScopeTest` keeps the scope on every class that implements a section.
  */
 @Module

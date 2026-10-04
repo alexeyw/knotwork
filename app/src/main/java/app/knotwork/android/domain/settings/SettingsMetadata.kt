@@ -105,12 +105,12 @@ enum class SettingControlType {
 /**
  * One row in the settings information architecture.
  *
- * A row is either a real persisted setting (a non-null [key] matching the
- * name of the preference key in its settings store's `Keys` object) or a non-editing row —
+ * A row is either a real persisted setting (a non-null [key] matching the name
+ * of the key's property in its settings store's `Keys` object) or a non-editing row —
  * a [SettingControlType.LINK] to another screen, the [SettingControlType.IDENTITY]
  * card, or the [SettingControlType.RESET] action — in which case [key] is `null`.
  *
- * @property key The persisted preference key name (SCREAMING_SNAKE, identical to
+ * @property key The name of the preference key's property (SCREAMING_SNAKE, identical to
  *   the `Keys` entry in its settings store), or `null` for link / identity /
  *   reset / memory-action rows that edit no single preference.
  * @property categoryId The category this row belongs to.
