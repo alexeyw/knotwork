@@ -35,6 +35,12 @@ details.
 
 ### Tests
 
+- **A renamed setting can no longer lose its value unnoticed.** A setting is
+  found again by its storage key's name and type; renaming either made the app
+  forget the user's choice, and nothing failed. The test suite now holds a
+  snapshot of every stored key and of the settings file names, checked against
+  the source code.
+
 - **Every shipped pipeline now runs end to end in the test suite.** Each bundled
   preset and cookbook recipe goes through the real pipeline engine and all its
   node executors under a scripted model, with recorded tool outputs, and the run's
