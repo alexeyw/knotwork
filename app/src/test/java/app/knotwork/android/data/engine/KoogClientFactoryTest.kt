@@ -32,7 +32,7 @@ class KoogClientFactoryTest {
         apiKeyRepository = mockk()
         settingsRepository = mockk(relaxed = true) {
             every { blockNetworkFromLocalModel } returns MutableStateFlow(false)
-            // Disable retry wrapping so each helper returns the raw client these
+            // Disable retry wrapping so `createClient` returns the raw client these
             // identity/null assertions expect (an attempt budget of 1 = no retries).
             every { cloudRetryMaxAttempts } returns flowOf(1)
         }
@@ -213,16 +213,6 @@ class KoogClientFactoryTest {
         assertNull(factory.createClient(CloudProvider.OLLAMA))
         assertTrue(factory.unavailabilityOf(CloudProvider.OLLAMA) is CloudClientUnavailability.CleartextRefused)
     }
-
-    @Test
-    fun `given a public https Ollama via the domain entry point in local-only mode when createClient then null`() =
-        runTest {
-            // The Cloud node and structured output reach Ollama through `createClient`, not the
-            // typed helper — the gate has to hold on that path too.
-            givenLocalOnlyOllama(url = "https://ollama.example.com")
-
-            assertNull(factory.createClient(CloudProvider.OLLAMA))
-        }
 
     private fun givenLocalOnlyOllama(url: String, approved: Set<String> = emptySet()) {
         every { settingsRepository.blockNetworkFromLocalModel } returns MutableStateFlow(true)
