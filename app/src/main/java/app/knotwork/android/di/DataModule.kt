@@ -15,7 +15,6 @@ import app.knotwork.android.data.local.AudioCaptureStoreImpl
 import app.knotwork.android.data.local.DatabaseResetServiceImpl
 import app.knotwork.android.data.local.DownloadedModelFilesImpl
 import app.knotwork.android.data.local.ImageCaptureStoreImpl
-import app.knotwork.android.data.local.SettingsManager
 import app.knotwork.android.data.local.TransientCacheSweeperImpl
 import app.knotwork.android.data.local.crypto.AeadCipher
 import app.knotwork.android.data.local.crypto.AndroidKeystoreAeadCipher
@@ -82,7 +81,6 @@ import app.knotwork.android.domain.repositories.PowerStateRepository
 import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.repositories.PromptRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ShareAdmissionRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
@@ -156,13 +154,6 @@ abstract class DataModule {
     abstract fun bindBundledDocumentationRepository(
         repository: AssetBundledDocumentationRepository,
     ): BundledDocumentationRepository
-
-    /**
-     * Binds the [SettingsManager] implementation to the [SettingsRepository] interface.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindSettingsRepository(settingsManager: SettingsManager): SettingsRepository
 
     /**
      * Binds the [LiteRTLlmEngine] implementation to the [LlmInferenceEngine] interface.

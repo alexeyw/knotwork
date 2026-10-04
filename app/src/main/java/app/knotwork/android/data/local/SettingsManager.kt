@@ -40,6 +40,7 @@ import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Concrete implementation of [SettingsRepository] utilizing Androidx DataStore Preferences.
@@ -51,9 +52,14 @@ import javax.inject.Inject
  * plain DataStore (the HuggingFace token, inline MCP auth) are migrated into the secret store on
  * the first read and removed from DataStore.
  *
+ * Scoped `@Singleton` on the class, not only on its bindings: every settings section is bound to this
+ * one instance (`SettingsModule`), and the in-memory MCP credential cache, the mutex serialising
+ * server edits and the Hugging Face token flow must exist once.
+ *
  * @property dataStore The underlying DataStore instance for persistence.
  * @property secretsStore The encrypted store backing every secret payload.
  */
+@Singleton
 @Suppress("LargeClass") // 31-field DataStore facade by design; per-section split planned post-v0.1.
 class SettingsManager @Inject constructor(
     private val dataStore: DataStore<Preferences>,

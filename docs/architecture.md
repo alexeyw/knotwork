@@ -73,7 +73,7 @@ interfaces.
 The presentation layer is hosted by a single `NavHost` declared in
 `presentation/ui/navigation/AppNavGraph.kt`. The graph wires:
 
-- **Splash** → **Onboarding** (only when `SettingsRepository.isFirstLaunch`
+- **Splash** → **Onboarding** (only when `AppStateSettings.isFirstLaunch`
   is `true`) → **Chat tab**. After onboarding, the flag is persisted as
   `false` so subsequent launches go straight to Chat.
 - Four top-level **tabs** rendered by `AppShellScaffold`'s Material3
@@ -247,7 +247,7 @@ Step-by-step notes:
 9. On the terminal `Completed` state, `ChatHomeViewModel` notifies the
    app-scoped `MemoryAutoExtractionCoordinator` (domain service). After a
    30-second per-session debounce — and only when
-   `SettingsRepository.autoExtractEnabled` is set — it runs
+   `MemorySettings.autoExtractEnabled` is set — it runs
    `MemoryExtractionUseCase`, which makes one local-model pass to distil
    durable facts from the recent dialogue — the user's and the assistant's
    turns only; tool observations and other `SYSTEM` rows are never read —
@@ -974,7 +974,7 @@ merges three layers:
    to `SENSITIVE` because the platform `AppFunctionManager` metadata
    gives no trustworthy signal about side effects. Users can override
    per-tool through
-   `SettingsRepository.setToolRiskOverride(toolKey, risk)`,
+   `ToolSettings.setToolRiskOverride(toolKey, risk)`,
    which writes into the `toolRiskOverrides` flow persisted
    under DataStore key `app_function_risk_overrides`. The override
    always wins over the conservative default.
@@ -1496,6 +1496,17 @@ through a `KeystoreBackedPrefsStore` instead.
 A stored setting is found again by its key name and value type alone, so
 renaming either loses what the user set. `PreferenceStorageSnapshotTest`
 pins every key and the names of the settings files against the sources.
+
+Code reads settings through **sections** in `domain/repositories/`:
+`GenerationSettings`, `NetworkSettings`, `MemorySettings`, `ToolSettings`,
+`RunSettings`, `EntryPointSettings`, `PrivacySettings`, `AppStateSettings`,
+and `SettingsReset` for the two resets that span several of them. A consumer
+depends on the section it reads. `SettingsRepository` is the union of all
+sections, kept while existing consumers move off it;
+`SettingsCompositeConsumersTest` refuses a new production dependency on it.
+Every section is bound to one instance, which is a class-level `@Singleton`
+(`SettingsSingletonScopeTest`): a scope on each binding alone would build one
+instance per binding, each with its own in-memory credential cache.
 
 #### Storage tiers at a glance
 

@@ -18,7 +18,6 @@ app/src/main/java/app/knotwork/android/di/DataModule.kt :: class DataModule :: T
 app/src/main/java/app/knotwork/android/domain/engine/DefaultPipelineFactory.kt :: fun create :: LongMethod
 app/src/main/java/app/knotwork/android/domain/engine/executors/ToolInvocationGate.kt :: fun dispatch :: LongMethod
 app/src/main/java/app/knotwork/android/domain/models/PipelineGraph.kt :: fun validate :: CyclomaticComplexMethod
-app/src/main/java/app/knotwork/android/domain/repositories/SettingsRepository.kt :: interface SettingsRepository :: TooManyFunctions
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt :: fun ChatHomeScreenState.toViewState :: LongMethod
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeViewModel.kt :: constructor :: LongParameterList
 app/src/main/java/app/knotwork/android/presentation/ui/more/MoreScreen.kt :: fun MoreUiState.toViewState :: LongParameterList
