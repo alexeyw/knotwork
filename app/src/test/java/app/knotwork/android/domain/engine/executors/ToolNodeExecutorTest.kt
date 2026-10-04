@@ -81,7 +81,7 @@ class ToolNodeExecutorTest {
 
         toolInvocationGate = ToolInvocationGate(
             toolRepository = toolRepository,
-            settingsRepository = settingsRepository,
+            toolSettings = settingsRepository,
             approvalNotifier = approvalNotifier,
             chatRepository = chatRepository,
             pendingInteractionRepository = pendingInteractionRepository,

@@ -14,9 +14,9 @@ import app.knotwork.android.domain.services.McpToolRouting
  * [McpServerConfig], connection status, and the tool list (when the
  * connection succeeded).
  * @property disabledAppFunctions ids of locally registered AppFunctions
- * the user has paused (stored in `SettingsRepository.disabledAppFunctions`).
+ * the user has paused (stored in `ToolSettings.disabledAppFunctions`).
  * @property disabledMcpTools ids (`McpTool.id`) of MCP tools the user has
- * paused (stored in `SettingsRepository.disabledMcpTools`).
+ * paused (stored in `ToolSettings.disabledMcpTools`).
  * @property localTools all AppFunctions discovered on-device by
  * `ToolRepository.getAllLocalTools`. Used both to render the
  * "Built-in" section and to source `AgentTool.parameters` for the

@@ -774,8 +774,8 @@ class ToolRepositoryImplTest {
         // Regression: switching the MCP dispatch loop from
         // ConcurrentHashMap.entries (implicit URL-key dedup) to the raw
         // persisted list let a duplicate-URL row in settings (which
-        // SettingsManager.updateMcpServer can produce by replacing-by-index
-        // without checking for collisions) execute the same tool twice on
+        // updateMcpServer could produce by replacing-by-index before it
+        // refused URL collisions) execute the same tool twice on
         // the same connected client per call — catastrophic for non-
         // idempotent side effects. distinctMcpConfigs() now keeps only the
         // first occurrence of each URL before iteration.

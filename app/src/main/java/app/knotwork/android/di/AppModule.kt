@@ -360,9 +360,11 @@ object AppModule {
     fun provideConverters(): Converters = Converters()
 
     /**
-     * Provides the Keystore-backed secret store consumed by `SettingsManager`
-     * (API keys, the Hugging Face token, per-server MCP credentials). Exposed via
-     * the [SecretStore] seam so unit tests substitute an in-memory fake.
+     * Provides the Keystore-backed secret store consumed by the settings section
+     * stores (the Hugging Face token in `GenerationSettingsStore`, per-server MCP
+     * credentials in `ToolSettingsStore`); API keys live in a store of their own
+     * (`ApiKeyManager`). Exposed via the [SecretStore] seam so unit tests
+     * substitute an in-memory fake.
      */
     @Provides
     @Singleton

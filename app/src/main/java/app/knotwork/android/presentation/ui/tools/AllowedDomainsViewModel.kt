@@ -2,7 +2,7 @@ package app.knotwork.android.presentation.ui.tools
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.HttpRequestPolicy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 /**
  * ViewModel backing the standalone Allowed-domains editor for the `http_request`
- * tool. Observes [SettingsRepository.allowedHttpDomains] and owns the add /
+ * tool. Observes [ToolSettings.allowedHttpDomains] and owns the add /
  * remove gestures plus the live validation of the add field.
  *
  * Validation and normalisation are delegated to [HttpRequestPolicy] — the same
@@ -24,13 +24,13 @@ import javax.inject.Inject
  * accepts and how it stores a host can never drift from what the tool enforces.
  */
 @HiltViewModel
-class AllowedDomainsViewModel @Inject constructor(private val settingsRepository: SettingsRepository) : ViewModel() {
+class AllowedDomainsViewModel @Inject constructor(private val toolSettings: ToolSettings) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AllowedDomainsUiState())
     val uiState: StateFlow<AllowedDomainsUiState> = _uiState.asStateFlow()
 
     init {
-        settingsRepository.allowedHttpDomains
+        toolSettings.allowedHttpDomains
             .onEach { hosts ->
                 _uiState.update { it.copy(hosts = hosts, addFeedback = feedbackFor(it.addInput, hosts)) }
             }
@@ -63,7 +63,7 @@ class AllowedDomainsViewModel @Inject constructor(private val settingsRepository
     }
 
     private fun persist(hosts: List<String>) {
-        viewModelScope.launch { settingsRepository.setAllowedHttpDomains(hosts) }
+        viewModelScope.launch { toolSettings.setAllowedHttpDomains(hosts) }
     }
 
     /**

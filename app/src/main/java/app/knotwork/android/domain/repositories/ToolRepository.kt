@@ -53,7 +53,7 @@ interface ToolRepository {
      *    their hard-coded risk constants. They are part of the app's own
      *    contract and are deliberately not overridable.
      * 2. Discovered AppFunctions return the user override from
-     *    `SettingsRepository.toolRiskOverrides` (keyed by the AppFunction's tool
+     *    `ToolSettings.toolRiskOverrides` (keyed by the AppFunction's tool
      *    name) if set, otherwise [ToolRisk.SENSITIVE] (we cannot trust the
      *    AppFunctionManager metadata for side-effect signal).
      * 3. MCP tools return the user override from the same map, keyed by the

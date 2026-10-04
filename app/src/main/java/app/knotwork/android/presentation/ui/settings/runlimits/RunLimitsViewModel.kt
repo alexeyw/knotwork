@@ -55,7 +55,7 @@ data class RunLimitsUiState(
  * too. Writing the key ends that relationship permanently. Persisting on every
  * drag frame — or on a touch that lands and goes nowhere — would end it by
  * accident, which is the same defect as a reset writing the key (fixed in
- * `SettingsManager.applySamplingDefaults`, and for the same reason).
+ * `RunSettingsStore.writeSamplingDefaults`, and for the same reason).
  *
  * @property runSettings Persistence for all four ceilings.
  */

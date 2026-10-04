@@ -102,7 +102,7 @@ object HttpRequestPolicy {
      * port, surrounding whitespace, and lower-cases the result.
      *
      * Used both by the Settings editor (validation + de-duplication) and as the
-     * canonical form persisted in [app.knotwork.android.domain.repositories.SettingsRepository.allowedHttpDomains].
+     * canonical form persisted in [app.knotwork.android.domain.repositories.ToolSettings.allowedHttpDomains].
      *
      * @param input The raw text the user typed (e.g. `https://API.Example.com/v1`).
      * @return The normalised host (`api.example.com`), or `null` if invalid.

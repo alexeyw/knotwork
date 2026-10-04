@@ -2,7 +2,7 @@ package app.knotwork.android.domain.models
 
 /**
  * Typed outcome of
- * [app.knotwork.android.domain.repositories.SettingsRepository.updateMcpServer].
+ * [app.knotwork.android.domain.repositories.ToolSettings.updateMcpServer].
  *
  * Replacing an MCP server row by index when the new URL collides with
  * another existing row's URL would produce a `[B, B]` list with the

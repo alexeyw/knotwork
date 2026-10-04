@@ -209,10 +209,10 @@ class ToolRepositoryImpl @Inject constructor(
 
     /**
      * Reads the persisted MCP server list and **deduplicates by URL**, keeping
-     * the first occurrence. Defensive measure against a known issue in
-     * [app.knotwork.android.data.local.SettingsManager.updateMcpServer], which
-     * replaces by index without checking for collisions: editing server A's
-     * URL to match an existing server B can persist `[B, B]`. The list
+     * the first occurrence. Defensive measure against a list persisted before
+     * [app.knotwork.android.data.local.settings.ToolSettingsStore.updateMcpServer]
+     * refused URL collisions: editing server A's URL to match an existing
+     * server B could persist `[B, B]`, and such a list stays stored. The list
      * iteration is the source of truth for ordering, so the dedup must
      * happen here — otherwise a duplicate URL would trigger a duplicate
      * `executeTool` call against the same connected client (catastrophic for

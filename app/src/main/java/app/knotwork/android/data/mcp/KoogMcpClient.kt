@@ -15,7 +15,7 @@ import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.defaultRequest
@@ -671,7 +671,7 @@ class KoogMcpClient(
  */
 class KoogMcpClientFactory @Inject constructor(
     private val networkActivityTracker: NetworkActivityTracker,
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
 ) : McpClientFactory {
     /**
      * Creates a new instance of [KoogMcpClient]. Each instance carries the
@@ -684,7 +684,7 @@ class KoogMcpClientFactory @Inject constructor(
     override fun create(): McpClient = KoogMcpClient(
         networkActivityTracker = networkActivityTracker,
         resultByteBudget = {
-            settingsRepository.httpToolMaxResponseBytes.firstOrNull()
+            toolSettings.httpToolMaxResponseBytes.firstOrNull()
                 ?: SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT
         },
     )

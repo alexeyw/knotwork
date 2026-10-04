@@ -1914,7 +1914,7 @@ class SettingsManagerTest {
             val allKeys = PreferenceKeyCensus.names
 
             // User-owned content / configuration / transient state the reset must
-            // never touch (mirrors the SettingsRepository.resetToRecommendedDefaults
+            // never touch (mirrors the SettingsReset.resetToRecommendedDefaults
             // contract). A new tunable key forgotten in the reset, or a user-data key
             // wrongly added to it, fails one of the assertions below.
             val excluded = setOf(

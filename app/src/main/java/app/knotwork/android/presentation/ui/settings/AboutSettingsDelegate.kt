@@ -51,7 +51,7 @@ class AboutSettingsDelegate(
      * Crashlytics collection actually stops — the persisted flag alone does not
      * flip the live collector. User data (memory, chats, pipelines, prompts,
      * connections, secrets) is deliberately left untouched; the scope contract
-     * lives on `SettingsRepository.resetToRecommendedDefaults`.
+     * lives on `SettingsReset.resetToRecommendedDefaults`.
      */
     fun performResetSettings() {
         scope.launch {

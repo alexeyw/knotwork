@@ -60,28 +60,19 @@ class SettingsCompositeConsumersTest {
         const val PACKAGE_PATH = "java/app/knotwork/android/"
 
         /**
-         * The production files that still depend on the composite, by source set and package path.
-         * 87 when the sections were introduced; the target is the few that span every
-         * section — the implementation, its Hilt module, the settings screen's ViewModel and the
-         * end-to-end test entry point.
+         * The production files that still depend on the composite, by source set and package path:
+         * 87 when the sections were introduced. What remains spans every section (the composite, its
+         * Hilt module, the settings screen's view model, the end-to-end test entry point) or hands it
+         * to several sections' delegates through a constructor already over the parameter limit
+         * (the chat home and orchestrator view models), until those view models are split up.
          */
         val LISTED_CONSUMERS = sortedSetOf(
-            "main/data/local/AgentWorkspaceImpl.kt",
             "main/data/local/SettingsManager.kt",
-            "main/data/mcp/KoogMcpClient.kt",
             "main/data/testing/AppFunctionsE2ETestEntryPoint.kt",
-            "main/data/tools/local/SearchTool.kt",
-            "main/data/tools/local/executors/HttpRequestExecutor.kt",
-            "main/data/tools/local/executors/ReadFileExecutor.kt",
             "main/di/SettingsModule.kt",
-            "main/domain/engine/executors/ToolInvocationGate.kt",
-            "main/domain/usecases/ResetSamplingDefaultsUseCase.kt",
-            "main/domain/usecases/ResetToRecommendedDefaultsUseCase.kt",
             "main/presentation/ui/chat/home/ChatHomeViewModel.kt",
             "main/presentation/ui/orchestrator/OrchestratorViewModel.kt",
             "main/presentation/ui/settings/SettingsViewModel.kt",
-            "main/presentation/ui/tools/AllowedDomainsViewModel.kt",
-            "main/presentation/ui/tools/ToolsViewModel.kt",
         )
     }
 }

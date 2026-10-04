@@ -361,7 +361,7 @@ class AppFunctionsEndToEndTest {
      * Scenario 4 — Risk override flow.
      *
      * Persists a [ToolRisk.READ_ONLY] override for the probe's echo through
-     * [SettingsRepository.setToolRiskOverride] and verifies that
+     * [ToolSettings.setToolRiskOverride] and verifies that
      * [ToolRepository.getRisk] resolves the same name to READ_ONLY on the next call.
      * The HITL gate then short-circuits to a direct execution because READ_ONLY tools
      * skip the approval flow (see `ToolNodeExecutor.execute`'s `needsApproval` branch).
@@ -794,7 +794,7 @@ class AppFunctionsEndToEndTest {
             toolRepository = entryPoint.toolRepository(),
             toolInvocationGate = ToolInvocationGate(
                 toolRepository = entryPoint.toolRepository(),
-                settingsRepository = entryPoint.settingsRepository(),
+                toolSettings = entryPoint.settingsRepository(),
                 approvalNotifier = silentNotifier,
                 chatRepository = entryPoint.chatRepository(),
                 pendingInteractionRepository = entryPoint.pendingInteractionRepository(),

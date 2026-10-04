@@ -1,13 +1,14 @@
 package app.knotwork.android.data.local.crypto
 
 /**
- * Minimal key-value store for secrets consumed by [app.knotwork.android.data.local.SettingsManager].
+ * Minimal key-value store for secrets consumed by the settings section stores
+ * (`GenerationSettingsStore`, `ToolSettingsStore`).
  *
  * Extracted as an interface so the encrypted, Keystore-backed implementation
  * ([KeystoreBackedPrefsStore]) can be injected in production and substituted by
- * an in-memory fake in unit tests — the settings repository persists API keys,
- * the Hugging Face token and per-server MCP credentials through this seam, none
- * of which may ever touch plain DataStore.
+ * an in-memory fake in unit tests — the settings persist the Hugging Face token and
+ * per-server MCP credentials through this seam, neither of which may ever touch
+ * plain DataStore.
  *
  * A value read that is present but undecryptable surfaces as a
  * [SecureValueUnreadableException]; an absent value returns `null`.

@@ -31,7 +31,7 @@ sealed class WorkspaceError {
 
     /**
      * The write would push the workspace's total occupied size past
-     * [app.knotwork.android.domain.repositories.SettingsRepository.workspaceMaxTotalBytes].
+     * [app.knotwork.android.domain.repositories.ToolSettings.workspaceMaxTotalBytes].
      */
     data object QuotaExceeded : WorkspaceError()
 
@@ -44,7 +44,7 @@ sealed class WorkspaceError {
 
     /**
      * A single file's size exceeds
-     * [app.knotwork.android.domain.repositories.SettingsRepository.workspaceMaxFileSizeBytes],
+     * [app.knotwork.android.domain.repositories.ToolSettings.workspaceMaxFileSizeBytes],
      * either on write (the new content is too large) or on read (the on-disk
      * file is too large to pull into memory wholesale).
      */

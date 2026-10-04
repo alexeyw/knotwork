@@ -8,6 +8,8 @@ import app.knotwork.android.data.local.settings.MemorySettingsStore
 import app.knotwork.android.data.local.settings.NetworkSettingsStore
 import app.knotwork.android.data.local.settings.PrivacySettingsStore
 import app.knotwork.android.data.local.settings.RunSettingsStore
+import app.knotwork.android.data.local.settings.SettingsResetStore
+import app.knotwork.android.data.local.settings.ToolSettingsStore
 import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.GenerationSettings
@@ -27,12 +29,13 @@ import javax.inject.Singleton
 /**
  * Hilt bindings of the settings sections and of the transitional [SettingsRepository] composite.
  *
- * A section split out into its own store is bound to that store; the rest are bound to the one
- * [SettingsManager], which delegates to the same store instances. Every class here is a class-level
- * `@Singleton`: a scope on a `@Binds` method caches per binding, so several scoped bindings of an
- * unscoped class would each build their own instance, each with its own copy of the in-memory MCP
- * credential cache, the mutex serialising server edits, and the Hugging Face token flow — an edit
- * made through one section would then be invisible to a read through another.
+ * Every section is bound to its store in `data/local/settings/`, the resets to `SettingsResetStore`,
+ * and the composite to [SettingsManager], which delegates each section to the same instance. Every
+ * class here is a class-level `@Singleton`: a scope on a `@Binds` method caches per binding, so
+ * several scoped bindings of an unscoped class would each build their own instance, each with its
+ * own copy of the in-memory MCP credential cache, the mutex serialising server edits, and the
+ * Hugging Face token flow — an edit made through one section would then be invisible to a read
+ * through another.
  * `SettingsSingletonScopeTest` keeps the scope on every class that implements a section.
  */
 @Module
@@ -59,10 +62,10 @@ abstract class SettingsModule {
     @Singleton
     abstract fun bindMemorySettings(store: MemorySettingsStore): MemorySettings
 
-    /** Binds the tools and workspace section. */
+    /** Binds the tools and workspace section to its store. */
     @Binds
     @Singleton
-    abstract fun bindToolSettings(settingsManager: SettingsManager): ToolSettings
+    abstract fun bindToolSettings(store: ToolSettingsStore): ToolSettings
 
     /** Binds the run ceilings and background-run section to its store. */
     @Binds
@@ -84,8 +87,8 @@ abstract class SettingsModule {
     @Singleton
     abstract fun bindAppStateSettings(store: AppStateSettingsStore): AppStateSettings
 
-    /** Binds the cross-section resets. */
+    /** Binds the cross-section resets to the store that writes them. */
     @Binds
     @Singleton
-    abstract fun bindSettingsReset(settingsManager: SettingsManager): SettingsReset
+    abstract fun bindSettingsReset(store: SettingsResetStore): SettingsReset
 }

@@ -7,8 +7,8 @@ import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTool
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.repositories.McpServerRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,17 +27,17 @@ import javax.inject.Inject
  * Surfaces three streams:
  *
  *  - **Local tools** — loaded once from `ToolRepository.getAllLocalTools`.
- *  - **MCP servers** — combined from `SettingsRepository.mcpServers`
+ *  - **MCP servers** — combined from `ToolSettings.mcpServers`
  *    (full [McpServerConfig] per row) and the per-URL streams of
  *    `McpServerRepository`. Adding or editing a server immediately
  *    triggers a `tools/list` fetch with the persisted headers;
  *    removing one disconnects the underlying client.
  *  - **Disabled MCP tool ids** — separate set in
- *    `SettingsRepository.disabledMcpTools`.
+ *    `ToolSettings.disabledMcpTools`.
  */
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
     private val toolRepository: ToolRepository,
     private val mcpServerRepository: McpServerRepository,
 ) : ViewModel() {
@@ -59,17 +59,17 @@ class ToolsViewModel @Inject constructor(
             _uiState.update { it.copy(localTools = tools) }
         }
 
-        settingsRepository.mcpServers
+        toolSettings.mcpServers
             .onEach { configs -> reconcileServerSet(configs) }
             .launchIn(viewModelScope)
 
-        settingsRepository.disabledAppFunctions
+        toolSettings.disabledAppFunctions
             .onEach { disabled ->
                 _uiState.update { it.copy(disabledAppFunctions = disabled) }
             }
             .launchIn(viewModelScope)
 
-        settingsRepository.disabledMcpTools
+        toolSettings.disabledMcpTools
             .onEach { disabled ->
                 _uiState.update { it.copy(disabledMcpTools = disabled) }
             }
@@ -78,14 +78,14 @@ class ToolsViewModel @Inject constructor(
         // Drives the risk segmented control on the tool-detail screen. Read even
         // when no override exists: an absent entry is not "no risk", it is the
         // conservative SENSITIVE default the approval gate itself falls back to.
-        settingsRepository.toolRiskOverrides
+        toolSettings.toolRiskOverrides
             .onEach { overrides ->
                 _uiState.update { it.copy(toolRiskOverrides = overrides) }
             }
             .launchIn(viewModelScope)
 
         // Drives the "Allowed domains · N hosts" sub-row count under http_request.
-        settingsRepository.allowedHttpDomains
+        toolSettings.allowedHttpDomains
             .onEach { domains ->
                 _uiState.update { it.copy(allowedHttpDomainCount = domains.size) }
             }
@@ -189,7 +189,7 @@ class ToolsViewModel @Inject constructor(
     /** Removes an MCP server URL and disconnects the underlying client. */
     fun removeMcpServer(url: String) {
         viewModelScope.launch {
-            settingsRepository.removeMcpServer(url = url)
+            toolSettings.removeMcpServer(url = url)
         }
     }
 
@@ -217,7 +217,7 @@ class ToolsViewModel @Inject constructor(
         viewModelScope.launch {
             val current = _uiState.value.disabledAppFunctions.toMutableSet()
             if (isEnabled) current.remove(toolName) else current.add(toolName)
-            settingsRepository.setDisabledAppFunctions(functions = current)
+            toolSettings.setDisabledAppFunctions(functions = current)
         }
     }
 
@@ -226,7 +226,7 @@ class ToolsViewModel @Inject constructor(
         viewModelScope.launch {
             val current = _uiState.value.disabledMcpTools.toMutableSet()
             if (isEnabled) current.remove(toolId) else current.add(toolId)
-            settingsRepository.setDisabledMcpTools(toolIds = current)
+            toolSettings.setDisabledMcpTools(toolIds = current)
         }
     }
 
@@ -243,7 +243,7 @@ class ToolsViewModel @Inject constructor(
      * @param risk The level the user chose.
      */
     fun setToolRisk(toolKey: String, risk: ToolRisk) {
-        viewModelScope.launch { settingsRepository.setToolRiskOverride(toolKey = toolKey, risk = risk) }
+        viewModelScope.launch { toolSettings.setToolRiskOverride(toolKey = toolKey, risk = risk) }
     }
 
     /**

@@ -8,7 +8,7 @@ package app.knotwork.android.domain.models
  * and interprets nothing itself. The rule has a floor no policy goes below:
  * **a [ToolRisk.DESTRUCTIVE] call always asks.** A quieter policy only drops the
  * prompts for the reversible tiers; the one control that removes the destructive
- * prompt is `SettingsRepository.blockDestructiveTools`, and it does so by
+ * prompt is `ToolSettings.blockDestructiveTools`, and it does so by
  * refusing the call, never by running it unasked.
  *
  * Wire key persists in DataStore so the value survives process death and
@@ -26,7 +26,7 @@ package app.knotwork.android.domain.models
  *    pipelines unattended.
  *
  * Migration from the legacy boolean `requires_user_confirmation` key lives in
- * `SettingsManager` and applies on read while no policy has been stored:
+ * `ToolSettingsStore` and applies on read while no policy has been stored:
  * `true` → [SensitiveOrDestructive], `false` → [NeverPrompt] (the legacy switch
  * was the only way to quiet the prompts; destructive calls ask under it like
  * under every policy).
