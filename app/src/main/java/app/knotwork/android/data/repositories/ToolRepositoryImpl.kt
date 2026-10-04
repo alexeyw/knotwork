@@ -20,8 +20,9 @@ import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.models.ToolSource
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalToolExecutor
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.HttpRequestPolicy
 import app.knotwork.android.domain.services.McpToolRouting
 import kotlinx.coroutines.CancellationException
@@ -48,7 +49,8 @@ import javax.inject.Inject
  * an unknown name now fails fast instead of returning a fake success string.
  */
 class ToolRepositoryImpl @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
+    private val networkSettings: NetworkSettings,
     private val mcpConnectionPool: McpConnectionPool,
     private val localAppFunctionManager: LocalAppFunctionManager,
     private val apiKeyRepository: ApiKeyRepository,
@@ -217,11 +219,11 @@ class ToolRepositoryImpl @Inject constructor(
      * non-idempotent tools) and emit duplicate tools from `getAvailableTools`.
      */
     private suspend fun distinctMcpConfigs(): List<McpServerConfig> =
-        settingsRepository.mcpServers.first().distinctBy { it.url }
+        toolSettings.mcpServers.first().distinctBy { it.url }
 
     /**
      * Brings the shared [McpConnectionPool] in line with
-     * [SettingsRepository.mcpServers] before this repository routes anything
+     * [ToolSettings.mcpServers] before this repository routes anything
      * through it: unknown servers are connected, servers whose config changed
      * (auth, transport, headers) are reconnected so the new settings take
      * effect, and servers no longer persisted are disconnected and dropped.
@@ -287,19 +289,19 @@ class ToolRepositoryImpl @Inject constructor(
      */
     override suspend fun getAvailableTools(): List<AgentTool> {
         val servers = connectedMcpServers()
-        val disabledLocal = settingsRepository.disabledAppFunctions.first()
-        val disabledMcp = settingsRepository.disabledMcpTools.first()
+        val disabledLocal = toolSettings.disabledAppFunctions.first()
+        val disabledMcp = toolSettings.disabledMcpTools.first()
         // http_request is its own master switch: while no domain is allowlisted the
         // tool is hidden from the agent entirely (a direct call is still refused by
         // the executor). This keeps the read_file → http_request exfiltration channel
         // closed by default until the user opts a destination in.
-        val httpDisabled = settingsRepository.allowedHttpDomains.first().isEmpty()
+        val httpDisabled = toolSettings.allowedHttpDomains.first().isEmpty()
         // "Block network from local model" covers the built-in search tool: while the
         // restriction is on the tool is withheld from the catalogue, so the model is not
         // offered a path off the device it has no confirmation gate for. Hiding it is only
         // half the answer — a pipeline node bound to `search_tool` by name never reads this
         // catalogue — so the tool refuses the call itself as well (see `SearchTool`).
-        val localOnlyMode = settingsRepository.blockNetworkFromLocalModel.first()
+        val localOnlyMode = networkSettings.blockNetworkFromLocalModel.first()
         val allLocal = getAllLocalTools()
         val availableLocal = allLocal.filter { tool ->
             tool.name !in disabledLocal &&
@@ -356,7 +358,7 @@ class ToolRepositoryImpl @Inject constructor(
      */
     override suspend fun executeTool(name: String, arguments: String, context: ToolExecutionContext): String {
         val builtinTools = getBuiltinTools()
-        val disabled = settingsRepository.disabledAppFunctions.first()
+        val disabled = toolSettings.disabledAppFunctions.first()
         if (builtinTools.any { it.name == name }) {
             if (name in disabled) {
                 throw IllegalArgumentException("Tool $name is disabled")
@@ -448,7 +450,7 @@ class ToolRepositoryImpl @Inject constructor(
         }
 
         if (localAppFunctionManager.isDiscovered(toolName)) {
-            val overrides = settingsRepository.toolRiskOverrides.first()
+            val overrides = toolSettings.toolRiskOverrides.first()
             return overrides[toolName] ?: ToolRisk.SENSITIVE
         }
 
@@ -472,7 +474,7 @@ class ToolRepositoryImpl @Inject constructor(
      */
     private suspend fun mcpRisk(server: ConnectedMcpServer, toolName: String): ToolRisk {
         val key = McpServerRepositoryImpl.mcpToolId(serverUrl = server.config.url, toolName = toolName)
-        return settingsRepository.toolRiskOverrides.first()[key] ?: ToolRisk.SENSITIVE
+        return toolSettings.toolRiskOverrides.first()[key] ?: ToolRisk.SENSITIVE
     }
 
     /**
@@ -482,7 +484,7 @@ class ToolRepositoryImpl @Inject constructor(
      */
     private suspend fun routeMcpTool(toolName: String): McpRoute {
         val servers = connectedMcpServers()
-        val disabledMcp = settingsRepository.disabledMcpTools.first()
+        val disabledMcp = toolSettings.disabledMcpTools.first()
         val servingUrl = McpToolRouting.servingServer(toolName, servers.map { it.catalogue(disabledMcp) })
         if (servingUrl != null) {
             return McpRoute.Served(servers.first { it.config.url == servingUrl })

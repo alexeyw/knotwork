@@ -17,7 +17,7 @@ import app.knotwork.android.R
 import app.knotwork.android.data.network.ResumableFileDownloader
 import app.knotwork.android.domain.constants.NotificationChannels
 import app.knotwork.android.domain.constants.NotificationIds
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.usecases.RegisterDownloadedModelUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -60,7 +60,7 @@ import java.io.File
  * screen shows; starting the download again resumes it from the partial file.
  *
  * @property downloader Performs the resumable transfer.
- * @property settingsRepository Source of the stored Hugging Face token.
+ * @property generationSettings Source of the stored Hugging Face token.
  * @property registerDownloadedModel Records the finished file in the local
  *   model store.
  * @property foregroundBudget Foreground time the download may still spend
@@ -71,7 +71,7 @@ class ModelDownloadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val downloader: ResumableFileDownloader,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val registerDownloadedModel: RegisterDownloadedModelUseCase,
     private val foregroundBudget: DownloadForegroundBudget,
 ) : CoroutineWorker(appContext, workerParams) {
@@ -127,7 +127,7 @@ class ModelDownloadWorker @AssistedInject constructor(
     private suspend fun transfer(url: String, fileName: String, meter: DownloadForegroundBudget.Meter): Result {
         promoteToForeground(fileName, progress = 0)
         val token = if (inputData.getBoolean(KEY_USE_STORED_AUTH, false)) {
-            settingsRepository.huggingFaceAuthToken.first()
+            generationSettings.huggingFaceAuthToken.first()
         } else {
             null
         }

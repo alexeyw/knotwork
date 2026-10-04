@@ -9,7 +9,7 @@ import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.Result
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
@@ -57,7 +57,7 @@ import kotlin.random.Random
 @Singleton
 class LiteRTLlmEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     @ApplicationScope private val appScope: CoroutineScope,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : LlmInferenceEngine,
@@ -267,8 +267,8 @@ class LiteRTLlmEngine @Inject constructor(
         // the non-locking teardown because the mutex is already held here.
         unloadInternal()
 
-        val maxTokens = settingsRepository.maxContextLength.first()
-        val configuredKey = settingsRepository.localModelBackend.first()
+        val maxTokens = generationSettings.maxContextLength.first()
+        val configuredKey = generationSettings.localModelBackend.first()
         val configured = LocalBackend.fromKey(configuredKey) ?: LocalBackend.CPU
 
         // Crash-recovery: if the previous attempt died mid-init with this exact
@@ -285,19 +285,19 @@ class LiteRTLlmEngine @Inject constructor(
         // consecutive start finds the same evidence. One unexplained kill
         // silently and permanently costing the device its GPU is the failure
         // this guards against.
-        val previousAttempt = settingsRepository.lastInitBackendAttempt.first()
+        val previousAttempt = generationSettings.lastInitBackendAttempt.first()
         val crashedLastTime = configured != LocalBackend.CPU && previousAttempt == configured.key
         val resolved = if (crashedLastTime) {
-            val streak = settingsRepository.localBackendFailureStreak.first() + 1
-            settingsRepository.setLocalBackendFailureStreak(streak)
+            val streak = generationSettings.localBackendFailureStreak.first() + 1
+            generationSettings.setLocalBackendFailureStreak(streak)
             if (streak >= BACKEND_FAILURE_STREAK_LIMIT) {
                 Timber.w(
                     "LiteRT backend '%s' failed to initialise %d starts in a row — switching to CPU for good.",
                     configured.key,
                     streak,
                 )
-                settingsRepository.setLocalModelBackend(LocalBackend.CPU.key)
-                settingsRepository.setLocalBackendFailureStreak(0)
+                generationSettings.setLocalModelBackend(LocalBackend.CPU.key)
+                generationSettings.setLocalBackendFailureStreak(0)
             } else {
                 Timber.w(
                     "Previous init with '%s' did not finish — running on CPU this session, '%s' stays selected.",
@@ -305,7 +305,7 @@ class LiteRTLlmEngine @Inject constructor(
                     configured.key,
                 )
             }
-            settingsRepository.setLastInitBackendAttempt(null)
+            generationSettings.setLastInitBackendAttempt(null)
             LocalBackend.CPU
         } else {
             configured
@@ -317,9 +317,9 @@ class LiteRTLlmEngine @Inject constructor(
         // the CPU backend ships in-process and cannot fail to find
         // its dispatch library.
         if (resolved != LocalBackend.CPU) {
-            settingsRepository.setLastInitBackendAttempt(resolved.key)
+            generationSettings.setLastInitBackendAttempt(resolved.key)
         } else {
-            settingsRepository.setLastInitBackendAttempt(null)
+            generationSettings.setLastInitBackendAttempt(null)
         }
 
         val backend = newBackend(resolved)
@@ -358,8 +358,8 @@ class LiteRTLlmEngine @Inject constructor(
         // Init succeeded — clear the crash-recovery breadcrumb so the
         // next launch trusts the persisted backend, and drop the failure
         // streak: whatever killed earlier attempts is evidently not fatal.
-        settingsRepository.setLastInitBackendAttempt(null)
-        settingsRepository.setLocalBackendFailureStreak(0)
+        generationSettings.setLastInitBackendAttempt(null)
+        generationSettings.setLocalBackendFailureStreak(0)
         _activeBackend = resolved
         Timber.i(
             "LiteRT-LM Engine successfully initialized with $modelPath " +
@@ -758,9 +758,9 @@ class LiteRTLlmEngine @Inject constructor(
      */
     private suspend fun userConversationConfig(): ConversationConfig = ConversationConfig(
         samplerConfig = SamplerConfig(
-            topK = settingsRepository.topK.first(),
-            topP = settingsRepository.topP.first().toDouble(),
-            temperature = settingsRepository.temperature.first().toDouble(),
+            topK = generationSettings.topK.first(),
+            topP = generationSettings.topP.first().toDouble(),
+            temperature = generationSettings.temperature.first().toDouble(),
             seed = Random.nextInt(from = 1, until = Int.MAX_VALUE),
         ),
     )

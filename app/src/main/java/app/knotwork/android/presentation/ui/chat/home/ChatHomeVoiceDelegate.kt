@@ -1,6 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
 import app.knotwork.android.domain.services.RecordingState
@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
  *
  * @property scope The ViewModel's [androidx.lifecycle.viewModelScope].
  * @property state The ViewModel's single source-of-truth state flow (shared reducer).
- * @property settingsRepository Source of the configured recording limit.
+ * @property generationSettings Source of the configured recording limit.
  * @property audioRecorder Microphone capture engine.
  * @property audioCaptureStore Imports picked audio files; deletes orphaned clips.
  * @property transcribeAudioUseCase Transcribes a clip into text.
@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
 class ChatHomeVoiceDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<ChatHomeScreenState>,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val audioRecorder: AudioRecorder,
     private val audioCaptureStore: AudioCaptureStore,
     private val transcribeAudioUseCase: TranscribeAudioUseCase,
@@ -66,7 +66,7 @@ class ChatHomeVoiceDelegate(
     /** Opens the voice-input source chooser (Record voice / Choose audio file). */
     fun onMicClicked() {
         scope.launch {
-            val maxSec = settingsRepository.audioMaxDurationSec.first()
+            val maxSec = generationSettings.audioMaxDurationSec.first()
             state.update {
                 it.copy(
                     composer = it.composer.copy(

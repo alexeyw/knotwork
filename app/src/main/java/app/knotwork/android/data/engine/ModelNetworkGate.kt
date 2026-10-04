@@ -1,7 +1,7 @@
 package app.knotwork.android.data.engine
 
 import app.knotwork.android.domain.engine.CloudClientUnavailability
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.services.CleartextPolicy
 import app.knotwork.android.domain.services.LocalOnlyPolicy
 import kotlinx.coroutines.flow.first
@@ -31,11 +31,11 @@ import javax.inject.Singleton
  * network from local model" that left a model-composed query reaching wikipedia.org would
  * be false by its own name, so [networkToolRefusal] closes that path with the rest.
  *
- * @property settingsRepository Source of the restriction flag and the approved cleartext
+ * @property networkSettings Source of the restriction flag and the approved cleartext
  *   origins, both read on every call so a change applies to the next request.
  */
 @Singleton
-class ModelNetworkGate @Inject constructor(private val settingsRepository: SettingsRepository) {
+class ModelNetworkGate @Inject constructor(private val networkSettings: NetworkSettings) {
 
     /**
      * Decides whether a hosted cloud provider (OpenAI, Anthropic, Google, DeepSeek) may be
@@ -65,7 +65,7 @@ class ModelNetworkGate @Inject constructor(private val settingsRepository: Setti
             Timber.w("ModelNetworkGate: Ollama at %s refused — not a local address in local-only mode", host)
             return CloudClientUnavailability.EndpointNotLocal(host)
         }
-        val verdict = CleartextPolicy.classify(url, settingsRepository.approvedCleartextOrigins.first())
+        val verdict = CleartextPolicy.classify(url, networkSettings.approvedCleartextOrigins.first())
         return CleartextPolicy.refusalMessage(verdict)?.let { reason ->
             Timber.w("ModelNetworkGate: Ollama refused — %s", reason)
             CloudClientUnavailability.CleartextRefused(reason)
@@ -94,6 +94,5 @@ class ModelNetworkGate @Inject constructor(private val settingsRepository: Setti
             "Turn the restriction off to use it."
     }
 
-    private suspend fun isLocalOnlyMode(): Boolean =
-        settingsRepository.blockNetworkFromLocalModel.firstOrNull() ?: false
+    private suspend fun isLocalOnlyMode(): Boolean = networkSettings.blockNetworkFromLocalModel.firstOrNull() ?: false
 }

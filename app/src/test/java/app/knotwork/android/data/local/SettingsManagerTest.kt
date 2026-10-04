@@ -1861,6 +1861,49 @@ class SettingsManagerTest {
     }
 
     @Test
+    fun `given tuned values when resetSamplingDefaults then exactly the sampling, ceiling and retry keys are reset`() =
+        runTest {
+            // Given — values the per-card reset must leave alone, plus a background step ceiling
+            // chosen on its own, which the reset must REMOVE (its default is to follow the
+            // interactive ceiling).
+            val (manager, ds, scope) = freshManagerWithExposedDataStore()
+            try {
+                manager.setAudioMaxDurationSec(99)
+                manager.setBlockNetworkFromLocalModel(true)
+                manager.setPipelineMaxStepsBackground(SettingsDefaults.PIPELINE_MAX_STEPS_MAX)
+                manager.setTemperature(0.1f)
+
+                // When
+                manager.resetSamplingDefaults()
+
+                // Then — the LLM-parameters card's keys: eleven written to their defaults, one removed…
+                val stored = ds.data.first().asMap().mapKeys { it.key.name }
+                assertEquals(
+                    setOf(
+                        "temperature", "top_k", "top_p", "max_context_length",
+                        "pipeline_max_steps", "run_max_tokens", "run_max_tokens_background",
+                        "pipeline_max_nesting_depth", "structured_output_max_repairs",
+                        "cloud_retry_max_attempts", "cloud_retry_base_delay_ms",
+                        // untouched by the reset, set above
+                        "audio_max_duration_sec", "block_network_from_local_model",
+                    ),
+                    stored.keys,
+                )
+                assertEquals(SettingsDefaults.TEMPERATURE_DEFAULT, manager.temperature.first())
+                assertEquals(SettingsDefaults.TOP_P_DEFAULT, manager.topP.first())
+                assertEquals(SettingsDefaults.RUN_MAX_TOKENS_DEFAULT, manager.runMaxTokens.first())
+                assertEquals(SettingsDefaults.CLOUD_RETRY_MAX_ATTEMPTS_DEFAULT, manager.cloudRetryMaxAttempts.first())
+                assertEquals(SettingsDefaults.CLOUD_RETRY_BASE_DELAY_MS_DEFAULT, manager.cloudRetryBaseDelayMs.first())
+                assertFalse(manager.pipelineMaxStepsBackgroundIsSet.first())
+                // …and nothing else changed.
+                assertEquals(99, manager.audioMaxDurationSec.first())
+                assertTrue(manager.blockNetworkFromLocalModel.first())
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
     fun `resetToRecommendedDefaults covers every persistable key except documented exclusions`() = runTest {
         val (manager, ds, scope) = freshManagerWithExposedDataStore()
         try {

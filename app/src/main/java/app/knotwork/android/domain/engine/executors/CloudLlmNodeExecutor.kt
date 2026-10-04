@@ -20,9 +20,9 @@ import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.Flow
@@ -57,7 +57,7 @@ import javax.inject.Inject
  * pipeline starts on a CLOUD node before it can run.
  */
 class CloudLlmNodeExecutor @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val apiKeyRepository: ApiKeyRepository,
     private val metricsRepository: MetricsRepository,
     private val cloudLlmClientFactory: CloudLlmClientFactory,
@@ -73,7 +73,7 @@ class CloudLlmNodeExecutor @Inject constructor(
         runId: String?,
         scope: ExecutionScope,
     ): Flow<NodeOutput> = channelFlow {
-        val systemPromptPrefix = settingsRepository.systemPromptPrefix.first()
+        val systemPromptPrefix = generationSettings.systemPromptPrefix.first()
         val nodeSystemPrompt = node.systemPrompt ?: DefaultPrompts.Cloud.SYSTEM_FALLBACK
         val baseSystemPrompt = "$systemPromptPrefix\n$nodeSystemPrompt\n"
 

@@ -70,7 +70,7 @@ class KoogClientFactory @Inject constructor(
      * Provider-keyed dispatch used by domain-side consumers. Exhaustive on
      * [CloudProvider]; adding a new provider value forces an update here.
      *
-     * When `SettingsRepository.blockNetworkFromLocalModel` is `true`, every
+     * When `NetworkSettings.blockNetworkFromLocalModel` is `true`, every
      * hosted cloud provider (OpenAI / Anthropic / Google / DeepSeek) returns `null`
      * regardless of credential state, and the Ollama client is constructible only
      * when its base URL names `localhost` or a loopback / private IPv4 address —

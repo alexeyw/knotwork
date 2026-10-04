@@ -11,9 +11,9 @@ import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.ModelPerformanceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.NativeMemorySampler
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import kotlinx.coroutines.CancellationException
@@ -37,7 +37,7 @@ import javax.inject.Inject
  */
 class LiteRtNodeExecutor @Inject constructor(
     private val llmEngine: LlmInferenceEngine,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val metricsRepository: MetricsRepository,
     private val modelPerformanceRepository: ModelPerformanceRepository,
     private val nativeMemorySampler: NativeMemorySampler,
@@ -52,7 +52,7 @@ class LiteRtNodeExecutor @Inject constructor(
         runId: String?,
         scope: ExecutionScope,
     ): Flow<NodeOutput> = flow {
-        val systemPromptPrefix = settingsRepository.systemPromptPrefix.first()
+        val systemPromptPrefix = generationSettings.systemPromptPrefix.first()
         val nodeSystemPrompt = node.systemPrompt ?: DefaultPrompts.LiteRt.SYSTEM_FALLBACK
         val baseSystemPrompt = "$systemPromptPrefix\n$nodeSystemPrompt\n"
 

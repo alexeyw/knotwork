@@ -4,7 +4,7 @@ import app.knotwork.android.domain.engine.HardwareAccelerationProbe
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.Result
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -47,7 +47,7 @@ import javax.inject.Inject
  * the next start. That machinery is deliberately left in the engine's hands
  * rather than duplicated here.
  *
- * @property settingsRepository Reads the raw backend preference and records the
+ * @property generationSettings Reads the raw backend preference and records the
  *   resolved decision.
  * @property accelerationProbe Static, crash-safe GPU plausibility check.
  * @property loadModelUseCase Plain warm-up path (no measurement).
@@ -57,7 +57,7 @@ import javax.inject.Inject
  *   backend is actually applied.
  */
 class PrepareInferenceBackendUseCase @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val accelerationProbe: HardwareAccelerationProbe,
     private val loadModelUseCase: LoadModelUseCase,
     private val testBackendUseCase: TestBackendUseCase,
@@ -114,18 +114,18 @@ class PrepareInferenceBackendUseCase @Inject constructor(
         }
 
     private suspend fun resolveAndWarmUp(modelPath: String, onAccelerationCheckStarted: () -> Unit): Outcome {
-        val stored = settingsRepository.localModelBackendPreference.first()
+        val stored = generationSettings.localModelBackendPreference.first()
         if (stored != null) {
             return warmUp(modelPath, LocalBackend.fromKey(stored) ?: LocalBackend.CPU)
         }
 
         if (!accelerationProbe.isGpuAvailable()) {
-            settingsRepository.setLocalModelBackend(LocalBackend.CPU.key)
+            generationSettings.setLocalModelBackend(LocalBackend.CPU.key)
             return warmUp(modelPath, LocalBackend.CPU)
         }
 
         onAccelerationCheckStarted()
-        settingsRepository.setLocalModelBackend(LocalBackend.GPU.key)
+        generationSettings.setLocalModelBackend(LocalBackend.GPU.key)
         val probe = testBackendUseCase(modelPath)
         if (probe.success) {
             Timber.i(
@@ -162,7 +162,7 @@ class PrepareInferenceBackendUseCase @Inject constructor(
      */
     private suspend fun persistBackendQuietly(backend: LocalBackend) {
         try {
-            settingsRepository.setLocalModelBackend(backend.key)
+            generationSettings.setLocalModelBackend(backend.key)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

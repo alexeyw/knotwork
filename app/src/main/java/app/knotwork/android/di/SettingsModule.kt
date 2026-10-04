@@ -3,6 +3,8 @@ package app.knotwork.android.di
 import app.knotwork.android.data.local.SettingsManager
 import app.knotwork.android.data.local.settings.AppStateSettingsStore
 import app.knotwork.android.data.local.settings.EntryPointSettingsStore
+import app.knotwork.android.data.local.settings.GenerationSettingsStore
+import app.knotwork.android.data.local.settings.NetworkSettingsStore
 import app.knotwork.android.data.local.settings.PrivacySettingsStore
 import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.EntryPointSettings
@@ -40,15 +42,15 @@ abstract class SettingsModule {
     @Singleton
     abstract fun bindSettingsRepository(settingsManager: SettingsManager): SettingsRepository
 
-    /** Binds the generation and local-model section. */
+    /** Binds the generation and local-model section to its store. */
     @Binds
     @Singleton
-    abstract fun bindGenerationSettings(settingsManager: SettingsManager): GenerationSettings
+    abstract fun bindGenerationSettings(store: GenerationSettingsStore): GenerationSettings
 
-    /** Binds the network and cloud-retry section. */
+    /** Binds the network and cloud-retry section to its store. */
     @Binds
     @Singleton
-    abstract fun bindNetworkSettings(settingsManager: SettingsManager): NetworkSettings
+    abstract fun bindNetworkSettings(store: NetworkSettingsStore): NetworkSettings
 
     /** Binds the memory and chat-history section. */
     @Binds

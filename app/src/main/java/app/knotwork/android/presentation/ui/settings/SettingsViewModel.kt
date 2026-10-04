@@ -91,7 +91,7 @@ class SettingsViewModel @Inject constructor(
         scope = viewModelScope,
         state = _uiState,
         appContext = appContext,
-        settingsRepository = settingsRepository,
+        generationSettings = settingsRepository,
         getSystemPromptVariableCatalogUseCase = getSystemPromptVariableCatalogUseCase,
         resetSamplingDefaultsUseCase = resetSamplingDefaultsUseCase,
     )
@@ -100,7 +100,7 @@ class SettingsViewModel @Inject constructor(
         scope = viewModelScope,
         state = _uiState,
         appContext = appContext,
-        settingsRepository = settingsRepository,
+        generationSettings = settingsRepository,
         apiKeyRepository = apiKeyRepository,
         localModelRepository = localModelRepository,
         testBackendUseCase = testBackendUseCase,
@@ -122,7 +122,7 @@ class SettingsViewModel @Inject constructor(
 
     private val pipelines = PipelinesSettingsDelegate(viewModelScope, _uiState, settingsRepository)
 
-    private val tools = ToolsSettingsDelegate(viewModelScope, _uiState, settingsRepository)
+    private val tools = ToolsSettingsDelegate(viewModelScope, _uiState, settingsRepository, settingsRepository)
 
     private val background =
         BackgroundSettingsDelegate(

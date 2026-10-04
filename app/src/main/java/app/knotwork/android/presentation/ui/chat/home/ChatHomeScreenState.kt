@@ -287,7 +287,7 @@ data class ChatHomeModelState(
  *
  * @property used rough token usage of the active session (`text.length / 4`).
  * @property max configured context-window cap propagated from
- *   `SettingsRepository.maxContextLength`.
+ *   `GenerationSettings.maxContextLength`.
  * @property streaming running approximate count of tokens produced by the
  *   in-flight LLM stream; surfaced through the agent status pill as
  *   `generating (GPU) · N tok`. Zero outside of [ChatHomeUiState.Generating].
