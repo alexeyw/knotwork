@@ -49,7 +49,7 @@ class TestBackendUseCaseTest {
             localModelRepository = localModelRepository,
             loadModelUseCase = loadModelUseCase,
             llmInferenceEngine = llmInferenceEngine,
-            settingsRepository = settingsRepository,
+            generationSettings = settingsRepository,
         )
     }
 

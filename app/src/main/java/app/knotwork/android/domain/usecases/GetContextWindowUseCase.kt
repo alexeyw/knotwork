@@ -3,7 +3,7 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -11,18 +11,18 @@ import javax.inject.Inject
  * Use case responsible for generating a prompt string from the recent chat history,
  * ensuring that the history kept fits within the configured context window.
  *
- * The window — [SettingsRepository.maxContextLength] — is expressed in **tokens**,
+ * The window — [GenerationSettings.maxContextLength] — is expressed in **tokens**,
  * while messages are measured in **characters**, so the budget is converted with the
  * [CHARS_PER_TOKEN] heuristic before truncation. The resulting string powers the chat
  * token-usage indicator (`ChatHomeViewModel`), which divides the character length back
  * by the same factor to estimate tokens used.
  *
  * @property chatRepository The repository to fetch chat history.
- * @property settingsRepository The repository to fetch context length limits.
+ * @property generationSettings The repository to fetch context length limits.
  */
 class GetContextWindowUseCase @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
 ) {
     /**
      * Retrieves the chat history for the given session ID, truncates old messages
@@ -39,7 +39,7 @@ class GetContextWindowUseCase @Inject constructor(
         // (≈ CHARS_PER_TOKEN characters per token) before comparing — otherwise
         // a token count is compared against character lengths and the history
         // is truncated to roughly 1/CHARS_PER_TOKEN of the intended window.
-        val maxTokens = settingsRepository.maxContextLength.first()
+        val maxTokens = generationSettings.maxContextLength.first()
         val maxChars = maxTokens * CHARS_PER_TOKEN
 
         val formattedMessages = mutableListOf<String>()
@@ -75,7 +75,7 @@ class GetContextWindowUseCase @Inject constructor(
     private companion object {
         /**
          * Approximate characters per token, used to convert the
-         * token-denominated [SettingsRepository.maxContextLength] budget into
+         * token-denominated [GenerationSettings.maxContextLength] budget into
          * the character budget this use case measures against. Mirrors the
          * presentation-layer estimators (`DisplayFormat.CHARS_PER_TOKEN`); kept
          * local so the `domain` layer stays free of presentation dependencies.

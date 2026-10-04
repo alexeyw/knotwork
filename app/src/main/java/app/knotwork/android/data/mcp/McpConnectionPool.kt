@@ -1,7 +1,7 @@
 package app.knotwork.android.data.mcp
 
 import app.knotwork.android.domain.models.McpServerConfig
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.services.CleartextPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -43,7 +43,7 @@ import javax.inject.Singleton
 @Singleton
 class McpConnectionPool @Inject constructor(
     private val clientFactory: McpClientFactory,
-    private val settingsRepository: SettingsRepository,
+    private val networkSettings: NetworkSettings,
 ) {
 
     /**
@@ -178,7 +178,7 @@ class McpConnectionPool @Inject constructor(
             // app-wide (Android cannot express "any private-LAN address" there),
             // so `CleartextPolicy` is what actually enforces it: private and
             // approved, or refused.
-            val verdict = CleartextPolicy.classify(config.url, settingsRepository.approvedCleartextOrigins.first())
+            val verdict = CleartextPolicy.classify(config.url, networkSettings.approvedCleartextOrigins.first())
             CleartextPolicy.refusalMessage(verdict)?.let { reason -> error(reason) }
             val created = clientFactory.create()
             created.connect(config)

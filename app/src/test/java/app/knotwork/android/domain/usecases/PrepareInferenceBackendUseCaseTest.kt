@@ -49,7 +49,7 @@ class PrepareInferenceBackendUseCaseTest {
         testBackendUseCase = mockk()
         llmInferenceEngine = mockk(relaxed = true)
         useCase = PrepareInferenceBackendUseCase(
-            settingsRepository = settingsRepository,
+            generationSettings = settingsRepository,
             accelerationProbe = accelerationProbe,
             loadModelUseCase = loadModelUseCase,
             testBackendUseCase = testBackendUseCase,

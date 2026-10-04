@@ -5,8 +5,8 @@ import app.knotwork.android.R
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.models.ProviderSummary
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.TestBackendUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +39,7 @@ import java.util.Locale
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.
  * @property appContext Application context for probe-result snackbar copy.
- * @property settingsRepository Persistence for the backend selection + probe result.
+ * @property generationSettings Persistence for the backend selection + probe result.
  * @property apiKeyRepository Source of the per-provider key/model/endpoint flows.
  * @property localModelRepository Source of the active-model card metadata.
  * @property testBackendUseCase Runs the on-device backend smoke probe.
@@ -48,7 +48,7 @@ class ModelsSettingsDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<SettingsUiState>,
     private val appContext: Context,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val apiKeyRepository: ApiKeyRepository,
     private val localModelRepository: LocalModelRepository,
     private val testBackendUseCase: TestBackendUseCase,
@@ -74,7 +74,7 @@ class ModelsSettingsDelegate(
 
     init {
         scope.launch {
-            appliedBackend = settingsRepository.localModelBackend.first()
+            appliedBackend = generationSettings.localModelBackend.first()
             hasCapturedBackendBaseline = true
             appliedOllamaBaseUrl = apiKeyRepository.getOllamaBaseUrl().firstOrNull()
             hasCapturedOllamaBaseline = true
@@ -87,7 +87,7 @@ class ModelsSettingsDelegate(
             state.update { it.copy(activeModelMeta = meta) }
         }.launchIn(scope)
 
-        settingsRepository.localModelBackend.onEach { value ->
+        generationSettings.localModelBackend.onEach { value ->
             state.update {
                 it.copy(
                     localModelBackend = value,
@@ -96,7 +96,7 @@ class ModelsSettingsDelegate(
             }
         }.launchIn(scope)
 
-        settingsRepository.lastTestProbeResult.onEach { value ->
+        generationSettings.lastTestProbeResult.onEach { value ->
             state.update { it.copy(lastTestProbeResult = value) }
         }.launchIn(scope)
 
@@ -187,7 +187,7 @@ class ModelsSettingsDelegate(
 
     /** Persists the selected local-model backend (restart-gated). */
     fun setLocalModelBackend(backend: String) {
-        scope.launch { settingsRepository.setLocalModelBackend(backend) }
+        scope.launch { generationSettings.setLocalModelBackend(backend) }
     }
 
     /** Runs the on-device backend smoke probe and surfaces the outcome as a snackbar. */

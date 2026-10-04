@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import app.knotwork.android.data.local.crypto.SecretStore
 import app.knotwork.android.data.local.settings.AppStateSettingsStore
 import app.knotwork.android.data.local.settings.EntryPointSettingsStore
+import app.knotwork.android.data.local.settings.GenerationSettingsStore
+import app.knotwork.android.data.local.settings.NetworkSettingsStore
 import app.knotwork.android.data.local.settings.PrivacySettingsStore
 
 /**
@@ -23,4 +25,6 @@ internal fun testSettingsManager(dataStore: DataStore<Preferences>, secretStore:
         appState = AppStateSettingsStore(dataStore),
         privacy = PrivacySettingsStore(dataStore),
         entryPoints = EntryPointSettingsStore(dataStore),
+        generation = GenerationSettingsStore(dataStore, secretStore),
+        network = NetworkSettingsStore(dataStore),
     )

@@ -121,6 +121,7 @@ class McpRoutingMatrixTest {
         every { searchTool.asAgentTool() } returns AgentTool("search_tool", "desc", "{}")
         return ToolRepositoryImpl(
             settings,
+            settings,
             McpConnectionPool(factory, settings),
             appFunctions,
             apiKeys,

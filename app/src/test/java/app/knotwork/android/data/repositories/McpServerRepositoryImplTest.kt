@@ -302,5 +302,5 @@ class McpServerRepositoryImplTest {
 private fun pool(factory: McpClientFactory): McpConnectionPool {
     val settings = mockk<SettingsRepository>()
     every { settings.approvedCleartextOrigins } returns flowOf(emptySet())
-    return McpConnectionPool(clientFactory = factory, settingsRepository = settings)
+    return McpConnectionPool(clientFactory = factory, networkSettings = settings)
 }

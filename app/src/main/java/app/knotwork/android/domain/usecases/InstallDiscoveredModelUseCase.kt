@@ -2,8 +2,8 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.DiscoverableModelFile
 import app.knotwork.android.domain.models.DownloadState
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.ModelDownloadManager
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
@@ -27,12 +27,12 @@ import javax.inject.Inject
  * @property downloadManager background downloader observed through its state stream.
  * @property registerDownloadedModel local model registry write, shared with the
  *   download worker (which registers the file even when nobody is observing).
- * @property settingsRepository source of the stored Hugging Face token.
+ * @property generationSettings source of the stored Hugging Face token.
  */
 class InstallDiscoveredModelUseCase @Inject constructor(
     private val downloadManager: ModelDownloadManager,
     private val registerDownloadedModel: RegisterDownloadedModelUseCase,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
 ) {
 
     /**
@@ -49,7 +49,7 @@ class InstallDiscoveredModelUseCase @Inject constructor(
         // Only the *presence* of a token decides whether to authenticate — the
         // value itself is read by the downloader from the encrypted store, so it
         // never travels through background-work input.
-        val useStoredAuth = !settingsRepository.huggingFaceAuthToken.first().isNullOrBlank()
+        val useStoredAuth = !generationSettings.huggingFaceAuthToken.first().isNullOrBlank()
         emitAll(
             downloadManager.downloadModel(
                 url = file.resolveUrl,

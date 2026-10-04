@@ -4,7 +4,7 @@ import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.clients.retry.RetryConfig
 import ai.koog.prompt.executor.clients.retry.RetryingLLMClient
 import app.knotwork.android.domain.engine.retry.CloudRetryListener
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.NetworkSettings
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,11 +28,11 @@ import kotlin.time.Duration.Companion.seconds
  * surface a [app.knotwork.android.domain.models.ConsoleEventType.CloudRetry]
  * console line.
  *
- * @property settingsRepository Source of the configured attempt budget and base
+ * @property networkSettings Source of the configured attempt budget and base
  *   delay (Settings → Providers).
  */
 @Singleton
-class CloudRetryWrapper @Inject constructor(private val settingsRepository: SettingsRepository) {
+class CloudRetryWrapper @Inject constructor(private val networkSettings: NetworkSettings) {
 
     /**
      * Decorates [client] with the configured retry policy.
@@ -53,10 +53,10 @@ class CloudRetryWrapper @Inject constructor(private val settingsRepository: Sett
         provider: String,
         listener: CloudRetryListener = CloudRetryListener.NONE,
     ): LLMClient {
-        val maxAttempts = settingsRepository.cloudRetryMaxAttempts.first()
+        val maxAttempts = networkSettings.cloudRetryMaxAttempts.first()
         if (maxAttempts <= 1) return client
 
-        val baseDelay = settingsRepository.cloudRetryBaseDelayMs.first().milliseconds
+        val baseDelay = networkSettings.cloudRetryBaseDelayMs.first().milliseconds
         val observed = RetryObservingLLMClient(
             delegate = client,
             provider = provider,

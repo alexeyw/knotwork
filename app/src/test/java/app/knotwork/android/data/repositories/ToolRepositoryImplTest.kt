@@ -91,6 +91,7 @@ class ToolRepositoryImplTest {
 
         repository = ToolRepositoryImpl(
             settingsRepository,
+            settingsRepository,
             McpConnectionPool(mcpClientFactory, settingsRepository),
             localAppFunctionManager,
             apiKeyRepository,

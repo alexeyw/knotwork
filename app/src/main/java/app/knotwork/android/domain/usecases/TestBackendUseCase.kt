@@ -3,8 +3,8 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.TestProbeResult
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -34,12 +34,12 @@ class TestBackendUseCase @Inject constructor(
     private val localModelRepository: LocalModelRepository,
     private val loadModelUseCase: LoadModelUseCase,
     private val llmInferenceEngine: LlmInferenceEngine,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
 ) {
 
     /**
      * Runs the probe end-to-end and persists the result. Caller may
-     * observe [SettingsRepository.lastTestProbeResult] for the live row
+     * observe [GenerationSettings.lastTestProbeResult] for the live row
      * subtitle.
      *
      * @param modelPath Absolute path of the model to probe. `null` — the
@@ -105,10 +105,10 @@ class TestBackendUseCase @Inject constructor(
     }
 
     private suspend fun persistAndReturn(result: TestProbeResult): TestProbeResult {
-        settingsRepository.setLastTestProbeResult(result)
+        generationSettings.setLastTestProbeResult(result)
         // Force a read so DataStore writes flush before the caller observes the row.
         try {
-            settingsRepository.lastTestProbeResult.first()
+            generationSettings.lastTestProbeResult.first()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {

@@ -64,7 +64,7 @@ object DefaultPrompts {
     /**
      * Generic preamble injected at the top of every LiteRT/Cloud system prompt
      * (`${'$'}systemPromptPrefix\n${'$'}nodeSystemPrompt\n` — see
-     * [LiteRtNodeExecutor]). Stored in `SettingsRepository.systemPromptPrefix`
+     * [LiteRtNodeExecutor]). Stored in `GenerationSettings.systemPromptPrefix`
      * with this value as its first-launch default.
      */
     const val SYSTEM_PROMPT_PREFIX = "You are a helpful AI assistant running on an Android device."

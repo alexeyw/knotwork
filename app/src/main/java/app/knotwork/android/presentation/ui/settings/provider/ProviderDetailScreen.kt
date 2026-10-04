@@ -19,7 +19,7 @@ import app.knotwork.android.data.engine.KoogModelMapper
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.repositories.ApiKeyRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.services.CleartextPolicy
 import app.knotwork.design.screens.settings.CleartextConsentUi
 import app.knotwork.design.screens.settings.CloudRetryViewState
@@ -273,7 +273,7 @@ data class ProviderDetailUiState(
 @HiltViewModel
 class ProviderDetailViewModel @Inject constructor(
     private val apiKeyRepository: ApiKeyRepository,
-    private val settingsRepository: SettingsRepository,
+    private val networkSettings: NetworkSettings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProviderDetailUiState())
@@ -282,10 +282,10 @@ class ProviderDetailViewModel @Inject constructor(
     init {
         // The cloud-retry policy is global (applies to every provider), so it is
         // bound once on construction rather than per-provider in [bind].
-        settingsRepository.cloudRetryMaxAttempts
+        networkSettings.cloudRetryMaxAttempts
             .onEach { v -> _uiState.update { it.copy(cloudRetryMaxAttempts = v) } }
             .launchIn(viewModelScope)
-        settingsRepository.cloudRetryBaseDelayMs
+        networkSettings.cloudRetryBaseDelayMs
             .onEach { v -> _uiState.update { it.copy(cloudRetryBaseDelayMs = v) } }
             .launchIn(viewModelScope)
     }
@@ -340,7 +340,7 @@ class ProviderDetailViewModel @Inject constructor(
                 // confirmation off.
                 combine(
                     apiKeyRepository.getOllamaBaseUrl(),
-                    settingsRepository.approvedCleartextOrigins,
+                    networkSettings.approvedCleartextOrigins,
                 ) { url, approved ->
                     val verdict = CleartextPolicy.classify(url.orEmpty(), approved)
                     (verdict as? CleartextPolicy.Verdict.NeedsApproval)?.origin
@@ -452,7 +452,7 @@ class ProviderDetailViewModel @Inject constructor(
      */
     fun approveCleartextOrigin() {
         val origin = _uiState.value.cleartextConsentOrigin ?: return
-        viewModelScope.launch { settingsRepository.approveCleartextOrigin(origin) }
+        viewModelScope.launch { networkSettings.approveCleartextOrigin(origin) }
     }
 
     fun updateOllamaModel(value: String) {
@@ -468,12 +468,12 @@ class ProviderDetailViewModel @Inject constructor(
 
     /** Persists the global cloud-retry attempt budget (coerced to 1–5 by the store). */
     fun updateCloudRetryMaxAttempts(value: Int) {
-        viewModelScope.launch { settingsRepository.setCloudRetryMaxAttempts(value) }
+        viewModelScope.launch { networkSettings.setCloudRetryMaxAttempts(value) }
     }
 
     /** Persists the global cloud-retry base delay in milliseconds (coerced to 100–10000). */
     fun updateCloudRetryBaseDelayMs(value: Long) {
-        viewModelScope.launch { settingsRepository.setCloudRetryBaseDelayMs(value) }
+        viewModelScope.launch { networkSettings.setCloudRetryBaseDelayMs(value) }
     }
 }
 

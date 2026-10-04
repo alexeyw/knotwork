@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.data.network.AndroidModelDownloadManager.DownloadError
 import app.knotwork.android.domain.models.DownloadState
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.ModelDownloadManager
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.GetDiscoverableModelDetailUseCase
 import app.knotwork.android.domain.usecases.InstallDiscoveredModelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,11 +27,11 @@ import javax.inject.Inject
  * and drives the per-file install flow through [InstallDiscoveredModelUseCase],
  * gating each download behind a license confirmation. The shared Hugging Face
  * token (used for access-gated repos) is read/written through
- * [SettingsRepository], matching the Models screen.
+ * [GenerationSettings], matching the Models screen.
  *
  * @property getDetail use case fetching the repository detail.
  * @property installModel use case streaming a file download + local registration.
- * @property settingsRepository source/sink of the Hugging Face token.
+ * @property generationSettings source/sink of the Hugging Face token.
  * @property downloadManager the background downloader, held so a cancel can stop
  *   the transfer itself and not merely this screen's view of it.
  */
@@ -39,7 +39,7 @@ import javax.inject.Inject
 class DiscoverDetailViewModel @Inject constructor(
     private val getDetail: GetDiscoverableModelDetailUseCase,
     private val installModel: InstallDiscoveredModelUseCase,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val downloadManager: ModelDownloadManager,
 ) : ViewModel() {
 
@@ -77,7 +77,7 @@ class DiscoverDetailViewModel @Inject constructor(
     private fun observeTokenOnce() {
         if (tokenObserved) return
         tokenObserved = true
-        settingsRepository.huggingFaceAuthToken
+        generationSettings.huggingFaceAuthToken
             .onEach { token -> _uiState.update { it.copy(tokenInput = token.orEmpty()) } }
             .launchIn(viewModelScope)
     }
@@ -175,7 +175,7 @@ class DiscoverDetailViewModel @Inject constructor(
     fun onTokenChange(token: String) {
         _uiState.update { it.copy(tokenInput = token) }
         viewModelScope.launch {
-            settingsRepository.setHuggingFaceAuthToken(token.takeIf { it.isNotBlank() })
+            generationSettings.setHuggingFaceAuthToken(token.takeIf { it.isNotBlank() })
         }
     }
 

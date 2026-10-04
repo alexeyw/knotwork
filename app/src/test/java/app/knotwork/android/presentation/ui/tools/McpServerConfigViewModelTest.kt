@@ -56,7 +56,8 @@ class McpServerConfigViewModelTest {
         savedStateHandle = SavedStateHandle(
             if (originalUrl != null) mapOf(McpServerConfigViewModel.EXTRA_ORIGINAL_URL to originalUrl) else emptyMap(),
         ),
-        settingsRepository = settings,
+        toolSettings = settings,
+        networkSettings = settings,
         mcpServerRepository = mcp,
     )
 

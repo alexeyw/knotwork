@@ -7,9 +7,9 @@ import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.CustomModelLink
 import app.knotwork.android.domain.models.DownloadState
 import app.knotwork.android.domain.models.isBusy
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.ModelDownloadManager
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.BenchmarkOutcome
 import app.knotwork.android.domain.usecases.BenchmarkRunPhase
 import app.knotwork.android.domain.usecases.GetModelPerformanceUseCase
@@ -43,7 +43,7 @@ import javax.inject.Inject
  *
  * @property localModelRepository The repository for accessing locally stored models.
  * @property downloadManager The manager for downloading new models from the network.
- * @property settingsRepository The repository for managing application settings like auth tokens.
+ * @property generationSettings The repository for managing application settings like auth tokens.
  * @property getModelPerformanceUseCase Supplies the rolling-average performance
  *   summary for the active model shown on the Performance card.
  * @property runBenchmarkUseCase Runs the controlled one-shot benchmark.
@@ -55,7 +55,7 @@ import javax.inject.Inject
 class ModelsViewModel @Inject constructor(
     private val localModelRepository: LocalModelRepository,
     private val downloadManager: ModelDownloadManager,
-    private val settingsRepository: SettingsRepository,
+    private val generationSettings: GenerationSettings,
     private val getModelPerformanceUseCase: GetModelPerformanceUseCase,
     private val runBenchmarkUseCase: RunBenchmarkUseCase,
     private val taskQueueManager: TaskQueueManager,
@@ -139,7 +139,7 @@ class ModelsViewModel @Inject constructor(
     }
 
     private fun observeBackend() {
-        settingsRepository.localModelBackend
+        generationSettings.localModelBackend
             .onEach { key ->
                 _uiState.update { it.copy(localBackendKey = key) }
             }
@@ -161,7 +161,7 @@ class ModelsViewModel @Inject constructor(
     }
 
     private fun observeAuthToken() {
-        settingsRepository.huggingFaceAuthToken
+        generationSettings.huggingFaceAuthToken
             .onEach { token ->
                 _uiState.update { it.copy(authTokenInput = token ?: "") }
             }
@@ -185,7 +185,7 @@ class ModelsViewModel @Inject constructor(
     fun onAuthTokenChanged(token: String) {
         _uiState.update { it.copy(authTokenInput = token) }
         viewModelScope.launch {
-            settingsRepository.setHuggingFaceAuthToken(token.takeIf { it.isNotBlank() })
+            generationSettings.setHuggingFaceAuthToken(token.takeIf { it.isNotBlank() })
         }
     }
 

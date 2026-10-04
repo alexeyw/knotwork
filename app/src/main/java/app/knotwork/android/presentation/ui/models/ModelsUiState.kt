@@ -48,7 +48,7 @@ data class ModelsUiState(
     /**
      * Wire key of the active local-model backend
      * ([app.knotwork.android.domain.models.LocalBackend.key]) — `cpu` /
-     * `gpu` / `npu`. Read from `SettingsRepository.localModelBackend`
+     * `gpu` / `npu`. Read from `GenerationSettings.localModelBackend`
      * and rendered as part of the per-model meta line. Defaults to
      * `cpu` until the first observation lands.
      */

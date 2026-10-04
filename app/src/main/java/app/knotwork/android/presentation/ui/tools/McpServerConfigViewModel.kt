@@ -8,7 +8,8 @@ import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
 import app.knotwork.android.domain.models.UpdateMcpServerResult
 import app.knotwork.android.domain.repositories.McpServerRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.NetworkSettings
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.CleartextPolicy
 import app.knotwork.design.screens.tools.AddMcpServerForm
 import app.knotwork.design.screens.tools.McpAuthSelector
@@ -29,24 +30,25 @@ import javax.inject.Inject
  * Drives the [AddMcpServerForm] state for both Add and Edit modes:
  *
  *  - **Add** — no `originalUrl` nav argument; submission calls
- *    `SettingsRepository.addMcpServer`.
+ *    `ToolSettings.addMcpServer`.
  *  - **Edit** — `originalUrl` is supplied via the nav graph; the VM
- *    fetches the existing config from `SettingsRepository.mcpServers`
+ *    fetches the existing config from `ToolSettings.mcpServers`
  *    on first observation and pre-fills the form. Submission calls
- *    `SettingsRepository.updateMcpServer` and disconnects the
+ *    `ToolSettings.updateMcpServer` and disconnects the
  *    underlying client so the next fetch picks up new headers.
  */
 @HiltViewModel
 class McpServerConfigViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
+    private val networkSettings: NetworkSettings,
     private val mcpServerRepository: McpServerRepository,
 ) : ViewModel() {
 
     /**
      * Original URL passed via the nav argument. `null` or blank means
      * Add mode; non-null means Edit mode and triggers a one-shot read
-     * from `SettingsRepository.mcpServers` to populate the form.
+     * from `ToolSettings.mcpServers` to populate the form.
      */
     private val originalUrl: String? = savedStateHandle
         .get<String>(EXTRA_ORIGINAL_URL)
@@ -73,14 +75,14 @@ class McpServerConfigViewModel @Inject constructor(
         // so it appears and disappears as the user edits rather than only at save
         // time — and it stays correct if approval happens from elsewhere.
         viewModelScope.launch {
-            settingsRepository.approvedCleartextOrigins.collect { approved ->
+            networkSettings.approvedCleartextOrigins.collect { approved ->
                 approvedOrigins = approved
                 _form.update { it.copy(cleartextConsentOrigin = consentOriginFor(it.url, approved)) }
             }
         }
         if (originalUrl != null) {
             viewModelScope.launch {
-                val existing = settingsRepository.mcpServers.first().firstOrNull { it.url == originalUrl }
+                val existing = toolSettings.mcpServers.first().firstOrNull { it.url == originalUrl }
                 if (existing != null) {
                     // Read the approved set here rather than relying on the
                     // collector above having run first: the two coroutines are
@@ -94,7 +96,7 @@ class McpServerConfigViewModel @Inject constructor(
                     // computed from the still-empty URL. The user would then see
                     // no banner and a Save that refuses with "approve the
                     // connection above" — pointing at nothing.
-                    val approved = settingsRepository.approvedCleartextOrigins.first()
+                    val approved = networkSettings.approvedCleartextOrigins.first()
                     _form.update {
                         it.fromConfig(existing)
                             .copy(cleartextConsentOrigin = consentOriginFor(existing.url, approved))
@@ -121,7 +123,7 @@ class McpServerConfigViewModel @Inject constructor(
      */
     fun onApproveCleartext() {
         val origin = _form.value.cleartextConsentOrigin ?: return
-        viewModelScope.launch { settingsRepository.approveCleartextOrigin(origin) }
+        viewModelScope.launch { networkSettings.approveCleartextOrigin(origin) }
     }
 
     /**
@@ -194,7 +196,7 @@ class McpServerConfigViewModel @Inject constructor(
                 // Drop the cached client so the next fetch reconnects with the
                 // new headers/transport/URL instead of reusing the old session.
                 mcpServerRepository.disconnect(serverUrl = originalUrl)
-                val outcome = settingsRepository.updateMcpServer(originalUrl = originalUrl, updated = config)
+                val outcome = toolSettings.updateMcpServer(originalUrl = originalUrl, updated = config)
                 when (outcome) {
                     is UpdateMcpServerResult.Success -> _events.value = Event.Saved
                     is UpdateMcpServerResult.UrlCollision -> {
@@ -207,7 +209,7 @@ class McpServerConfigViewModel @Inject constructor(
                     }
                 }
             } else {
-                settingsRepository.addMcpServer(config = config)
+                toolSettings.addMcpServer(config = config)
                 _events.value = Event.Saved
             }
         }

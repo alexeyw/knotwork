@@ -269,7 +269,7 @@ constructor(
     val voice: ChatHomeVoiceDelegate = ChatHomeVoiceDelegate(
         scope = viewModelScope,
         state = _state,
-        settingsRepository = settingsRepository,
+        generationSettings = settingsRepository,
         audioRecorder = audioRecorder,
         audioCaptureStore = audioCaptureStore,
         transcribeAudioUseCase = transcribeAudioUseCase,
