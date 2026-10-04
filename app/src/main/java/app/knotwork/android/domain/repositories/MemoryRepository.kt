@@ -89,7 +89,7 @@ interface MemoryRepository {
      * to the similarity, never multiplied into it, so no candidate can be
      * scored out of the results by age alone. The pool is
      * bounded in practice by the compaction hard-limit
-     * (`SettingsRepository.maxMemoryChunks`), which is the explicit
+     * (`MemorySettings.maxMemoryChunks`), which is the explicit
      * performance cap; implementations log a warning when the scanned pool
      * grows large enough for the linear scan to become noticeable.
      *

@@ -98,7 +98,7 @@ class MemoryExtractionUseCaseTest {
             memoryRepository = memoryRepository,
             memorySearchStatsTracker = memorySearchStatsTracker,
             structuredOutputGate = StructuredOutputGate(),
-            settingsRepository = settingsRepository,
+            runSettings = settingsRepository,
             metricsRepository = metricsRepository,
         )
     }

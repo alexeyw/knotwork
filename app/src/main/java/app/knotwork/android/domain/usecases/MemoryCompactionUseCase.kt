@@ -9,7 +9,7 @@ import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.services.CompactionCoverageVerifier
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.KMeansClusterer
@@ -74,7 +74,7 @@ import javax.inject.Inject
  * @property promptVariableProviders Registered providers backing the templating.
  * @property embeddingProviderResolver Resolves the active embedding backend per call.
  * @property memoryRepository Candidate loading, persistence, and deletion.
- * @property settingsRepository Source of the compaction age window.
+ * @property memorySettings Source of the compaction age window.
  * @property kMeansClusterer Groups candidate chunks by embedding similarity.
  * @property coverageVerifier Decides which cluster members a generated summary
  *   is allowed to replace.
@@ -86,7 +86,7 @@ class MemoryCompactionUseCase @Inject constructor(
     private val promptVariableProviders: Set<@JvmSuppressWildcards PromptVariableProvider>,
     private val embeddingProviderResolver: EmbeddingProviderResolver,
     private val memoryRepository: MemoryRepository,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val kMeansClusterer: KMeansClusterer,
     private val coverageVerifier: CompactionCoverageVerifier,
 ) {
@@ -100,9 +100,9 @@ class MemoryCompactionUseCase @Inject constructor(
      */
     suspend operator fun invoke(nowMillis: Long = System.currentTimeMillis()): MemoryCompactionOutcome =
         withContext(Dispatchers.Default) {
-            val ageDays = settingsRepository.memoryCompactionAgeDays.first()
+            val ageDays = memorySettings.memoryCompactionAgeDays.first()
             val cutoff = nowMillis - ageDays.toLong() * TimeAndIdConstants.MS_PER_DAY
-            val verboseLogging = settingsRepository.verboseMemoryLoggingEnabled.first()
+            val verboseLogging = memorySettings.verboseMemoryLoggingEnabled.first()
 
             val candidates = memoryRepository.getCompactionCandidates(cutoff)
             if (candidates.size < MIN_CHUNKS_TO_COMPACT) {
@@ -147,7 +147,7 @@ class MemoryCompactionUseCase @Inject constructor(
             // floor changed nothing, so labelling it "compacted just now" would
             // mislead the user (and could throttle a later genuine pass).
             if (clustersProcessed > 0) {
-                settingsRepository.setMemoryLastCompactedAt(nowMillis)
+                memorySettings.setMemoryLastCompactedAt(nowMillis)
             }
 
             MemoryCompactionOutcome(
@@ -175,7 +175,7 @@ class MemoryCompactionUseCase @Inject constructor(
      * @param verboseLogging When `true`, logs the cluster membership (the merged
      *   chunk ids, and any member the summary failed to cover) of every
      *   successful consolidation for observability. Gated on
-     *   `SettingsRepository.verboseMemoryLoggingEnabled` so the logcat stays quiet
+     *   `MemorySettings.verboseMemoryLoggingEnabled` so the logcat stays quiet
      *   by default.
      * @return What the consolidation changed, or `null` if the cluster was left
      *   untouched.

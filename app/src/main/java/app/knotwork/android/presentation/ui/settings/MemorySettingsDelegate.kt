@@ -8,7 +8,7 @@ import app.knotwork.android.domain.models.MemoryExportDocument
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemoryImportStrategy
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
 import app.knotwork.android.domain.text.ImportedText
@@ -49,7 +49,7 @@ import java.io.OutputStream
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.
  * @property appContext Application context for snackbar copy.
- * @property settingsRepository Persistence for the memory-tuning settings.
+ * @property memorySettings Persistence for the memory-tuning settings.
  * @property memoryRepository Source of the live aggregate stats.
  * @property memorySearchStatsTracker Rolling average of recent similarity scores.
  * @property embeddingProviders Hilt-registered embedding providers (dropdown source + validation set).
@@ -63,7 +63,7 @@ class MemorySettingsDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<SettingsUiState>,
     private val appContext: Context,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val memoryRepository: MemoryRepository,
     private val memorySearchStatsTracker: MemorySearchStatsTracker,
     private val embeddingProviders: Map<String, EmbeddingProvider>,
@@ -103,66 +103,66 @@ class MemorySettingsDelegate(
             state.update { it.copy(averageSimilarityScore = value) }
         }.launchIn(scope)
 
-        settingsRepository.autoExtractEnabled.onEach { value ->
+        memorySettings.autoExtractEnabled.onEach { value ->
             state.update { it.copy(autoExtractEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.memorySearchTopK.onEach { value ->
+        memorySettings.memorySearchTopK.onEach { value ->
             state.update { it.copy(memorySearchTopK = value) }
         }.launchIn(scope)
 
-        settingsRepository.memorySearchThreshold.onEach { value ->
+        memorySettings.memorySearchThreshold.onEach { value ->
             state.update { it.copy(memorySearchThreshold = value) }
         }.launchIn(scope)
 
-        settingsRepository.memoryRecencyHalfLifeDays.onEach { value ->
+        memorySettings.memoryRecencyHalfLifeDays.onEach { value ->
             state.update { it.copy(memoryRecencyHalfLifeDays = value) }
         }.launchIn(scope)
 
-        settingsRepository.memoryCompactionEnabled.onEach { value ->
+        memorySettings.memoryCompactionEnabled.onEach { value ->
             state.update { it.copy(memoryCompactionEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.memoryCompactionAgeDays.onEach { value ->
+        memorySettings.memoryCompactionAgeDays.onEach { value ->
             state.update { it.copy(memoryCompactionAgeDays = value) }
         }.launchIn(scope)
 
-        settingsRepository.maxMemoryChunks.onEach { value ->
+        memorySettings.maxMemoryChunks.onEach { value ->
             state.update { it.copy(maxMemoryChunks = value) }
         }.launchIn(scope)
 
-        settingsRepository.chatHistoryCompressionEnabled.onEach { value ->
+        memorySettings.chatHistoryCompressionEnabled.onEach { value ->
             state.update { it.copy(chatHistoryCompressionEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.chatHistoryCompressionThresholdTokens.onEach { value ->
+        memorySettings.chatHistoryCompressionThresholdTokens.onEach { value ->
             state.update { it.copy(chatHistoryCompressionThresholdTokens = value) }
         }.launchIn(scope)
 
-        settingsRepository.chatHistoryLiveWindowSize.onEach { value ->
+        memorySettings.chatHistoryLiveWindowSize.onEach { value ->
             state.update { it.copy(chatHistoryLiveWindowSize = value) }
         }.launchIn(scope)
 
-        settingsRepository.activeEmbeddingProviderId.onEach { value ->
+        memorySettings.activeEmbeddingProviderId.onEach { value ->
             state.update { it.copy(activeEmbeddingProviderId = value) }
         }.launchIn(scope)
 
-        settingsRepository.lastReembedProviderId.onEach { value ->
+        memorySettings.lastReembedProviderId.onEach { value ->
             state.update { it.copy(lastReembedProviderId = value) }
         }.launchIn(scope)
 
-        settingsRepository.verboseMemoryLoggingEnabled.onEach { value ->
+        memorySettings.verboseMemoryLoggingEnabled.onEach { value ->
             state.update { it.copy(verboseMemoryLoggingEnabled = value) }
         }.launchIn(scope)
 
-        settingsRepository.memorySummaryDefaultLimit.onEach { value ->
+        memorySettings.memorySummaryDefaultLimit.onEach { value ->
             state.update { it.copy(memorySummaryDefaultLimit = value) }
         }.launchIn(scope)
     }
 
     /** Persists the "Auto-extract from conversations" toggle. */
     fun setAutoExtractEnabled(enabled: Boolean) {
-        scope.launch { settingsRepository.setAutoExtractEnabled(enabled) }
+        scope.launch { memorySettings.setAutoExtractEnabled(enabled) }
     }
 
     /**
@@ -171,12 +171,12 @@ class MemorySettingsDelegate(
      * write needs no separate range rejection.
      */
     fun setMemorySummaryDefaultLimit(limit: Int) {
-        scope.launch { settingsRepository.setMemorySummaryDefaultLimit(limit) }
+        scope.launch { memorySettings.setMemorySummaryDefaultLimit(limit) }
     }
 
     /** Persists the verbose memory-logging toggle (logs every memory retrieval to the console). */
     fun setVerboseMemoryLoggingEnabled(enabled: Boolean) {
-        scope.launch { settingsRepository.setVerboseMemoryLoggingEnabled(enabled) }
+        scope.launch { memorySettings.setVerboseMemoryLoggingEnabled(enabled) }
     }
 
     /**
@@ -189,7 +189,7 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setMemorySearchTopK(value) }
+        scope.launch { memorySettings.setMemorySearchTopK(value) }
     }
 
     /**
@@ -204,7 +204,7 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setMemorySearchThreshold(value) }
+        scope.launch { memorySettings.setMemorySearchThreshold(value) }
     }
 
     /**
@@ -219,13 +219,13 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setMemoryRecencyHalfLifeDays(days) }
+        scope.launch { memorySettings.setMemoryRecencyHalfLifeDays(days) }
     }
 
     /** Persists the background-compaction toggle. Booleans cannot be out-of-range. */
     fun setMemoryCompactionEnabled(enabled: Boolean) {
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setMemoryCompactionEnabled(enabled) }
+        scope.launch { memorySettings.setMemoryCompactionEnabled(enabled) }
     }
 
     /**
@@ -240,7 +240,7 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setMemoryCompactionAgeDays(days) }
+        scope.launch { memorySettings.setMemoryCompactionAgeDays(days) }
     }
 
     /**
@@ -253,13 +253,13 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setMaxMemoryChunks(limit) }
+        scope.launch { memorySettings.setMaxMemoryChunks(limit) }
     }
 
     /** Toggles long-session chat-history compression. */
     fun setChatHistoryCompressionEnabled(enabled: Boolean) {
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setChatHistoryCompressionEnabled(enabled) }
+        scope.launch { memorySettings.setChatHistoryCompressionEnabled(enabled) }
     }
 
     /**
@@ -274,7 +274,7 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setChatHistoryCompressionThresholdTokens(tokens) }
+        scope.launch { memorySettings.setChatHistoryCompressionThresholdTokens(tokens) }
     }
 
     /**
@@ -289,7 +289,7 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setChatHistoryLiveWindowSize(size) }
+        scope.launch { memorySettings.setChatHistoryLiveWindowSize(size) }
     }
 
     /**
@@ -303,7 +303,7 @@ class MemorySettingsDelegate(
             return
         }
         clearMemoryValidationError()
-        scope.launch { settingsRepository.setActiveEmbeddingProviderId(id) }
+        scope.launch { memorySettings.setActiveEmbeddingProviderId(id) }
     }
 
     /** Clears the transient memory-tuning validation error (e.g. after the screen showed it). */
@@ -453,7 +453,7 @@ class MemorySettingsDelegate(
             }
             // The store is now consistent with the active provider — record it so
             // the "re-embed recommended" banner disappears.
-            settingsRepository.setLastReembedProviderId(state.value.activeEmbeddingProviderId)
+            memorySettings.setLastReembedProviderId(state.value.activeEmbeddingProviderId)
             emitSnackbar(appContext.getString(R.string.settings_memory_reembed_done))
         }
     }
@@ -466,7 +466,7 @@ class MemorySettingsDelegate(
     fun performClearMemory() {
         scope.launch {
             clearAllMemoryUseCase()
-            settingsRepository.setLastReembedProviderId(state.value.activeEmbeddingProviderId)
+            memorySettings.setLastReembedProviderId(state.value.activeEmbeddingProviderId)
             emitSnackbar(appContext.getString(R.string.settings_memory_cleared_snackbar))
         }
     }

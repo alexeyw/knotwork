@@ -21,7 +21,8 @@ details.
   sections — generation and model, network, memory, tools, run limits, entry
   points, privacy, app state — and code depends only on the section it reads.
   The test suite refuses new code that asks for all settings at once. Nothing
-  about how settings are stored changes.
+  about how settings are stored changes, and the settings no longer need an
+  exemption from the class-size limit.
 
 - **The pipeline engine is split into small parts, without changing what it
   does.** It was one 2,000-line class built around a 1,200-line function. Each
@@ -36,9 +37,9 @@ details.
   155 suppressions of the detekt rules that limit how long or tangled a class or
   function may be. 126 of them did nothing, and they have been removed. The rest
   are listed in `config/detekt/size-suppressions.txt`, one line per suppressed
-  rule; splitting the engine has since removed five more. The build now
-  fails on a suppression that is not listed, and on a listed one that is gone, so
-  the list can only shrink. See
+  rule; splitting the engine has since removed five more, and splitting the
+  settings two. The build now fails on a suppression that is not listed, and on
+  a listed one that is gone, so the list can only shrink. See
   [`docs/static-analysis.md`](docs/static-analysis.md#size-suppression-ratchet-verifysizesuppressions).
 
 ### Tests

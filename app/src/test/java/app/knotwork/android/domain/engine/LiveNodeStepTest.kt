@@ -110,6 +110,7 @@ class LiveNodeStepTest {
         inputs = NodeInputComposer.Factory(
             mockk(),
             mockk(),
+            mockk(),
             PromptTemplateEngine(),
             emptySet(),
             NodeContextBuilder(),

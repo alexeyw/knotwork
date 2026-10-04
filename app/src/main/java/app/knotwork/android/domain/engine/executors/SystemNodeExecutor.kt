@@ -22,7 +22,7 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.RouteLabels
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -70,7 +70,7 @@ class SystemNodeExecutor @Inject constructor(
     private val loadModelUseCase: LoadModelUseCase,
     @Suppress("unused") private val chatRepository: ChatRepository,
     private val structuredOutputGate: StructuredOutputGate,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val cloudStructuredFactory: CloudStructuredInferenceClientFactory,
 ) : NodeExecutor {
 
@@ -97,7 +97,7 @@ class SystemNodeExecutor @Inject constructor(
             }
         val fullPrompt = "$nodeSystemPrompt$imageNote\n\nUSER: $inputText\nAGENT: "
 
-        val configuredMaxRepairs = settingsRepository.structuredOutputMaxRepairs.first()
+        val configuredMaxRepairs = runSettings.structuredOutputMaxRepairs.first()
         // The last inference attempt's streamed text. Reset on every repair (see
         // [resettingListener]) so that — after the gate returns — it holds exactly
         // the text of the attempt that finally validated, usable as the node's

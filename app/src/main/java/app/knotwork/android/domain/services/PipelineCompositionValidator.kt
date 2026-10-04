@@ -5,7 +5,7 @@ import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineTargetAvailability
 import app.knotwork.android.domain.models.PipelineValidationError
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -25,7 +25,7 @@ import javax.inject.Inject
  *   pipeline already on the path (including a self-reference); such a
  *   composition can never terminate.
  * - [PipelineValidationError.PipelineNestingTooDeep] — a reference chain would
- *   run deeper than [SettingsRepository.pipelineMaxNestingDepth], mirroring the
+ *   run deeper than [RunSettings.pipelineMaxNestingDepth], mirroring the
  *   runtime ceiling enforced by `PipelineNodeExecutor`.
  *
  * Because the call graph is known ahead of time, this is the authoritative
@@ -41,7 +41,7 @@ import javax.inject.Inject
  */
 class PipelineCompositionValidator @Inject constructor(
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
 ) {
     /**
      * Validates the composition rooted at [graph].
@@ -63,7 +63,7 @@ class PipelineCompositionValidator @Inject constructor(
         // Cheap short-circuit: nothing to compose if there are no PIPELINE nodes.
         if (graph.nodes.none { it.type == NodeType.PIPELINE }) return emptyList()
 
-        val maxDepth = settingsRepository.pipelineMaxNestingDepth.first()
+        val maxDepth = runSettings.pipelineMaxNestingDepth.first()
         val errors = LinkedHashSet<PipelineValidationError>()
         // Descendants resolve from the supplied in-memory set first, then the
         // repo. The root resolves to its own in-memory instance regardless.
@@ -124,7 +124,7 @@ class PipelineCompositionValidator @Inject constructor(
      *  - its call graph transitively runs [editingPipelineId], which would close a
      *    cycle ([PipelineTargetAvailability.Reason.Cycle], naming the back-reference);
      *  - nesting it under the edited pipeline would exceed
-     *    [SettingsRepository.pipelineMaxNestingDepth]
+     *    [RunSettings.pipelineMaxNestingDepth]
      *    ([PipelineTargetAvailability.Reason.Depth]).
      *
      * The depth check measures the candidate's own subtree as if the edited
@@ -142,7 +142,7 @@ class PipelineCompositionValidator @Inject constructor(
         editingGraph: PipelineGraph,
     ): List<PipelineTargetAvailability> {
         val all = pipelineRepository.getAllPipelines().first()
-        val maxDepth = settingsRepository.pipelineMaxNestingDepth.first()
+        val maxDepth = runSettings.pipelineMaxNestingDepth.first()
         // Resolve ids through the persisted set, but let the in-memory edited
         // graph win for its own id so unsaved edits drive the classification.
         val byId = all.associateByTo(mutableMapOf()) { it.id }

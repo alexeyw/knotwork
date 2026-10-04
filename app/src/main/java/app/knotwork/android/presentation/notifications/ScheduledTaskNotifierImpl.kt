@@ -14,7 +14,7 @@ import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
 import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.models.RunTerminationKind
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
 import app.knotwork.android.presentation.ui.common.RunTerminationTone
@@ -42,7 +42,7 @@ import javax.inject.Singleton
 @Singleton
 class ScheduledTaskNotifierImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
 ) : ScheduledTaskNotifier {
 
     override fun registerChannel() {
@@ -123,7 +123,7 @@ class ScheduledTaskNotifierImpl @Inject constructor(
 
     @SuppressLint("MissingPermission") // hasPostNotificationsPermission() gates the call below.
     private suspend fun post(sessionId: String, title: String, body: String, icon: Int) {
-        val enabled = settingsRepository.scheduledTaskNotificationsEnabled.firstOrNull() ?: false
+        val enabled = runSettings.scheduledTaskNotificationsEnabled.firstOrNull() ?: false
         if (!enabled) return
         if (!hasPostNotificationsPermission()) return
         val notification = NotificationCompat.Builder(context, NotificationChannels.TASK_RESULTS)

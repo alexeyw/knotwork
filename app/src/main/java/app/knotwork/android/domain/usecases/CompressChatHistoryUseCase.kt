@@ -10,7 +10,7 @@ import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -51,7 +51,7 @@ import javax.inject.Inject
  * @property loadModelUseCase Ensures the active model is loaded before inference.
  * @property promptTemplateEngine Substitutes runtime `$VARIABLE`s (here `$DATE`).
  * @property promptVariableProviders Registered providers backing the templating.
- * @property settingsRepository Source of the compression toggle, token budget,
+ * @property memorySettings Source of the compression toggle, token budget,
  *   and live-window size.
  */
 class CompressChatHistoryUseCase @Inject constructor(
@@ -60,7 +60,7 @@ class CompressChatHistoryUseCase @Inject constructor(
     private val loadModelUseCase: LoadModelUseCase,
     private val promptTemplateEngine: PromptTemplateEngine,
     private val promptVariableProviders: Set<@JvmSuppressWildcards PromptVariableProvider>,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
 ) {
 
     /** What a single compression pass did. */
@@ -83,10 +83,10 @@ class CompressChatHistoryUseCase @Inject constructor(
     suspend operator fun invoke(sessionId: String, nowMillis: Long = System.currentTimeMillis()): CompressionOutcome =
         withContext(Dispatchers.Default) {
             if (sessionId.isBlank()) return@withContext CompressionOutcome.SKIPPED
-            if (!settingsRepository.chatHistoryCompressionEnabled.first()) return@withContext CompressionOutcome.SKIPPED
+            if (!memorySettings.chatHistoryCompressionEnabled.first()) return@withContext CompressionOutcome.SKIPPED
 
-            val window = settingsRepository.chatHistoryLiveWindowSize.first()
-            val thresholdTokens = settingsRepository.chatHistoryCompressionThresholdTokens.first()
+            val window = memorySettings.chatHistoryLiveWindowSize.first()
+            val thresholdTokens = memorySettings.chatHistoryCompressionThresholdTokens.first()
 
             val messages = chatRepository.getMessagesForSession(sessionId).first()
             if (messages.size <= window) return@withContext CompressionOutcome.SKIPPED

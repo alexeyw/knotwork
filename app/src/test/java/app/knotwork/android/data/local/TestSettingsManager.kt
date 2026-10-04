@@ -6,8 +6,10 @@ import app.knotwork.android.data.local.crypto.SecretStore
 import app.knotwork.android.data.local.settings.AppStateSettingsStore
 import app.knotwork.android.data.local.settings.EntryPointSettingsStore
 import app.knotwork.android.data.local.settings.GenerationSettingsStore
+import app.knotwork.android.data.local.settings.MemorySettingsStore
 import app.knotwork.android.data.local.settings.NetworkSettingsStore
 import app.knotwork.android.data.local.settings.PrivacySettingsStore
+import app.knotwork.android.data.local.settings.RunSettingsStore
 
 /**
  * Builds a [SettingsManager] from its section stores over [dataStore], the way Hilt wires it: one
@@ -27,4 +29,6 @@ internal fun testSettingsManager(dataStore: DataStore<Preferences>, secretStore:
         entryPoints = EntryPointSettingsStore(dataStore),
         generation = GenerationSettingsStore(dataStore, secretStore),
         network = NetworkSettingsStore(dataStore),
+        memory = MemorySettingsStore(dataStore),
+        run = RunSettingsStore(dataStore),
     )

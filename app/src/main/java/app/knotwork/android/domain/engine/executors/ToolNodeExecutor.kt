@@ -20,7 +20,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.prompt.ChatTranscript
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import kotlinx.coroutines.CancellationException
@@ -60,7 +60,7 @@ class ToolNodeExecutor @Inject constructor(
     private val toolRepository: ToolRepository,
     private val toolInvocationGate: ToolInvocationGate,
     private val structuredOutputGate: StructuredOutputGate,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val cloudStructuredFactory: CloudStructuredInferenceClientFactory,
 ) : NodeExecutor {
 
@@ -112,7 +112,7 @@ class ToolNodeExecutor @Inject constructor(
 
         emit(NodeOutput.State(AgentOrchestratorState.Thinking("Analyzing task for tool execution...")))
 
-        val configuredMaxRepairs = settingsRepository.structuredOutputMaxRepairs.first()
+        val configuredMaxRepairs = runSettings.structuredOutputMaxRepairs.first()
         // Engine selection mirrors the SKILL node: a node carrying a cloud
         // provider resolves its tool call against that provider; otherwise the
         // local LiteRT engine backs it. Tool selection / arguments are JSON

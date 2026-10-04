@@ -63,7 +63,7 @@ class ResumePipelineRunUseCaseTest {
         useCase = ResumePipelineRunUseCase(
             pipelineRunRepository = pipelineRunRepository,
             pipelineRepository = pipelineRepository,
-            settingsRepository = settingsRepository,
+            runSettings = settingsRepository,
             pendingInteractionRepository = pendingInteractionRepository,
             taskQueueManager = taskQueueManager,
         )

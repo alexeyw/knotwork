@@ -48,7 +48,7 @@ class ChatHistoryCompressionCoordinatorTest {
             CompressChatHistoryUseCase.CompressionOutcome.SKIPPED
 
         coordinator = ChatHistoryCompressionCoordinator(
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
             compressChatHistoryUseCase = compressChatHistoryUseCase,
             taskQueueManager = taskQueueManager,
         )

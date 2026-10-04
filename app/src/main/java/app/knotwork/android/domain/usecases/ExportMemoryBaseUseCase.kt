@@ -2,7 +2,7 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.memoryio.MemoryJsonSerializer
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -23,13 +23,13 @@ import javax.inject.Inject
  * [MemoryImportUseCase].
  *
  * @property memoryRepository Source of the chunks to export.
- * @property settingsRepository Source of the active embedding provider id
+ * @property memorySettings Source of the active embedding provider id
  *   stamped onto the document.
  * @return Number of chunks written.
  */
 class ExportMemoryBaseUseCase @Inject constructor(
     private val memoryRepository: MemoryRepository,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
 ) {
     /**
      * Serialises chunks into [target] and returns the number of entries
@@ -50,7 +50,7 @@ class ExportMemoryBaseUseCase @Inject constructor(
     ): Int = withContext(Dispatchers.IO) {
         val memories = memoryRepository.getAllMemories()
             .let { all -> if (ids == null) all else all.filter { it.id in ids } }
-        val providerId = settingsRepository.activeEmbeddingProviderId.first()
+        val providerId = memorySettings.activeEmbeddingProviderId.first()
         val payload = MemoryJsonSerializer.serialize(
             chunks = memories,
             embeddingProviderId = providerId,

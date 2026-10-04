@@ -250,7 +250,7 @@ The dead ones were deleted. The ones that remain are listed in
 one line per suppressed rule:
 
 ```text
-app/src/main/java/app/knotwork/android/data/local/SettingsManager.kt :: class SettingsManager :: LargeClass
+app/src/main/java/app/knotwork/android/di/DataModule.kt :: class DataModule :: TooManyFunctions
 ```
 
 `:app:verifySizeSuppressions` (wired into `check`) compares the sources with

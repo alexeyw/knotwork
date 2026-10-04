@@ -92,7 +92,7 @@ class MemoryCompactionUseCaseTest {
             promptVariableProviders = emptySet(),
             embeddingProviderResolver = embeddingProviderResolver,
             memoryRepository = memoryRepository,
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
             kMeansClusterer = kMeansClusterer,
             // The verifier is pure arithmetic: exercising the real one keeps
             // these tests honest about what actually gets deleted.

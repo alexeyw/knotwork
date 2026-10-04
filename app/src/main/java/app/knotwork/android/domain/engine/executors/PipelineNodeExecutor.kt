@@ -15,8 +15,8 @@ import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -95,14 +95,14 @@ import javax.inject.Provider
  * recursive call runs one level deeper. The authoritative protection against
  * runaway nesting and cycles is *static* — `PipelineCompositionValidator`
  * rejects such compositions before any run starts. The runtime ceiling here
- * ([SettingsRepository.pipelineMaxNestingDepth]) is only the safety net for a
+ * ([RunSettings.pipelineMaxNestingDepth]) is only the safety net for a
  * graph edited in the window between validation and execution. The object-graph
  * cycle (engine → [NodeExecutorFactory] → this executor → engine) is broken
  * with a [Provider].
  */
 class PipelineNodeExecutor @Inject constructor(
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val pipelineRunRepository: PipelineRunRepository,
     private val runTraceRepository: RunTraceRepository,
     private val engineProvider: Provider<GraphExecutionEngine>,
@@ -122,7 +122,7 @@ class PipelineNodeExecutor @Inject constructor(
             return@flow
         }
 
-        val maxDepth = settingsRepository.pipelineMaxNestingDepth.first()
+        val maxDepth = runSettings.pipelineMaxNestingDepth.first()
         if (scope.run.depth + 1 > maxDepth) {
             emit(failure("Pipeline nesting depth exceeded the limit of $maxDepth"))
             return@flow

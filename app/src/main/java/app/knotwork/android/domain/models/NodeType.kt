@@ -74,7 +74,7 @@ enum class NodeType {
      * inherent hazards; both are rejected statically before a run starts
      * (the call graph is known ahead of time — see
      * `PipelineCompositionValidator`), with a runtime depth ceiling
-     * ([app.knotwork.android.domain.repositories.SettingsRepository.pipelineMaxNestingDepth])
+     * ([app.knotwork.android.domain.repositories.RunSettings.pipelineMaxNestingDepth])
      * as a race-condition safety net.
      */
     PIPELINE,

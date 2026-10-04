@@ -1,6 +1,6 @@
 package app.knotwork.android.presentation.ui.settings
 
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -19,27 +19,27 @@ import kotlinx.coroutines.launch
  *
  * @property scope The ViewModel's `viewModelScope`.
  * @property state The ViewModel's single source-of-truth state flow.
- * @property settingsRepository Persistence for the pipeline step cap.
+ * @property runSettings Persistence for the pipeline step cap.
  */
 class PipelinesSettingsDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<SettingsUiState>,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
 ) {
 
     init {
-        settingsRepository.pipelineMaxSteps.onEach { value ->
+        runSettings.pipelineMaxSteps.onEach { value ->
             state.update { it.copy(capAutonomousSteps = value) }
         }.launchIn(scope)
         // Read, never written here: the entry row shows the current limits, and
         // the run-limits screen is where they are changed.
-        settingsRepository.runMaxTokens.onEach { value ->
+        runSettings.runMaxTokens.onEach { value ->
             state.update { it.copy(runMaxTokens = value) }
         }.launchIn(scope)
-        settingsRepository.pipelineMaxNestingDepth.onEach { value ->
+        runSettings.pipelineMaxNestingDepth.onEach { value ->
             state.update { it.copy(pipelineMaxNestingDepth = value) }
         }.launchIn(scope)
-        settingsRepository.structuredOutputMaxRepairs.onEach { value ->
+        runSettings.structuredOutputMaxRepairs.onEach { value ->
             state.update { it.copy(structuredOutputMaxRepairs = value) }
         }.launchIn(scope)
     }
@@ -49,7 +49,7 @@ class PipelinesSettingsDelegate(
      * the value into the sanctioned range.
      */
     fun setPipelineMaxNestingDepth(depth: Int) {
-        scope.launch { settingsRepository.setPipelineMaxNestingDepth(depth) }
+        scope.launch { runSettings.setPipelineMaxNestingDepth(depth) }
     }
 
     /**
@@ -57,6 +57,6 @@ class PipelinesSettingsDelegate(
      * value into the sanctioned range.
      */
     fun setStructuredOutputMaxRepairs(count: Int) {
-        scope.launch { settingsRepository.setStructuredOutputMaxRepairs(count) }
+        scope.launch { runSettings.setStructuredOutputMaxRepairs(count) }
     }
 }

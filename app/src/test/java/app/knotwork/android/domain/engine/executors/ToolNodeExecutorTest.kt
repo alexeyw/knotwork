@@ -93,7 +93,7 @@ class ToolNodeExecutorTest {
             toolRepository = toolRepository,
             toolInvocationGate = toolInvocationGate,
             structuredOutputGate = StructuredOutputGate(),
-            settingsRepository = settingsRepository,
+            runSettings = settingsRepository,
             cloudStructuredFactory = CloudStructuredInferenceClientFactory { _, _ -> null },
         )
 
@@ -116,7 +116,7 @@ class ToolNodeExecutorTest {
                 toolRepository = toolRepository,
                 toolInvocationGate = toolInvocationGate,
                 structuredOutputGate = StructuredOutputGate(),
-                settingsRepository = settingsRepository,
+                runSettings = settingsRepository,
                 cloudStructuredFactory = CloudStructuredInferenceClientFactory { _, _ ->
                     CloudStructuredClient(
                         inference = { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) },

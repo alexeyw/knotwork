@@ -93,7 +93,7 @@ class MemoryExtractionIntegrationTest {
             memoryRepository = repository,
             memorySearchStatsTracker = MemorySearchStatsTracker(),
             structuredOutputGate = StructuredOutputGate(),
-            settingsRepository = settingsRepository,
+            runSettings = settingsRepository,
             metricsRepository = metricsRepository,
         )
     }

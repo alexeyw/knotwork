@@ -11,7 +11,7 @@ import app.knotwork.android.domain.repositories.ClarificationRepository
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
 import app.knotwork.android.domain.usecases.ResumeOutcome
 import app.knotwork.android.domain.usecases.ResumePipelineRunUseCase
@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
  * @property state The ViewModel's single source-of-truth state flow.
  * @property pipelineRunRepository Resolves the session's run records.
  * @property pipelineRepository Resolves the interrupted run's node label.
- * @property settingsRepository Source of the resume window.
+ * @property runSettings Source of the resume window.
  * @property agentOrchestratorUseCase Source of the live pending-approval snapshot on restore.
  * @property clarificationRepository Source of the live pending-clarification snapshot on restore.
  * @property pendingInteractionRepository Source of the durable parked interaction on restore.
@@ -69,7 +69,7 @@ class ChatHomeReattachDelegate(
     private val state: MutableStateFlow<ChatHomeScreenState>,
     private val pipelineRunRepository: PipelineRunRepository,
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val agentOrchestratorUseCase: AgentOrchestratorUseCase,
     private val clarificationRepository: ClarificationRepository,
     private val pendingInteractionRepository: PendingInteractionRepository,
@@ -258,7 +258,7 @@ class ChatHomeReattachDelegate(
         // The card only offers Resume while the checkpoint is inside the resume
         // window and the record carries everything resume needs (the original
         // prompt — absent on legacy rows). The use case re-validates on tap.
-        val maxAgeMillis = settingsRepository.resumeMaxAgeHours.first() * MILLIS_PER_HOUR
+        val maxAgeMillis = runSettings.resumeMaxAgeHours.first() * MILLIS_PER_HOUR
         val interruptedAt = run.finishedAt ?: run.startedAt
         val resumable = run.userPrompt != null &&
             System.currentTimeMillis() - interruptedAt <= maxAgeMillis

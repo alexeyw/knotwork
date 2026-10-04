@@ -350,7 +350,7 @@ constructor(
         state = _state,
         pipelineRunRepository = pipelineRunRepository,
         pipelineRepository = pipelineRepository,
-        settingsRepository = settingsRepository,
+        runSettings = settingsRepository,
         agentOrchestratorUseCase = agentOrchestratorUseCase,
         clarificationRepository = clarificationRepository,
         pendingInteractionRepository = pendingInteractionRepository,

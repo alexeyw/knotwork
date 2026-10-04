@@ -73,7 +73,7 @@ class CompressChatHistoryUseCaseTest {
             loadModelUseCase = loadModelUseCase,
             promptTemplateEngine = promptTemplateEngine,
             promptVariableProviders = emptySet(),
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
         )
     }
 

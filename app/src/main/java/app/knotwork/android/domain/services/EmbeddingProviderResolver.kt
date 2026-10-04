@@ -1,6 +1,6 @@
 package app.knotwork.android.domain.services
 
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
@@ -12,18 +12,18 @@ import javax.inject.Singleton
  *
  * The memory pipeline asks this resolver for "the" embedding provider on every
  * embed/search call rather than holding a fixed provider reference, so that a
- * mid-session change to `SettingsRepository.activeEmbeddingProviderId` takes
+ * mid-session change to `MemorySettings.activeEmbeddingProviderId` takes
  * effect immediately without restarting any long-lived component.
  *
  * @property providers All registered providers, keyed by [EmbeddingProvider.id]
  *   (supplied by Hilt multibinding). Always contains at least the on-device
  *   [EmbeddingProvider.ID_USE] entry.
- * @property settingsRepository Source of the active provider id.
+ * @property memorySettings Source of the active provider id.
  */
 @Singleton
 class EmbeddingProviderResolver @Inject constructor(
     private val providers: Map<String, @JvmSuppressWildcards EmbeddingProvider>,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
 ) {
 
     /**
@@ -45,7 +45,7 @@ class EmbeddingProviderResolver @Inject constructor(
      * @return The provider to use; never null.
      */
     suspend fun resolve(): EmbeddingProvider {
-        val activeId = settingsRepository.activeEmbeddingProviderId.first()
+        val activeId = memorySettings.activeEmbeddingProviderId.first()
         val active = providers[activeId]
         if (active == null) {
             Timber.w(

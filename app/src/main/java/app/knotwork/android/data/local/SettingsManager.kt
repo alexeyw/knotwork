@@ -1,7 +1,6 @@
 package app.knotwork.android.data.local
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -14,8 +13,10 @@ import app.knotwork.android.data.local.crypto.SecureValueUnreadableException
 import app.knotwork.android.data.local.settings.AppStateSettingsStore
 import app.knotwork.android.data.local.settings.EntryPointSettingsStore
 import app.knotwork.android.data.local.settings.GenerationSettingsStore
+import app.knotwork.android.data.local.settings.MemorySettingsStore
 import app.knotwork.android.data.local.settings.NetworkSettingsStore
 import app.knotwork.android.data.local.settings.PrivacySettingsStore
+import app.knotwork.android.data.local.settings.RunSettingsStore
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpServerConfig
@@ -26,8 +27,10 @@ import app.knotwork.android.domain.models.UpdateMcpServerResult
 import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.GenerationSettings
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.repositories.PrivacySettings
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.repositories.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -59,7 +62,7 @@ import javax.inject.Singleton
  *
  * The sections already split out into their own stores ([AppStateSettingsStore],
  * [PrivacySettingsStore], [EntryPointSettingsStore], [GenerationSettingsStore],
- * [NetworkSettingsStore]) are delegated to; the rest is still implemented
+ * [NetworkSettingsStore], [MemorySettingsStore], [RunSettingsStore]) are delegated to; the rest is still implemented
  * here and moves out section by section. Both resets stay here until every section has moved, and
  * write each split-out section's part through its store, in the same atomic edit.
  *
@@ -74,9 +77,10 @@ import javax.inject.Singleton
  * @property entryPoints The store of the entry-point section; writes its part of a reset.
  * @property generation The store of the generation section; writes its part of both resets.
  * @property network The store of the network section; writes its part of both resets.
+ * @property memory The store of the memory section; writes its part of a reset.
+ * @property run The store of the run section; writes its part of both resets.
  */
 @Singleton
-@Suppress("LargeClass") // Shrinks as each settings section moves out to its own store.
 class SettingsManager @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val secretsStore: SecretStore,
@@ -85,9 +89,13 @@ class SettingsManager @Inject constructor(
     private val entryPoints: EntryPointSettingsStore,
     private val generation: GenerationSettingsStore,
     private val network: NetworkSettingsStore,
+    private val memory: MemorySettingsStore,
+    private val run: RunSettingsStore,
 ) : SettingsRepository,
     GenerationSettings by generation,
     NetworkSettings by network,
+    MemorySettings by memory,
+    RunSettings by run,
     AppStateSettings by appState,
     PrivacySettings by privacy,
     EntryPointSettings by entryPoints {
@@ -110,16 +118,6 @@ class SettingsManager @Inject constructor(
         // would silently drop every override a user had already set. The Kotlin
         // surface (`toolRiskOverrides`) is the honest name; this string is history.
         val TOOL_RISK_OVERRIDES = stringPreferencesKey("app_function_risk_overrides")
-        val MEMORY_LAST_COMPACTED_AT =
-            androidx.datastore.preferences.core.longPreferencesKey("memory_last_compacted_at")
-        val MEMORY_SEARCH_TOP_K = intPreferencesKey("memory_search_top_k")
-        val CHAT_HISTORY_COMPRESSION_ENABLED = booleanPreferencesKey("chat_history_compression_enabled")
-        val CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS =
-            intPreferencesKey("chat_history_compression_threshold_tokens")
-        val CHAT_HISTORY_LIVE_WINDOW_SIZE = intPreferencesKey("chat_history_live_window_size")
-        val MEMORY_SEARCH_THRESHOLD =
-            androidx.datastore.preferences.core.floatPreferencesKey("memory_search_threshold")
-        val MEMORY_RECENCY_HALF_LIFE_DAYS = intPreferencesKey("memory_recency_half_life_days")
 
         val TOOL_CALL_TIMEOUT_MS = androidx.datastore.preferences.core.longPreferencesKey("tool_call_timeout_ms")
         val WORKSPACE_MAX_FILE_SIZE_BYTES =
@@ -136,35 +134,10 @@ class SettingsManager @Inject constructor(
         val ALLOWED_HTTP_DOMAINS = stringPreferencesKey("allowed_http_domains")
         val HTTP_TOOL_MAX_RESPONSE_BYTES =
             androidx.datastore.preferences.core.longPreferencesKey("http_tool_max_response_bytes")
-        val PIPELINE_MAX_STEPS = intPreferencesKey("pipeline_max_steps")
-        val PIPELINE_MAX_STEPS_BACKGROUND = intPreferencesKey("pipeline_max_steps_background")
-        val RUN_MAX_TOKENS = intPreferencesKey("run_max_tokens")
-        val RUN_MAX_TOKENS_BACKGROUND = intPreferencesKey("run_max_tokens_background")
-        val PIPELINE_MAX_NESTING_DEPTH = intPreferencesKey("pipeline_max_nesting_depth")
-        val STRUCTURED_OUTPUT_MAX_REPAIRS = intPreferencesKey("structured_output_max_repairs")
-        val RESUME_MAX_AGE_HOURS = intPreferencesKey("resume_max_age_hours")
-        val BACKGROUND_APPROVAL_WINDOW_HOURS = intPreferencesKey("background_approval_window_hours")
-        val MEMORY_SUMMARY_DEFAULT_LIMIT = intPreferencesKey("memory_summary_default_limit")
 
         // Settings redesign.
         val TOOL_APPROVAL_POLICY = stringPreferencesKey("tool_approval_policy")
         val BLOCK_DESTRUCTIVE_TOOLS = booleanPreferencesKey("block_destructive_tools")
-        val SCHEDULED_TASK_NOTIFICATIONS = booleanPreferencesKey("scheduled_task_notifications")
-
-        // Embedding provider abstraction.
-        val ACTIVE_EMBEDDING_PROVIDER_ID = stringPreferencesKey("active_embedding_provider_id")
-        val LAST_REEMBED_PROVIDER_ID = stringPreferencesKey("last_reembed_provider_id")
-
-        // Memory write auto-extraction.
-        val AUTO_EXTRACT_ENABLED = booleanPreferencesKey("auto_extract_enabled")
-
-        // Background memory compaction.
-        val MEMORY_COMPACTION_ENABLED = booleanPreferencesKey("memory_compaction_enabled")
-        val MEMORY_COMPACTION_AGE_DAYS = intPreferencesKey("memory_compaction_age_days")
-        val MAX_MEMORY_CHUNKS = intPreferencesKey("max_memory_chunks")
-
-        // Memory observability.
-        val VERBOSE_MEMORY_LOGGING_ENABLED = booleanPreferencesKey("verbose_memory_logging_enabled")
     }
 
     /**
@@ -688,292 +661,6 @@ class SettingsManager @Inject constructor(
         return json.toString()
     }
 
-    override val memoryLastCompactedAt: Flow<Long> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_LAST_COMPACTED_AT] ?: 0L
-        }
-
-    override suspend fun setMemoryLastCompactedAt(millis: Long) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_LAST_COMPACTED_AT] = millis
-        }
-    }
-
-    override val memorySearchTopK: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_SEARCH_TOP_K]
-                ?: SettingsDefaults.MEMORY_SEARCH_TOP_K_DEFAULT
-        }
-
-    override suspend fun setMemorySearchTopK(topK: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_SEARCH_TOP_K] = topK
-        }
-    }
-
-    override val chatHistoryCompressionEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.CHAT_HISTORY_COMPRESSION_ENABLED]
-                ?: SettingsDefaults.CHAT_HISTORY_COMPRESSION_ENABLED_DEFAULT
-        }
-
-    override suspend fun setChatHistoryCompressionEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.CHAT_HISTORY_COMPRESSION_ENABLED] = enabled
-        }
-    }
-
-    override val chatHistoryCompressionThresholdTokens: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS]
-                ?: SettingsDefaults.CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS_DEFAULT
-        }
-
-    override suspend fun setChatHistoryCompressionThresholdTokens(tokens: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS] = tokens
-        }
-    }
-
-    override val chatHistoryLiveWindowSize: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.CHAT_HISTORY_LIVE_WINDOW_SIZE]
-                ?: SettingsDefaults.CHAT_HISTORY_LIVE_WINDOW_DEFAULT
-        }
-
-    override suspend fun setChatHistoryLiveWindowSize(size: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.CHAT_HISTORY_LIVE_WINDOW_SIZE] = size
-        }
-    }
-
-    override val memorySearchThreshold: Flow<Float> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_SEARCH_THRESHOLD]
-                ?: SettingsDefaults.MEMORY_SEARCH_THRESHOLD_DEFAULT
-        }
-
-    override suspend fun setMemorySearchThreshold(threshold: Float) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_SEARCH_THRESHOLD] = threshold
-        }
-    }
-
-    override val memoryRecencyHalfLifeDays: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_RECENCY_HALF_LIFE_DAYS]
-                ?: SettingsDefaults.MEMORY_RECENCY_HALF_LIFE_DAYS_DEFAULT
-        }
-
-    override suspend fun setMemoryRecencyHalfLifeDays(days: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_RECENCY_HALF_LIFE_DAYS] = days
-        }
-    }
-
-    override val activeEmbeddingProviderId: Flow<String> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.ACTIVE_EMBEDDING_PROVIDER_ID]
-                ?: SettingsDefaults.ACTIVE_EMBEDDING_PROVIDER_ID_DEFAULT
-        }
-
-    override suspend fun setActiveEmbeddingProviderId(id: String) {
-        dataStore.edit { preferences ->
-            // First provider switch ever: capture the provider the stored
-            // vectors were created with, so the re-embed reminder banner can
-            // compare it against the new active id. Done inside the same edit
-            // so the capture and the switch land atomically.
-            if (preferences[PreferencesKeys.LAST_REEMBED_PROVIDER_ID] == null) {
-                preferences[PreferencesKeys.LAST_REEMBED_PROVIDER_ID] =
-                    preferences[PreferencesKeys.ACTIVE_EMBEDDING_PROVIDER_ID]
-                        ?: SettingsDefaults.ACTIVE_EMBEDDING_PROVIDER_ID_DEFAULT
-            }
-            preferences[PreferencesKeys.ACTIVE_EMBEDDING_PROVIDER_ID] = id
-        }
-    }
-
-    override val lastReembedProviderId: Flow<String?> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.LAST_REEMBED_PROVIDER_ID]
-        }
-
-    override suspend fun setLastReembedProviderId(id: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.LAST_REEMBED_PROVIDER_ID] = id
-        }
-    }
-
-    override val autoExtractEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.AUTO_EXTRACT_ENABLED] ?: SettingsDefaults.AUTO_EXTRACT_ENABLED_DEFAULT
-        }
-
-    override val memoryCompactionEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_COMPACTION_ENABLED]
-                ?: SettingsDefaults.MEMORY_COMPACTION_ENABLED_DEFAULT
-        }
-
-    override suspend fun setMemoryCompactionEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_COMPACTION_ENABLED] = enabled
-        }
-    }
-
-    override val verboseMemoryLoggingEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.VERBOSE_MEMORY_LOGGING_ENABLED]
-                ?: SettingsDefaults.VERBOSE_MEMORY_LOGGING_ENABLED_DEFAULT
-        }
-
-    override suspend fun setVerboseMemoryLoggingEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.VERBOSE_MEMORY_LOGGING_ENABLED] = enabled
-        }
-    }
-
-    override val memoryCompactionAgeDays: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_COMPACTION_AGE_DAYS]
-                ?: SettingsDefaults.MEMORY_COMPACTION_AGE_DAYS_DEFAULT
-        }
-
-    override suspend fun setMemoryCompactionAgeDays(days: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_COMPACTION_AGE_DAYS] = days
-        }
-    }
-
-    override val maxMemoryChunks: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MAX_MEMORY_CHUNKS]
-                ?: SettingsDefaults.MAX_MEMORY_CHUNKS_DEFAULT
-        }
-
-    override suspend fun setMaxMemoryChunks(limit: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MAX_MEMORY_CHUNKS] = limit
-        }
-    }
-
-    override suspend fun setAutoExtractEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.AUTO_EXTRACT_ENABLED] = enabled
-        }
-    }
-
     override val toolCallTimeoutMs: Flow<Long> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -1112,233 +799,6 @@ class SettingsManager @Inject constructor(
         }
     }
 
-    override val pipelineMaxSteps: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.PIPELINE_MAX_STEPS] ?: SettingsDefaults.PIPELINE_MAX_STEPS_DEFAULT
-        }
-
-    override suspend fun setPipelineMaxSteps(steps: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PIPELINE_MAX_STEPS] = steps.coerceIn(
-                SettingsDefaults.PIPELINE_MAX_STEPS_MIN,
-                SettingsDefaults.PIPELINE_MAX_STEPS_MAX,
-            )
-        }
-    }
-
-    override val pipelineMaxStepsBackground: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            // Falls back to the *configured* interactive cap, not to a constant.
-            // Until this key existed one setting governed every origin, so a user
-            // who had raised the cap to 40 would otherwise find their triggers
-            // silently dropped to the shipped default on upgrade — the exact
-            // capability regression the background default was chosen to avoid.
-            // A constant is only reached when the user never set either.
-            preferences[PreferencesKeys.PIPELINE_MAX_STEPS_BACKGROUND]
-                ?: preferences[PreferencesKeys.PIPELINE_MAX_STEPS]
-                ?: SettingsDefaults.PIPELINE_MAX_STEPS_BACKGROUND_DEFAULT
-        }
-
-    /**
-     * True once the background key exists in storage, whatever its value.
-     *
-     * Deliberately keyed on presence, not on the number: the default background
-     * ceiling equals the interactive one, so a user who deliberately sets 15
-     * and a user who has never touched it produce the same figure and only the
-     * stored key tells them apart.
-     */
-    override val pipelineMaxStepsBackgroundIsSet: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences -> preferences.contains(PreferencesKeys.PIPELINE_MAX_STEPS_BACKGROUND) }
-
-    override suspend fun setPipelineMaxStepsBackground(steps: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PIPELINE_MAX_STEPS_BACKGROUND] = steps.coerceIn(
-                SettingsDefaults.PIPELINE_MAX_STEPS_MIN,
-                SettingsDefaults.PIPELINE_MAX_STEPS_MAX,
-            )
-        }
-    }
-
-    override val runMaxTokens: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.RUN_MAX_TOKENS] ?: SettingsDefaults.RUN_MAX_TOKENS_DEFAULT
-        }
-
-    override suspend fun setRunMaxTokens(tokens: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.RUN_MAX_TOKENS] = tokens.coerceIn(
-                SettingsDefaults.RUN_MAX_TOKENS_MIN,
-                SettingsDefaults.RUN_MAX_TOKENS_MAX,
-            )
-        }
-    }
-
-    override val runMaxTokensBackground: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.RUN_MAX_TOKENS_BACKGROUND]
-                ?: SettingsDefaults.RUN_MAX_TOKENS_BACKGROUND_DEFAULT
-        }
-
-    override suspend fun setRunMaxTokensBackground(tokens: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.RUN_MAX_TOKENS_BACKGROUND] = tokens.coerceIn(
-                SettingsDefaults.RUN_MAX_TOKENS_MIN,
-                SettingsDefaults.RUN_MAX_TOKENS_MAX,
-            )
-        }
-    }
-
-    override val pipelineMaxNestingDepth: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.PIPELINE_MAX_NESTING_DEPTH]
-                ?: SettingsDefaults.PIPELINE_MAX_NESTING_DEPTH_DEFAULT
-        }
-
-    override suspend fun setPipelineMaxNestingDepth(depth: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PIPELINE_MAX_NESTING_DEPTH] = depth.coerceIn(
-                SettingsDefaults.PIPELINE_MAX_NESTING_DEPTH_MIN,
-                SettingsDefaults.PIPELINE_MAX_NESTING_DEPTH_MAX,
-            )
-        }
-    }
-
-    override val structuredOutputMaxRepairs: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.STRUCTURED_OUTPUT_MAX_REPAIRS]
-                ?: SettingsDefaults.STRUCTURED_OUTPUT_MAX_REPAIRS_DEFAULT
-        }
-
-    override suspend fun setStructuredOutputMaxRepairs(count: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.STRUCTURED_OUTPUT_MAX_REPAIRS] = count.coerceIn(
-                SettingsDefaults.STRUCTURED_OUTPUT_MAX_REPAIRS_MIN,
-                SettingsDefaults.STRUCTURED_OUTPUT_MAX_REPAIRS_MAX,
-            )
-        }
-    }
-
-    override val resumeMaxAgeHours: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.RESUME_MAX_AGE_HOURS] ?: SettingsDefaults.RESUME_MAX_AGE_HOURS_DEFAULT
-        }
-
-    override suspend fun setResumeMaxAgeHours(hours: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.RESUME_MAX_AGE_HOURS] = hours.coerceIn(
-                SettingsDefaults.RESUME_MAX_AGE_HOURS_MIN,
-                SettingsDefaults.RESUME_MAX_AGE_HOURS_MAX,
-            )
-        }
-    }
-
-    override val backgroundApprovalWindowHours: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.BACKGROUND_APPROVAL_WINDOW_HOURS]
-                ?: SettingsDefaults.BACKGROUND_APPROVAL_WINDOW_HOURS_DEFAULT
-        }
-
-    override suspend fun setBackgroundApprovalWindowHours(hours: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.BACKGROUND_APPROVAL_WINDOW_HOURS] = hours.coerceIn(
-                SettingsDefaults.BACKGROUND_APPROVAL_WINDOW_HOURS_MIN,
-                SettingsDefaults.BACKGROUND_APPROVAL_WINDOW_HOURS_MAX,
-            )
-        }
-    }
-
-    override val memorySummaryDefaultLimit: Flow<Int> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.MEMORY_SUMMARY_DEFAULT_LIMIT]
-                ?: SettingsDefaults.MEMORY_SUMMARY_DEFAULT_LIMIT_DEFAULT
-        }
-
-    override suspend fun setMemorySummaryDefaultLimit(limit: Int) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.MEMORY_SUMMARY_DEFAULT_LIMIT] = limit
-        }
-    }
-
     override val toolApprovalPolicy: Flow<ToolApprovalPolicy> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -1391,61 +851,23 @@ class SettingsManager @Inject constructor(
         }
     }
 
-    override val scheduledTaskNotificationsEnabled: Flow<Boolean> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Timber.e(exception, "Error reading preferences")
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.SCHEDULED_TASK_NOTIFICATIONS]
-                ?: SettingsDefaults.SCHEDULED_TASK_NOTIFICATIONS_ENABLED_DEFAULT
-        }
-
-    override suspend fun setScheduledTaskNotificationsEnabled(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SCHEDULED_TASK_NOTIFICATIONS] = enabled
-        }
-    }
-
-    /**
-     * Writes the pipeline / run-ceiling / structured-output defaults into [preferences]. Shared by
-     * [resetSamplingDefaults] (the per-card "Reset to defaults") and [resetToRecommendedDefaults]
-     * (the global reset) so the two paths cannot drift on these keys; the sampling and cloud-retry
-     * keys beside them are written by their own sections' stores, shared the same way.
-     */
-    private fun MutablePreferences.applyRunCeilingDefaults() {
-        this[PreferencesKeys.PIPELINE_MAX_STEPS] = SettingsDefaults.PIPELINE_MAX_STEPS_DEFAULT
-        // REMOVED, not written back to its default. Writing the key is exactly
-        // what marks the background ceiling as independently chosen, so writing
-        // it here would make a reset do the one thing a reset must not: leave
-        // the user with a deliberate-looking decision they never made, silently
-        // detached from the interactive ceiling it is supposed to follow.
-        // Removing it restores the inheritance, which *is* the default state.
-        remove(PreferencesKeys.PIPELINE_MAX_STEPS_BACKGROUND)
-        this[PreferencesKeys.RUN_MAX_TOKENS] = SettingsDefaults.RUN_MAX_TOKENS_DEFAULT
-        this[PreferencesKeys.RUN_MAX_TOKENS_BACKGROUND] = SettingsDefaults.RUN_MAX_TOKENS_BACKGROUND_DEFAULT
-        this[PreferencesKeys.PIPELINE_MAX_NESTING_DEPTH] = SettingsDefaults.PIPELINE_MAX_NESTING_DEPTH_DEFAULT
-        this[PreferencesKeys.STRUCTURED_OUTPUT_MAX_REPAIRS] = SettingsDefaults.STRUCTURED_OUTPUT_MAX_REPAIRS_DEFAULT
-    }
-
     override suspend fun resetSamplingDefaults() {
         dataStore.edit { preferences ->
             generation.writeSamplingDefaults(preferences)
-            preferences.applyRunCeilingDefaults()
+            run.writeSamplingDefaults(preferences)
             network.writeSamplingDefaults(preferences)
         }
     }
 
     override suspend fun resetToRecommendedDefaults() {
         dataStore.edit { preferences ->
-            // Sampling + voice length, cloud retry + local-only mode, run ceilings.
+            // The sections split out into stores write their own part, in this same edit.
             generation.writeRecommendedDefaults(preferences)
             network.writeRecommendedDefaults(preferences)
-            preferences.applyRunCeilingDefaults()
+            run.writeRecommendedDefaults(preferences)
+            memory.writeRecommendedDefaults(preferences)
+            privacy.writeRecommendedDefaults(preferences)
+            entryPoints.writeRecommendedDefaults(preferences)
             // Tool / workspace / http limits.
             preferences[PreferencesKeys.TOOL_CALL_TIMEOUT_MS] = SettingsDefaults.TOOL_CALL_TIMEOUT_MS_DEFAULT
             preferences[PreferencesKeys.WORKSPACE_MAX_FILE_SIZE_BYTES] =
@@ -1456,43 +878,11 @@ class SettingsManager @Inject constructor(
                 SettingsDefaults.WORKSPACE_READ_TOKEN_BUDGET_DEFAULT
             preferences[PreferencesKeys.HTTP_TOOL_MAX_RESPONSE_BYTES] =
                 SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT
-            // Run lifecycle windows / retention.
-            preferences[PreferencesKeys.RESUME_MAX_AGE_HOURS] = SettingsDefaults.RESUME_MAX_AGE_HOURS_DEFAULT
-            preferences[PreferencesKeys.BACKGROUND_APPROVAL_WINDOW_HOURS] =
-                SettingsDefaults.BACKGROUND_APPROVAL_WINDOW_HOURS_DEFAULT
-            // Memory tuning.
-            preferences[PreferencesKeys.MEMORY_SUMMARY_DEFAULT_LIMIT] =
-                SettingsDefaults.MEMORY_SUMMARY_DEFAULT_LIMIT_DEFAULT
-            preferences[PreferencesKeys.MEMORY_SEARCH_TOP_K] = SettingsDefaults.MEMORY_SEARCH_TOP_K_DEFAULT
-            preferences[PreferencesKeys.MEMORY_SEARCH_THRESHOLD] = SettingsDefaults.MEMORY_SEARCH_THRESHOLD_DEFAULT
-            preferences[PreferencesKeys.MEMORY_RECENCY_HALF_LIFE_DAYS] =
-                SettingsDefaults.MEMORY_RECENCY_HALF_LIFE_DAYS_DEFAULT
-            preferences[PreferencesKeys.MEMORY_COMPACTION_ENABLED] =
-                SettingsDefaults.MEMORY_COMPACTION_ENABLED_DEFAULT
-            preferences[PreferencesKeys.MEMORY_COMPACTION_AGE_DAYS] =
-                SettingsDefaults.MEMORY_COMPACTION_AGE_DAYS_DEFAULT
-            preferences[PreferencesKeys.MAX_MEMORY_CHUNKS] = SettingsDefaults.MAX_MEMORY_CHUNKS_DEFAULT
-            preferences[PreferencesKeys.AUTO_EXTRACT_ENABLED] = SettingsDefaults.AUTO_EXTRACT_ENABLED_DEFAULT
-            preferences[PreferencesKeys.VERBOSE_MEMORY_LOGGING_ENABLED] =
-                SettingsDefaults.VERBOSE_MEMORY_LOGGING_ENABLED_DEFAULT
-            // Chat-history compression.
-            preferences[PreferencesKeys.CHAT_HISTORY_COMPRESSION_ENABLED] =
-                SettingsDefaults.CHAT_HISTORY_COMPRESSION_ENABLED_DEFAULT
-            preferences[PreferencesKeys.CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS] =
-                SettingsDefaults.CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS_DEFAULT
-            preferences[PreferencesKeys.CHAT_HISTORY_LIVE_WINDOW_SIZE] =
-                SettingsDefaults.CHAT_HISTORY_LIVE_WINDOW_DEFAULT
             // Security toggles. The typed policy is written explicitly, so the
             // legacy boolean the migration reads can never decide it again.
             preferences[PreferencesKeys.TOOL_APPROVAL_POLICY] = ToolApprovalPolicy.DEFAULT.key
             preferences[PreferencesKeys.BLOCK_DESTRUCTIVE_TOOLS] =
                 SettingsDefaults.BLOCK_DESTRUCTIVE_TOOLS_DEFAULT
-            // Notifications.
-            preferences[PreferencesKeys.SCHEDULED_TASK_NOTIFICATIONS] =
-                SettingsDefaults.SCHEDULED_TASK_NOTIFICATIONS_ENABLED_DEFAULT
-            // The sections already split out write their own part, in this same edit.
-            privacy.writeRecommendedDefaults(preferences)
-            entryPoints.writeRecommendedDefaults(preferences)
         }
     }
 }

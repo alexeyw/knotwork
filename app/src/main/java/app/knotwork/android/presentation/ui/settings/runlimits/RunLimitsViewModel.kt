@@ -3,7 +3,7 @@ package app.knotwork.android.presentation.ui.settings.runlimits
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.constants.SettingsDefaults
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,10 +57,10 @@ data class RunLimitsUiState(
  * accident, which is the same defect as a reset writing the key (fixed in
  * `SettingsManager.applySamplingDefaults`, and for the same reason).
  *
- * @property settingsRepository Persistence for all four ceilings.
+ * @property runSettings Persistence for all four ceilings.
  */
 @HiltViewModel
-class RunLimitsViewModel @Inject constructor(private val settingsRepository: SettingsRepository) : ViewModel() {
+class RunLimitsViewModel @Inject constructor(private val runSettings: RunSettings) : ViewModel() {
 
     private val _state = MutableStateFlow(RunLimitsUiState())
 
@@ -68,19 +68,19 @@ class RunLimitsViewModel @Inject constructor(private val settingsRepository: Set
     val state: StateFlow<RunLimitsUiState> = _state.asStateFlow()
 
     init {
-        settingsRepository.pipelineMaxSteps
+        runSettings.pipelineMaxSteps
             .onEach { value -> _state.update { it.copy(steps = value) } }
             .launchIn(viewModelScope)
-        settingsRepository.pipelineMaxStepsBackground
+        runSettings.pipelineMaxStepsBackground
             .onEach { value -> _state.update { it.copy(stepsBackground = value) } }
             .launchIn(viewModelScope)
-        settingsRepository.pipelineMaxStepsBackgroundIsSet
+        runSettings.pipelineMaxStepsBackgroundIsSet
             .onEach { isSet -> _state.update { it.copy(stepsBackgroundInherited = !isSet) } }
             .launchIn(viewModelScope)
-        settingsRepository.runMaxTokens
+        runSettings.runMaxTokens
             .onEach { value -> _state.update { it.copy(tokens = value) } }
             .launchIn(viewModelScope)
-        settingsRepository.runMaxTokensBackground
+        runSettings.runMaxTokensBackground
             .onEach { value -> _state.update { it.copy(tokensBackground = value) } }
             .launchIn(viewModelScope)
     }
@@ -94,7 +94,7 @@ class RunLimitsViewModel @Inject constructor(private val settingsRepository: Set
 
     /** Persists the interactive step ceiling once the gesture ends. */
     fun onStepsCommit() {
-        viewModelScope.launch { settingsRepository.setPipelineMaxSteps(_state.value.steps) }
+        viewModelScope.launch { runSettings.setPipelineMaxSteps(_state.value.steps) }
     }
 
     /**
@@ -119,8 +119,8 @@ class RunLimitsViewModel @Inject constructor(private val settingsRepository: Set
     fun onStepsBackgroundCommit() {
         val draft = _state.value.stepsBackground
         viewModelScope.launch {
-            if (draft != settingsRepository.pipelineMaxStepsBackground.first()) {
-                settingsRepository.setPipelineMaxStepsBackground(draft)
+            if (draft != runSettings.pipelineMaxStepsBackground.first()) {
+                runSettings.setPipelineMaxStepsBackground(draft)
             }
         }
     }
@@ -134,7 +134,7 @@ class RunLimitsViewModel @Inject constructor(private val settingsRepository: Set
 
     /** Persists the interactive token ceiling once the gesture ends. */
     fun onTokensCommit() {
-        viewModelScope.launch { settingsRepository.setRunMaxTokens(_state.value.tokens) }
+        viewModelScope.launch { runSettings.setRunMaxTokens(_state.value.tokens) }
     }
 
     /**
@@ -146,6 +146,6 @@ class RunLimitsViewModel @Inject constructor(private val settingsRepository: Set
 
     /** Persists the background token ceiling once the gesture ends. */
     fun onTokensBackgroundCommit() {
-        viewModelScope.launch { settingsRepository.setRunMaxTokensBackground(_state.value.tokensBackground) }
+        viewModelScope.launch { runSettings.setRunMaxTokensBackground(_state.value.tokensBackground) }
     }
 }

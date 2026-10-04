@@ -4,8 +4,10 @@ import app.knotwork.android.data.local.SettingsManager
 import app.knotwork.android.data.local.settings.AppStateSettingsStore
 import app.knotwork.android.data.local.settings.EntryPointSettingsStore
 import app.knotwork.android.data.local.settings.GenerationSettingsStore
+import app.knotwork.android.data.local.settings.MemorySettingsStore
 import app.knotwork.android.data.local.settings.NetworkSettingsStore
 import app.knotwork.android.data.local.settings.PrivacySettingsStore
+import app.knotwork.android.data.local.settings.RunSettingsStore
 import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.GenerationSettings
@@ -52,20 +54,20 @@ abstract class SettingsModule {
     @Singleton
     abstract fun bindNetworkSettings(store: NetworkSettingsStore): NetworkSettings
 
-    /** Binds the memory and chat-history section. */
+    /** Binds the memory and chat-history section to its store. */
     @Binds
     @Singleton
-    abstract fun bindMemorySettings(settingsManager: SettingsManager): MemorySettings
+    abstract fun bindMemorySettings(store: MemorySettingsStore): MemorySettings
 
     /** Binds the tools and workspace section. */
     @Binds
     @Singleton
     abstract fun bindToolSettings(settingsManager: SettingsManager): ToolSettings
 
-    /** Binds the run ceilings and background-run section. */
+    /** Binds the run ceilings and background-run section to its store. */
     @Binds
     @Singleton
-    abstract fun bindRunSettings(settingsManager: SettingsManager): RunSettings
+    abstract fun bindRunSettings(store: RunSettingsStore): RunSettings
 
     /** Binds the entry-point bindings section to its store. */
     @Binds

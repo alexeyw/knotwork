@@ -61,7 +61,7 @@ class ParkedRunResumerTest {
         resumer = ParkedRunResumer(
             pendingInteractionRepository = pendingInteractionRepository,
             pipelineRunRepository = pipelineRunRepository,
-            settingsRepository = settingsRepository,
+            runSettings = settingsRepository,
             approvalNotifier = approvalNotifier,
             clarificationNotifier = clarificationNotifier,
             ceilingNotifier = ceilingNotifier,

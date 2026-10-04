@@ -63,7 +63,8 @@ fun testGraphExecutionEngine(
     ),
     nodeInputs = NodeInputComposer.Factory(
         chatRepository = chatRepository,
-        settingsRepository = settingsRepository,
+        memorySettings = settingsRepository,
+        toolSettings = settingsRepository,
         promptTemplateEngine = promptTemplateEngine,
         promptVariableProviders = promptVariableProviders,
         nodeContextBuilder = nodeContextBuilder,

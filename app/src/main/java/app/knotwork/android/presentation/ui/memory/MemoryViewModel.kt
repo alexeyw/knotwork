@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.usecases.EstimateCompactionUseCase
 import app.knotwork.android.domain.usecases.ExportMemoryBaseUseCase
@@ -45,7 +45,7 @@ import javax.inject.Inject
 class MemoryViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val memoryRepository: MemoryRepository,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val embeddingProviderResolver: EmbeddingProviderResolver,
     private val exportMemoryBaseUseCase: ExportMemoryBaseUseCase,
     private val saveMessageToMemoryUseCase: SaveMessageToMemoryUseCase,
@@ -98,7 +98,7 @@ class MemoryViewModel @Inject constructor(
             try {
                 val memories = memoryRepository.getAllMemories()
                 val totalBytes = memoryRepository.observeStats().first().totalBytes
-                val lastCompactedAt = settingsRepository.memoryLastCompactedAt.first()
+                val lastCompactedAt = memorySettings.memoryLastCompactedAt.first()
                 val sessionNames =
                     resolveSessionNames(memories.mapNotNull { (it.source as? MemorySource.ChatSession)?.sessionId })
                 _uiState.update {
