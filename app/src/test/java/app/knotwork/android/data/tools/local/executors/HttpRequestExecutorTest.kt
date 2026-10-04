@@ -2,6 +2,7 @@ package app.knotwork.android.data.tools.local.executors
 
 import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
@@ -52,10 +53,7 @@ class HttpRequestExecutorTest {
         server = MockWebServer()
         server.start()
         // No stored credentials by default.
-        every { apiKeys.getOpenAIKey() } returns flowOf(null)
-        every { apiKeys.getAnthropicKey() } returns flowOf(null)
-        every { apiKeys.getGoogleKey() } returns flowOf(null)
-        every { apiKeys.getDeepSeekKey() } returns flowOf(null)
+        every { apiKeys.getApiKey(any()) } returns flowOf(null)
         every { settings.httpToolMaxResponseBytes } returns
             flowOf(SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_DEFAULT)
         executor = HttpRequestExecutor(client, settings, apiKeys, networkActivity)
@@ -152,7 +150,7 @@ class HttpRequestExecutorTest {
     @Test
     fun `given a stored key in a header when execute then refuses without a request`() = runTest {
         allow(server.hostName)
-        every { apiKeys.getOpenAIKey() } returns flowOf("sk-leak-123")
+        every { apiKeys.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-leak-123")
 
         val result = run(
             """{"method":"GET","url":"${server.url("/")}","headers":{"Authorization":"Bearer sk-leak-123"}}""",
@@ -165,7 +163,7 @@ class HttpRequestExecutorTest {
     @Test
     fun `given a stored key in the url query when execute then refuses without a request`() = runTest {
         allow(server.hostName)
-        every { apiKeys.getOpenAIKey() } returns flowOf("sk-leak-123")
+        every { apiKeys.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-leak-123")
 
         // The easiest GET exfil channel: a key smuggled into the query string of
         // an allowlisted host. Must be refused before any socket opens.
@@ -179,7 +177,7 @@ class HttpRequestExecutorTest {
     fun `given a stored key as a header name or percent-encoded when execute then refuses without a request`() =
         runTest {
             allow(server.hostName)
-            every { apiKeys.getOpenAIKey() } returns flowOf("sk-leak-123")
+            every { apiKeys.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-leak-123")
             val url = server.url("/log")
 
             // As a header NAME, percent-encoded in the query, percent-encoded in a
@@ -242,13 +240,31 @@ class HttpRequestExecutorTest {
     @Test
     fun `given a stored key in the body when execute then refuses without a request`() = runTest {
         allow(server.hostName)
-        every { apiKeys.getAnthropicKey() } returns flowOf("sk-ant-secret")
+        every { apiKeys.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("sk-ant-secret")
 
         val result = run(
             """{"method":"POST","url":"${server.url("/")}","body":"payload=sk-ant-secret"}""",
         )
 
         assertTrue(result.contains("stored credential"))
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `given the stored key of any provider that uses one in the body when execute then refuses`() = runTest {
+        // The scan once named four providers by hand; a provider added later would have had
+        // its key sent to an allowlisted host unnoticed. This walks the enum, so it grows with it.
+        allow(server.hostName)
+        CloudProvider.entries.filter { it.usesApiKey }.forEach { provider ->
+            every { apiKeys.getApiKey(any()) } returns flowOf(null)
+            every { apiKeys.getApiKey(provider) } returns flowOf("secret-of-${provider.id}")
+
+            val result = run(
+                """{"method":"POST","url":"${server.url("/")}","body":"payload=secret-of-${provider.id}"}""",
+            )
+
+            assertTrue("${provider.id}: $result", result.contains("stored credential"))
+        }
         assertEquals(0, server.requestCount)
     }
 

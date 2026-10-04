@@ -1,11 +1,13 @@
 package app.knotwork.android.presentation.ui.settings.provider
 
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -30,9 +32,10 @@ import org.junit.Test
  * The tests exercise both directions of the contract:
  * - `bind(providerId)` wires the relevant [ApiKeyRepository] read flows into
  *   [ProviderDetailUiState] for every provider.
- * - Each `update*` mutator persists through the repository, applying the
- *   "blank → null" normalisation and the Ollama-specific validation /
- *   context-window fallback.
+ * - Each `update*` mutator persists through the repository under the bound
+ *   provider, applying the "blank → null" normalisation, the address
+ *   validation and the context-window fallback — and never writes a slot the
+ *   provider does not use.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderDetailViewModelTest {
@@ -60,172 +63,156 @@ class ProviderDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /** Every provider reached with a key at a host the client already knows. */
+    private val hostedProviders = ProviderId.entries.filter { it.cloudProvider.usesApiKey }
+
     @Test
-    fun `given OpenAi when bind then key and model flow into state`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-openai")
-        every { apiKeyRepository.getOpenAIModel() } returns flowOf("gpt-4o")
+    fun `given each hosted provider when bind then its key and model flow into state`() = runTest {
+        hostedProviders.forEach { id ->
+            val vm = ProviderDetailViewModel(apiKeyRepository, settingsRepository)
+            every { apiKeyRepository.getApiKey(id.cloudProvider) } returns flowOf("key-${id.name}")
+            every { apiKeyRepository.getModel(id.cloudProvider) } returns flowOf("model-${id.name}")
+
+            vm.bind(id)
+            advanceUntilIdle()
+
+            assertEquals("key-${id.name}", vm.uiState.value.apiKey)
+            assertEquals("model-${id.name}", vm.uiState.value.model)
+        }
+    }
+
+    @Test
+    fun `given a hosted provider when bind then no server address is read`() = runTest {
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-openai")
+        every { apiKeyRepository.getModel(CloudProvider.OPENAI) } returns flowOf("gpt-4o")
 
         viewModel.bind(ProviderId.OpenAi)
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals("sk-openai", state.openAiKey)
-        assertEquals("gpt-4o", state.openAiModel)
-    }
-
-    @Test
-    fun `given Anthropic when bind then key and model flow into state`() = runTest {
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf("sk-ant")
-        every { apiKeyRepository.getAnthropicModel() } returns flowOf("claude")
-
-        viewModel.bind(ProviderId.Anthropic)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals("sk-ant", state.anthropicKey)
-        assertEquals("claude", state.anthropicModel)
-    }
-
-    @Test
-    fun `given Google when bind then key and model flow into state`() = runTest {
-        every { apiKeyRepository.getGoogleKey() } returns flowOf("g-key")
-        every { apiKeyRepository.getGoogleModel() } returns flowOf("gemini")
-
-        viewModel.bind(ProviderId.Google)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals("g-key", state.googleKey)
-        assertEquals("gemini", state.googleModel)
-    }
-
-    @Test
-    fun `given DeepSeek when bind then key and model flow into state`() = runTest {
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf("ds-key")
-        every { apiKeyRepository.getDeepSeekModel() } returns flowOf("deepseek-chat")
-
-        viewModel.bind(ProviderId.DeepSeek)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals("ds-key", state.deepSeekKey)
-        assertEquals("deepseek-chat", state.deepSeekModel)
+        verify(exactly = 0) { apiKeyRepository.getBaseUrl(any()) }
+        verify(exactly = 0) { apiKeyRepository.getOllamaContextWindowSize() }
     }
 
     @Test
     fun `given Ollama when bind then base url model and context window flow into state`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("http://10.0.0.2:11434")
-        every { apiKeyRepository.getOllamaModelName() } returns flowOf("llama3")
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf("http://10.0.0.2:11434")
+        every { apiKeyRepository.getModel(CloudProvider.OLLAMA) } returns flowOf("llama3")
         every { apiKeyRepository.getOllamaContextWindowSize() } returns flowOf(8192)
 
         viewModel.bind(ProviderId.Ollama)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("http://10.0.0.2:11434", state.ollamaBaseUrl)
-        assertEquals("llama3", state.ollamaModel)
+        assertEquals("http://10.0.0.2:11434", state.baseUrl)
+        assertEquals("llama3", state.model)
         assertEquals("8192", state.ollamaContextWindow)
+        verify(exactly = 0) { apiKeyRepository.getApiKey(any()) }
     }
 
     @Test
     fun `given null repository value when bind then state field is empty string`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-        every { apiKeyRepository.getOpenAIModel() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+        every { apiKeyRepository.getModel(CloudProvider.OPENAI) } returns flowOf(null)
 
         viewModel.bind(ProviderId.OpenAi)
         advanceUntilIdle()
 
-        assertEquals("", viewModel.uiState.value.openAiKey)
-        assertEquals("", viewModel.uiState.value.openAiModel)
+        assertEquals("", viewModel.uiState.value.apiKey)
+        assertEquals("", viewModel.uiState.value.model)
     }
 
     @Test
-    fun `given non-blank value when updateOpenAiKey then persists value`() = runTest {
-        viewModel.updateOpenAiKey("sk-new")
+    fun `given non-blank value when updateKey then persists value for that provider`() = runTest {
+        viewModel.updateKey(ProviderId.OpenAi, "sk-new")
         advanceUntilIdle()
-        coVerify { apiKeyRepository.setOpenAIKey("sk-new") }
+        coVerify { apiKeyRepository.setApiKey(CloudProvider.OPENAI, "sk-new") }
     }
 
     @Test
-    fun `given blank value when updateOpenAiKey then persists null`() = runTest {
-        viewModel.updateOpenAiKey("   ")
+    fun `given blank value when updateKey then persists null`() = runTest {
+        viewModel.updateKey(ProviderId.OpenAi, "   ")
         advanceUntilIdle()
-        coVerify { apiKeyRepository.setOpenAIKey(null) }
+        coVerify { apiKeyRepository.setApiKey(CloudProvider.OPENAI, null) }
     }
 
     @Test
-    fun `when update model mutators then each persists trimmed-to-null value`() = runTest {
-        viewModel.updateOpenAiModel("gpt-4o")
-        viewModel.updateAnthropicKey("a")
-        viewModel.updateAnthropicModel("claude")
-        viewModel.updateGoogleKey("g")
-        viewModel.updateGoogleModel("gemini")
-        viewModel.updateDeepSeekKey("d")
-        viewModel.updateDeepSeekModel("deepseek")
-        viewModel.updateOllamaModel("llama3")
+    fun `given Ollama when updateKey then nothing is written`() = runTest {
+        // Ollama has no key; a stray write would create an entry nothing ever reads.
+        viewModel.updateKey(ProviderId.Ollama, "sk-stray")
         advanceUntilIdle()
-
-        coVerify { apiKeyRepository.setOpenAIModel("gpt-4o") }
-        coVerify { apiKeyRepository.setAnthropicKey("a") }
-        coVerify { apiKeyRepository.setAnthropicModel("claude") }
-        coVerify { apiKeyRepository.setGoogleKey("g") }
-        coVerify { apiKeyRepository.setGoogleModel("gemini") }
-        coVerify { apiKeyRepository.setDeepSeekKey("d") }
-        coVerify { apiKeyRepository.setDeepSeekModel("deepseek") }
-        coVerify { apiKeyRepository.setOllamaModelName("llama3") }
+        coVerify(exactly = 0) { apiKeyRepository.setApiKey(any(), any()) }
     }
 
     @Test
-    fun `given blank base url when updateOllamaBaseUrl then flags invalid and persists null`() = runTest {
-        viewModel.updateOllamaBaseUrl("")
+    fun `given each provider when updateModel then persists trimmed-to-null value under that provider`() = runTest {
+        ProviderId.entries.forEach { id -> viewModel.updateModel(id, "model-${id.name}") }
+        viewModel.updateModel(ProviderId.Google, " ")
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.ollamaBaseUrlInvalid)
-        assertEquals("", viewModel.uiState.value.ollamaBaseUrl)
-        coVerify { apiKeyRepository.setOllamaBaseUrl(null) }
+        ProviderId.entries.forEach { id ->
+            coVerify { apiKeyRepository.setModel(id.cloudProvider, "model-${id.name}") }
+        }
+        coVerify { apiKeyRepository.setModel(CloudProvider.GOOGLE, null) }
     }
 
     @Test
-    fun `given a base url with no scheme when updateOllamaBaseUrl then it is flagged invalid`() = runTest {
+    fun `given blank base url when updateBaseUrl then flags invalid and persists null`() = runTest {
+        viewModel.updateBaseUrl(ProviderId.Ollama, "")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.baseUrlInvalid)
+        assertEquals("", viewModel.uiState.value.baseUrl)
+        coVerify { apiKeyRepository.setBaseUrl(CloudProvider.OLLAMA, null) }
+    }
+
+    @Test
+    fun `given a hosted provider when updateBaseUrl then nothing is written`() = runTest {
+        viewModel.updateBaseUrl(ProviderId.OpenAi, "http://localhost:11434")
+        advanceUntilIdle()
+        coVerify(exactly = 0) { apiKeyRepository.setBaseUrl(any(), any()) }
+    }
+
+    @Test
+    fun `given a base url with no scheme when updateBaseUrl then it is flagged invalid`() = runTest {
         // Found on the device. The check used to be `isBlank()` alone, so a bare
         // address was accepted in silence — and because `CleartextPolicy` treats
         // anything without an `http://` prefix as *not cleartext*, no consent
         // was asked for either. The value was stored, looked right, and failed
         // at request time.
-        viewModel.updateOllamaBaseUrl("192.168.1.24")
+        viewModel.updateBaseUrl(ProviderId.Ollama, "192.168.1.24")
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.ollamaBaseUrlInvalid)
+        assertTrue(viewModel.uiState.value.baseUrlInvalid)
     }
 
     @Test
-    fun `given a host with a port but no scheme when updateOllamaBaseUrl then it is flagged invalid`() = runTest {
+    fun `given a host with a port but no scheme when updateBaseUrl then it is flagged invalid`() = runTest {
         // The shape a person is most likely to type, and the one that reads most
         // like a finished URL.
-        viewModel.updateOllamaBaseUrl("192.168.1.24:11434")
+        viewModel.updateBaseUrl(ProviderId.Ollama, "192.168.1.24:11434")
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.ollamaBaseUrlInvalid)
+        assertTrue(viewModel.uiState.value.baseUrlInvalid)
     }
 
     @Test
-    fun `given an https base url when updateOllamaBaseUrl then it is accepted`() = runTest {
+    fun `given an https base url when updateBaseUrl then it is accepted`() = runTest {
         // The validator asks for a parseable scheme and host, not for cleartext:
         // a TLS-terminated Ollama behind a reverse proxy is a legitimate setup.
-        viewModel.updateOllamaBaseUrl("https://ollama.example.net")
+        viewModel.updateBaseUrl(ProviderId.Ollama, "https://ollama.example.net")
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.ollamaBaseUrlInvalid)
+        assertFalse(viewModel.uiState.value.baseUrlInvalid)
     }
 
     @Test
-    fun `given valid base url when updateOllamaBaseUrl then clears invalid and persists value`() = runTest {
-        viewModel.updateOllamaBaseUrl("http://localhost:11434")
+    fun `given valid base url when updateBaseUrl then clears invalid and persists value`() = runTest {
+        viewModel.updateBaseUrl(ProviderId.Ollama, "http://localhost:11434")
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.ollamaBaseUrlInvalid)
-        assertEquals("http://localhost:11434", viewModel.uiState.value.ollamaBaseUrl)
-        coVerify { apiKeyRepository.setOllamaBaseUrl("http://localhost:11434") }
+        assertFalse(viewModel.uiState.value.baseUrlInvalid)
+        assertEquals("http://localhost:11434", viewModel.uiState.value.baseUrl)
+        coVerify { apiKeyRepository.setBaseUrl(CloudProvider.OLLAMA, "http://localhost:11434") }
     }
 
     @Test

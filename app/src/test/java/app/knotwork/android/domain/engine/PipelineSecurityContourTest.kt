@@ -25,6 +25,7 @@ import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceCli
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTool
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
@@ -153,10 +154,10 @@ class PipelineSecurityContourTest {
         writeFileExecutor = WriteFileExecutor(workspace)
         deleteFileExecutor = spyk(DeleteFileExecutor(workspace))
 
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf(null)
-        every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
         every { settingsRepository.httpToolMaxResponseBytes } returns flowOf(100_000L)
         // Allowlist contains a different domain so the test target is rejected as off-list.
         every { settingsRepository.allowedHttpDomains } returns flowOf(listOf("example.org"))

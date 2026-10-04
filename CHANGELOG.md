@@ -15,6 +15,15 @@ details.
 
 ### Changed
 
+- **Saved provider keys are read per provider.** Each provider had its own
+  methods for its key, its model and its server address, and every place that
+  needed all saved keys listed the providers by hand — including the check that
+  stops `http_request` from sending a saved key to another site. That check, the
+  providers `delegate_task` offers and the provider rows in Settings now follow
+  the list of providers itself, so a provider added later is covered without a
+  line of its own. Keys stay where they were saved; the test suite pins the
+  names they are stored under.
+
 - **Settings are split into sections.** One interface held every setting, so
   every class that read one setting could see and change all of them, and
   every test of such a class had to fake all of them. Settings now come in

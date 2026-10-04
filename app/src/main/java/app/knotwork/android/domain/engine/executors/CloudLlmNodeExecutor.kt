@@ -306,20 +306,13 @@ class CloudLlmNodeExecutor @Inject constructor(
     }
 
     /**
-     * Picks the first [CloudProvider] for which an API key is configured.
+     * Picks the first provider of [AUTO_ORDER] for which an API key is configured.
      *
-     * Order mirrors the historical "auto" routing priority (Google → Anthropic → OpenAI →
-     * DeepSeek) so existing pipelines keep their previous default behaviour. Returns
-     * `null` when no provider has credentials, which the caller surfaces to the user as
-     * "No cloud provider configured or selected".
+     * Returns `null` when none has a key, which the caller surfaces to the user as
+     * "No cloud provider is configured".
      */
-    private suspend fun autoDetectProvider(): CloudProvider? {
-        if (!apiKeyRepository.getGoogleKey().first().isNullOrBlank()) return CloudProvider.GOOGLE
-        if (!apiKeyRepository.getAnthropicKey().first().isNullOrBlank()) return CloudProvider.ANTHROPIC
-        if (!apiKeyRepository.getOpenAIKey().first().isNullOrBlank()) return CloudProvider.OPENAI
-        if (!apiKeyRepository.getDeepSeekKey().first().isNullOrBlank()) return CloudProvider.DEEPSEEK
-        return null
-    }
+    private suspend fun autoDetectProvider(): CloudProvider? =
+        AUTO_ORDER.firstOrNull { !apiKeyRepository.getApiKey(it).first().isNullOrBlank() }
 
     /**
      * Whether an absent finish reason is evidence of a truncated answer for [provider].
@@ -345,6 +338,23 @@ class CloudLlmNodeExecutor @Inject constructor(
     }
 
     private companion object {
+        /**
+         * The providers `"auto"` chooses among, in the order it tries them — the historical
+         * routing priority, kept so existing pipelines keep their previous default.
+         *
+         * A list of its own rather than [CloudProvider.entries]: what `"auto"` may pick is a
+         * decision, not a consequence of adding a provider. A provider appended to the enum
+         * would otherwise start receiving every `"auto"` node's prompt the moment its key is
+         * saved, without the user ever choosing it. Ollama is absent for the same reason it
+         * always was — it has no key to detect.
+         */
+        val AUTO_ORDER: List<CloudProvider> = listOf(
+            CloudProvider.GOOGLE,
+            CloudProvider.ANTHROPIC,
+            CloudProvider.OPENAI,
+            CloudProvider.DEEPSEEK,
+        )
+
         /** The provider stopped sending without ever saying the answer was finished. */
         fun truncatedResponse(providerId: String): String =
             "The response from '$providerId' was cut off before it finished — the connection " +

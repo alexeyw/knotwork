@@ -1,25 +1,18 @@
 package app.knotwork.android.data.tools.local
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
-import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
-import ai.koog.prompt.executor.clients.google.GoogleModels
-import ai.koog.prompt.executor.clients.openai.OpenAIModels
-import ai.koog.prompt.llm.LLMCapability
-import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
-import app.knotwork.android.data.engine.KoogClientFactory
-import app.knotwork.android.data.engine.KoogModelMapper
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
+import app.knotwork.android.domain.engine.CloudLlmClientFactory
+import app.knotwork.android.domain.engine.CloudLlmModelResolver
 import app.knotwork.android.domain.models.CloudProvider
-import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
@@ -31,7 +24,7 @@ import javax.inject.Inject
 /**
  * A specialized tool designed for the main (local) AI agent to delegate complex or
  * specialized tasks to powerful external Large Language Models (LLMs) such as Claude,
- * OpenAI, or Gemini, through the KoogClientFactory.
+ * OpenAI, or Gemini, through the same client factory and model resolver as a Cloud node.
  *
  * This class exposes a function that the local agent can call. When called,
  * it routes the prompt to the specified external model, awaits the response asynchronously,
@@ -41,20 +34,25 @@ import javax.inject.Inject
  * This allows the local agent to remain lightweight and responsive, while offloading
  * computationally expensive or highly specialized reasoning to cloud models.
  *
- * @property koogClientFactory A factory used to instantiate the appropriate external LLM client.
+ * The client and the model come from the same [CloudLlmClientFactory] and [CloudLlmModelResolver]
+ * a Cloud node uses, so a delegated call is built — gated, retried and defaulted — exactly like
+ * one, and a provider added to [CloudProvider] reaches this tool without a branch of its own.
+ * The tool used to build both itself, with a third copy of every provider's default model.
+ *
+ * @property cloudLlmClientFactory Builds the retry-wrapped client and names the cause when it cannot.
+ * @property cloudLlmModelResolver Resolves the provider's chosen (or default) model.
  * @property memoryRepository The repository responsible for persisting long-term memories.
  * @property embeddingProviderResolver Resolves the user's active embedding provider so the saved
  *   chunk shares the same embedding space as every other memory write — otherwise retrieval, which
  *   embeds the query with that same active provider, could never match a delegated result.
- * @property apiKeyRepository The repository responsible for persisting selected model configurations.
  * @property networkActivityTracker Told about the delegated call before it is sent, so the
  *   More tab's privacy indicator counts it.
  */
 class DelegateTaskTool @Inject constructor(
-    private val koogClientFactory: KoogClientFactory,
+    private val cloudLlmClientFactory: CloudLlmClientFactory,
+    private val cloudLlmModelResolver: CloudLlmModelResolver,
     private val memoryRepository: MemoryRepository,
     private val embeddingProviderResolver: EmbeddingProviderResolver,
-    private val apiKeyRepository: ApiKeyRepository,
     private val networkActivityTracker: NetworkActivityTracker,
 ) {
 
@@ -71,7 +69,7 @@ class DelegateTaskTool @Inject constructor(
      * the main thread or the agent's Foreground Service.
      *
      * @param taskDescription A detailed explanation of the task to be delegated. This will be used as the prompt for the external LLM.
-     * @param targetModel The identifier for the external model to use. Supported values: "anthropic", "openai", "google", "deepseek", "ollama". Defaults to "google".
+     * @param targetModel The [CloudProvider] wire id of the provider to use (aliases such as `"gemini"` included). Defaults to "google".
      * @return A summary string detailing the outcome of the delegation, including whether it succeeded, timed out, or encountered an error. This summary is returned back to the calling agent.
      */
     suspend fun executeDelegation(taskDescription: String, targetModel: String = CloudProvider.GOOGLE.id): String =
@@ -81,51 +79,20 @@ class DelegateTaskTool @Inject constructor(
             // surface as a typed error rather than silently falling through.
             val provider = CloudProvider.fromId(targetModel)
                 ?: return@withContext "Error: Unsupported target model '$targetModel'." +
-                    " Supported models: anthropic, openai, google, deepseek, ollama."
+                    " Supported models: ${CloudProvider.entries.joinToString { it.id }}."
 
-            val client = when (provider) {
-                CloudProvider.ANTHROPIC -> koogClientFactory.createAnthropicExecutor()
-                CloudProvider.OPENAI -> koogClientFactory.createOpenAIExecutor()
-                CloudProvider.GOOGLE -> koogClientFactory.createGoogleExecutor()
-                CloudProvider.DEEPSEEK -> koogClientFactory.createDeepSeekExecutor()
-                CloudProvider.OLLAMA -> koogClientFactory.createOllamaExecutor()
-            }
+            val client = cloudLlmClientFactory.createClient(provider) as? LLMClient
 
             if (client == null) {
                 // Name the real cause — a missing key, the "Block network from local model"
                 // restriction, or a refused address — so the model can relay the right remedy.
-                val cause = koogClientFactory.unavailabilityOf(provider)?.message(provider)
+                val cause = cloudLlmClientFactory.unavailabilityOf(provider)?.message(provider)
                     ?: "Check the provider's settings."
                 return@withContext "Error: Client for '${provider.id}' could not be initialized. $cause"
             }
 
             return@withContext try {
-                val model = when (provider) {
-                    CloudProvider.ANTHROPIC -> KoogModelMapper.getAnthropicModel(
-                        apiKeyRepository.getAnthropicModel().first() ?: AnthropicModels.Sonnet_4_5.id,
-                    )
-
-                    CloudProvider.OPENAI -> KoogModelMapper.getOpenAIModel(
-                        apiKeyRepository.getOpenAIModel().first() ?: OpenAIModels.Chat.GPT5_4.id,
-                    )
-
-                    CloudProvider.GOOGLE -> KoogModelMapper.getGoogleModel(
-                        apiKeyRepository.getGoogleModel().first() ?: GoogleModels.Gemini3_Flash_Preview.id,
-                    )
-
-                    CloudProvider.DEEPSEEK -> KoogModelMapper.getDeepSeekModel(
-                        apiKeyRepository.getDeepSeekModel().first() ?: DeepSeekModels.DeepSeekV4Flash.id,
-                    )
-
-                    CloudProvider.OLLAMA -> LLModel(
-                        provider = LLMProvider.Ollama,
-                        id = apiKeyRepository.getOllamaModelName().first() ?: "llama3",
-                        capabilities = listOf(
-                            LLMCapability.Completion,
-                        ),
-                        contextLength = apiKeyRepository.getOllamaContextWindowSize().first().toLong(),
-                    )
-                }
+                val model = cloudLlmModelResolver.resolveModel(provider) as LLModel
 
                 networkActivityTracker.recordOutbound()
                 // Apply a 60-second timeout for the external API call

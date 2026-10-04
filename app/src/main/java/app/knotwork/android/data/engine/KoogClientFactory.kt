@@ -26,9 +26,9 @@ import javax.inject.Singleton
  * It uses the [ApiKeyRepository] to retrieve the necessary credentials
  * and configurations (like Custom Base URL for Ollama) at runtime.
  *
- * Implements the domain-level [CloudLlmClientFactory] interface so that
- * `CloudLlmNodeExecutor` can construct cloud clients without importing data-layer types,
- * while internal callers (e.g. `DelegateTaskTool`) retain the typed per-provider helpers.
+ * Implements the domain-level [CloudLlmClientFactory] interface so that every caller —
+ * `CloudLlmNodeExecutor`, structured output and `delegate_task` alike — constructs cloud
+ * clients through [createClient] without importing data-layer types.
  *
  * Every client is built only after [ModelNetworkGate] admits it, and [unavailabilityOf]
  * reports the refusal the gate (or a missing credential) produced — the two share one
@@ -107,7 +107,7 @@ class KoogClientFactory @Inject constructor(
     /**
      * Builds the raw, un-decorated Koog client for [provider], applying the
      * network gate and the per-provider credential checks. Retry wrapping is
-     * applied separately by [createClient] / the public helpers.
+     * applied separately by [createClient].
      *
      * @return The raw client, or `null` when [unavailabilityOf] reports a cause.
      */
@@ -118,46 +118,6 @@ class KoogClientFactory @Inject constructor(
         CloudProvider.DEEPSEEK -> rawDeepSeek()
         CloudProvider.OLLAMA -> rawOllama()
     }
-
-    /**
-     * Creates a retry-wrapped OpenAI LLMClient.
-     * @return The client, or null if the API key is not configured or
-     *   local-only mode is on.
-     */
-    suspend fun createOpenAIExecutor(): LLMClient? = rawOpenAI()?.let { wrapNoObserve(it, CloudProvider.OPENAI) }
-
-    /**
-     * Creates a retry-wrapped Anthropic LLMClient.
-     * @return The client, or null if the API key is not configured or
-     *   local-only mode is on.
-     */
-    suspend fun createAnthropicExecutor(): LLMClient? =
-        rawAnthropic()?.let { wrapNoObserve(it, CloudProvider.ANTHROPIC) }
-
-    /**
-     * Creates a retry-wrapped Google (Gemini) LLMClient.
-     * @return The client, or null if the API key is not configured or
-     *   local-only mode is on.
-     */
-    suspend fun createGoogleExecutor(): LLMClient? = rawGoogle()?.let { wrapNoObserve(it, CloudProvider.GOOGLE) }
-
-    /**
-     * Creates a retry-wrapped DeepSeek LLMClient.
-     * @return The client, or null if the API key is not configured or
-     *   local-only mode is on.
-     */
-    suspend fun createDeepSeekExecutor(): LLMClient? = rawDeepSeek()?.let { wrapNoObserve(it, CloudProvider.DEEPSEEK) }
-
-    /**
-     * Creates a retry-wrapped Ollama LLMClient connected to the configured server.
-     * @return The client, or null if the base URL is not configured or
-     *   [ModelNetworkGate.ollamaRefusal] refuses it.
-     */
-    suspend fun createOllamaExecutor(): LLMClient? = rawOllama()?.let { wrapNoObserve(it, CloudProvider.OLLAMA) }
-
-    /** Wraps a raw client with the retry policy but no retry observation (off-graph callers). */
-    private suspend fun wrapNoObserve(client: LLMClient, provider: CloudProvider): LLMClient =
-        retryWrapper.wrap(client = client, provider = provider.id)
 
     private suspend fun rawOpenAI(): LLMClient? {
         val key = admittedApiKey(CloudProvider.OPENAI) ?: return null
@@ -212,16 +172,14 @@ class KoogClientFactory @Inject constructor(
     private suspend fun admittedApiKey(provider: CloudProvider): String? =
         if (modelNetworkGate.cloudRefusal() != null) null else apiKey(provider)
 
-    /** The trimmed, non-blank key saved for a hosted [provider]; `null` for Ollama, which has none. */
-    private suspend fun apiKey(provider: CloudProvider): String? = when (provider) {
-        CloudProvider.OPENAI -> apiKeyRepository.getOpenAIKey()
-        CloudProvider.ANTHROPIC -> apiKeyRepository.getAnthropicKey()
-        CloudProvider.GOOGLE -> apiKeyRepository.getGoogleKey()
-        CloudProvider.DEEPSEEK -> apiKeyRepository.getDeepSeekKey()
-        CloudProvider.OLLAMA -> null
-    }?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+    /** The trimmed, non-blank key saved for a hosted [provider]; `null` for a provider that uses none. */
+    private suspend fun apiKey(provider: CloudProvider): String? =
+        if (provider.usesApiKey) apiKeyRepository.getApiKey(provider).firstOrNull()?.trimmedOrNull() else null
 
     /** The trimmed, non-blank Ollama base URL, or `null` when none is configured. */
     private suspend fun ollamaBaseUrl(): String? =
-        apiKeyRepository.getOllamaBaseUrl().firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+        apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA).firstOrNull()?.trimmedOrNull()
+
+    /** The value with surrounding whitespace removed, or `null` when nothing else is left. */
+    private fun String.trimmedOrNull(): String? = trim().takeIf { it.isNotBlank() }
 }

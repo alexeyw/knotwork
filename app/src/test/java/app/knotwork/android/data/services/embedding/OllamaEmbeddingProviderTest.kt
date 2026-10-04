@@ -3,6 +3,7 @@ package app.knotwork.android.data.services.embedding
 import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
 import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingException
@@ -65,22 +66,22 @@ class OllamaEmbeddingProviderTest {
 
     @Test
     fun `isAvailable is true when a base url is configured`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(LAN_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(LAN_URL)
         assertTrue(provider.isAvailable())
     }
 
     @Test
     fun `isAvailable is false when the base url is missing or blank`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(null)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(null)
         assertFalse(provider.isAvailable())
 
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("  ")
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf("  ")
         assertFalse(provider.isAvailable())
     }
 
     @Test
     fun `embed with a base url calls Ollama and maps doubles to floats`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(LAN_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(LAN_URL)
         coEvery { embedderFactory.ollamaClient(LAN_URL) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } returns
             listOf(listOf(0.5, 0.25))
@@ -93,7 +94,7 @@ class OllamaEmbeddingProviderTest {
 
     @Test
     fun `given the gate admits the call when embed then the privacy indicator records it`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(LAN_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(LAN_URL)
         coEvery { embedderFactory.ollamaClient(LAN_URL) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } returns listOf(listOf(0.5))
 
@@ -104,7 +105,7 @@ class OllamaEmbeddingProviderTest {
 
     @Test
     fun `given the gate refuses the call when embed then nothing is recorded`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("http://203.0.113.7:11434")
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf("http://203.0.113.7:11434")
 
         runCatching { provider.embed("private memory text") }
 
@@ -114,7 +115,7 @@ class OllamaEmbeddingProviderTest {
     @Test
     fun `given local-only mode on and a public https url when isAvailable then false`() = runTest {
         localOnlyMode.value = true
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(PUBLIC_HTTPS_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(PUBLIC_HTTPS_URL)
 
         assertFalse(provider.isAvailable())
     }
@@ -123,7 +124,7 @@ class OllamaEmbeddingProviderTest {
     fun `given local-only mode on and a public https url when embed then refuses without building a client`() =
         runTest {
             localOnlyMode.value = true
-            every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(PUBLIC_HTTPS_URL)
+            every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(PUBLIC_HTTPS_URL)
 
             val thrown = runCatching { provider.embed("private memory text") }.exceptionOrNull()
 
@@ -135,14 +136,14 @@ class OllamaEmbeddingProviderTest {
     @Test
     fun `given local-only mode on and a private address over https when isAvailable then true`() = runTest {
         localOnlyMode.value = true
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("https://192.168.1.2:11434")
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf("https://192.168.1.2:11434")
 
         assertTrue(provider.isAvailable())
     }
 
     @Test
     fun `given local-only mode off and a public https url when isAvailable then true`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(PUBLIC_HTTPS_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(PUBLIC_HTTPS_URL)
 
         assertTrue(provider.isAvailable())
     }
@@ -151,7 +152,7 @@ class OllamaEmbeddingProviderTest {
     fun `given cleartext to a public address when embed then refuses without building a client`() = runTest {
         // The embedding client used to skip the cleartext rule the chat client applies,
         // so memory text could travel unencrypted to a public host.
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("http://203.0.113.7:11434")
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf("http://203.0.113.7:11434")
 
         assertFalse(provider.isAvailable())
         val thrown = runCatching { provider.embed("private memory text") }.exceptionOrNull()
@@ -162,14 +163,14 @@ class OllamaEmbeddingProviderTest {
 
     @Test
     fun `given unapproved cleartext to a private address when isAvailable then false`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf("http://10.0.0.9:11434")
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf("http://10.0.0.9:11434")
 
         assertFalse(provider.isAvailable())
     }
 
     @Test
     fun `embed without a base url throws EmbeddingException`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(null)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(null)
 
         val thrown = runCatching { provider.embed("hi") }.exceptionOrNull()
 
@@ -179,7 +180,7 @@ class OllamaEmbeddingProviderTest {
 
     @Test
     fun `embed wraps a client failure in EmbeddingException`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(LAN_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(LAN_URL)
         coEvery { embedderFactory.ollamaClient(any()) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } throws RuntimeException("down")
 
@@ -190,7 +191,7 @@ class OllamaEmbeddingProviderTest {
 
     @Test
     fun `embed rethrows CancellationException without wrapping`() = runTest {
-        every { apiKeyRepository.getOllamaBaseUrl() } returns flowOf(LAN_URL)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(LAN_URL)
         coEvery { embedderFactory.ollamaClient(any()) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } throws CancellationException("cancelled")
 

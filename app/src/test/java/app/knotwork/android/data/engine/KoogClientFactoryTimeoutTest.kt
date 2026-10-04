@@ -36,10 +36,10 @@ class KoogClientFactoryTimeoutTest {
         apiKeyRepository = mockk(relaxed = true)
         settingsRepository = mockk(relaxed = true)
 
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("k")
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf("k")
-        every { apiKeyRepository.getGoogleKey() } returns flowOf("k")
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf("k")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("k")
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("k")
+        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf("k")
+        every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf("k")
         every { settingsRepository.blockNetworkFromLocalModel } returns flowOf(false)
         // Retries off, so `createClient` hands back the raw provider client to inspect.
         every { settingsRepository.cloudRetryMaxAttempts } returns flowOf(1)

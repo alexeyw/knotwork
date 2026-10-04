@@ -34,6 +34,7 @@ import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTask
 import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ChatMessage
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.Identity
 import app.knotwork.android.domain.models.LocalModel
@@ -773,15 +774,19 @@ internal class GoldenTraceHarness(
         }
     }
 
-    /** Only an OpenAI key is set, so an `auto` cloud node resolves to OpenAI. */
-    private fun apiKeys(): ApiKeyRepository = object : ApiKeyRepository by goldenStrict(log) {
-        override fun getGoogleKey(): Flow<String?> = flowOf(null)
-
-        override fun getAnthropicKey(): Flow<String?> = flowOf(null)
-
-        override fun getOpenAIKey(): Flow<String?> = flowOf("golden-openai-key")
-
-        override fun getDeepSeekKey(): Flow<String?> = flowOf(null)
+    /**
+     * Only an OpenAI key is set, so an `auto` cloud node resolves to OpenAI. The keys `auto`
+     * may ask about are answered; any other read stays a violation.
+     */
+    private fun apiKeys(): ApiKeyRepository {
+        val strict = goldenStrict<ApiKeyRepository>(log)
+        return object : ApiKeyRepository by strict {
+            override fun getApiKey(provider: CloudProvider): Flow<String?> = when (provider) {
+                CloudProvider.OPENAI -> flowOf("golden-openai-key")
+                CloudProvider.GOOGLE, CloudProvider.ANTHROPIC, CloudProvider.DEEPSEEK -> flowOf(null)
+                else -> strict.getApiKey(provider)
+            }
+        }
     }
 
     private fun libraryRepository(): PipelineRepository = object : PipelineRepository by goldenStrict(log) {

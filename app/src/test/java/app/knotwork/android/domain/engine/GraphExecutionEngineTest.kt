@@ -188,16 +188,8 @@ class GraphExecutionEngineTest {
         // The resolver is exercised whenever a CLOUD node fires; default to a sensible
         // Koog model so each individual test does not have to wire it up.
         coEvery { cloudLlmModelResolver.resolveModel(any()) } returns AnthropicModels.Sonnet_4_5
-        // Provider-keyed dispatch — tests that exercise CLOUD configure Anthropic.
-        coEvery { koogClientFactory.createClient(any(), any()) } coAnswers {
-            when (firstArg<CloudProvider>()) {
-                CloudProvider.ANTHROPIC -> koogClientFactory.createAnthropicExecutor()
-                CloudProvider.OPENAI -> koogClientFactory.createOpenAIExecutor()
-                CloudProvider.GOOGLE -> koogClientFactory.createGoogleExecutor()
-                CloudProvider.DEEPSEEK -> koogClientFactory.createDeepSeekExecutor()
-                CloudProvider.OLLAMA -> koogClientFactory.createOllamaExecutor()
-            }
-        }
+        // Tests that exercise a CLOUD node stub `createClient` for the provider they use;
+        // any other provider stays unanswered, so an unexpected route fails loudly.
 
         val inputNodeExecutor = InputNodeExecutor()
         val outputNodeExecutor = OutputNodeExecutor(llmEngine, loadModelUseCase, chatRepository, mockk(relaxed = true))
@@ -1603,14 +1595,14 @@ class GraphExecutionEngineTest {
         coEvery {
             mockAnthropicClient.executeStreaming(capture(capturedPrompt), any<LLModel>())
         } returns flowOf(StreamFrame.TextDelta("cloud_response_for_user_reply"))
-        coEvery { koogClientFactory.createAnthropicExecutor() } returns mockAnthropicClient
+        coEvery { koogClientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns mockAnthropicClient
 
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf("anthropic-test-key")
-        every { apiKeyRepository.getAnthropicModel() } returns flowOf("claude-sonnet-4-5")
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("anthropic-test-key")
+        every { apiKeyRepository.getModel(CloudProvider.ANTHROPIC) } returns flowOf("claude-sonnet-4-5")
         // Other providers are unconfigured so the auto-selection path also lands on Anthropic.
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-        every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
 
         // CLARIFICATION uses llmEngine to generate the JSON question; OUTPUT has no
         // systemPrompt so it just echoes its input — that lets us assert that the
@@ -2192,13 +2184,13 @@ class GraphExecutionEngineTest {
         coEvery {
             mockAnthropicClient.executeStreaming(capture(capturedCloudPrompt), any<LLModel>())
         } returns flowOf(StreamFrame.TextDelta("cloud_answer"))
-        coEvery { koogClientFactory.createAnthropicExecutor() } returns mockAnthropicClient
+        coEvery { koogClientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns mockAnthropicClient
 
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf("anthropic-test-key")
-        every { apiKeyRepository.getAnthropicModel() } returns flowOf("claude-sonnet-4-5")
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-        every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("anthropic-test-key")
+        every { apiKeyRepository.getModel(CloudProvider.ANTHROPIC) } returns flowOf("claude-sonnet-4-5")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
 
         // Two LITE_RT consumers fire in order:
         //   1. ToolNodeExecutor's auto-selection LLM → returns the JSON tool choice
@@ -2344,12 +2336,12 @@ class GraphExecutionEngineTest {
             val cloudPrompt = slot<Prompt>()
             coEvery { cloudClient.executeStreaming(capture(cloudPrompt), any<LLModel>()) } returns
                 flowOf(StreamFrame.TextDelta("cloud_answer"))
-            coEvery { koogClientFactory.createAnthropicExecutor() } returns cloudClient
-            every { apiKeyRepository.getAnthropicKey() } returns flowOf("anthropic-test-key")
-            every { apiKeyRepository.getAnthropicModel() } returns flowOf("claude-sonnet-4-5")
-            every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-            every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
-            every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
+            coEvery { koogClientFactory.createClient(CloudProvider.ANTHROPIC, any()) } returns cloudClient
+            every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("anthropic-test-key")
+            every { apiKeyRepository.getModel(CloudProvider.ANTHROPIC) } returns flowOf("claude-sonnet-4-5")
+            every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+            every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
+            every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
 
             val localPrompts = mutableListOf<String>()
             every { llmEngine.generateResponseStream(capture(localPrompts)) } returnsMany listOf(
@@ -3391,7 +3383,7 @@ class GraphExecutionEngineTest {
             StreamFrame.TextDelta("cloud answer"),
             StreamFrame.End(finishReason = "stop", metaInfo = ResponseMetaInfo.Empty),
         )
-        coEvery { koogClientFactory.createDeepSeekExecutor() } returns cloudClient
+        coEvery { koogClientFactory.createClient(CloudProvider.DEEPSEEK, any()) } returns cloudClient
 
         val calls = mutableListOf<String>()
         coEvery { runTraceRepository.append(any()) } answers {

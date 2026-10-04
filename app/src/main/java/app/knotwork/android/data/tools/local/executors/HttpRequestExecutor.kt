@@ -1,6 +1,7 @@
 package app.knotwork.android.data.tools.local.executors
 
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalToolExecutor
@@ -370,13 +371,17 @@ class HttpRequestExecutor internal constructor(
         return result
     }
 
-    /** Reads all stored, non-blank provider API key values for the credential scan. */
-    private suspend fun collectStoredSecrets(): List<String> = listOfNotNull(
-        apiKeyRepository.getOpenAIKey().firstOrNull(),
-        apiKeyRepository.getAnthropicKey().firstOrNull(),
-        apiKeyRepository.getGoogleKey().firstOrNull(),
-        apiKeyRepository.getDeepSeekKey().firstOrNull(),
-    ).filter { it.isNotBlank() }
+    /**
+     * Reads every stored, non-blank provider API key for the credential scan.
+     *
+     * Iterates [CloudProvider.entries] instead of naming providers: the scan is a security
+     * control, and a hand-written list of four keys would have let the key of any provider
+     * added later travel to an allowlisted host unnoticed.
+     */
+    private suspend fun collectStoredSecrets(): List<String> = CloudProvider.entries
+        .filter { it.usesApiKey }
+        .mapNotNull { apiKeyRepository.getApiKey(it).firstOrNull() }
+        .filter { it.isNotBlank() }
 
     companion object {
         /** Tool name as exposed to the LLM and used as the DI map key. */

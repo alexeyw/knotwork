@@ -604,6 +604,19 @@ with a stable wire-id (the lowercase string used in pipeline JSON,
 e.g. `"mistral"`). Existing values are
 `OPENAI`, `ANTHROPIC`, `GOOGLE`, `DEEPSEEK`, `OLLAMA`.
 
+The constant also declares how the provider is reached: `usesApiKey` (a key
+the user saves) and `usesBaseUrl` (a server address the user enters, as for
+Ollama). The credential store, the settings screens, the stored-key scan of
+`http_request` and the provider list of `delegate_task` read that shape
+instead of naming providers, so a new constant reaches all of them. The
+wire-id also names the provider's stored entries (3.4), so it can never
+change once shipped.
+
+`"auto"` on a Cloud node is the exception, on purpose: it chooses only among
+`AUTO_ORDER` in `CloudLlmNodeExecutor`. A new provider joins it only by a
+deliberate edit there — otherwise saving its key would silently move every
+`"auto"` node's prompt to it.
+
 Then add a `case` for the new id to `wireToTile` in `pipeline-editor.html`,
 on the tile it belongs to. The browser editor reads a pipeline file's provider
 ids through that one function, the way `CloudProvider.fromId` does, and
@@ -631,11 +644,14 @@ can map a free-text model id to a concrete Koog `LLModel`.
 API keys live in the Keystore-backed encrypted store only — never in
 DataStore, never in `local.properties`, never committed to git.
 
-- Add a new key constant in
-  [`ApiKeyManager`](../app/src/main/java/app/knotwork/android/data/local/ApiKeyManager.kt)
-  (e.g. `MISTRAL_KEY`).
-- Add reader/writer methods for the new key (or extend the generic
-  ones if your provider follows the standard shape).
+There is nothing to add for a provider of the usual shape.
+[`ApiKeyRepository`](../app/src/main/java/app/knotwork/android/domain/repositories/ApiKeyRepository.kt)
+is keyed by `CloudProvider` — `getApiKey`/`setApiKey`, `getModel`/`setModel`,
+`getBaseUrl`/`setBaseUrl` — and
+[`ApiKeyManager`](../app/src/main/java/app/knotwork/android/data/local/ApiKeyManager.kt)
+names each entry after the wire-id: `<id>_api_key`, `<id>_model`,
+`<id>_base_url`. `ApiKeyManagerTest` pins the names already shipped, because
+renaming one would read every saved key as missing.
 
 ### 3.5. Add a Settings section
 
@@ -659,18 +675,20 @@ To add a new external LLM provider:
    [`ProviderSummary.kt`](../app/src/main/java/app/knotwork/android/domain/models/ProviderSummary.kt)
    with its `cloudProvider` mapping (the wire id used for navigation and
    key storage).
-2. Add a `providerSummary(ProviderId.<Name>, "<Name>", …)` row to the
-   **External providers** block in
+2. Give it its display name in
+   [`ProviderId.displayName()`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt)
+   — the exhaustive `when` asks for it. The **External providers** row, the
+   *Add provider* picker and the detail title all read that one function;
    [`ModelsSettingsDelegate`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/ModelsSettingsDelegate.kt)
-   — this renders the provider row inside the Models category and links it
-   to its editor.
-3. For a standard cloud provider there is nothing to wire in the editor:
+   builds a row for every `ProviderId` by itself.
+3. For a standard cloud provider there is nothing else to wire in the editor:
    [`ProviderDetailScreen`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDetailScreen.kt)
-   dispatches on the wire id and renders the shared catalog
-   [`KnotworkProviderRow`](../catalog/src/main/java/app/knotwork/design/screens/settings/KnotworkProviderRow.kt).
-   A network-local provider (Ollama-style) supplies an
-   `OllamaProviderInputs` bundle for the extra base-URL and context-window
-   fields.
+   shows the fields the provider's shape asks for (`usesApiKey`,
+   `usesBaseUrl`) in the shared catalog
+   [`KnotworkProviderRow`](../catalog/src/main/java/app/knotwork/design/screens/settings/KnotworkProviderRow.kt);
+   add the provider's model list to `availableModels` in its `toViewState`.
+   Ollama additionally supplies an `OllamaProviderInputs` bundle for the
+   base-URL and context-window fields.
 4. Persist the key and model through `ApiKeyRepository` (Keystore-backed)
    and `NetworkSettings` (retry budget, approved unencrypted origins),
    exactly as `ProviderDetailViewModel` already does for the built-in

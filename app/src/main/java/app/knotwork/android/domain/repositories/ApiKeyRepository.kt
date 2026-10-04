@@ -1,142 +1,100 @@
 package app.knotwork.android.domain.repositories
 
+import app.knotwork.android.domain.models.CloudProvider
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Repository interface for managing API keys for external LLM providers and
- * configuration settings for local network providers (like Ollama).
+ * Credentials and per-provider configuration of the external LLM providers: the API key, the
+ * chosen model id and, for a provider reached at an address the user enters
+ * ([CloudProvider.usesBaseUrl]), that address.
+ *
+ * Every accessor is keyed by [CloudProvider] rather than spelled out once per provider. A
+ * per-provider getter pair used to exist for each slot, and every consumer that needed "all
+ * keys" or "all configured providers" wrote its own list of them — the stored-key filter of
+ * `http_request` among them, which is a security control. A provider added to the enum now
+ * reaches every consumer that iterates [CloudProvider.entries], instead of being silently left
+ * out of a hand-written list.
+ *
+ * A slot a provider does not use (an API key for Ollama, a base URL for OpenAI) simply reads as
+ * `null`; nothing ever writes it.
  */
 interface ApiKeyRepository {
 
     /**
-     * Retrieves the OpenAI API key.
-     * @return A Flow emitting the key, or null if not set.
+     * The saved API key of [provider].
+     *
+     * @param provider The provider whose key is read.
+     * @return A Flow emitting the key, or `null` when none is saved.
      */
-    fun getOpenAIKey(): Flow<String?>
+    fun getApiKey(provider: CloudProvider): Flow<String?>
 
     /**
-     * Sets the OpenAI API key.
-     * @param key The key to save, or null to remove it.
+     * Saves or removes the API key of [provider].
+     *
+     * @param provider The provider whose key is written.
+     * @param key The key to save, or `null` to remove it.
      */
-    suspend fun setOpenAIKey(key: String?)
+    suspend fun setApiKey(provider: CloudProvider, key: String?)
 
     /**
-     * Retrieves the OpenAI model name.
-     * @return A Flow emitting the model name, or null if not set.
+     * The model id the user chose for [provider].
+     *
+     * @param provider The provider whose model is read.
+     * @return A Flow emitting the model id, or `null` when none is chosen — the model resolver
+     *   then substitutes the provider's default.
      */
-    fun getOpenAIModel(): Flow<String?>
+    fun getModel(provider: CloudProvider): Flow<String?>
 
     /**
-     * Sets the OpenAI model name.
-     * @param model The model to save, or null to remove it.
+     * Saves or removes the model id chosen for [provider].
+     *
+     * @param provider The provider whose model is written.
+     * @param model The model id to save, or `null` to remove it.
      */
-    suspend fun setOpenAIModel(model: String?)
+    suspend fun setModel(provider: CloudProvider, model: String?)
 
     /**
-     * Retrieves the Anthropic API key.
-     * @return A Flow emitting the key, or null if not set.
+     * The server address of a provider reached at an address the user enters (today: Ollama).
+     *
+     * @param provider The provider whose address is read.
+     * @return A Flow emitting the address (e.g. `http://192.168.1.100:11434`), or `null` when
+     *   none is saved.
      */
-    fun getAnthropicKey(): Flow<String?>
+    fun getBaseUrl(provider: CloudProvider): Flow<String?>
 
     /**
-     * Sets the Anthropic API key.
-     * @param key The key to save, or null to remove it.
+     * Saves or removes the server address of [provider].
+     *
+     * @param provider The provider whose address is written.
+     * @param url The address to save, or `null` to remove it.
      */
-    suspend fun setAnthropicKey(key: String?)
+    suspend fun setBaseUrl(provider: CloudProvider, url: String?)
 
     /**
-     * Retrieves the Anthropic model name.
-     * @return A Flow emitting the model name, or null if not set.
-     */
-    fun getAnthropicModel(): Flow<String?>
-
-    /**
-     * Sets the Anthropic model name.
-     * @param model The model to save, or null to remove it.
-     */
-    suspend fun setAnthropicModel(model: String?)
-
-    /**
-     * Retrieves the Google (Gemini) API key.
-     * @return A Flow emitting the key, or null if not set.
-     */
-    fun getGoogleKey(): Flow<String?>
-
-    /**
-     * Sets the Google (Gemini) API key.
-     * @param key The key to save, or null to remove it.
-     */
-    suspend fun setGoogleKey(key: String?)
-
-    /**
-     * Retrieves the Google model name.
-     * @return A Flow emitting the model name, or null if not set.
-     */
-    fun getGoogleModel(): Flow<String?>
-
-    /**
-     * Sets the Google model name.
-     * @param model The model to save, or null to remove it.
-     */
-    suspend fun setGoogleModel(model: String?)
-
-    /**
-     * Retrieves the DeepSeek API key.
-     * @return A Flow emitting the key, or null if not set.
-     */
-    fun getDeepSeekKey(): Flow<String?>
-
-    /**
-     * Sets the DeepSeek API key.
-     * @param key The key to save, or null to remove it.
-     */
-    suspend fun setDeepSeekKey(key: String?)
-
-    /**
-     * Retrieves the DeepSeek model name.
-     * @return A Flow emitting the model name, or null if not set.
-     */
-    fun getDeepSeekModel(): Flow<String?>
-
-    /**
-     * Sets the DeepSeek model name.
-     * @param model The model to save, or null to remove it.
-     */
-    suspend fun setDeepSeekModel(model: String?)
-
-    /**
-     * Retrieves the base URL for the local Ollama instance.
-     * @return A Flow emitting the URL, or null if not set.
-     */
-    fun getOllamaBaseUrl(): Flow<String?>
-
-    /**
-     * Sets the base URL for the local Ollama instance.
-     * @param url The URL to save (e.g., "http://192.168.1.100:11434"), or null to remove it.
-     */
-    suspend fun setOllamaBaseUrl(url: String?)
-
-    /**
-     * Retrieves the Ollama model name.
-     * @return A Flow emitting the model name, or null if not set.
-     */
-    fun getOllamaModelName(): Flow<String?>
-
-    /**
-     * Sets the Ollama model name.
-     * @param model The model name to save, or null to remove it.
-     */
-    suspend fun setOllamaModelName(model: String?)
-
-    /**
-     * Retrieves the Ollama context window size.
-     * @return A Flow emitting the context window size, defaults to 4096.
+     * The context window requested from the Ollama server.
+     *
+     * @return A Flow emitting the window size; the default when none is saved.
      */
     fun getOllamaContextWindowSize(): Flow<Int>
 
     /**
-     * Sets the Ollama context window size.
+     * Saves the context window requested from the Ollama server.
+     *
      * @param size The context window size to save.
      */
     suspend fun setOllamaContextWindowSize(size: Int)
 }
+
+/**
+ * The credential that decides whether [provider] is set up at all: its server address when it
+ * is reached at one ([CloudProvider.usesBaseUrl]), otherwise its API key.
+ *
+ * One definition for every place that asks "is this provider configured" — the list of
+ * providers offered to `delegate_task` and the provider rows in Settings — so the two cannot
+ * disagree about a provider that has both an address and a key.
+ *
+ * @param provider The provider asked about.
+ * @return A Flow emitting the deciding credential, or `null` when it is not saved.
+ */
+fun ApiKeyRepository.requiredCredential(provider: CloudProvider): Flow<String?> =
+    if (provider.usesBaseUrl) getBaseUrl(provider) else getApiKey(provider)

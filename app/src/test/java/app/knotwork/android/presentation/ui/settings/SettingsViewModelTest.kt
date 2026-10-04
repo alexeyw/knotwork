@@ -2,6 +2,7 @@ package app.knotwork.android.presentation.ui.settings
 
 import android.content.Context
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.Identity
 import app.knotwork.android.domain.models.MemoryStats
 import app.knotwork.android.domain.models.TestProbeResult
@@ -142,16 +143,16 @@ class SettingsViewModelTest {
         every { localModels.observeActiveModelMeta() } returns MutableStateFlow(null)
         every { memory.observeStats() } returns MutableStateFlow(MemoryStats.EMPTY)
 
-        every { apiKeys.getOpenAIKey() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getOpenAIModel() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getAnthropicKey() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getAnthropicModel() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getGoogleKey() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getGoogleModel() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getDeepSeekKey() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getDeepSeekModel() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getOllamaBaseUrl() } returns MutableStateFlow<String?>(null)
-        every { apiKeys.getOllamaModelName() } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getApiKey(CloudProvider.OPENAI) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.OPENAI) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getApiKey(CloudProvider.ANTHROPIC) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.ANTHROPIC) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getApiKey(CloudProvider.GOOGLE) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.GOOGLE) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getApiKey(CloudProvider.DEEPSEEK) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.DEEPSEEK) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getBaseUrl(CloudProvider.OLLAMA) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.OLLAMA) } returns MutableStateFlow<String?>(null)
         every { apiKeys.getOllamaContextWindowSize() } returns MutableStateFlow(4096)
 
         coEvery { identity.getIdentity(any()) } returns Identity(
@@ -474,7 +475,7 @@ class SettingsViewModelTest {
     @Test
     fun `setting Ollama base URL from blank to value flips restartRequired`() = runTest {
         val ollamaUrlFlow = MutableStateFlow<String?>(null)
-        every { apiKeys.getOllamaBaseUrl() } returns ollamaUrlFlow
+        every { apiKeys.getBaseUrl(CloudProvider.OLLAMA) } returns ollamaUrlFlow
         viewModel = newViewModel()
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.restartRequired)
@@ -486,7 +487,7 @@ class SettingsViewModelTest {
     @Test
     fun `clearing Ollama base URL from value to blank flips restartRequired`() = runTest {
         val ollamaUrlFlow = MutableStateFlow<String?>("http://192.168.1.42:11434")
-        every { apiKeys.getOllamaBaseUrl() } returns ollamaUrlFlow
+        every { apiKeys.getBaseUrl(CloudProvider.OLLAMA) } returns ollamaUrlFlow
         viewModel = newViewModel()
         advanceUntilIdle()
         assertFalse(viewModel.uiState.value.restartRequired)

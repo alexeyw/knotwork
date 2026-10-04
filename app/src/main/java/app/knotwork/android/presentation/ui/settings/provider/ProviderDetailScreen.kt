@@ -73,7 +73,7 @@ fun ProviderDetailScreen(
                 onBack = onBack,
                 onApiKeyChange = { value -> viewModel.updateKey(providerId, value) },
                 onModelChange = { value -> viewModel.updateModel(providerId, value) },
-                onOllamaBaseUrlChange = viewModel::updateOllamaBaseUrl,
+                onOllamaBaseUrlChange = { value -> viewModel.updateBaseUrl(providerId, value) },
                 onOllamaContextWindowChange = viewModel::updateOllamaContextWindow,
                 onApproveCleartextOrigin = viewModel::approveCleartextOrigin,
                 onRetryAttemptsChange = viewModel::updateCloudRetryMaxAttempts,
@@ -87,10 +87,11 @@ fun ProviderDetailScreen(
  * Projects the VM state onto the catalog's view state, resolving every string
  * here so the design module never learns which providers exist.
  *
- * The provider `when` is the one place that knows a provider's shape. Ollama is
- * the outlier twice over: it runs LAN-local without authentication, so its API
- * key is `null` rather than empty, and its model is typed rather than chosen
- * from a list.
+ * The state holds the bound provider's values only; what the provider *uses* — a key, a
+ * server address — comes from its [CloudProvider][app.knotwork.android.domain.models.CloudProvider]
+ * shape, so a field the provider has no use for is hidden rather than shown empty. Ollama is
+ * still named twice: its model is typed rather than chosen from a list, and the context
+ * window is an Ollama setting.
  *
  * @param providerId Which provider the screen was opened for.
  * @param context Resource resolution.
@@ -98,27 +99,16 @@ fun ProviderDetailScreen(
  */
 @VisibleForTesting
 internal fun ProviderDetailUiState.toViewState(providerId: ProviderId, context: Context): ProviderDetailViewState {
-    val label = providerLabel(providerId)
-    val ollamaError = context.getString(R.string.settings_ollama_base_url_error).takeIf { ollamaBaseUrlInvalid }
+    val label = providerId.displayName()
+    val provider = providerId.cloudProvider
+    val baseUrlError = context.getString(R.string.settings_ollama_base_url_error).takeIf { baseUrlInvalid }
     return ProviderDetailViewState(
         title = context.getString(R.string.settings_provider_detail_title, label),
         providerLabel = label,
         backContentDescription = context.getString(R.string.common_back),
-        apiKey = when (providerId) {
-            ProviderId.OpenAi -> openAiKey
-            ProviderId.Anthropic -> anthropicKey
-            ProviderId.Google -> googleKey
-            ProviderId.DeepSeek -> deepSeekKey
-            ProviderId.Ollama -> null
-        },
+        apiKey = apiKey.takeIf { provider.usesApiKey },
         apiKeyLabel = context.getString(R.string.settings_provider_api_key_label, label),
-        model = when (providerId) {
-            ProviderId.OpenAi -> openAiModel
-            ProviderId.Anthropic -> anthropicModel
-            ProviderId.Google -> googleModel
-            ProviderId.DeepSeek -> deepSeekModel
-            ProviderId.Ollama -> ollamaModel
-        },
+        model = model,
         modelLabel = when (providerId) {
             ProviderId.Ollama -> context.getString(R.string.settings_ollama_model_label)
             else -> context.getString(R.string.settings_provider_model_label, label)
@@ -132,9 +122,9 @@ internal fun ProviderDetailUiState.toViewState(providerId: ProviderId, context: 
         },
         ollama = if (providerId == ProviderId.Ollama) {
             OllamaProviderInputs(
-                baseUrl = ollamaBaseUrl,
+                baseUrl = baseUrl,
                 baseUrlPlaceholder = context.getString(R.string.settings_ollama_base_url_placeholder),
-                baseUrlValidationError = ollamaError,
+                baseUrlValidationError = baseUrlError,
                 contextWindow = ollamaContextWindow,
                 contextWindowLabel = context.getString(R.string.settings_ollama_context_label),
                 baseUrlLabel = context.getString(R.string.settings_ollama_base_url_label),
@@ -227,38 +217,27 @@ private fun retryHints(context: Context): SettingsHintController = SettingsHintC
 }
 
 /**
- * The provider's own name. Not localized: these are product names.
- *
- * @param id The provider.
- * @return Its display name.
- */
-private fun providerLabel(id: ProviderId): String = when (id) {
-    ProviderId.OpenAi -> "OpenAI"
-    ProviderId.Anthropic -> "Anthropic"
-    ProviderId.Google -> "Google"
-    ProviderId.DeepSeek -> "DeepSeek"
-    ProviderId.Ollama -> "Ollama"
-}
-
-/**
- * UI state slice surfaced by [ProviderDetailViewModel].
+ * UI state slice surfaced by [ProviderDetailViewModel] — the values of the one provider
+ * the screen is bound to.
  *
  * Kept as a single data class so the screen recomposes against one
  * snapshot.
+ *
+ * @property apiKey The saved key; empty when none (and unused by a provider without one).
+ * @property model The chosen model id; empty when none.
+ * @property baseUrl The server address of a provider reached at one; empty otherwise.
+ * @property baseUrlInvalid Whether [baseUrl] as typed cannot be used.
+ * @property ollamaContextWindow The Ollama context window, as text for the field.
+ * @property cleartextConsentOrigin The unencrypted private origin awaiting the user's approval.
+ * @property cloudRetryMaxAttempts The global cloud-retry attempt budget.
+ * @property cloudRetryBaseDelayMs The global cloud-retry base delay.
  */
 data class ProviderDetailUiState(
-    val openAiKey: String = "",
-    val openAiModel: String = "",
-    val anthropicKey: String = "",
-    val anthropicModel: String = "",
-    val googleKey: String = "",
-    val googleModel: String = "",
-    val deepSeekKey: String = "",
-    val deepSeekModel: String = "",
-    val ollamaBaseUrl: String = "",
-    val ollamaModel: String = "",
+    val apiKey: String = "",
+    val model: String = "",
+    val baseUrl: String = "",
+    val baseUrlInvalid: Boolean = false,
     val ollamaContextWindow: String = "4096",
-    val ollamaBaseUrlInvalid: Boolean = false,
     val cleartextConsentOrigin: String? = null,
     val cloudRetryMaxAttempts: Int = SettingsDefaults.CLOUD_RETRY_MAX_ATTEMPTS_DEFAULT,
     val cloudRetryBaseDelayMs: Long = SettingsDefaults.CLOUD_RETRY_BASE_DELAY_MS_DEFAULT,
@@ -291,143 +270,75 @@ class ProviderDetailViewModel @Inject constructor(
     }
 
     /**
-     * Binds the screen to the relevant API-key flows. Idempotent —
-     * `LaunchedEffect(providerId)` invokes this on the very first
-     * composition.
+     * Binds the screen to the flows of [providerId]: its key when it uses one, its model, and
+     * — for a provider reached at an address the user enters — that address with its
+     * cleartext consent state. Idempotent — `LaunchedEffect(providerId)` invokes this on the
+     * very first composition.
+     *
+     * @param providerId The provider the screen shows.
      */
     fun bind(providerId: ProviderId) {
-        when (providerId) {
-            ProviderId.OpenAi -> {
-                apiKeyRepository.getOpenAIKey().onEach { v -> _uiState.update { it.copy(openAiKey = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-                apiKeyRepository.getOpenAIModel().onEach { v -> _uiState.update { it.copy(openAiModel = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
+        val provider = providerId.cloudProvider
+        if (provider.usesApiKey) {
+            apiKeyRepository.getApiKey(provider)
+                .onEach { v -> _uiState.update { it.copy(apiKey = v.orEmpty()) } }
+                .launchIn(viewModelScope)
+        }
+        apiKeyRepository.getModel(provider)
+            .onEach { v -> _uiState.update { it.copy(model = v.orEmpty()) } }
+            .launchIn(viewModelScope)
+        if (provider.usesBaseUrl) {
+            apiKeyRepository.getBaseUrl(provider)
+                .onEach { v -> _uiState.update { it.copy(baseUrl = v.orEmpty()) } }
+                .launchIn(viewModelScope)
+            // The consent notice is derived, not stored: it appears whenever the
+            // saved address is an unencrypted private one the user has not
+            // approved, and disappears the moment either side changes. Combining
+            // both flows (rather than checking once on save) is what keeps it
+            // correct when the URL is edited keystroke by keystroke — this field
+            // persists on every character, so there is no "save" moment to hang a
+            // confirmation off.
+            combine(
+                apiKeyRepository.getBaseUrl(provider),
+                networkSettings.approvedCleartextOrigins,
+            ) { url, approved ->
+                val verdict = CleartextPolicy.classify(url.orEmpty(), approved)
+                (verdict as? CleartextPolicy.Verdict.NeedsApproval)?.origin
             }
-            ProviderId.Anthropic -> {
-                apiKeyRepository.getAnthropicKey()
-                    .onEach { v -> _uiState.update { it.copy(anthropicKey = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-                apiKeyRepository.getAnthropicModel()
-                    .onEach { v -> _uiState.update { it.copy(anthropicModel = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-            }
-            ProviderId.Google -> {
-                apiKeyRepository.getGoogleKey()
-                    .onEach { v -> _uiState.update { it.copy(googleKey = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-                apiKeyRepository.getGoogleModel()
-                    .onEach { v -> _uiState.update { it.copy(googleModel = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-            }
-            ProviderId.DeepSeek -> {
-                apiKeyRepository.getDeepSeekKey()
-                    .onEach { v -> _uiState.update { it.copy(deepSeekKey = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-                apiKeyRepository.getDeepSeekModel()
-                    .onEach { v -> _uiState.update { it.copy(deepSeekModel = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-            }
-            ProviderId.Ollama -> {
-                apiKeyRepository.getOllamaBaseUrl()
-                    .onEach { v -> _uiState.update { it.copy(ollamaBaseUrl = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-                // The consent notice is derived, not stored: it appears whenever the
-                // saved address is an unencrypted private one the user has not
-                // approved, and disappears the moment either side changes. Combining
-                // both flows (rather than checking once on save) is what keeps it
-                // correct when the URL is edited keystroke by keystroke — this field
-                // persists on every character, so there is no "save" moment to hang a
-                // confirmation off.
-                combine(
-                    apiKeyRepository.getOllamaBaseUrl(),
-                    networkSettings.approvedCleartextOrigins,
-                ) { url, approved ->
-                    val verdict = CleartextPolicy.classify(url.orEmpty(), approved)
-                    (verdict as? CleartextPolicy.Verdict.NeedsApproval)?.origin
-                }
-                    .onEach { origin -> _uiState.update { it.copy(cleartextConsentOrigin = origin) } }
-                    .launchIn(viewModelScope)
-                apiKeyRepository.getOllamaModelName()
-                    .onEach { v -> _uiState.update { it.copy(ollamaModel = v.orEmpty()) } }
-                    .launchIn(viewModelScope)
-                apiKeyRepository.getOllamaContextWindowSize()
-                    .onEach { v -> _uiState.update { it.copy(ollamaContextWindow = v.toString()) } }
-                    .launchIn(viewModelScope)
-            }
+                .onEach { origin -> _uiState.update { it.copy(cleartextConsentOrigin = origin) } }
+                .launchIn(viewModelScope)
+        }
+        if (providerId == ProviderId.Ollama) {
+            apiKeyRepository.getOllamaContextWindowSize()
+                .onEach { v -> _uiState.update { it.copy(ollamaContextWindow = v.toString()) } }
+                .launchIn(viewModelScope)
         }
     }
 
     /**
-     * Routes a key edit to the bound provider's own setter.
-     *
-     * The screen no longer names providers when wiring its callbacks — the one
-     * place that knows a provider's shape is the projection above — so the
-     * dispatch lives here instead of being spelled out five times at the call
-     * site. Ollama has no key and never reaches this.
+     * Persists a key edit for [providerId]; a provider that uses no key never reaches this.
      *
      * @param providerId The provider being edited.
      * @param value The new key; blank clears it.
      */
     fun updateKey(providerId: ProviderId, value: String) {
-        when (providerId) {
-            ProviderId.OpenAi -> updateOpenAiKey(value)
-            ProviderId.Anthropic -> updateAnthropicKey(value)
-            ProviderId.Google -> updateGoogleKey(value)
-            ProviderId.DeepSeek -> updateDeepSeekKey(value)
-            ProviderId.Ollama -> Unit
-        }
+        val provider = providerId.cloudProvider
+        if (!provider.usesApiKey) return
+        viewModelScope.launch { apiKeyRepository.setApiKey(provider, value.takeIf { it.isNotBlank() }) }
     }
 
     /**
-     * Routes a model edit to the bound provider's own setter.
+     * Persists a model edit for [providerId].
      *
      * @param providerId The provider being edited.
-     * @param value The new model id.
+     * @param value The new model id; blank clears it.
      */
     fun updateModel(providerId: ProviderId, value: String) {
-        when (providerId) {
-            ProviderId.OpenAi -> updateOpenAiModel(value)
-            ProviderId.Anthropic -> updateAnthropicModel(value)
-            ProviderId.Google -> updateGoogleModel(value)
-            ProviderId.DeepSeek -> updateDeepSeekModel(value)
-            ProviderId.Ollama -> updateOllamaModel(value)
-        }
-    }
-
-    fun updateOpenAiKey(value: String) {
-        viewModelScope.launch { apiKeyRepository.setOpenAIKey(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateOpenAiModel(value: String) {
-        viewModelScope.launch { apiKeyRepository.setOpenAIModel(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateAnthropicKey(value: String) {
-        viewModelScope.launch { apiKeyRepository.setAnthropicKey(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateAnthropicModel(value: String) {
-        viewModelScope.launch { apiKeyRepository.setAnthropicModel(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateGoogleKey(value: String) {
-        viewModelScope.launch { apiKeyRepository.setGoogleKey(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateGoogleModel(value: String) {
-        viewModelScope.launch { apiKeyRepository.setGoogleModel(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateDeepSeekKey(value: String) {
-        viewModelScope.launch { apiKeyRepository.setDeepSeekKey(value.takeIf { it.isNotBlank() }) }
-    }
-
-    fun updateDeepSeekModel(value: String) {
-        viewModelScope.launch { apiKeyRepository.setDeepSeekModel(value.takeIf { it.isNotBlank() }) }
+        viewModelScope.launch { apiKeyRepository.setModel(providerId.cloudProvider, value.takeIf { it.isNotBlank() }) }
     }
 
     /**
-     * Persists the Ollama base URL and flags whether it can be used.
+     * Persists the server address of [providerId] and flags whether it can be used.
      *
      * The check used to be `isBlank()` alone, so the only invalid value was an
      * empty field: `192.168.1.24` was accepted silently, and — because
@@ -437,12 +348,16 @@ class ProviderDetailViewModel @Inject constructor(
      * when there is no parseable scheme and host, which is the same condition
      * every downstream gate applies.
      *
+     * @param providerId The provider being edited; one that is reached at no address of its
+     *   own never reaches this.
      * @param value The URL as typed; blank clears the setting.
      */
-    fun updateOllamaBaseUrl(value: String) {
+    fun updateBaseUrl(providerId: ProviderId, value: String) {
+        val provider = providerId.cloudProvider
+        if (!provider.usesBaseUrl) return
         val unusable = value.isBlank() || CleartextPolicy.hostOf(value) == null
-        _uiState.update { it.copy(ollamaBaseUrl = value, ollamaBaseUrlInvalid = unusable) }
-        viewModelScope.launch { apiKeyRepository.setOllamaBaseUrl(value.takeIf { it.isNotBlank() }) }
+        _uiState.update { it.copy(baseUrl = value, baseUrlInvalid = unusable) }
+        viewModelScope.launch { apiKeyRepository.setBaseUrl(provider, value.takeIf { it.isNotBlank() }) }
     }
 
     /**
@@ -453,10 +368,6 @@ class ProviderDetailViewModel @Inject constructor(
     fun approveCleartextOrigin() {
         val origin = _uiState.value.cleartextConsentOrigin ?: return
         viewModelScope.launch { networkSettings.approveCleartextOrigin(origin) }
-    }
-
-    fun updateOllamaModel(value: String) {
-        viewModelScope.launch { apiKeyRepository.setOllamaModelName(value.takeIf { it.isNotBlank() }) }
     }
 
     fun updateOllamaContextWindow(value: String) {
