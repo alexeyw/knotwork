@@ -398,7 +398,34 @@ Pipelines are first-class. A `PipelineGraph` is a directed graph of typed
 runs them is `GraphExecutionEngine`, decomposed into per-type
 `NodeExecutor` strategies.
 
-The walk delegates to collaborators, each covering one concern:
+The engine itself is an entry point. It validates the graph, announces an
+image, builds or inherits the run tree, opens one of each per-invocation
+collaborator, and hands the graph to `RunWalk`. Each step of the walk asks
+the ledger first, then enters the node, replays or runs it, and handles a
+failure. It then records the step, shows it to the repetition detector, and
+moves on.
+
+```mermaid
+flowchart LR
+    Engine["GraphExecutionEngine<br/>validate · image line · run tree"] --> Walk["RunWalk<br/>one step at a time"]
+    Engine -. builds .-> Tree["RunTreeContext<br/>ledger · detector · notes · image"]
+    Walk --> Ceiling{"ledger:<br/>ceiling reached?"}
+    Ceiling -- "park or stop" --> Records["RunRecordWriter<br/>current node · spend · WAITING_*"]
+    Ceiling -- clear --> Replay["CheckpointReplay<br/>recorded prefix"]
+    Replay -- "no record" --> Live["LiveNodeStep<br/>executor · charge · soft notice"]
+    Live --> Inputs["NodeInputComposer<br/>prompt · context · image"]
+    Live --> Records
+    Walk --> Console["RunConsole<br/>console + trace, one seq"]
+    Walk --> Routing["GraphRouting<br/>next node · estimate"]
+    Walk --> Queue["QueueCursor<br/>items · results · summary"]
+```
+
+The collaborators, each covering one concern:
+
+- **`RunWalk`** — the walk: the node it is on, the text it carries there and
+  whether a model wrote it, the step count and estimate it reports, and the
+  end of a walk that did not reach OUTPUT — a protective stop or a branch with
+  nowhere left to go.
 
 - **`RunTreeContext`** — what every invocation of one run tree shares: the
   spend ledger, the repetition detector, pending advice, the image, the

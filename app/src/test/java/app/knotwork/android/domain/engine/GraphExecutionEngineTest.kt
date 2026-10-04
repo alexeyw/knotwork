@@ -2505,6 +2505,46 @@ class GraphExecutionEngineTest {
         }
 
     @Test
+    fun `given a queue's summary echoed by OUTPUT when the run completes then the reply is relayed`() = runTest {
+        // The items are written by a model, but the summary the queue leaves by
+        // its Done edge is the app's text around them — so the echoed reply must
+        // not be read as the assistant's own words. Each queue boundary resets the
+        // authorship; nothing else pinned that.
+        every { settingsRepository.pipelineMaxSteps } returns flowOf(20)
+        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+            flowOf("""["one", "two"]"""),
+            flowOf("result one"),
+            flowOf("result two"),
+        )
+        val saved = mutableListOf<ChatMessage>()
+        coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
+        val graph = PipelineGraph(
+            id = "g1",
+            name = "Queue echo",
+            nodes = listOf(
+                NodeModel("input", NodeType.INPUT, 0f, 0f),
+                NodeModel("list_gen", NodeType.LITE_RT, 0f, 0f),
+                NodeModel("queue", NodeType.QUEUE_PROCESSOR, 0f, 0f),
+                NodeModel("item", NodeType.LITE_RT, 0f, 0f),
+                NodeModel("output", NodeType.OUTPUT, 0f, 0f, systemPrompt = null),
+            ),
+            connections = listOf(
+                ConnectionModel("c1", "input", "list_gen"),
+                ConnectionModel("c2", "list_gen", "queue"),
+                ConnectionModel("c3", "queue", "item", label = "Item"),
+                ConnectionModel("c4", "queue", "output", label = "Done"),
+            ),
+        )
+
+        val states = engine(sessionId, "plan it", graph).toList()
+
+        assertTrue("Expected Completed but got: ${states.last()}", states.last() is AgentOrchestratorState.Completed)
+        val reply = saved.single { it.role == Role.AGENT }
+        assertTrue(reply.content, reply.content.startsWith("Queue execution completed."))
+        assertTrue(reply.relayed)
+    }
+
+    @Test
     fun `given a pass-through OUTPUT behind a model node when the run completes then the reply is not relayed`() =
         runTest {
             every { llmEngine.generateResponseStream(any()) } returns flowOf("an answer")
@@ -2665,6 +2705,31 @@ class GraphExecutionEngineTest {
             assertTrue(
                 "Unexpected 'Image not used' note: $consoleLines",
                 consoleLines.none { it.contains("Image not used") },
+            )
+        }
+
+    @Test
+    fun `given an image input and a branch that ends without OUTPUT then the end still says the image went unused`() =
+        runTest {
+            // INPUT and nothing after it: the walk ends with no OUTPUT node, so the
+            // note can only come from the end of the walk, not from before OUTPUT.
+            val graph = PipelineGraph(
+                id = "g1",
+                name = "Dangling",
+                nodes = listOf(NodeModel("input_1", NodeType.INPUT, 0f, 0f)),
+            )
+            val image = EngineImageInput(absolutePath = "/abs/x.jpg", width = 10, height = 10, sizeBytes = 2048)
+
+            val states = engine(sessionId, "hi", graph, imageInput = image).toList()
+
+            assertTrue(states.last() is AgentOrchestratorState.Error)
+            val consoleLines = states.filterIsInstance<AgentOrchestratorState.ConsoleLog>()
+                .last().events.map { it.message }
+            assertTrue(
+                "Missing 'Image not used' note: $consoleLines",
+                consoleLines.any {
+                    it.contains("Image not used")
+                },
             )
         }
 

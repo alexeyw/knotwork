@@ -3,29 +3,19 @@ package app.knotwork.android.domain.engine
 import app.knotwork.android.domain.engine.executors.NodeExecutorFactory
 import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
 import app.knotwork.android.domain.engine.stuck.GraphStuckDetector
-import app.knotwork.android.domain.engine.stuck.RunStepObservation
-import app.knotwork.android.domain.engine.stuck.StuckVerdict
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
-import app.knotwork.android.domain.models.NodeExecutionResult
-import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
-import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.RunBudgetLedger
 import app.knotwork.android.domain.models.RunContextNotes
 import app.knotwork.android.domain.models.RunGeneratingModel
 import app.knotwork.android.domain.models.RunImageDelivery
-import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunOrigin
-import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTreeContext
-import app.knotwork.android.domain.models.ToolInvocationResult
-import app.knotwork.android.domain.models.asCeilingBreach
-import app.knotwork.android.domain.models.diagnostic
 import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
@@ -36,14 +26,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Engine responsible for executing a given [PipelineGraph].
- * It traverses nodes starting from [NodeType.INPUT], evaluates conditions,
- * executes LLM inference, triggers tools, and reaches [NodeType.OUTPUT].
+ * Engine responsible for executing a given [PipelineGraph], as a root run or as a
+ * sub-pipeline inside one.
+ *
+ * Each invocation validates the graph, announces the run's image, builds the run
+ * tree (or inherits its parent's), opens the per-invocation collaborators — the
+ * console and trace, the run record, what each node sees, the checkpoint replay,
+ * the live node runner — and hands the graph to [RunWalk], which walks it from
+ * [NodeType.INPUT] to [NodeType.OUTPUT].
  */
 @Singleton
 class GraphExecutionEngine
@@ -227,13 +221,6 @@ constructor(
      * @param entry Where the run tree comes from.
      * @return A cold flow of orchestrator states describing the run.
      */
-    // Reason: this is the agent's core orchestrator. It is a long single
-    // state machine that walks the DAG, dispatches per node type, manages
-    // queue/clarification/approval suspensions, emits typed orchestrator
-    // states, and surfaces console events. Its decomposition into collaborators
-    // is under way; each one that lands shortens this body, and the suppression
-    // goes when it fits the thresholds.
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     private fun invoke(
         sessionId: String,
         userPrompt: String,
@@ -331,27 +318,6 @@ constructor(
             }
         }
 
-        // Per-`PIPELINE`-node visit counter. A PIPELINE node inside a loop
-        // (QUEUE_PROCESSOR) executes once per item; the index disambiguates the
-        // child run id of each visit and is re-derived deterministically on
-        // resume (it increments on replayed visits too), so the in-flight visit
-        // lands on the same index as on the interrupted run.
-        val pipelineVisitCounts = mutableMapOf<String, Int>()
-        // Known up front for a graph without routing or queues; for any other it
-        // stays null until a branch is resolved.
-        var estimatedTotalSteps: Int? = GraphRouting.fixedStepCount(graph)
-        var currentNode: NodeModel? = inputNode
-        var stepCount = 0
-        var currentInputText = userPrompt
-        // Whether a model wrote `currentInputText` (ModelAuthorship): the run's
-        // prompt is the user's, a tool's result is not a model's, and a
-        // pass-through node keeps whatever it received. The root OUTPUT records
-        // it on the chat row so memory extraction skips relayed text.
-        var currentInputByModel = false
-
-        val queue = QueueCursor(graph)
-        val traceSteps = mutableListOf<AgentOrchestratorState.TraceStep>()
-
         // What each node sees: rendered prompt, composed context, the image.
         val inputs = nodeInputs.open(console, graph, sessionId, userPrompt, tree, resume?.memorySnapshot)
         // Runs a node's executor and accounts for it.
@@ -369,379 +335,17 @@ constructor(
             beforeOutput = { noteUndeliveredImage() },
         )
 
-        // Set the moment a ceiling refuses to let the walk continue, so the
-        // post-loop branch can say which one bound instead of re-deriving it.
-        var terminationReason: RunTerminationReason? = null
-
-        while (currentNode != null) {
-            // Ask the ledger before charging, so a node that is refused is never
-            // counted: a run stopped at the ceiling has spent exactly the
-            // ceiling, not one more than it.
-            val breach = tree.budget.hardBreach()
-            if (breach != null) {
-                // A ceiling is a number the user chose, and reaching it says
-                // nothing went wrong — so the run asks whether it may carry on
-                // instead of ending on the spot, which is what it used to do.
-                //
-                // The park is durable from the first moment, with no live
-                // in-process phase before it. The two HITL gates have one
-                // because something is in flight — a resolved tool call, a
-                // generated question — that a park would have to persist and a
-                // resume re-consume. Here the walk is *between* nodes: the
-                // checkpoint already holds everything, so a live wait would
-                // hold the foreground service open buying nothing.
-                val ceiling = breach.asCeilingBreach()
-                if (ceiling != null && records.parkOnCeiling(ceiling)) {
-                    // The diagnostic plus one stable word, not a sentence. The
-                    // suffix is load-bearing: without it a pause and a stop
-                    // produce byte-identical console lines, and whoever greps
-                    // this later cannot tell a run that ended from one that is
-                    // still waiting.
-                    console.push(ConsoleEventType.RunCeiling, "${breach.diagnostic()} — paused")
-                    val pause = AgentOrchestratorState.WaitingForCeilingRaise(
-                        axis = ceiling.axis,
-                        limit = ceiling.limit,
-                        spent = ceiling.spent,
-                    )
-                    records.mirror(pause)
-                    emit(pause)
-                    // Ends the walk without a terminal state, exactly as an
-                    // approval park does — and, from a sub-pipeline, tells the
-                    // parent PIPELINE node to park the whole stack rather than
-                    // settle this run.
-                    emit(AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.CEILING))
-                    console.flush()
-                    return@flow
-                }
-                // Non-persisted runs (editor test runs) and storage failures
-                // keep the old behaviour. A pause the user cannot be asked
-                // about, or one recorded nowhere and so unanswerable after this
-                // coroutine ends, is worse than a stop that says why it stopped.
-                terminationReason = breach
-                break
-            }
-
-            stepCount++
-
-            // Visit index of this node when it is a PIPELINE node — incremented
-            // on every entry (replayed or live) so the counter stays aligned
-            // through a resume replay and the live visit gets the right index.
-            val pipelineVisitIndex = if (currentNode.type == NodeType.PIPELINE) {
-                val idx = pipelineVisitCounts.getOrDefault(currentNode.id, 0)
-                pipelineVisitCounts[currentNode.id] = idx + 1
-                idx
-            } else {
-                0
-            }
-
-            // Record the node about to execute so an interrupted run can
-            // report where it stopped.
-            records.enterNode(currentNode.id)
-
-            // Emit current step with dynamically estimated total (null = still unknown).
-            emit(
-                AgentOrchestratorState.PipelineStage(
-                    AgentOrchestratorState.PipelineStepInfo(
-                        stepIndex = stepCount,
-                        totalSteps = estimatedTotalSteps,
-                        nodeName = currentNode.type.name,
-                    ),
-                ),
-            )
-            // A node the interrupted run completed is replayed from its record:
-            // its recorded output and routing verdicts drive the same control flow
-            // a live result would. No executor call, no metrics, no new NodeIo
-            // record; the compact console line is the only addition to the trace.
-            val replayed = when (val step = replay.take(currentNode)) {
-                ReplayStep.Diverged -> {
-                    console.push(
-                        ConsoleEventType.Error,
-                        "Checkpoint trace diverged at ${currentNode.type.name}; resume aborted",
-                    )
-                    emit(
-                        AgentOrchestratorState.Error(
-                            "Recorded checkpoint no longer matches the pipeline graph. Restart the task instead.",
-                            reason = RunTerminationReason.GraphChanged,
-                        ),
-                    )
-                    return@flow
-                }
-                is ReplayStep.Replayed -> step
-                ReplayStep.Live -> null
-            }
-
-            val nodeResult: NodeExecutionResult?
-            val executorInput: String
-            val nodeDurationMs: Long
-            if (replayed != null) {
-                nodeResult = replayed.result
-                executorInput = replayed.input
-                nodeDurationMs = replayed.durationMs
-                console.push(
-                    ConsoleEventType.NodeExecution,
-                    "↻ ${currentNode.type.name} replayed from checkpoint",
-                )
-            } else {
-                when (val outcome = live.run(currentNode, currentInputText, currentInputByModel, pipelineVisitIndex)) {
-                    is LiveOutcome.Ran -> {
-                        nodeResult = outcome.result
-                        executorInput = outcome.input
-                        nodeDurationMs = outcome.durationMs
-                    }
-                    LiveOutcome.Parked, LiveOutcome.Failed -> return@flow
-                }
-            }
-            val nodeTokenCount = nodeResult?.tokenCount
-
-            val nodeError = nodeResult?.error?.let(CloudErrorSanitizer::redactSecrets)
-            if (nodeError != null) {
-                // Every node's failure passes this line on its way to the run record,
-                // the console and the surface, so this is where a credential quoted
-                // in a provider error is stopped regardless of which executor
-                // produced it — or forgot to scrub it.
-                Timber.tag(
-                    "PipelineDebug",
-                ).e("[NODE_ERR] type=%s id=%s error=%s", currentNode.type.name, currentNode.id, nodeError)
-                console.push(
-                    ConsoleEventType.Error,
-                    "${currentNode.type.name}: $nodeError",
-                )
-                // A queue whose author turned `stopOnError` off keeps going: the
-                // failure becomes this item's result and the next item starts.
-                //
-                // A typed cause is never survivable, whatever the switch says. A
-                // `PIPELINE` node forwards a sub-pipeline's ceiling breach or
-                // stuck-detector verdict through this same field, and those are
-                // not "this subtask failed" — they are the run being out of
-                // budget or going in circles. Carrying on would spend the very
-                // budget the breach reported as gone.
-                val survivable = nodeResult?.terminationReason == null
-                if (survivable && queue.continuesAfterFailure()) {
-                    val step = queue.advancePastFailure(nodeError)
-                    currentInputByModel = false
-                    currentInputText = step.inputText
-                    currentNode = step.node
-                    continue
-                }
-                // A `PIPELINE` node forwards its sub-pipeline's typed cause here.
-                // Re-emitting it is what keeps a ceiling breach one nesting
-                // level down from settling the root run as an ordinary failure.
-                emit(AgentOrchestratorState.Error(nodeError, reason = nodeResult?.terminationReason))
-                return@flow
-            }
-
-            // Skip the "✓" event for OUTPUT — its own emitted Completed state
-            // already marks the end of the pipeline, and pushing a ConsoleLog
-            // after Completed would shift the terminal state away from the
-            // tail of the flow. Replayed nodes already pushed their compact
-            // "↻ replayed" event instead.
-            if (currentNode.type != NodeType.OUTPUT && replayed == null) {
-                console.push(
-                    ConsoleEventType.NodeExecution,
-                    "✓ ${currentNode.type.name} in ${nodeDurationMs}ms",
-                )
-            }
-
-            if (currentNode.type == NodeType.TOOL) {
-                val toolOutput = nodeResult?.outputText ?: ""
-                // Prefer the executor-resolved tool name so "auto"-configured TOOL
-                // nodes attribute the observation to the tool that actually ran,
-                // not the literal "auto" placeholder. Fall back to the node's
-                // configured toolName, then the node label as a last resort.
-                val toolName = nodeResult?.resolvedToolName
-                    ?: currentNode.toolName?.takeUnless { it.equals("auto", ignoreCase = true) }
-                    ?: currentNode.label
-                inputs.recordToolResult(ToolInvocationResult(toolName = toolName, output = toolOutput))
-                console.push(ConsoleEventType.ToolCall, toolName)
-            }
-
-            if (currentNode.type != NodeType.INPUT && currentNode.type != NodeType.OUTPUT) {
-                val outputText = nodeResult?.outputText ?: currentInputText
-                traceSteps.add(
-                    AgentOrchestratorState.TraceStep(
-                        nodeName = currentNode.type.name,
-                        outputText = outputText,
-                        durationMs = nodeDurationMs,
-                        tokenCount = nodeTokenCount,
-                        depth = depth,
-                    ),
-                )
-                // Write-through into the persistent run trace, which a checkpoint
-                // resume replays instead of re-running the node. A replayed node
-                // appends nothing — its record is already in the trace.
-                if (replayed == null) {
-                    console.recordNodeIo(currentNode, executorInput, outputText, nodeDurationMs, nodeResult)
-                }
-                emit(AgentOrchestratorState.PipelineTrace(traceSteps.toList()))
-                // Surface the per-node I/O pair for the Vars tab of the
-                // chat-home console pane. INPUT is skipped (its input is
-                // the raw user prompt already surfaced as the latest chat
-                // row) and OUTPUT is skipped
-                // (already terminal; emitting after the `Completed` of
-                // OUTPUT would shift the terminal state away from the
-                // tail of the flow — same rule applied to the `✓`
-                // console event upstream).
-                emit(
-                    AgentOrchestratorState.NodeIO(
-                        nodeId = currentNode.id,
-                        nodeType = currentNode.type.name,
-                        input = executorInput,
-                        output = outputText,
-                        depth = depth,
-                    ),
-                )
-            }
-
-            // ── Stuck-detector observation point ──────────────────────────
-            //
-            // Placed **after** the trace append above, not before it. The
-            // stop's whole user-facing promise is *Open console*, where the
-            // repetition is visible — and a `break` taken before the append
-            // would drop the one step the verdict was actually reached on, so
-            // the console would be missing precisely the evidence the reader
-            // was sent to find. Judging the same input/output pair the trace
-            // has just recorded is the point: for every node the trace carries,
-            // what the detector saw and what a person can read back are the
-            // same thing. (INPUT is the one exception, and it is the trace's
-            // rule, not this one: INPUT and OUTPUT are never recorded. INPUT is
-            // still observed, because the pass-through accounting needs it, but
-            // it can only ever contribute a pass-through — never the repetition
-            // a verdict is reached on.)
-            //
-            // OUTPUT is excluded on the same grounds as the ✓ event and the
-            // soft-ceiling notice above: its executor has already emitted
-            // `Completed`, and a console line pushed after that would shift the
-            // terminal state away from the tail of the flow. Nothing is lost —
-            // a run that has just delivered its answer is not going in circles.
-            if (currentNode.type != NodeType.OUTPUT) {
-                val observation = RunStepObservation(
-                    nodeId = currentNode.id,
-                    inputFingerprint = GraphStuckDetector.fingerprint(executorInput),
-                    // The engine's own fallback for a node that emitted no
-                    // result is to forward its input, so the fingerprints match
-                    // and the step reads as the pass-through it is.
-                    outputFingerprint = GraphStuckDetector.fingerprint(nodeResult?.outputText ?: executorInput),
-                )
-                if (replayed != null) {
-                    // Rebuild the window from history without re-deciding it:
-                    // the attempt that actually ran this prefix did not stop on
-                    // it, and reaching a different verdict now would be the app
-                    // rewriting what already happened.
-                    //
-                    // The escalation it earned does carry forward, though, and
-                    // that obliges us to carry the advice with it: notes are
-                    // live-only, so the attempt that raised one and then parked
-                    // destroyed it. Re-queue it for the first live node that
-                    // composes a prompt — otherwise the resumed run inherits
-                    // only the clock and is stopped for ignoring something it
-                    // was never told. The console line and the on-screen notice
-                    // are not repeated: they were emitted when the verdict was
-                    // actually reached, and a warning re-shown on every resume
-                    // is one the reader learns to skip.
-                    if (tree.stuckDetector.replay(observation)) {
-                        tree.contextNotes.add(STUCK_CONTEXT_NOTE)
-                    }
-                } else {
-                    when (val verdict = tree.stuckDetector.observe(observation)) {
-                        StuckVerdict.Healthy -> Unit
-                        is StuckVerdict.Nudge -> {
-                            val cause = RunNoticeCause.LooksStuck(verdict.signal)
-                            console.push(ConsoleEventType.StuckDetector, cause.diagnostic())
-                            emit(AgentOrchestratorState.RunNotice(cause))
-                            tree.contextNotes.add(STUCK_CONTEXT_NOTE)
-                        }
-                        is StuckVerdict.Stop -> {
-                            // Same seam the ceilings use: set the reason and
-                            // leave the walk. The post-loop branch owns the
-                            // console line and the typed terminal state, so a
-                            // protective stop is worded in exactly one place
-                            // however it was decided.
-                            console.push(ConsoleEventType.StuckDetector, verdict.signal.diagnostic)
-                            terminationReason = RunTerminationReason.NoProgress
-                            break
-                        }
-                    }
-                }
-            }
-
-            if (currentNode.type == NodeType.OUTPUT) {
-                return@flow
-            }
-
-            if (currentNode.type == NodeType.QUEUE_PROCESSOR) {
-                when (val entry = queue.enter(currentNode, nodeResult?.outputText ?: currentInputText)) {
-                    is QueueEntry.FirstItem -> {
-                        estimatedTotalSteps = stepCount + entry.remainingSteps
-                        // Assembled from earlier results and a planned subtask: the
-                        // app's text around other nodes' output, so not a model's.
-                        currentInputByModel = false
-                        currentInputText = entry.inputText
-                        currentNode = entry.node
-                    }
-                    is QueueEntry.Skipped -> currentNode = entry.node
-                }
-                continue
-            }
-
-            // INTENT_ROUTER's outputText is the routing key — a control signal, not a content payload.
-            // Preserve currentInputText so downstream nodes receive the original data, not the routing label.
-            currentInputByModel =
-                ModelAuthorship.after(currentNode.type, nodeResult, currentInputText, currentInputByModel)
-            currentInputText = if (currentNode.type == NodeType.INTENT_ROUTER) {
-                currentInputText
-            } else {
-                nodeResult?.outputText ?: currentInputText
-            }
-
-            val nextNodeId =
-                GraphRouting.nextNodeId(currentNode, graph, nodeResult?.conditionResult, nodeResult?.routingKey)
-            val nextNode = graph.nodes.find { it.id == nextNodeId }
-
-            // After a branching node resolves its path, compute the estimated total for that branch.
-            if (currentNode.type == NodeType.INTENT_ROUTER || currentNode.type == NodeType.IF_CONDITION) {
-                estimatedTotalSteps = stepCount + GraphRouting.countNodesOnPath(nextNode, graph)
-            }
-
-            if (queue.isActive && (nextNode == null || nextNode.type == NodeType.QUEUE_PROCESSOR)) {
-                val step = queue.advance(currentInputText)
-                currentInputByModel = false
-                currentInputText = step.inputText
-                currentNode = step.node
-                continue
-            }
-
-            currentNode = nextNode
-        }
-
-        // Covers loop exits that don't go through an OUTPUT node (a dangling graph
-        // whose walk ends with no terminal node); the OUTPUT path notes it inline.
-        noteUndeliveredImage()
-
-        val breach = terminationReason
-        if (breach != null) {
-            // A ceiling refused to let the walk continue. When this run is a
-            // sub-pipeline the Error becomes the parent PIPELINE node's error and
-            // terminates the whole stack; the typed reason travels with it, so a
-            // breach at any depth stays classified all the way up.
-            //
-            // Both carriers get the *diagnostic* form, not prose. This string is
-            // persisted to `pipeline_runs.errorMessage` and written to the run
-            // trace, where it is read by engineers; the sentence a person reads
-            // is resolved from `breach` in the presentation layer. Keeping a
-            // hand-written English sentence here is what previously let one
-            // event acquire four different wordings, two of which described
-            // behaviour the engine never had.
-            console.push(consoleTypeFor(breach), breach.diagnostic())
-            emit(AgentOrchestratorState.Error(breach.diagnostic(), reason = breach))
-        } else {
-            // Loop exited because currentNode became null before reaching OUTPUT
-            console.push(ConsoleEventType.Error, "Pipeline terminated without OUTPUT")
-            emit(
-                AgentOrchestratorState.Error(
-                    "Pipeline execution terminated unexpectedly without reaching OUTPUT node.",
-                ),
-            )
-        }
+        RunWalk(
+            collector = this,
+            graph = graph,
+            tree = tree,
+            console = console,
+            records = records,
+            inputs = inputs,
+            replay = replay,
+            live = live,
+            noteUndeliveredImage = { noteUndeliveredImage() },
+        ).walk(inputNode, userPrompt)
     }.onCompletion {
         // Terminal flush: completion, failure and cancellation all land here,
         // so the persisted trace is complete the moment the run ends — even
@@ -803,61 +407,7 @@ constructor(
         )
     }
 
-    /**
-     * Which console channel a protective stop belongs on.
-     *
-     * The walk exits through one seam whatever decided to end it, so the choice
-     * of channel has to be made from the reason rather than from the site — and
-     * it is worth making, because the two channels answer different questions.
-     * A ceiling line says a number the user chose was reached; a detector line
-     * says the pipeline misbehaved. Filing the second under the first is how a
-     * console stops being searchable.
-     *
-     * Exhaustive rather than defaulting: the reasons the walk cannot produce
-     * are listed too, on the neutral channel. An `else` would file the next
-     * engine-raised reason under the ceiling channel — a console line claiming
-     * a limit was reached when none was, found only by whoever greps for it.
-     *
-     * @param reason The typed cause the walk stopped on.
-     * @return The console event type its diagnostic should be pushed under.
-     */
-    private fun consoleTypeFor(reason: RunTerminationReason): ConsoleEventType = when (reason) {
-        RunTerminationReason.NoProgress -> ConsoleEventType.StuckDetector
-        is RunTerminationReason.StepCeiling,
-        is RunTerminationReason.TokenCeiling,
-        -> ConsoleEventType.RunCeiling
-        // Exhaustive rather than an `else`, and the reasons below are listed
-        // even though the walk cannot produce them. An `else` would quietly
-        // file the next engine-raised reason under the ceiling channel — a
-        // console line that says a limit was reached when none was, discovered
-        // only by whoever greps for it later.
-        RunTerminationReason.RunStalled,
-        RunTerminationReason.HitlWindowExpired,
-        RunTerminationReason.GraphChanged,
-        RunTerminationReason.ProcessDied,
-        RunTerminationReason.DiscardedByUser,
-        RunTerminationReason.NotResumable,
-        -> ConsoleEventType.SystemMessage
-    }
-
     private companion object {
-        /**
-         * Injected into the run's own context the first time the stuck-detector
-         * decides the run is going in circles, so the model gets a chance to
-         * break the pattern itself before the run is ended for it. This first
-         * stage is meant to be the last one: a model told that it is repeating
-         * itself usually stops.
-         *
-         * Names the observation rather than the machinery. "You have produced
-         * this before" is something a model can act on; the signal name and the
-         * repetition count are for the console, where an engineer reads them.
-         */
-        const val STUCK_CONTEXT_NOTE: String =
-            "SYSTEM NOTICE: this run appears to be repeating itself — the same work has produced the " +
-                "same result more than once, and the run will be stopped if that continues. Change " +
-                "approach or finish: give the best answer you can from what you already have, and do " +
-                "not repeat a step you have already taken."
-
         /** Crashlytics custom key for the id of the pipeline currently executing. */
         const val CRASH_KEY_PIPELINE_ID: String = "active_pipeline_id"
 
