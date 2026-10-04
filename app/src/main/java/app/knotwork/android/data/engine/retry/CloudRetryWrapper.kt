@@ -1,8 +1,6 @@
 package app.knotwork.android.data.engine.retry
 
 import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.executor.clients.retry.RetryConfig
-import ai.koog.prompt.executor.clients.retry.RetryingLLMClient
 import app.knotwork.android.domain.engine.retry.CloudRetryListener
 import app.knotwork.android.domain.repositories.NetworkSettings
 import kotlinx.coroutines.flow.first
@@ -14,19 +12,17 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * Wraps a raw Koog [LLMClient] with the project's settings-driven retry policy.
  *
- * Centralises the single legitimate Koog "retry" boundary: every cloud client
- * (chat completions, embeddings) is decorated here so transient failures
- * (HTTP 429 / 5xx / connection or read timeouts) are retried with exponential
- * backoff and jitter, while authentication errors and
- * [kotlinx.coroutines.CancellationException] are never retried — both contracts
- * come straight from Koog's [RetryingLLMClient] (the project's
- * cancellation contract is preserved because the decorator wraps a suspend client).
+ * Centralises the single legitimate "retry" boundary: every cloud client (chat completions,
+ * embeddings) is decorated here, so a transient failure — a 429 or 5xx, a dropped connection —
+ * is retried with exponential backoff and jitter, or after the wait the provider asked for,
+ * while authentication errors, invalid requests and [kotlinx.coroutines.CancellationException]
+ * are never retried. The decision is [CloudRetryPolicy]'s; the loop is
+ * [RetryingCloudLlmClient]'s, which also reports each retry to a [CloudRetryListener] so the
+ * cloud node executor can surface a
+ * [app.knotwork.android.domain.models.ConsoleEventType.CloudRetry] console line.
  *
- * Retries are made observable by interposing a [RetryObservingLLMClient]
- * between the policy and the real client: it counts re-invocations and reports
- * each one to the supplied [CloudRetryListener] so the cloud node executor can
- * surface a [app.knotwork.android.domain.models.ConsoleEventType.CloudRetry]
- * console line.
+ * Both replaced Koog's `RetryingLLMClient`, which read the status out of the message text,
+ * never saw a `Retry-After` header and slept through any wait a provider named.
  *
  * @property networkSettings Source of the configured attempt budget and base
  *   delay (Settings → Providers).
@@ -41,51 +37,44 @@ class CloudRetryWrapper @Inject constructor(private val networkSettings: Network
      * returned unchanged — there is nothing to retry and nothing to observe.
      *
      * @param client The raw cloud client to wrap.
-     * @param provider Display id of the provider (e.g. `"openai"`), used only
-     *   for the retry console line.
+     * @param provider Display id of the provider (e.g. `"openai"`), used for the
+     *   retry console line and the error of a wait that is too long.
      * @param listener Sink notified before each retry; defaults to
      *   [CloudRetryListener.NONE] for off-graph callers (embeddings, the
      *   delegate-task tool) that do not surface console lines.
+     * @param retryAfter Where [client]'s transport records the `Retry-After` header of an
+     *   error answer ([RetryAfterCapturingHttpClientFactory]); `null` for a client built
+     *   without capture, which still honours a wait named in the error text.
      * @return The retry-wrapped client, or [client] itself when retries are off.
      */
     suspend fun wrap(
         client: LLMClient,
         provider: String,
         listener: CloudRetryListener = CloudRetryListener.NONE,
+        retryAfter: RetryAfterSlot? = null,
     ): LLMClient {
         val maxAttempts = networkSettings.cloudRetryMaxAttempts.first()
         if (maxAttempts <= 1) return client
 
         val baseDelay = networkSettings.cloudRetryBaseDelayMs.first().milliseconds
-        val observed = RetryObservingLLMClient(
+        return RetryingCloudLlmClient(
             delegate = client,
             provider = provider,
-            maxAttempts = maxAttempts,
-            listener = listener,
-        )
-        return RetryingLLMClient(
-            delegate = observed,
-            config = RetryConfig(
+            policy = CloudRetryPolicy(
                 maxAttempts = maxAttempts,
                 initialDelay = baseDelay,
-                // The base delay is bounded to 10s by settings, so a fixed 30s
-                // ceiling always satisfies RetryConfig's initialDelay <= maxDelay
-                // invariant while leaving headroom for the exponential growth.
+                // The base delay is bounded to 10 s by settings, so a fixed 30 s ceiling always
+                // stays above it while leaving headroom for the exponential growth. It is also
+                // the longest wait a provider may ask for before the call fails instead.
                 maxDelay = maxOf(baseDelay, MAX_BACKOFF),
-                backoffMultiplier = BACKOFF_MULTIPLIER,
-                jitterFactor = JITTER_FACTOR,
             ),
+            listener = listener,
+            retryAfter = retryAfter,
         )
     }
 
     private companion object {
-        /** Upper bound on a single backoff delay (matches Koog's PRODUCTION shape). */
+        /** Upper bound on a single backoff delay, and on a provider's requested wait. */
         val MAX_BACKOFF = 30.seconds
-
-        /** Exponential backoff growth factor between retries. */
-        const val BACKOFF_MULTIPLIER = 2.0
-
-        /** Random jitter fraction added on top of each backoff delay. */
-        const val JITTER_FACTOR = 0.2
     }
 }

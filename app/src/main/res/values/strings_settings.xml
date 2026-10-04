@@ -189,7 +189,7 @@
     <string name="settings_cloud_retry_delay_title">Base delay</string>
     <string name="settings_cloud_retry_delay_value">%1$d ms</string>
     <!-- Retry-policy explanations, opened from the section and slider glyphs. -->
-    <string name="settings_cloud_retry_hint">Applies to every cloud provider and cloud embeddings. Rate limits, 5xx and timeouts are retried; a bad key never is.</string>
+    <string name="settings_cloud_retry_hint">Applies to every cloud provider and cloud embeddings. Rate limits and server errors are retried, after the wait the provider asks for; a bad key never is.</string>
     <string name="settings_cloud_retry_attempts_hint">How many times one failed call is tried again before it gives up. Set it to 1 and a failure is reported immediately.</string>
     <string name="settings_cloud_retry_delay_hint">The wait before the first retry; each further one waits longer. Short reacts faster, long is kinder to a rate limit.</string>
 

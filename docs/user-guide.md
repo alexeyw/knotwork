@@ -2456,21 +2456,21 @@ The active on-device model, its backend, and external cloud providers.
   default.
 
 The provider editor's **Retry policy** applies to every cloud provider (chat and
-cloud embeddings alike). Transient failures — rate-limits (HTTP 429), server
-errors (5xx) and connection/read timeouts — are retried with exponential
-backoff; authentication errors are not retried, and stopping a run cancels
-cleanly. **Max attempts** (1–5, default 3; set to **1** to disable retries) and
-**Base delay** (100–10 000 ms, default 1 000) tune it. Each retry shows on the
-agent console as a muted line such as `Cloud retry 1/2 for openai`, at the
-moment the retry happens rather than after the answer finishes.
+cloud embeddings alike). A rate limit (HTTP 429) or a server error (5xx) is
+retried; the status the provider answered with decides, so an invalid request
+or a rejected key is reported at once, never retried, and stopping a run
+cancels cleanly. **Max attempts** (1–5, default 3; set to **1** to disable
+retries) and **Base delay** (100–10 000 ms, default 1 000) tune it. Each retry
+shows on the agent console as a muted line such as `Cloud retry 1/2 for openai`,
+at the moment the retry happens rather than after the answer finishes.
 
-One limitation worth knowing, measured rather than assumed: when a provider
-answers a rate-limit with a `Retry-After` header asking you to wait a specific
-time, that request is **not** honoured — the backoff curve is the same whether
-the header is present or not. The cause is in the upstream client library, and
-working around it would mean building a second retry layer of our own. In
-practice it means that under a real rate limit the app knocks sooner than it was
-asked to.
+**When the provider says how long to wait, the retry waits exactly that.** It may
+say so in a `Retry-After` header or in its error message — for example Groq's
+"try again in 1m2.5s". Otherwise the wait starts at **Base delay** and doubles
+with each retry. A wait longer than **30 seconds** is not sat through: the step
+fails at once with a message that names the provider and the wait — for example
+`'groq' is rate-limiting requests and asked to wait 63 s, longer than the 30 s the
+app waits` — so you can run it again after that instead of watching a stalled run.
 
 #### How long a cloud provider is given, and how many tries it gets
 
@@ -2484,14 +2484,13 @@ from documentation:
   minutes** on a stalled provider.
 - **30 seconds to connect.**
 - **3 attempts, waiting 1 then 2 seconds** — the default retry budget above,
-  which also covers timeouts.
+  for rate limits and server errors.
 
-A timeout ends that *attempt*, not the run: it counts as a transient failure
-and is retried. Only once the retry budget is spent does the error reach the
-console and the run stop, rather than carrying on without an answer. In the
-worst case a dead provider therefore costs about three minutes — three silent
-minutes plus the backoff — where before these limits were set a single attempt
-alone could hold the run for fifteen.
+A provider that falls silent is **not** retried: a minute of silence is reported
+once, the error reaches the console and the run stops, rather than carrying on
+without an answer. Retrying would hold the run for three silent minutes on a
+provider that has already shown it is not answering — where before these limits
+were set a single attempt alone could hold it for fifteen.
 
 #### An answer that was cut off is not shown as an answer
 

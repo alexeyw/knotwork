@@ -27,11 +27,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for [CloudRetryWrapper] and the [RetryObservingLLMClient] it
- * interposes. The transient failure is simulated at the client layer — a thrown
- * error whose message matches Koog's retryable patterns (HTTP 429 / 5xx /
- * timeout keywords) — which is exactly what the retry policy keys on, so these
- * exercise the real `RetryingLLMClient` retry loop without a live network.
+ * Unit tests for [CloudRetryWrapper]: the settings it reads and the [RetryingCloudLlmClient]
+ * it builds. The transient failure is simulated at the client layer — a thrown error whose
+ * message alone says what happened, with no HTTP status, so the policy judges it by the text
+ * rules it keeps for such failures. The status-carrying cases are in [CloudRetryPolicyTest],
+ * and the wire-level ones in [CloudRetryEndToEndTest].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CloudRetryWrapperTest {
