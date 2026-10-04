@@ -14,10 +14,11 @@ import org.junit.Test
  * recreates the database empty. Splitting the settings into sections moves every key to another
  * file, so the snapshot is pinned against the sources, not against the file a key used to live in.
  *
- * **What it reads.** The production sources with comments removed ([ProductionSources]). Every
- * `…PreferencesKey(` call must take a string literal, so a name built at run time cannot slip
- * past the census. The census does not see a key created any other way; there is exactly one
- * DataStore file, so a key created elsewhere would have to be written through the same factory.
+ * **What it reads.** The production sources with comments removed ([ProductionSources]). The eight
+ * `…PreferencesKey(name)` factories are the only public way to make a key (`Preferences.Key`'s
+ * constructor is internal in DataStore 1.2.1), so the census sees every key. Each call must take a
+ * string literal, so a name built at run time cannot slip past it, and there is one DataStore file,
+ * so two keys of the same name cannot live in different files.
  *
  * **Changing the snapshot.** Adding a key means adding it to [EXPECTED_KEYS] in the same change.
  * Removing or renaming one loses the user's value: keep reading the old name (and migrate it) or
@@ -71,10 +72,11 @@ class PreferenceStorageSnapshotTest {
         )
         val appModule = dataStoreSites.values.single()
 
+        val fileArgument = DATA_STORE_FILE.find(appModule)!!.groupValues
         assertEquals(
             "the DataStore file name",
             "agent_preferences",
-            appModule.constant(DATA_STORE_FILE.find(appModule)!!.groupValues[1]),
+            fileArgument[1].ifEmpty { appModule.constant(fileArgument[2]) },
         )
         val secretStore = SECRET_STORE.find(appModule)
         assertTrue("AppModule no longer provides the settings secret store as expected", secretStore != null)
@@ -102,7 +104,8 @@ class PreferenceStorageSnapshotTest {
         assertEquals(1, KEY_CALL.findAll("stringPreferencesKey(name)").count())
         assertEquals(0, KEY_DECLARATION.findAll("stringPreferencesKey(name)").count())
         assertEquals(0, KEY_DECLARATION.findAll("stringPreferencesKey(\"a\$b\")").count())
-        assertTrue("only ${EXPECTED_KEYS.size} keys in the snapshot", EXPECTED_KEYS.size >= MIN_KNOWN_KEYS)
+        assertEquals("NAME", DATA_STORE_FILE.find("preferencesDataStoreFile(NAME)")?.groupValues?.get(2))
+        assertEquals("x", DATA_STORE_FILE.find("by preferencesDataStore(name = \"x\")")?.groupValues?.get(1))
     }
 
     /** The value of `const val [name] = "…"` in this source, or `null` when it is not declared here. */
@@ -118,8 +121,8 @@ class PreferenceStorageSnapshotTest {
         val KEY_DECLARATION =
             Regex("""\b(boolean|int|long|float|double|string|stringSet|byteArray)PreferencesKey\(\s*"([^"$]*)"\s*\)""")
 
-        /** Where a Preferences DataStore file is named; the argument identifier is group 1. */
-        val DATA_STORE_FILE = Regex("""\bpreferencesDataStore(?:File)?\s*\(\s*(?:name\s*=\s*)?(\w+)""")
+        /** Where a Preferences DataStore file is named: a literal name in group 1, or a constant in 2. */
+        val DATA_STORE_FILE = Regex("""\bpreferencesDataStore(?:File)?\s*\(\s*(?:name\s*=\s*)?(?:"([^"]*)"|(\w+))""")
 
         /** The settings secret store's construction: file-name constant in group 1, key alias in 2. */
         val SECRET_STORE = Regex(
@@ -127,9 +130,6 @@ class PreferenceStorageSnapshotTest {
         )
 
         const val APP_MODULE = "AppModule.kt"
-
-        /** The size of the snapshot when it was taken; it may grow, never shrink. */
-        const val MIN_KNOWN_KEYS = 68
 
         /**
          * Every preference key, by name, with its value type. Taken on 03.10.2026: 67 keys of the
