@@ -55,8 +55,8 @@ class CloudEmbeddingProvider @Inject constructor(
     override val dimension: Int = DIMENSION
 
     /** Available only when the network gate admits cloud providers and a non-blank OpenAI API key is configured. */
-    override suspend fun isAvailable(): Boolean =
-        modelNetworkGate.cloudRefusal() == null && !apiKeyRepository.getOpenAIKey().firstOrNull().isNullOrBlank()
+    override suspend fun isAvailable(): Boolean = modelNetworkGate.cloudRefusal() == null &&
+        !apiKeyRepository.getApiKey(CloudProvider.OPENAI).firstOrNull().isNullOrBlank()
 
     override suspend fun embed(text: String): FloatArray = embed(listOf(text)).first()
 
@@ -76,7 +76,7 @@ class CloudEmbeddingProvider @Inject constructor(
         modelNetworkGate.cloudRefusal()?.let { refusal ->
             throw EmbeddingException(refusal.message(CloudProvider.OPENAI))
         }
-        val key = apiKeyRepository.getOpenAIKey().firstOrNull()
+        val key = apiKeyRepository.getApiKey(CloudProvider.OPENAI).firstOrNull()
         if (key.isNullOrBlank()) {
             throw EmbeddingException("OpenAI API key is not configured")
         }

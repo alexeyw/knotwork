@@ -457,7 +457,6 @@ Only Kotlin files appear inside the generated blocks.
     - `SubmitCeilingDecisionUseCaseTest.kt` - Unit tests for `SubmitCeilingDecisionUseCase`.
     - `SubmitClarificationAnswerUseCaseTest.kt` - Unit tests for `SubmitClarificationAnswerUseCase` — the single entry point of the user's clarification answer across both waiting phases.
     - `SyncTriggersUseCaseTest.kt` - Unit tests for `SyncTriggersUseCase` — the one-shot reconcile that hands the current active-trigger snapshot to the scheduler.
-    - `TaskRouterUseCaseTest.kt` - Tests for TaskRouterUseCase.
     - `TestBackendUseCaseTest.kt` - Covers the fixed-prompt backend probe, including the caller-supplied model path added for the onboarding acceleration check — where the model that was just installed is not necessarily the active one yet, so resolving through "active model" would measure the wrong thing (or nothing at all).
     - `TranscribeAudioUseCaseTest.kt` - Unit tests for `TranscribeAudioUseCase` covering every branch of the voice-input transcription pre-flight: the engine-busy gate, the active-model audio-capability checks, the success path, and the failure paths — plus the ephemeral-clip cleanup contract.
     - `TriggerHealthEvaluatorTest.kt` - Unit tests for `TriggerHealthEvaluator`: the pure derivation of a trigger's health badge from its journal facts and the current time, covering the inactive short-circuits, the staleness threshold per condition, the last-run-error signal, and the stale-over-errored precedence.

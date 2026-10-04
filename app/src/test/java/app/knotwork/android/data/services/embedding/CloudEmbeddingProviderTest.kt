@@ -3,6 +3,7 @@ package app.knotwork.android.data.services.embedding
 import ai.koog.prompt.executor.clients.LLMEmbeddingProviderAPI
 import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.data.repositories.NetworkActivityTrackerImpl
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingException
@@ -63,16 +64,16 @@ class CloudEmbeddingProviderTest {
 
     @Test
     fun `isAvailable is true when a key is configured`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
         assertTrue(provider.isAvailable())
     }
 
     @Test
     fun `isAvailable is false when the key is missing or blank`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
         assertFalse(provider.isAvailable())
 
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("   ")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("   ")
         assertFalse(provider.isAvailable())
     }
 
@@ -81,7 +82,7 @@ class CloudEmbeddingProviderTest {
         // The resolver reads `false` as "fall back to the on-device model", so memory keeps
         // working and no memory text reaches OpenAI while the restriction is on.
         localOnlyMode.value = true
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
 
         assertFalse(provider.isAvailable())
     }
@@ -91,7 +92,7 @@ class CloudEmbeddingProviderTest {
         // `isAvailable` and `embed` are separate calls; the restriction can be switched on
         // between them, so the send itself must refuse too.
         localOnlyMode.value = true
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
 
         val thrown = runCatching { provider.embed("private memory text") }.exceptionOrNull()
 
@@ -102,7 +103,7 @@ class CloudEmbeddingProviderTest {
 
     @Test
     fun `embed with a key calls OpenAI and maps doubles to floats`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
         coEvery { embedderFactory.openAiClient("sk-test") } returns client
         coEvery { client.embed(any<List<String>>(), any()) } returns
             listOf(listOf(0.1, 0.2, 0.3))
@@ -117,7 +118,7 @@ class CloudEmbeddingProviderTest {
     fun `given the gate admits the call when embed then the privacy indicator records it`() = runTest {
         // Every memory write and memory search goes through here while the embedding model
         // is OpenAI — traffic the More tab's "no network calls" pill never heard of.
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
         coEvery { embedderFactory.openAiClient("sk-test") } returns client
         coEvery { client.embed(any<List<String>>(), any()) } returns listOf(listOf(0.1))
 
@@ -129,7 +130,7 @@ class CloudEmbeddingProviderTest {
     @Test
     fun `given the gate refuses the call when embed then nothing is recorded`() = runTest {
         localOnlyMode.value = true
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
 
         runCatching { provider.embed("private memory text") }
 
@@ -138,7 +139,7 @@ class CloudEmbeddingProviderTest {
 
     @Test
     fun `embed batch preserves per-input order`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
         coEvery { embedderFactory.openAiClient(any()) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } returns
             listOf(listOf(1.0), listOf(2.0))
@@ -152,7 +153,7 @@ class CloudEmbeddingProviderTest {
 
     @Test
     fun `embed without a key throws EmbeddingException`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
 
         val thrown = runCatching { provider.embed("hello") }.exceptionOrNull()
 
@@ -162,7 +163,7 @@ class CloudEmbeddingProviderTest {
 
     @Test
     fun `embed wraps a client failure in EmbeddingException`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
         coEvery { embedderFactory.openAiClient(any()) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } throws RuntimeException("boom")
 
@@ -174,7 +175,7 @@ class CloudEmbeddingProviderTest {
 
     @Test
     fun `embed rethrows CancellationException without wrapping`() = runTest {
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf("sk-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
         coEvery { embedderFactory.openAiClient(any()) } returns client
         coEvery { client.embed(any<List<String>>(), any()) } throws CancellationException("cancelled")
 

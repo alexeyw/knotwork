@@ -95,7 +95,7 @@ class OllamaEmbeddingProvider @Inject constructor(
 
     /** The trimmed, non-blank Ollama base URL, or `null` when none is configured. */
     private suspend fun baseUrl(): String? =
-        apiKeyRepository.getOllamaBaseUrl().firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
+        apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA).firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
 
     private companion object {
         /** Output dimension of the `nomic-embed-text` Ollama model. */

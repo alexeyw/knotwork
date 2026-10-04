@@ -24,7 +24,6 @@ import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.pipelineio.PipelineJsonSerializer
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
-import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
@@ -88,7 +87,7 @@ import javax.inject.Inject
 )
 class OrchestratorViewModel
 @Inject
-// The 25-parameter constructor is the same fact seen from the dependency side:
+// The 24-parameter constructor is the same fact seen from the dependency side:
 // one ViewModel coordinating a dozen flows needs a use case for each. Hilt
 // assembles the list, so no reader ever writes it out; it shrinks when the class
 // is split, which is the refactor tracked above. Scoped to the constructor so it
@@ -111,7 +110,6 @@ constructor(
     private val savePromptTemplateUseCase: SavePromptTemplateUseCase,
     private val savePipelineAsPresetUseCase: SavePipelineAsPresetUseCase,
     private val savePromptAsPresetUseCase: SavePromptAsPresetUseCase,
-    private val apiKeyRepository: ApiKeyRepository,
     private val toolRepository: ToolRepository,
     private val localModelRepository: LocalModelRepository,
     private val settingsRepository: SettingsRepository,
@@ -142,7 +140,6 @@ constructor(
 
     init {
         observeSavedPipelines()
-        observeProviderKeys()
         loadAvailableTools()
         observeLocalModels()
         observePromptTemplates()
@@ -312,37 +309,6 @@ constructor(
                         )
                     }
                 }
-        }
-    }
-
-    private fun observeProviderKeys() {
-        viewModelScope.launch {
-            apiKeyRepository.getOpenAIKey().collect { key ->
-                updateProviderKey(CloudProvider.OPENAI, !key.isNullOrBlank())
-            }
-        }
-        viewModelScope.launch {
-            apiKeyRepository.getAnthropicKey().collect { key ->
-                updateProviderKey(CloudProvider.ANTHROPIC, !key.isNullOrBlank())
-            }
-        }
-        viewModelScope.launch {
-            apiKeyRepository.getGoogleKey().collect { key ->
-                updateProviderKey(CloudProvider.GOOGLE, !key.isNullOrBlank())
-            }
-        }
-        viewModelScope.launch {
-            apiKeyRepository.getDeepSeekKey().collect { key ->
-                updateProviderKey(CloudProvider.DEEPSEEK, !key.isNullOrBlank())
-            }
-        }
-    }
-
-    private fun updateProviderKey(provider: CloudProvider, hasKey: Boolean) {
-        _uiState.update { state ->
-            val updatedKeys = state.providerKeys.toMutableMap()
-            updatedKeys[provider] = hasKey
-            state.copy(providerKeys = updatedKeys)
         }
     }
 

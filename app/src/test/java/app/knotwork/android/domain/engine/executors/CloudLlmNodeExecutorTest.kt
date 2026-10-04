@@ -63,11 +63,11 @@ class CloudLlmNodeExecutorTest {
         networkActivityTracker = mockk(relaxed = true)
 
         every { settingsRepository.systemPromptPrefix } returns flowOf("")
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf("anthropic-key")
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-        every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
-        every { apiKeyRepository.getAnthropicModel() } returns flowOf("claude-sonnet-4-5")
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("anthropic-key")
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
+        every { apiKeyRepository.getModel(CloudProvider.ANTHROPIC) } returns flowOf("claude-sonnet-4-5")
 
         executor = CloudLlmNodeExecutor(
             settingsRepository,
@@ -227,7 +227,7 @@ class CloudLlmNodeExecutorTest {
     @Test
     fun `given no provider selected and no keys when execute then the node fails`() = runTest {
         val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = CloudProvider.AUTO_KEY)
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf(null)
 
         val outputs = executor.execute(node, "input", "s1", "Q").toList()
 
@@ -241,12 +241,12 @@ class CloudLlmNodeExecutorTest {
         // The node sheet shows "AUTO" as Auto (it compares ignoring case); the run
         // must treat it the same way instead of as an unknown provider.
         val node = NodeModel("1", NodeType.CLOUD, 0f, 0f, cloudProvider = "AUTO")
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf(null)
 
         executor.execute(node, "input", "s1", "Q").toList()
 
         // Auto-detection is the only path that reads the saved keys.
-        verify { apiKeyRepository.getGoogleKey() }
+        verify { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) }
     }
 
     @Test

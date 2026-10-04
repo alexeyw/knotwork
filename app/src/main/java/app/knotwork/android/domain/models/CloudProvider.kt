@@ -16,23 +16,35 @@ package app.knotwork.android.domain.models
  * decoded once on the boundary.
  */
 enum class CloudProvider(
-    /** Lowercase wire-id persisted to disk and accepted by the cloud LLM router. */
+    /**
+     * Lowercase wire-id persisted to disk and accepted by the cloud LLM router. It also
+     * names the provider's entries in the credential store (`<id>_api_key`, `<id>_model`,
+     * `<id>_base_url`), so it can never change once shipped.
+     */
     val id: String,
+    /** Whether the provider is reached with an API key the user saves. */
+    val usesApiKey: Boolean,
+    /**
+     * Whether the provider is reached at a server address the user enters, rather than at
+     * a host the client already knows. For such a provider the address — not a key — is
+     * what decides whether it is set up at all.
+     */
+    val usesBaseUrl: Boolean,
 ) {
     /** OpenAI (GPT family). */
-    OPENAI("openai"),
+    OPENAI("openai", usesApiKey = true, usesBaseUrl = false),
 
     /** Anthropic (Claude family). */
-    ANTHROPIC("anthropic"),
+    ANTHROPIC("anthropic", usesApiKey = true, usesBaseUrl = false),
 
     /** Google AI Studio / Gemini family. */
-    GOOGLE("google"),
+    GOOGLE("google", usesApiKey = true, usesBaseUrl = false),
 
     /** DeepSeek hosted API. */
-    DEEPSEEK("deepseek"),
+    DEEPSEEK("deepseek", usesApiKey = true, usesBaseUrl = false),
 
-    /** Self-hosted Ollama instance (typically over Wi-Fi). */
-    OLLAMA("ollama"),
+    /** Self-hosted Ollama instance (typically over Wi-Fi); no key. */
+    OLLAMA("ollama", usesApiKey = false, usesBaseUrl = true),
     ;
 
     /** Owns the wire-id ↔ enum parsing rules (including the legacy `"gemini"` alias). */

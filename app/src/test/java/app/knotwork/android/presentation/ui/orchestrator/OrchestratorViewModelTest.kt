@@ -1,7 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
 import app.knotwork.android.domain.models.AgentTool
-import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.NodeContextConfig
@@ -18,7 +17,6 @@ import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.prompt.PromptSegment
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
-import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PromptPresetRepository
@@ -86,7 +84,6 @@ class OrchestratorViewModelTest {
     private lateinit var savePromptTemplateUseCase: SavePromptTemplateUseCase
     private lateinit var savePipelineAsPresetUseCase: SavePipelineAsPresetUseCase
     private lateinit var savePromptAsPresetUseCase: SavePromptAsPresetUseCase
-    private lateinit var apiKeyRepository: ApiKeyRepository
     private lateinit var toolRepository: ToolRepository
     private lateinit var localModelRepository: LocalModelRepository
     private lateinit var settingsRepository: SettingsRepository
@@ -141,7 +138,6 @@ class OrchestratorViewModelTest {
             every { getPresetsForType(any()) } returns flowOf(emptyList())
         }
         skillRepository = mockk(relaxed = true)
-        apiKeyRepository = mockk()
         toolRepository = mockk()
         localModelRepository = mockk()
         settingsRepository = mockk(relaxed = true) {
@@ -154,11 +150,6 @@ class OrchestratorViewModelTest {
         every { loadPipelineUseCase.observeAllPipelines() } returns flowOf(emptyList())
         every { getPromptTemplatesUseCase() } returns flowOf(emptyList())
         every { localModelRepository.getAllModels() } returns flowOf(emptyList())
-
-        every { apiKeyRepository.getOpenAIKey() } returns flowOf(null)
-        every { apiKeyRepository.getAnthropicKey() } returns flowOf("key")
-        every { apiKeyRepository.getGoogleKey() } returns flowOf(null)
-        every { apiKeyRepository.getDeepSeekKey() } returns flowOf(null)
 
         coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool("Tool1", "Desc", "{}"))
 
@@ -197,7 +188,6 @@ class OrchestratorViewModelTest {
         savePromptTemplateUseCase,
         savePipelineAsPresetUseCase,
         savePromptAsPresetUseCase,
-        apiKeyRepository,
         toolRepository,
         localModelRepository,
         settingsRepository,
@@ -214,12 +204,10 @@ class OrchestratorViewModelTest {
     }
 
     @Test
-    fun `init loads provider keys and tools`() = runTest {
+    fun `init loads the available tools`() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(true, state.providerKeys[CloudProvider.ANTHROPIC])
-        assertEquals(false, state.providerKeys[CloudProvider.OPENAI])
         assertEquals(1, state.availableTools.size)
         assertEquals("Tool1", state.availableTools[0].name)
     }

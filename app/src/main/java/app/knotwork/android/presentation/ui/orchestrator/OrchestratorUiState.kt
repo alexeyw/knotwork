@@ -1,7 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
 import app.knotwork.android.domain.models.AgentTool
-import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.NodeModel
@@ -26,7 +25,6 @@ import app.knotwork.android.presentation.ui.common.UiText
  * @property isLoading Whether a loading operation is currently in progress.
  * @property errorMessage An error message if an operation fails.
  * @property availableTools List of all available tools in the system.
- * @property providerKeys Map indicating whether an API key is set for specific provider node types.
  * @property promptTemplates List of saved prompt templates.
  * @property availableVariables Tokens (`$KEY`) of every prompt variable currently
  * registered in the DI graph. Drives the chip row in the prompt editor.
@@ -76,7 +74,6 @@ data class OrchestratorUiState(
     val errorMessage: UiText? = null,
     val availableTools: List<AgentTool> = emptyList(),
     val availableLocalModels: List<LocalModel> = emptyList(),
-    val providerKeys: Map<CloudProvider, Boolean> = emptyMap(),
     val promptTemplates: List<PromptTemplate> = emptyList(),
     val availableVariables: List<String> = emptyList(),
     val previewState: PromptPreviewState = PromptPreviewState.Hidden,

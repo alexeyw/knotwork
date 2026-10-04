@@ -1,8 +1,8 @@
 package app.knotwork.android.domain.models
 
 /**
- * Identifier for one of the 5 known external LLM providers surfaced by the
- * Settings → External providers list. Tied 1:1 to [CloudProvider] but
+ * Identifier for one of the external LLM providers surfaced by the
+ * Settings → External providers list, in the order the list shows them. Tied 1:1 to [CloudProvider] but
  * kept separate so the UI can ship localized display labels without
  * polluting the enum used by the inference pipeline.
  */
@@ -38,8 +38,9 @@ enum class ProviderId(
  *   renders "Not configured · tap to add API key".
  * @property model Currently selected model name (e.g. `gpt-4o-mini`).
  *   `null` when no model has been picked.
- * @property isLanLocal `true` only for [ProviderId.Ollama] — drives the
- *   LAN pill rendered next to the row title.
+ * @property isLanLocal `true` for a provider reached at an address the user
+ *   enters ([CloudProvider.usesBaseUrl] — today Ollama) — drives the LAN pill
+ *   rendered next to the row title.
  * @property endpointHint Optional secondary line (e.g. Ollama base URL)
  *   shown beneath the model name. `null` when the provider has no
  *   user-facing endpoint configuration.

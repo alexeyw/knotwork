@@ -5,12 +5,14 @@ import app.knotwork.android.data.local.crypto.AeadCipher
 import app.knotwork.android.data.local.crypto.KeystoreBackedPrefsStore
 import app.knotwork.android.data.local.crypto.SecureValueUnreadableException
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import timber.log.Timber
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,112 +48,46 @@ class ApiKeyManager @Inject constructor(@ApplicationContext private val context:
         cipher = cipher,
     )
 
-    private object Keys {
-        const val OPENAI_KEY = "openai_api_key"
-        const val OPENAI_MODEL = "openai_model"
-        const val ANTHROPIC_KEY = "anthropic_api_key"
-        const val ANTHROPIC_MODEL = "anthropic_model"
-        const val GOOGLE_KEY = "google_api_key"
-        const val GOOGLE_MODEL = "google_model"
-        const val DEEPSEEK_KEY = "deepseek_api_key"
-        const val DEEPSEEK_MODEL = "deepseek_model"
-        const val OLLAMA_URL = "ollama_base_url"
-        const val OLLAMA_MODEL = "ollama_model"
-        const val OLLAMA_CONTEXT = "ollama_context"
-    }
+    /**
+     * One observable per stored entry, keyed by entry name and created on first access from
+     * the stored value, so a write through one reader is seen by every other reader of the
+     * same entry.
+     */
+    private val entries = ConcurrentHashMap<String, MutableStateFlow<String?>>()
 
-    // Mutable state flows to allow reactive observing of key changes
-    private val _openAIKeyFlow by lazy { MutableStateFlow(readOrNull(Keys.OPENAI_KEY)) }
-    private val _openAIModelFlow by lazy { MutableStateFlow(readOrNull(Keys.OPENAI_MODEL)) }
-    private val _anthropicKeyFlow by lazy { MutableStateFlow(readOrNull(Keys.ANTHROPIC_KEY)) }
-    private val _anthropicModelFlow by lazy { MutableStateFlow(readOrNull(Keys.ANTHROPIC_MODEL)) }
-    private val _googleKeyFlow by lazy { MutableStateFlow(readOrNull(Keys.GOOGLE_KEY)) }
-    private val _googleModelFlow by lazy { MutableStateFlow(readOrNull(Keys.GOOGLE_MODEL)) }
-    private val _deepSeekKeyFlow by lazy { MutableStateFlow(readOrNull(Keys.DEEPSEEK_KEY)) }
-    private val _deepSeekModelFlow by lazy { MutableStateFlow(readOrNull(Keys.DEEPSEEK_MODEL)) }
-    private val _ollamaUrlFlow by lazy { MutableStateFlow(readOrNull(Keys.OLLAMA_URL)) }
-    private val _ollamaModelFlow by lazy { MutableStateFlow(readOrNull(Keys.OLLAMA_MODEL)) }
-    private val _ollamaContextFlow by lazy {
+    private val ollamaContextFlow by lazy {
         MutableStateFlow(
-            readOrNull(Keys.OLLAMA_CONTEXT)?.toIntOrNull() ?: SettingsDefaults.OLLAMA_CONTEXT_WINDOW_DEFAULT,
+            readOrNull(OLLAMA_CONTEXT_ENTRY)?.toIntOrNull() ?: SettingsDefaults.OLLAMA_CONTEXT_WINDOW_DEFAULT,
         )
     }
 
-    override fun getOpenAIKey(): Flow<String?> = _openAIKeyFlow.asStateFlow()
+    override fun getApiKey(provider: CloudProvider): Flow<String?> = entry(apiKeyEntry(provider)).asStateFlow()
 
-    override suspend fun setOpenAIKey(key: String?) {
-        saveString(Keys.OPENAI_KEY, key)
-        _openAIKeyFlow.value = key
-    }
+    override suspend fun setApiKey(provider: CloudProvider, key: String?) = write(apiKeyEntry(provider), key)
 
-    override fun getOpenAIModel(): Flow<String?> = _openAIModelFlow.asStateFlow()
+    override fun getModel(provider: CloudProvider): Flow<String?> = entry(modelEntry(provider)).asStateFlow()
 
-    override suspend fun setOpenAIModel(model: String?) {
-        saveString(Keys.OPENAI_MODEL, model)
-        _openAIModelFlow.value = model
-    }
+    override suspend fun setModel(provider: CloudProvider, model: String?) = write(modelEntry(provider), model)
 
-    override fun getAnthropicKey(): Flow<String?> = _anthropicKeyFlow.asStateFlow()
+    override fun getBaseUrl(provider: CloudProvider): Flow<String?> = entry(baseUrlEntry(provider)).asStateFlow()
 
-    override suspend fun setAnthropicKey(key: String?) {
-        saveString(Keys.ANTHROPIC_KEY, key)
-        _anthropicKeyFlow.value = key
-    }
+    override suspend fun setBaseUrl(provider: CloudProvider, url: String?) = write(baseUrlEntry(provider), url)
 
-    override fun getAnthropicModel(): Flow<String?> = _anthropicModelFlow.asStateFlow()
-
-    override suspend fun setAnthropicModel(model: String?) {
-        saveString(Keys.ANTHROPIC_MODEL, model)
-        _anthropicModelFlow.value = model
-    }
-
-    override fun getGoogleKey(): Flow<String?> = _googleKeyFlow.asStateFlow()
-
-    override suspend fun setGoogleKey(key: String?) {
-        saveString(Keys.GOOGLE_KEY, key)
-        _googleKeyFlow.value = key
-    }
-
-    override fun getGoogleModel(): Flow<String?> = _googleModelFlow.asStateFlow()
-
-    override suspend fun setGoogleModel(model: String?) {
-        saveString(Keys.GOOGLE_MODEL, model)
-        _googleModelFlow.value = model
-    }
-
-    override fun getDeepSeekKey(): Flow<String?> = _deepSeekKeyFlow.asStateFlow()
-
-    override suspend fun setDeepSeekKey(key: String?) {
-        saveString(Keys.DEEPSEEK_KEY, key)
-        _deepSeekKeyFlow.value = key
-    }
-
-    override fun getDeepSeekModel(): Flow<String?> = _deepSeekModelFlow.asStateFlow()
-
-    override suspend fun setDeepSeekModel(model: String?) {
-        saveString(Keys.DEEPSEEK_MODEL, model)
-        _deepSeekModelFlow.value = model
-    }
-
-    override fun getOllamaBaseUrl(): Flow<String?> = _ollamaUrlFlow.asStateFlow()
-
-    override suspend fun setOllamaBaseUrl(url: String?) {
-        saveString(Keys.OLLAMA_URL, url)
-        _ollamaUrlFlow.value = url
-    }
-
-    override fun getOllamaModelName(): Flow<String?> = _ollamaModelFlow.asStateFlow()
-
-    override suspend fun setOllamaModelName(model: String?) {
-        saveString(Keys.OLLAMA_MODEL, model)
-        _ollamaModelFlow.value = model
-    }
-
-    override fun getOllamaContextWindowSize(): Flow<Int> = _ollamaContextFlow.asStateFlow()
+    override fun getOllamaContextWindowSize(): Flow<Int> = ollamaContextFlow.asStateFlow()
 
     override suspend fun setOllamaContextWindowSize(size: Int) {
-        store.putString(Keys.OLLAMA_CONTEXT, size.toString(), synchronous = false)
-        _ollamaContextFlow.value = size
+        store.putString(OLLAMA_CONTEXT_ENTRY, size.toString(), synchronous = false)
+        ollamaContextFlow.value = size
+    }
+
+    /** The observable of the entry [name], seeded from the store the first time it is asked for. */
+    private fun entry(name: String): MutableStateFlow<String?> =
+        entries.computeIfAbsent(name) { MutableStateFlow(readOrNull(it)) }
+
+    /** Persists [value] under [name] (removing the entry for `null`) and publishes it. */
+    private fun write(name: String, value: String?) {
+        saveString(name, value)
+        entry(name).value = value
     }
 
     /**
@@ -180,5 +116,23 @@ class ApiKeyManager @Inject constructor(@ApplicationContext private val context:
 
         /** Android Keystore alias of the AEAD key dedicated to the API-key store. */
         const val KEY_ALIAS = "knotwork.api_keys"
+
+        /** Entry holding the Ollama context window, the one slot that is not per provider. */
+        const val OLLAMA_CONTEXT_ENTRY = "ollama_context"
+
+        /**
+         * Entry names are derived from the provider's wire id, which can never change either.
+         * Every name shipped before the store was keyed by provider already had this shape
+         * (`openai_api_key`, `deepseek_model`, `ollama_base_url`, …), so the derivation reads
+         * existing installs' values without a migration; `ApiKeyManagerTest` pins the shipped
+         * names.
+         */
+        fun apiKeyEntry(provider: CloudProvider): String = "${provider.id}_api_key"
+
+        /** Entry name of [provider]'s chosen model id. */
+        fun modelEntry(provider: CloudProvider): String = "${provider.id}_model"
+
+        /** Entry name of [provider]'s server address. */
+        fun baseUrlEntry(provider: CloudProvider): String = "${provider.id}_base_url"
     }
 }
