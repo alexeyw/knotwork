@@ -57,7 +57,7 @@ class MemoryAutoExtractionCoordinatorTest {
             MemoryExtractionUseCase.MemoryExtractionOutcome.EMPTY
 
         coordinator = MemoryAutoExtractionCoordinator(
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
             chatRepository = chatRepository,
             memoryExtractionUseCase = memoryExtractionUseCase,
             taskQueueManager = taskQueueManager,

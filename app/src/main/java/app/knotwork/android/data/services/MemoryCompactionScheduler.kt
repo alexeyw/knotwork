@@ -8,7 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,13 +44,13 @@ import javax.inject.Singleton
  *
  * @property workManager The WorkManager instance work is enqueued on.
  * @property memoryRepository Source of the live chunk count for the hard-limit watch.
- * @property settingsRepository Source of the max-chunks hard limit.
+ * @property memorySettings Source of the max-chunks hard limit.
  */
 @Singleton
 class MemoryCompactionScheduler @Inject constructor(
     private val workManager: WorkManager,
     private val memoryRepository: MemoryRepository,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
 ) {
 
     /**
@@ -146,7 +146,7 @@ class MemoryCompactionScheduler @Inject constructor(
         if (!watchStarted.compareAndSet(false, true)) return
         combine(
             memoryRepository.observeStats().map { it.chunkCount },
-            settingsRepository.maxMemoryChunks,
+            memorySettings.maxMemoryChunks,
         ) { count, max -> count.takeIf { it > max } }
             .distinctUntilChanged()
             .onEach { overLimitCount -> if (overLimitCount != null) triggerImmediate() }

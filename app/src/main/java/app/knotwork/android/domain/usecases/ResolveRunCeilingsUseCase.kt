@@ -4,7 +4,7 @@ import app.knotwork.android.domain.engine.isInteractive
 import app.knotwork.android.domain.models.RunCeilingLimit
 import app.knotwork.android.domain.models.RunCeilings
 import app.knotwork.android.domain.models.RunOrigin
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -29,9 +29,9 @@ import javax.inject.Inject
  * [app.knotwork.android.domain.models.RunBudgetLedger], which knows what it is
  * counting.
  *
- * @property settingsRepository Source of the four configured ceilings.
+ * @property runSettings Source of the four configured ceilings.
  */
-class ResolveRunCeilingsUseCase @Inject constructor(private val settingsRepository: SettingsRepository) {
+class ResolveRunCeilingsUseCase @Inject constructor(private val runSettings: RunSettings) {
 
     /**
      * Resolves the ceilings for a run of the given origin.
@@ -45,14 +45,14 @@ class ResolveRunCeilingsUseCase @Inject constructor(private val settingsReposito
     suspend operator fun invoke(origin: RunOrigin): RunCeilings {
         val background = !origin.isInteractive
         val hardSteps = if (background) {
-            settingsRepository.pipelineMaxStepsBackground.first()
+            runSettings.pipelineMaxStepsBackground.first()
         } else {
-            settingsRepository.pipelineMaxSteps.first()
+            runSettings.pipelineMaxSteps.first()
         }
         val hardTokens = if (background) {
-            settingsRepository.runMaxTokensBackground.first()
+            runSettings.runMaxTokensBackground.first()
         } else {
-            settingsRepository.runMaxTokens.first()
+            runSettings.runMaxTokens.first()
         }
         return RunCeilings(
             origin = origin,

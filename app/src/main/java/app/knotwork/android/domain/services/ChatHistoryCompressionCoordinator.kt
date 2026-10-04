@@ -3,7 +3,7 @@ package app.knotwork.android.domain.services
 import app.knotwork.android.domain.constants.TimeAndIdConstants
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.isBusy
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.usecases.CompressChatHistoryUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -45,7 +45,7 @@ import javax.inject.Singleton
  * agent-busy-gated background passes over the shared inference engine, kept as
  * separate coordinators so each owns its own toggle and debounce lifecycle.
  *
- * @property settingsRepository Source of the compression toggle.
+ * @property memorySettings Source of the compression toggle.
  * @property compressChatHistoryUseCase The compression pass itself.
  * @property taskQueueManager Source of the agent-busy signal
  *   ([TaskQueueManager.globalState]) used to defer compression while a
@@ -53,7 +53,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ChatHistoryCompressionCoordinator @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val compressChatHistoryUseCase: CompressChatHistoryUseCase,
     private val taskQueueManager: TaskQueueManager,
 ) {
@@ -92,7 +92,7 @@ class ChatHistoryCompressionCoordinator @Inject constructor(
                     delay(DEBOUNCE_MS)
                     // Read the toggle at compression time so a user flipping it
                     // off during the debounce window still cancels the work.
-                    if (!settingsRepository.chatHistoryCompressionEnabled.first()) return@launch
+                    if (!memorySettings.chatHistoryCompressionEnabled.first()) return@launch
                     if (taskQueueManager.globalState.value.isBusy) continue
 
                     compressChatHistoryUseCase(sessionId)

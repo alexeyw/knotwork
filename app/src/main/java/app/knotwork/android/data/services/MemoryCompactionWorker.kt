@@ -6,7 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.usecases.MemoryCompactionUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -21,7 +21,7 @@ import timber.log.Timber
  * (constrained to charging + idle so it never costs the user battery) and as an
  * out-of-schedule one-off when the chunk count crosses the hard limit. The
  * worker itself is deliberately thin: it gates on the
- * [SettingsRepository.memoryCompactionEnabled] toggle and delegates the actual
+ * [MemorySettings.memoryCompactionEnabled] toggle and delegates the actual
  * clustering and consolidation to [MemoryCompactionUseCase] — mirroring how
  * [AgentWorker] delegates to its orchestrator use case.
  *
@@ -37,7 +37,7 @@ import timber.log.Timber
  * harmlessly.
  *
  * @property memoryCompactionUseCase The compaction pass itself.
- * @property settingsRepository Source of the compaction toggle, re-read on every
+ * @property memorySettings Source of the compaction toggle, re-read on every
  *   run so a user disabling the feature cancels an already-queued job.
  * @property taskQueueManager Source of the agent-busy signal used to defer the
  *   pass while a foreground pipeline is generating on the shared engine.
@@ -47,7 +47,7 @@ class MemoryCompactionWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val memoryCompactionUseCase: MemoryCompactionUseCase,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val taskQueueManager: TaskQueueManager,
 ) : CoroutineWorker(context, workerParams) {
 
@@ -59,7 +59,7 @@ class MemoryCompactionWorker @AssistedInject constructor(
      *   WorkManager re-attempts it under the same constraints.
      */
     override suspend fun doWork(): Result {
-        if (!settingsRepository.memoryCompactionEnabled.first()) {
+        if (!memorySettings.memoryCompactionEnabled.first()) {
             Timber.tag(TAG).d("Memory compaction disabled; skipping run")
             return Result.success()
         }

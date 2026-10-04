@@ -99,7 +99,7 @@ sealed class PipelineValidationError {
     /**
      * Error indicating the static nesting depth of the pipeline composition
      * exceeds the configured ceiling
-     * ([app.knotwork.android.domain.repositories.SettingsRepository.pipelineMaxNestingDepth]).
+     * ([app.knotwork.android.domain.repositories.RunSettings.pipelineMaxNestingDepth]).
      * Computed over the acyclic call graph (a cycle is reported separately as
      * [PipelineCycle]).
      *

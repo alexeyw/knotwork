@@ -268,7 +268,7 @@ enum class MemoryImportWarning {
  * One selectable embedding provider in the Memory-section dropdown.
  *
  * @property id Stable wire id persisted via
- *   [app.knotwork.android.domain.repositories.SettingsRepository.activeEmbeddingProviderId]
+ *   [app.knotwork.android.domain.repositories.MemorySettings.activeEmbeddingProviderId]
  *   (e.g. `"use"`).
  * @property displayName Human-readable provider label rendered in the dropdown.
  */

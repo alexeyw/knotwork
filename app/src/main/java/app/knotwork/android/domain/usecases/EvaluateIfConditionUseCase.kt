@@ -11,7 +11,7 @@ import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -37,7 +37,7 @@ import javax.inject.Inject
  *
  * @property llmInferenceEngine The engine used to evaluate free-form prompt conditions via LLM.
  * @property structuredOutputGate Validate-and-repair gate wrapping the LLM verdict.
- * @property settingsRepository Source of the configured repair ceiling.
+ * @property runSettings Source of the configured repair ceiling.
  * @property cloudStructuredFactory Builds a cloud-backed gate client when the
  *   node carries a [NodeModel.cloudProvider]; falls back to the local engine
  *   when the cloud provider is unavailable.
@@ -45,7 +45,7 @@ import javax.inject.Inject
 class EvaluateIfConditionUseCase @Inject constructor(
     private val llmInferenceEngine: LlmInferenceEngine,
     private val structuredOutputGate: StructuredOutputGate,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val cloudStructuredFactory: CloudStructuredInferenceClientFactory,
 ) {
 
@@ -162,7 +162,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
                 "INPUT_TEXT" to inputText,
             ),
         )
-        val maxRepairs = settingsRepository.structuredOutputMaxRepairs.first()
+        val maxRepairs = runSettings.structuredOutputMaxRepairs.first()
         val inference = resolveInference(node)
 
         val result = try {

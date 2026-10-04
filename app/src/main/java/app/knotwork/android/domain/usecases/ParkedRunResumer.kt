@@ -10,7 +10,7 @@ import app.knotwork.android.domain.models.ceilingBreach
 import app.knotwork.android.domain.models.diagnostic
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
@@ -31,7 +31,7 @@ import javax.inject.Inject
 class ParkedRunResumer @Inject constructor(
     private val pendingInteractionRepository: PendingInteractionRepository,
     private val pipelineRunRepository: PipelineRunRepository,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val approvalNotifier: ApprovalNotifier,
     private val clarificationNotifier: ClarificationNotifier,
     private val ceilingNotifier: CeilingNotifier,
@@ -65,7 +65,7 @@ class ParkedRunResumer @Inject constructor(
     ): PendingSubmissionOutcome {
         cancelNotification(pending)
 
-        val windowHours = settingsRepository.backgroundApprovalWindowHours.first()
+        val windowHours = runSettings.backgroundApprovalWindowHours.first()
         if (System.currentTimeMillis() - pending.requestedAt > windowHours * MILLIS_PER_HOUR) {
             failExpiredPark(pending)
             return PendingSubmissionOutcome.Expired

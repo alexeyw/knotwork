@@ -65,7 +65,8 @@ class NodeInputComposerTest {
     }
     private val factory = NodeInputComposer.Factory(
         chatRepository = chat,
-        settingsRepository = settings,
+        memorySettings = settings,
+        toolSettings = settings,
         promptTemplateEngine = PromptTemplateEngine(),
         promptVariableProviders = setOf(date),
         nodeContextBuilder = NodeContextBuilder(),

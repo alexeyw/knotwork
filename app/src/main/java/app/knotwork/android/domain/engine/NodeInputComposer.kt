@@ -14,7 +14,8 @@ import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
@@ -150,7 +151,7 @@ class NodeInputComposer private constructor(
         // the history it replays.
         val hasToolText = toolResults.isNotEmpty() || chatHistoryView.liveWindow.any { it.role == Role.SYSTEM }
         val toolResultCharBudget = if (hasToolText && feedsOnDeviceModel(node)) {
-            sources.settingsRepository.workspaceReadTokenBudget.first() * ChatHistoryWindowPlanner.CHARS_PER_TOKEN
+            sources.toolSettings.workspaceReadTokenBudget.first() * ChatHistoryWindowPlanner.CHARS_PER_TOKEN
         } else {
             null
         }
@@ -242,7 +243,7 @@ class NodeInputComposer private constructor(
             Timber.tag("PipelineDebug").w(e, "Failed to retrieve long-term memories; continuing without them")
             emptyList()
         }
-        val verbose = sources.settingsRepository.verboseMemoryLoggingEnabled.first()
+        val verbose = sources.memorySettings.verboseMemoryLoggingEnabled.first()
         console.push(
             ConsoleEventType.MemoryAccess,
             MemoryAccessLogFormatter.format(
@@ -327,7 +328,7 @@ class NodeInputComposer private constructor(
 
     /** Reads the compression settings and, when compression is on, the cached summary. */
     private suspend fun loadHistorySettings(): HistorySettings {
-        val settings = sources.settingsRepository
+        val settings = sources.memorySettings
         val enabled = settings.chatHistoryCompressionEnabled.first()
         val summary = if (enabled) {
             try {
@@ -388,8 +389,8 @@ class NodeInputComposer private constructor(
      * node inputs are composed from.
      *
      * @property chatRepository The session's messages and its history summary.
-     * @property settingsRepository History compression, memory logging and the
-     *   tool-text budget.
+     * @property memorySettings History compression and memory logging.
+     * @property toolSettings The tool-text budget.
      * @property promptTemplateEngine Renders `$VARIABLE` placeholders.
      * @property promptVariableProviders The registered placeholder values.
      * @property nodeContextBuilder Assembles the opted-into blocks in their fixed order.
@@ -400,7 +401,8 @@ class NodeInputComposer private constructor(
     @Singleton
     class Factory @Inject constructor(
         internal val chatRepository: ChatRepository,
-        internal val settingsRepository: SettingsRepository,
+        internal val memorySettings: MemorySettings,
+        internal val toolSettings: ToolSettings,
         internal val promptTemplateEngine: PromptTemplateEngine,
         internal val promptVariableProviders: Set<@JvmSuppressWildcards PromptVariableProvider>,
         internal val nodeContextBuilder: NodeContextBuilder,

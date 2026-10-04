@@ -2,7 +2,7 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.MemoryReranker
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
@@ -43,7 +43,7 @@ import javax.inject.Inject
  * @property memoryRepository Backing store exposing the raw vector search.
  * @property memoryReranker Applies recency / pinned / dedup / threshold rules to
  *   the raw search hits.
- * @property settingsRepository Source of the default top-K / threshold /
+ * @property memorySettings Source of the default top-K / threshold /
  *   recency half-life when the caller does not override them.
  * @property memorySearchStatsTracker Records the raw similarity scores of each
  *   search so the Settings AVG SCORE stat cell reflects retrieval quality.
@@ -52,7 +52,7 @@ class RetrieveRelevantMemoryUseCase @Inject constructor(
     private val embeddingProviderResolver: EmbeddingProviderResolver,
     private val memoryRepository: MemoryRepository,
     private val memoryReranker: MemoryReranker,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val memorySearchStatsTracker: MemorySearchStatsTracker,
 ) {
     /**
@@ -60,12 +60,12 @@ class RetrieveRelevantMemoryUseCase @Inject constructor(
      *
      * @param query The text query (e.g. the user's message) to find context for.
      * @param limit Maximum number of memories to return. When `null` (the
-     *   default), `SettingsRepository.memorySearchTopK` is used. Provided as an
+     *   default), `MemorySettings.memorySearchTopK` is used. Provided as an
      *   explicit override mainly for tests.
      * @param threshold Minimum raw similarity a memory must reach to be kept —
      *   the recency and pinned bonuses reorder the survivors but never buy a
      *   chunk past this gate. Pinned chunks bypass the filter. When `null` (the
-     *   default), `SettingsRepository.memorySearchThreshold` is used.
+     *   default), `MemorySettings.memorySearchThreshold` is used.
      * @return Relevant [MemoryChunk]s ordered best-first (pinned chunks first,
      *   then by descending final score), capped at the effective top-K.
      */
@@ -84,11 +84,11 @@ class RetrieveRelevantMemoryUseCase @Inject constructor(
      *
      * @param query The text query (e.g. the user's message) to find context for.
      * @param limit Maximum number of memories to return. When `null` (the
-     *   default), `SettingsRepository.memorySearchTopK` is used.
+     *   default), `MemorySettings.memorySearchTopK` is used.
      * @param threshold Minimum raw similarity a memory must reach to be kept —
      *   the recency and pinned bonuses reorder the survivors but never buy a
      *   chunk past this gate. Pinned chunks bypass the filter. When `null` (the
-     *   default), `SettingsRepository.memorySearchThreshold` is used.
+     *   default), `MemorySettings.memorySearchThreshold` is used.
      * @return Relevant `(chunk, finalScore)` pairs ordered best-first (pinned
      *   chunks first, then by descending final score), capped at the effective
      *   top-K.
@@ -108,9 +108,9 @@ class RetrieveRelevantMemoryUseCase @Inject constructor(
         val provider = embeddingProviderResolver.resolve()
         val queryEmbedding = provider.embed(query)
 
-        val effectiveLimit = limit ?: settingsRepository.memorySearchTopK.first()
-        val effectiveThreshold = threshold ?: settingsRepository.memorySearchThreshold.first()
-        val halfLifeDays = settingsRepository.memoryRecencyHalfLifeDays.first()
+        val effectiveLimit = limit ?: memorySettings.memorySearchTopK.first()
+        val effectiveThreshold = threshold ?: memorySettings.memorySearchThreshold.first()
+        val halfLifeDays = memorySettings.memoryRecencyHalfLifeDays.first()
 
         // Pull the full scored pool (not just the raw-cosine top-K) so the
         // re-ranker can promote a pinned or fresh chunk that the raw search

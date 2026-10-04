@@ -15,7 +15,7 @@ import app.knotwork.android.domain.models.RunTerminationKind
  * freshly landed messages.
  *
  * The toggle's user-controlled flag is read from
- * `SettingsRepository.scheduledTaskNotificationsEnabled` by the
+ * `RunSettings.scheduledTaskNotificationsEnabled` by the
  * implementation — callers do NOT need to gate themselves. If the user has
  * the flag off (or the POST_NOTIFICATIONS permission is missing), both
  * notify methods are no-ops.

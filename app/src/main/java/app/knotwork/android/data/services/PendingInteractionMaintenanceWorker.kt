@@ -5,7 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.usecases.ParkedRunResumer
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -37,7 +37,7 @@ import timber.log.Timber
  * this pass is the backstop for parks the user never responds to at all.
  *
  * @property pendingInteractionRepository Source of the parked records.
- * @property settingsRepository Source of the `backgroundApprovalWindowHours`
+ * @property runSettings Source of the `backgroundApprovalWindowHours`
  *   setting, re-read on every run so a changed window applies immediately.
  * @property parkedRunResumer Owner of the shared park-settlement semantics.
  */
@@ -46,7 +46,7 @@ class PendingInteractionMaintenanceWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val pendingInteractionRepository: PendingInteractionRepository,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val parkedRunResumer: ParkedRunResumer,
 ) : CoroutineWorker(context, workerParams) {
 
@@ -58,7 +58,7 @@ class PendingInteractionMaintenanceWorker @AssistedInject constructor(
      *   re-attempts under the same constraints.
      */
     override suspend fun doWork(): Result = try {
-        val windowHours = settingsRepository.backgroundApprovalWindowHours.first()
+        val windowHours = runSettings.backgroundApprovalWindowHours.first()
         val cutoff = System.currentTimeMillis() - windowHours * MILLIS_PER_HOUR
         val expired = pendingInteractionRepository.getRequestedAtOrBefore(cutoff)
         expired.forEach { pending -> parkedRunResumer.failExpiredPark(pending) }

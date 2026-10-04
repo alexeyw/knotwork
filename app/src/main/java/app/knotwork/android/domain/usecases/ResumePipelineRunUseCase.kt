@@ -7,7 +7,7 @@ import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
@@ -62,7 +62,7 @@ import javax.inject.Inject
 class ResumePipelineRunUseCase @Inject constructor(
     private val pipelineRunRepository: PipelineRunRepository,
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val pendingInteractionRepository: PendingInteractionRepository,
     private val taskQueueManager: TaskQueueManager,
 ) {
@@ -188,7 +188,7 @@ class ResumePipelineRunUseCase @Inject constructor(
      */
     private suspend fun windowRejectionFor(run: PipelineRun): ResumeOutcome? {
         if (run.status == PipelineRunStatus.INTERRUPTED) {
-            val maxAgeHours = settingsRepository.resumeMaxAgeHours.first()
+            val maxAgeHours = runSettings.resumeMaxAgeHours.first()
             val interruptedAt = run.finishedAt ?: run.startedAt
             if (System.currentTimeMillis() - interruptedAt > maxAgeHours * MILLIS_PER_HOUR) {
                 return ResumeOutcome.Expired
@@ -201,7 +201,7 @@ class ResumePipelineRunUseCase @Inject constructor(
             Timber.w("Resume rejected for %s: WAITING_* run holds no pending-interaction record", run.id)
             return ResumeOutcome.NotResumable
         }
-        val windowHours = settingsRepository.backgroundApprovalWindowHours.first()
+        val windowHours = runSettings.backgroundApprovalWindowHours.first()
         return if (System.currentTimeMillis() - pending.requestedAt > windowHours * MILLIS_PER_HOUR) {
             ResumeOutcome.Expired
         } else {

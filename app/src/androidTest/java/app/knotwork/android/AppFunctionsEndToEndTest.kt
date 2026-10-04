@@ -801,7 +801,7 @@ class AppFunctionsEndToEndTest {
                 recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
             ),
             structuredOutputGate = StructuredOutputGate(),
-            settingsRepository = entryPoint.settingsRepository(),
+            runSettings = entryPoint.settingsRepository(),
             // This E2E covers a fixed on-device TOOL node; no cloud structured
             // client is needed, so the factory always yields null.
             cloudStructuredFactory = CloudStructuredInferenceClientFactory { _, _ -> null },

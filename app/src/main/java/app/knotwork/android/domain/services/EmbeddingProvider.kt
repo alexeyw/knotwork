@@ -13,7 +13,7 @@ package app.knotwork.android.domain.services
  *
  * Providers are registered into a Hilt `Map<String, EmbeddingProvider>` keyed
  * by [id]; the currently active id is persisted in
- * `SettingsRepository.activeEmbeddingProviderId`.
+ * `MemorySettings.activeEmbeddingProviderId`.
  *
  * Implementations must be safe to call from a coroutine and must perform all
  * heavy work off the main thread.

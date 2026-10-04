@@ -110,7 +110,7 @@ class SettingsViewModel @Inject constructor(
         scope = viewModelScope,
         state = _uiState,
         appContext = appContext,
-        settingsRepository = settingsRepository,
+        memorySettings = settingsRepository,
         memoryRepository = memoryRepository,
         memorySearchStatsTracker = memorySearchStatsTracker,
         embeddingProviders = embeddingProviders,

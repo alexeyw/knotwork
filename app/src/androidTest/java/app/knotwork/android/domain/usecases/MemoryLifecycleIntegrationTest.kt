@@ -158,7 +158,7 @@ class MemoryLifecycleIntegrationTest {
 
         embeddingProviderResolver = EmbeddingProviderResolver(
             providers = mapOf(EmbeddingProvider.ID_USE to fakeEmbeddingProvider),
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
         )
 
         val searchStatsTracker = MemorySearchStatsTracker()
@@ -171,14 +171,14 @@ class MemoryLifecycleIntegrationTest {
             memoryRepository = repository,
             memorySearchStatsTracker = searchStatsTracker,
             structuredOutputGate = StructuredOutputGate(),
-            settingsRepository = settingsRepository,
+            runSettings = settingsRepository,
             metricsRepository = metricsRepository,
         )
         retrieveUseCase = RetrieveRelevantMemoryUseCase(
             embeddingProviderResolver = embeddingProviderResolver,
             memoryRepository = repository,
             memoryReranker = MemoryReranker(),
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
             memorySearchStatsTracker = searchStatsTracker,
         )
         compactionUseCase = MemoryCompactionUseCase(
@@ -188,7 +188,7 @@ class MemoryLifecycleIntegrationTest {
             promptVariableProviders = emptySet(),
             embeddingProviderResolver = embeddingProviderResolver,
             memoryRepository = repository,
-            settingsRepository = settingsRepository,
+            memorySettings = settingsRepository,
             kMeansClusterer = KMeansClusterer(),
             coverageVerifier = CompactionCoverageVerifier(),
         )

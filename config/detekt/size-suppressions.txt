@@ -11,7 +11,6 @@
 # below was measured live — removing its annotation produced a detekt finding.
 # See docs/static-analysis.md, "Size-suppression ratchet".
 
-app/src/main/java/app/knotwork/android/data/local/SettingsManager.kt :: class SettingsManager :: LargeClass
 app/src/main/java/app/knotwork/android/data/local/dao/ChatDao.kt :: interface ChatDao :: TooManyFunctions
 app/src/main/java/app/knotwork/android/di/AppModule.kt :: object AppModule :: TooManyFunctions
 app/src/main/java/app/knotwork/android/di/DataModule.kt :: class DataModule :: TooManyFunctions

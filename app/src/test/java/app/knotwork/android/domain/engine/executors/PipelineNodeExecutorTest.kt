@@ -57,7 +57,7 @@ class PipelineNodeExecutorTest {
 
     private val executor = PipelineNodeExecutor(
         pipelineRepository = pipelineRepository,
-        settingsRepository = settingsRepository,
+        runSettings = settingsRepository,
         pipelineRunRepository = pipelineRunRepository,
         runTraceRepository = runTraceRepository,
         engineProvider = Provider { engine },

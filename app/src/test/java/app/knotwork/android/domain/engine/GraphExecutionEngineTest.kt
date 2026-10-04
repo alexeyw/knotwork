@@ -2492,7 +2492,7 @@ class GraphExecutionEngineTest {
                 memoryRepository = mockk(relaxed = true),
                 memorySearchStatsTracker = mockk(relaxed = true),
                 structuredOutputGate = StructuredOutputGate(),
-                settingsRepository = extractorSettings,
+                runSettings = extractorSettings,
                 metricsRepository = mockk(relaxed = true),
             )
             val ask = ChatMessage(sessionId = sessionId, role = Role.USER, content = "tallest peak?", timestamp = 1L)

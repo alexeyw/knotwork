@@ -3,7 +3,7 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.constants.TimeAndIdConstants
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.repositories.MemoryRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -32,11 +32,11 @@ import kotlin.math.sqrt
  * surprise.
  *
  * @property memoryRepository Candidate loading.
- * @property settingsRepository Source of the compaction age window.
+ * @property memorySettings Source of the compaction age window.
  */
 class EstimateCompactionUseCase @Inject constructor(
     private val memoryRepository: MemoryRepository,
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
 ) {
     /**
      * Computes a compaction estimate as of [nowMillis].
@@ -47,7 +47,7 @@ class EstimateCompactionUseCase @Inject constructor(
      */
     suspend operator fun invoke(nowMillis: Long = System.currentTimeMillis()): CompactionEstimate =
         withContext(Dispatchers.Default) {
-            val ageDays = settingsRepository.memoryCompactionAgeDays.first()
+            val ageDays = memorySettings.memoryCompactionAgeDays.first()
             val cutoff = nowMillis - ageDays.toLong() * TimeAndIdConstants.MS_PER_DAY
             val candidates = memoryRepository.getCompactionCandidates(cutoff)
             val n = candidates.size

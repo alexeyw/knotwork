@@ -15,7 +15,7 @@ import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
 import app.knotwork.android.domain.services.MemoryVectorSimilarity
@@ -80,8 +80,8 @@ import javax.inject.Inject
  *   Settings AVG SCORE stat cell keeps reflecting every similarity search.
  * @property structuredOutputGate Validate-and-repair gate the JSON-array reply
  *   is run through before parsing.
- * @property settingsRepository Source of the configured repair ceiling
- *   ([SettingsRepository.structuredOutputMaxRepairs]).
+ * @property runSettings Source of the configured repair ceiling
+ *   ([RunSettings.structuredOutputMaxRepairs]).
  * @property metricsRepository Sink for the per-pass repair-attempt counter.
  */
 class MemoryExtractionUseCase @Inject constructor(
@@ -93,7 +93,7 @@ class MemoryExtractionUseCase @Inject constructor(
     private val memoryRepository: MemoryRepository,
     private val memorySearchStatsTracker: MemorySearchStatsTracker,
     private val structuredOutputGate: StructuredOutputGate,
-    private val settingsRepository: SettingsRepository,
+    private val runSettings: RunSettings,
     private val metricsRepository: MetricsRepository,
 ) {
 
@@ -140,7 +140,7 @@ class MemoryExtractionUseCase @Inject constructor(
      *
      * The gate validates the reply as a JSON array of `{type, text}` objects and,
      * on a malformed reply, hands the model its own output back with the parse
-     * error for up to [SettingsRepository.structuredOutputMaxRepairs] corrective
+     * error for up to [RunSettings.structuredOutputMaxRepairs] corrective
      * re-inferences. Each repair attempt bumps the off-graph `MEMORY_EXTRACTION`
      * repair counter so the cost of a stumbling model is observable.
      *
@@ -162,7 +162,7 @@ class MemoryExtractionUseCase @Inject constructor(
             ChatTranscript.turn(label = message.role.label(), content = message.content)
         }
         val fullPrompt = "$systemPrompt\n\nCONVERSATION:\n$dialogue\n\nJSON OUTPUT: "
-        val maxRepairs = settingsRepository.structuredOutputMaxRepairs.first()
+        val maxRepairs = runSettings.structuredOutputMaxRepairs.first()
 
         val result = try {
             structuredOutputGate.runJson(

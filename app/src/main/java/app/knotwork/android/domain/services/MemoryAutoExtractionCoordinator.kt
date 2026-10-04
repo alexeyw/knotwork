@@ -4,7 +4,7 @@ import app.knotwork.android.domain.constants.TimeAndIdConstants
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.isBusy
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.usecases.MemoryExtractionUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -45,7 +45,7 @@ import javax.inject.Singleton
  * The scope is overridable (via [scope]) so tests can drive it with a test
  * dispatcher and virtual time.
  *
- * @property settingsRepository Source of the auto-extract toggle.
+ * @property memorySettings Source of the auto-extract toggle.
  * @property chatRepository Source of the session's messages to mine.
  * @property memoryExtractionUseCase The extraction pass itself.
  * @property taskQueueManager Source of the agent-busy signal
@@ -54,7 +54,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class MemoryAutoExtractionCoordinator @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val memorySettings: MemorySettings,
     private val chatRepository: ChatRepository,
     private val memoryExtractionUseCase: MemoryExtractionUseCase,
     private val taskQueueManager: TaskQueueManager,
@@ -94,7 +94,7 @@ class MemoryAutoExtractionCoordinator @Inject constructor(
                     delay(DEBOUNCE_MS)
                     // Read the toggle at extraction time so a user flipping it
                     // off during the debounce window still cancels the work.
-                    if (!settingsRepository.autoExtractEnabled.first()) return@launch
+                    if (!memorySettings.autoExtractEnabled.first()) return@launch
                     if (taskQueueManager.globalState.value.isBusy) continue
 
                     val messages = chatRepository.getMessagesForSession(sessionId).first()
