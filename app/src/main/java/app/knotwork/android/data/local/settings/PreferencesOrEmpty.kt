@@ -13,8 +13,9 @@ import java.io.IOException
  *
  * An [IOException] (a corrupt or unreadable file) is logged and emitted as [emptyPreferences], so
  * every setting read through it falls back to its default instead of failing its collector. Any
- * other failure propagates. Every settings section reads through this one function, so the policy
- * is written once.
+ * other failure propagates. The settings section stores read through this one function, so the
+ * policy is written once; the sections still implemented in `SettingsManager` repeat the same block
+ * until they move out.
  *
  * @return A flow of the stored preferences, or of empty preferences after a read error.
  */
