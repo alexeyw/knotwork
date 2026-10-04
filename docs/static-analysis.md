@@ -245,9 +245,9 @@ Nothing noticed when one stopped working either. When they were first counted,
   `presentation/ui/**` for `LargeClass`).
 - The rule never runs on that source set.
 
-The dead ones were deleted. The 29 that remain are listed in
+The dead ones were deleted. The ones that remain are listed in
 [`config/detekt/size-suppressions.txt`](../config/detekt/size-suppressions.txt),
-one line per suppressed rule (32 lines):
+one line per suppressed rule:
 
 ```text
 app/src/main/java/app/knotwork/android/data/local/SettingsManager.kt :: class SettingsManager :: LargeClass

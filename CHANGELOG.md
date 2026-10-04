@@ -15,20 +15,20 @@ details.
 
 ### Changed
 
-- **The pipeline engine is being split into smaller parts, without changing
-  what it does.** The shared spending limit, loop detector, image and other
-  state that a nested pipeline inherits from its parent now travel together as
-  one value, instead of as separate arguments. Writing the console and the run
-  trace, choosing the next node, running a queue's items, keeping the run
-  record up to date, composing what each step sees, replaying a resumed run and
-  running a step live are now parts of their own. Every shipped pipeline still produces exactly the run it produced
-  before: its golden trace is unchanged.
+- **The pipeline engine is split into small parts, without changing what it
+  does.** It was one 2,000-line class built around a 1,200-line function. Each
+  concern now has a part of its own: the state a nested pipeline shares with
+  its parent, the console and run trace, routing, queues, the run record, what
+  each step sees, resuming a run, running a step, and the walk itself. Every
+  shipped pipeline still produces exactly the run it produced before: its golden
+  trace is unchanged. The engine no longer needs an exemption from the size and
+  complexity limits.
 
 - **Size and complexity exceptions can no longer pile up.** The code carried
   155 suppressions of the detekt rules that limit how long or tangled a class or
-  function may be. 126 of them did nothing, and they have been removed. The 29
-  that remain are listed in `config/detekt/size-suppressions.txt`, one line per
-  suppressed rule (32 lines). The build now
+  function may be. 126 of them did nothing, and they have been removed. The rest
+  are listed in `config/detekt/size-suppressions.txt`, one line per suppressed
+  rule; splitting the engine has since removed five more. The build now
   fails on a suppression that is not listed, and on a listed one that is gone, so
   the list can only shrink. See
   [`docs/static-analysis.md`](docs/static-analysis.md#size-suppression-ratchet-verifysizesuppressions).
