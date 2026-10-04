@@ -34,10 +34,10 @@ import javax.inject.Inject
 /**
  * Executor for [NodeType.CLOUD][app.knotwork.android.domain.models.NodeType.CLOUD] nodes.
  *
- * Streams a response from one of the supported cloud LLM providers (OpenAI, Anthropic,
- * Google, DeepSeek, Ollama) using the Koog client abstraction. The active provider is
- * either taken from `node.cloudProvider` or auto-detected from the first configured API
- * key when the node is set to `"auto"`. The fully assembled `inputText` is sent verbatim:
+ * Streams a response from one of the supported cloud LLM providers ([CloudProvider]) using
+ * the Koog client abstraction. The active provider is either taken from `node.cloudProvider`
+ * or, when the node is set to `"auto"`, the first of [AUTO_ORDER] with a configured API key —
+ * never a provider outside that list. The fully assembled `inputText` is sent verbatim:
  * `NodeContextBuilder` has already concatenated the context blocks selected by
  * [NodeContextConfig][app.knotwork.android.domain.models.NodeContextConfig], so the executor
  * must not re-fetch chat history or memory itself.
