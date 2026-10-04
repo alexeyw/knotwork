@@ -54,6 +54,14 @@ class IfConditionNodeExecutor @Inject constructor(private val evaluateIfConditio
         repairListener.attempts.forEach { attempt ->
             emit(NodeOutput.Console(ConsoleEventType.StructuredOutputRepair, attempt.consoleMessage()))
         }
+        outcome.unavailableProvider?.let { providerId ->
+            emit(
+                NodeOutput.Console(
+                    ConsoleEventType.Error,
+                    "Cloud provider '$providerId' unavailable for '${node.label}'; falling back to the local model",
+                ),
+            )
+        }
         if (outcome.gateFailed) {
             emit(
                 NodeOutput.Console(

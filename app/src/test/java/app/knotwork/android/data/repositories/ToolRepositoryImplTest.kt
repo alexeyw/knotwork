@@ -73,11 +73,10 @@ class ToolRepositoryImplTest {
         coEvery { mcpClient.connect(any()) } returns Unit
         coEvery { mcpClient.disconnect() } returns Unit
 
-        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
-        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf(null)
-        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf(null)
-        every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
-        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns flowOf(null)
+        // No provider set up by default; a test saves what it needs.
+        every { apiKeyRepository.getApiKey(any()) } returns flowOf(null)
+        every { apiKeyRepository.getBaseUrl(any()) } returns flowOf(null)
+        every { apiKeyRepository.getModel(any()) } returns flowOf(null)
 
         every { searchTool.asAgentTool() } returns AgentTool("search_tool", "desc", "{}")
         every { scheduleTaskExecutor.toolName } returns "schedule_task"
@@ -124,11 +123,12 @@ class ToolRepositoryImplTest {
 
     @Test
     fun `given every provider set up when getAvailableTools then delegate_task offers each in enum order`() = runTest {
-        // The list once named five providers by hand; it is now the enum filtered by each
-        // provider's deciding credential — a key, or the server address for Ollama.
+        // The list once named five providers by hand; it is now the enum filtered by whether
+        // each is set up — its key or server address, and a model where none is the default.
         CloudProvider.entries.forEach { provider ->
             every { apiKeyRepository.getApiKey(provider) } returns flowOf("key-${provider.id}")
             every { apiKeyRepository.getBaseUrl(provider) } returns flowOf("http://10.0.0.2:1")
+            every { apiKeyRepository.getModel(provider) } returns flowOf("model-${provider.id}")
         }
         coEvery { mcpClient.getTools() } returns emptyList()
 
@@ -141,6 +141,19 @@ class ToolRepositoryImplTest {
             delegate.parameters.contains("Default is ${CloudProvider.entries.first().id}."),
         )
     }
+
+    @Test
+    fun `given OpenRouter with a key but no model when getAvailableTools then delegate_task does not offer it`() =
+        runTest {
+            // Offered without a model, a delegation could only fail at the factory.
+            every { apiKeyRepository.getApiKey(CloudProvider.OPENROUTER) } returns flowOf("sk-or")
+            every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk")
+            coEvery { mcpClient.getTools() } returns emptyList()
+
+            val delegate = repository.getAvailableTools().single { it.name == "delegate_task" }
+
+            assertTrue(delegate.parameters, delegate.parameters.contains("MUST be one of: openai."))
+        }
 
     @Test
     fun `given only an Ollama address when getAvailableTools then delegate_task offers Ollama alone`() = runTest {

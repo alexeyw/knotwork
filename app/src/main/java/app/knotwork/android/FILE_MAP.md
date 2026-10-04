@@ -22,16 +22,19 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogCloudLlmModelResolver.kt` - Data-layer impl of `domain/engine/CloudLlmModelResolver`; owns per-provider default model ids and Ollama context-window lookup.
     - `KoogModelMapper.kt` - Maps string identifiers to Koog LLModel constants.
     - `KoogStructuredInferenceClientFactory.kt` - Data-layer impl of `domain/engine/structured/CloudStructuredInferenceClientFactory`; builds a retry-wrapped Koog client, detects native JSON via `LLModel.capabilities`, and exposes a `StructuredInferenceClient` that collapses the streamed response for the gate.
+    - `KoogTransportFactory.kt` - The transport every Koog model client the app builds runs on: Koog's own Ktor client, extended to check every hop (first request and each redirect) against `ModelHopRule` and to record the `Retry-After` of each error answer for the retry policy.
     - `LiteRTLlmEngine.kt` - LiteRT LLM engine implementation.
     - `MediaPipeTextEmbeddingEngine.kt` - MediaPipe text embedding engine.
+    - `ModelHopRule.kt` - Where one request of a model client may go: the rule `KoogTransportFactory` applies to every hop — the request the client sends and each redirect a server answers with.
     - `ModelNetworkGate.kt` - The one place that decides whether a model request may leave the device right now.
+    - `OpenAiCompatibleClients.kt` - Builds the Koog client of the providers reached through the OpenAI API: OpenRouter, Groq and a server the user runs (`CloudProvider.OPENAI_COMPATIBLE`).
     - `OpenClAccelerationProbe.kt` - `HardwareAccelerationProbe` impl: decides whether GPU inference is plausible by linking `libOpenCL.so` (falling back to the conventional vendor paths) — never touches the native inference stack, so it cannot abort the process the way a real GPU init can. Memoised; both seams (linker, filesystem) injectable for JVM tests.
     - `retry/` - Cloud retry wrapping (data layer).
       - `CloudRetryPolicy.kt` - Decides whether a failed cloud call is tried again, and after how long.
       - `CloudRetryWrapper.kt` - `@Singleton` that decorates a raw Koog `LLMClient` with Koog's `RetryingLLMClient` using the settings-driven policy (attempts + base delay); returns the raw client unchanged when retries are disabled (`maxAttempts == 1`).
-      - `RetryAfterCapturingHttpClientFactory.kt` - A `KoogHttpClient.Factory` that builds exactly what `delegate` builds, then records the `Retry-After` header of every error answer into `slot`.
       - `RetryAfterExceededException.kt` - A cloud call ended because the provider asked to wait longer than the app waits between attempts.
       - `RetryAfterHint.kt` - Reads how long a provider asked the caller to wait before trying again.
+      - `RetryAfterSlot.kt` - The `Retry-After` header of the latest error answer one client received.
       - `RetryingCloudLlmClient.kt` - An `LLMClient` that sends each call to `delegate` and, when it fails, retries it as `policy` decides — the project's replacement for Koog's `RetryingLLMClient`.
     - `TaskQueueManagerImpl.kt` - Task queue manager implementation.
     - `TextEmbedderFactory.kt` - Factory for text embedders.

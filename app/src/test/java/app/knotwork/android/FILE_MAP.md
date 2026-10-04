@@ -65,16 +65,19 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogClientFactoryTimeoutTest.kt` - Guards the network deadlines applied to cloud clients.
     - `KoogStructuredInferenceClientFactoryTest.kt` - Unit tests for `KoogStructuredInferenceClientFactory` — the cloud-backed `app.knotwork.android.domain.engine.structured.StructuredInferenceClient` seam for the structured-output gate.
     - `KoogTimeoutReflection.kt` - Reads the `ConnectionTimeoutConfig` a Koog provider client was built with.
+    - `KoogTransportFactoryTest.kt` - Unit tests for `KoogTransportFactory`.
     - `LiteRTLlmEngineTest.kt` - Tests for LiteRTLlmEngine.
     - `LocalOnlyPolicyParserAgreementTest.kt` - Checks `LocalOnlyPolicy` against the parser that actually opens the connection.
     - `MediaPipeTextEmbeddingEngineTest.kt` - Tests for MediaPipeTextEmbeddingEngine.
+    - `ModelHopRuleTest.kt` - Unit tests for `ModelHopRule`: where one request of a model client may go.
     - `ModelNetworkGateTest.kt` - Unit tests for `ModelNetworkGate` — the single decision every model client asks before it is built.
+    - `OpenAiCompatibleClientsTest.kt` - Unit tests for `OpenAiCompatibleClients`: the addresses, paths, headers and deadlines the three OpenAI-compatible providers are built with.
+    - `OpenAiCompatibleServerEndToEndTest.kt` - A server the user runs, reached on the wire through the production `KoogClientFactory` and `KoogCloudLlmModelResolver`: the address the way vLLM and LM Studio document it (ending in `/v1`), the paths, the key or its absence, and the model list.
     - `OpenClAccelerationProbeTest.kt` - Covers the two-step OpenCL detection and, above all, its failure discipline: the probe exists so a *missing* GPU never reaches the native engine, so any path that let an error escape would defeat its entire purpose.
     - `retry/` - Tests for the cloud retry wrapping.
       - `CloudRetryEndToEndTest.kt` - The retry policy measured on the wire: a real Koog client, built by the production `KoogClientFactory` and therefore wrapped and transported exactly as a Cloud node's is, against a local server that answers with scripted failures.
       - `CloudRetryPolicyTest.kt` - Unit tests for `CloudRetryPolicy`: which failures are retried, and after how long.
       - `CloudRetryWrapperTest.kt` - Unit tests for `CloudRetryWrapper` and the `RetryObservingLLMClient` it interposes.
-      - `RetryAfterCapturingHttpClientFactoryTest.kt` - Unit tests for `RetryAfterCapturingHttpClientFactory`.
       - `RetryAfterHintTest.kt` - Unit tests for `RetryAfterHint`: every form a provider uses to say how long to wait.
       - `RetryingCloudLlmClientTest.kt` - Unit tests for `RetryingCloudLlmClient`: the loop around the policy — when it waits, what it reports, and what it throws.
     - `TaskQueueManagerImplTest.kt` - Unit tests for `TaskQueueManagerImpl`: enqueuing a task processes it and updates the session state without a race or a deadlock.
@@ -337,6 +340,8 @@ Only Kotlin files appear inside the generated blocks.
     - `PromptPackMarkdownSerializerTest.kt` - Contract tests for `PromptPackMarkdownSerializer`.
   - `report/` - Tests for the content-report composer.
     - `ContentReportComposerTest.kt` - Unit tests for `ContentReportComposer`.
+  - `repositories/` - Tests of the definitions the domain repository contracts carry beside their accessors.
+    - `ApiKeyRepositoryTest.kt` - Unit tests for the definitions `ApiKeyRepository` carries beside its accessors: `requiredCredential` and `isConfigured`.
   - `services/` - Tests for the domain service interfaces and their pure helpers.
     - `ChatHistoryCompressionCoordinatorTest.kt` - Unit tests for `ChatHistoryCompressionCoordinator`.
     - `CleartextPolicyTest.kt` - Unit tests for `CleartextPolicy` — the rule that replaced the hand-written IP list in `network_security_config.xml`.

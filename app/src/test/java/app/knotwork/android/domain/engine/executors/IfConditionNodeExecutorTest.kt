@@ -87,4 +87,18 @@ class IfConditionNodeExecutorTest {
         val errors = outputs.consoleEvents().filter { it.type == ConsoleEventType.Error }
         assertEquals(1, errors.size)
     }
+
+    @Test
+    fun `execute on a provider that could not be used names it on the console`() = runTest {
+        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any()) } returns
+            EvaluateIfConditionUseCase.Outcome(value = true, unavailableProvider = "groq")
+
+        val outputs = executor.execute(node, "test input", "session-1", "prompt").toList()
+
+        assertEquals(true, outputs.lastResult().conditionResult)
+        val errors = outputs.consoleEvents().filter { it.type == ConsoleEventType.Error }
+        assertEquals(1, errors.size)
+        assertTrue(errors.single().message, errors.single().message.contains("'groq'"))
+        assertTrue(errors.single().message, errors.single().message.contains("falling back to the local model"))
+    }
 }

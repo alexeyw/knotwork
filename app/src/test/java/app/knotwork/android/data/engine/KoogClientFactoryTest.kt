@@ -32,6 +32,7 @@ class KoogClientFactoryTest {
         apiKeyRepository = mockk()
         settingsRepository = mockk(relaxed = true) {
             every { blockNetworkFromLocalModel } returns MutableStateFlow(false)
+            every { approvedCleartextOrigins } returns flowOf(emptySet())
             // Disable retry wrapping so `createClient` returns the raw client these
             // identity/null assertions expect (an attempt budget of 1 = no retries).
             every { cloudRetryMaxAttempts } returns flowOf(1)
@@ -212,6 +213,106 @@ class KoogClientFactoryTest {
 
         assertNull(factory.createClient(CloudProvider.OLLAMA))
         assertTrue(factory.unavailabilityOf(CloudProvider.OLLAMA) is CloudClientUnavailability.CleartextRefused)
+    }
+
+    @Test
+    fun `given OpenRouter with a key but no model when asked then no client, and the cause is the model`() = runTest {
+        // No default model ships for it: a client without one would only fail at the server.
+        coEvery { apiKeyRepository.getApiKey(CloudProvider.OPENROUTER) } returns flowOf("sk-or")
+        coEvery { apiKeyRepository.getModel(CloudProvider.OPENROUTER) } returns flowOf(null)
+
+        assertNull(factory.createClient(CloudProvider.OPENROUTER))
+        assertEquals(CloudClientUnavailability.MissingModel, factory.unavailabilityOf(CloudProvider.OPENROUTER))
+    }
+
+    @Test
+    fun `given Groq with a key and a model when asked then a client is built`() = runTest {
+        coEvery { apiKeyRepository.getApiKey(CloudProvider.GROQ) } returns flowOf("gsk")
+        coEvery { apiKeyRepository.getModel(CloudProvider.GROQ) } returns flowOf("llama-3.3-70b-versatile")
+
+        assertNotNull(factory.createClient(CloudProvider.GROQ))
+        assertNull(factory.unavailabilityOf(CloudProvider.GROQ))
+    }
+
+    @Test
+    fun `given Groq with a model but no key when asked then the cause is the key, not the model`() = runTest {
+        coEvery { apiKeyRepository.getApiKey(CloudProvider.GROQ) } returns flowOf(" ")
+        coEvery { apiKeyRepository.getModel(CloudProvider.GROQ) } returns flowOf(null)
+
+        assertEquals(CloudClientUnavailability.MissingCredentials, factory.unavailabilityOf(CloudProvider.GROQ))
+    }
+
+    @Test
+    fun `given the restriction on when a hosted OpenAI-compatible provider is asked for then it is blocked`() =
+        runTest {
+            every { settingsRepository.blockNetworkFromLocalModel } returns MutableStateFlow(true)
+            coEvery { apiKeyRepository.getApiKey(CloudProvider.OPENROUTER) } returns flowOf("sk-or")
+            coEvery { apiKeyRepository.getModel(CloudProvider.OPENROUTER) } returns flowOf("m")
+
+            assertNull(factory.createClient(CloudProvider.OPENROUTER))
+            assertEquals(
+                CloudClientUnavailability.BlockedByLocalOnlyMode,
+                factory.unavailabilityOf(CloudProvider.OPENROUTER),
+            )
+        }
+
+    @Test
+    fun `given a server the user runs with no address when asked then the cause is the address`() = runTest {
+        coEvery { apiKeyRepository.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf(null)
+
+        val cause = factory.unavailabilityOf(CloudProvider.OPENAI_COMPATIBLE)
+
+        assertEquals(CloudClientUnavailability.MissingCredentials, cause)
+        assertTrue(cause!!.message(CloudProvider.OPENAI_COMPATIBLE).contains("no server address"))
+    }
+
+    @Test
+    fun `given a server the user runs without a key when asked then the missing key is not a cause`() = runTest {
+        coEvery { apiKeyRepository.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns
+            flowOf("http://192.168.1.20:8000/v1")
+        coEvery { apiKeyRepository.getApiKey(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf(null)
+        coEvery { apiKeyRepository.getModel(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf("qwen")
+        every { settingsRepository.approvedCleartextOrigins } returns flowOf(setOf("http://192.168.1.20:8000"))
+
+        assertNotNull(factory.createClient(CloudProvider.OPENAI_COMPATIBLE))
+        assertNull(factory.unavailabilityOf(CloudProvider.OPENAI_COMPATIBLE))
+    }
+
+    @Test
+    fun `given a server the user runs at a host name while restricted when asked then it is not local`() = runTest {
+        // D6: the Ollama rule — a name says nothing about where DNS will send the request.
+        every { settingsRepository.blockNetworkFromLocalModel } returns MutableStateFlow(true)
+        coEvery { apiKeyRepository.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns
+            flowOf("https://llm.home.lan/v1")
+        coEvery { apiKeyRepository.getModel(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf("qwen")
+
+        assertEquals(
+            CloudClientUnavailability.EndpointNotLocal("llm.home.lan"),
+            factory.unavailabilityOf(CloudProvider.OPENAI_COMPATIBLE),
+        )
+    }
+
+    @Test
+    fun `given a server the user runs over http on the internet when asked then cleartext is refused`() = runTest {
+        coEvery { apiKeyRepository.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf("http://203.0.113.7/v1")
+        coEvery { apiKeyRepository.getModel(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf("qwen")
+
+        assertNull(factory.createClient(CloudProvider.OPENAI_COMPATIBLE))
+        assertTrue(
+            factory.unavailabilityOf(CloudProvider.OPENAI_COMPATIBLE) is CloudClientUnavailability.CleartextRefused,
+        )
+    }
+
+    @Test
+    fun `given a server the user runs with an address but no model when asked then the cause is the model`() = runTest {
+        coEvery { apiKeyRepository.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns
+            flowOf("https://192.168.1.20/v1")
+        coEvery { apiKeyRepository.getModel(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf(null)
+
+        assertEquals(
+            CloudClientUnavailability.MissingModel,
+            factory.unavailabilityOf(CloudProvider.OPENAI_COMPATIBLE),
+        )
     }
 
     private fun givenLocalOnlyOllama(url: String, approved: Set<String> = emptySet()) {

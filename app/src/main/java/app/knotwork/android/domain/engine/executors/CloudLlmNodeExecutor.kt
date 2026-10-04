@@ -34,10 +34,10 @@ import javax.inject.Inject
 /**
  * Executor for [NodeType.CLOUD][app.knotwork.android.domain.models.NodeType.CLOUD] nodes.
  *
- * Streams a response from one of the supported cloud LLM providers (OpenAI, Anthropic,
- * Google, DeepSeek, Ollama) using the Koog client abstraction. The active provider is
- * either taken from `node.cloudProvider` or auto-detected from the first configured API
- * key when the node is set to `"auto"`. The fully assembled `inputText` is sent verbatim:
+ * Streams a response from one of the supported cloud LLM providers ([CloudProvider]) using
+ * the Koog client abstraction. The active provider is either taken from `node.cloudProvider`
+ * or, when the node is set to `"auto"`, the first of [AUTO_ORDER] with a configured API key —
+ * never a provider outside that list. The fully assembled `inputText` is sent verbatim:
  * `NodeContextBuilder` has already concatenated the context blocks selected by
  * [NodeContextConfig][app.knotwork.android.domain.models.NodeContextConfig], so the executor
  * must not re-fetch chat history or memory itself.
@@ -331,10 +331,16 @@ class CloudLlmNodeExecutor @Inject constructor(
      * - `ANTHROPIC` — **excluded pending measurement**. The harness could not produce a
      *   stream its parser accepts, so there is no evidence either way, and a guess here
      *   is exactly the failure mode this task exists to avoid.
+     * - `OPENROUTER` / `GROQ` / `OPENAI_COMPATIBLE` — **excluded pending measurement**. The
+     *   stream parser is OpenAI's, but the signal is the server's: a server that omits the
+     *   finish reason would have every healthy answer discarded as cut off.
      */
     private fun providerReportsFinishReason(provider: CloudProvider): Boolean = when (provider) {
         CloudProvider.OPENAI, CloudProvider.DEEPSEEK, CloudProvider.GOOGLE -> true
         CloudProvider.ANTHROPIC, CloudProvider.OLLAMA -> false
+        // Same client as OpenAI, but whether each *server* sends the finish reason is what
+        // matters, and none has been measured yet; off until the device check says otherwise.
+        CloudProvider.OPENROUTER, CloudProvider.GROQ, CloudProvider.OPENAI_COMPATIBLE -> false
     }
 
     private companion object {

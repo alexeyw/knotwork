@@ -551,9 +551,12 @@ only for gated repositories) is handled exactly like a cloud-provider key:
 ### API keys for cloud providers
 
 - Keys for optional cloud LLM providers (OpenAI, Anthropic, Google, DeepSeek,
-  Ollama) are stored exclusively in the same kind of Keystore-backed
-  encrypted store as the database passphrase (AES-256-GCM under its own
-  dedicated Android Keystore key).
+  OpenRouter, Groq, and an OpenAI-compatible server you run, if it uses one) —
+  and the addresses of servers you run — are stored exclusively in the same kind
+  of Keystore-backed encrypted store as the database passphrase (AES-256-GCM
+  under its own dedicated Android Keystore key).
+- A server you run may need no key. Then no `Authorization` header is sent at
+  all, rather than an empty one.
 - Keys are never written to plain `SharedPreferences`, DataStore, log files,
   exported chat archives, or any artifact checked into the repository.
 - A provider error can quote the failing request, key included (Google
@@ -765,8 +768,9 @@ The defences are layered so that no single one has to be perfect:
   attention sees the destination before the data leaves the device. An
   unparsable call falls back to the strictest risk.
 - **Stored-credential filter.** Before a request is sent, its URL, header
-  names and values, and body are scanned for any saved cloud-provider API key
-  (OpenAI, Anthropic, Google, DeepSeek) — the URL and the body also
+  names and values, and body are scanned for every saved cloud-provider API key
+  — whichever providers are set up, the list follows the providers the app
+  supports rather than being written out by hand — the URL and the body also
   percent-decoded. A request carrying one as written is refused outright, even
   with user approval. It is a substring filter, and it promises what one can:
   a key the model splits across fields or encodes some other way is not
@@ -791,7 +795,12 @@ The defences are layered so that no single one has to be perfect:
   the platform network-security config permits cleartext app-wide, because it
   cannot express "any private address"). The shared client that model
   downloads and discovery use enforces the same floor on **every hop**,
-  including redirects it follows itself.
+  including redirects it follows itself — and so does the transport of every
+  model client (chat, structured output, `delegate_task`, memory embeddings):
+  each hop, redirects included, must be https, or an approved private address,
+  and while *Block network from local model* is on, this device or a private
+  address. A model server that answers with a redirect elsewhere does not take
+  the prompt with it.
 
 The residual risk is the honest one: a user who has **deliberately added a
 host to the allowlist** and then **approves** a `SENSITIVE`/`DESTRUCTIVE`

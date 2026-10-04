@@ -57,8 +57,11 @@ class EvaluateIfConditionUseCase @Inject constructor(
      *   gate and it exhausted its repairs (or the inference errored), so the
      *   executor can emit a console Error for the silent-fork-free fallback. Always
      *   `false` for the keyword / complexity / no-config paths (no gate involved).
+     * @property unavailableProvider The provider id the node chose when it could not be used
+     *   and the local engine answered instead, so the executor can say so — `null` when the
+     *   node chose none, or got the one it chose.
      */
-    data class Outcome(val value: Boolean, val gateFailed: Boolean = false)
+    data class Outcome(val value: Boolean, val gateFailed: Boolean = false, val unavailableProvider: String? = null)
 
     /**
      * Evaluates the condition against the provided input text.
@@ -163,7 +166,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
             ),
         )
         val maxRepairs = runSettings.structuredOutputMaxRepairs.first()
-        val inference = resolveInference(node)
+        val (inference, unavailableProvider) = resolveInference(node)
 
         val result = try {
             structuredOutputGate.runToken(
@@ -179,29 +182,38 @@ class EvaluateIfConditionUseCase @Inject constructor(
         } catch (e: Exception) {
             // An inference-layer failure is a gate failure for policy purposes:
             // keep the default branch but mark it so the executor surfaces it.
-            return Outcome(value = false, gateFailed = true)
+            return Outcome(value = false, gateFailed = true, unavailableProvider = unavailableProvider)
         }
 
         return when (result) {
-            is GateResult.Success -> Outcome(value = result.value == TOKEN_TRUE)
-            is GateResult.Failed -> Outcome(value = false, gateFailed = true)
+            is GateResult.Success ->
+                Outcome(value = result.value == TOKEN_TRUE, unavailableProvider = unavailableProvider)
+            is GateResult.Failed -> Outcome(value = false, gateFailed = true, unavailableProvider = unavailableProvider)
         }
     }
 
     /**
-     * Picks the gate's inference client for [node]: a cloud-backed client when
-     * the node selects a configured cloud provider, otherwise the local LiteRT
-     * engine. An unavailable cloud provider (missing credentials / local-only
-     * mode / unknown id) degrades silently to the local engine — the executor
-     * surfaces any resulting gate failure through [Outcome.gateFailed].
+     * Picks the gate's inference client for [node]: a cloud-backed client when the node
+     * selects a cloud provider that can be used now, otherwise the local LiteRT engine.
      *
-     * The use case streams no tokens, so the cloud client's token hook is a
-     * no-op.
+     * An unavailable provider — missing credentials, the local-only restriction, an unknown
+     * id — falls back to the local engine, as the TOOL and system nodes do, and is reported
+     * back so the executor writes the same console line they write. It used to fall back in
+     * silence: a user whose condition ran on the phone instead of the provider they chose had
+     * no way to tell.
+     *
+     * The use case streams no tokens, so the cloud client's token hook is a no-op.
+     *
+     * @return The client, and the id of the provider that was chosen but could not be used.
      */
-    private suspend fun resolveInference(node: NodeModel): StructuredInferenceClient {
-        val provider = node.cloudProvider?.takeIf { it.isNotBlank() }?.let { CloudProvider.fromId(it) }
-        val cloud = provider?.let { cloudStructuredFactory.create(it) { } }
-        return cloud?.inference ?: EngineStructuredInferenceClient(llmInferenceEngine)
+    private suspend fun resolveInference(node: NodeModel): Pair<StructuredInferenceClient, String?> {
+        val providerId = node.cloudProvider?.takeIf { it.isNotBlank() }
+        val cloud = providerId?.let { CloudProvider.fromId(it) }?.let { cloudStructuredFactory.create(it) { } }
+        return if (cloud != null) {
+            cloud.inference to null
+        } else {
+            EngineStructuredInferenceClient(llmInferenceEngine) to providerId
+        }
     }
 
     private companion object {

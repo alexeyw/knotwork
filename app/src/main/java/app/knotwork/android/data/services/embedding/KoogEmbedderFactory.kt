@@ -6,8 +6,9 @@ import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.ollama.client.OllamaClient
 import app.knotwork.android.data.engine.CloudClientTimeouts
+import app.knotwork.android.data.engine.KoogTransportFactory
+import app.knotwork.android.data.engine.ModelNetworkGate
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
-import app.knotwork.android.data.engine.retry.RetryAfterCapturingHttpClientFactory
 import app.knotwork.android.data.engine.retry.RetryAfterSlot
 import app.knotwork.android.domain.models.CloudProvider
 import javax.inject.Inject
@@ -50,7 +51,7 @@ interface KoogEmbedderFactory {
      * [baseUrl], decorated with the configured transient-failure retry policy.
      *
      * Applies no network rule of its own: callers must have passed [baseUrl]
-     * through `ModelNetworkGate.ollamaRefusal` first, as `OllamaEmbeddingProvider`
+     * through `ModelNetworkGate.endpointRefusal` first, as `OllamaEmbeddingProvider`
      * does — a client built from an unchecked address bypasses both the cleartext
      * rule and the "Block network from local model" restriction.
      *
@@ -71,14 +72,20 @@ interface KoogEmbedderFactory {
  * auto-discovery path throws at runtime — passing the factory explicitly
  * bypasses the lookup.
  *
+ * Both clients run on a [KoogTransportFactory], as the chat clients do: every hop is checked
+ * against the network rules in force ([ModelNetworkGate.hopRule]), redirects included, and the
+ * `Retry-After` of an error answer reaches the retry policy.
+ *
  * Both clients carry [CloudClientTimeouts.CONFIG], the chat clients' own deadlines. Built
  * without it, as they once were, they fell back to Koog's 900 s request and socket
  * timeouts — every memory write and search could wait fifteen minutes on a silent
  * provider.
  */
 @Singleton
-class DefaultKoogEmbedderFactory @Inject constructor(private val retryWrapper: CloudRetryWrapper) :
-    KoogEmbedderFactory {
+class DefaultKoogEmbedderFactory @Inject constructor(
+    private val retryWrapper: CloudRetryWrapper,
+    private val modelNetworkGate: ModelNetworkGate,
+) : KoogEmbedderFactory {
 
     private val httpClientFactory = KtorKoogHttpClient.Factory()
 
@@ -88,7 +95,7 @@ class DefaultKoogEmbedderFactory @Inject constructor(private val retryWrapper: C
             client = OpenAILLMClient(
                 apiKey = apiKey,
                 settings = OpenAIClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
-                httpClientFactory = RetryAfterCapturingHttpClientFactory(httpClientFactory, retryAfter),
+                httpClientFactory = KoogTransportFactory(httpClientFactory, retryAfter, modelNetworkGate.hopRule()),
             ),
             provider = CloudProvider.OPENAI.id,
             retryAfter = retryAfter,
@@ -99,7 +106,7 @@ class DefaultKoogEmbedderFactory @Inject constructor(private val retryWrapper: C
         val retryAfter = RetryAfterSlot()
         return retryWrapper.wrap(
             client = OllamaClient(
-                httpClientFactory = RetryAfterCapturingHttpClientFactory(httpClientFactory, retryAfter),
+                httpClientFactory = KoogTransportFactory(httpClientFactory, retryAfter, modelNetworkGate.hopRule()),
                 baseUrl = baseUrl,
                 timeoutConfig = CloudClientTimeouts.CONFIG,
             ),

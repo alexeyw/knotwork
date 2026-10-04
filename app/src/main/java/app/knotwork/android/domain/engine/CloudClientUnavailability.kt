@@ -24,13 +24,26 @@ sealed interface CloudClientUnavailability {
      */
     fun message(provider: CloudProvider): String
 
-    /** No API key is saved for the provider — or, for Ollama, no server address. */
+    /**
+     * The credential the provider cannot do without is missing: the server address of a
+     * provider reached at one ([CloudProvider.usesBaseUrl] — whose key, if any, is optional),
+     * otherwise the API key.
+     */
     data object MissingCredentials : CloudClientUnavailability {
-        override fun message(provider: CloudProvider): String = if (provider == CloudProvider.OLLAMA) {
+        override fun message(provider: CloudProvider): String = if (provider.usesBaseUrl) {
             "Cloud provider '${provider.id}' has no server address configured. Add one in Settings."
         } else {
             "Cloud provider '${provider.id}' has no API key configured. Add one in Settings."
         }
+    }
+
+    /**
+     * The provider has no default model in the app ([CloudProvider.requiresModel]) and none
+     * was chosen, so there is nothing to ask it for.
+     */
+    data object MissingModel : CloudClientUnavailability {
+        override fun message(provider: CloudProvider): String =
+            "Cloud provider '${provider.id}' has no model selected. Choose one in Settings."
     }
 
     /** The "Block network from local model" restriction refuses every cloud provider. */

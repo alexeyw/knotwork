@@ -49,6 +49,10 @@ class KoogClientTimeoutKonsistTest {
         assertEquals("chat clients seen: ${byFile["KoogClientFactory.kt"]}", 5, byFile["KoogClientFactory.kt"]?.size)
         val embedding = byFile["KoogEmbedderFactory.kt"]
         assertEquals("embedding clients seen: $embedding", 2, embedding?.size)
+        // OpenRouter, Groq and a server the user runs share one client class, built with a
+        // key or, for a server without one, from its HTTP client.
+        val compatible = byFile["OpenAiCompatibleClients.kt"]
+        assertEquals("OpenAI-compatible clients seen: $compatible", 2, compatible?.size)
     }
 
     /** One `SomeClient(…)` call in production code. */

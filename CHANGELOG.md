@@ -15,6 +15,11 @@ details.
 
 ### Changed
 
+- **A condition node says when it could not use its provider.** A TOOL node, a
+  router or a decomposition that could not reach the provider it was set to use
+  ran on the on-device model and wrote a console line saying so; a condition
+  node did the same, in silence. It now writes the same line.
+
 - **Saved provider keys are read per provider.** Each provider had its own
   methods for its key, its model and its server address, and every place that
   needed all saved keys listed the providers by hand — including the check that
@@ -64,6 +69,17 @@ details.
   whose body mentioned "500" was retried; the status the provider answered with
   now decides. The user guide no longer claims timeouts are retried — a provider
   that falls silent is reported once.
+
+### Security
+
+- **A model server's redirect is checked hop by hop.** The address of a server
+  you run — Ollama — was checked once, before the first request; a server could
+  then answer with a redirect, and nothing inside the model client looked where
+  to, so an approved address on your network could forward the prompt to any
+  host over plain HTTP. Every request a model client sends — chat, structured
+  output, `delegate_task`, memory embeddings — is now checked before each hop:
+  unencrypted traffic only to an address you approved, and while *Block network
+  from local model* is on, only to this device or your own network.
 
 ### Tests
 
