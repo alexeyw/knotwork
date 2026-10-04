@@ -7,6 +7,8 @@ import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.ollama.client.OllamaClient
 import app.knotwork.android.data.engine.CloudClientTimeouts
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
+import app.knotwork.android.data.engine.retry.RetryAfterCapturingHttpClientFactory
+import app.knotwork.android.data.engine.retry.RetryAfterSlot
 import app.knotwork.android.domain.models.CloudProvider
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,23 +82,31 @@ class DefaultKoogEmbedderFactory @Inject constructor(private val retryWrapper: C
 
     private val httpClientFactory = KtorKoogHttpClient.Factory()
 
-    override suspend fun openAiClient(apiKey: String): LLMEmbeddingProviderAPI = retryWrapper.wrap(
-        client = OpenAILLMClient(
-            apiKey = apiKey,
-            settings = OpenAIClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
-            httpClientFactory = httpClientFactory,
-        ),
-        provider = CloudProvider.OPENAI.id,
-    )
+    override suspend fun openAiClient(apiKey: String): LLMEmbeddingProviderAPI {
+        val retryAfter = RetryAfterSlot()
+        return retryWrapper.wrap(
+            client = OpenAILLMClient(
+                apiKey = apiKey,
+                settings = OpenAIClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
+                httpClientFactory = RetryAfterCapturingHttpClientFactory(httpClientFactory, retryAfter),
+            ),
+            provider = CloudProvider.OPENAI.id,
+            retryAfter = retryAfter,
+        )
+    }
 
-    override suspend fun ollamaClient(baseUrl: String): LLMEmbeddingProviderAPI = retryWrapper.wrap(
-        client = OllamaClient(
-            httpClientFactory = httpClientFactory,
-            baseUrl = baseUrl,
-            timeoutConfig = CloudClientTimeouts.CONFIG,
-        ),
-        provider = CloudProvider.OLLAMA.id,
-    )
+    override suspend fun ollamaClient(baseUrl: String): LLMEmbeddingProviderAPI {
+        val retryAfter = RetryAfterSlot()
+        return retryWrapper.wrap(
+            client = OllamaClient(
+                httpClientFactory = RetryAfterCapturingHttpClientFactory(httpClientFactory, retryAfter),
+                baseUrl = baseUrl,
+                timeoutConfig = CloudClientTimeouts.CONFIG,
+            ),
+            provider = CloudProvider.OLLAMA.id,
+            retryAfter = retryAfter,
+        )
+    }
 }
 
 /**

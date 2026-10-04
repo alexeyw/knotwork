@@ -438,11 +438,21 @@ class NetworkEgressInventoryKonsistTest {
                     "3.1",
                     Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("CloudRetryWrapper")),
                 ),
-            "$MAIN/data/engine/retry/RetryObservingLLMClient.kt" to
+            "$MAIN/data/engine/retry/RetryingCloudLlmClient.kt" to
                 Egress.Opens(
                     "3.1",
-                    Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("RetryObservingLLMClient")),
+                    Indicator.RecordedBy(CHAT_CALLERS + EMBEDDING_CALLERS, listOf("RetryingCloudLlmClient")),
                 ),
+            "$MAIN/data/engine/retry/RetryAfterCapturingHttpClientFactory.kt" to
+                Egress.Opens(
+                    "3.1",
+                    Indicator.RecordedBy(
+                        CHAT_CALLERS + EMBEDDING_CALLERS,
+                        listOf("RetryAfterCapturingHttpClientFactory"),
+                    ),
+                ),
+            "$MAIN/data/engine/retry/CloudRetryPolicy.kt" to
+                Egress.None("reads the status and the requested wait of a failed call; sends nothing"),
             "$MAIN/domain/engine/executors/CloudLlmNodeExecutor.kt" to
                 Egress.Opens("3.1", Indicator.RecordsItself),
             "$MAIN/data/tools/local/DelegateTaskTool.kt" to

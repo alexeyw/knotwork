@@ -1184,17 +1184,24 @@ had refused.
 **Transient-failure retry.** Every cloud `LLMClient` built by
 `KoogClientFactory` or `DefaultKoogEmbedderFactory` — chat completions and the
 cloud / Ollama embedding clients alike — is wrapped with an exponential-backoff
-retry policy before use (`data/engine/retry/CloudRetryWrapper`, using Koog's
-standalone `RetryingLLMClient` decorator). Transient failures (HTTP 429 / 5xx /
-529 and connection-or-read timeouts) are retried; authentication errors are
-not, and coroutine cancellation is always honoured (re-thrown, never
-swallowed). The attempt budget (`cloudRetryMaxAttempts`, 1–5, default 3;
-`1` returns the raw client unwrapped, disabling retries) and the base delay
-(`cloudRetryBaseDelayMs`, 100–10000 ms, default 1000) are configurable under
-Settings → Providers. Koog exposes no per-attempt hook, so a thin
-`RetryObservingLLMClient` sits as the retrying client's delegate and counts
-invocations; a retried `CLOUD` node surfaces each retry on the console as a
-muted `RUNTIME` warning (`Cloud retry 1/2 for openai`).
+retry policy before use (`data/engine/retry/CloudRetryWrapper` building a
+`RetryingCloudLlmClient`, which replaced Koog's `RetryingLLMClient`). The decision
+is `CloudRetryPolicy`'s: a failure carrying an HTTP status is judged by that
+status alone (429 / 500 / 502 / 503 / 504 / 529 retried, anything else not — Koog
+searched the message text, body included, for the number); a failure with no
+status keeps Koog's text rules unchanged, so a socket timeout is still not
+retried. The wait is the one the provider asked for — the `Retry-After` header,
+which `RetryAfterCapturingHttpClientFactory` records on the transport because
+Koog's exceptions carry no headers, or a wait named in the error text (Groq's
+`1m2.5s` included) — or else exponential backoff with jitter. A requested wait
+over the 30 s ceiling fails the call with `RetryAfterExceededException` instead
+of being slept through. Coroutine cancellation is always honoured (re-thrown,
+never swallowed), and a streamed answer is retried only before its first frame.
+The attempt budget (`cloudRetryMaxAttempts`, 1–5, default 3; `1` returns the raw
+client unwrapped, disabling retries) and the base delay (`cloudRetryBaseDelayMs`,
+100–10000 ms, default 1000) are configurable under Settings → Providers. Each
+retry is reported just before it is sent; a retried `CLOUD` node surfaces it on
+the console as a muted `RUNTIME` warning (`Cloud retry 1/2 for openai`).
 
 **Deadlines.** Every Koog model client — the chat clients `KoogClientFactory`
 builds and the embedding clients `DefaultKoogEmbedderFactory` builds — carries one

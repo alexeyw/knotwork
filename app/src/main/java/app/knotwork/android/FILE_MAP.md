@@ -27,8 +27,12 @@ Only Kotlin files appear inside the generated blocks.
     - `ModelNetworkGate.kt` - The one place that decides whether a model request may leave the device right now.
     - `OpenClAccelerationProbe.kt` - `HardwareAccelerationProbe` impl: decides whether GPU inference is plausible by linking `libOpenCL.so` (falling back to the conventional vendor paths) — never touches the native inference stack, so it cannot abort the process the way a real GPU init can. Memoised; both seams (linker, filesystem) injectable for JVM tests.
     - `retry/` - Cloud retry wrapping (data layer).
+      - `CloudRetryPolicy.kt` - Decides whether a failed cloud call is tried again, and after how long.
       - `CloudRetryWrapper.kt` - `@Singleton` that decorates a raw Koog `LLMClient` with Koog's `RetryingLLMClient` using the settings-driven policy (attempts + base delay); returns the raw client unchanged when retries are disabled (`maxAttempts == 1`).
-      - `RetryObservingLLMClient.kt` - Pass-through `LLMClient` placed *as* the retry policy's delegate; counts re-invocations and reports the 2nd+ as a retry through `CloudRetryListener` (Koog exposes no per-attempt hook). Single-operation-per-instance.
+      - `RetryAfterCapturingHttpClientFactory.kt` - A `KoogHttpClient.Factory` that builds exactly what `delegate` builds, then records the `Retry-After` header of every error answer into `slot`.
+      - `RetryAfterExceededException.kt` - A cloud call ended because the provider asked to wait longer than the app waits between attempts.
+      - `RetryAfterHint.kt` - Reads how long a provider asked the caller to wait before trying again.
+      - `RetryingCloudLlmClient.kt` - An `LLMClient` that sends each call to `delegate` and, when it fails, retries it as `policy` decides — the project's replacement for Koog's `RetryingLLMClient`.
     - `TaskQueueManagerImpl.kt` - Task queue manager implementation.
     - `TextEmbedderFactory.kt` - Factory for text embedders.
   - `local/` - Local database and data storage components (Room DB, DataStore).

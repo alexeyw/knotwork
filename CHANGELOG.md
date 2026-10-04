@@ -51,6 +51,20 @@ details.
   a listed one that is gone, so the list can only shrink. See
   [`docs/static-analysis.md`](docs/static-analysis.md#size-suppression-ratchet-verifysizesuppressions).
 
+### Fixed
+
+- **Cloud retries wait as long as the provider asks, and no longer retry what
+  cannot succeed.** A provider that answered a rate limit with a `Retry-After`
+  header got its retry about a tenth of a second later, because the header never
+  reached the retry logic; it is now honoured, as is a wait named in the error
+  message — including Groq's "try again in 1m2.5s", which was not recognised.
+  A wait longer than 30 seconds used to be slept through, however long it was;
+  now the step fails at once and says which provider asked for how long. And a
+  failed request was judged by searching its message for a number, so a 400
+  whose body mentioned "500" was retried; the status the provider answered with
+  now decides. The user guide no longer claims timeouts are retried — a provider
+  that falls silent is reported once.
+
 ### Tests
 
 - **A renamed setting can no longer lose its value unnoticed.** A setting is

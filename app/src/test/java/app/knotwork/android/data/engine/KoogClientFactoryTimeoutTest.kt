@@ -1,6 +1,8 @@
 package app.knotwork.android.data.engine
 
-import ai.koog.prompt.executor.clients.retry.RetryConfig
+import ai.koog.http.client.KoogHttpClientException
+import ai.koog.prompt.executor.clients.LLMClientException
+import app.knotwork.android.data.engine.retry.CloudRetryPolicy
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
@@ -80,11 +82,12 @@ class KoogClientFactoryTimeoutTest {
         // treats it as transient: with the configured 3 attempts, a retried socket timeout
         // would mean three full 60 s waits instead of one. Koog's default patterns match
         // several timeout phrasings, so this is asserted against the real message the
-        // engine produces rather than assumed.
+        // engine produces rather than assumed. A timeout carries no HTTP status, so the
+        // policy judges it by Koog's text rules, which it keeps unchanged for that case.
         val socketTimeout = "Socket timeout has expired " +
             "[url=https://api.deepseek.com/chat/completions, socket_timeout=60000] ms"
 
-        val retryable = RetryConfig.DEFAULT_PATTERNS.any { it.matches(socketTimeout) }
+        val retryable = CloudRetryPolicy.isRetryable(RuntimeException(socketTimeout))
 
         assertFalse(
             "a socket timeout must fail once, not three times over three minutes",
@@ -96,9 +99,8 @@ class KoogClientFactoryTimeoutTest {
     fun `given a rejected API key when matched against the retry policy then it is not retried`() {
         // Verbatim from the reference device (invalid Google key). Retrying an auth
         // failure spends the whole attempt budget to be told "no" three times, and
-        // delays the one message that tells the user what to fix. Koog's patterns match
-        // on message text, and a provider's error body is long and quotes numbers, so
-        // "400 is not in the retryable list" is asserted rather than assumed.
+        // delays the one message that tells the user what to fix. The status decides, not
+        // the text: a provider's error body is long and quotes numbers.
         val invalidKey = """
             Error from client: GoogleLLMClient
             Message: Expected status code 200 but was 400
@@ -113,7 +115,12 @@ class KoogClientFactoryTimeoutTest {
             }
         """.trimIndent()
 
-        val retryable = RetryConfig.DEFAULT_PATTERNS.any { it.matches(invalidKey) }
+        val transport = KoogHttpClientException(
+            clientName = "GoogleLLMClient",
+            statusCode = 400,
+            errorBody = invalidKey.substringAfter("Error body:\n"),
+        )
+        val retryable = CloudRetryPolicy.isRetryable(LLMClientException("GoogleLLMClient", invalidKey, transport))
 
         assertFalse("an invalid key must be reported at once, not retried", retryable)
     }

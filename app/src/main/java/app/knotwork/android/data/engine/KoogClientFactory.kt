@@ -1,5 +1,6 @@
 package app.knotwork.android.data.engine
 
+import ai.koog.http.client.KoogHttpClient
 import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicClientSettings
@@ -12,6 +13,8 @@ import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.ollama.client.OllamaClient
 import app.knotwork.android.data.engine.retry.CloudRetryWrapper
+import app.knotwork.android.data.engine.retry.RetryAfterCapturingHttpClientFactory
+import app.knotwork.android.data.engine.retry.RetryAfterSlot
 import app.knotwork.android.domain.engine.CloudClientUnavailability
 import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.retry.CloudRetryListener
@@ -82,10 +85,15 @@ class KoogClientFactory @Inject constructor(
      * @param retryListener Sink notified before each retry.
      * @return The LLMClient on success, or `null` when [unavailabilityOf] reports a cause.
      */
-    override suspend fun createClient(provider: CloudProvider, retryListener: CloudRetryListener): Any? =
-        rawClient(provider)?.let { raw ->
-            retryWrapper.wrap(client = raw, provider = provider.id, listener = retryListener)
+    override suspend fun createClient(provider: CloudProvider, retryListener: CloudRetryListener): Any? {
+        // One slot per client: its transport records the `Retry-After` of an error answer,
+        // which the retry policy honours (Koog's exceptions do not carry headers).
+        val retryAfter = RetryAfterSlot()
+        val http = RetryAfterCapturingHttpClientFactory(httpClientFactory, retryAfter)
+        return rawClient(provider, http)?.let { raw ->
+            retryWrapper.wrap(client = raw, provider = provider.id, listener = retryListener, retryAfter = retryAfter)
         }
+    }
 
     /**
      * Names the cause of a `null` from [createClient], checking in the order the `raw*`
@@ -111,58 +119,58 @@ class KoogClientFactory @Inject constructor(
      *
      * @return The raw client, or `null` when [unavailabilityOf] reports a cause.
      */
-    private suspend fun rawClient(provider: CloudProvider): LLMClient? = when (provider) {
-        CloudProvider.OPENAI -> rawOpenAI()
-        CloudProvider.ANTHROPIC -> rawAnthropic()
-        CloudProvider.GOOGLE -> rawGoogle()
-        CloudProvider.DEEPSEEK -> rawDeepSeek()
-        CloudProvider.OLLAMA -> rawOllama()
+    private suspend fun rawClient(provider: CloudProvider, http: KoogHttpClient.Factory): LLMClient? = when (provider) {
+        CloudProvider.OPENAI -> rawOpenAI(http)
+        CloudProvider.ANTHROPIC -> rawAnthropic(http)
+        CloudProvider.GOOGLE -> rawGoogle(http)
+        CloudProvider.DEEPSEEK -> rawDeepSeek(http)
+        CloudProvider.OLLAMA -> rawOllama(http)
     }
 
-    private suspend fun rawOpenAI(): LLMClient? {
+    private suspend fun rawOpenAI(http: KoogHttpClient.Factory): LLMClient? {
         val key = admittedApiKey(CloudProvider.OPENAI) ?: return null
         return OpenAILLMClient(
             apiKey = key,
             settings = OpenAIClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
-            httpClientFactory = httpClientFactory,
+            httpClientFactory = http,
         )
     }
 
-    private suspend fun rawAnthropic(): LLMClient? {
+    private suspend fun rawAnthropic(http: KoogHttpClient.Factory): LLMClient? {
         val key = admittedApiKey(CloudProvider.ANTHROPIC) ?: return null
         return AnthropicLLMClient(
             apiKey = key,
             settings = AnthropicClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
-            httpClientFactory = httpClientFactory,
+            httpClientFactory = http,
         )
     }
 
-    private suspend fun rawGoogle(): LLMClient? {
+    private suspend fun rawGoogle(http: KoogHttpClient.Factory): LLMClient? {
         val key = admittedApiKey(CloudProvider.GOOGLE) ?: return null
         return GoogleLLMClient(
             apiKey = key,
             settings = GoogleClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
-            httpClientFactory = httpClientFactory,
+            httpClientFactory = http,
         )
     }
 
-    private suspend fun rawDeepSeek(): LLMClient? {
+    private suspend fun rawDeepSeek(http: KoogHttpClient.Factory): LLMClient? {
         val key = admittedApiKey(CloudProvider.DEEPSEEK) ?: return null
         return DeepSeekLLMClient(
             apiKey = key,
             settings = DeepSeekClientSettings(timeoutConfig = CloudClientTimeouts.CONFIG),
-            httpClientFactory = httpClientFactory,
+            httpClientFactory = http,
         )
     }
 
-    private suspend fun rawOllama(): LLMClient? {
+    private suspend fun rawOllama(http: KoogHttpClient.Factory): LLMClient? {
         val url = ollamaBaseUrl() ?: return null
         // Both network rules that concern a user-configured address — the local-only
         // restriction and the cleartext rule — are applied by the gate, the same one the
         // Ollama embedding provider asks, so chat and memory cannot drift apart again.
         if (modelNetworkGate.ollamaRefusal(url) != null) return null
         return OllamaClient(
-            httpClientFactory = httpClientFactory,
+            httpClientFactory = http,
             baseUrl = url,
             timeoutConfig = CloudClientTimeouts.CONFIG,
         )
