@@ -1872,7 +1872,7 @@ class SettingsManagerTest {
             // wrongly added to it, fails one of the assertions below.
             val excluded = setOf(
                 "is_first_launch", "has_completed_onboarding", "hugging_face_token",
-                "system_prompt_prefix", "tool_usage_instruction",
+                "system_prompt_prefix",
                 "mcp_server_urls", "mcp_servers_json",
                 "disabled_app_functions", "disabled_mcp_tools", "app_function_risk_overrides",
                 "current_chat_session_id", "memory_last_compacted_at",
@@ -1917,6 +1917,13 @@ class SettingsManagerTest {
                 "Persistable keys neither reset nor explicitly excluded " +
                     "(wire them into resetToRecommendedDefaults or add to the exclusion list): $uncovered",
                 uncovered.isEmpty(),
+            )
+            // An exclusion that names no key excludes nothing and hides the next real one
+            // behind a list nobody re-reads (one named a key removed long before).
+            val staleExclusions = excluded - allKeys
+            assertTrue(
+                "Excluded keys that no longer exist (drop them from the list): $staleExclusions",
+                staleExclusions.isEmpty(),
             )
             val wronglyReset = written intersect excluded
             assertTrue(

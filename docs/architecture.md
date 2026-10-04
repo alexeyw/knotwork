@@ -1493,6 +1493,9 @@ instance per feature module. DataStore is not encrypted — it is
 explicitly reserved for non-sensitive preferences. Any value that is
 sensitive (an API key, a passphrase, a personal identifier) goes
 through a `KeystoreBackedPrefsStore` instead.
+A stored setting is found again by its key name and value type alone, so
+renaming either loses what the user set. `PreferenceStorageSnapshotTest`
+pins every key and the names of the settings files against the sources.
 
 #### Storage tiers at a glance
 
