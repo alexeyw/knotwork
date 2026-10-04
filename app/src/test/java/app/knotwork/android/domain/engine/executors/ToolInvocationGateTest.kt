@@ -481,7 +481,7 @@ class ToolInvocationGateTest {
             coEvery { pendingInteractionRepository.save(any()) } returns true
             gate = ToolInvocationGate(
                 toolRepository = toolRepository,
-                settingsRepository = settingsRepository,
+                toolSettings = settingsRepository,
                 approvalNotifier = approvalNotifier,
                 chatRepository = mockk(relaxed = true),
                 pendingInteractionRepository = pendingInteractionRepository,

@@ -6,7 +6,7 @@ import app.knotwork.android.domain.constants.RepositoryLinks
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -42,7 +42,7 @@ import javax.inject.Singleton
  * @property networkActivityTracker Told about every lookup that gets as far as opening a
  *   connection, so the More tab's privacy indicator does not report "no network calls"
  *   while this tool — on by default — is reaching Wikipedia.
- * @property settingsRepository Holds the Tools screen's per-tool switch. Read here for the
+ * @property toolSettings Holds the Tools screen's per-tool switch. Read here for the
  *   same reason as the network check: switching `search_tool` off has to stop the
  *   published AppFunction too, which never passes through the tool catalogue.
  */
@@ -52,7 +52,7 @@ class SearchTool @Inject constructor(
     private val networkGate: ModelNetworkGate,
     private val connectionOpener: ConnectionOpener,
     private val networkActivityTracker: NetworkActivityTracker,
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
 ) {
 
     /**
@@ -225,7 +225,7 @@ class SearchTool @Inject constructor(
      *   Wikipedia subdomain.
      */
     suspend fun executeSearch(query: String, lang: String): String = withContext(Dispatchers.IO) {
-        if (TOOL_NAME in settingsRepository.disabledAppFunctions.first()) return@withContext SWITCHED_OFF_ERROR
+        if (TOOL_NAME in toolSettings.disabledAppFunctions.first()) return@withContext SWITCHED_OFF_ERROR
         networkGate.networkToolRefusal(TOOL_NAME)?.let { return@withContext it }
         // Refused rather than replaced with `en`: a silent fallback would search the
         // wrong edition and hand the model a confident answer to a different question.

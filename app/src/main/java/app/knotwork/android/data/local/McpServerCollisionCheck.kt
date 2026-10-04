@@ -5,7 +5,8 @@ import app.knotwork.android.domain.models.UpdateMcpServerResult
 
 /**
  * Pure collision-detection used by
- * [SettingsManager.updateMcpServer] before it persists the new row.
+ * [app.knotwork.android.data.local.settings.ToolSettingsStore.updateMcpServer]
+ * before it persists the new row.
  *
  * The check is extracted to an internal object so the rule can be
  * exercised by a fast pure-Kotlin unit test without any DataStore
@@ -29,11 +30,11 @@ internal object McpServerCollisionCheck {
      * caller is responsible for trimming whitespace before calling.
      *
      * @param currentList The persisted MCP server list as read from
-     *   [SettingsManager.mcpServers].
+     *   [app.knotwork.android.data.local.settings.ToolSettingsStore.mcpServers].
      * @param originalUrl The URL of the row the user is editing. Pass
      *   [newUrl] verbatim from the Add-mode path so the function trivially
      *   returns `null` (Add isn't a "replace", every Add path uses a
-     *   different code branch in `SettingsManager`).
+     *   different code branch in `ToolSettingsStore`).
      * @param newUrl The URL the form is about to persist.
      */
     fun detectCollision(

@@ -1,6 +1,6 @@
 package app.knotwork.android.domain.usecases
 
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.SettingsReset
 import javax.inject.Inject
 
 /**
@@ -9,13 +9,13 @@ import javax.inject.Inject
  * "Reset to defaults" header action inside the Settings → LLM parameters
  * card.
  *
- * Thin wrapper over [SettingsRepository.resetSamplingDefaults] so callers
+ * Thin wrapper over [SettingsReset.resetSamplingDefaults] so callers
  * can express intent through a typed use case (and so the surface is
  * mockable in `SettingsViewModelTest`).
  */
-class ResetSamplingDefaultsUseCase @Inject constructor(private val settingsRepository: SettingsRepository) {
+class ResetSamplingDefaultsUseCase @Inject constructor(private val settingsReset: SettingsReset) {
     /** Resets temperature / top-K / top-P / max-context / max-steps. */
     suspend operator fun invoke() {
-        settingsRepository.resetSamplingDefaults()
+        settingsReset.resetSamplingDefaults()
     }
 }

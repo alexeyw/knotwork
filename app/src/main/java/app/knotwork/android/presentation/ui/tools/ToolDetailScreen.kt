@@ -26,7 +26,7 @@ import org.json.JSONObject
  *  - `mcp:…` → resolves an [app.knotwork.android.domain.models.McpTool] from
  *    `ToolsViewModel.findMcpTool`. Renders the server-supplied JSON Schema
  *    verbatim and the enabled-toggle is wired to
- *    `SettingsRepository.disabledMcpTools`.
+ *    `ToolSettings.disabledMcpTools`.
  *  - anything else → treats the id as an AppFunction name and pulls the
  *    matching `AgentTool` from `ToolsViewModel.uiState.localTools`. The
  *    schema preview now renders the real `AgentTool.parameters` (was a

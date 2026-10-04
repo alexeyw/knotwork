@@ -4,7 +4,7 @@ import app.knotwork.android.domain.models.ToolExecutionContext
 import app.knotwork.android.domain.models.WorkspaceError
 import app.knotwork.android.domain.models.WorkspaceResult
 import app.knotwork.android.domain.repositories.LocalToolExecutor
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.AgentWorkspace
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
@@ -20,7 +20,7 @@ import javax.inject.Inject
  * window:
  *
  *  - The served window is capped by the per-read token budget
- *    ([SettingsRepository.workspaceReadTokenBudget], converted to a byte ceiling
+ *    ([ToolSettings.workspaceReadTokenBudget], converted to a byte ceiling
  *    via [APPROX_BYTES_PER_TOKEN]). An explicit `limit` may only *lower* the
  *    served size, never raise it past the budget.
  *  - `offset` / `limit` are measured in **bytes**, enabling page-by-page reads
@@ -38,11 +38,11 @@ import javax.inject.Inject
  * string instead of throwing — the agent sees the cause and can react.
  *
  * @property workspace The jailed file sandbox every read funnels through.
- * @property settingsRepository Source of the per-read token budget.
+ * @property toolSettings Source of the per-read token budget.
  */
 class ReadFileExecutor @Inject constructor(
     private val workspace: AgentWorkspace,
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
 ) : LocalToolExecutor {
 
     override val toolName: String = TOOL_NAME
@@ -94,7 +94,7 @@ class ReadFileExecutor @Inject constructor(
 
     /** Resolves the per-read byte ceiling from the token budget, never below 1. */
     private suspend fun readBudgetBytes(): Int {
-        val tokens = settingsRepository.workspaceReadTokenBudget.first()
+        val tokens = toolSettings.workspaceReadTokenBudget.first()
         return (tokens.toLong() * APPROX_BYTES_PER_TOKEN)
             .coerceIn(1L, Int.MAX_VALUE.toLong())
             .toInt()

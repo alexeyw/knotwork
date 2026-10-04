@@ -8,7 +8,7 @@ import app.knotwork.android.domain.models.WorkspaceFile
 import app.knotwork.android.domain.models.WorkspaceResult
 import app.knotwork.android.domain.models.WorkspaceTextPreview
 import app.knotwork.android.domain.models.WorkspaceUsage
-import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.AgentWorkspace
 import app.knotwork.android.domain.services.WorkspaceNamePolicy
 import app.knotwork.android.domain.services.WorkspaceTextEdit
@@ -34,7 +34,7 @@ import javax.inject.Singleton
  * the app's private storage ([Context.filesDir]).
  *
  * The directory is created lazily on first access. All blocking I/O runs on
- * [Dispatchers.IO]. Quota limits are read fresh from [SettingsRepository] on
+ * [Dispatchers.IO]. Quota limits are read fresh from [ToolSettings] on
  * each write so a settings change takes effect immediately.
  *
  * **Containment** is enforced in exactly one place — [canonicalResolve] — which
@@ -68,7 +68,7 @@ import javax.inject.Singleton
  *
  * @property context Application context, used to locate [Context.filesDir] (the
  *   workspace) and [Context.cacheDir] (the share staging).
- * @property settingsRepository Source of the per-file and total-size quotas.
+ * @property toolSettings Source of the per-file and total-size quotas.
  * @property maxEntries Ceiling on the number of entries — files and directories
  *   together — the workspace may hold; [DEFAULT_MAX_ENTRIES] in the app, lowered
  *   by tests so the boundary can be reached cheaply.
@@ -76,7 +76,7 @@ import javax.inject.Singleton
 @Singleton
 class AgentWorkspaceImpl internal constructor(
     private val context: Context,
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
     private val maxEntries: Int,
 ) : AgentWorkspace {
 
@@ -84,13 +84,13 @@ class AgentWorkspaceImpl internal constructor(
      * The constructor Hilt uses: the entry ceiling is the fixed [DEFAULT_MAX_ENTRIES].
      *
      * @param context Application context, used to locate the workspace and its share staging.
-     * @param settingsRepository Source of the per-file and total-size quotas.
+     * @param toolSettings Source of the per-file and total-size quotas.
      */
     @Inject
     constructor(
         @ApplicationContext context: Context,
-        settingsRepository: SettingsRepository,
-    ) : this(context, settingsRepository, DEFAULT_MAX_ENTRIES)
+        toolSettings: ToolSettings,
+    ) : this(context, toolSettings, DEFAULT_MAX_ENTRIES)
 
     private val mutex = Mutex()
 
@@ -167,7 +167,7 @@ class AgentWorkspaceImpl internal constructor(
     }
 
     override suspend fun usage(): WorkspaceResult<WorkspaceUsage> = withContext(Dispatchers.IO) {
-        val limit = settingsRepository.workspaceMaxTotalBytes.first()
+        val limit = toolSettings.workspaceMaxTotalBytes.first()
         val used = mutex.withLock { tallyLocked().bytes }
         WorkspaceResult.Success(WorkspaceUsage(usedBytes = used, limitBytes = limit))
     }
@@ -392,7 +392,7 @@ class AgentWorkspaceImpl internal constructor(
         val existingSize = if (exists) target.length() else 0L
         val projectedBytes = tally.bytes - existingSize + newBytes.size
         val overQuota = tally.entries + newEntries > maxEntries ||
-            projectedBytes > settingsRepository.workspaceMaxTotalBytes.first()
+            projectedBytes > toolSettings.workspaceMaxTotalBytes.first()
         if (overQuota) return WorkspaceResult.Failure(WorkspaceError.QuotaExceeded)
 
         // Invalidate the cache before the risky write: if the write throws partway
@@ -537,7 +537,7 @@ class AgentWorkspaceImpl internal constructor(
     }
 
     /** Returns the per-file size ceiling from settings. */
-    private suspend fun maxFileSizeBytes(): Long = settingsRepository.workspaceMaxFileSizeBytes.first()
+    private suspend fun maxFileSizeBytes(): Long = toolSettings.workspaceMaxFileSizeBytes.first()
 
     /**
      * Returns what the workspace holds, using the cached value when present and

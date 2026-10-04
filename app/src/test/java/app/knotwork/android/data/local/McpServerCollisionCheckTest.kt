@@ -10,7 +10,7 @@ import org.junit.Test
  * Pure-Kotlin unit coverage for [McpServerCollisionCheck.detectCollision].
  *
  * Each case mirrors a path in the production helper so a regression at the
- * persistence layer (`SettingsManager.updateMcpServer`) surfaces here
+ * persistence layer (`ToolSettingsStore.updateMcpServer`) surfaces here
  * before any DataStore plumbing is involved.
  */
 class McpServerCollisionCheckTest {

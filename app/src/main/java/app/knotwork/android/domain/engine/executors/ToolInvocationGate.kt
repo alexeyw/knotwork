@@ -14,8 +14,8 @@ import app.knotwork.android.domain.models.TriggerHitlEvent
 import app.knotwork.android.domain.models.TriggerHitlResolution
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
 import kotlinx.coroutines.CancellationException
@@ -77,7 +77,7 @@ import javax.inject.Singleton
 @Singleton
 class ToolInvocationGate @Inject constructor(
     private val toolRepository: ToolRepository,
-    private val settingsRepository: SettingsRepository,
+    private val toolSettings: ToolSettings,
     private val approvalNotifier: ApprovalNotifier,
     private val chatRepository: ChatRepository,
     private val pendingInteractionRepository: PendingInteractionRepository,
@@ -238,7 +238,7 @@ class ToolInvocationGate @Inject constructor(
         // successful observation. Without that distinction the LLM would
         // hallucinate that the destructive action succeeded and could
         // loop back to retry the same call.
-        if (risk == ToolRisk.DESTRUCTIVE && settingsRepository.blockDestructiveTools.first()) {
+        if (risk == ToolRisk.DESTRUCTIVE && toolSettings.blockDestructiveTools.first()) {
             val message = "Destructive tools are blocked by Settings — $resolvedToolName was not executed."
             chatRepository.saveMessage(
                 ChatMessage(
@@ -280,7 +280,7 @@ class ToolInvocationGate @Inject constructor(
         }
         val askAgain = parkedAnswer != null && appliedDecision == null
         val needsApproval =
-            askAgain || alwaysConfirm || settingsRepository.toolApprovalPolicy.first().requiresApproval(risk)
+            askAgain || alwaysConfirm || toolSettings.toolApprovalPolicy.first().requiresApproval(risk)
         var isApproved = true
 
         if (appliedDecision != null) {
@@ -309,7 +309,7 @@ class ToolInvocationGate @Inject constructor(
             val deferred = CompletableDeferred<Boolean>()
             val holder = PendingApprovalHolder(deferred, approvalRequest)
             activeApprovalDeferreds[sessionId] = holder
-            val timeoutMs = settingsRepository.toolCallTimeoutMs.first()
+            val timeoutMs = toolSettings.toolCallTimeoutMs.first()
             var parked = false
             isApproved = try {
                 withTimeout(timeoutMs) { deferred.await() }

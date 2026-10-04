@@ -62,7 +62,7 @@ class ToolsViewModelTest {
         every { mcpServerRepository.observeConnectionStatus(any()) } answers { statusFlowFor(firstArg()) }
         coEvery { mcpServerRepository.fetchToolList(any(), any()) } returns Result.success(emptyList())
         viewModel = ToolsViewModel(
-            settingsRepository = settingsRepository,
+            toolSettings = settingsRepository,
             toolRepository = toolRepository,
             mcpServerRepository = mcpServerRepository,
         )
@@ -100,7 +100,7 @@ class ToolsViewModelTest {
             AgentTool(name = "com.x/echo", description = "", parameters = "{}", source = ToolSource.APP_FUNCTION),
         )
         viewModel = ToolsViewModel(
-            settingsRepository = settingsRepository,
+            toolSettings = settingsRepository,
             toolRepository = toolRepository,
             mcpServerRepository = mcpServerRepository,
         )

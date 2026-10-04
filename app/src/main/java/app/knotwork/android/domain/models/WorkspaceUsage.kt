@@ -12,7 +12,7 @@ package app.knotwork.android.domain.models
  * @property usedBytes Total bytes currently occupied by regular files in the
  *   workspace (transient atomic-write scratch files are excluded). Never negative.
  * @property limitBytes The workspace-wide ceiling in bytes, mirroring
- *   [app.knotwork.android.domain.repositories.SettingsRepository.workspaceMaxTotalBytes].
+ *   [app.knotwork.android.domain.repositories.ToolSettings.workspaceMaxTotalBytes].
  */
 data class WorkspaceUsage(val usedBytes: Long, val limitBytes: Long) {
     /**

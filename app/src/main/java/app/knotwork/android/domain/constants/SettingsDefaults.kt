@@ -7,9 +7,8 @@ import app.knotwork.android.domain.services.EmbeddingProvider
  * [app.knotwork.android.domain.repositories.SettingsRepository].
  *
  * Each `const val` is the **single source of truth** consumed by:
- *  - the DataStore-backed implementation
- *    ([app.knotwork.android.data.local.SettingsManager]) when a preference key has
- *    not yet been written;
+ *  - the DataStore-backed settings stores (`data/local/settings/`) when a
+ *    preference key has not yet been written;
  *  - the settings UI (`SettingsViewModel` / `SettingsScreen`) for slider bounds
  *    and reset-to-default actions;
  *  - the Ollama provider auto-detection path

@@ -2,7 +2,7 @@ package app.knotwork.android.domain.models
 
 /**
  * Per-server configuration for an MCP connection, persisted by
- * `SettingsRepository.mcpServers`.
+ * `ToolSettings.mcpServers`.
  *
  * @property url base URL of the MCP server (acts as the stable identity).
  * @property name optional display label rendered as the row title; the
