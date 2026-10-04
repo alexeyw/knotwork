@@ -74,6 +74,7 @@ Only Kotlin files appear inside the generated blocks.
       - `CloudRetryEndToEndTest.kt` - The retry policy measured on the wire: a real Koog client, built by the production `KoogClientFactory` and therefore wrapped and transported exactly as a Cloud node's is, against a local server that answers with scripted failures.
       - `CloudRetryPolicyTest.kt` - Unit tests for `CloudRetryPolicy`: which failures are retried, and after how long.
       - `CloudRetryWrapperTest.kt` - Unit tests for `CloudRetryWrapper` and the `RetryObservingLLMClient` it interposes.
+      - `RetryAfterCapturingHttpClientFactoryTest.kt` - Unit tests for `RetryAfterCapturingHttpClientFactory`.
       - `RetryAfterHintTest.kt` - Unit tests for `RetryAfterHint`: every form a provider uses to say how long to wait.
       - `RetryingCloudLlmClientTest.kt` - Unit tests for `RetryingCloudLlmClient`: the loop around the policy — when it waits, what it reports, and what it throws.
     - `TaskQueueManagerImplTest.kt` - Unit tests for `TaskQueueManagerImpl`: enqueuing a task processes it and updates the session state without a race or a deadlock.
