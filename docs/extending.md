@@ -167,7 +167,7 @@ reference) and the cross-entity checks in a dedicated repository-backed
 validator invoked from the relevant use case. [`PipelineCompositionValidator`](../app/src/main/java/app/knotwork/android/domain/services/PipelineCompositionValidator.kt)
 is the reference example: `SavePipelineUseCase` runs it alongside
 `validate()` to reject reference cycles, dangling targets, and chains
-nested deeper than `SettingsRepository.pipelineMaxNestingDepth` before a
+nested deeper than `RunSettings.pipelineMaxNestingDepth` before a
 graph can be persisted.
 
 ### 1.6. Mirror the new type into the browser editor
@@ -336,7 +336,7 @@ from other packages), the default is `SENSITIVE` — the platform
 `AppFunctionManager` metadata gives no trustworthy signal about side
 effects. The user can downgrade a specific tool to `READ_ONLY` (or
 upgrade it to `DESTRUCTIVE`) via
-[`SettingsRepository.setToolRiskOverride(toolKey, risk)`](../app/src/main/java/app/knotwork/android/domain/repositories/SettingsRepository.kt),
+[`ToolSettings.setToolRiskOverride(toolKey, risk)`](../app/src/main/java/app/knotwork/android/domain/repositories/ToolSettings.kt),
 which writes into the `toolRiskOverrides` flow persisted under
 DataStore key `app_function_risk_overrides`. `ToolRepository.getRisk(name)`
 consults the override map first and falls back to the conservative
@@ -672,15 +672,19 @@ To add a new external LLM provider:
    `OllamaProviderInputs` bundle for the extra base-URL and context-window
    fields.
 4. Persist the key and model through `ApiKeyRepository` (Keystore-backed)
-   and `SettingsRepository`, exactly as `ProviderDetailViewModel` already
-   does for the built-in providers.
+   and `NetworkSettings` (retry budget, approved unencrypted origins),
+   exactly as `ProviderDetailViewModel` already does for the built-in
+   providers.
 
 To add a **non-provider setting**: declare a `SettingEntry` in the right
-category list of `SettingsRegistry`, add its persisted key to
-`SettingsRepository` with a default in
+category list of `SettingsRegistry`, add its property and setter to the
+settings section it belongs to (`MemorySettings`, `ToolSettings`, … in
+`domain/repositories/`) with a default in
 [`SettingsDefaults`](../app/src/main/java/app/knotwork/android/domain/constants/SettingsDefaults.kt),
-and render the control in that category's `*SettingsContent` (plus its
-delegate). The hub, sub-screen placement and search index pick it up from
+add the new key to `PreferenceStorageSnapshotTest`, and render the control
+in that category's `*SettingsContent` (plus its delegate). Code that reads the
+new setting depends on its section, not on `SettingsRepository`. The hub,
+sub-screen placement and search index pick it up from
 the registry entry.
 
 The catalog composables that power these screens:

@@ -15,6 +15,14 @@ details.
 
 ### Changed
 
+- **Settings are split into sections.** One interface held every setting, so
+  every class that read one setting could see and change all of them, and
+  every test of such a class had to fake all of them. Settings now come in
+  sections — generation and model, network, memory, tools, run limits, entry
+  points, privacy, app state — and code depends only on the section it reads.
+  The test suite refuses new code that asks for all settings at once. Nothing
+  about how settings are stored changes.
+
 - **The pipeline engine is split into small parts, without changing what it
   does.** It was one 2,000-line class built around a 1,200-line function. Each
   concern now has a part of its own: the state a nested pipeline shares with

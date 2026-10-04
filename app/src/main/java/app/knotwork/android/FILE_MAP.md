@@ -234,6 +234,7 @@ Only Kotlin files appear inside the generated blocks.
   - `IoDispatcher.kt` - Qualifies the `kotlinx.coroutines.CoroutineDispatcher` for blocking I/O that `CoroutinesModule` provides as `kotlinx.coroutines.Dispatchers.IO`.
   - `LocalToolsModule.kt` - Hilt multibinding for `LocalToolExecutor` map and bindings for `CloudLlmClientFactory` / `CloudLlmModelResolver`.
   - `PromptTemplateModule.kt` - Hilt multibinding module for prompt variable providers.
+  - `SettingsModule.kt` - Hilt bindings of the settings sections and of the transitional `SettingsRepository` composite.
 - `domain/` - Domain layer containing core business logic and Use Cases.
   - `constants/` - Domain-level constants.
     - `BundledPresetCatalog.kt` - Declared presentation order of the bundled pipeline-preset catalogue (`DISPLAY_ORDER`: onboarding scenarios → showcases → build-your-own templates) plus `rankOf`. Applied by `LocalPipelinePresetRepositoryImpl.getBundledPresets`, which would otherwise emit presets in `AssetManager.list()` (alphabetical) order; `PipelinePresetCatalogValidationTest` requires every user-facing bundled preset to be ranked here.
@@ -456,35 +457,44 @@ Only Kotlin files appear inside the generated blocks.
     - `ContentReportComposer.kt` - Pure renderer: subject line plus a Markdown body (note, category, block-quoted model output capped at `MAX_QUOTED_CHARS` with the omission stated, build metadata). Framework-free so "what exactly is in a report" is unit-testable.
   - `repositories/` - Repository interfaces.
     - `ApiKeyRepository.kt` - API key repository interface.
+    - `AppStateSettings.kt` - State the app keeps between starts that is not a preference: the first-launch and onboarding flags, the chat that is open, and the console tab last chosen.
     - `BackgroundPromptRepository.kt` - The prompts of background runs waiting in the scheduler, kept in the encrypted database rather than handed to the background runtime.
     - `BundledDocumentationRepository.kt` - Access to the documentation that ships inside the APK.
     - `ChatRepository.kt` - Chat repository interface.
     - `ClarificationRepository.kt` - Bridges the agent (suspending until the user answers) and the UI (publishing the pending question, forwarding the reply).
     - `CrashReportingRepository.kt` - Domain gateway for anonymous crash reporting (opt-in). All methods are no-op until `SettingsRepository.crashReportingEnabled` becomes `true`.
+    - `EntryPointSettings.kt` - Which pipeline each entry point runs: the default pipeline, the share target, the Quick Settings tile and external automation — with the share target's one-chat preference and the external automation contract's master switch.
     - `ExternalAutomationJournalRepository.kt` - Port of the external-automation request journal: `recordRefusal` (folds a repeated refusal, caps **refusals** in the same transaction), `admitAcceptedWithinCeiling` (atomic count-and-insert, fail-closed), once-only `recordOutcome`, `findByRunId`, `observeAll`, `applyRetention`.
+    - `GenerationSettings.kt` - How the model generates, and which local model does it: the sampling parameters, the system-prompt prefix, the context window and the voice-input length; the local backend, the breadcrumbs that recover from a backend that crashed during initialisation, the last backend probe; and the Hugging Face token that model downloads use.
     - `IdentityRepository.kt` - Read-only gateway exposing the device-local identity snapshot. Data-layer impl: `IdentityRepositoryImpl`.
     - `LocalModelRepository.kt` - Local model repository interface.
     - `LocalToolExecutor.kt` - Strategy interface for executing a single locally-registered agent tool (multibound by name in `LocalToolsModule`).
     - `McpServerRepository.kt` - Per-server gateway interface (`fetchToolList` with 5-min cache + `forceRefresh`, `observeConnectionStatus`, `disconnect`). Data-layer impl: `McpServerRepositoryImpl`.
     - `MemoryRepository.kt` - Memory repository interface.
+    - `MemorySettings.kt` - Long-term memory and chat-history compression: retrieval tuning, automatic extraction, compaction, the embedding provider with its re-embed marker, verbose memory logging, and when a long chat's history is summarised.
     - `MetricsRepository.kt` - Metrics repository interface.
     - `ModelDiscoveryRepository.kt` - Read-only Hugging Face model-discovery interface (`searchModels`, `getModelDetail`); both return `Result`. Data-layer impl: `ModelDiscoveryRepositoryImpl`.
     - `ModelDownloadManager.kt` - Model download manager interface.
     - `ModelPerformanceRepository.kt` - Persists/queries per-model inference samples keyed by on-disk path: best-effort `record` (insert + retention-cap trim), `observeRecentForModel(modelPath, limit)` for the rolling window, and `deleteForModel` (orphan cleanup, called from `LocalModelRepository` on model removal). Unlike `MetricsRepository` (session-scoped, in-memory), this survives process death. Data-layer impl: `ModelPerformanceRepositoryImpl`.
     - `NetworkActivityTracker.kt` - Domain interface tracking the timestamp of the most recent outbound LLM / MCP call. Used by the More tab privacy footer to compute "no network calls in last N m" without observing connectivity.
+    - `NetworkSettings.kt` - Where model traffic may go and how a cloud call is retried: local-only mode ("Block network from local model"), the origins the user agreed to reach without encryption, and the retry budget of a cloud call.
     - `NetworkStateRepository.kt` - Network state repository interface.
     - `PendingInteractionRepository.kt` - Parked HITL interaction store interface — the persistent half of the two-phase waiting protocol (durable request snapshot, first-writer-wins decision/answer recording, one-shot consumption). Data-layer impl: `PendingInteractionRepositoryImpl`.
     - `PipelinePresetRepository.kt` - Domain gateway over the two-tier pipeline-preset catalogue: bundled (read-only, from APK assets) + user-saved (mutable, Room-backed). Data-layer impl: `LocalPipelinePresetRepositoryImpl`.
     - `PipelineRepository.kt` - Pipeline repository interface.
     - `PipelineRunRepository.kt` - Persistent pipeline-run records interface: creation/RUNNING/terminal transitions are owned by the task queue, per-node progress and WAITING_* suspensions by the execution engine; terminal statuses are write-once; all methods are best-effort (storage failures absorbed); orphan detection is process-ownership-based. Data-layer impl: `PipelineRunRepositoryImpl`.
     - `PowerStateRepository.kt` - Power state repository interface.
+    - `PrivacySettings.kt` - What the app records about itself: the crash-reporting opt-in, on-device usage statistics, and how long run traces are kept.
     - `PromptPresetRepository.kt` - Domain gateway over the two-tier prompt-preset catalogue: bundled (read-only, from APK assets) + user-saved (mutable, Room-backed). Exposes a per-`NodeType` filtered flow used by the Prompt Library. Data-layer impl: `LocalPromptPresetRepositoryImpl`.
     - `PromptRepository.kt` - Prompt-template repository interface (CRUD over `PromptTemplate`). Data-layer impl: `PromptRepositoryImpl`.
+    - `RunSettings.kt` - How far a run may go, and how a run nobody is watching behaves: the step and token ceilings (interactive and background), the PIPELINE-node nesting depth, the structured-output repair budget, the resume and background-approval windows, and the scheduled-task result notifications.
     - `RunTraceRepository.kt` - Buffered persistent run-trace interface (`append` / `flush` / `getTraceForRun`): writes are batched so trace persistence never costs a SQLCipher commit per streamed event; the engine force-flushes at suspension and terminal points. Best-effort contract. Data-layer impl: `RunTraceRepositoryImpl`.
-    - `SettingsRepository.kt` - Settings repository interface.
+    - `SettingsRepository.kt` - Transitional composite of every settings section; production code depends on a section, and `SettingsCompositeConsumersTest` keeps the remaining consumers shrinking.
+    - `SettingsReset.kt` - The two resets of tunable settings.
     - `ShareAdmissionRepository.kt` - Ledger of recent share-target admissions — the count the share rate ceiling (`app.knotwork.android.domain.usecases.RunRateCeiling.SHARE`) is taken over.
     - `SkillRepository.kt` - Domain gateway over the skill catalogue (bundled + user, single `skills` table). Exposes bundled/user/all flows, CRUD with read-only-bundled enforcement, `duplicateSkill`, and the idempotent `seedBundledSkills`. Data-layer impl: `SkillRepositoryImpl`.
     - `ToolRepository.kt` - Tool repository interface.
+    - `ToolSettings.kt` - What the agent's tools may reach and how a call is gated: the MCP servers, per-tool enable / disable and risk overrides, the approval policy and its window, the destructive-tool block, the agent workspace's limits, and the `http_request` allowlist and response cap.
     - `TriggerJournalRepository.kt` - Trigger-evaluation journal port: `recordEvaluation` / `recordRunOutcome(runId, …)` / `recordHitlEvent(runId, event)` (folds one HITL transition onto the row; no-op for runs with no row) / `observeByTrigger` / `observeHealthInputs` (per-trigger latest-eval + latest-fired-outcome map for the list health-badge) / `readAll` (one-shot newest-first snapshot of the whole journal, backing the debug soak dump) / `applyRetention(olderThan, maxRecords)`. Best-effort observer contract (storage failures absorbed, never propagated into the observed run). Data-layer impl: `TriggerJournalRepositoryImpl`.
     - `TriggerRepository.kt` - Automation-trigger repository interface: `observeTriggers` / `observeActiveTriggers` (enabled + bound; backs the scheduler sync) + `getTriggerById` / `saveTrigger` / `deleteTrigger` / `setEnabled` / `setArmed` / `markFired`. Data-layer impl: `TriggerRepositoryImpl`.
     - `UsageTelemetryRepository.kt` - On-device usage-statistics store interface: live `summary` (counters + derived weekly retention), opt-in-gated `recordPipelineRunOutcome` / `recordTriggerFired`, `isEnabled`, `reset`. No network on this path.

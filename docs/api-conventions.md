@@ -78,7 +78,7 @@ interface LiteRtRepository {
   for discovered AppFunctions (keyed by tool name) and for MCP tools
   (keyed per server by the `mcp:<sha8(serverUrl)>:<toolName>` id, so the
   same tool name on two servers stays two decisions) via
-  `SettingsRepository.setToolRiskOverride`, then `SENSITIVE` as the
+  `ToolSettings.setToolRiskOverride`, then `SENSITIVE` as the
   conservative fallback. The override is the user's voice, never the
   server's — MCP's `readOnlyHint` / `destructiveHint` annotations are
   deliberately not consulted, since a server able to declare its own
@@ -258,8 +258,19 @@ interface Tool {
 
 ## DataStore (settings)
 
-- Define a single `PreferencesDataStore` instance per feature module, not
-  per class.
+- One `DataStore<Preferences>` for the whole app (file `agent_preferences`,
+  provided by `AppModule`); every settings section shares it. A second
+  instance over the same file throws, and a second file leaves existing
+  installs' values behind.
+- Code reads settings through the section interfaces in
+  `domain/repositories/` (`GenerationSettings`, `MemorySettings`,
+  `ToolSettings`, …) and depends on the section it reads, never on the
+  `SettingsRepository` composite (`SettingsCompositeConsumersTest`). Every
+  class that implements a section is a class-level `@Singleton`
+  (`SettingsSingletonScopeTest`): a scope on each `@Binds` alone builds one
+  instance per binding.
+- A shipped key's name and type never change — the stored value would be
+  lost. A new key is added to `PreferenceStorageSnapshotTest`.
 - All preference keys are `object`s in a `PreferenceKeys` companion
   object.
 - Wrap `DataStore.data` collection in a `catch` operator to handle
