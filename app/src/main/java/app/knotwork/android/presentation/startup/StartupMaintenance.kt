@@ -5,6 +5,7 @@ import app.knotwork.android.data.services.MemoryCompactionScheduler
 import app.knotwork.android.data.services.PendingInteractionMaintenanceScheduler
 import app.knotwork.android.data.services.RunRetentionScheduler
 import app.knotwork.android.domain.services.MemoryReembedScheduler
+import app.knotwork.android.domain.services.ModelFileHashScheduler
 import app.knotwork.android.domain.usecases.SyncTriggersUseCase
 import app.knotwork.android.presentation.shortcuts.AppShortcutPublisher
 import kotlinx.coroutines.CancellationException
@@ -24,6 +25,7 @@ import javax.inject.Inject
  *
  * @property memoryCompactionScheduler Daily memory compaction and its hard-limit watch.
  * @property memoryReembedScheduler Re-arms an interrupted memory re-embed pass.
+ * @property modelFileHashScheduler Hashes installed model files that have no current hash.
  * @property pendingInteractionMaintenanceScheduler Expiry pass for parked background requests.
  * @property runRetentionScheduler Retention pass over persisted pipeline runs.
  * @property attachmentOrphanCleanupScheduler Backstop sweep for orphaned attachment files.
@@ -33,6 +35,7 @@ import javax.inject.Inject
 class StartupMaintenance @Inject constructor(
     private val memoryCompactionScheduler: MemoryCompactionScheduler,
     private val memoryReembedScheduler: MemoryReembedScheduler,
+    private val modelFileHashScheduler: ModelFileHashScheduler,
     private val pendingInteractionMaintenanceScheduler: PendingInteractionMaintenanceScheduler,
     private val runRetentionScheduler: RunRetentionScheduler,
     private val attachmentOrphanCleanupScheduler: AttachmentOrphanCleanupScheduler,
@@ -57,6 +60,7 @@ class StartupMaintenance @Inject constructor(
         step("run retention") { runRetentionScheduler.schedulePeriodic() }
         step("attachment orphan cleanup") { attachmentOrphanCleanupScheduler.schedulePeriodic() }
         step("memory re-embed re-arm") { memoryReembedScheduler.rearmIfPending() }
+        step("model file hash re-arm") { modelFileHashScheduler.rearmIfPending() }
         step("trigger sync") { syncTriggersUseCase() }
         if (refreshShortcuts) step("launcher shortcuts") { appShortcutPublisher.refresh() }
     }

@@ -1150,4 +1150,32 @@ class AppDatabaseMigrationTest {
             statement.captured,
         )
     }
+
+    @Test
+    fun `MIGRATION_65_66 targets versions 65 to 66`() {
+        val migration = AppDatabase.MIGRATION_65_66
+
+        assertEquals(65, migration.startVersion)
+        assertEquals(66, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_65_66 adds the model file hash and its stamp as nullable columns`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statements = mutableListOf<String>()
+
+        AppDatabase.MIGRATION_65_66.migrate(db)
+
+        verify(exactly = 3) { db.execSQL(capture(statements)) }
+        // Nullable with no default: a row installed before the migration has never
+        // been hashed, and the entity declares the three columns without a default.
+        assertEquals(
+            listOf(
+                "ALTER TABLE `local_models` ADD COLUMN `sha256` TEXT",
+                "ALTER TABLE `local_models` ADD COLUMN `sha256FileSize` INTEGER",
+                "ALTER TABLE `local_models` ADD COLUMN `sha256FileModifiedAt` INTEGER",
+            ),
+            statements,
+        )
+    }
 }

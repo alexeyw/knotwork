@@ -6,6 +6,7 @@ import app.knotwork.android.data.services.PendingInteractionMaintenanceScheduler
 import app.knotwork.android.data.services.RunRetentionScheduler
 import app.knotwork.android.domain.models.DbPassphraseUnavailableException
 import app.knotwork.android.domain.services.MemoryReembedScheduler
+import app.knotwork.android.domain.services.ModelFileHashScheduler
 import app.knotwork.android.domain.usecases.SyncTriggersUseCase
 import app.knotwork.android.presentation.shortcuts.AppShortcutPublisher
 import io.mockk.coEvery
@@ -29,13 +30,14 @@ class StartupMaintenanceTest {
 
     private val compaction = mockk<MemoryCompactionScheduler>(relaxed = true)
     private val reembed = mockk<MemoryReembedScheduler>(relaxed = true)
+    private val modelHash = mockk<ModelFileHashScheduler>(relaxed = true)
     private val pendingExpiry = mockk<PendingInteractionMaintenanceScheduler>(relaxed = true)
     private val retention = mockk<RunRetentionScheduler>(relaxed = true)
     private val orphans = mockk<AttachmentOrphanCleanupScheduler>(relaxed = true)
     private val syncTriggers = mockk<SyncTriggersUseCase>(relaxed = true)
     private val shortcuts = mockk<AppShortcutPublisher>(relaxed = true)
     private val maintenance =
-        StartupMaintenance(compaction, reembed, pendingExpiry, retention, orphans, syncTriggers, shortcuts)
+        StartupMaintenance(compaction, reembed, modelHash, pendingExpiry, retention, orphans, syncTriggers, shortcuts)
 
     @Test
     fun `given the database key is lost when the trigger sync throws then the run completes and later steps run`() =
@@ -92,6 +94,7 @@ class StartupMaintenanceTest {
         every { retention.schedulePeriodic() } answers { calls += RETENTION }
         every { orphans.schedulePeriodic() } answers { calls += ORPHANS }
         coEvery { reembed.rearmIfPending() } answers { calls += REEMBED }
+        coEvery { modelHash.rearmIfPending() } answers { calls += MODEL_HASH }
         coEvery { syncTriggers() } answers { calls += TRIGGERS }
         coEvery { shortcuts.refresh() } answers { calls += SHORTCUTS }
     }
@@ -103,6 +106,7 @@ class StartupMaintenanceTest {
         RETENTION to { every { retention.schedulePeriodic() } throws IllegalStateException("x") },
         ORPHANS to { every { orphans.schedulePeriodic() } throws IllegalStateException("x") },
         REEMBED to { coEvery { reembed.rearmIfPending() } throws IllegalStateException("x") },
+        MODEL_HASH to { coEvery { modelHash.rearmIfPending() } throws IllegalStateException("x") },
         TRIGGERS to { coEvery { syncTriggers() } throws IllegalStateException("x") },
         SHORTCUTS to { coEvery { shortcuts.refresh() } throws IllegalStateException("x") },
     )
@@ -113,8 +117,9 @@ class StartupMaintenanceTest {
         const val RETENTION = "retention"
         const val ORPHANS = "orphans"
         const val REEMBED = "reembed"
+        const val MODEL_HASH = "model hash"
         const val TRIGGERS = "triggers"
         const val SHORTCUTS = "shortcuts"
-        val ALL_STEPS = setOf(COMPACTION, EXPIRY, RETENTION, ORPHANS, REEMBED, TRIGGERS, SHORTCUTS)
+        val ALL_STEPS = setOf(COMPACTION, EXPIRY, RETENTION, ORPHANS, REEMBED, MODEL_HASH, TRIGGERS, SHORTCUTS)
     }
 }

@@ -145,4 +145,20 @@ interface LocalModelDao {
      */
     @Query("SELECT * FROM local_models WHERE path = :path LIMIT 1")
     suspend fun findByPath(path: String): LocalModelEntity?
+
+    /**
+     * Stores the file hash of the model with the given [id] and the stamp of the
+     * file it was computed from. A targeted column update, so a registration
+     * writing the same row concurrently keeps its own columns.
+     *
+     * @param id The ID of the model to update.
+     * @param sha256 Lowercase hex SHA-256 of the model file.
+     * @param fileSize The file's length when it was hashed.
+     * @param fileModifiedAt The file's last-modified time (epoch ms) when it was hashed.
+     */
+    @Query(
+        "UPDATE local_models SET sha256 = :sha256, sha256FileSize = :fileSize, " +
+            "sha256FileModifiedAt = :fileModifiedAt WHERE id = :id",
+    )
+    suspend fun setFileHash(id: Long, sha256: String, fileSize: Long, fileModifiedAt: Long)
 }

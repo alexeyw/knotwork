@@ -33,6 +33,11 @@ details.
   each uses on this device or *not configured on this device*. The *Compatible*
   tile, which stood for several providers at once, is gone; the browser editor
   lists the same providers, grouped.
+- **Each installed model file has a SHA-256.** The app reads a model file once,
+  in the background, after it is downloaded — and once for every model installed
+  before this release — and keeps the checksum with the model. A file replaced on
+  disk afterwards is read again. Groundwork for runs that can be checked later:
+  the checksum names exactly which model file a run used.
 
 ### Changed
 

@@ -1,11 +1,14 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.LocalModel
+import app.knotwork.android.domain.models.ModelFileHash
 import app.knotwork.android.domain.repositories.LocalModelRepository
+import app.knotwork.android.domain.services.ModelFileHashScheduler
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
@@ -21,7 +24,8 @@ import org.junit.Test
 class RegisterDownloadedModelUseCaseTest {
 
     private val localModelRepository = mockk<LocalModelRepository>()
-    private val useCase = RegisterDownloadedModelUseCase(localModelRepository)
+    private val hashScheduler = mockk<ModelFileHashScheduler>(relaxed = true)
+    private val useCase = RegisterDownloadedModelUseCase(localModelRepository, hashScheduler)
 
     @Test
     fun `given no existing row when registering then a fresh inactive model is inserted`() = runTest {
@@ -38,6 +42,8 @@ class RegisterDownloadedModelUseCaseTest {
         assertEquals(2_048L, inserted.captured.size)
         // Installing a model is not choosing it.
         assertEquals(false, inserted.captured.isActive)
+        // A new file has no hash yet: the background pass computes it.
+        verify(exactly = 1) { hashScheduler.schedule() }
     }
 
     @Test
@@ -57,6 +63,25 @@ class RegisterDownloadedModelUseCaseTest {
         assertEquals(2_048L, updated.captured.size)
         // An active model that gets re-downloaded stays active.
         assertEquals(true, updated.captured.isActive)
+        // A re-download may have replaced the bytes: the pass re-checks the stamp.
+        verify(exactly = 1) { hashScheduler.schedule() }
+    }
+
+    @Test
+    fun `given a hashed row when re-registered then the stored hash is carried, not erased`() = runTest {
+        // The stamp decides whether the hash still holds; the registration only
+        // rewrites name, path and size, so a file that did not change keeps its hash.
+        val hash = ModelFileHash(sha256 = "ab12", fileSizeBytes = 2_048L, fileModifiedAtMs = 99L)
+        val existing =
+            LocalModel(id = 9L, name = "gemma.litertlm", path = "/data/gemma.litertlm", size = 2_048L, isActive = false)
+                .copy(fileHash = hash)
+        coEvery { localModelRepository.findByFileName("gemma.litertlm") } returns existing
+        val updated = slot<LocalModel>()
+        coEvery { localModelRepository.updateModel(capture(updated)) } returns Unit
+
+        useCase("gemma.litertlm", "/data/gemma.litertlm", sizeBytes = 2_048L)
+
+        assertEquals(hash, updated.captured.fileHash)
     }
 
     @Test

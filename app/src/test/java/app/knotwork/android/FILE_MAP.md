@@ -108,6 +108,7 @@ Only Kotlin files appear inside the generated blocks.
     - `settings/` - Tests of the settings section stores' shared read helper.
       - `PreferencesOrEmptyTest.kt` - `preferencesOrEmpty`: readable preferences pass through, an `IOException` becomes empty preferences, any other failure propagates.
     - `SettingsManagerTest.kt` - Tests for SettingsManager.
+    - `StreamingModelFileHasherTest.kt` - `StreamingModelFileHasher` against real files: the digest must be the plain SHA-256 of the bytes whatever the chunking, and a file that cannot be read or changes mid-read must yield no hash at all.
     - `TagsCsvTest.kt` - Unit tests for the shared `TagsCsv` codec.
     - `TestSettingsManager.kt` - Builds a `SettingsManager` from its section stores over `dataStore`, the way Hilt wires it: one instance of each store, shared by the composite.
     - `TransientCacheSweeperImplTest.kt` - Verifies `TransientCacheSweeperImpl` on a real filesystem: every registered handoff directory is swept, only past the shared retention, a share slot counts as fresh while its copy is, and nothing outside the registry is touched.
@@ -146,6 +147,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ClarificationRepositoryImplTest.kt` - Unit tests for `ClarificationRepositoryImpl`.
     - `ExternalAutomationJournalRepositoryImplTest.kt` - Verifies `ExternalAutomationJournalRepositoryImpl` against a real in-memory Room database: the status / target mapping round-trips, the rate ceiling counts and admits atomically, repeated refusals collapse, retention applies both limits, and an undecodable row is dropped on read.
     - `IdentityRepositoryImplTest.kt` - Unit tests for the static-format portion of `IdentityRepositoryImpl`.
+    - `LocalModelFileHashPersistenceTest.kt` - The model file hash through `LocalModelRepositoryImpl`, a real (in-memory) Room database and real files: a stored hash vouches for a file only while the file still has the stamp the hash was computed at.
     - `LocalModelRepositoryImplTest.kt` - Tests for LocalModelRepositoryImpl.
     - `LocalPipelinePresetRepositoryImplTest.kt` - Unit tests for `LocalPipelinePresetRepositoryImpl`.
     - `LocalPipelineRepositoryImplTest.kt` - Tests for LocalPipelineRepositoryImpl.
@@ -187,11 +189,13 @@ Only Kotlin files appear inside the generated blocks.
     - `MemoryCompactionWorkerTest.kt` - Robolectric coverage for the `@HiltWorker`-annotated `MemoryCompactionWorker`.
     - `MemoryReembedWorkerTest.kt` - Robolectric coverage for the `@HiltWorker`-annotated `MemoryReembedWorker`.
     - `ModelDownloadWorkerTest.kt` - Covers the download worker's policy decisions: what it does with the token, what it does once the bytes are on disk, and — the part that decides whether a flaky network costs the user their progress — when a failure is worth another attempt.
+    - `ModelFileHashWorkerTest.kt` - Robolectric coverage for the `@HiltWorker`-annotated `ModelFileHashWorker`, mirroring `MemoryReembedWorkerTest`: the mocked use case reaches the worker through a manual `WorkerFactory`.
     - `PendingInteractionMaintenanceWorkerTest.kt` - Robolectric coverage for the `@HiltWorker`-annotated `PendingInteractionMaintenanceWorker`.
     - `RunRetentionSchedulerTest.kt` - Unit tests for `RunRetentionScheduler`: the daily retention job is enqueued under its unique name with the KEEP policy (idempotent cold-start scheduling) and carries the charging + idle + battery-not-low maintenance constraints.
     - `RunRetentionWorkerTest.kt` - Robolectric coverage for the `@HiltWorker`-annotated `RunRetentionWorker`.
     - `TriggerWatchWorkerTest.kt` - Robolectric coverage for the `@HiltWorker`-annotated `TriggerWatchWorker`, including the self-cancel reclaim path.
     - `WorkManagerMemoryReembedSchedulerTest.kt` - Unit tests for `WorkManagerMemoryReembedScheduler`.
+    - `WorkManagerModelFileHashSchedulerTest.kt` - `WorkManagerModelFileHashScheduler`: a registration chains a pass, and the start-up re-arm schedules one only for unhashed files without ever crashing start-up.
     - `WorkManagerTaskSchedulerTest.kt` - Unit tests for `WorkManagerTaskScheduler`.
     - `WorkManagerTriggerSchedulerTest.kt` - Unit tests for `WorkManagerTriggerScheduler` — the mapping from a `Trigger`'s condition onto a periodic WorkManager request, plus register/cancel/sync.
   - `tools/` - Tests for the tool layer.
@@ -400,6 +404,7 @@ Only Kotlin files appear inside the generated blocks.
     - `CleanupTriggerJournalUseCaseTest.kt` - Unit tests for `CleanupTriggerJournalUseCase`: it derives the age cutoff from the configured window and delegates the bounded pass to the repository.
     - `ClearAllMemoryUseCaseTest.kt` - Unit tests for `ClearAllMemoryUseCase`.
     - `CompressChatHistoryUseCaseTest.kt` - Unit tests for `CompressChatHistoryUseCase` — the background pass that summarises the older tail of a long session.
+    - `ComputeModelFileHashesUseCaseTest.kt` - `ComputeModelFileHashesUseCase`: one pass hashes every file the registry lists as needing it, stores each result, and leaves an unreadable file for the next pass.
     - `CreatePipelineUseCaseTest.kt` - Unit tests for `CreatePipelineUseCase`.
     - `DeletePipelineUseCaseTest.kt` - Unit tests for `DeletePipelineUseCase`.
     - `DuplicatePipelineUseCaseTest.kt` - Unit tests for `DuplicatePipelineUseCase`.

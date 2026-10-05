@@ -2,6 +2,7 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.repositories.LocalModelRepository
+import app.knotwork.android.domain.services.ModelFileHashScheduler
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -25,10 +26,19 @@ import javax.inject.Singleton
  * ([RediscoverDownloadedModelsUseCase]) registers the same file would otherwise
  * insert it twice — both would find no row, then both would insert.
  *
+ * Every registration asks for a background hashing pass: the file's SHA-256
+ * identifies the model a run used, and it is computed once, off the download
+ * path. A re-registered file that changed on disk no longer matches its stored
+ * hash, so the same pass covers it.
+ *
  * @property localModelRepository The local model registry.
+ * @property modelFileHashScheduler Schedules the pass that hashes the file.
  */
 @Singleton
-class RegisterDownloadedModelUseCase @Inject constructor(private val localModelRepository: LocalModelRepository) {
+class RegisterDownloadedModelUseCase @Inject constructor(
+    private val localModelRepository: LocalModelRepository,
+    private val modelFileHashScheduler: ModelFileHashScheduler,
+) {
 
     /** Serialises lookup-then-insert across every caller in the process. */
     private val registration = Mutex()
@@ -42,17 +52,22 @@ class RegisterDownloadedModelUseCase @Inject constructor(private val localModelR
      *   (the Hub listing) pass it; otherwise the on-disk length is the truth.
      * @return The row id of the registered model.
      */
-    suspend operator fun invoke(fileName: String, path: String, sizeBytes: Long): Long = registration.withLock {
-        // By name first; then by path, which catches the row the start-up pass
-        // registered under the flattened on-disk name of a file this download
-        // names by its repository path — the row takes the download's name back.
-        val existing = localModelRepository.findByFileName(fileName) ?: localModelRepository.findByPath(path)
-        if (existing != null) {
-            localModelRepository.updateModel(existing.copy(name = fileName, path = path, size = sizeBytes))
-            return@withLock existing.id
+    suspend operator fun invoke(fileName: String, path: String, sizeBytes: Long): Long {
+        val id = registration.withLock {
+            // By name first; then by path, which catches the row the start-up pass
+            // registered under the flattened on-disk name of a file this download
+            // names by its repository path — the row takes the download's name back.
+            val existing = localModelRepository.findByFileName(fileName) ?: localModelRepository.findByPath(path)
+            if (existing != null) {
+                localModelRepository.updateModel(existing.copy(name = fileName, path = path, size = sizeBytes))
+                existing.id
+            } else {
+                localModelRepository.insertModel(
+                    LocalModel(name = fileName, path = path, size = sizeBytes, isActive = false),
+                )
+            }
         }
-        localModelRepository.insertModel(
-            LocalModel(name = fileName, path = path, size = sizeBytes, isActive = false),
-        )
+        modelFileHashScheduler.schedule()
+        return id
     }
 }

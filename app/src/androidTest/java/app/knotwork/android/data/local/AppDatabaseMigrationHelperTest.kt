@@ -798,4 +798,35 @@ class AppDatabaseMigrationHelperTest {
             }
         }
     }
+
+    /**
+     * v65 → v66 adds the model file's SHA-256 and its stamp to `local_models`. A
+     * model installed before the migration was never hashed, so all three columns
+     * start `NULL` and the row itself survives untouched. The schema must match
+     * the exported `66.json`.
+     */
+    @Test
+    fun migrate65to66_leavesExistingModelsUnhashed() {
+        helper.createDatabase(TEST_DB, 65).use { db ->
+            db.execSQL(
+                "INSERT INTO local_models(name, path, size, isActive, supportsVision, supportsAudio) " +
+                    "VALUES('gemma.litertlm', '/models/gemma.litertlm', 1234, 1, 0, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 66, true, AppDatabase.MIGRATION_65_66).use { db ->
+            db.query(
+                "SELECT path, size, isActive, sha256, sha256FileSize, sha256FileModifiedAt " +
+                    "FROM local_models WHERE name = 'gemma.litertlm'",
+            ).use { c ->
+                assertTrue("the pre-existing model must survive the migration", c.moveToFirst())
+                assertEquals("/models/gemma.litertlm", c.getString(0))
+                assertEquals(1234L, c.getLong(1))
+                assertEquals(1, c.getInt(2))
+                assertTrue("a pre-existing model has no hash", c.isNull(3))
+                assertTrue("a pre-existing model has no hashed size", c.isNull(4))
+                assertTrue("a pre-existing model has no hashed modification time", c.isNull(5))
+            }
+        }
+    }
 }

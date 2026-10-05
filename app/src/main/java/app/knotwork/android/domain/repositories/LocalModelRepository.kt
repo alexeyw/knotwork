@@ -2,6 +2,7 @@ package app.knotwork.android.domain.repositories
 
 import app.knotwork.android.domain.models.ActiveModelMeta
 import app.knotwork.android.domain.models.LocalModel
+import app.knotwork.android.domain.models.ModelFileHash
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -113,4 +114,38 @@ interface LocalModelRepository {
      * @param path Absolute path of the model file.
      */
     suspend fun findByPath(path: String): LocalModel?
+
+    /**
+     * Returns the SHA-256 of the model file at [path] — only when the registry
+     * holds one and it still describes the file on disk.
+     *
+     * The hash is computed once and cached (see [ModelFileHash]); this is the
+     * read that checks the cached value against the file's current size and
+     * modification time, so a file replaced since it was hashed answers `null`
+     * rather than a hash of other bytes. A run records what this returns as the
+     * identity of the model it ran on.
+     *
+     * @param path Absolute path of the model file.
+     * @return The lowercase hex SHA-256, or `null` when no row names the file,
+     *   the file has not been hashed yet, it changed since, or it is gone.
+     */
+    suspend fun currentFileHash(path: String): String?
+
+    /**
+     * Returns the registered models whose file exists and has no current hash:
+     * never hashed, or changed on disk since it was. The background hashing pass
+     * works through this list.
+     *
+     * @return The models still to hash; empty when every file is covered.
+     */
+    suspend fun modelsNeedingFileHash(): List<LocalModel>
+
+    /**
+     * Stores the hash of the model with the given [id]. A targeted write: it
+     * leaves every other column of the row as it is.
+     *
+     * @param id The ID of the model the file belongs to.
+     * @param hash The file's SHA-256 with the stamp it was computed from.
+     */
+    suspend fun recordFileHash(id: Long, hash: ModelFileHash)
 }
