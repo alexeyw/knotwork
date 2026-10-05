@@ -142,6 +142,26 @@ class KoogClientFactory @Inject constructor(
     }
 
     /**
+     * The client a connection check asks for a model list: built exactly as a run's is, on the
+     * transport the caller passes, but with no retry policy — a check is one attempt — and with
+     * no admission. The caller has applied its own
+     * ([app.knotwork.android.domain.connection.ConnectionPreconditions]); in particular it does
+     * not require a model, because the check is how a model gets chosen.
+     *
+     * @param provider The provider to build for.
+     * @param apiKey The key entered; required for a hosted provider, optional for a server the user runs.
+     * @param baseUrl The address entered for a server the user runs.
+     * @param http The transport, which applies the per-hop rule.
+     * @return An undecorated client; the caller closes it.
+     */
+    internal fun checkClient(
+        provider: CloudProvider,
+        apiKey: String?,
+        baseUrl: String?,
+        http: KoogHttpClient.Factory,
+    ): LLMClient = rawClient(provider, Admission.Granted(apiKey = apiKey, baseUrl = baseUrl), http)
+
+    /**
      * Builds the raw, un-decorated Koog client for [provider] from what [admission] granted.
      * Retry wrapping is applied separately by [createClient].
      */

@@ -390,6 +390,7 @@ class NetworkEgressInventoryKonsistTest {
             "$MAIN/domain/engine/executors/CloudLlmNodeExecutor.kt",
             "$MAIN/data/engine/KoogStructuredInferenceClientFactory.kt",
             "$MAIN/data/tools/local/DelegateTaskTool.kt",
+            "$MAIN/data/engine/KoogProviderConnectionChecker.kt",
         )
 
         /** The files that send memory text through an embedding client. */
@@ -452,6 +453,10 @@ class NetworkEgressInventoryKonsistTest {
                 Egress.Opens("3.1", Indicator.RecordedBy(CHAT_CALLERS, listOf("OpenAiCompatibleClients"))),
             "$MAIN/data/engine/retry/CloudRetryPolicy.kt" to
                 Egress.None("reads the status and the requested wait of a failed call; sends nothing"),
+            "$MAIN/data/engine/KoogProviderConnectionChecker.kt" to
+                Egress.Opens("3.1", Indicator.RecordsItself),
+            "$MAIN/data/network/ConnectionFailureClassifier.kt" to
+                Egress.None("names the cause of a connection check that already failed; sends nothing"),
             "$MAIN/domain/engine/executors/CloudLlmNodeExecutor.kt" to
                 Egress.Opens("3.1", Indicator.RecordsItself),
             "$MAIN/data/tools/local/DelegateTaskTool.kt" to

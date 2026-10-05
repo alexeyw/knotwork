@@ -1,17 +1,27 @@
 package app.knotwork.android.presentation.ui.settings.provider
 
+import app.knotwork.android.domain.connection.AddressRefusal
+import app.knotwork.android.domain.connection.ConnectionCheckResult
+import app.knotwork.android.domain.connection.ConnectionRefusal
+import app.knotwork.android.domain.connection.ProviderConnectionChecker
+import app.knotwork.android.domain.connection.ProviderConnectionDraft
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.presentation.ui.common.ConnectionTestState
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -22,6 +32,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.TestTimeSource
 
 /**
  * Unit tests for [ProviderDetailViewModel] — the standalone editor backing the
@@ -55,8 +66,12 @@ class ProviderDetailViewModelTest {
         // Relaxed so the global cloud-retry flows the ViewModel binds on
         // construction resolve to empty flows (no emissions) by default.
         settingsRepository = mockk(relaxed = true)
-        viewModel = ProviderDetailViewModel(apiKeyRepository, settingsRepository)
+        viewModel = newViewModel()
     }
+
+    /** A ViewModel on the shared mocks; the connection checker is irrelevant outside the Test row tests. */
+    private fun newViewModel(): ProviderDetailViewModel =
+        ProviderDetailViewModel(apiKeyRepository, settingsRepository, mockk(relaxed = true), TestTimeSource())
 
     @After
     fun tearDown() {
@@ -69,7 +84,7 @@ class ProviderDetailViewModelTest {
     @Test
     fun `given each hosted provider when bind then its key and model flow into state`() = runTest {
         hostedProviders.forEach { id ->
-            val vm = ProviderDetailViewModel(apiKeyRepository, settingsRepository)
+            val vm = newViewModel()
             every { apiKeyRepository.getApiKey(id.cloudProvider) } returns flowOf("key-${id.name}")
             every { apiKeyRepository.getModel(id.cloudProvider) } returns flowOf("model-${id.name}")
 
@@ -227,5 +242,94 @@ class ProviderDetailViewModelTest {
         viewModel.updateOllamaContextWindow("not-a-number")
         advanceUntilIdle()
         coVerify { apiKeyRepository.setOllamaContextWindowSize(4096) }
+    }
+
+    /** A ViewModel whose Test row sees [approved] origins with the restriction off, and checks with [checker]. */
+    private fun testRowViewModel(
+        checker: ProviderConnectionChecker,
+        approved: Set<String> = emptySet(),
+    ): ProviderDetailViewModel {
+        every { settingsRepository.approvedCleartextOrigins } returns MutableStateFlow(approved)
+        every { settingsRepository.blockNetworkFromLocalModel } returns MutableStateFlow(false)
+        return ProviderDetailViewModel(apiKeyRepository, settingsRepository, checker, TestTimeSource())
+    }
+
+    private val ollamaUrl = "http://192.168.1.20:11434"
+
+    /** Ollama bound at [ollamaUrl], its Test row checking with [checker]. */
+    private fun TestScope.boundOllama(checker: ProviderConnectionChecker): ProviderDetailViewModel {
+        every { apiKeyRepository.getModel(CloudProvider.OLLAMA) } returns flowOf(null)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OLLAMA) } returns MutableStateFlow(ollamaUrl)
+        every { apiKeyRepository.getOllamaContextWindowSize() } returns flowOf(4096)
+        return testRowViewModel(checker, approved = setOf(ollamaUrl)).also {
+            it.bind(ProviderId.Ollama)
+            advanceUntilIdle()
+        }
+    }
+
+    private fun ollamaChecker(): ProviderConnectionChecker = mockk {
+        every { destination(CloudProvider.OLLAMA, ollamaUrl) } returns "192.168.1.20"
+        coEvery { check(CloudProvider.OLLAMA, ProviderConnectionDraft("", ollamaUrl)) } returns
+            ConnectionCheckResult.Reachable(listOf("llama3.2:3b"))
+    }
+
+    @Test
+    fun `given a hosted provider without a key when bound then the Test row is disabled for the key`() = runTest {
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf(null)
+        every { apiKeyRepository.getModel(CloudProvider.OPENAI) } returns flowOf(null)
+        val vm = testRowViewModel(mockk())
+
+        vm.bind(ProviderId.OpenAi)
+        advanceUntilIdle()
+
+        assertEquals(ConnectionTestState.Disabled(ConnectionRefusal.MissingKey), vm.connectionTestState.value)
+    }
+
+    @Test
+    fun `given Ollama at an approved address when Test is pressed then the values in the form are checked`() = runTest {
+        val vm = boundOllama(ollamaChecker())
+        val before = vm.connectionTestState.value
+
+        vm.startConnectionTest()
+        advanceUntilIdle()
+
+        assertEquals(ConnectionTestState.Idle, before)
+        assertEquals(
+            ConnectionTestState.Finished(ConnectionCheckResult.Reachable(listOf("llama3.2:3b"))),
+            vm.connectionTestState.value,
+        )
+    }
+
+    @Test
+    fun `given a result when the address is edited then it is dropped and the new address is judged`() = runTest {
+        val vm = boundOllama(ollamaChecker())
+        vm.startConnectionTest()
+        advanceUntilIdle()
+
+        vm.updateBaseUrl(ProviderId.Ollama, "http://192.168.1.21:11434")
+        advanceUntilIdle()
+
+        assertEquals(
+            ConnectionTestState.Disabled(AddressRefusal.CleartextNeedsApproval("http://192.168.1.21:11434")),
+            vm.connectionTestState.value,
+        )
+    }
+
+    @Test
+    fun `given a running test when cancelled then the row is idle again`() = runTest {
+        val checker = mockk<ProviderConnectionChecker> {
+            every { destination(any(), any()) } returns "192.168.1.20"
+            coEvery { check(any(), any()) } coAnswers { awaitCancellation() }
+        }
+        val vm = boundOllama(checker)
+        vm.startConnectionTest()
+        advanceUntilIdle()
+        val running = vm.connectionTestState.value
+
+        vm.cancelConnectionTest()
+        advanceUntilIdle()
+
+        assertTrue("$running", running is ConnectionTestState.Running)
+        assertEquals(ConnectionTestState.Idle, vm.connectionTestState.value)
     }
 }

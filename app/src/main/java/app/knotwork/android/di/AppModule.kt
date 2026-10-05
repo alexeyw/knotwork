@@ -59,6 +59,7 @@ import dagger.hilt.components.SingletonComponent
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
+import kotlin.time.TimeSource
 
 /**
  * Global application-level dependency injection module.
@@ -396,6 +397,13 @@ object AppModule {
      */
     @Provides
     fun provideSearchConnectionOpener(): SearchTool.ConnectionOpener = SearchTool.ConnectionOpener.SYSTEM
+
+    /**
+     * Provides the monotonic clock a running connection check is timed by: the Test row counts
+     * its elapsed seconds from the start this marks. A seam, so tests can step time.
+     */
+    @Provides
+    fun provideMonotonicTimeSource(): TimeSource.WithComparableMarks = TimeSource.Monotonic
 
     /**
      * Provides the singleton instance of LocalAppFunctionManager.

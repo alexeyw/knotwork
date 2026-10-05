@@ -1145,6 +1145,11 @@ which the platform used to cover app-wide and the move left open, are covered by
 handling and applies `ModelHopRule` — the cleartext rule, and the local-only
 restriction while it is on — to every hop before it is sent.
 
+The pair of checks is one function, `domain/connection/EndpointRule`, read by the
+gate before a client is built, by `ModelHopRule` on every hop, and by the settings
+forms while an address is typed — so a form cannot accept an address the
+send-time check then refuses.
+
 ### 4.4. Cloud LLM providers
 
 Cloud providers (`openai`, `anthropic`, `google`, `deepseek`, `openrouter`,
@@ -1188,6 +1193,19 @@ The factory reports *why* a client is `null` through
 by the same checks in the same order. Callers used to re-derive the cause, and
 blamed the restriction — or a missing API key — for an address the cleartext rule
 had refused.
+
+**Connection checks.** *Test connection* on a provider screen and in the MCP
+server form runs one check against the values in the form
+(`domain/connection/ProviderConnectionChecker`, `McpConnectionChecker`). A
+provider check builds the client `KoogClientFactory` builds, on the same
+transport and deadlines, and asks for the model list once — no retry policy, no
+prompt (OpenRouter's key is checked first, because its model list answers any
+key). An MCP check connects a throwaway `KoogMcpClient`, lists the tools and
+disconnects, outside `McpConnectionPool`. What stops a check before it sends is
+`ConnectionPreconditions`, which the form also reads to disable the button with a
+reason; a failed check is named by `data/network/ConnectionFailureClassifier`
+(rejected key, wrong path, rate limit, server error, unknown host, refused port,
+connect or read deadline, not an MCP endpoint, refused redirect).
 
 **Transient-failure retry.** Every cloud `LLMClient` built by
 `KoogClientFactory` or `DefaultKoogEmbedderFactory` — chat completions and the

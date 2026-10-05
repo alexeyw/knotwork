@@ -111,7 +111,7 @@ provider's own privacy policy and data-retention terms govern it — including
 whether they retain or train on it. Review the policy of whichever provider
 you choose.
 
-Two other paths reach the same providers, both also opt-in:
+Three other paths reach the same providers, all also opt-in:
 
 - **Memory embeddings.** If you choose OpenAI or Ollama as the *Embedding model*
   in the memory settings, the text being embedded is sent to that service: a
@@ -121,8 +121,12 @@ Two other paths reach the same providers, both also opt-in:
 - **The `delegate_task` tool** hands a subtask to a provider you have a key for.
   It counts as a sensitive tool call, so it waits for your approval unless you
   set *Approve tool calls* to *Never*.
+- **Test connection** on a provider's settings screen, when you press it, asks
+  that provider for its list of models with the key and address you entered;
+  for OpenRouter it first asks whether the key is valid. No prompt or
+  conversation text is sent.
 
-Apart from those two, a pipeline contacts a cloud provider only through a step
+Apart from those three, a pipeline contacts a cloud provider only through a step
 that runs on one. A node's settings show its engine, so you can see which do.
 
 **Block network from local model** (Settings → Tools & workspace) keeps every
@@ -138,7 +142,9 @@ affect MCP servers (3.2), model downloads (3.3) or the `http_request` tool
 ### 3.2 MCP servers (opt-in)
 
 If you add a Model Context Protocol server, the app connects to that server's
-URL to list its tools and to invoke them. Tool arguments produced during a run
+URL to list its tools and to invoke them. *Test connection* in the server form
+does the first of those with the values you entered, before you save them:
+it connects, lists the tools and disconnects. Tool arguments produced during a run
 — which may contain content from your conversation — are sent to that server,
 along with any credentials you stored for it. The operator of that server
 determines what happens to that data.

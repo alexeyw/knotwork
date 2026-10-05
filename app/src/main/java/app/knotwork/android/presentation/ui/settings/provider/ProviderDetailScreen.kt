@@ -16,11 +16,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
 import app.knotwork.android.data.engine.KoogModelMapper
+import app.knotwork.android.domain.connection.ConnectionPreconditions
+import app.knotwork.android.domain.connection.ProviderConnectionChecker
+import app.knotwork.android.domain.connection.ProviderConnectionDraft
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.services.CleartextPolicy
+import app.knotwork.android.presentation.ui.common.ConnectionTest
+import app.knotwork.android.presentation.ui.common.ConnectionTestState
 import app.knotwork.design.screens.settings.CleartextConsentUi
 import app.knotwork.design.screens.settings.CloudRetryViewState
 import app.knotwork.design.screens.settings.KnotworkProviderRow
@@ -36,11 +42,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.TimeSource
 
 /**
  * Standalone editor for a single external LLM provider, reached from
@@ -248,15 +257,32 @@ data class ProviderDetailUiState(
  * edits routed through [ApiKeyRepository]. Independent from the main
  * Settings VM so the provider detail screen can be reached as a deep-
  * link target without forcing the entire Settings tree to load.
+ *
+ * Also owns the screen's Test connection row ([connectionTestState]): it checks the values in the
+ * form through [ProviderConnectionChecker], and is disabled, with the reason, while
+ * [ConnectionPreconditions] says the check cannot run.
  */
 @HiltViewModel
 class ProviderDetailViewModel @Inject constructor(
     private val apiKeyRepository: ApiKeyRepository,
     private val networkSettings: NetworkSettings,
+    private val connectionChecker: ProviderConnectionChecker,
+    timeSource: TimeSource.WithComparableMarks,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProviderDetailUiState())
     val uiState: StateFlow<ProviderDetailUiState> = _uiState.asStateFlow()
+
+    private val connectionTest = ConnectionTest(viewModelScope, timeSource)
+
+    /**
+     * The Test connection row: disabled with a reason, idle, running since a moment, or finished
+     * with what the check found. A result is dropped as soon as a value it was run with changes.
+     */
+    val connectionTestState: StateFlow<ConnectionTestState> = connectionTest.state
+
+    /** The provider [bind] attached the screen to; `null` until then. */
+    private var boundProvider: CloudProvider? = null
 
     init {
         // The cloud-retry policy is global (applies to every provider), so it is
@@ -279,6 +305,7 @@ class ProviderDetailViewModel @Inject constructor(
      */
     fun bind(providerId: ProviderId) {
         val provider = providerId.cloudProvider
+        boundProvider = provider
         if (provider.usesApiKey) {
             apiKeyRepository.getApiKey(provider)
                 .onEach { v -> _uiState.update { it.copy(apiKey = v.orEmpty()) } }
@@ -313,6 +340,48 @@ class ProviderDetailViewModel @Inject constructor(
                 .onEach { v -> _uiState.update { it.copy(ollamaContextWindow = v.toString()) } }
                 .launchIn(viewModelScope)
         }
+        observeConnectionTestInputs(provider)
+    }
+
+    /**
+     * Feeds the Test row everything a check of [provider] reads — the key and address in the form,
+     * the approved unencrypted origins, "Block network from local model" — with the reason it
+     * cannot run, judged by the same [ConnectionPreconditions] the check applies.
+     */
+    private fun observeConnectionTestInputs(provider: CloudProvider) {
+        combine(
+            _uiState.map { it.connectionDraft() }.distinctUntilChanged(),
+            networkSettings.approvedCleartextOrigins,
+            networkSettings.blockNetworkFromLocalModel,
+        ) { draft, approved, localOnly -> ConnectionTestInputs(draft, approved, localOnly) }
+            .onEach { inputs ->
+                connectionTest.onInputs(
+                    inputs = inputs,
+                    refusal = ConnectionPreconditions.provider(
+                        provider = provider,
+                        draft = inputs.draft,
+                        approvedCleartextOrigins = inputs.approvedCleartextOrigins,
+                        localOnly = inputs.localOnly,
+                    ),
+                )
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /**
+     * Runs Test connection with the values in the form. Does nothing before [bind], while the row
+     * is disabled, or while a check is running.
+     */
+    fun startConnectionTest() {
+        val provider = boundProvider ?: return
+        val draft = _uiState.value.connectionDraft()
+        val host = connectionChecker.destination(provider, draft.baseUrl) ?: return
+        connectionTest.start(host) { connectionChecker.check(provider, draft) }
+    }
+
+    /** Cancels a running Test connection; the row goes back to idle. */
+    fun cancelConnectionTest() {
+        connectionTest.cancel()
     }
 
     /**
@@ -387,6 +456,23 @@ class ProviderDetailViewModel @Inject constructor(
         viewModelScope.launch { networkSettings.setCloudRetryBaseDelayMs(value) }
     }
 }
+
+/** The key and address a provider check reads, from the form's state. */
+private fun ProviderDetailUiState.connectionDraft(): ProviderConnectionDraft =
+    ProviderConnectionDraft(apiKey = apiKey, baseUrl = baseUrl)
+
+/**
+ * Everything a provider check reads, compared as a whole: a change to any of it drops a result.
+ *
+ * @property draft The key and address in the form.
+ * @property approvedCleartextOrigins The approved unencrypted origins.
+ * @property localOnly Whether "Block network from local model" is on.
+ */
+private data class ConnectionTestInputs(
+    val draft: ProviderConnectionDraft,
+    val approvedCleartextOrigins: Set<String>,
+    val localOnly: Boolean,
+)
 
 /** Test tag for the unencrypted-connection consent banner on the Ollama provider screen. */
 const val CLEARTEXT_CONSENT_BANNER_TAG: String = "cleartext_consent_banner"
