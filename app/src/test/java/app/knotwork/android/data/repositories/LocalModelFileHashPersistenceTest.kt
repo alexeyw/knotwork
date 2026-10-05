@@ -48,7 +48,7 @@ class LocalModelFileHashPersistenceTest {
     }
 
     @Test
-    fun `given a registered file never hashed then it needs a hash and has no current one`() = runTest {
+    fun `given a registered file never hashed when read then it needs a hash and has no current one`() = runTest {
         val file = modelFile("a.litertlm", "weights")
         val id = repository.insertModel(model(file))
 
@@ -57,7 +57,7 @@ class LocalModelFileHashPersistenceTest {
     }
 
     @Test
-    fun `given a recorded hash for an unchanged file then it is current and the file needs no pass`() = runTest {
+    fun `given a recorded hash for an unchanged file when read then it is current and needs no pass`() = runTest {
         val file = modelFile("a.litertlm", "weights")
         val id = repository.insertModel(model(file))
 
@@ -68,7 +68,7 @@ class LocalModelFileHashPersistenceTest {
     }
 
     @Test
-    fun `given the file was rewritten after hashing then the hash is stale and the file needs a pass`() = runTest {
+    fun `given a hashed file when it is rewritten then the hash is stale and the file needs a pass`() = runTest {
         val file = modelFile("a.litertlm", "weights")
         val id = repository.insertModel(model(file))
         repository.recordFileHash(id, stampOf(file, sha = "abc123"))
@@ -82,7 +82,7 @@ class LocalModelFileHashPersistenceTest {
     }
 
     @Test
-    fun `given the file is gone then it has no current hash and nothing to hash`() = runTest {
+    fun `given a hashed file when it is deleted then it has no current hash and nothing to hash`() = runTest {
         val file = modelFile("a.litertlm", "weights")
         val id = repository.insertModel(model(file))
         repository.recordFileHash(id, stampOf(file, sha = "abc123"))
@@ -94,12 +94,12 @@ class LocalModelFileHashPersistenceTest {
     }
 
     @Test
-    fun `given no row for the path then there is no current hash`() = runTest {
+    fun `given no row for the path when read then there is no current hash`() = runTest {
         assertNull(repository.currentFileHash(File(folder.root, "unknown.litertlm").path))
     }
 
     @Test
-    fun `given a recorded hash then the other columns of the row are untouched`() = runTest {
+    fun `given a model row when its hash is recorded then the other columns are untouched`() = runTest {
         val file = modelFile("a.litertlm", "weights")
         val id = repository.insertModel(model(file).copy(isActive = true, supportsVision = true))
 
@@ -112,7 +112,7 @@ class LocalModelFileHashPersistenceTest {
     }
 
     @Test
-    fun `given a re-registration of an unchanged file then its hash survives the update`() = runTest {
+    fun `given a hashed unchanged file when re-registered then its hash survives the update`() = runTest {
         // Registration rewrites the whole row with `@Update`; the hash must travel in it.
         val file = modelFile("a.litertlm", "weights")
         val id = repository.insertModel(model(file))
