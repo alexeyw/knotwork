@@ -368,7 +368,7 @@ class LiveNodeStepTest {
     }
 
     @Test
-    fun `given a node that parks after a model call then the call is recorded before the park`() = runTest {
+    fun `given a node that called the model when it parks then the call is recorded before the park`() = runTest {
         executor.script = callsTheModelThen(
             NodeOutput.State(AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.APPROVAL)),
         )
@@ -380,7 +380,7 @@ class LiveNodeStepTest {
     }
 
     @Test
-    fun `given a node that fails after a model call then the call is still recorded`() = runTest {
+    fun `given a node that called the model when it fails then the call is still recorded`() = runTest {
         executor.script = { scope ->
             flow {
                 scope.inference.local(engine, "the prompt").collect { }

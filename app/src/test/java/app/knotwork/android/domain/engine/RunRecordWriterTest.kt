@@ -90,7 +90,7 @@ class RunRecordWriterTest {
     }
 
     @Test
-    fun `given a persisted run then its header is read back from the record and written to it`() = runTest {
+    fun `given a persisted run when its header is read and written then the record is used`() = runTest {
         coEvery { runs.getRun("run-1") } returns mockk { every { header } returns TEST_RUN_HEADER }
         val writer = factory.open("run-1", "s")
 
@@ -101,7 +101,7 @@ class RunRecordWriterTest {
     }
 
     @Test
-    fun `given a run whose record is missing then it has no recorded header`() = runTest {
+    fun `given a run whose record is missing when its header is read then there is none`() = runTest {
         coEvery { runs.getRun("run-1") } returns null
 
         assertNull(factory.open("run-1", "s").recordedHeader())
