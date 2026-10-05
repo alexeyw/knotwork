@@ -67,13 +67,14 @@ class RunWalk(
     private val traceSteps = mutableListOf<AgentOrchestratorState.TraceStep>()
 
     /**
-     * Per-`PIPELINE`-node visit counter. A PIPELINE node inside a loop
-     * (QUEUE_PROCESSOR) executes once per item; the index disambiguates the child
-     * run id of each visit and is re-derived deterministically on resume (it
-     * increments on replayed visits too), so the in-flight visit lands on the same
-     * index as on the interrupted run.
+     * Per-node visit counter. A node inside a loop (QUEUE_PROCESSOR) executes once
+     * per item; the index tells the visits apart — a PIPELINE node's child run id,
+     * every on-device call's seed, the trace record of each visit — and is
+     * re-derived deterministically on resume (it increments on replayed visits
+     * too), so the in-flight visit lands on the same index as on the interrupted
+     * run.
      */
-    private val pipelineVisitCounts = mutableMapOf<String, Int>()
+    private val visitCounts = mutableMapOf<String, Int>()
 
     /**
      * Steps the run is expected to take: known up front for a graph without
@@ -120,13 +121,14 @@ class RunWalk(
                     break
                 }
             }
-            val step = execute(node, enter(node)) ?: return
+            val visit = enter(node)
+            val step = execute(node, visit) ?: return
             val result = step.result
             val error = result?.error
             if (result != null && error != null) {
                 if (survivesFailure(node, result, CloudErrorSanitizer.redactSecrets(error))) continue else return
             }
-            record(node, step)
+            record(node, step, visit)
             if (observe(node, step)) {
                 stop = RunTerminationReason.NoProgress
                 break
@@ -185,19 +187,14 @@ class RunWalk(
      * Enters [node]: counts the step, records the node so an interrupted run can
      * report where it stopped, and shows the stage with the current estimate.
      *
-     * @return The node's visit index when it is a PIPELINE node, `0` otherwise —
-     *   incremented on every entry, replayed or live, so the counter stays aligned
-     *   through a resume replay and the live visit gets the right index.
+     * @return The node's zero-based visit index — incremented on every entry,
+     *   replayed or live, so the counter stays aligned through a resume replay and
+     *   the live visit gets the right index.
      */
     private suspend fun enter(node: NodeModel): Int {
         stepCount++
-        val visitIndex = if (node.type == NodeType.PIPELINE) {
-            val idx = pipelineVisitCounts.getOrDefault(node.id, 0)
-            pipelineVisitCounts[node.id] = idx + 1
-            idx
-        } else {
-            0
-        }
+        val visitIndex = visitCounts.getOrDefault(node.id, 0)
+        visitCounts[node.id] = visitIndex + 1
         records.enterNode(node.id)
         collector.emit(
             AgentOrchestratorState.PipelineStage(
@@ -276,8 +273,8 @@ class RunWalk(
         return false
     }
 
-    /** Writes [step] to the console and the trace, and keeps a TOOL node's result for later nodes. */
-    private suspend fun record(node: NodeModel, step: Step) {
+    /** Writes [step] — the [visit]-th of [node] — to the console and the trace, and keeps a TOOL node's result. */
+    private suspend fun record(node: NodeModel, step: Step, visit: Int) {
         // Skip the "✓" event for OUTPUT — its own emitted Completed state already
         // marks the end of the pipeline, and pushing a ConsoleLog after Completed
         // would shift the terminal state away from the tail of the flow. Replayed
@@ -312,7 +309,7 @@ class RunWalk(
         // replays instead of re-running the node. A replayed node appends nothing
         // — its record is already in the trace.
         if (!step.replayed) {
-            console.recordNodeIo(node, step.input, outputText, step.durationMs, step.result)
+            console.recordNodeIo(node, visit, step.input, outputText, step.durationMs, step.result)
         }
         collector.emit(AgentOrchestratorState.PipelineTrace(traceSteps.toList()))
         // Surface the per-node I/O pair for the Vars tab of the chat-home console

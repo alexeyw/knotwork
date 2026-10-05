@@ -2,6 +2,7 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.engine.NodeInference
 import app.knotwork.android.domain.engine.structured.EngineStructuredInferenceClient
 import app.knotwork.android.domain.engine.structured.GateResult
 import app.knotwork.android.domain.engine.structured.RepairListener
@@ -166,7 +167,7 @@ class MemoryExtractionUseCase @Inject constructor(
 
         val result = try {
             structuredOutputGate.runJson(
-                inference = EngineStructuredInferenceClient(llmInferenceEngine),
+                inference = EngineStructuredInferenceClient(llmInferenceEngine, NodeInference.Unrecorded),
                 prompt = fullPrompt,
                 serializer = ListSerializer(ExtractedFactDto.serializer()),
                 nodeName = METRICS_KEY,

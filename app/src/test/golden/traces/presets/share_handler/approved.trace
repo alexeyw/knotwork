@@ -16,6 +16,7 @@ run.running golden pipeline=share_handler graphHash=b7295fa2ac0ae318d87cd9991e52
 driver start
 crash.key active_pipeline_id=share_handler
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden share_handler/node-1 INPUT #1
 state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You capture shared content into the user's workspace. Read the shared text in your input. Output STRICTLY one JSON object and nothing else, with exactly two string keys. The first key is path and its value is exactly inbox/captures.md. The second key is content: a Markdown block that begins with a newline, then a level-two heading with a short descriptive title for the item, then 3 to 6 concise bullet points capturing the key information, and if the text implies any tasks, a line with the bold text 'Action items:' followed by those tasks as bullets, then a trailing newline. Use only what the input actually says; never invent facts. Write in the user's language (en-US). Output only the JSON object.
@@ -54,13 +55,14 @@ state Streaming thinking=1 answering=3
       | Structure answer, visit 1.
 metrics.update tokens=4
 modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+trace.model.local seq=3 run=golden node-2 LITE_RT visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=f162a3e50519 output=e0484f424cd6
 metrics.node LITE_RT tokens=4
 run.spend golden steps=2 tokens=4
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden node-2 LITE_RT depth=0 visit=0 tokens=4 in=84a1710bee89 out=e0484f424cd6
     input:
       | --- Original Task ---
       | https://example.org/article — Ten habits of calm people
@@ -69,19 +71,19 @@ trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
       | https://example.org/article — Ten habits of calm people
     output:
       | Structure answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=4)
-state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=5)
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=5)
 visit golden share_handler/node-3 TOOL #1
 state Stage step=3 of=4 TOOL
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=node-3 call=1 temperature=default image=none
+model local node=node-3 call=1 seed=943585322 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that generates arguments for a specific tool.
       |
@@ -125,33 +127,34 @@ state ObservationResult append_file
 chat.save SYSTEM final=false model=null
     content:
       | Observation from append_file: Appended 32 characters to notes/golden.md.
+trace.model.local seq=7 run=golden node-3 TOOL visit=0 call=0 depth=0 seed=943585322 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=5b2e930f063c output=3b6121aa87f7
 metrics.node TOOL tokens=null
 run.spend golden steps=3 tokens=4
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.console seq=7 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.console seq=9 run=golden depth=0 ToolCall
     message:
       | append_file
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
-trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=append_file
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden node-3 TOOL depth=0 visit=0 tokens=null tool=append_file in=6c5178e2e29b out=ec29643bd262
     input:
       | --- Previous Node Output ---
       | Structure answer, visit 1.
     output:
       | Appended 32 characters to notes/golden.md.
 trace.flush
-state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
-state NodeIO node-3 TOOL depth=0 (= trace.node seq=8)
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=10)
+state NodeIO node-3 TOOL depth=0 (= trace.node seq=10)
 visit golden share_handler/node-4 OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=11)
 model.load path=null vision=false audio=false
-model local node=node-4 call=1 temperature=default image=none
+model local node=node-4 call=1 seed=524897445 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Your input confirms text was appended to a file, like: Appended N bytes to 'inbox/captures.md'. Reply with one short line telling the user the shared item was captured to their workspace inbox. If the input is instead an error message, relay it plainly in one sentence. Add nothing else.
       |
@@ -173,6 +176,7 @@ chat.save AGENT final=true model=Golden Model
 end Completed
     finalResponse:
       | Confirm answer, visit 1.
+trace.model.local seq=12 run=golden node-4 OUTPUT visit=0 call=0 depth=0 seed=524897445 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=5661276a739e output=89a6113ccff1
 metrics.node OUTPUT tokens=null
 run.spend golden steps=4 tokens=4
 trace.flush

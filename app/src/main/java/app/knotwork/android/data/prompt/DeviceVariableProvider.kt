@@ -32,18 +32,29 @@ class DeviceVariableProvider internal constructor(
 
     override fun key(): String = KEY
 
-    override suspend fun resolve(): String {
-        val manufacturer = manufacturerProvider().trim().replaceFirstChar { it.uppercaseChar() }
-        val model = modelProvider().trim()
-        val deviceLabel = listOf(manufacturer, model).filter { it.isNotBlank() }.joinToString(" ")
-        val version = androidVersionProvider().trim().takeIf { it.isNotBlank() }?.let { "Android $it" }
-        return listOfNotNull(deviceLabel.takeIf { it.isNotBlank() }, version).joinToString(SEPARATOR)
-            .ifBlank { UNKNOWN }
-    }
+    override suspend fun resolve(): String = describe(manufacturerProvider(), modelProvider(), androidVersionProvider())
 
-    private companion object {
-        const val KEY = "DEVICE"
-        const val SEPARATOR = " · "
-        const val UNKNOWN = "unknown device"
+    /** The descriptor format, shared with the header of a pipeline run. */
+    companion object {
+        private const val KEY = "DEVICE"
+        private const val SEPARATOR = " · "
+        private const val UNKNOWN = "unknown device"
+
+        /**
+         * Formats the device descriptor: `Manufacturer model · Android version`,
+         * dropping a blank part, `unknown device` when every part is blank.
+         *
+         * @param manufacturer The device manufacturer.
+         * @param model The device model.
+         * @param androidVersion The Android release.
+         * @return The descriptor.
+         */
+        fun describe(manufacturer: String, model: String, androidVersion: String): String {
+            val maker = manufacturer.trim().replaceFirstChar { it.uppercaseChar() }
+            val deviceLabel = listOf(maker, model.trim()).filter { it.isNotBlank() }.joinToString(" ")
+            val version = androidVersion.trim().takeIf { it.isNotBlank() }?.let { "Android $it" }
+            return listOfNotNull(deviceLabel.takeIf { it.isNotBlank() }, version).joinToString(SEPARATOR)
+                .ifBlank { UNKNOWN }
+        }
     }
 }

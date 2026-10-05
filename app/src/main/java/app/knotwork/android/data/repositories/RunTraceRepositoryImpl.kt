@@ -2,9 +2,13 @@ package app.knotwork.android.data.repositories
 
 import androidx.annotation.VisibleForTesting
 import app.knotwork.android.data.local.dao.TraceStepDao
+import app.knotwork.android.data.local.models.ModelCallEntity
 import app.knotwork.android.data.local.models.TraceStepEntity
 import app.knotwork.android.domain.models.ConsoleEventType
+import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MemoryChunk
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -77,14 +81,14 @@ class RunTraceRepositoryImpl @Inject constructor(private val traceStepDao: Trace
     private val bufferMutex = Mutex()
 
     /** Records accepted by [append] and not yet written to storage. */
-    private val buffer = ArrayDeque<TraceStepEntity>()
+    private val buffer = ArrayDeque<RunTraceRecord>()
 
     /** Pending deferred-flush timer, `null` when the buffer is empty. */
     private var timerJob: Job? = null
 
     override suspend fun append(record: RunTraceRecord) {
         bufferMutex.withLock {
-            buffer.addLast(record.toEntity())
+            buffer.addLast(record)
             when {
                 buffer.size >= FLUSH_SIZE -> drainAndInsertLocked()
                 timerJob == null -> timerJob = timerScope.launch {
@@ -102,7 +106,11 @@ class RunTraceRepositoryImpl @Inject constructor(private val traceStepDao: Trace
     override suspend fun getTraceForRun(runId: String): List<RunTraceRecord> =
         absorbingStoreFailure({ "Run-trace store failure in getTraceForRun; degrading to empty" }) {
             withContext(dispatcher) {
-                traceStepDao.getTraceStepsForRun(runId).mapNotNull { it.toRecordOrNull() }
+                // Two tables, one numbering: trace rows and model calls merge back
+                // into the run's single `seq`-ordered trace.
+                val steps = traceStepDao.getTraceStepsForRun(runId).mapNotNull { it.toRecordOrNull() }
+                val calls = traceStepDao.getModelCallsForRun(runId).mapNotNull { it.toRecordOrNull() }
+                (steps + calls).sortedBy { it.seq }
             }
         } ?: emptyList()
 
@@ -141,7 +149,7 @@ class RunTraceRepositoryImpl @Inject constructor(private val traceStepDao: Trace
             { "Run-trace store failure flushing ${batch.size} records; retrying per run" },
         ) {
             withContext(dispatcher) {
-                traceStepDao.insertTraceSteps(batch)
+                insertRecords(batch)
             }
         }
         if (batchInserted == null) {
@@ -150,11 +158,32 @@ class RunTraceRepositoryImpl @Inject constructor(private val traceStepDao: Trace
                     { "Run-trace store failure flushing ${group.size} records of run $runId; group dropped" },
                 ) {
                     withContext(dispatcher) {
-                        traceStepDao.insertTraceSteps(group)
+                        insertRecords(group)
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Writes [records] in one transaction: model calls to `model_calls`, every
+     * other record to `trace_steps`.
+     *
+     * @param records The records to write, in their in-run order.
+     */
+    private suspend fun insertRecords(records: List<RunTraceRecord>) {
+        val steps = mutableListOf<TraceStepEntity>()
+        val calls = mutableListOf<ModelCallEntity>()
+        for (record in records) {
+            when (record) {
+                is RunTraceRecord.LocalModelCall -> calls += record.toEntity()
+                is RunTraceRecord.CloudModelCall -> calls += record.toEntity()
+                is RunTraceRecord.NodeIo -> steps += record.toTraceStep()
+                is RunTraceRecord.ConsoleEntry -> steps += record.toTraceStep()
+                is RunTraceRecord.MemorySnapshot -> steps += record.toTraceStep()
+            }
+        }
+        traceStepDao.insertBatch(steps, calls)
     }
 
     private companion object {
@@ -167,51 +196,65 @@ class RunTraceRepositoryImpl @Inject constructor(private val traceStepDao: Trace
 }
 
 /**
- * Maps the domain trace record to its persistence row. Console entries store
- * their message in the shared `outputText` payload column and an empty
- * `nodeName` (they are not tied to a node) — see [TraceStepEntity].
+ * Maps a node's input/output record to its `trace_steps` row.
  *
  * @return The entity ready for insertion.
  */
-private fun RunTraceRecord.toEntity(): TraceStepEntity = when (this) {
-    is RunTraceRecord.NodeIo -> TraceStepEntity(
-        sessionId = sessionId,
-        nodeName = nodeType,
-        outputText = outputText,
-        timestamp = timestamp,
-        durationMs = durationMs,
-        tokenCount = tokenCount,
-        runId = runId,
-        seq = seq,
-        recordKind = TraceStepEntity.KIND_NODE_IO,
-        nodeId = nodeId,
-        inputText = inputText,
-        conditionResult = conditionResult,
-        routingKey = routingKey,
-        resolvedToolName = resolvedToolName,
-        depth = depth,
-    )
-    is RunTraceRecord.ConsoleEntry -> TraceStepEntity(
-        sessionId = sessionId,
-        nodeName = "",
-        outputText = message,
-        timestamp = timestamp,
-        runId = runId,
-        seq = seq,
-        recordKind = TraceStepEntity.KIND_CONSOLE_EVENT,
-        consoleEventType = type.toStorageName(),
-        depth = depth,
-    )
-    is RunTraceRecord.MemorySnapshot -> TraceStepEntity(
-        sessionId = sessionId,
-        nodeName = "",
-        outputText = serializeMemoryEntries(entries),
-        timestamp = timestamp,
-        runId = runId,
-        seq = seq,
-        recordKind = TraceStepEntity.KIND_MEMORY_SNAPSHOT,
-    )
-}
+private fun RunTraceRecord.NodeIo.toTraceStep(): TraceStepEntity = TraceStepEntity(
+    sessionId = sessionId,
+    nodeName = nodeType,
+    outputText = outputText,
+    timestamp = timestamp,
+    durationMs = durationMs,
+    tokenCount = tokenCount,
+    runId = runId,
+    seq = seq,
+    recordKind = TraceStepEntity.KIND_NODE_IO,
+    nodeId = nodeId,
+    inputText = inputText,
+    conditionResult = conditionResult,
+    routingKey = routingKey,
+    resolvedToolName = resolvedToolName,
+    depth = depth,
+    visit = visit,
+    inputSha256 = inputSha256,
+    outputSha256 = outputSha256,
+)
+
+/**
+ * Maps a console line to its `trace_steps` row: the message goes into the shared
+ * `outputText` payload column and `nodeName` stays empty (a console line is not
+ * tied to a node) — see [TraceStepEntity].
+ *
+ * @return The entity ready for insertion.
+ */
+private fun RunTraceRecord.ConsoleEntry.toTraceStep(): TraceStepEntity = TraceStepEntity(
+    sessionId = sessionId,
+    nodeName = "",
+    outputText = message,
+    timestamp = timestamp,
+    runId = runId,
+    seq = seq,
+    recordKind = TraceStepEntity.KIND_CONSOLE_EVENT,
+    consoleEventType = type.toStorageName(),
+    depth = depth,
+)
+
+/**
+ * Maps a memory snapshot to its `trace_steps` row, the chunks serialized into
+ * the `outputText` payload column.
+ *
+ * @return The entity ready for insertion.
+ */
+private fun RunTraceRecord.MemorySnapshot.toTraceStep(): TraceStepEntity = TraceStepEntity(
+    sessionId = sessionId,
+    nodeName = "",
+    outputText = serializeMemoryEntries(entries),
+    timestamp = timestamp,
+    runId = runId,
+    seq = seq,
+    recordKind = TraceStepEntity.KIND_MEMORY_SNAPSHOT,
+)
 
 /**
  * Maps a persistence row back to the domain record, or `null` when the row
@@ -238,6 +281,9 @@ private fun TraceStepEntity.toRecordOrNull(): RunTraceRecord? {
             routingKey = routingKey,
             resolvedToolName = resolvedToolName,
             depth = depth,
+            visit = visit,
+            inputSha256 = inputSha256,
+            outputSha256 = outputSha256,
         )
         TraceStepEntity.KIND_CONSOLE_EVENT -> consoleEventTypeFromStorage(consoleEventType)?.let { type ->
             RunTraceRecord.ConsoleEntry(
@@ -364,3 +410,150 @@ private fun deserializeMemoryEntries(payload: String): List<MemoryChunk>? = try 
     Timber.w(e, "Failed to parse memory-snapshot payload")
     null
 }
+
+/**
+ * Maps an on-device model call to its `model_calls` row.
+ *
+ * @return The row ready for insertion.
+ */
+private fun RunTraceRecord.LocalModelCall.toEntity(): ModelCallEntity = ModelCallEntity(
+    runId = runId,
+    sessionId = sessionId,
+    seq = seq,
+    timestamp = timestamp,
+    depth = depth,
+    nodeId = nodeId,
+    nodeType = nodeType,
+    visit = visit,
+    callIndex = call,
+    engine = ModelCallEntity.ENGINE_LOCAL,
+    seed = sampling.seed,
+    temperature = sampling.sampler.temperature,
+    topK = sampling.sampler.topK,
+    topP = sampling.sampler.topP,
+    modelPath = modelPath,
+    modelSha256 = modelSha256,
+    backend = backend?.key,
+    contextWindow = contextWindow,
+    hadImage = hadImage,
+    prompt = prompt,
+    output = output,
+    promptSha256 = promptSha256,
+    outputSha256 = outputSha256,
+)
+
+/**
+ * Maps a cloud model call to its `model_calls` row; every on-device column stays
+ * `null`.
+ *
+ * @return The row ready for insertion.
+ */
+private fun RunTraceRecord.CloudModelCall.toEntity(): ModelCallEntity = ModelCallEntity(
+    runId = runId,
+    sessionId = sessionId,
+    seq = seq,
+    timestamp = timestamp,
+    depth = depth,
+    nodeId = nodeId,
+    nodeType = nodeType,
+    visit = visit,
+    callIndex = call,
+    engine = ModelCallEntity.ENGINE_CLOUD,
+    cloudProvider = provider,
+    cloudModel = model,
+)
+
+/**
+ * Maps a `model_calls` row back to the domain record, or `null` when the row
+ * cannot be interpreted — an unknown engine, or an on-device row missing a
+ * column every on-device call writes. The read path skips such a row instead of
+ * failing the whole trace.
+ *
+ * @return The domain record, or `null` for an unreadable row.
+ */
+private fun ModelCallEntity.toRecordOrNull(): RunTraceRecord? = when (engine) {
+    ModelCallEntity.ENGINE_LOCAL -> toLocalRecordOrNull()
+    ModelCallEntity.ENGINE_CLOUD -> cloudProvider?.let { provider ->
+        RunTraceRecord.CloudModelCall(
+            runId = runId,
+            sessionId = sessionId,
+            seq = seq,
+            timestamp = timestamp,
+            nodeId = nodeId,
+            nodeType = nodeType,
+            visit = visit,
+            call = callIndex,
+            depth = depth,
+            provider = provider,
+            model = cloudModel,
+        )
+    }
+    else -> {
+        Timber.w("Skipping model-call row %d with unknown engine '%s'", id, engine)
+        null
+    }
+}
+
+/** The on-device record of this row, or `null` when a column it always has is missing. */
+private fun ModelCallEntity.toLocalRecordOrNull(): RunTraceRecord.LocalModelCall? {
+    val sampling = samplingOrNull()
+    val texts = textsOrNull()
+    if (sampling == null || texts == null) {
+        Timber.w("Skipping on-device model-call row %d with a missing column", id)
+        return null
+    }
+    return RunTraceRecord.LocalModelCall(
+        runId = runId,
+        sessionId = sessionId,
+        seq = seq,
+        timestamp = timestamp,
+        nodeId = nodeId,
+        nodeType = nodeType,
+        visit = visit,
+        call = callIndex,
+        depth = depth,
+        sampling = sampling,
+        modelPath = modelPath,
+        modelSha256 = modelSha256,
+        backend = LocalBackend.fromKey(backend),
+        contextWindow = contextWindow,
+        hadImage = hadImage,
+        prompt = texts.prompt,
+        output = texts.output,
+        promptSha256 = texts.promptSha256,
+        outputSha256 = texts.outputSha256,
+    )
+}
+
+/** The sampler and seed of an on-device row, or `null` when one of their columns is missing. */
+private fun ModelCallEntity.samplingOrNull(): LocalSampling? {
+    val temperature = temperature ?: return null
+    val topK = topK ?: return null
+    val topP = topP ?: return null
+    val seed = seed ?: return null
+    return LocalSampling(RunSampler(temperature = temperature, topK = topK, topP = topP), seed = seed)
+}
+
+/** The texts and hashes of an on-device row, or `null` when one of them is missing. */
+private fun ModelCallEntity.textsOrNull(): CallTexts? {
+    val prompt = prompt ?: return null
+    val output = output ?: return null
+    val promptSha256 = promptSha256 ?: return null
+    val outputSha256 = outputSha256 ?: return null
+    return CallTexts(prompt = prompt, output = output, promptSha256 = promptSha256, outputSha256 = outputSha256)
+}
+
+/**
+ * What an on-device call read and wrote, with the hashes of both.
+ *
+ * @property prompt The full prompt.
+ * @property output The full output.
+ * @property promptSha256 SHA-256 of [prompt].
+ * @property outputSha256 SHA-256 of [output].
+ */
+private data class CallTexts(
+    val prompt: String,
+    val output: String,
+    val promptSha256: String,
+    val outputSha256: String,
+)

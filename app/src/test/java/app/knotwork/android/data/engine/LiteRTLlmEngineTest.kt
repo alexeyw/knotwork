@@ -3,7 +3,9 @@ package app.knotwork.android.data.engine
 import android.content.ComponentCallbacks2
 import android.content.Context
 import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.repositories.SettingsRepository
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
@@ -201,7 +203,9 @@ class LiteRTLlmEngineTest {
     }
 
     @Test
-    fun `the structured-output repair loop overrides the user's sampler`() = runTest {
+    fun `given a run's sampling when generating then the conversation runs on it, not on the settings`() = runTest {
+        // A pipeline run records the sampler and seed of every call; the engine
+        // must run on exactly those, or the record describes another generation.
         val tempFile = File.createTempFile("model", ".tflite")
         tempFile.deleteOnExit()
         every { settingsRepository.temperature } returns flowOf(1.9f)
@@ -213,18 +217,32 @@ class LiteRTLlmEngineTest {
         every { anyConstructed<Engine>().createConversation(capture(captured)) } returns conversation
         engine.initialize(tempFile.absolutePath)
 
-        engine.generateResponseStream("Repair this", temperature = 0.1f).toList()
+        engine.generateResponseStream(
+            "Repair this",
+            sampling = LocalSampling(RunSampler(temperature = 0.1, topK = 64, topP = 0.95), seed = 4242),
+        ).toList()
 
-        // A creative Temperature setting must not leak into the repair pass —
-        // that pass exists to get schema-obedient output back.
-        // Asserted as "not the user's values" rather than against the repair
-        // constants: the property under test is that the override wins, and
-        // pinning the constants here would only restate their declaration.
         val sampler = captured.captured.samplerConfig
         assertEquals(0.1, sampler?.temperature ?: 0.0, TOLERANCE)
-        assertTrue("repair pass used the user's top-K", sampler?.topK != 7)
-        assertTrue("repair pass used the user's top-P", sampler?.topP != 0.55)
+        assertEquals(64, sampler?.topK)
+        assertEquals(0.95, sampler?.topP ?: 0.0, TOLERANCE)
+        assertEquals(4242, sampler?.seed)
     }
+
+    @Test
+    fun `given a loaded model when asked for the context window then it is the one the engine was built with`() =
+        runTest {
+            // Recorded with every on-device call: on GPU a seed repeats only at the same window.
+            val tempFile = File.createTempFile("model", ".tflite")
+            tempFile.deleteOnExit()
+            assertEquals(null, engine.activeContextLength)
+
+            engine.initialize(tempFile.absolutePath)
+            assertEquals(4096, engine.activeContextLength)
+
+            engine.unload()
+            assertEquals(null, engine.activeContextLength)
+        }
 
     @Test
     fun `registers component callbacks on init`() {

@@ -35,13 +35,32 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
             is RunTraceRecord.NodeIo -> log.record(
                 buildString {
                     append("trace.node seq=${record.seq} run=${record.runId} ${record.nodeId} ${record.nodeType}")
-                    append(" depth=${record.depth} tokens=${record.tokenCount}")
+                    append(" depth=${record.depth} visit=${record.visit} tokens=${record.tokenCount}")
                     record.conditionResult?.let { append(" condition=$it") }
                     record.routingKey?.let { append(" routingKey=$it") }
                     record.resolvedToolName?.let { append(" tool=$it") }
+                    append(" in=${record.inputSha256.short()} out=${record.outputSha256.short()}")
                 },
                 "input" to record.inputText,
                 "output" to record.outputText,
+            )
+            // The texts are in the `model local` event of the same call; the record pins what
+            // was kept of it — sampling, model file, backend, window — and the hashes.
+            is RunTraceRecord.LocalModelCall -> log.record(
+                buildString {
+                    append("trace.model.local seq=${record.seq} run=${record.runId} ${record.nodeId} ")
+                    append("${record.nodeType} visit=${record.visit} call=${record.call} depth=${record.depth} ")
+                    append("seed=${record.sampling.seed} t=${record.sampling.sampler.temperature} ")
+                    append("k=${record.sampling.sampler.topK} p=${record.sampling.sampler.topP} ")
+                    append("model=${record.modelPath} sha=${record.modelSha256.short()} ")
+                    append("backend=${record.backend} window=${record.contextWindow} image=${record.hadImage} ")
+                    append("prompt=${record.promptSha256.short()} output=${record.outputSha256.short()}")
+                },
+            )
+            is RunTraceRecord.CloudModelCall -> log.record(
+                "trace.model.cloud seq=${record.seq} run=${record.runId} ${record.nodeId} ${record.nodeType} " +
+                    "visit=${record.visit} call=${record.call} depth=${record.depth} " +
+                    "provider=${record.provider} model=${record.model}",
             )
             is RunTraceRecord.ConsoleEntry -> log.record(
                 "trace.console seq=${record.seq} run=${record.runId} depth=${record.depth} ${record.type}",
@@ -52,6 +71,9 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
             )
         }
     }
+
+    /** The first twelve hex digits of a hash: enough to show any change, short enough to read. */
+    private fun String?.short(): String = this?.take(SHORT_HASH) ?: "none"
 
     override suspend fun flush() {
         durable += buffered
@@ -143,5 +165,8 @@ internal class GoldenRunTraceRepository(private val log: GoldenEventLog) : RunTr
 
         /** Any millisecond figure left after masking. */
         val RESIDUAL_DURATION = Regex("\\d+\\s?ms")
+
+        /** Hex digits of a hash the trace shows. */
+        const val SHORT_HASH = 12
     }
 }

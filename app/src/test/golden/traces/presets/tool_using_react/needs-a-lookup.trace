@@ -16,6 +16,7 @@ run.running golden pipeline=tool_using_react graphHash=89ceb48be0c58629934d5b35b
 driver start
 crash.key active_pipeline_id=tool_using_react
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden tool_using_react/input INPUT #1
 state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -34,7 +35,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ IF_CONDITION
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
-model local node=needs_tool call=1 temperature=default image=none
+model local node=needs_tool call=1 seed=1014368355 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Evaluate the following text against the condition: "Answering the user's request well requires looking something up in an external source — a fact, a figure, a date, a definition, or anything about a specific person, place, work, event or organisation that the assistant should not answer from memory alone.
       |
@@ -47,27 +48,28 @@ model local node=needs_tool call=1 temperature=default image=none
       | Reply strictly with 'true' or 'false'.
     answer:
       | True
+trace.model.local seq=3 run=golden needs_tool IF_CONDITION visit=0 call=0 depth=0 seed=1014368355 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=79cea049a89e output=3cbc87c7681f
 metrics.node IF_CONDITION tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ IF_CONDITION in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden needs_tool IF_CONDITION depth=0 tokens=null condition=true
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden needs_tool IF_CONDITION depth=0 visit=0 tokens=null condition=true in=0ffacc02a295 out=0ffacc02a295
     input:
       | What is the tallest mountain on Earth?
     output:
       | What is the tallest mountain on Earth?
-state PipelineTrace steps=1 last=IF_CONDITION depth=0 tokens=null (= trace.node seq=4)
-state NodeIO needs_tool IF_CONDITION depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=IF_CONDITION depth=0 tokens=null (= trace.node seq=5)
+state NodeIO needs_tool IF_CONDITION depth=0 (= trace.node seq=5)
 visit golden tool_using_react/query_builder LITE_RT #1
 state Stage step=3 of=6 LITE_RT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 model.load path=null vision=false audio=false
-model local node=query_builder call=1 temperature=default image=none
+model local node=query_builder call=1 seed=208014635 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | The user's request needs a factual lookup, and the search runs in the very next step. Your output becomes the search term.
@@ -90,13 +92,14 @@ state Streaming thinking=1 answering=4
       | Query Builder answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=7 run=golden query_builder LITE_RT visit=0 call=0 depth=0 seed=208014635 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=65f5dc2843a2 output=ea4ba06a793c
 metrics.node LITE_RT tokens=5
 run.spend golden steps=3 tokens=5
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden query_builder LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.node seq=9 run=golden query_builder LITE_RT depth=0 visit=0 tokens=5 in=04b8fe28cb0b out=ea4ba06a793c
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -105,19 +108,19 @@ trace.node seq=7 run=golden query_builder LITE_RT depth=0 tokens=5
       | What is the tallest mountain on Earth?
     output:
       | Query Builder answer, visit 1.
-state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=7)
-state NodeIO query_builder LITE_RT depth=0 (= trace.node seq=7)
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=9)
+state NodeIO query_builder LITE_RT depth=0 (= trace.node seq=9)
 visit golden tool_using_react/tool TOOL #1
 state Stage step=4 of=6 TOOL
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=10)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=tool call=1 temperature=default image=none
+model local node=tool call=1 seed=1346221111 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that selects the best tool for a given task and generates arguments.
       |
@@ -175,17 +178,18 @@ chat.save SYSTEM final=false model=null
       | Observation from search_tool: Search results for "Tool":
       | 1. Tool — a recorded encyclopedia summary.
       | 2. Tool — a second recorded source.
+trace.model.local seq=11 run=golden tool TOOL visit=0 call=0 depth=0 seed=1346221111 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=d9788931eea9 output=8d4ad4f1a30e
 metrics.node TOOL tokens=null
 run.spend golden steps=4 tokens=5
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
-trace.console seq=10 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=12)
+trace.console seq=13 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=9 (= trace.console run=golden seq=10)
-trace.node seq=11 run=golden tool TOOL depth=0 tokens=null tool=search_tool
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=13)
+trace.node seq=14 run=golden tool TOOL depth=0 visit=0 tokens=null tool=search_tool in=c84e83f4b328 out=9e2f3c644b58
     input:
       | --- Previous Node Output ---
       | Query Builder answer, visit 1.
@@ -194,16 +198,16 @@ trace.node seq=11 run=golden tool TOOL depth=0 tokens=null tool=search_tool
       | 1. Tool — a recorded encyclopedia summary.
       | 2. Tool — a second recorded source.
 trace.flush
-state PipelineTrace steps=3 last=TOOL depth=0 tokens=null (= trace.node seq=11)
-state NodeIO tool TOOL depth=0 (= trace.node seq=11)
+state PipelineTrace steps=3 last=TOOL depth=0 tokens=null (= trace.node seq=14)
+state NodeIO tool TOOL depth=0 (= trace.node seq=14)
 visit golden tool_using_react/summary SUMMARY #1
 state Stage step=5 of=6 SUMMARY
-trace.console seq=12 run=golden depth=0 NodeExecution
+trace.console seq=15 run=golden depth=0 NodeExecution
     message:
       | ▶ SUMMARY
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=15)
 model.load path=null vision=false audio=false
-model local node=summary call=1 temperature=default image=none
+model local node=summary call=1 seed=1105354820 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You synthesise the result of a tool invocation into a final reply for the user. Quote the concrete facts the tool returned and answer the user's original question directly. If the tool failed or returned nothing useful, say so plainly.
       |
@@ -233,13 +237,14 @@ model local node=summary call=1 temperature=default image=none
 state Streaming thinking=1 answering=3
     text:
       | Summariser answer, visit 1.
+trace.model.local seq=16 run=golden summary SUMMARY visit=0 call=0 depth=0 seed=1105354820 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=92adfa956e28 output=91c17f0e2fef
 metrics.node SUMMARY tokens=null
 run.spend golden steps=5 tokens=5
-trace.console seq=13 run=golden depth=0 NodeExecution
+trace.console seq=17 run=golden depth=0 NodeExecution
     message:
       | ✓ SUMMARY in <ms>ms
-state ConsoleLog run=golden events=11 (= trace.console run=golden seq=13)
-trace.node seq=14 run=golden summary SUMMARY depth=0 tokens=null
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=17)
+trace.node seq=18 run=golden summary SUMMARY depth=0 visit=0 tokens=null in=afcc86004eab out=91c17f0e2fef
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -255,14 +260,14 @@ trace.node seq=14 run=golden summary SUMMARY depth=0 tokens=null
       | 2. Tool — a second recorded source.
     output:
       | Summariser answer, visit 1.
-state PipelineTrace steps=4 last=SUMMARY depth=0 tokens=null (= trace.node seq=14)
-state NodeIO summary SUMMARY depth=0 (= trace.node seq=14)
+state PipelineTrace steps=4 last=SUMMARY depth=0 tokens=null (= trace.node seq=18)
+state NodeIO summary SUMMARY depth=0 (= trace.node seq=18)
 visit golden tool_using_react/output OUTPUT #1
 state Stage step=6 of=6 OUTPUT
-trace.console seq=15 run=golden depth=0 NodeExecution
+trace.console seq=19 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=19)
 chat.save AGENT final=true model=Golden Model
     content:
       | Summariser answer, visit 1.

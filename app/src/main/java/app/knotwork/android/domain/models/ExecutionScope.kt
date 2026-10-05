@@ -1,5 +1,7 @@
 package app.knotwork.android.domain.models
 
+import app.knotwork.android.domain.engine.NodeInference
+
 /**
  * What the engine tells one node executor beyond the node and its input: the run
  * tree the node belongs to, and the facts that are particular to this one visit.
@@ -15,12 +17,12 @@ package app.knotwork.android.domain.models
  *   form to the sub-pipeline it starts. The default is
  *   [RunTreeContext.standalone], for a node executed outside any engine run; the
  *   engine always passes the run's own tree.
- * @property pipelineVisitIndex Zero-based index of *this* `PIPELINE`-node visit
- *   within the current run. Incremented by the engine each time it enters a
- *   `PIPELINE` node (including replayed visits during resume), so the value is
- *   re-derived deterministically on resume and the in-flight visit lands on the
- *   same index as on the original run — letting `PipelineNodeExecutor` find the
- *   exact child run to resume. `0` for every non-`PIPELINE` node.
+ * @property visitIndex Zero-based index of *this* visit to the node within the
+ *   current run invocation. Incremented by the engine each time it enters the
+ *   node (including replayed visits during resume), so the value is re-derived
+ *   deterministically on resume and the in-flight visit lands on the same index
+ *   as on the original run. `PipelineNodeExecutor` uses it to find the exact
+ *   child run to resume; every on-device model call derives its seed from it.
  * @property routingChoices Labels of the node's outgoing connections, supplied
  *   by the engine only for routing nodes ([NodeType.INTENT_ROUTER]). The node's
  *   executor passes them to the structured-output gate as the constrained set of
@@ -41,11 +43,16 @@ package app.knotwork.android.domain.models
  *   `false` for the run's prompt and for a tool's result, however many pass-through
  *   nodes it crossed. Read by the OUTPUT node, whose echo mode saves that text as
  *   the assistant's message and marks the row relayed when no model wrote it.
+ * @property inference The node's only way to a model during this visit: inside a
+ *   run the engine passes a recording one, which seeds every on-device call from
+ *   the run seed and keeps it for the trace. The default records nothing, for a
+ *   node executed outside any engine run.
  */
 data class ExecutionScope(
     val run: RunTreeContext = RunTreeContext.standalone(),
-    val pipelineVisitIndex: Int = 0,
+    val visitIndex: Int = 0,
     val routingChoices: List<String> = emptyList(),
     val imagePath: String? = null,
     val inputWrittenByModel: Boolean = false,
+    val inference: NodeInference = NodeInference.Unrecorded,
 )

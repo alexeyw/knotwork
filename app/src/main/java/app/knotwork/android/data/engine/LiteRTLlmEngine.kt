@@ -8,6 +8,7 @@ import app.knotwork.android.di.IoDispatcher
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.repositories.GenerationSettings
 import com.google.ai.edge.litertlm.Backend
@@ -76,6 +77,14 @@ class LiteRTLlmEngine @Inject constructor(
      */
     @Volatile
     private var _activeBackend: LocalBackend? = null
+
+    /**
+     * Context window the live engine was built with — set on every successful
+     * init, cleared on teardown. May differ from the current setting, which is
+     * read only at load time.
+     */
+    @Volatile
+    private var _activeContextLength: Int? = null
 
     /**
      * The coroutine [Job] of the generation currently holding [generationMutex],
@@ -149,6 +158,12 @@ class LiteRTLlmEngine @Inject constructor(
      * model is loaded.
      */
     override val activeBackend: LocalBackend? get() = _activeBackend
+
+    /**
+     * The context window the loaded engine was built with, or `null` when no
+     * model is loaded.
+     */
+    override val activeContextLength: Int? get() = _activeContextLength
 
     init {
         context.registerComponentCallbacks(this)
@@ -361,6 +376,7 @@ class LiteRTLlmEngine @Inject constructor(
         generationSettings.setLastInitBackendAttempt(null)
         generationSettings.setLocalBackendFailureStreak(0)
         _activeBackend = resolved
+        _activeContextLength = maxTokens
         Timber.i(
             "LiteRT-LM Engine successfully initialized with $modelPath " +
                 "(vision=$enableVision, audio=$enableAudio)",
@@ -379,18 +395,15 @@ class LiteRTLlmEngine @Inject constructor(
      *   text, which requires the engine to have been initialized with
      *   `enableVision = true`; the caller (`LiteRtNodeExecutor` via
      *   `LoadModelUseCase`) guarantees that before issuing an image generation.
-     * @param temperature Optional sampling-temperature override. When `null` the
-     *   conversation is opened with the sampler the user configured in Settings
-     *   (Generation → Temperature / Top-K / Top-P) — the ordinary path. When
-     *   non-`null` the conversation is opened with a deterministic-leaning
-     *   [SamplerConfig] at the requested temperature, overriding the user's
-     *   values — used by the structured-output repair loop.
+     * @param sampling The sampler and seed to open the conversation with — a
+     *   pipeline run's, recorded with the call — or `null` to open it with the
+     *   user's sampler and a fresh seed (see [userConversationConfig]).
      * @return A [Flow] of strings representing the generated tokens as they are produced.
      */
-    override fun generateResponseStream(prompt: String, imagePath: String?, temperature: Float?): Flow<String> =
+    override fun generateResponseStream(prompt: String, imagePath: String?, sampling: LocalSampling?): Flow<String> =
         // With an image, the message is a multimodal [Contents] (image then text);
         // without, the plain-string overload keeps the text path byte-identical.
-        streamConversation(temperature) { conversation, callback ->
+        streamConversation(sampling) { conversation, callback ->
             if (imagePath == null) {
                 conversation.sendMessageAsync(prompt, callback)
             } else {
@@ -413,7 +426,7 @@ class LiteRTLlmEngine @Inject constructor(
      * @return A [Flow] of transcript token chunks, emitted on [ioDispatcher].
      */
     override fun transcribe(audioPath: String, prompt: String): Flow<String> =
-        streamConversation(temperature = null) { conversation, callback ->
+        streamConversation(sampling = null) { conversation, callback ->
             conversation.sendMessageAsync(Contents.of(Content.AudioFile(audioPath), Content.Text(prompt)), callback)
         }
 
@@ -423,8 +436,8 @@ class LiteRTLlmEngine @Inject constructor(
      * single LiteRT-LM [Conversation] and streaming its tokens never interleaves
      * with another concurrent generation (which would tear down an in-flight
      * session), opens a fresh conversation carrying a [SamplerConfig] (the
-     * user's Settings values, or the repair sampler when [temperature] is
-     * non-`null`), sends the caller-built message, and re-emits each chunk's
+     * caller's [sampling], or the user's Settings values and a fresh seed when it
+     * is `null`), sends the caller-built message, and re-emits each chunk's
      * [Content.Text] parts as they arrive.
      *
      * **The conversation is closed only once its native work has ended.** A
@@ -437,15 +450,15 @@ class LiteRTLlmEngine @Inject constructor(
      * `sendMessageAsync` is used — the Flow overload never reports that its
      * native work has ended once the collector is gone.
      *
-     * @param temperature Optional sampling-temperature override (see
-     *   [generateResponseStream]); `null` uses the user's configured sampler.
+     * @param sampling The sampler and seed to use (see [generateResponseStream]);
+     *   `null` uses the user's configured sampler and a fresh seed.
      * @param sendMessage Builds the message and sends it on the freshly opened
      *   [Conversation], reporting the response through the given
      *   [MessageCallback].
      * @return A [Flow] of generated text chunks, emitted on [ioDispatcher].
      */
     private fun streamConversation(
-        temperature: Float?,
+        sampling: LocalSampling?,
         sendMessage: (Conversation, MessageCallback) -> Unit,
     ): Flow<String> = flow {
         generationMutex.withLock {
@@ -464,11 +477,7 @@ class LiteRTLlmEngine @Inject constructor(
             // engine still fails on that and not on a settings read. The
             // mutex is held for the whole decode anyway, so one cached
             // DataStore read inside it costs nothing measurable.
-            val conversationConfig = if (temperature == null) {
-                userConversationConfig()
-            } else {
-                repairConversationConfig(temperature)
-            }
+            val conversationConfig = sampling?.let(::conversationConfigOf) ?: userConversationConfig()
             conversation?.close()
             val activeConversation = currentEngine.createConversation(conversationConfig)
             conversation = activeConversation
@@ -620,6 +629,7 @@ class LiteRTLlmEngine @Inject constructor(
             _isVisionEnabled = false
             _isAudioEnabled = false
             _activeBackend = null
+            _activeContextLength = null
         }
     }
 
@@ -737,9 +747,9 @@ class LiteRTLlmEngine @Inject constructor(
     }
 
     /**
-     * Builds the [ConversationConfig] for an ordinary generation: a
+     * Builds the [ConversationConfig] for a generation outside a pipeline run: a
      * [SamplerConfig] carrying the user's Settings values (Generation →
-     * Temperature / Top-K / Top-P).
+     * Temperature / Top-K / Top-P) and a fresh seed.
      *
      * Reading all three here is not a style choice. LiteRT-LM's [SamplerConfig]
      * has no defaults for `topK` / `topP` / `temperature` and no "override one
@@ -747,14 +757,16 @@ class LiteRTLlmEngine @Inject constructor(
      * supplied — which is exactly why the three sliders reached nothing before:
      * the conversation was opened with no config at all.
      *
-     * `seed` is drawn fresh per conversation. It is the one field the library
-     * does default (to `0`), and what a fixed seed means is decided native-side,
-     * below this API — so pinning it would risk making every answer to a
-     * repeated prompt identical, and "Regenerate" useless. A fresh value keeps
-     * the variability the model had when no config was passed, whatever the
-     * native default happens to be.
+     * The seed is fresh for every such conversation. A fixed seed is not random
+     * native-side: on CPU and GPU the same seed, sampler, model file and input
+     * give the same text byte for byte — and `0`, the library's default, is an
+     * ordinary fixed seed (`decisions.md §70.6`). That is what a pipeline run
+     * relies on: it passes its own sampling, with a seed derived from the run
+     * seed, so its calls can be recorded and repeated, and a retry draws a new
+     * run seed. Work outside a run records nothing, so it keeps the variability a
+     * fresh seed gives.
      *
-     * @return A conversation config carrying the user's sampler.
+     * @return A conversation config carrying the user's sampler and a fresh seed.
      */
     private suspend fun userConversationConfig(): ConversationConfig = ConversationConfig(
         samplerConfig = SamplerConfig(
@@ -766,26 +778,19 @@ class LiteRTLlmEngine @Inject constructor(
     )
 
     /**
-     * Builds a [ConversationConfig] whose [SamplerConfig] applies [temperature]
-     * over conventional top-k / top-p values.
+     * Builds the [ConversationConfig] for [sampling] — exactly its sampler and
+     * seed, nothing read from settings, so the conversation is the one the run
+     * records.
      *
-     * LiteRT-LM exposes the sampler only as an all-or-nothing [SamplerConfig], so
-     * a temperature override cannot leave the user's other sampler fields in
-     * place — they must be re-specified here. The chosen top-k / top-p are the
-     * conventional Gemma-family decode values; the override is only ever used for
-     * the structured-output repair loop, where the low [temperature] already
-     * biases generation towards near-deterministic, schema-obedient output, and
-     * where the user's creative settings are precisely what must not apply.
-     *
-     * @param temperature The repair sampling temperature to apply.
-     * @return A conversation config carrying the repair [SamplerConfig].
+     * @param sampling The sampler and seed to open the conversation with.
+     * @return A conversation config carrying them.
      */
-    private fun repairConversationConfig(temperature: Float): ConversationConfig = ConversationConfig(
+    private fun conversationConfigOf(sampling: LocalSampling): ConversationConfig = ConversationConfig(
         samplerConfig = SamplerConfig(
-            topK = REPAIR_SAMPLER_TOP_K,
-            topP = REPAIR_SAMPLER_TOP_P,
-            temperature = temperature.toDouble(),
-            seed = REPAIR_SAMPLER_SEED,
+            topK = sampling.sampler.topK,
+            topP = sampling.sampler.topP,
+            temperature = sampling.sampler.temperature,
+            seed = sampling.seed,
         ),
     )
 
@@ -795,23 +800,6 @@ class LiteRTLlmEngine @Inject constructor(
          * single attachment per user message, so one image suffices.
          */
         const val MAX_NUM_IMAGES: Int = 1
-
-        /**
-         * Top-k for the temperature-override (repair) sampler. Conventional
-         * Gemma-family value; paired with [REPAIR_SAMPLER_TOP_P] it is only ever
-         * exercised by the structured-output repair loop.
-         */
-        const val REPAIR_SAMPLER_TOP_K: Int = 64
-
-        /** Top-p (nucleus) for the temperature-override (repair) sampler. */
-        const val REPAIR_SAMPLER_TOP_P: Double = 0.95
-
-        /**
-         * Fixed seed for the repair sampler so a corrective re-inference is
-         * reproducible for a given prompt — desirable when chasing down a model
-         * that keeps emitting the same malformed shape.
-         */
-        const val REPAIR_SAMPLER_SEED: Int = 0
 
         /**
          * Consecutive unfinished inits with the same non-CPU backend before the

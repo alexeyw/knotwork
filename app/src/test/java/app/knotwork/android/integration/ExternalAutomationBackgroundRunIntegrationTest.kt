@@ -674,7 +674,10 @@ class ExternalAutomationBackgroundRunIntegrationTest {
      */
     private fun scriptedLlmEngine(): LlmInferenceEngine = mockk {
         every { currentModelPath } returns null
-        every { generateResponseStream(any()) } answers {
+        // A recorded on-device call notes what the engine ran on.
+        every { activeBackend } returns null
+        every { activeContextLength } returns null
+        every { generateResponseStream(any(), any(), any()) } answers {
             val prompt = firstArg<String>()
             flowOf(
                 when {

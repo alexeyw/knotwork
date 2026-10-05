@@ -78,7 +78,7 @@ class OutputNodeExecutorTest {
                 "session-1",
                 "prompt",
                 runId = null,
-                scope = ExecutionScope(run = RunTreeContext.standalone().nested()),
+                scope = ExecutionScope(run = RunTreeContext.standalone().nested("pipe", visitIndex = 0)),
             )
             .toList()
             .unwrap()
@@ -107,7 +107,7 @@ class OutputNodeExecutorTest {
                 "session-1",
                 "prompt",
                 runId = null,
-                scope = ExecutionScope(run = RunTreeContext.standalone().nested()),
+                scope = ExecutionScope(run = RunTreeContext.standalone().nested("pipe", visitIndex = 0)),
             )
             .toList()
             .unwrap()

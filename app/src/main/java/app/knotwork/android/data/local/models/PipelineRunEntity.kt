@@ -65,6 +65,16 @@ import androidx.room.PrimaryKey
  *   string reads back as `null` rather than throwing, unlike [origin] and
  *   [status], because an unclassified termination is a legitimate state while
  *   an unknown origin or status is data corruption.
+ * @property headerSeed The run seed of a root run's header (`RunHeader.seed`).
+ *   The seven `header*` columns hold one `RunHeader`, written together once when
+ *   the run starts (`MIGRATION_66_67`); all `null` for a sub-pipeline's row, a
+ *   run not started yet and every row written before headers existed.
+ * @property headerTemperature The sampler temperature of the header.
+ * @property headerTopK The sampler top-k of the header.
+ * @property headerTopP The sampler top-p of the header.
+ * @property headerAppVersion The app version the run started on.
+ * @property headerRuntimeVersion The inference runtime and its version.
+ * @property headerDevice The device descriptor.
  */
 @Entity(
     tableName = "pipeline_runs",
@@ -106,4 +116,11 @@ data class PipelineRunEntity(
     val stepCeilingExtensions: Int = 0,
     @ColumnInfo(defaultValue = "0")
     val tokenCeilingExtensions: Int = 0,
+    val headerSeed: Int? = null,
+    val headerTemperature: Double? = null,
+    val headerTopK: Int? = null,
+    val headerTopP: Double? = null,
+    val headerAppVersion: String? = null,
+    val headerRuntimeVersion: String? = null,
+    val headerDevice: String? = null,
 )

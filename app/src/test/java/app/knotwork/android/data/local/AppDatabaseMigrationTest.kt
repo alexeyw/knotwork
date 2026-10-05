@@ -1178,4 +1178,50 @@ class AppDatabaseMigrationTest {
             statements,
         )
     }
+
+    @Test
+    fun `MIGRATION_66_67 targets versions 66 to 67`() {
+        val migration = AppDatabase.MIGRATION_66_67
+
+        assertEquals(66, migration.startVersion)
+        assertEquals(67, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_66_67 adds the run header, node hashes and the model-call table, all nullable`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statements = mutableListOf<String>()
+
+        AppDatabase.MIGRATION_66_67.migrate(db)
+
+        verify(exactly = 13) { db.execSQL(capture(statements)) }
+        // Additive with no back-fill: a run recorded before the migration has no header,
+        // no hashes and no model calls. The table's SQL must match `67.json` exactly, which
+        // the instrumented `runMigrationsAndValidate` checks; here the order and the
+        // nullable columns are pinned.
+        assertEquals(
+            listOf(
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerSeed` INTEGER",
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerTemperature` REAL",
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerTopK` INTEGER",
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerTopP` REAL",
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerAppVersion` TEXT",
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerRuntimeVersion` TEXT",
+                "ALTER TABLE `pipeline_runs` ADD COLUMN `headerDevice` TEXT",
+                "ALTER TABLE `trace_steps` ADD COLUMN `visit` INTEGER",
+                "ALTER TABLE `trace_steps` ADD COLUMN `inputSha256` TEXT",
+                "ALTER TABLE `trace_steps` ADD COLUMN `outputSha256` TEXT",
+            ),
+            statements.take(10),
+        )
+        assertTrue(statements[10].startsWith("CREATE TABLE IF NOT EXISTS `model_calls` ("))
+        assertTrue(statements[10].contains("FOREIGN KEY(`runId`) REFERENCES `pipeline_runs`(`id`)"))
+        assertEquals(
+            listOf(
+                "CREATE INDEX IF NOT EXISTS `index_model_calls_sessionId` ON `model_calls` (`sessionId`)",
+                "CREATE INDEX IF NOT EXISTS `index_model_calls_runId` ON `model_calls` (`runId`)",
+            ),
+            statements.drop(11),
+        )
+    }
 }

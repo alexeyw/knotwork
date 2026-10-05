@@ -16,6 +16,7 @@ run.running golden pipeline=clarify_then_act graphHash=2c9f886b7dafc3d8aea6250bd
 driver start
 crash.key active_pipeline_id=clarify_then_act
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden clarify_then_act/input INPUT #1
 state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ CLARIFICATION
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=clarify call=1 temperature=default image=none
+model local node=clarify call=1 seed=1769242183 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Inspect the user's request. If anything important is ambiguous, craft ONE concise clarifying question and propose 2-3 short, mutually exclusive options. Today is 15 September 2026. Output STRICTLY valid JSON of shape: {"question": "...", "options": ["...", "..."]}. If nothing needs clarifying, output an empty options array and a question that confirms intent in one line.
       |
@@ -66,14 +67,15 @@ state AwaitingClarification request=#1 timeoutMs=60000
       | The second one
 driver clarification Answer(text=The second one) request=#1 → LiveResumed
 journal.hitl golden Resolved(resolution=ANSWERED)
+trace.model.local seq=3 run=golden clarify CLARIFICATION visit=0 call=0 depth=0 seed=1769242183 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=de04843e4e1f output=db4478292f55
 run.status golden RUNNING
 metrics.node CLARIFICATION tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ CLARIFICATION in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden clarify CLARIFICATION depth=0 tokens=null
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden clarify CLARIFICATION depth=0 visit=0 tokens=null in=55cd0be732ce out=3f178725d9e9
     input:
       | --- Original Task ---
       | Book a table for dinner.
@@ -83,16 +85,16 @@ trace.node seq=4 run=golden clarify CLARIFICATION depth=0 tokens=null
     output:
       | Q: Clarify: which one do you mean?
       | A: The second one
-state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=4)
-state NodeIO clarify CLARIFICATION depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=5)
+state NodeIO clarify CLARIFICATION depth=0 (= trace.node seq=5)
 visit golden clarify_then_act/lite_rt LITE_RT #1
 state Stage step=3 of=4 LITE_RT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 model.load path=null vision=false audio=false
-model local node=lite_rt call=1 temperature=default image=none
+model local node=lite_rt call=1 seed=1974857103 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are an on-device assistant running on Golden Model. Today is 15 September 2026. The user's clarified request appears below; answer it directly in one or two short paragraphs.
@@ -114,13 +116,14 @@ state Streaming thinking=1 answering=4
       | Local LLM answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=7 run=golden lite_rt LITE_RT visit=0 call=0 depth=0 seed=1974857103 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=474269bdf657 output=84a7b5efa403
 metrics.node LITE_RT tokens=5
 run.spend golden steps=3 tokens=5
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden lite_rt LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.node seq=9 run=golden lite_rt LITE_RT depth=0 visit=0 tokens=5 in=1b3046e14dd8 out=84a7b5efa403
     input:
       | --- Original Task ---
       | Book a table for dinner.
@@ -130,14 +133,14 @@ trace.node seq=7 run=golden lite_rt LITE_RT depth=0 tokens=5
       | A: The second one
     output:
       | Local LLM answer, visit 1.
-state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=7)
-state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=7)
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=9)
+state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=9)
 visit golden clarify_then_act/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=10)
 chat.save AGENT final=true model=Golden Model
     content:
       | Local LLM answer, visit 1.

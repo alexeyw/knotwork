@@ -25,7 +25,7 @@ class IfConditionNodeExecutorTest {
 
     @Test
     fun `execute evaluates condition and returns result`() = runTest {
-        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any()) } returns
+        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any(), any()) } returns
             EvaluateIfConditionUseCase.Outcome(value = true)
 
         val outputs = executor.execute(node, "test input", "session-1", "prompt").toList()
@@ -38,7 +38,7 @@ class IfConditionNodeExecutorTest {
 
     @Test
     fun `execute surfaces each repair attempt as a console event`() = runTest {
-        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any()) } answers {
+        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any(), any()) } answers {
             val listener = arg<RepairListener>(3)
             listener.onRepairAttempt(node.label, 1, 2)
             EvaluateIfConditionUseCase.Outcome(value = true)
@@ -78,7 +78,7 @@ class IfConditionNodeExecutorTest {
 
     @Test
     fun `execute on gate failure keeps default branch and emits an error console event`() = runTest {
-        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any()) } returns
+        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any(), any()) } returns
             EvaluateIfConditionUseCase.Outcome(value = false, gateFailed = true)
 
         val outputs = executor.execute(node, "test input", "session-1", "prompt").toList()
@@ -90,7 +90,7 @@ class IfConditionNodeExecutorTest {
 
     @Test
     fun `execute on a provider that could not be used names it on the console`() = runTest {
-        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any()) } returns
+        coEvery { evaluateIfConditionUseCase(node, "test input", any(), any(), any()) } returns
             EvaluateIfConditionUseCase.Outcome(value = true, unavailableProvider = "groq")
 
         val outputs = executor.execute(node, "test input", "session-1", "prompt").toList()

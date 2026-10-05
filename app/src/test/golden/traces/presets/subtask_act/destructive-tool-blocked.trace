@@ -16,6 +16,7 @@ run.running golden pipeline=subtask_act graphHash=a716f52979ae506debaaed19b93300
 driver start
 crash.key active_pipeline_id=subtask_act
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden subtask_act/node-1 INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -38,7 +39,7 @@ state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that selects the best tool for a given task and generates arguments.
       |
@@ -82,13 +83,14 @@ chat.save SYSTEM final=false model=null
 end Error reason=null
     message:
       | Destructive tools are blocked by Settings — delete_file was not executed.
+trace.model.local seq=3 run=golden node-2 TOOL visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=37be15490364 output=3d07228bdad8
 metrics.node TOOL tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 Error
+trace.console seq=4 run=golden depth=0 Error
     message:
       | TOOL: Destructive tools are blocked by Settings — delete_file was not executed.
 after the terminal state:
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
 after the terminal state:
 end Error reason=null
     message:

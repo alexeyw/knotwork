@@ -16,6 +16,7 @@ run.running golden pipeline=recipe-tool-with-approval graphHash=dcece86c951d8b8b
 driver start
 crash.key active_pipeline_id=recipe-tool-with-approval
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden recipe-tool-with-approval/input INPUT #1
 state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=draft call=1 temperature=default image=none
+model local node=draft call=1 seed=543738389 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | Turn the user's message into the exact text of a short note. Reply with the note text only — no title, no commentary.
@@ -56,13 +57,14 @@ state Streaming thinking=1 answering=5
       | Draft the note answer, visit 1.
 metrics.update tokens=6
 modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=3 run=golden draft LITE_RT visit=0 call=0 depth=0 seed=543738389 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=017c063e1da9 output=ab8da20c93a4
 metrics.node LITE_RT tokens=6
 run.spend golden steps=2 tokens=6
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=6
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden draft LITE_RT depth=0 visit=0 tokens=6 in=80ec81b58092 out=ab8da20c93a4
     input:
       | --- Original Task ---
       | Note that the boiler service is due in March.
@@ -71,19 +73,19 @@ trace.node seq=4 run=golden draft LITE_RT depth=0 tokens=6
       | Note that the boiler service is due in March.
     output:
       | Draft the note answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=4)
-state NodeIO draft LITE_RT depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=5)
+state NodeIO draft LITE_RT depth=0 (= trace.node seq=5)
 visit golden recipe-tool-with-approval/save TOOL #1
 state Stage step=3 of=4 TOOL
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=save call=1 temperature=default image=none
+model local node=save call=1 seed=845101736 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that generates arguments for a specific tool.
       |
@@ -116,31 +118,32 @@ state ObservationResult write_file
 chat.save SYSTEM final=false model=null
     content:
       | Observation from write_file: Wrote 27 characters to notes/golden.md.
+trace.model.local seq=7 run=golden save TOOL visit=0 call=0 depth=0 seed=845101736 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=7749b040e4b8 output=84ee6a068f9c
 metrics.node TOOL tokens=null
 run.spend golden steps=3 tokens=6
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.console seq=7 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.console seq=9 run=golden depth=0 ToolCall
     message:
       | write_file
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
-trace.node seq=8 run=golden save TOOL depth=0 tokens=null tool=write_file
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden save TOOL depth=0 visit=0 tokens=null tool=write_file in=f69103285a4b out=d1c396fed860
     input:
       | --- Previous Node Output ---
       | Draft the note answer, visit 1.
     output:
       | Wrote 27 characters to notes/golden.md.
 trace.flush
-state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
-state NodeIO save TOOL depth=0 (= trace.node seq=8)
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=10)
+state NodeIO save TOOL depth=0 (= trace.node seq=10)
 visit golden recipe-tool-with-approval/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=11)
 chat.save AGENT final=true model=Golden Model
     content:
       | Wrote 27 characters to notes/golden.md.

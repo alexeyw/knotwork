@@ -33,6 +33,15 @@ details.
   each uses on this device or *not configured on this device*. The *Compatible*
   tile, which stood for several providers at once, is gone; the browser editor
   lists the same providers, grouped.
+- **Every pipeline run records what it ran with.** A run now picks one seed when
+  it starts and keeps it, with the sampler (temperature, top-k, top-p), the app
+  and runtime versions and the device, as the run's header. Every call a step
+  makes to the on-device model runs on that sampler with a seed derived from the
+  run seed, the step and its visit, and the trace keeps the whole prompt and
+  answer of the call with the model file's checksum, the backend and the context
+  window. Each step's input and output carry a SHA-256. A run paused for an
+  approval keeps its seed and sampler when it continues. Retrying a run still
+  draws a new seed. Groundwork for checking a run later by repeating it.
 - **Each installed model file has a SHA-256.** The app reads a model file once,
   in the background, after it is downloaded — and once for every model installed
   before this release — and keeps the checksum with the model. A file replaced on

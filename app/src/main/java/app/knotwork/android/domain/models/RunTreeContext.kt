@@ -42,6 +42,14 @@ import app.knotwork.android.domain.engine.stuck.GraphStuckDetector
  * @property origin What started the run tree. Keys long-term-memory retrieval
  *   (`MemoryRetrievalQueryResolver`), so a sub-pipeline of a trigger run
  *   classifies its retrieval exactly as its parent does.
+ * @property header The root run's header: the seed every on-device call's seed
+ *   is derived from and the sampler every such call uses. A sub-pipeline runs
+ *   with its root's header, so the whole tree is reproducible from one seed.
+ * @property seedPath Where in the tree this invocation sits, for deriving seeds:
+ *   empty at the root, and one `PIPELINE` node id and visit index more per level
+ *   (see [nested]). Two sub-pipelines started from different nodes — or from the
+ *   same node on different visits — derive different seeds for nodes that share
+ *   an id.
  */
 data class RunTreeContext(
     val depth: Int,
@@ -52,15 +60,21 @@ data class RunTreeContext(
     val imagePresent: Boolean,
     val generatingModel: RunGeneratingModel,
     val origin: RunOrigin,
+    val header: RunHeader,
+    val seedPath: String = "",
 ) {
 
     /**
      * The value a `PIPELINE` node hands to the sub-pipeline it starts: the same
      * shared holders, one level deeper.
      *
-     * @return A copy with [depth] incremented and every holder shared by reference.
+     * @param pipelineNodeId The `PIPELINE` node starting the sub-pipeline.
+     * @param visitIndex That node's zero-based visit index in its own invocation.
+     * @return A copy with [depth] incremented, [seedPath] extended by the node and
+     *   visit, and every holder shared by reference.
      */
-    fun nested(): RunTreeContext = copy(depth = depth + 1)
+    fun nested(pipelineNodeId: String, visitIndex: Int): RunTreeContext =
+        copy(depth = depth + 1, seedPath = "$seedPath/$pipelineNodeId#$visitIndex")
 
     /** Builds the value for a node executed outside any engine run. */
     companion object {
@@ -73,6 +87,9 @@ data class RunTreeContext(
          * Its ceilings are zero on purpose. A missing scope must not read as an
          * unlimited one, so an engine handed this tree stops before its first
          * step instead of running without a ceiling.
+         *
+         * Its header is a fixed placeholder: a node executed outside a run records
+         * nothing, so no seed it would derive is ever kept.
          *
          * @return A fresh, unshared tree at depth `0` with no image, an empty
          *   generating-model holder and the interactive origin.
@@ -92,6 +109,16 @@ data class RunTreeContext(
             imagePresent = false,
             generatingModel = RunGeneratingModel(),
             origin = RunOrigin.CHAT,
+            header = STANDALONE_HEADER,
+        )
+
+        /** The header of a [standalone] tree. */
+        private val STANDALONE_HEADER = RunHeader(
+            seed = 0,
+            sampler = RunSampler(temperature = 0.0, topK = 1, topP = 1.0),
+            appVersion = "",
+            runtimeVersion = "",
+            device = "",
         )
     }
 }

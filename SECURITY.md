@@ -43,11 +43,17 @@ storage and credentials:
   - `memory_chunks` — fragments of long-term agent memory extracted from
     prior conversations.
   - `trace_steps` — the persistent pipeline-run trace: per-node inputs and
-    outputs, console events, and resolved long-term-memory snapshots recorded
-    while a run executes (this is what console replay and checkpoint resume
-    read back).
+    outputs (with their SHA-256), console events, and resolved long-term-memory
+    snapshots recorded while a run executes (this is what console replay and
+    checkpoint resume read back).
+  - `model_calls` — every call a run made to a model: for an on-device call the
+    full prompt the model read (chat history and memory included, as far as the
+    step used them) and its full answer, with the seed, sampler, model-file
+    checksum, backend and context window that produced it; for a cloud call only
+    the provider and model. Deleted with its run.
   - `pipeline_runs` — persistent run records, including the original user
-    prompt of each run and per-node progress markers.
+    prompt of each run, per-node progress markers and the run header (seed,
+    sampler, app and runtime versions, device).
   - `pending_interactions` — parked human-in-the-loop requests for runs that
     wait in the background: each record stores the staged **tool name and the
     exact arguments** awaiting approval (or the clarification question), so
@@ -102,7 +108,7 @@ storage and credentials:
   the destructive-recreation fallback on upgrade has been removed. An in-place
   upgrade therefore keeps all local data — chats and metadata (`chat_messages`,
   `chat_sessions`), long-term memory (`memory_chunks`), pipeline run traces
-  (`trace_steps`), **custom pipelines** (`pipelines`, `pipeline_nodes`,
+  (`trace_steps`, `model_calls`), **custom pipelines** (`pipelines`, `pipeline_nodes`,
   `pipeline_connections`), and **saved presets and prompt templates**
   (`pipeline_presets`, `prompt_presets`, `prompt_templates`). The migrations
   across the exported-schema baseline range are covered by a `MigrationTestHelper`

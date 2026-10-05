@@ -409,7 +409,7 @@ class PipelineNodeExecutorTest {
         coEvery { pipelineRunRepository.getRun(any()) } returns null
         stubEngine(flowOf(AgentOrchestratorState.Completed("ok")))
 
-        runExecutor(pipelineNode(), runId = "root", scope = ExecutionScope(pipelineVisitIndex = 2))
+        runExecutor(pipelineNode(), runId = "root", scope = ExecutionScope(visitIndex = 2))
 
         verify {
             engine.invoke("session", "hello", subGraph, "root::p::2", null, atDepth(1))

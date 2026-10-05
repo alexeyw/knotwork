@@ -47,7 +47,7 @@ class IfConditionNodeExecutor @Inject constructor(private val evaluateIfConditio
         // presence even when it executes live past a checkpoint resume — and whether or not
         // a downstream vision node has consumed the image yet.
         val hasImage = scope.run.imagePresent
-        val outcome = evaluateIfConditionUseCase(node, inputText, hasImage, repairListener)
+        val outcome = evaluateIfConditionUseCase(node, inputText, hasImage, repairListener, scope.inference)
 
         // Surface each buffered repair attempt; the engine renders it and bumps
         // the per-node repair counter.

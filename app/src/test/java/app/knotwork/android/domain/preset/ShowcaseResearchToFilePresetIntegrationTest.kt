@@ -136,6 +136,9 @@ class ShowcaseResearchToFilePresetIntegrationTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         toolRepository = mockk()
         chatRepository = mockk(relaxed = true)
         settingsRepository = mockk()

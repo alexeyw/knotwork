@@ -4,6 +4,8 @@ import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.PipelineExecutionDefaults
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.engine.NodeInference
+import app.knotwork.android.domain.engine.structured.CloudCallNotingClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.CollectingRepairListener
 import app.knotwork.android.domain.engine.structured.EngineStructuredInferenceClient
@@ -117,7 +119,7 @@ class SystemNodeExecutor @Inject constructor(
         // provider runs the gate against that provider; otherwise the local
         // LiteRT engine backs it. `null` from the cloud factory (missing
         // credentials / local-only mode) degrades gracefully to the local model.
-        val resolved = resolveInference(node, onToken) ?: return@flow
+        val resolved = resolveInference(node, onToken, scope.inference) ?: return@flow
         val client = resolved.first
         // The native-JSON budget cut applies only to JSON-payload gate calls
         // (DECOMPOSITION's array): a provider's JSON mode guarantees well-formed
@@ -196,13 +198,14 @@ class SystemNodeExecutor @Inject constructor(
     private suspend fun FlowCollector<NodeOutput>.resolveInference(
         node: NodeModel,
         onToken: suspend (String) -> Unit,
+        inference: NodeInference,
     ): Pair<StructuredInferenceClient, Boolean>? {
         val providerId = node.cloudProvider?.takeIf { it.isNotBlank() }
         if (providerId != null) {
             val provider = CloudProvider.fromId(providerId)
             val cloud = provider?.let { cloudStructuredFactory.create(it, onToken) }
-            if (cloud != null) {
-                return cloud.inference to cloud.supportsNativeJson
+            if (provider != null && cloud != null) {
+                return CloudCallNotingClient(provider.id, inference, cloud.inference) to cloud.supportsNativeJson
             }
             emit(
                 NodeOutput.Console(
@@ -211,7 +214,7 @@ class SystemNodeExecutor @Inject constructor(
                 ),
             )
         }
-        return loadLocalInference(node, onToken)
+        return loadLocalInference(node, onToken, inference)
     }
 
     /**
@@ -222,6 +225,7 @@ class SystemNodeExecutor @Inject constructor(
     private suspend fun FlowCollector<NodeOutput>.loadLocalInference(
         node: NodeModel,
         onToken: suspend (String) -> Unit,
+        inference: NodeInference,
     ): Pair<StructuredInferenceClient, Boolean>? {
         val loadResult = loadModelUseCase(node.modelPath)
         if (loadResult is Result.Error) {
@@ -230,7 +234,7 @@ class SystemNodeExecutor @Inject constructor(
             emit(NodeOutput.Result(NodeExecutionResult(error = errorMsg)))
             return null
         }
-        return EngineStructuredInferenceClient(llmEngine, onToken) to false
+        return EngineStructuredInferenceClient(llmEngine, inference, onToken) to false
     }
 
     /**

@@ -133,6 +133,35 @@ interface PipelineRunDao {
     suspend fun recordSpend(rootRunId: String, stepsSpent: Int, tokensSpent: Int, terminalStatuses: List<String>)
 
     /**
+     * Writes the header of root run [runId] — its seed, sampler, versions and
+     * device — in one statement, so the seven columns are never half written.
+     *
+     * @param runId The root run's id.
+     * @param seed The run seed.
+     * @param temperature The sampler temperature.
+     * @param topK The sampler top-k.
+     * @param topP The sampler top-p.
+     * @param appVersion The app version.
+     * @param runtimeVersion The inference runtime and its version.
+     * @param device The device descriptor.
+     */
+    @Query(
+        "UPDATE pipeline_runs SET headerSeed = :seed, headerTemperature = :temperature, " +
+            "headerTopK = :topK, headerTopP = :topP, headerAppVersion = :appVersion, " +
+            "headerRuntimeVersion = :runtimeVersion, headerDevice = :device WHERE id = :runId",
+    )
+    suspend fun setHeader(
+        runId: String,
+        seed: Int,
+        temperature: Double,
+        topK: Int,
+        topP: Double,
+        appVersion: String,
+        runtimeVersion: String,
+        device: String,
+    )
+
+    /**
      * Reads back the spend already charged to a run tree.
      *
      * Projected rather than read through the whole row because the only caller

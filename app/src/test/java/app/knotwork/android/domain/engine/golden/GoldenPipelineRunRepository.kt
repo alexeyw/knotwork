@@ -3,6 +3,7 @@ package app.knotwork.android.domain.engine.golden
 import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunCeilingAxis
+import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationReason
@@ -95,6 +96,16 @@ internal class GoldenPipelineRunRepository(private val log: GoldenEventLog, priv
     }
 
     override suspend fun getRun(runId: String): PipelineRun? = runs[runId]
+
+    override suspend fun setHeader(runId: String, header: RunHeader) {
+        // The production write is an unguarded UPDATE by id: a header lands whatever the status.
+        runs[runId]?.let { runs[runId] = it.copy(header = header) }
+        log.record(
+            "run.header $runId seed=${header.seed} t=${header.sampler.temperature} k=${header.sampler.topK} " +
+                "p=${header.sampler.topP} app=${header.appVersion} runtime=${header.runtimeVersion} " +
+                "device=${header.device}",
+        )
+    }
 
     override suspend fun getRootRunId(runId: String): String? {
         var run = runs[runId] ?: return null

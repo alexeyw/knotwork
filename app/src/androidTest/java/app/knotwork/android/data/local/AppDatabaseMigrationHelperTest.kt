@@ -829,4 +829,40 @@ class AppDatabaseMigrationHelperTest {
             }
         }
     }
+
+    /**
+     * v66 → v67 makes a run checkable: a header on `pipeline_runs`, `visit` and hashes on
+     * `trace_steps`, and the new `model_calls` table. A run recorded before the migration
+     * keeps its rows with every new column `NULL` — it reads as a run that cannot be
+     * checked. The schema must match the exported `67.json`.
+     */
+    @Test
+    fun migrate66to67_leavesExistingRunsWithoutHeaderAndHashes() {
+        helper.createDatabase(TEST_DB, 66).use { db ->
+            db.execSQL("INSERT INTO chat_sessions(id, name, updatedAt) VALUES('s1', 'chat', 0)")
+            db.execSQL(
+                "INSERT INTO pipeline_runs(id, sessionId, pipelineId, origin, status, startedAt, hadImage) " +
+                    "VALUES('r1', 's1', 'p1', 'CHAT', 'COMPLETED', 1, 0)",
+            )
+            db.execSQL(
+                "INSERT INTO trace_steps(sessionId, nodeName, outputText, timestamp, durationMs, runId, seq, " +
+                    "recordKind, depth) VALUES('s1', 'LITE_RT', 'out', 2, 5, 'r1', 0, 'NODE_IO', 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 67, true, AppDatabase.MIGRATION_66_67).use { db ->
+            db.query("SELECT headerSeed, headerDevice FROM pipeline_runs WHERE id = 'r1'").use { c ->
+                assertTrue("the pre-existing run must survive the migration", c.moveToFirst())
+                assertTrue("a pre-existing run has no header", c.isNull(0) && c.isNull(1))
+            }
+            db.query("SELECT visit, inputSha256, outputSha256 FROM trace_steps WHERE runId = 'r1'").use { c ->
+                assertTrue("the pre-existing trace row must survive the migration", c.moveToFirst())
+                assertTrue("a pre-existing row has no visit or hashes", c.isNull(0) && c.isNull(1) && c.isNull(2))
+            }
+            db.query("SELECT COUNT(*) FROM model_calls").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("no model call is invented for an old run", 0, c.getInt(0))
+            }
+        }
+    }
 }

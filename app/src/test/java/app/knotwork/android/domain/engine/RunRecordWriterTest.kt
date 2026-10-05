@@ -23,12 +23,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.confirmVerified
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,6 +85,26 @@ class RunRecordWriterTest {
         writer.mirror(approval)
         writer.mirror(AgentOrchestratorState.Loading)
         writer.endSuspension()
+        assertNull(writer.recordedHeader())
+        writer.recordHeader(TEST_RUN_HEADER)
+    }
+
+    @Test
+    fun `given a persisted run then its header is read back from the record and written to it`() = runTest {
+        coEvery { runs.getRun("run-1") } returns mockk { every { header } returns TEST_RUN_HEADER }
+        val writer = factory.open("run-1", "s")
+
+        assertEquals(TEST_RUN_HEADER, writer.recordedHeader())
+        writer.recordHeader(TEST_RUN_HEADER)
+
+        coVerify(exactly = 1) { runs.setHeader("run-1", TEST_RUN_HEADER) }
+    }
+
+    @Test
+    fun `given a run whose record is missing then it has no recorded header`() = runTest {
+        coEvery { runs.getRun("run-1") } returns null
+
+        assertNull(factory.open("run-1", "s").recordedHeader())
     }
 
     @Test

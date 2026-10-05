@@ -3,6 +3,7 @@ package app.knotwork.android.domain.repositories
 import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunCeilingAxis
+import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationReason
@@ -166,6 +167,17 @@ interface PipelineRunRepository {
      * @return The run record, or `null` when not found.
      */
     suspend fun getRun(runId: String): PipelineRun?
+
+    /**
+     * Stores the header of the root run [runId] — its seed, sampler, versions and
+     * device — chosen when the run starts. Written once per run; every later
+     * attempt of the run reads it back through [getRun] instead of choosing anew,
+     * so a resumed run keeps its seed and sampler.
+     *
+     * @param runId The root run's id.
+     * @param header The header to store.
+     */
+    suspend fun setHeader(runId: String, header: RunHeader)
 
     /**
      * Returns every descendant run of [rootRunId] (its direct sub-pipeline

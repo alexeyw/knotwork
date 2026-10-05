@@ -69,6 +69,10 @@ package app.knotwork.android.domain.models
  *   human-readable rendering lives in [errorMessage]; this is the machine-
  *   readable cause, so consumers no longer have to recover it by comparing
  *   prose. See [RunTerminationKind].
+ * @property header The seed, sampler, versions and device the run executes
+ *   with — chosen when a root run starts and kept for every later attempt of it.
+ *   `null` for a sub-pipeline's record (it runs with its root's header), for a
+ *   run not started yet, and for a run recorded before headers existed.
  */
 data class PipelineRun(
     val id: String,
@@ -87,6 +91,7 @@ data class PipelineRun(
     val stepsSpent: Int = 0,
     val tokensSpent: Int = 0,
     val terminationReason: RunTerminationKind? = null,
+    val header: RunHeader? = null,
 )
 
 /**

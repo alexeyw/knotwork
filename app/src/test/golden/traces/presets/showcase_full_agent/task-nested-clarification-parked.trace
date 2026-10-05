@@ -16,6 +16,7 @@ run.running golden pipeline=showcase_full_agent graphHash=9a81ecec5af3f94e609ad5
 driver start
 crash.key active_pipeline_id=showcase_full_agent
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden showcase_full_agent/node-1 INPUT #1
 state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=node-23 call=1 temperature=default image=none
+model local node=node-23 call=1 seed=1338736591 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are the intake step of an agent pipeline. You receive the user's message and, sometimes, an attached image.
@@ -65,13 +66,14 @@ state Streaming thinking=1 answering=4
       | Vision intake answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=3 run=golden node-23 LITE_RT visit=0 call=0 depth=0 seed=1338736591 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=ab830d04c893 output=db994192ae1c
 metrics.node LITE_RT tokens=5
 run.spend golden steps=2 tokens=5
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden node-23 LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden node-23 LITE_RT depth=0 visit=0 tokens=5 in=8d711b6d9f81 out=db994192ae1c
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -80,16 +82,16 @@ trace.node seq=4 run=golden node-23 LITE_RT depth=0 tokens=5
       | Plan my Saturday evening in the city.
     output:
       | Vision intake answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=4)
-state NodeIO node-23 LITE_RT depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=5)
+state NodeIO node-23 LITE_RT depth=0 (= trace.node seq=5)
 visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
 state Stage step=3 of=null INTENT_ROUTER
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 model.load path=null vision=false audio=false
-model local node=node-3 call=1 temperature=default image=none
+model local node=node-3 call=1 seed=943585322 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an Intent Router. Read the user's request and decide which single category it belongs to.
       |
@@ -123,13 +125,14 @@ model local node=node-3 call=1 temperature=default image=none
 state Streaming thinking=1
     text:
       | Task
+trace.model.local seq=7 run=golden node-3 INTENT_ROUTER visit=0 call=0 depth=0 seed=943585322 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=283923e9ffc3 output=4bc74b21357c
 metrics.node INTENT_ROUTER tokens=null
 run.spend golden steps=3 tokens=5
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden node-3 INTENT_ROUTER depth=0 tokens=null routingKey=Task
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.node seq=9 run=golden node-3 INTENT_ROUTER depth=0 visit=0 tokens=null routingKey=Task in=2873cc72d69d out=4bc74b21357c
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -142,16 +145,16 @@ trace.node seq=7 run=golden node-3 INTENT_ROUTER depth=0 tokens=null routingKey=
       | Vision intake answer, visit 1.
     output:
       | Task
-state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=7)
-state NodeIO node-3 INTENT_ROUTER depth=0 (= trace.node seq=7)
+state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=9)
+state NodeIO node-3 INTENT_ROUTER depth=0 (= trace.node seq=9)
 visit golden showcase_full_agent/node-13 DECOMPOSITION #1
 state Stage step=4 of=7 DECOMPOSITION
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ▶ DECOMPOSITION
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=10)
 model.load path=null vision=false audio=false
-model local node=node-13 call=1 temperature=default image=none
+model local node=node-13 call=1 seed=1261727082 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are planning how to carry out an actionable task the user has asked for. Break the task into an ordered list of concrete subtasks that, completed in sequence, accomplish it.
       |
@@ -187,13 +190,14 @@ model local node=node-13 call=1 temperature=default image=none
 state Streaming thinking=12
     text:
       | ["Task Planner: first part", "Task Planner: second part", "Task Planner: third part"]
+trace.model.local seq=11 run=golden node-13 DECOMPOSITION visit=0 call=0 depth=0 seed=1261727082 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=3d128b24a8ac output=38202b3abec7
 metrics.node DECOMPOSITION tokens=null
 run.spend golden steps=4 tokens=5
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=12 run=golden depth=0 NodeExecution
     message:
       | ✓ DECOMPOSITION in <ms>ms
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
-trace.node seq=10 run=golden node-13 DECOMPOSITION depth=0 tokens=null
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=12)
+trace.node seq=13 run=golden node-13 DECOMPOSITION depth=0 visit=0 tokens=null in=add10b7fdb2b out=000c794193d4
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -202,35 +206,35 @@ trace.node seq=10 run=golden node-13 DECOMPOSITION depth=0 tokens=null
       | Vision intake answer, visit 1.
     output:
       | ["Task Planner: first part","Task Planner: second part","Task Planner: third part"]
-state PipelineTrace steps=3 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=10)
-state NodeIO node-13 DECOMPOSITION depth=0 (= trace.node seq=10)
+state PipelineTrace steps=3 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=13)
+state NodeIO node-13 DECOMPOSITION depth=0 (= trace.node seq=13)
 visit golden showcase_full_agent/node-14 QUEUE_PROCESSOR #1
 state Stage step=5 of=7 QUEUE_PROCESSOR
-trace.console seq=11 run=golden depth=0 NodeExecution
+trace.console seq=14 run=golden depth=0 NodeExecution
     message:
       | ▶ QUEUE_PROCESSOR
-state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=14)
 metrics.node QUEUE_PROCESSOR tokens=null
 run.spend golden steps=5 tokens=5
-trace.console seq=12 run=golden depth=0 NodeExecution
+trace.console seq=15 run=golden depth=0 NodeExecution
     message:
       | ✓ QUEUE_PROCESSOR in <ms>ms
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
-trace.node seq=13 run=golden node-14 QUEUE_PROCESSOR depth=0 tokens=null
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=15)
+trace.node seq=16 run=golden node-14 QUEUE_PROCESSOR depth=0 visit=0 tokens=null in=000c794193d4 out=000c794193d4
     input:
       | ["Task Planner: first part","Task Planner: second part","Task Planner: third part"]
     output:
       | ["Task Planner: first part","Task Planner: second part","Task Planner: third part"]
-state PipelineTrace steps=4 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=13)
-state NodeIO node-14 QUEUE_PROCESSOR depth=0 (= trace.node seq=13)
+state PipelineTrace steps=4 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=16)
+state NodeIO node-14 QUEUE_PROCESSOR depth=0 (= trace.node seq=16)
 visit golden showcase_full_agent/node-15 INTENT_ROUTER #1
 state Stage step=6 of=13 INTENT_ROUTER
-trace.console seq=14 run=golden depth=0 NodeExecution
+trace.console seq=17 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=11 (= trace.console run=golden seq=14)
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=17)
 model.load path=null vision=false audio=false
-model local node=node-15 call=1 temperature=default image=none
+model local node=node-15 call=1 seed=1351846807 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
       |
@@ -267,13 +271,14 @@ model local node=node-15 call=1 temperature=default image=none
 state Streaming thinking=1
     text:
       | Clarify
+trace.model.local seq=18 run=golden node-15 INTENT_ROUTER visit=0 call=0 depth=0 seed=1351846807 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=0b8a1a72e635 output=64e9acc696c9
 metrics.node INTENT_ROUTER tokens=null
 run.spend golden steps=6 tokens=5
-trace.console seq=15 run=golden depth=0 NodeExecution
+trace.console seq=19 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
-trace.node seq=16 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Clarify
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=19)
+trace.node seq=20 run=golden node-15 INTENT_ROUTER depth=0 visit=0 tokens=null routingKey=Clarify in=ec9618face29 out=64e9acc696c9
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -285,14 +290,14 @@ trace.node seq=16 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKe
       | Task Planner: first part
     output:
       | Clarify
-state PipelineTrace steps=5 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=16)
-state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=16)
+state PipelineTrace steps=5 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=20)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=20)
 visit golden showcase_full_agent/node-17 PIPELINE #1
 state Stage step=7 of=9 PIPELINE
-trace.console seq=17 run=golden depth=0 NodeExecution
+trace.console seq=21 run=golden depth=0 NodeExecution
     message:
       | ▶ PIPELINE
-state ConsoleLog run=golden events=13 (= trace.console run=golden seq=17)
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=21)
 run.create golden::node-17::0 pipeline=subtask_clarify parent=golden status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
@@ -319,7 +324,7 @@ trace.console seq=2 run=golden::node-17::0 depth=1 NodeExecution
       | [Subtask — Clarify] ▶ CLARIFICATION
 state ConsoleLog run=golden::node-17::0 events=3 (= trace.console run=golden::node-17::0 seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=873425259 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
       |
@@ -377,15 +382,16 @@ notify.clarification.persistent run=golden::node-17::0
       | Clarify: which one do you mean?
 journal.hitl golden Parked
 state SuspendedInBackground CLARIFICATION
-trace.console seq=3 run=golden::node-17::0 depth=1 NodeExecution
+trace.model.local seq=3 run=golden::node-17::0 node-2 CLARIFICATION visit=0 call=0 depth=1 seed=873425259 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=381bd71f482c output=db4478292f55
+trace.console seq=4 run=golden::node-17::0 depth=1 NodeExecution
     message:
       | [Subtask — Clarify] ⏸ CLARIFICATION parked awaiting user response
-state ConsoleLog run=golden::node-17::0 events=4 (= trace.console run=golden::node-17::0 seq=3)
+state ConsoleLog run=golden::node-17::0 events=4 (= trace.console run=golden::node-17::0 seq=4)
 trace.flush ×2
-trace.console seq=18 run=golden depth=0 NodeExecution
+trace.console seq=22 run=golden depth=0 NodeExecution
     message:
       | ⏸ PIPELINE parked awaiting user response
-state ConsoleLog run=golden events=14 (= trace.console run=golden seq=18)
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=22)
 trace.flush ×2
 notify.clarification.cancel
 pending.record golden::node-17::0 answer applied=true
@@ -401,91 +407,91 @@ crash.key active_pipeline_id=showcase_full_agent
 crash.key active_model=Golden Model
 visit golden showcase_full_agent/node-1 INPUT #1
 state Stage step=1 of=null INPUT
-trace.console seq=19 run=golden depth=0 NodeExecution
-    message:
-      | ▶ INPUT
-state ConsoleLog run=golden events=1 (= trace.console run=golden seq=19)
-metrics.node INPUT tokens=null
-run.spend golden steps=7 tokens=5
-trace.console seq=20 run=golden depth=0 NodeExecution
-    message:
-      | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=2 (= trace.console run=golden seq=20)
-visit golden showcase_full_agent/node-23 LITE_RT #1
-state Stage step=2 of=null LITE_RT
-trace.console seq=21 run=golden depth=0 NodeExecution
-    message:
-      | ↻ LITE_RT replayed from checkpoint
-state ConsoleLog run=golden events=3 (= trace.console run=golden seq=21)
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=4)
-state NodeIO node-23 LITE_RT depth=0 (= trace.node seq=4)
-visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
-state Stage step=3 of=null INTENT_ROUTER
-trace.console seq=22 run=golden depth=0 NodeExecution
-    message:
-      | ↻ INTENT_ROUTER replayed from checkpoint
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=22)
-state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=7)
-state NodeIO node-3 INTENT_ROUTER depth=0 (= trace.node seq=7)
-visit golden showcase_full_agent/node-13 DECOMPOSITION #1
-state Stage step=4 of=7 DECOMPOSITION
 trace.console seq=23 run=golden depth=0 NodeExecution
     message:
-      | ↻ DECOMPOSITION replayed from checkpoint
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=23)
-state PipelineTrace steps=3 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=10)
-state NodeIO node-13 DECOMPOSITION depth=0 (= trace.node seq=10)
-visit golden showcase_full_agent/node-14 QUEUE_PROCESSOR #1
-state Stage step=5 of=7 QUEUE_PROCESSOR
+      | ▶ INPUT
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=23)
+metrics.node INPUT tokens=null
+run.spend golden steps=7 tokens=5
 trace.console seq=24 run=golden depth=0 NodeExecution
     message:
-      | ↻ QUEUE_PROCESSOR replayed from checkpoint
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=24)
-state PipelineTrace steps=4 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=13)
-state NodeIO node-14 QUEUE_PROCESSOR depth=0 (= trace.node seq=13)
-visit golden showcase_full_agent/node-15 INTENT_ROUTER #1
-state Stage step=6 of=13 INTENT_ROUTER
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=24)
+visit golden showcase_full_agent/node-23 LITE_RT #1
+state Stage step=2 of=null LITE_RT
 trace.console seq=25 run=golden depth=0 NodeExecution
     message:
-      | ↻ INTENT_ROUTER replayed from checkpoint
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=25)
-state PipelineTrace steps=5 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=16)
-state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=16)
-visit golden showcase_full_agent/node-17 PIPELINE #1
-state Stage step=7 of=9 PIPELINE
+      | ↻ LITE_RT replayed from checkpoint
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=25)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=5)
+state NodeIO node-23 LITE_RT depth=0 (= trace.node seq=5)
+visit golden showcase_full_agent/node-3 INTENT_ROUTER #1
+state Stage step=3 of=null INTENT_ROUTER
 trace.console seq=26 run=golden depth=0 NodeExecution
     message:
+      | ↻ INTENT_ROUTER replayed from checkpoint
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=26)
+state PipelineTrace steps=2 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=9)
+state NodeIO node-3 INTENT_ROUTER depth=0 (= trace.node seq=9)
+visit golden showcase_full_agent/node-13 DECOMPOSITION #1
+state Stage step=4 of=7 DECOMPOSITION
+trace.console seq=27 run=golden depth=0 NodeExecution
+    message:
+      | ↻ DECOMPOSITION replayed from checkpoint
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=27)
+state PipelineTrace steps=3 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=13)
+state NodeIO node-13 DECOMPOSITION depth=0 (= trace.node seq=13)
+visit golden showcase_full_agent/node-14 QUEUE_PROCESSOR #1
+state Stage step=5 of=7 QUEUE_PROCESSOR
+trace.console seq=28 run=golden depth=0 NodeExecution
+    message:
+      | ↻ QUEUE_PROCESSOR replayed from checkpoint
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=28)
+state PipelineTrace steps=4 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=16)
+state NodeIO node-14 QUEUE_PROCESSOR depth=0 (= trace.node seq=16)
+visit golden showcase_full_agent/node-15 INTENT_ROUTER #1
+state Stage step=6 of=13 INTENT_ROUTER
+trace.console seq=29 run=golden depth=0 NodeExecution
+    message:
+      | ↻ INTENT_ROUTER replayed from checkpoint
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=29)
+state PipelineTrace steps=5 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=20)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=20)
+visit golden showcase_full_agent/node-17 PIPELINE #1
+state Stage step=7 of=9 PIPELINE
+trace.console seq=30 run=golden depth=0 NodeExecution
+    message:
       | ▶ PIPELINE
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=26)
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=30)
 run.resumed golden::node-17::0 from=WAITING_CLARIFICATION applied=true
 run.running golden::node-17::0 pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c9772575bb0b6205eaac4a048dc5634c151c5233b
 crash.key active_pipeline_id=subtask_clarify
 crash.key active_model=Golden Model
 visit golden::node-17::0 subtask_clarify/node-1 INPUT #1
-trace.console seq=4 run=golden::node-17::0 depth=1 NodeExecution
-    message:
-      | [Subtask — Clarify] ▶ INPUT
-state ConsoleLog run=golden::node-17::0 events=1 (= trace.console run=golden::node-17::0 seq=4)
-metrics.node INPUT tokens=null
-run.spend golden steps=7 tokens=5
 trace.console seq=5 run=golden::node-17::0 depth=1 NodeExecution
     message:
-      | [Subtask — Clarify] ✓ INPUT in <ms>ms
-state ConsoleLog run=golden::node-17::0 events=2 (= trace.console run=golden::node-17::0 seq=5)
-visit golden::node-17::0 subtask_clarify/node-2 CLARIFICATION #1
+      | [Subtask — Clarify] ▶ INPUT
+state ConsoleLog run=golden::node-17::0 events=1 (= trace.console run=golden::node-17::0 seq=5)
+metrics.node INPUT tokens=null
+run.spend golden steps=7 tokens=5
 trace.console seq=6 run=golden::node-17::0 depth=1 NodeExecution
     message:
+      | [Subtask — Clarify] ✓ INPUT in <ms>ms
+state ConsoleLog run=golden::node-17::0 events=2 (= trace.console run=golden::node-17::0 seq=6)
+visit golden::node-17::0 subtask_clarify/node-2 CLARIFICATION #1
+trace.console seq=7 run=golden::node-17::0 depth=1 NodeExecution
+    message:
       | [Subtask — Clarify] ▶ CLARIFICATION
-state ConsoleLog run=golden::node-17::0 events=3 (= trace.console run=golden::node-17::0 seq=6)
+state ConsoleLog run=golden::node-17::0 events=3 (= trace.console run=golden::node-17::0 seq=7)
 pending.delete golden::node-17::0 kind=CLARIFICATION
 journal.hitl golden Resolved(resolution=ANSWERED)
 metrics.node CLARIFICATION tokens=null
 run.spend golden steps=8 tokens=5
-trace.console seq=7 run=golden::node-17::0 depth=1 NodeExecution
+trace.console seq=8 run=golden::node-17::0 depth=1 NodeExecution
     message:
       | [Subtask — Clarify] ✓ CLARIFICATION in <ms>ms
-state ConsoleLog run=golden::node-17::0 events=4 (= trace.console run=golden::node-17::0 seq=7)
-trace.node seq=8 run=golden::node-17::0 node-2 CLARIFICATION depth=1 tokens=null
+state ConsoleLog run=golden::node-17::0 events=4 (= trace.console run=golden::node-17::0 seq=8)
+trace.node seq=9 run=golden::node-17::0 node-2 CLARIFICATION depth=1 visit=0 tokens=null in=69a6b83f6c59 out=3f178725d9e9
     input:
       | --- Original Task ---
       | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
@@ -501,12 +507,12 @@ trace.node seq=8 run=golden::node-17::0 node-2 CLARIFICATION depth=1 tokens=null
     output:
       | Q: Clarify: which one do you mean?
       | A: The second one
-state NodeIO node-2 CLARIFICATION depth=1 (= trace.node seq=8)
+state NodeIO node-2 CLARIFICATION depth=1 (= trace.node seq=9)
 visit golden::node-17::0 subtask_clarify/node-3 OUTPUT #1
-trace.console seq=9 run=golden::node-17::0 depth=1 NodeExecution
+trace.console seq=10 run=golden::node-17::0 depth=1 NodeExecution
     message:
       | [Subtask — Clarify] ▶ OUTPUT
-state ConsoleLog run=golden::node-17::0 events=5 (= trace.console run=golden::node-17::0 seq=9)
+state ConsoleLog run=golden::node-17::0 events=5 (= trace.console run=golden::node-17::0 seq=10)
 metrics.node OUTPUT tokens=null
 run.spend golden steps=8 tokens=5
 trace.flush
@@ -515,11 +521,11 @@ run.finish golden::node-17::0 COMPLETED reason=null
       (empty)
 metrics.node PIPELINE tokens=null
 run.spend golden steps=9 tokens=5
-trace.console seq=27 run=golden depth=0 NodeExecution
+trace.console seq=31 run=golden depth=0 NodeExecution
     message:
       | ✓ PIPELINE in <ms>ms
-state ConsoleLog run=golden events=9 (= trace.console run=golden seq=27)
-trace.node seq=28 run=golden node-17 PIPELINE depth=0 tokens=null
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=31)
+trace.node seq=32 run=golden node-17 PIPELINE depth=0 visit=0 tokens=null in=d73e2ffc0b5f out=3f178725d9e9
     input:
       | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
       |
@@ -528,16 +534,16 @@ trace.node seq=28 run=golden node-17 PIPELINE depth=0 tokens=null
     output:
       | Q: Clarify: which one do you mean?
       | A: The second one
-state PipelineTrace steps=6 last=PIPELINE depth=0 tokens=null (= trace.node seq=28)
-state NodeIO node-17 PIPELINE depth=0 (= trace.node seq=28)
+state PipelineTrace steps=6 last=PIPELINE depth=0 tokens=null (= trace.node seq=32)
+state NodeIO node-17 PIPELINE depth=0 (= trace.node seq=32)
 visit golden showcase_full_agent/node-15 INTENT_ROUTER #2
 state Stage step=8 of=9 INTENT_ROUTER
-trace.console seq=29 run=golden depth=0 NodeExecution
+trace.console seq=33 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=29)
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=33)
 model.load path=null vision=false audio=false
-model local node=node-15 call=1 temperature=default image=none
+model local node=node-15 call=1 seed=1562504016 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
       |
@@ -581,13 +587,14 @@ model local node=node-15 call=1 temperature=default image=none
 state Streaming thinking=1
     text:
       | Process
+trace.model.local seq=34 run=golden node-15 INTENT_ROUTER visit=1 call=0 depth=0 seed=1562504016 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=98817f441141 output=e083bd83e9d3
 metrics.node INTENT_ROUTER tokens=null
 run.spend golden steps=10 tokens=5
-trace.console seq=30 run=golden depth=0 NodeExecution
+trace.console seq=35 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=11 (= trace.console run=golden seq=30)
-trace.node seq=31 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Process
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=35)
+trace.node seq=36 run=golden node-15 INTENT_ROUTER depth=0 visit=1 tokens=null routingKey=Process in=d8a20bc85be8 out=e083bd83e9d3
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -606,14 +613,14 @@ trace.node seq=31 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKe
       | Task Planner: second part
     output:
       | Process
-state PipelineTrace steps=7 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=31)
-state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=31)
+state PipelineTrace steps=7 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=36)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=36)
 visit golden showcase_full_agent/node-21 PIPELINE #1
 state Stage step=9 of=12 PIPELINE
-trace.console seq=32 run=golden depth=0 NodeExecution
+trace.console seq=37 run=golden depth=0 NodeExecution
     message:
       | ▶ PIPELINE
-state ConsoleLog run=golden events=12 (= trace.console run=golden seq=32)
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=37)
 run.create golden::node-21::0 pipeline=subtask_process parent=golden status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | PREVIOUS RESULTS CONTEXT:
@@ -647,7 +654,7 @@ trace.console seq=2 run=golden::node-21::0 depth=1 NodeExecution
       | [Subtask — Process] ▶ LITE_RT
 state ConsoleLog run=golden::node-21::0 events=3 (= trace.console run=golden::node-21::0 seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=846925822 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are completing ONE subtask from a larger plan. It is a reasoning, writing, transformation, calculation or composition step — everything it needs is already available to you; you are not searching for facts, using tools, or asking the user.
@@ -694,13 +701,14 @@ model local node=node-2 call=1 temperature=default image=none
       | Process answer, visit 1.
 metrics.update tokens=4
 modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+trace.model.local seq=3 run=golden::node-21::0 node-2 LITE_RT visit=0 call=0 depth=1 seed=846925822 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=b88c961e29c4 output=529c888e15af
 metrics.node LITE_RT tokens=4
 run.spend golden steps=12 tokens=9
-trace.console seq=3 run=golden::node-21::0 depth=1 NodeExecution
+trace.console seq=4 run=golden::node-21::0 depth=1 NodeExecution
     message:
       | [Subtask — Process] ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden::node-21::0 events=4 (= trace.console run=golden::node-21::0 seq=3)
-trace.node seq=4 run=golden::node-21::0 node-2 LITE_RT depth=1 tokens=4
+state ConsoleLog run=golden::node-21::0 events=4 (= trace.console run=golden::node-21::0 seq=4)
+trace.node seq=5 run=golden::node-21::0 node-2 LITE_RT depth=1 visit=0 tokens=4 in=a40b2b92c4d3 out=529c888e15af
     input:
       | --- Original Task ---
       | PREVIOUS RESULTS CONTEXT:
@@ -729,12 +737,12 @@ trace.node seq=4 run=golden::node-21::0 node-2 LITE_RT depth=1 tokens=4
       | Task Planner: second part
     output:
       | Process answer, visit 1.
-state NodeIO node-2 LITE_RT depth=1 (= trace.node seq=4)
+state NodeIO node-2 LITE_RT depth=1 (= trace.node seq=5)
 visit golden::node-21::0 subtask_process/node-3 OUTPUT #1
-trace.console seq=5 run=golden::node-21::0 depth=1 NodeExecution
+trace.console seq=6 run=golden::node-21::0 depth=1 NodeExecution
     message:
       | [Subtask — Process] ▶ OUTPUT
-state ConsoleLog run=golden::node-21::0 events=5 (= trace.console run=golden::node-21::0 seq=5)
+state ConsoleLog run=golden::node-21::0 events=5 (= trace.console run=golden::node-21::0 seq=6)
 metrics.node OUTPUT tokens=null
 run.spend golden steps=13 tokens=9
 trace.flush
@@ -743,11 +751,11 @@ run.finish golden::node-21::0 COMPLETED reason=null
       (empty)
 metrics.node PIPELINE tokens=null
 run.spend golden steps=14 tokens=9
-trace.console seq=33 run=golden depth=0 NodeExecution
+trace.console seq=38 run=golden depth=0 NodeExecution
     message:
       | ✓ PIPELINE in <ms>ms
-state ConsoleLog run=golden events=13 (= trace.console run=golden seq=33)
-trace.node seq=34 run=golden node-21 PIPELINE depth=0 tokens=null
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=38)
+trace.node seq=39 run=golden node-21 PIPELINE depth=0 visit=0 tokens=null in=f09d134c893b out=529c888e15af
     input:
       | PREVIOUS RESULTS CONTEXT:
       | Result of Subtask 1:
@@ -762,16 +770,16 @@ trace.node seq=34 run=golden node-21 PIPELINE depth=0 tokens=null
       | Task Planner: second part
     output:
       | Process answer, visit 1.
-state PipelineTrace steps=8 last=PIPELINE depth=0 tokens=null (= trace.node seq=34)
-state NodeIO node-21 PIPELINE depth=0 (= trace.node seq=34)
+state PipelineTrace steps=8 last=PIPELINE depth=0 tokens=null (= trace.node seq=39)
+state NodeIO node-21 PIPELINE depth=0 (= trace.node seq=39)
 visit golden showcase_full_agent/node-15 INTENT_ROUTER #3
 state Stage step=10 of=12 INTENT_ROUTER
-trace.console seq=35 run=golden depth=0 NodeExecution
+trace.console seq=40 run=golden depth=0 NodeExecution
     message:
       | ▶ INTENT_ROUTER
-state ConsoleLog run=golden events=14 (= trace.console run=golden seq=35)
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=40)
 model.load path=null vision=false audio=false
-model local node=node-15 call=1 temperature=default image=none
+model local node=node-15 call=1 seed=1212079295 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are a Subtask Router inside a task-execution loop. The input contains ONE subtask from a larger plan. Decide how this single subtask should be handled.
       |
@@ -818,13 +826,14 @@ model local node=node-15 call=1 temperature=default image=none
 state Streaming thinking=1
     text:
       | Lookup
+trace.model.local seq=41 run=golden node-15 INTENT_ROUTER visit=2 call=0 depth=0 seed=1212079295 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=0742b51927ae output=b9beafcaf6c1
 metrics.node INTENT_ROUTER tokens=null
 run.spend golden steps=15 tokens=9
-trace.console seq=36 run=golden depth=0 NodeExecution
+trace.console seq=42 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=15 (= trace.console run=golden seq=36)
-trace.node seq=37 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKey=Lookup
+state ConsoleLog run=golden events=15 (= trace.console run=golden seq=42)
+trace.node seq=43 run=golden node-15 INTENT_ROUTER depth=0 visit=2 tokens=null routingKey=Lookup in=114f216a4863 out=b9beafcaf6c1
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -846,14 +855,14 @@ trace.node seq=37 run=golden node-15 INTENT_ROUTER depth=0 tokens=null routingKe
       | Task Planner: third part
     output:
       | Lookup
-state PipelineTrace steps=9 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=37)
-state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=37)
+state PipelineTrace steps=9 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=43)
+state NodeIO node-15 INTENT_ROUTER depth=0 (= trace.node seq=43)
 visit golden showcase_full_agent/node-18 PIPELINE #1
 state Stage step=11 of=14 PIPELINE
-trace.console seq=38 run=golden depth=0 NodeExecution
+trace.console seq=44 run=golden depth=0 NodeExecution
     message:
       | ▶ PIPELINE
-state ConsoleLog run=golden events=16 (= trace.console run=golden seq=38)
+state ConsoleLog run=golden events=16 (= trace.console run=golden seq=44)
 run.create golden::node-18::0 pipeline=subtask_lookup parent=golden status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | PREVIOUS RESULTS CONTEXT:
@@ -890,7 +899,7 @@ trace.console seq=2 run=golden::node-18::0 depth=1 NodeExecution
       | [Subtask — Lookup] ▶ LITE_RT
 state ConsoleLog run=golden::node-18::0 events=3 (= trace.console run=golden::node-18::0 seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=1997039373 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.
@@ -942,13 +951,14 @@ model local node=node-2 call=1 temperature=default image=none
       | Subtask Query Builder answer, visit 1.
 metrics.update tokens=6
 modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=3 run=golden::node-18::0 node-2 LITE_RT visit=0 call=0 depth=1 seed=1997039373 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=60b3383df059 output=9c8b5f7dbee6
 metrics.node LITE_RT tokens=6
 run.spend golden steps=17 tokens=15
-trace.console seq=3 run=golden::node-18::0 depth=1 NodeExecution
+trace.console seq=4 run=golden::node-18::0 depth=1 NodeExecution
     message:
       | [Subtask — Lookup] ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden::node-18::0 events=4 (= trace.console run=golden::node-18::0 seq=3)
-trace.node seq=4 run=golden::node-18::0 node-2 LITE_RT depth=1 tokens=6
+state ConsoleLog run=golden::node-18::0 events=4 (= trace.console run=golden::node-18::0 seq=4)
+trace.node seq=5 run=golden::node-18::0 node-2 LITE_RT depth=1 visit=0 tokens=6 in=c558d7cbfb38 out=9c8b5f7dbee6
     input:
       | --- Original Task ---
       | PREVIOUS RESULTS CONTEXT:
@@ -983,14 +993,14 @@ trace.node seq=4 run=golden::node-18::0 node-2 LITE_RT depth=1 tokens=6
       | Task Planner: third part
     output:
       | Subtask Query Builder answer, visit 1.
-state NodeIO node-2 LITE_RT depth=1 (= trace.node seq=4)
+state NodeIO node-2 LITE_RT depth=1 (= trace.node seq=5)
 visit golden::node-18::0 subtask_lookup/node-3 TOOL #1
-trace.console seq=5 run=golden::node-18::0 depth=1 NodeExecution
+trace.console seq=6 run=golden::node-18::0 depth=1 NodeExecution
     message:
       | [Subtask — Lookup] ▶ TOOL
-state ConsoleLog run=golden::node-18::0 events=5 (= trace.console run=golden::node-18::0 seq=5)
+state ConsoleLog run=golden::node-18::0 events=5 (= trace.console run=golden::node-18::0 seq=6)
 model.load path=null vision=false audio=false
-model local node=node-3 call=1 temperature=default image=none
+model local node=node-3 call=1 seed=283851284 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that generates arguments for a specific tool.
       |
@@ -1021,17 +1031,18 @@ chat.save SYSTEM final=false model=null
       | Observation from search_tool: Search results for "Wikipedia Lookup (subtask)":
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
+trace.model.local seq=7 run=golden::node-18::0 node-3 TOOL visit=0 call=0 depth=1 seed=283851284 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=c009af31c078 output=b7787e4f7dd5
 metrics.node TOOL tokens=null
 run.spend golden steps=18 tokens=15
-trace.console seq=6 run=golden::node-18::0 depth=1 NodeExecution
+trace.console seq=8 run=golden::node-18::0 depth=1 NodeExecution
     message:
       | [Subtask — Lookup] ✓ TOOL in <ms>ms
-state ConsoleLog run=golden::node-18::0 events=6 (= trace.console run=golden::node-18::0 seq=6)
-trace.console seq=7 run=golden::node-18::0 depth=1 ToolCall
+state ConsoleLog run=golden::node-18::0 events=6 (= trace.console run=golden::node-18::0 seq=8)
+trace.console seq=9 run=golden::node-18::0 depth=1 ToolCall
     message:
       | [Subtask — Lookup] search_tool
-state ConsoleLog run=golden::node-18::0 events=7 (= trace.console run=golden::node-18::0 seq=7)
-trace.node seq=8 run=golden::node-18::0 node-3 TOOL depth=1 tokens=null tool=search_tool
+state ConsoleLog run=golden::node-18::0 events=7 (= trace.console run=golden::node-18::0 seq=9)
+trace.node seq=10 run=golden::node-18::0 node-3 TOOL depth=1 visit=0 tokens=null tool=search_tool in=1f3b051ca9b8 out=a2b946976019
     input:
       | --- Previous Node Output ---
       | Subtask Query Builder answer, visit 1.
@@ -1040,12 +1051,12 @@ trace.node seq=8 run=golden::node-18::0 node-3 TOOL depth=1 tokens=null tool=sea
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
 trace.flush
-state NodeIO node-3 TOOL depth=1 (= trace.node seq=8)
+state NodeIO node-3 TOOL depth=1 (= trace.node seq=10)
 visit golden::node-18::0 subtask_lookup/node-4 OUTPUT #1
-trace.console seq=9 run=golden::node-18::0 depth=1 NodeExecution
+trace.console seq=11 run=golden::node-18::0 depth=1 NodeExecution
     message:
       | [Subtask — Lookup] ▶ OUTPUT
-state ConsoleLog run=golden::node-18::0 events=8 (= trace.console run=golden::node-18::0 seq=9)
+state ConsoleLog run=golden::node-18::0 events=8 (= trace.console run=golden::node-18::0 seq=11)
 metrics.node OUTPUT tokens=null
 run.spend golden steps=19 tokens=15
 trace.flush
@@ -1054,11 +1065,11 @@ run.finish golden::node-18::0 COMPLETED reason=null
       (empty)
 metrics.node PIPELINE tokens=null
 run.spend golden steps=20 tokens=15
-trace.console seq=39 run=golden depth=0 NodeExecution
+trace.console seq=45 run=golden depth=0 NodeExecution
     message:
       | ✓ PIPELINE in <ms>ms
-state ConsoleLog run=golden events=17 (= trace.console run=golden seq=39)
-trace.node seq=40 run=golden node-18 PIPELINE depth=0 tokens=null
+state ConsoleLog run=golden events=17 (= trace.console run=golden seq=45)
+trace.node seq=46 run=golden node-18 PIPELINE depth=0 visit=0 tokens=null in=c2d339abe78c out=a2b946976019
     input:
       | PREVIOUS RESULTS CONTEXT:
       | Result of Subtask 1:
@@ -1078,16 +1089,16 @@ trace.node seq=40 run=golden node-18 PIPELINE depth=0 tokens=null
       | Search results for "Wikipedia Lookup (subtask)":
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
-state PipelineTrace steps=10 last=PIPELINE depth=0 tokens=null (= trace.node seq=40)
-state NodeIO node-18 PIPELINE depth=0 (= trace.node seq=40)
+state PipelineTrace steps=10 last=PIPELINE depth=0 tokens=null (= trace.node seq=46)
+state NodeIO node-18 PIPELINE depth=0 (= trace.node seq=46)
 visit golden showcase_full_agent/node-16 SUMMARY #1
 state Stage step=12 of=14 SUMMARY
-trace.console seq=41 run=golden depth=0 NodeExecution
+trace.console seq=47 run=golden depth=0 NodeExecution
     message:
       | ▶ SUMMARY
-state ConsoleLog run=golden events=18 (= trace.console run=golden seq=41)
+state ConsoleLog run=golden events=18 (= trace.console run=golden seq=47)
 model.load path=null vision=false audio=false
-model local node=node-16 call=1 temperature=default image=none
+model local node=node-16 call=1 seed=1039481536 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are writing the final response to the user after an actionable task has been carried out. The task was broken into subtasks, each completed separately — some produced content, some gathered information, some performed actions through tools, some collected the user's own input. Their results are provided to you.
       |
@@ -1128,13 +1139,14 @@ model local node=node-16 call=1 temperature=default image=none
 state Streaming thinking=1 answering=4
     text:
       | Task Synthesis answer, visit 1.
+trace.model.local seq=48 run=golden node-16 SUMMARY visit=0 call=0 depth=0 seed=1039481536 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=b2c7ab7f25d2 output=add789a9d797
 metrics.node SUMMARY tokens=null
 run.spend golden steps=21 tokens=15
-trace.console seq=42 run=golden depth=0 NodeExecution
+trace.console seq=49 run=golden depth=0 NodeExecution
     message:
       | ✓ SUMMARY in <ms>ms
-state ConsoleLog run=golden events=19 (= trace.console run=golden seq=42)
-trace.node seq=43 run=golden node-16 SUMMARY depth=0 tokens=null
+state ConsoleLog run=golden events=19 (= trace.console run=golden seq=49)
+trace.node seq=50 run=golden node-16 SUMMARY depth=0 visit=0 tokens=null in=433a4a9e5d4a out=add789a9d797
     input:
       | --- Original Task ---
       | Plan my Saturday evening in the city.
@@ -1150,14 +1162,14 @@ trace.node seq=43 run=golden node-16 SUMMARY depth=0 tokens=null
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
     output:
       | Task Synthesis answer, visit 1.
-state PipelineTrace steps=11 last=SUMMARY depth=0 tokens=null (= trace.node seq=43)
-state NodeIO node-16 SUMMARY depth=0 (= trace.node seq=43)
+state PipelineTrace steps=11 last=SUMMARY depth=0 tokens=null (= trace.node seq=50)
+state NodeIO node-16 SUMMARY depth=0 (= trace.node seq=50)
 visit golden showcase_full_agent/node-2 OUTPUT #1
 state Stage step=13 of=14 OUTPUT
-trace.console seq=44 run=golden depth=0 NodeExecution
+trace.console seq=51 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=20 (= trace.console run=golden seq=44)
+state ConsoleLog run=golden events=20 (= trace.console run=golden seq=51)
 chat.save AGENT final=true model=Golden Model
     content:
       | Task Synthesis answer, visit 1.

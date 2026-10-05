@@ -16,6 +16,7 @@ run.running golden pipeline=recipe-decompose-and-queue graphHash=ca2a5a1e09a1481
 driver start
 crash.key active_pipeline_id=recipe-decompose-and-queue
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden recipe-decompose-and-queue/input INPUT #1
 state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ DECOMPOSITION
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=plan call=1 temperature=default image=none
+model local node=plan call=1 seed=436888255 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Break the user's task into a short list of simple, actionable subtasks. Output a JSON array of strings and nothing else. Keep the list under six items.
       |
@@ -52,13 +53,14 @@ model local node=plan call=1 temperature=default image=none
 state Streaming thinking=9
     text:
       | ["Plan: first part", "Plan: second part", "Plan: third part"]
+trace.model.local seq=3 run=golden plan DECOMPOSITION visit=0 call=0 depth=0 seed=436888255 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=6648ec27ec78 output=4417aaf56062
 metrics.node DECOMPOSITION tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ DECOMPOSITION in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden plan DECOMPOSITION depth=0 tokens=null
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden plan DECOMPOSITION depth=0 visit=0 tokens=null in=1ae120fc9635 out=ce170fdb6d45
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -67,65 +69,66 @@ trace.node seq=4 run=golden plan DECOMPOSITION depth=0 tokens=null
       | Compare how solar and wind power grew over the last decade.
     output:
       | ["Plan: first part","Plan: second part","Plan: third part"]
-state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=4)
-state NodeIO plan DECOMPOSITION depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=DECOMPOSITION depth=0 tokens=null (= trace.node seq=5)
+state NodeIO plan DECOMPOSITION depth=0 (= trace.node seq=5)
 visit golden recipe-decompose-and-queue/queue QUEUE_PROCESSOR #1
 state Stage step=3 of=null QUEUE_PROCESSOR
-trace.console seq=5 run=golden depth=0 NodeExecution
-    message:
-      | ▶ QUEUE_PROCESSOR
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
-metrics.node QUEUE_PROCESSOR tokens=null
-run.spend golden steps=3 tokens=0
 trace.console seq=6 run=golden depth=0 NodeExecution
     message:
+      | ▶ QUEUE_PROCESSOR
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
+metrics.node QUEUE_PROCESSOR tokens=null
+run.spend golden steps=3 tokens=0
+trace.console seq=7 run=golden depth=0 NodeExecution
+    message:
       | ✓ QUEUE_PROCESSOR in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden queue QUEUE_PROCESSOR depth=0 tokens=null
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
+trace.node seq=8 run=golden queue QUEUE_PROCESSOR depth=0 visit=0 tokens=null in=ce170fdb6d45 out=ce170fdb6d45
     input:
       | ["Plan: first part","Plan: second part","Plan: third part"]
     output:
       | ["Plan: first part","Plan: second part","Plan: third part"]
-state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=7)
-state NodeIO queue QUEUE_PROCESSOR depth=0 (= trace.node seq=7)
+state PipelineTrace steps=2 last=QUEUE_PROCESSOR depth=0 tokens=null (= trace.node seq=8)
+state NodeIO queue QUEUE_PROCESSOR depth=0 (= trace.node seq=8)
 visit golden recipe-decompose-and-queue/work LITE_RT #1
 state Stage step=4 of=8 LITE_RT
-trace.console seq=8 run=golden depth=0 NodeExecution
-    message:
-      | ▶ LITE_RT
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
-model.load path=null vision=false audio=false
-model local node=work call=1 temperature=default image=none
-    prompt:
-      | [golden prefix] Answer in plain words.
-      | You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.
-      |
-      | Reply in the user's language (en-US).
-      |
-      |
-      | --- Original Task ---
-      | Compare how solar and wind power grew over the last decade.
-      |
-      | --- Previous Node Output ---
-      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
-      |
-      | CURRENT SUBTASK TO EXECUTE:
-      | Plan: first part
-      | AGENT: ⏎
-    answer:
-      | Do the subtask answer, visit 1.
-state Streaming thinking=1 answering=5
-    text:
-      | Do the subtask answer, visit 1.
-metrics.update tokens=6
-modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
-metrics.node LITE_RT tokens=6
-run.spend golden steps=4 tokens=6
 trace.console seq=9 run=golden depth=0 NodeExecution
     message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=9)
+model.load path=null vision=false audio=false
+model local node=work call=1 seed=175593264 t=0.55 k=17 p=0.85 image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Plan: first part
+      | AGENT: ⏎
+    answer:
+      | Do the subtask answer, visit 1.
+state Streaming thinking=1 answering=5
+    text:
+      | Do the subtask answer, visit 1.
+metrics.update tokens=6
+modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=10 run=golden work LITE_RT visit=0 call=0 depth=0 seed=175593264 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=b3933f210152 output=8a26671d7ff9
+metrics.node LITE_RT tokens=6
+run.spend golden steps=4 tokens=6
+trace.console seq=11 run=golden depth=0 NodeExecution
+    message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
-trace.node seq=10 run=golden work LITE_RT depth=0 tokens=6
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=11)
+trace.node seq=12 run=golden work LITE_RT depth=0 visit=0 tokens=6 in=25d6699bc4d8 out=8a26671d7ff9
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -137,16 +140,16 @@ trace.node seq=10 run=golden work LITE_RT depth=0 tokens=6
       | Plan: first part
     output:
       | Do the subtask answer, visit 1.
-state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=6 (= trace.node seq=10)
-state NodeIO work LITE_RT depth=0 (= trace.node seq=10)
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=6 (= trace.node seq=12)
+state NodeIO work LITE_RT depth=0 (= trace.node seq=12)
 visit golden recipe-decompose-and-queue/work LITE_RT #2
 state Stage step=5 of=8 LITE_RT
-trace.console seq=11 run=golden depth=0 NodeExecution
+trace.console seq=13 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=9 (= trace.console run=golden seq=11)
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=13)
 model.load path=null vision=false audio=false
-model local node=work call=1 temperature=default image=none
+model local node=work call=1 seed=1020167386 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.
@@ -176,79 +179,81 @@ state Streaming thinking=1 answering=5
       | Do the subtask answer, visit 2.
 metrics.update tokens=6
 modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=14 run=golden work LITE_RT visit=1 call=0 depth=0 seed=1020167386 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=1190e0c4aea6 output=000dbf13d072
 metrics.node LITE_RT tokens=6
 run.spend golden steps=5 tokens=12
-trace.console seq=12 run=golden depth=0 NodeExecution
-    message:
-      | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
-trace.node seq=13 run=golden work LITE_RT depth=0 tokens=6
-    input:
-      | --- Original Task ---
-      | Compare how solar and wind power grew over the last decade.
-      |
-      | --- Previous Node Output ---
-      | PREVIOUS RESULTS CONTEXT:
-      | Result of Subtask 1:
-      | Do the subtask answer, visit 1.
-      |
-      | ---
-      |
-      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
-      |
-      | CURRENT SUBTASK TO EXECUTE:
-      | Plan: second part
-    output:
-      | Do the subtask answer, visit 2.
-state PipelineTrace steps=4 last=LITE_RT depth=0 tokens=6 (= trace.node seq=13)
-state NodeIO work LITE_RT depth=0 (= trace.node seq=13)
-visit golden recipe-decompose-and-queue/work LITE_RT #3
-state Stage step=6 of=8 LITE_RT
-trace.console seq=14 run=golden depth=0 NodeExecution
-    message:
-      | ▶ LITE_RT
-state ConsoleLog run=golden events=11 (= trace.console run=golden seq=14)
-model.load path=null vision=false audio=false
-model local node=work call=1 temperature=default image=none
-    prompt:
-      | [golden prefix] Answer in plain words.
-      | You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.
-      |
-      | Reply in the user's language (en-US).
-      |
-      |
-      | --- Original Task ---
-      | Compare how solar and wind power grew over the last decade.
-      |
-      | --- Previous Node Output ---
-      | PREVIOUS RESULTS CONTEXT:
-      | Result of Subtask 1:
-      | Do the subtask answer, visit 1.
-      |
-      | Result of Subtask 2:
-      | Do the subtask answer, visit 2.
-      |
-      | ---
-      |
-      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
-      |
-      | CURRENT SUBTASK TO EXECUTE:
-      | Plan: third part
-      | AGENT: ⏎
-    answer:
-      | Do the subtask answer, visit 3.
-state Streaming thinking=1 answering=5
-    text:
-      | Do the subtask answer, visit 3.
-metrics.update tokens=6
-modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
-metrics.node LITE_RT tokens=6
-run.spend golden steps=6 tokens=18
 trace.console seq=15 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
-trace.node seq=16 run=golden work LITE_RT depth=0 tokens=6
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=15)
+trace.node seq=16 run=golden work LITE_RT depth=0 visit=1 tokens=6 in=471a8f1b71d4 out=000dbf13d072
+    input:
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Do the subtask answer, visit 1.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Plan: second part
+    output:
+      | Do the subtask answer, visit 2.
+state PipelineTrace steps=4 last=LITE_RT depth=0 tokens=6 (= trace.node seq=16)
+state NodeIO work LITE_RT depth=0 (= trace.node seq=16)
+visit golden recipe-decompose-and-queue/work LITE_RT #3
+state Stage step=6 of=8 LITE_RT
+trace.console seq=17 run=golden depth=0 NodeExecution
+    message:
+      | ▶ LITE_RT
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=17)
+model.load path=null vision=false audio=false
+model local node=work call=1 seed=271187568 t=0.55 k=17 p=0.85 image=none
+    prompt:
+      | [golden prefix] Answer in plain words.
+      | You are given one subtask from a larger task. Carry out that subtask and reply with its result only — no preamble, no restating the subtask.
+      |
+      | Reply in the user's language (en-US).
+      |
+      |
+      | --- Original Task ---
+      | Compare how solar and wind power grew over the last decade.
+      |
+      | --- Previous Node Output ---
+      | PREVIOUS RESULTS CONTEXT:
+      | Result of Subtask 1:
+      | Do the subtask answer, visit 1.
+      |
+      | Result of Subtask 2:
+      | Do the subtask answer, visit 2.
+      |
+      | ---
+      |
+      | CRITICAL INSTRUCTION: You are executing a single subtask within a larger workflow. Focus ONLY on this specific subtask. Do NOT provide conversational filler, and do NOT attempt to solve the overall task or future steps.
+      |
+      | CURRENT SUBTASK TO EXECUTE:
+      | Plan: third part
+      | AGENT: ⏎
+    answer:
+      | Do the subtask answer, visit 3.
+state Streaming thinking=1 answering=5
+    text:
+      | Do the subtask answer, visit 3.
+metrics.update tokens=6
+modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=18 run=golden work LITE_RT visit=2 call=0 depth=0 seed=271187568 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=fc270b150a5d output=13e44ee9604c
+metrics.node LITE_RT tokens=6
+run.spend golden steps=6 tokens=18
+trace.console seq=19 run=golden depth=0 NodeExecution
+    message:
+      | ✓ LITE_RT in <ms>ms
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=19)
+trace.node seq=20 run=golden work LITE_RT depth=0 visit=2 tokens=6 in=137626318d03 out=13e44ee9604c
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -269,16 +274,16 @@ trace.node seq=16 run=golden work LITE_RT depth=0 tokens=6
       | Plan: third part
     output:
       | Do the subtask answer, visit 3.
-state PipelineTrace steps=5 last=LITE_RT depth=0 tokens=6 (= trace.node seq=16)
-state NodeIO work LITE_RT depth=0 (= trace.node seq=16)
+state PipelineTrace steps=5 last=LITE_RT depth=0 tokens=6 (= trace.node seq=20)
+state NodeIO work LITE_RT depth=0 (= trace.node seq=20)
 visit golden recipe-decompose-and-queue/collect SUMMARY #1
 state Stage step=7 of=8 SUMMARY
-trace.console seq=17 run=golden depth=0 NodeExecution
+trace.console seq=21 run=golden depth=0 NodeExecution
     message:
       | ▶ SUMMARY
-state ConsoleLog run=golden events=13 (= trace.console run=golden seq=17)
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=21)
 model.load path=null vision=false audio=false
-model local node=collect call=1 temperature=default image=none
+model local node=collect call=1 seed=1985550751 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are given the results of every subtask of one task. Combine them into a single answer to the original task. Do not list the subtasks.
       |
@@ -305,13 +310,14 @@ model local node=collect call=1 temperature=default image=none
 state Streaming thinking=1 answering=5
     text:
       | Put it together answer, visit 1.
+trace.model.local seq=22 run=golden collect SUMMARY visit=0 call=0 depth=0 seed=1985550751 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=50620b7d88f3 output=581c1545e303
 metrics.node SUMMARY tokens=null
 run.spend golden steps=7 tokens=18
-trace.console seq=18 run=golden depth=0 NodeExecution
+trace.console seq=23 run=golden depth=0 NodeExecution
     message:
       | ✓ SUMMARY in <ms>ms
-state ConsoleLog run=golden events=14 (= trace.console run=golden seq=18)
-trace.node seq=19 run=golden collect SUMMARY depth=0 tokens=null
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=23)
+trace.node seq=24 run=golden collect SUMMARY depth=0 visit=0 tokens=null in=aed03193abfb out=581c1545e303
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -324,14 +330,14 @@ trace.node seq=19 run=golden collect SUMMARY depth=0 tokens=null
       | 3. Do the subtask answer, visit 3.
     output:
       | Put it together answer, visit 1.
-state PipelineTrace steps=6 last=SUMMARY depth=0 tokens=null (= trace.node seq=19)
-state NodeIO collect SUMMARY depth=0 (= trace.node seq=19)
+state PipelineTrace steps=6 last=SUMMARY depth=0 tokens=null (= trace.node seq=24)
+state NodeIO collect SUMMARY depth=0 (= trace.node seq=24)
 visit golden recipe-decompose-and-queue/output OUTPUT #1
 state Stage step=8 of=8 OUTPUT
-trace.console seq=20 run=golden depth=0 NodeExecution
+trace.console seq=25 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=15 (= trace.console run=golden seq=20)
+state ConsoleLog run=golden events=15 (= trace.console run=golden seq=25)
 chat.save AGENT final=true model=Golden Model
     content:
       | Put it together answer, visit 1.

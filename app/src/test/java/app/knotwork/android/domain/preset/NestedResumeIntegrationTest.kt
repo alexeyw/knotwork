@@ -124,9 +124,12 @@ class NestedResumeIntegrationTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         settingsRepository = mockk(relaxed = true)
         every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
-        every { llmEngine.generateResponseStream(any()) } returns
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
             flowOf("""{"question":"What color?","options":["Blue","Red"]}""")
         every { settingsRepository.pipelineMaxNestingDepth } returns flowOf(3)
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)

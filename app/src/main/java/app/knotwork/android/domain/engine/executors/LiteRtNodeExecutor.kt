@@ -76,7 +76,7 @@ class LiteRtNodeExecutor @Inject constructor(
             return@flow
         }
 
-        val responseStream = llmEngine.generateResponseStream(fullPrompt, imagePath = imagePath)
+        val responseStream = scope.inference.local(llmEngine, fullPrompt, imagePath = imagePath)
 
         val accumulatedResponse = StringBuilder()
         var emittedThinking = false

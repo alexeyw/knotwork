@@ -54,6 +54,14 @@ sealed class RunTraceRecord {
      *   `0` for the top-level run, `1` for a direct sub-pipeline, and so on.
      *   Projected back into the Traces/Vars console tabs so a sub-pipeline's
      *   nodes render nested under the `PIPELINE` node that spawned them.
+     * @property visit Zero-based index of this visit to [nodeId] within its run
+     *   invocation — a node inside a queue loop runs once per item. Ties the
+     *   record to the model calls made during the same visit. `null` for a
+     *   record written before visits were recorded.
+     * @property inputSha256 Lowercase hex SHA-256 of [inputText] (UTF-8), or
+     *   `null` for a record written before hashes were recorded.
+     * @property outputSha256 Lowercase hex SHA-256 of [outputText] (UTF-8), or
+     *   `null` for a record written before hashes were recorded.
      */
     data class NodeIo(
         override val runId: String,
@@ -70,6 +78,9 @@ sealed class RunTraceRecord {
         val routingKey: String? = null,
         val resolvedToolName: String? = null,
         val depth: Int = 0,
+        val visit: Int? = null,
+        val inputSha256: String? = null,
+        val outputSha256: String? = null,
     ) : RunTraceRecord()
 
     /**
@@ -112,5 +123,96 @@ sealed class RunTraceRecord {
         override val seq: Long,
         override val timestamp: Long,
         val entries: List<MemoryChunk>,
+    ) : RunTraceRecord()
+
+    /**
+     * One call a node made to the on-device model: exactly what went in and came
+     * out, and everything that decided the output.
+     *
+     * The record is what makes a run checkable. Re-running [prompt] with
+     * [sampling] on the model file [modelSha256], on the same [backend] (and, on
+     * GPU, the same [contextWindow]), on the same device, produces [output] again
+     * byte for byte — measured for CPU and GPU, not promised for NPU
+     * (`decisions.md §70.6`). The prompt is the whole text the model read —
+     * system prompt, context blocks, history and memory included — so no live
+     * input has to be reconstructed to repeat the call.
+     *
+     * A node may call the model several times in one visit (a structured-output
+     * repair, for one); each call is its own record, numbered by [call].
+     *
+     * @property nodeId The graph node that made the call.
+     * @property nodeType The [NodeType] name of that node.
+     * @property visit Zero-based visit index of the node within its run
+     *   invocation; matches [NodeIo.visit].
+     * @property call Zero-based index of this call among the visit's model calls.
+     * @property depth Pipeline-nesting level of the run, as on [NodeIo.depth].
+     * @property sampling The sampler and seed the call ran with.
+     * @property modelPath Absolute path of the model file the engine had loaded,
+     *   or `null` when the engine reported none.
+     * @property modelSha256 SHA-256 of that file from the model registry, or
+     *   `null` when the file had not been hashed yet — such a call cannot be
+     *   checked later, since nothing proves which bytes ran it.
+     * @property backend The backend the engine actually ran on (after any
+     *   fallback), or `null` when the engine reported none.
+     * @property contextWindow The engine's context window (tokens) at the call,
+     *   or `null` when the engine reported none. Part of what a GPU repeat must
+     *   match.
+     * @property hadImage Whether an image was sent with the prompt. The image
+     *   itself is not recorded, so such a call cannot be repeated from the record.
+     * @property prompt The full text sent to the model.
+     * @property output The full text the model streamed back, unprocessed.
+     * @property promptSha256 Lowercase hex SHA-256 of [prompt] (UTF-8).
+     * @property outputSha256 Lowercase hex SHA-256 of [output] (UTF-8).
+     */
+    data class LocalModelCall(
+        override val runId: String,
+        override val sessionId: String,
+        override val seq: Long,
+        override val timestamp: Long,
+        val nodeId: String,
+        val nodeType: String,
+        val visit: Int,
+        val call: Int,
+        val depth: Int,
+        val sampling: LocalSampling,
+        val modelPath: String?,
+        val modelSha256: String?,
+        val backend: LocalBackend?,
+        val contextWindow: Int?,
+        val hadImage: Boolean,
+        val prompt: String,
+        val output: String,
+        val promptSha256: String,
+        val outputSha256: String,
+    ) : RunTraceRecord()
+
+    /**
+     * One call a node made to a cloud model. Only which provider and model were
+     * asked is recorded, not the text: a hosted model takes no seed the app
+     * controls, so its answer cannot be repeated and checked — the record exists
+     * so a node answered in the cloud is shown as such instead of as a node that
+     * made no model call.
+     *
+     * @property nodeId The graph node that made the call.
+     * @property nodeType The [NodeType] name of that node.
+     * @property visit Zero-based visit index of the node within its run invocation.
+     * @property call Zero-based index of this call among the visit's model calls.
+     * @property depth Pipeline-nesting level of the run.
+     * @property provider The provider id (e.g. `anthropic`).
+     * @property model The model id the provider was asked for, or `null` when the
+     *   calling node does not know it.
+     */
+    data class CloudModelCall(
+        override val runId: String,
+        override val sessionId: String,
+        override val seq: Long,
+        override val timestamp: Long,
+        val nodeId: String,
+        val nodeType: String,
+        val visit: Int,
+        val call: Int,
+        val depth: Int,
+        val provider: String,
+        val model: String?,
     ) : RunTraceRecord()
 }

@@ -414,6 +414,7 @@ flowchart LR
     Ceiling -- clear --> Replay["CheckpointReplay<br/>recorded prefix"]
     Replay -- "no record" --> Live["LiveNodeStep<br/>executor · charge · soft notice"]
     Live --> Inputs["NodeInputComposer<br/>prompt · context · image"]
+    Live --> Inference["RecordingNodeInference<br/>seeded, recorded model calls"]
     Live --> Records
     Walk --> Console["RunConsole<br/>console + trace, one seq"]
     Walk --> Routing["GraphRouting<br/>next node · estimate"]
@@ -429,13 +430,31 @@ The collaborators, each covering one concern:
 
 - **`RunTreeContext`** — what every invocation of one run tree shares: the
   spend ledger, the repetition detector, pending advice, the image, the
-  generating model and the origin. The engine builds it for the root run;
-  each node receives it in `ExecutionScope.run`, and a `PIPELINE` node hands it
-  to its sub-pipeline one level deeper.
+  generating model, the origin and the run header. The engine builds it for the
+  root run; each node receives it in `ExecutionScope.run`, and a `PIPELINE` node
+  hands it to its sub-pipeline one level deeper, extending its seed path by the
+  node and visit.
+- **Run header (`RunHeaders`)** — chosen once, when a root run first starts, and
+  stored on its `pipeline_runs` row: the run seed, the sampler (temperature,
+  top-k, top-p), the app and runtime versions and the device. A resumed run reads
+  it back, so every on-device call of the run — before and after a pause — uses
+  the same sampler and seeds derived from the same run seed.
 - **`RunConsole`** — one invocation's console lines and trace records, in a
   single `seq` numbering that a resumed run continues. It shows console lines
-  as they are pushed, and records each node's input and output for the
-  checkpoint replay. A TOOL or CLOUD node's record is flushed at once.
+  as they are pushed, and records each node's input and output — with the visit
+  index and the SHA-256 of both texts — for the checkpoint replay, and each model
+  call a node made. A TOOL or CLOUD node's record is flushed at once.
+- **`NodeInference` (`RecordingNodeInference`)** — a node's only way to its
+  model during one visit, passed in `ExecutionScope.inference`. Every on-device
+  call runs on the run header's sampler with a seed derived (`RunSeeds`) from the
+  run seed, the seed path, the node, the visit and the call's index, and is kept
+  with its full prompt and output and what the engine ran on — model file,
+  backend, context window. `LiveNodeStep` drains the kept calls into the trace
+  when the node finishes, parks or fails, before the node's own record; a call is
+  buffered rather than written because an executor's flow may produce on another
+  coroutine than the one owning `seq`. A cloud call leaves only a note of the
+  provider. No executor calls the engine around this seam
+  (`LocalInferenceSeamKonsistTest`).
 - **`GraphRouting`** — where the run goes after a node, from the graph's edges
   and the node's verdict: IF_CONDITION's `True`/`False` edge, INTENT_ROUTER's
   labelled edge or its fallback, EVALUATION's verdict port, otherwise the first
@@ -1418,6 +1437,18 @@ number; the chat console replays the stored trace of a session's
 active (or latest) run on open and merges live events on top by that
 sequence, which keeps the replay/live seam free of duplicates. Trace
 rows cascade-delete with their parent `pipeline_runs` row.
+
+The model calls of a run live in their own table, `model_calls`, in the same
+`seq` numbering: an on-device call with its full prompt and output, the
+sampling and seed, the model file and its registry checksum, the backend and the
+context window; a cloud call with its provider and model only. They go through
+the same buffer and reach storage in the same transaction as the trace rows
+flushed with them (`TraceStepDao.insertBatch`), and the read merges both tables
+back into one ordered trace. The run header (seed, sampler, versions, device)
+sits on the root run's `pipeline_runs` row. The model file's checksum is
+computed once per file in the background and kept in `local_models` with the
+file's size and modification time; a file that changed since reads as not
+hashed.
 
 Migration rules:
 

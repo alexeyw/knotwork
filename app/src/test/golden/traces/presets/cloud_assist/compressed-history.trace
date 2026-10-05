@@ -16,6 +16,7 @@ run.running golden pipeline=cloud_assist graphHash=e283d1eba5037d2b8f933f5083048
 driver start
 crash.key active_pipeline_id=cloud_assist
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden cloud_assist/input INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -86,13 +87,14 @@ metrics.update tokens=5
 state Streaming thinking=1 answering=4
     text:
       | Cloud LLM answer, visit 1.
+trace.model.cloud seq=6 run=golden cloud CLOUD visit=0 call=0 depth=0 provider=openai model=golden-cloud-model
 metrics.node CLOUD tokens=5
 run.spend golden steps=2 tokens=5
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=7 run=golden depth=0 NodeExecution
     message:
       | ✓ CLOUD in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden cloud CLOUD depth=0 tokens=5
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
+trace.node seq=8 run=golden cloud CLOUD depth=0 visit=0 tokens=5 in=d45d85bd2184 out=8fb02b83fde0
     input:
       | --- Original Task ---
       | What should I pack for my trip?
@@ -117,14 +119,14 @@ trace.node seq=7 run=golden cloud CLOUD depth=0 tokens=5
     output:
       | Cloud LLM answer, visit 1.
 trace.flush
-state PipelineTrace steps=1 last=CLOUD depth=0 tokens=5 (= trace.node seq=7)
-state NodeIO cloud CLOUD depth=0 (= trace.node seq=7)
+state PipelineTrace steps=1 last=CLOUD depth=0 tokens=5 (= trace.node seq=8)
+state NodeIO cloud CLOUD depth=0 (= trace.node seq=8)
 visit golden cloud_assist/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=9 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=9)
 chat.save AGENT final=true model=openai
     content:
       | Cloud LLM answer, visit 1.

@@ -160,6 +160,9 @@ class GraphExecutionEngineTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         toolRepository = mockk(relaxed = true)
         chatRepository = mockk(relaxed = true)
         getContextWindowUseCase = mockk()
@@ -366,7 +369,7 @@ class GraphExecutionEngineTest {
         // 2, leaving 1 for the sub-pipeline — not enough for its INPUT + LLM, so
         // the sub-run exhausts the shared budget and the failure bubbles up.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(3)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("partial")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("partial")
         val subGraph = PipelineGraph(
             id = "sub-pipe",
             name = "Sub",
@@ -493,7 +496,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf(
             "{\"question\":\"Confirm?\",\"options\":[\"yes\",\"no\"]}",
         )
         coEvery { clarificationRepository.requestAnswer(any()) } returns ClarificationOutcome.Answered("user reply")
@@ -530,7 +533,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("LLM ", "Response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("LLM ", "Response")
 
         val states = engine(sessionId, "User prompt", graph).toList()
 
@@ -588,7 +591,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flow {
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flow {
             throw CancellationException("user stop")
         }
 
@@ -626,9 +629,9 @@ class GraphExecutionEngineTest {
         )
 
         // Evaluate to true
-        coEvery { evaluateIfConditionUseCase(ifNode, "Test prompt", any(), any()) } returns
+        coEvery { evaluateIfConditionUseCase(ifNode, "Test prompt", any(), any(), any()) } returns
             EvaluateIfConditionUseCase.Outcome(value = true)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Test prompt")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Test prompt")
 
         val statesTrue = engine(sessionId, "Test prompt", graph).toList()
         assertTrue(statesTrue.last() is AgentOrchestratorState.Completed)
@@ -654,9 +657,9 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        coEvery { evaluateIfConditionUseCase(ifNode, "Test prompt", any(), any()) } returns
+        coEvery { evaluateIfConditionUseCase(ifNode, "Test prompt", any(), any(), any()) } returns
             EvaluateIfConditionUseCase.Outcome(value = false)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Test prompt")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Test prompt")
 
         val states = engine(sessionId, "Test prompt", graph).toList()
 
@@ -778,7 +781,7 @@ class GraphExecutionEngineTest {
 
         // Router routing key is not an exact port label but contains "Cancel" as
         // a whole word; it must match the "Cancel" port, not "can".
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Please Cancel")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Please Cancel")
 
         val states = engine(sessionId, "query", graph).toList()
 
@@ -808,7 +811,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Use C# here")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Use C# here")
 
         val states = engine(sessionId, "query", graph).toList()
 
@@ -832,7 +835,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Formatted Response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Formatted Response")
 
         val states = engine(sessionId, "Raw User Input", graph).toList()
 
@@ -844,6 +847,8 @@ class GraphExecutionEngineTest {
                 match {
                     it.contains("Format this text:") && it.contains("Raw User Input")
                 },
+                any(),
+                any(),
             )
         }
     }
@@ -888,7 +893,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Response")
 
         val states = engine(sessionId, "Test", graph).toList()
 
@@ -951,7 +956,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", graph).toList()
 
@@ -976,7 +981,7 @@ class GraphExecutionEngineTest {
             nodes = listOf(inputNode, outputNode),
             connections = listOf(ConnectionModel("c1", "input_1", "output_1")),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("done")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("done")
 
         val states = engine(sessionId, "prompt", graph).toList()
 
@@ -1002,7 +1007,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "lite_rt", "output"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         val stages = engine(sessionId, "query", graph).toList()
             .filterIsInstance<AgentOrchestratorState.PipelineStage>()
@@ -1031,7 +1036,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c3", "lite_rt", "output"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("Data"),
             flowOf("answer"),
             flowOf("final"),
@@ -1084,7 +1089,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("Data"), // INTENT_ROUTER routing decision
             flowOf("Correct answer"), // LITE_RT processes original prompt
             flowOf("Final"), // OUTPUT formats the response
@@ -1106,11 +1111,13 @@ class GraphExecutionEngineTest {
                 match {
                     it.contains("--- Previous Node Output ---") && it.contains("fuel consumption query")
                 },
+                any(),
+                any(),
             )
         }
         // No downstream node must receive the routing key as its previous-node-output payload.
         io.mockk.verify(exactly = 0) {
-            llmEngine.generateResponseStream(match { it.contains("Previous Node Output ---\nData") })
+            llmEngine.generateResponseStream(match { it.contains("Previous Node Output ---\nData") }, any(), any())
         }
     }
 
@@ -1143,7 +1150,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given EVALUATION verdict PASS then routes through the Pass output port`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("PASS — the subtask result satisfies the goal."), // EVALUATION verdict
             flowOf("pass-branch answer"), // LITE_RT on the Pass branch
             flowOf("Final"), // OUTPUT
@@ -1152,16 +1159,16 @@ class GraphExecutionEngineTest {
         val states = engine(sessionId, "evaluate this", evaluationBranchGraph()).toList()
 
         assertTrue("Expected Completed but got: ${states.last()}", states.last() is AgentOrchestratorState.Completed)
-        io.mockk.verify { llmEngine.generateResponseStream(match { it.contains("PASS_BRANCH_MARKER") }) }
+        io.mockk.verify { llmEngine.generateResponseStream(match { it.contains("PASS_BRANCH_MARKER") }, any(), any()) }
         io.mockk.verify(exactly = 0) {
-            llmEngine.generateResponseStream(match { it.contains("FAIL_BRANCH_MARKER") })
+            llmEngine.generateResponseStream(match { it.contains("FAIL_BRANCH_MARKER") }, any(), any())
         }
     }
 
     @Test
     fun `given EVALUATION verdict FAIL then routes through the Fail output port`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("FAIL: the result is incorrect and cannot be repaired."), // EVALUATION verdict
             flowOf("fail-branch answer"), // LITE_RT on the Fail branch
             flowOf("Final"), // OUTPUT
@@ -1170,9 +1177,9 @@ class GraphExecutionEngineTest {
         val states = engine(sessionId, "evaluate this", evaluationBranchGraph()).toList()
 
         assertTrue("Expected Completed but got: ${states.last()}", states.last() is AgentOrchestratorState.Completed)
-        io.mockk.verify { llmEngine.generateResponseStream(match { it.contains("FAIL_BRANCH_MARKER") }) }
+        io.mockk.verify { llmEngine.generateResponseStream(match { it.contains("FAIL_BRANCH_MARKER") }, any(), any()) }
         io.mockk.verify(exactly = 0) {
-            llmEngine.generateResponseStream(match { it.contains("PASS_BRANCH_MARKER") })
+            llmEngine.generateResponseStream(match { it.contains("PASS_BRANCH_MARKER") }, any(), any())
         }
     }
 
@@ -1202,7 +1209,7 @@ class GraphExecutionEngineTest {
                 ),
             )
 
-            every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
                 flowOf("""["subtask_one", "subtask_two"]"""),
                 flowOf("result_one"),
                 flowOf("result_two"),
@@ -1239,7 +1246,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("""["item_a", "item_b"]"""),
             flowOf("result_a"),
             flowOf("result_b"),
@@ -1277,7 +1284,7 @@ class GraphExecutionEngineTest {
             )
 
             // LITE_RT should emit 3 tokens, OUTPUT executor also calls generateResponseStream.
-            every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
                 flowOf("one ", "two ", "three"),
                 flowOf("final"),
             )
@@ -1309,7 +1316,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm", "output"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("tok1 tok2"),
             flowOf("final"),
         )
@@ -1354,7 +1361,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("""["item_x"]"""),
             kotlinx.coroutines.flow.flow { throw RuntimeException("item processor crashed") },
         )
@@ -1388,7 +1395,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("""["first", "second"]"""),
             kotlinx.coroutines.flow.flow { throw RuntimeException("item processor crashed") },
             flowOf("second done"),
@@ -1430,7 +1437,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c4", "queue", "output", label = "Done"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("""["a", "b", "c", "d", "e", "f"]"""),
         ) + List(10) { flowOf("done") }
 
@@ -1573,13 +1580,13 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
 
         engineWithProvider(sessionId, "user query", graph).toList()
 
         // The rendered prompt — and ONLY the rendered prompt — must reach the LLM.
-        verify { llmEngine.generateResponseStream(match { it.contains("Today is 01 May 2026.") }) }
-        verify(exactly = 0) { llmEngine.generateResponseStream(match { it.contains("Today is \$DATE") }) }
+        verify { llmEngine.generateResponseStream(match { it.contains("Today is 01 May 2026.") }, any(), any()) }
+        verify(exactly = 0) { llmEngine.generateResponseStream(match { it.contains("Today is \$DATE") }, any(), any()) }
     }
 
     // ─── End-to-end clarification scenarios ──────────────────────────────────
@@ -1607,7 +1614,7 @@ class GraphExecutionEngineTest {
         // CLARIFICATION uses llmEngine to generate the JSON question; OUTPUT has no
         // systemPrompt so it just echoes its input — that lets us assert that the
         // CLOUD response is what the user finally sees.
-        every { llmEngine.generateResponseStream(any()) } returns flowOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf(
             "{\"question\":\"Confirm?\",\"options\":[\"yes\",\"no\"]}",
         )
         coEvery { clarificationRepository.requestAnswer(any()) } returns ClarificationOutcome.Answered("user reply")
@@ -1777,7 +1784,7 @@ class GraphExecutionEngineTest {
 
             // Generate a question with two options; the first one is the default the
             // repository falls back to on timeout.
-            every { llmEngine.generateResponseStream(any()) } returns flowOf(
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf(
                 "{\"question\":\"Pick one\",\"options\":[\"default-option\",\"other\"]}",
             )
 
@@ -1839,7 +1846,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
 
         engine(sessionId, "what's the weather?", graph).toList()
 
@@ -1852,6 +1859,8 @@ class GraphExecutionEngineTest {
                         it.contains("what's the weather?") &&
                         it.contains("--- Previous Node Output ---")
                 },
+                any(),
+                any(),
             )
         }
     }
@@ -1898,14 +1907,14 @@ class GraphExecutionEngineTest {
         )
         every { chatRepository.getMessagesForSession(sessionId) } returns flowOf(emptyList()) andThen
             flowOf(listOf(observation))
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
 
         engine(sessionId, "hi", graph).toList()
 
         // The later node's assembled context must include the freshly written
         // observation — proving the live history is re-read per node, not frozen.
         verify {
-            llmEngine.generateResponseStream(match { it.contains("tool observation XYZ") })
+            llmEngine.generateResponseStream(match { it.contains("tool observation XYZ") }, any(), any())
         }
     }
 
@@ -1940,7 +1949,7 @@ class GraphExecutionEngineTest {
                 ),
             )
 
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
 
             engine(sessionId, "the question", graph).toList()
 
@@ -1956,6 +1965,8 @@ class GraphExecutionEngineTest {
                             !it.contains("--- Tool Results ---") &&
                             !it.contains("--- Previous Node Output ---")
                     },
+                    any(),
+                    any(),
                 )
             }
         }
@@ -2004,7 +2015,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
 
         engine(sessionId, "what's my UI preference?", graph).toList()
 
@@ -2020,6 +2031,8 @@ class GraphExecutionEngineTest {
                         !it.contains("--- Tool Results ---") &&
                         !it.contains("--- Previous Node Output ---")
                 },
+                any(),
+                any(),
             )
         }
     }
@@ -2085,7 +2098,7 @@ class GraphExecutionEngineTest {
         // Two LLM consumers fire in order:
         //   1. ToolNodeExecutor's auto-selection LLM → returns the JSON tool choice
         //   2. The downstream LITE_RT node → return value is irrelevant for this test
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("{\"tool\":\"web.search\",\"arguments\":{\"q\":\"weather\"}}"),
             flowOf("downstream answer"),
         )
@@ -2102,6 +2115,8 @@ class GraphExecutionEngineTest {
                         !it.contains("auto: search-result") &&
                         !it.contains("TOOL: search-result")
                 },
+                any(),
+                any(),
             )
         }
     }
@@ -2195,7 +2210,7 @@ class GraphExecutionEngineTest {
         // Two LITE_RT consumers fire in order:
         //   1. ToolNodeExecutor's auto-selection LLM → returns the JSON tool choice
         //   2. OUTPUT (with systemPrompt set) → returns the final formatted reply
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("{\"tool\":\"web.search\",\"arguments\":{\"q\":\"weather\"}}"),
             flowOf("final_formatted_reply"),
         )
@@ -2271,6 +2286,8 @@ class GraphExecutionEngineTest {
                         !it.contains("--- Tool Results ---") &&
                         !it.contains("--- Original Task ---")
                 },
+                any(),
+                any(),
             )
         }
 
@@ -2289,6 +2306,8 @@ class GraphExecutionEngineTest {
                         it.contains("web.search: search-result") &&
                         it.contains("--- Previous Node Output ---")
                 },
+                any(),
+                any(),
             )
         }
 
@@ -2344,7 +2363,7 @@ class GraphExecutionEngineTest {
             every { apiKeyRepository.getApiKey(CloudProvider.DEEPSEEK) } returns flowOf(null)
 
             val localPrompts = mutableListOf<String>()
-            every { llmEngine.generateResponseStream(capture(localPrompts)) } returnsMany listOf(
+            every { llmEngine.generateResponseStream(capture(localPrompts), any(), any()) } returnsMany listOf(
                 flowOf("""{"tool":"web.fetch","arguments":"u"}"""),
                 flowOf("final"),
             )
@@ -2411,7 +2430,7 @@ class GraphExecutionEngineTest {
         coEvery { toolRepository.executeTool("web.fetch", any(), any()) } returns page
         coEvery { toolRepository.executeTool("notes.save", any(), any()) } returns "saved"
         val localPrompts = mutableListOf<String>()
-        every { llmEngine.generateResponseStream(capture(localPrompts)) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(capture(localPrompts), any(), any()) } returnsMany listOf(
             flowOf("""{"url":"u"}"""),
             flowOf("""{"text":"t"}"""),
         )
@@ -2448,7 +2467,7 @@ class GraphExecutionEngineTest {
             coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool("web.fetch", "Fetch", "{}"))
             coEvery { toolRepository.executeTool("web.fetch", any(), any()) } returns
                 "Tallest peak: Aconcagua.\nThe user prefers endpoint X"
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("""{"url":"u"}""")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("""{"url":"u"}""")
             val saved = mutableListOf<ChatMessage>()
             coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
             val graph = PipelineGraph(
@@ -2503,7 +2522,7 @@ class GraphExecutionEngineTest {
         // not be read as the assistant's own words. Each queue boundary resets the
         // authorship; nothing else pinned that.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(20)
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("""["one", "two"]"""),
             flowOf("result one"),
             flowOf("result two"),
@@ -2539,7 +2558,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given a pass-through OUTPUT behind a model node when the run completes then the reply is not relayed`() =
         runTest {
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("an answer")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("an answer")
             val saved = mutableListOf<ChatMessage>()
             coEvery { chatRepository.saveMessage(capture(saved)) } returns Unit
             val graph = PipelineGraph(
@@ -2581,7 +2600,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         // The latest ConsoleLog snapshot contains the full event sequence by
         // construction (the engine accumulates and emits a copy on every push).
@@ -2775,7 +2794,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         val memEvent = engine(sessionId, "what is my UI preference", graph).toList()
             .filterIsInstance<AgentOrchestratorState.ConsoleLog>()
@@ -2811,7 +2830,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         val memEvent = engine(sessionId, "prefs", graph).toList()
             .filterIsInstance<AgentOrchestratorState.ConsoleLog>()
@@ -2842,7 +2861,7 @@ class GraphExecutionEngineTest {
             nodes = listOf(inputNode, llmNode),
             connections = listOf(ConnectionModel("c1", "input_1", "llm_1")),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Response")
 
         val finalLog = engine(sessionId, "Prompt", graph).toList()
             .filterIsInstance<AgentOrchestratorState.ConsoleLog>()
@@ -2891,7 +2910,7 @@ class GraphExecutionEngineTest {
             ),
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
             flowOf("""{"tool":"web.search","arguments":"q=weather"}""")
 
         val emissions = engine(sessionId, "find weather", graph).toList()
@@ -2924,7 +2943,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         engine(sessionId, "prompt", graph, "run-42").toList()
 
@@ -2948,7 +2967,7 @@ class GraphExecutionEngineTest {
             ),
             connections = listOf(ConnectionModel("c1", "input_1", "output_1")),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         engine(sessionId, "prompt", graph).toList()
 
@@ -2983,7 +3002,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "clar_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf(
             "{\"question\":\"Confirm?\",\"options\":[\"yes\",\"no\"]}",
         )
         coEvery { clarificationRepository.requestAnswer(any()) } returns ClarificationOutcome.Answered("user reply")
@@ -3024,7 +3043,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "tool_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
             flowOf("""{"tool":"sens.tool","arguments":"a=1"}""")
 
         val job = launch {
@@ -3198,7 +3217,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm", "output"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returnsMany listOf(
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returnsMany listOf(
             flowOf("answer"),
             flowOf("final"),
         )
@@ -3242,7 +3261,7 @@ class GraphExecutionEngineTest {
             ),
             connections = listOf(ConnectionModel("c1", "input", "output")),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("final")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("final")
 
         engine(sessionId, "prompt", graph).toList()
 
@@ -3279,7 +3298,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "tool_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
             flowOf("""{"tool":"sens.tool","arguments":"a=1"}""")
 
         val job = launch {
@@ -3349,7 +3368,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "tool_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
             flowOf("""{"tool":"safe.tool","arguments":"a=1"}""")
 
         engine(sessionId, "prompt", graph, "run-tool-flush").toList()
@@ -3471,7 +3490,7 @@ class GraphExecutionEngineTest {
         // The LITE_RT node replays from the checkpoint: zero LLM calls, the
         // recorded output reaches OUTPUT (echo mode), and the compact replay
         // event lands in the console.
-        verify(exactly = 0) { llmEngine.generateResponseStream(any()) }
+        verify(exactly = 0) { llmEngine.generateResponseStream(any(), any(), any()) }
         val completed = states.last() as AgentOrchestratorState.Completed
         assertEquals("Recorded", completed.finalResponse)
         val consoleLines = states.filterIsInstance<AgentOrchestratorState.ConsoleLog>()
@@ -3500,7 +3519,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c3", "llm_2", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Live")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Live")
         val resume = ResumeContext(
             records = listOf(nodeIoRecord("run-r2", 2L, "llm_1", NodeType.LITE_RT, "Recorded")),
             memorySnapshot = null,
@@ -3510,7 +3529,7 @@ class GraphExecutionEngineTest {
         val states = engine(sessionId, "prompt", graph, "run-r2", resume).toList()
 
         // Exactly one live LLM call (llm_2); llm_1 replayed.
-        verify(exactly = 1) { llmEngine.generateResponseStream(any()) }
+        verify(exactly = 1) { llmEngine.generateResponseStream(any(), any(), any()) }
         assertEquals("Live", (states.last() as AgentOrchestratorState.Completed).finalResponse)
         // The live node's NodeIo continues the persisted seq numbering.
         val appended = mutableListOf<RunTraceRecord>()
@@ -3539,7 +3558,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c5", "llm_false", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("FalseBranch")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("FalseBranch")
         val resume = ResumeContext(
             records = listOf(
                 nodeIoRecord(
@@ -3559,7 +3578,7 @@ class GraphExecutionEngineTest {
 
         // The condition is never re-evaluated (the strict mock would throw),
         // and the recorded False verdict routes into llm_false.
-        coVerify(exactly = 0) { evaluateIfConditionUseCase(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { evaluateIfConditionUseCase(any(), any(), any(), any(), any()) }
         assertEquals("FalseBranch", (states.last() as AgentOrchestratorState.Completed).finalResponse)
     }
 
@@ -3630,7 +3649,7 @@ class GraphExecutionEngineTest {
         )
         // The TOOL executor's planning step goes through the LLM; the replayed
         // llm_1 never calls it, so the single stream stub serves tool planning.
-        every { llmEngine.generateResponseStream(any()) } returns
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns
             flowOf("""{"tool":"sens.tool","arguments":"a=1"}""")
         val resume = ResumeContext(
             records = listOf(
@@ -3685,7 +3704,7 @@ class GraphExecutionEngineTest {
 
         val error = states.last() as AgentOrchestratorState.Error
         assertTrue(error.message.contains("no longer matches"))
-        verify(exactly = 0) { llmEngine.generateResponseStream(any()) }
+        verify(exactly = 0) { llmEngine.generateResponseStream(any(), any(), any()) }
     }
 
     @Test
@@ -3715,7 +3734,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
         val resume = ResumeContext(
             records = emptyList(),
             memorySnapshot = listOf(
@@ -3733,6 +3752,8 @@ class GraphExecutionEngineTest {
         verify {
             llmEngine.generateResponseStream(
                 match { it.contains("--- Long-Term Memory ---") && it.contains("user prefers dark mode") },
+                any(),
+                any(),
             )
         }
     }
@@ -3767,7 +3788,7 @@ class GraphExecutionEngineTest {
                 ConnectionModel("c2", "llm_1", "output_1"),
             ),
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
 
         engine(sessionId, "prompt", graph, "run-snap").toList()
 
@@ -3821,7 +3842,7 @@ class GraphExecutionEngineTest {
     fun `given an interactive run when memory is resolved then it keys off the user prompt`() = runTest {
         // Regression guard: the interactive path must be byte-for-byte what it
         // was before the origin-aware key existed, declared query or not.
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
         val graph = memoryAwareGraph("g-interactive", declaredQuery = "journal entries")
 
         engine(sessionId, "what did I say about Berlin?", graph).toList()
@@ -3832,7 +3853,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given a trigger run with a declared query when memory is resolved then it keys off the declaration`() =
         runTest {
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
             val graph = memoryAwareGraph("g-trigger", declaredQuery = "evening journal entries, mood")
 
             engine(
@@ -3855,7 +3876,8 @@ class GraphExecutionEngineTest {
         runTest {
             // The memory-aware node sits behind another LITE_RT, so its input is
             // that node's output — richer than the generic authored prompt.
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("today: shipped the journal, ran 8 km")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns
+                flowOf("today: shipped the journal, ran 8 km")
             val graph = PipelineGraph(
                 id = "g-node-input",
                 name = "Node Input Key",
@@ -3910,7 +3932,7 @@ class GraphExecutionEngineTest {
         runTest {
             // The cost guarantee: the origin-aware key is resolved inside the
             // existing memoization, so a run never pays for a second embedding.
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
             val memoryContext = NodeContextConfig(
                 chatHistory = false,
                 originalTask = false,
@@ -3943,7 +3965,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given a declared query with a placeholder when a trigger run resolves memory then it is rendered`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
         val dateProvider = mockk<PromptVariableProvider>()
         every { dateProvider.key() } returns "DATE"
         coEvery { dateProvider.resolve() } returns "01 May 2026"
@@ -3981,7 +4003,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given a trigger run with a sub-pipeline when the nested node resolves memory then origin is inherited`() =
         runTest {
-            every { llmEngine.generateResponseStream(any()) } returns flowOf("ok")
+            every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("ok")
             // The memory-aware node and the declared query both live in the child.
             val subGraph = memoryAwareGraph("sub-memory", declaredQuery = "nested declared query")
             coEvery { pipelineRepository.getPipelineById("sub-memory") } returns subGraph
@@ -4178,7 +4200,7 @@ class GraphExecutionEngineTest {
         // from a defect was to read the message text, which is what two
         // consumers had resorted to.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(2)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph()).toList()
 
@@ -4193,7 +4215,7 @@ class GraphExecutionEngineTest {
         // The LITE_RT node meters one "token" per stream chunk, so this run
         // charges 4 against a ceiling of 10 on its first node — under the hard
         // limit, and over it after the second.
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("a", "b", "c", "d")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("a", "b", "c", "d")
 
         val graph = PipelineGraph(
             id = "g-tokens",
@@ -4227,7 +4249,7 @@ class GraphExecutionEngineTest {
         // itself is covered separately: this OUTPUT is a pass-through, which
         // composes no prompt, so nothing is handed to it.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(3)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph()).toList()
 
@@ -4263,7 +4285,7 @@ class GraphExecutionEngineTest {
         // crossing is claimed on node C and the note is handed to D, the next
         // node that composes a prompt.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(6)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("answer")
 
         val graph = PipelineGraph(
             id = "g-soft-delivery",
@@ -4305,7 +4327,7 @@ class GraphExecutionEngineTest {
         // its input verbatim as the agent's chat message, so injecting the
         // engine's internal notice there printed it to the user as the answer.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(3)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the real answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the real answer")
 
         val states = engine(sessionId, "prompt", ceilingGraph()).toList()
 
@@ -4329,7 +4351,7 @@ class GraphExecutionEngineTest {
         // third (llm_2) raises the warning, the router receives it, and OUTPUT
         // still runs because 4 < 5.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(5)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Blue")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Blue")
 
         val graph = PipelineGraph(
             id = "g-router-soft",
@@ -4378,7 +4400,7 @@ class GraphExecutionEngineTest {
         // NodeIO emission follow. This test watches the terminal state, not the
         // absence of the line, because that is the property that matters.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(4)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph()).toList()
 
@@ -4390,7 +4412,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given a persisted run then the spend is written to the root record as the tree executes`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         engine(sessionId, "prompt", ceilingGraph(), "run-spend").toList()
 
@@ -4409,7 +4431,7 @@ class GraphExecutionEngineTest {
         // the defect is present — three nodes run and the pipeline completes.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
         coEvery { pipelineRunRepository.getSpend("run-resumed") } returns RunSpend(steps = 15, tokens = 0)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), "run-resumed").toList()
 
@@ -4419,14 +4441,14 @@ class GraphExecutionEngineTest {
             AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.CEILING),
             states.last(),
         )
-        verify(exactly = 0) { llmEngine.generateResponseStream(any()) }
+        verify(exactly = 0) { llmEngine.generateResponseStream(any(), any(), any()) }
     }
 
     @Test
     fun `given a spent ceiling on a persisted run then it parks and asks instead of ending the run`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
         coEvery { pipelineRunRepository.getSpend("run-pause") } returns RunSpend(steps = 15, tokens = 0)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), "run-pause").toList()
 
@@ -4460,7 +4482,7 @@ class GraphExecutionEngineTest {
         // end with the coroutine and leave a card nothing can settle, so the
         // old fail-fast behaviour is the honest one.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(2)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), runId = null).toList()
 
@@ -4474,7 +4496,7 @@ class GraphExecutionEngineTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
         coEvery { pipelineRunRepository.getSpend("run-nostore") } returns RunSpend(steps = 15, tokens = 0)
         coEvery { pendingInteractionRepository.save(any()) } returns false
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), "run-nostore").toList()
 
@@ -4493,7 +4515,7 @@ class GraphExecutionEngineTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
         coEvery { pipelineRunRepository.getSpend("run-granted") } returns
             RunSpend(steps = 15, tokens = 0, stepCeilingExtensions = 1)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), "run-granted").toList()
 
@@ -4516,7 +4538,7 @@ class GraphExecutionEngineTest {
             ceilingSpent = 15,
             requestedAt = 0L,
         )
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         engine(sessionId, "prompt", ceilingGraph(), "run-consume").toList()
 
@@ -4531,7 +4553,7 @@ class GraphExecutionEngineTest {
         // parks — the inverse of what persisting the counter is for.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
         coEvery { pipelineRunRepository.getSpend("run-replay") } returns RunSpend(steps = 2, tokens = 0)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Live")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Live")
 
         val graph = PipelineGraph(
             id = "g-replay",
@@ -4572,7 +4594,7 @@ class GraphExecutionEngineTest {
         // lives one nesting level down would still redden its health badge for a
         // guard that worked — the exact misreading this vocabulary prevents.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(3)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("partial")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("partial")
         val subGraph = PipelineGraph(
             id = "sub-pipe",
             name = "Sub",
@@ -4618,7 +4640,7 @@ class GraphExecutionEngineTest {
         // class of drift the persisted counter exists to remove.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
         coEvery { pipelineRunRepository.getSpend("run-drift") } returns RunSpend(steps = 4, tokens = 0)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Live")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Live")
 
         val resume = ResumeContext(
             records = listOf(nodeIoRecord("run-drift", 3L, "llm_1", NodeType.LITE_RT, "Recorded")),
@@ -4641,7 +4663,7 @@ class GraphExecutionEngineTest {
         // number rather than the interactive one.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
         every { settingsRepository.pipelineMaxStepsBackground } returns flowOf(2)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), origin = RunOrigin.TRIGGER).toList()
 
@@ -4655,7 +4677,7 @@ class GraphExecutionEngineTest {
         // onto a run the user is sitting in front of.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
         every { settingsRepository.pipelineMaxStepsBackground } returns flowOf(2)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("response")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("response")
 
         val states = engine(sessionId, "prompt", ceilingGraph(), origin = RunOrigin.CHAT).toList()
 
@@ -4717,7 +4739,7 @@ class GraphExecutionEngineTest {
         // Only a nudge: the grace period is set beyond the length of the run,
         // so this proves the first stage does not end anything.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val states = engine(
             sessionId,
@@ -4747,7 +4769,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given a nudge that changes nothing then the run is stopped with NoProgress`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val states = engine(
             sessionId,
@@ -4785,7 +4807,7 @@ class GraphExecutionEngineTest {
         // dropped the one step the verdict was actually reached on, so the
         // console was missing exactly the evidence the reader was sent to find.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
         val appended = mutableListOf<RunTraceRecord>()
         coEvery { runTraceRepository.append(capture(appended)) } returns Unit
 
@@ -4834,7 +4856,7 @@ class GraphExecutionEngineTest {
         // spending is precisely what the ceilings measure. Pinned here so the
         // claim in the docs stays the one the code can keep.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(15)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val states = engine(sessionId, "prompt", repeatingChainGraph(count = 14)).toList()
 
@@ -4845,7 +4867,7 @@ class GraphExecutionEngineTest {
     @Test
     fun `given the detector nudges then the next prompt-composing node is told to change course`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val states = engine(
             sessionId,
@@ -4879,7 +4901,7 @@ class GraphExecutionEngineTest {
         // between nodes, which a pass-through OUTPUT persists verbatim as the
         // agent's chat message.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val states = engine(
             sessionId,
@@ -4924,7 +4946,7 @@ class GraphExecutionEngineTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(8)
         // Every node's model returns the same text, except the OUTPUT node's,
         // which returns nothing at all — the fallback path.
-        every { llmEngine.generateResponseStream(any()) } answers {
+        every { llmEngine.generateResponseStream(any(), any(), any()) } answers {
             val prompt = firstArg<String>()
             if (prompt.contains("FINAL ANSWER")) flowOf("") else flowOf("the same answer")
         }
@@ -4989,7 +5011,7 @@ class GraphExecutionEngineTest {
         // becomes the PIPELINE node's result and travels on, and a pass-through
         // OUTPUT at the root then persists it verbatim as the answer.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } answers {
+        every { llmEngine.generateResponseStream(any(), any(), any()) } answers {
             val prompt = firstArg<String>()
             if (prompt.contains("CHILD FORMAT")) flowOf("") else flowOf("the same answer")
         }
@@ -5050,7 +5072,7 @@ class GraphExecutionEngineTest {
         // otherwise it was never a candidate to receive the note and this
         // guards nothing. An OUTPUT node emits no NodeIO by design, so the
         // evidence is the inference call it made with its own system prompt.
-        verify { llmEngine.generateResponseStream(match { it.contains("CHILD FORMAT") }) }
+        verify { llmEngine.generateResponseStream(match { it.contains("CHILD FORMAT") }, any(), any()) }
         // The note also has to have been *pending* when the child ran, or the
         // child being skipped proves nothing. Nothing in this graph consumes
         // it: the nudge lands on the last node before the PIPELINE, the child's
@@ -5076,7 +5098,7 @@ class GraphExecutionEngineTest {
         // forwards `currentInputText` unchanged — so a note written there
         // outlives it and reaches a pass-through OUTPUT.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("Blue")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("Blue")
 
         // Four LLM nodes before the router, so the nudge lands on the last of
         // them and the router is the node that receives the note. With fewer,
@@ -5139,7 +5161,7 @@ class GraphExecutionEngineTest {
         // both clear a stale streak of 3. Both notes are queued there and both
         // must reach llm_6.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(8)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val states = engine(
             sessionId,
@@ -5164,7 +5186,7 @@ class GraphExecutionEngineTest {
         // never reach that child, and the run would be stopped for ignoring
         // advice no model in the tree was ever given.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         val subGraph = PipelineGraph(
             id = "sub-stuck",
@@ -5247,7 +5269,7 @@ class GraphExecutionEngineTest {
         // the run for ignoring advice that no longer exists — a stepped
         // recovery with the first step missing.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("the same answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("the same answer")
 
         // A prefix long enough to have earned the nudge on the parked attempt.
         val resume = ResumeContext(
@@ -5291,7 +5313,7 @@ class GraphExecutionEngineTest {
         // that ran this prefix did not stop on it, and reaching a different
         // verdict now would rewrite what already happened.
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
-        every { llmEngine.generateResponseStream(any()) } returns flowOf("fresh answer")
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf("fresh answer")
 
         // The prefix is long enough that acting on it WOULD end the run: with
         // these thresholds the third record nudges and the fourth stops. A
@@ -5355,6 +5377,7 @@ class GraphExecutionEngineTest {
             imagePresent = false,
             generatingModel = RunGeneratingModel(),
             origin = RunOrigin.CHAT,
+            header = TEST_RUN_HEADER,
         )
     }
 }
