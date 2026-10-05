@@ -39,6 +39,7 @@ import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.Identity
 import app.knotwork.android.domain.models.LocalModel
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySummary
 import app.knotwork.android.domain.models.ModelPerformanceSample
@@ -143,10 +144,14 @@ import javax.inject.Provider
  * @param scenario The scenario to run.
  * @param attemptLimitMs Virtual time one engine invocation may take; far above any scenario's
  *   real need (the longest waits out one 60-second clarification window).
+ * @param samplingOverride The seed and sampler the run is started again with, as the queue
+ *   passes a task's own; `null` — every golden scenario — for the harness's fixed seed and the
+ *   settings' sampler.
  */
 internal class GoldenTraceHarness(
     private val scenario: GoldenScenario,
     private val attemptLimitMs: Long = ATTEMPT_LIMIT_MS,
+    private val samplingOverride: LocalSampling? = null,
 ) {
 
     private val log = GoldenEventLog()
@@ -332,6 +337,7 @@ internal class GoldenTraceHarness(
                 resume = resume,
                 runHadImage = runs.getRun(task.id)?.hadImage == true,
                 origin = task.origin,
+                samplingOverride = samplingOverride,
             ).collect { state ->
                 if (ending == GoldenOutcome.COMPLETED || ending == GoldenOutcome.ERROR) {
                     log.record("after the terminal state:")

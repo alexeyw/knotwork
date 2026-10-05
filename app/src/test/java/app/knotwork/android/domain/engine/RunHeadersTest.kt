@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.engine
 
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.repositories.GenerationSettings
@@ -37,6 +38,25 @@ class RunHeadersTest {
                 seed = 42,
                 // The slider's 0.7, not the 0.699999988079071 a plain toDouble() exposes.
                 sampler = RunSampler(temperature = 0.7, topK = 40, topP = 0.9),
+                appVersion = "0.12.0 (17)",
+                runtimeVersion = "LiteRT-LM 0.17.1",
+                device = "Samsung SM-S938B · Android 16",
+            ),
+            header,
+        )
+    }
+
+    @Test
+    fun `given a recorded seed and sampler when a run starts again then its header takes both`() = runTest {
+        val recorded = LocalSampling(RunSampler(temperature = 0.3, topK = 12, topP = 0.5), seed = 1_482_913)
+
+        val header = RunHeaders(settings, { error("a run started again draws no seed") }, environment)
+            .fresh(samplingOverride = recorded)
+
+        assertEquals(
+            RunHeader(
+                seed = 1_482_913,
+                sampler = recorded.sampler,
                 appVersion = "0.12.0 (17)",
                 runtimeVersion = "LiteRT-LM 0.17.1",
                 device = "Samsung SM-S938B · Android 16",

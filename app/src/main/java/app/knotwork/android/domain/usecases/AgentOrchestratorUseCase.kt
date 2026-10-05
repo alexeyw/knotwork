@@ -3,6 +3,7 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTask
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.TaskPriority
@@ -84,6 +85,10 @@ class AgentOrchestratorUseCase @Inject constructor(private val taskQueueManager:
      * @param origin What triggered the run. Defaults to [RunOrigin.CHAT] for an
      *   interactive message; the share target passes [RunOrigin.SHARE] so the
      *   persistent record attributes the foreground run to the share surface.
+     * @param persistUserMessage Whether the run writes the user message into the
+     *   chat; `false` re-runs a turn whose message is already stored.
+     * @param samplingOverride The seed and sampler of a recorded run, when this run
+     *   starts it again with them; `null` for a fresh seed and the current sampler.
      * @return A [Flow] of [AgentOrchestratorState] emitting the progress of the agent.
      */
     operator fun invoke(
@@ -94,6 +99,7 @@ class AgentOrchestratorUseCase @Inject constructor(private val taskQueueManager:
         displayContent: String? = null,
         origin: RunOrigin = RunOrigin.CHAT,
         persistUserMessage: Boolean = true,
+        samplingOverride: LocalSampling? = null,
     ): Flow<AgentOrchestratorState> {
         val task = AgentTask(
             sessionId = sessionId,
@@ -104,6 +110,7 @@ class AgentOrchestratorUseCase @Inject constructor(private val taskQueueManager:
             displayContent = displayContent,
             origin = origin,
             persistUserMessage = persistUserMessage,
+            samplingOverride = samplingOverride,
         )
         taskQueueManager.enqueueTask(task)
         return taskQueueManager.observeTaskState(sessionId)

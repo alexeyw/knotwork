@@ -38,7 +38,9 @@ import org.junit.Test
  */
 class PlanRunVerificationUseCaseTest {
 
-    private val runs: PipelineRunRepository = mockk()
+    private val runs: PipelineRunRepository = mockk {
+        coEvery { getDescendantRuns(any()) } returns emptyList()
+    }
     private val traces = mutableMapOf<String, List<RunTraceRecord>>()
     private val trace: RunTraceRepository = mockk {
         coEvery { getTraceForRun(any()) } answers
@@ -64,7 +66,8 @@ class PlanRunVerificationUseCaseTest {
         every { localModelBackend } answers { flowOf(backend) }
         every { maxContextLength } answers { flowOf(window) }
     }
-    private val planner = PlanRunVerificationUseCase(runs, trace, models, pipelines, settings)
+    private val planner =
+        PlanRunVerificationUseCase(ReadRecordedRunTreeUseCase(runs, trace), models, pipelines, settings)
 
     private fun givenRun(vararg records: RunTraceRecord, status: PipelineRunStatus = PipelineRunStatus.COMPLETED) {
         coEvery { runs.getRun(ROOT) } returns run(status = status)

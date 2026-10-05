@@ -3,8 +3,9 @@ package app.knotwork.android.architecture
 /**
  * The import prefixes that mean "this file can speak to the network", shared by every
  * guard that asks the question: the allow-list [NetworkEgressInventoryKonsistTest] and
- * the three deny-lists ([JournalExportNoNetworkKonsistTest],
- * [PromptPackNoNetworkKonsistTest], [UsageTelemetryNoNetworkKonsistTest]).
+ * the four deny-lists ([JournalExportNoNetworkKonsistTest],
+ * [RunTraceExportNoNetworkKonsistTest], [PromptPackNoNetworkKonsistTest],
+ * [UsageTelemetryNoNetworkKonsistTest]).
  *
  * **One list because four copies drifted as one.** Each guard used to carry its own
  * copy of the same five prefixes, so a namespace missing from one was missing from all

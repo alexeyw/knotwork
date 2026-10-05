@@ -892,12 +892,24 @@ recorded on-device model calls** — never the graph, a tool or a cloud model.
 
 ```mermaid
 flowchart LR
-    Plan["PlanRunVerificationUseCase<br/>record only"] -- "Available(plan)" --> Verify["VerifyRunUseCase<br/>repeat each call"]
-    Plan -. reads .-> Record[("pipeline_runs · trace_steps · model_calls")]
+    Record[("pipeline_runs · trace_steps · model_calls")] -. reads .-> Tree["ReadRecordedRunTreeUseCase<br/>RecordedRunTree"]
+    Tree --> Plan["PlanRunVerificationUseCase<br/>record only"]
+    Plan -- "Available(plan)" --> Verify["VerifyRunUseCase<br/>repeat each call"]
     Plan -. reads .-> Registry[("local_models<br/>checksum + stamp")]
     Verify --> Load["LoadModelUseCase"]
     Verify --> Engine["LlmInferenceEngine<br/>recorded prompt · sampler · seed"]
+    Tree --> Digest["RunDigest<br/>SHA-256 chain"]
+    Tree --> Export["ExportRunTraceUseCase<br/>JSON document"]
+    Digest --> Export
+    Again["PlanRunAgainWithSeedUseCase"] -- "RunAgainRequest" --> Queue["AgentTask.samplingOverride<br/>→ engine → run header"]
 ```
+
+Every reader of a finished run as a whole goes through one reading of it:
+`ReadRecordedRunTreeUseCase` returns the root run, its sub-pipeline runs and each
+run's trace in `seq` order as a `RecordedRunTree`, which places a sub-pipeline run
+under the `PIPELINE` visit that started it — the visit of a `PIPELINE` node that
+failed and wrote no record included. The check, the digest and the export all walk
+it, so they cannot disagree about the shape of a run.
 
 1. **Plan.** `PlanRunVerificationUseCase` reads the run tree, its traces, the model
    registry and the generation settings, and loads nothing. It refuses a run that
@@ -920,6 +932,27 @@ flowchart LR
    constructor dependency and any mention of a tool, an executor or the graph
    engine, and `RunVerificationGoldenTest` runs the check on a real run with the
    tool catalogue set to fail on any call.
+4. **Digest.** `RunDigest` chains SHA-256 over a finished run's content records in
+   `seq` order — each node's input and output hashes, each on-device call's prompt
+   and output hashes, each cloud call's provider and model — with every field
+   length-prefixed and the scheme tag `knotwork-digest-v1` first. A sub-pipeline's
+   digest is folded into the record of its `PIPELINE` visit. Times, durations, ids,
+   seeds, the sampler, the model file and console lines stay out, so a repeat with
+   the same content has the same digest. It is computed when read, never stored;
+   a run still going or recorded before headers has none.
+5. **Export.** `ExportRunTraceUseCase` renders a finished run through
+   `BuildRunTraceExportUseCase`: one JSON document with the header, every record of
+   every run in tree order — full prompts and outputs with their hashes, the seed
+   and sampler, the model file's name and SHA-256 — and the digest with its scheme.
+   It is built before the export surface opens, so the surface can show its size.
+   The path imports no network client (`RunTraceExportNoNetworkKonsistTest`).
+6. **Start again with the seed.** `PlanRunAgainWithSeedUseCase` offers a finished
+   chat or share run without an image whose pipeline still exists, and returns the
+   run's message, pipeline, seed and sampler. The new run carries them as
+   `AgentTask.samplingOverride`; the queue hands them to the engine, whose
+   `RunHeaders.fresh` takes them instead of a fresh seed and the current sampler —
+   unless the run already has a header, as a resumed one does. Everything else is
+   read again: it is a new run on today's inputs.
 
 ## 4. Integrations
 

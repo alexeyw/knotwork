@@ -464,6 +464,7 @@ flag them with spurious, environment-dependent violations.
 | `UsageTelemetryNoNetworkKonsistTest` | No file on the local usage-telemetry path imports a network client. The statistics stay on-device. |
 | `PromptPackNoNetworkKonsistTest`   | No file on the prompt-pack path imports a network client — a pack is imported from a file the user picked, never fetched (see below). |
 | `JournalExportNoNetworkKonsistTest` | No file on the journal-export path imports a network client — the trigger and external-request journals leave the device only through the share sheet or a file the user picked (see below). |
+| `RunTraceExportNoNetworkKonsistTest` | No file on the run-trace-export path imports a network client — a run's trace (every prompt the on-device model read, with its answers and hashes) leaves the device only through the share sheet or a file the user picked. Same three instruments as the journal-export rule (see below). |
 | `NetworkEgressInventoryKonsistTest` | Every shipping file (every production source set of `app` and `:catalog`) that imports a network client is named in an inventory, with either the `PRIVACY.md` section describing what leaves the device along it or the reason it opens nothing — and, for an egress, what the More tab's privacy indicator sees of it (see below). |
 | `KoogClientTimeoutKonsistTest`     | Every construction of a Koog model client passes the shared deadlines (`CloudClientTimeouts.CONFIG`); without them Koog's 900 s request and socket defaults apply, which the embedding clients once did. |
 | `ContentUriReadInventoryTest`      | Every file that opens a URI through `ContentResolver` is inventoried with where the URI comes from; one another app can supply must pass `ForeignContentUri` (another app's `content://` only), since the read runs with this app's identity. |
@@ -497,9 +498,9 @@ catch: reintroducing a `domain -> data` import (or an `android.*` import in
 `domain`) turns both `LayerDependencyKonsistTest` and
 `DomainPurityKonsistTest` red — verified during the suite's introduction.
 
-**The three no-network rules, and the trap they share.**
-`UsageTelemetryNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest` and
-`JournalExportNoNetworkKonsistTest`
+**The four no-network rules, and the trap they share.**
+`UsageTelemetryNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest`,
+`JournalExportNoNetworkKonsistTest` and `RunTraceExportNoNetworkKonsistTest`
 select their files by name and path, and a filter of that shape goes stale in
 silence: a new file on the same logical path, named something the filter does
 not match, is simply unguarded and nothing says so. The prompt-pack rule closes
@@ -517,10 +518,11 @@ two `Export…JournalUseCase`s and both journal screens unguarded, because none 
 them carries the export token in its own name. The filter now also matches on
 *imports* containing that token, and a third test pins the token to the real
 declarations' names — so a rename fails loudly instead of quietly emptying the
-guarded set.
+guarded set. The run-trace-export rule was written with all three from its first
+day, keyed off the `RunTraceExport` token.
 
-**The allow-list rule, and the question the three deny-lists cannot answer.**
-The three rules above each say "this surface must never reach the network".
+**The allow-list rule, and the question the four deny-lists cannot answer.**
+The four rules above each say "this surface must never reach the network".
 Between them they say nothing about *which* surfaces do — and that is the
 question every privacy text in the repository answers in prose. The project
 shipped the same defect three times on that gap: a document listing the ways
@@ -537,9 +539,9 @@ goes out along it, or `None`, with the reason it starts no request — a URL bui
 a model descriptor, an interceptor on somebody else's client. A named section has
 to exist, and an entry naming no such file fails too, so the inventory cannot rot
 in either direction. Selection is by import rather than by name, which is what
-keeps it clear of the trap the three deny-lists share.
+keeps it clear of the trap the four deny-lists share.
 
-The import prefixes live in one list, `NetworkClientImports`, which all four rules
+The import prefixes live in one list, `NetworkClientImports`, which all five rules
 read. They used to be four copies of five prefixes, and a namespace missing from one
 was missing from all: the image loader (`coil3.`), the Firebase SDK and
 `android.webkit.` were. So was a whole source set — scoped to `app/src/main`, the

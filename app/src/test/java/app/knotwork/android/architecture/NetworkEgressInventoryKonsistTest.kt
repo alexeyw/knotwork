@@ -9,9 +9,10 @@ import java.util.ServiceLoader
 /**
  * Allow-list guard over every file that can open a network connection.
  *
- * **Why an allow-list, when three deny-lists already exist.**
- * [JournalExportNoNetworkKonsistTest], [PromptPackNoNetworkKonsistTest] and
- * [UsageTelemetryNoNetworkKonsistTest] each answer "this surface must never reach the
+ * **Why an allow-list, when four deny-lists already exist.**
+ * [JournalExportNoNetworkKonsistTest], [RunTraceExportNoNetworkKonsistTest],
+ * [PromptPackNoNetworkKonsistTest] and [UsageTelemetryNoNetworkKonsistTest] each answer
+ * "this surface must never reach the
  * network". None of them answers the question the public documents make a promise about:
  * *which* surfaces do. A deny-list is silent about a path nobody thought to name, and the
  * project has now shipped three rounds of the same defect — a privacy text listing the
