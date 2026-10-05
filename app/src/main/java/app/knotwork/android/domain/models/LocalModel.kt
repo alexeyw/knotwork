@@ -23,6 +23,11 @@ package app.knotwork.android.domain.models
  *   model screen. Voice input transcribes the clip with the active model *before*
  *   the pipeline runs; this flag gates that preprocessing step so a text-only
  *   model yields a calm "switch model" message instead of failing in native code.
+ * @property fileHash The SHA-256 of the model file with the stamp of the file it
+ *   was computed from, or `null` until the background pass has hashed it. Read
+ *   through `LocalModelRepository.currentFileHash`, which also checks the stamp
+ *   against the file on disk; the raw value may describe a file that has since
+ *   been replaced.
  */
 data class LocalModel(
     val id: Long = 0,
@@ -32,4 +37,5 @@ data class LocalModel(
     val isActive: Boolean,
     val supportsVision: Boolean = false,
     val supportsAudio: Boolean = false,
+    val fileHash: ModelFileHash? = null,
 )

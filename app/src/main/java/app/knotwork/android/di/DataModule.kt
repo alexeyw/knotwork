@@ -16,6 +16,7 @@ import app.knotwork.android.data.local.AudioCaptureStoreImpl
 import app.knotwork.android.data.local.DatabaseResetServiceImpl
 import app.knotwork.android.data.local.DownloadedModelFilesImpl
 import app.knotwork.android.data.local.ImageCaptureStoreImpl
+import app.knotwork.android.data.local.StreamingModelFileHasher
 import app.knotwork.android.data.local.TransientCacheSweeperImpl
 import app.knotwork.android.data.local.crypto.AeadCipher
 import app.knotwork.android.data.local.crypto.AndroidKeystoreAeadCipher
@@ -54,6 +55,7 @@ import app.knotwork.android.data.repositories.TriggerJournalRepositoryImpl
 import app.knotwork.android.data.repositories.TriggerRepositoryImpl
 import app.knotwork.android.data.repositories.UsageTelemetryRepositoryImpl
 import app.knotwork.android.data.services.WorkManagerMemoryReembedScheduler
+import app.knotwork.android.data.services.WorkManagerModelFileHashScheduler
 import app.knotwork.android.data.services.WorkManagerTriggerScheduler
 import app.knotwork.android.domain.connection.McpConnectionChecker
 import app.knotwork.android.domain.connection.ProviderConnectionChecker
@@ -99,6 +101,8 @@ import app.knotwork.android.domain.services.DatabaseResetService
 import app.knotwork.android.domain.services.DownloadedModelFiles
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.MemoryReembedScheduler
+import app.knotwork.android.domain.services.ModelFileHashScheduler
+import app.knotwork.android.domain.services.ModelFileHasher
 import app.knotwork.android.domain.services.NativeMemorySampler
 import app.knotwork.android.domain.services.TransientCacheSweeper
 import app.knotwork.android.domain.services.TriggerScheduler
@@ -504,6 +508,21 @@ abstract class DataModule {
      */
     @Binds
     abstract fun bindDownloadedModelFiles(files: DownloadedModelFilesImpl): DownloadedModelFiles
+
+    /**
+     * Binds [StreamingModelFileHasher] to [ModelFileHasher] — reads a model file
+     * through SHA-256 in chunks for the background hashing pass.
+     */
+    @Binds
+    abstract fun bindModelFileHasher(hasher: StreamingModelFileHasher): ModelFileHasher
+
+    /**
+     * Binds [WorkManagerModelFileHashScheduler] to [ModelFileHashScheduler] —
+     * enqueues the background pass that hashes installed model files.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindModelFileHashScheduler(scheduler: WorkManagerModelFileHashScheduler): ModelFileHashScheduler
 
     /**
      * Binds [AudioCaptureStoreImpl] to [AudioCaptureStore] — the ephemeral

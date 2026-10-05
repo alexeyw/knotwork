@@ -87,7 +87,7 @@ import app.knotwork.android.data.local.models.UsagePipelineDayEntity
         OnboardingMilestoneEntity::class,
         BackgroundPromptEntity::class,
     ],
-    version = 65,
+    version = 66,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -1592,6 +1592,25 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_64_65 = object : Migration(64, 65) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `relayed` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
+         * v65 → v66: adds the model file's SHA-256 to `local_models` — `sha256` and
+         * the stamp of the file it was computed from (`sha256FileSize`,
+         * `sha256FileModifiedAt`).
+         *
+         * The hash identifies the model a run used. It is computed once per file
+         * by a background pass, never per run, and the stamp tells a current hash
+         * from one of a file replaced since. All three columns are nullable with
+         * no back-fill: a row installed before this migration has never been
+         * hashed, and the start-up re-arm schedules the pass that hashes it.
+         */
+        val MIGRATION_65_66 = object : Migration(65, 66) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `local_models` ADD COLUMN `sha256` TEXT")
+                db.execSQL("ALTER TABLE `local_models` ADD COLUMN `sha256FileSize` INTEGER")
+                db.execSQL("ALTER TABLE `local_models` ADD COLUMN `sha256FileModifiedAt` INTEGER")
             }
         }
     }
