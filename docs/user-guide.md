@@ -1343,6 +1343,19 @@ returns the formatted result instead. Even then, its default context is just the
 tool results — so it re-formats only that reply. Enable the other context blocks
 in the node's config if a formatter genuinely needs them.
 
+A **Cloud** node's **Provider** and the **Engine** of a router, condition,
+decomposition, evaluation, tool or skill node are one field each: it shows the
+choice and, under it, the model it uses on this device. Tapping it opens the
+full list — **Auto** (Cloud) or **On-device** (Engine) first, then the hosted
+providers and the servers you run, each by name. A provider not set up on this
+device is marked **not configured on this device** and can still be chosen: a
+pipeline can run on another device. The line under the field says what happens
+if it is not set up where the pipeline runs — a Cloud node fails and names the
+reason; another node runs on the on-device model and writes a console line.
+**Auto** uses the first configured of Google, Anthropic, OpenAI and DeepSeek —
+never OpenRouter, Groq or your own server — and the field shows which one that
+is on this device.
+
 For the **IntentRouter** node, the Classes section in its config
 sheet lets you grow / shrink the class list: each row has a small
 **−** button to remove it (disabled below the 2-class minimum), and a
@@ -1849,6 +1862,14 @@ including any token you set in the Authentication section below.
 approved. Approval is remembered per address *and port* — approving
 `http://192.168.1.42:8080` does not approve port 3000 on the same machine,
 because that is a different server.
+
+**Test connection**, between the Authentication section and the buttons,
+connects with the values on the form, lists the server's tools and disconnects
+— before anything is saved; **Add server** is what saves. It answers with the
+number of tools, or with what went wrong: credentials rejected, an address that
+answers but not as an MCP server (the path is often `/mcp` or `/sse`), a server
+that accepted the connection but did not finish the MCP handshake in 30 seconds,
+or a host or port that cannot be reached.
 
 MCP connections open lazily — the app only contacts the server when
 a tool from it is needed — and they are wrapped in error-handling
@@ -2446,14 +2467,70 @@ The active on-device model, its backend, and external cloud providers.
   navigation.
 - **Manage** — opens the full Models browser to discover and install on-device
   models.
-- **External providers** *(Basic link)* — each provider (**OpenAI**,
-  **Anthropic**, **Google**, **DeepSeek**, **Ollama**) collapses to a row showing
-  the masked key fingerprint and selected model; tap to open the provider editor.
-  The Ollama row carries a **LAN** pill and base URL. **+ Add provider** surfaces
-  an unconfigured provider without scrolling. Leaving every cloud row blank keeps
-  the agent fully offline.
+- **External providers** *(Basic link)* — one row per provider, in this order:
+  the hosted ones (**OpenAI**, **Anthropic**, **Google**, **DeepSeek**,
+  **OpenRouter**, **Groq**), then the servers you run (**Ollama**, an
+  **OpenAI-compatible server**). A row shows the masked key fingerprint — or, for
+  a server you run, its address and a **LAN** pill — and the selected model; tap
+  it to open the provider's screen. An unset row says what it needs (*tap to add
+  API key*, *tap to add the server address*). A row that ends in **no model
+  selected** is the one that would fail if a step used it: OpenRouter, Groq and an
+  OpenAI-compatible server have no default model, so they need one chosen.
+  **+ Add provider** lists every provider in the same order, grouped into
+  **Hosted** and **Your own server**, and marks the ones already set up as
+  **added**. Leaving every row blank keeps the agent fully offline.
 - **Default pipeline** *(Advanced link)* — picks which pipeline new chats use by
   default.
+
+#### Setting up a provider
+
+A provider's screen shows its fields in the order you fill them, with
+**Test connection** between what it reads and what it fills: address → key →
+**Test connection** → model.
+
+- **OpenAI, Anthropic, Google, DeepSeek** — an API key, and a model from a
+  built-in list.
+- **OpenRouter, Groq** — the address they send to is shown read-only under
+  **Sends to**; an API key (**required**) and a **Model id** (**required**) that
+  you type or choose from the provider's list.
+- **Ollama** — its base URL, a model name, and the context window.
+- **OpenAI-compatible server** — for vLLM, LM Studio, llama.cpp or any server
+  that speaks the OpenAI API. Enter the **Server address** the way the server
+  documents it, including **`/v1`** (`http://192.168.1.20:8000/v1`); the paths
+  the app asks for are relative to it. The **API key** is **optional** — leave it
+  empty if your server has none, and no key is sent at all. A **Model id** is
+  **required**.
+
+An address that will be refused says so **under the field, while you type**:
+`http://` to a public host, or — while **Block network from local model** is on
+— a host name or a public address. An unencrypted address on your own network
+shows the **Approve unencrypted connection** notice instead, as for Ollama.
+
+#### Test connection
+
+**Test connection** asks the provider for its list of models, with the key and
+address on the screen. It sends no prompt and spends no tokens, and it tries
+once — no retries. For OpenRouter it first asks whether the key is valid,
+because OpenRouter's model list answers any key. While it runs, the row names
+the host and counts the seconds; **Cancel** stops it, and so does leaving the
+screen.
+
+- **Connected · N models** — the server answered. On a provider whose model you
+  type, the model field gains **Choose**: a full-height list of the server's
+  model ids with a search field, so a list of hundreds is searched rather than
+  scrolled. Picking an id fills the field; the field stays editable.
+- **Not sent.** — a rule kept the request on the device, and the row says which
+  rule and where to change it. The privacy indicator does not register it.
+- **A failure** — says what happened, with the code in brackets, and one thing
+  to do: a rejected key, nothing at the address (most often a missing `/v1`),
+  a rate limit and how long the provider asked to wait, a server error, a host
+  that does not resolve, a port nothing listens on, a server that did not
+  connect within 30 seconds or went silent for 60.
+
+The button is disabled, with the reason, until the test can run: no address,
+an address that is not one, no key for a hosted provider, an unencrypted
+address not yet approved, or an address a rule refuses. A result describes the
+values it was run with: edit the key or the address and it is cleared.
 
 The provider editor's **Retry policy** applies to every cloud provider (chat and
 cloud embeddings alike). A rate limit (HTTP 429) or a server error (5xx) is
@@ -2511,8 +2588,9 @@ working setups:
 | **Google** | Yes — its client reports a broken stream as an error on its own. |
 | **Ollama** | **No.** Its client never sends the finishing marker at all, so its absence proves nothing; checking for it would fail every healthy run. |
 | **Anthropic** | **No.** We could not produce a trustworthy test either way, and guessing is exactly the failure this check exists to prevent. |
+| **OpenRouter**, **Groq**, **OpenAI-compatible server** | **No — not yet measured.** Whether each server sends the marker is checked on a device before it is relied on. |
 
-For the bottom two rows a connection that drops mid-answer can still leave you
+For the rows marked **No**, a connection that drops mid-answer can still leave you
 with a reply that is shorter than it should be and looks finished. If an answer
 from one of those ends abruptly for no obvious reason, ask again before
 concluding the model had nothing more to say.
@@ -2677,13 +2755,15 @@ Basic:
   unattended.
 - **Block network from local model** — when on, no model request leaves this
   device or your own network:
-  - **Cloud providers** (OpenAI, Anthropic, Google, DeepSeek) are refused even
-    with a key saved — for Cloud steps, `delegate_task` and memory alike.
+  - **Hosted providers** (OpenAI, Anthropic, Google, DeepSeek, OpenRouter,
+    Groq) are refused even with a key saved — for Cloud steps, `delegate_task`
+    and memory alike.
     If OpenAI is your **Embedding model**, memory switches to the on-device
     model while the restriction is on. Memories embedded by OpenAI are recalled
     poorly until you turn it off, and memories saved meanwhile are recalled
     poorly after you do — run **Re-embed** once you have settled on one.
-  - **Ollama** answers only when its address is `localhost` or a private IP
+  - **A server you run** — Ollama or an OpenAI-compatible server — answers only
+    when its address is `localhost` or a private IP
     address (`127.x.x.x`, `10.x.x.x`, `172.16.x.x`–`172.31.x.x`,
     `192.168.x.x`), over `http` or `https`. A server on the internet is refused
     even over `https`, and so is **any host name** — `ollama.lan`, `nas.local` —

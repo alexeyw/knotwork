@@ -111,6 +111,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `KnotworkSnackbar.kt` - Knotwork snackbar — thin wrapper over Material3 `Snackbar` that recolours by `variant` and pushes the action label through `KnotworkTextStyles`.
     - `KnotworkSnackbarHost.kt` - The one snackbar host of the app: Material3's `SnackbarHost` rendering every message as a `KnotworkSnackbar` with Material's outer margin.
     - `KnotworkStatCell.kt` - Single stat-grid cell used by the Settings → Memory card's 4-up counter row (CHUNKS / SIZE / THREADS / AVG SCORE).
+    - `KnotworkTestProbeRow.kt` - A test row: glyph, label, status and one button, on a bordered surface.
     - `KnotworkWarningBanner.kt` - A persistent, warning-toned notice with one inline action.
     - `StripedPlaceholder.kt` - Knotwork striped placeholder — the canonical "missing asset" stand-in for any product surface that ships before its real illustration / hero image is available.
   - `pipelineeditor/` - pipeline-editor base components.
@@ -127,6 +128,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `NodeType.kt` - enum of the 12 editor node types (Input, Output, LiteRT, Cloud, IntentRouter, IfCondition, Clarification, Tool, Decomposition, QueueProcessor, Evaluation, Summary).
     - `NodeTypeColors.kt` - composables mapping `NodeType` to header tint, luminance-banded foreground, and display label.
     - `PipelineEditorCatalogContent.kt` - scrollable harness exercising every pipeline-editor base component + theme previews.
+    - `ProviderChoices.kt` - What the node sheet's provider fields know about this device: which providers are set up here and with which model, what *Auto* would pick, and the on-device model.
   - `prompt/` - prompt-facing components: the preview sheet that shows a rendered prompt with its placeholders resolved, and its unresolved ones marked as errors.
     - `PromptPreviewPreview.kt` - Preview fixtures for the prompt-preview sheet.
     - `PromptPreviewSheet.kt` - Bottom sheet displaying a prompt with its `$VARIABLES` already substituted.
@@ -329,9 +331,9 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `GenerationSettingsContent.kt` - system instructions, restrictions and the LLM generation parameters.
     - `KnotworkMonoTextArea.kt` - multi-line monospace textarea (brand outline) for system instructions.
     - `KnotworkParamSlider.kt` - labelled numeric-parameter slider with value label, optional validation error, and (inside a settings screen) its own help glyph and explanation panel under the track.
-    - `KnotworkProviderRow.kt` - cloud-provider row with optional Ollama-specific fields (base URL, model) and validation.
     - `MemoryImportDialog.kt` - Strategy choice raised after a memory-import file parses.
     - `MemorySettingsContent.kt` - long-term-memory controls (extraction, retrieval thresholds, re-embed).
+    - `ModelPickerSheet.kt` - The list of a server's model ids, full height over the provider form.
     - `ModelsSettingsContent.kt` - local model + inference backend and the cloud-provider list.
     - `PipelinesSettingsContent.kt` - pipeline / structured-output controls. Basic tier is the **Run limits** entry row, carrying the current step and token limits as its subtitle.
     - `PrivacySettingsContent.kt` - privacy, retention and telemetry controls (links out to the usage-statistics surface).
@@ -511,6 +513,7 @@ matters.
   - `settings/` - the settings hub and its category sub-screens, including the hint affordance, the search surface, and the provider / run-limits details.
     - `HeroSnapshotTest.kt` - Roborazzi baseline for the README "Settings" hero shot at the canonical 1080 × 2400 resolution.
     - `ProviderDetailSnapshotTest.kt` - Roborazzi baselines for the provider detail screen.
+    - `ProviderPreview.kt` - Preview fixtures of the external providers: the Models list with all eight rows, the *Add provider* picker, each provider form in its states, and the model list.
     - `RunLimitsSnapshotTest.kt` - Roborazzi baselines for the run-limits screen.
     - `SettingsCategorySnapshotTest.kt` - Roborazzi baseline for the settings category sub-screens.
     - `SettingsHintBehaviourTest.kt` - Behaviour of the settings hint affordance: the parts a Roborazzi baseline cannot show.

@@ -154,8 +154,7 @@ internal object NodeConfigCodec {
                 // `toWireIdPreserving` keeps `CloudProvider.AUTO` as the "auto"
                 // sentinel (rather than collapsing to a concrete provider), so
                 // saving the sheet does not rewrite an auto-routing node to
-                // OpenAI — and, for the same reason, does not rewrite an Ollama
-                // node to DeepSeek just because both share the `COMPATIBLE` tile.
+                // OpenAI, and keeps the spelling of an id the node was saved with.
                 cloudProvider = CloudProviderMapper.toWireIdPreserving(config.provider, source.cloudProvider),
             )
             is ToolConfig -> withJson.copy(
@@ -256,9 +255,8 @@ internal object NodeConfigCodec {
      * engine picker offers only on-device + concrete providers.
      *
      * [previousWireId] is the value already on the node, forwarded so an unchanged
-     * `COMPATIBLE` selection keeps the provider it actually had (Ollama stays
-     * Ollama) instead of collapsing to the tile's canonical DeepSeek — the same
-     * round-trip hazard the CLOUD node has.
+     * selection keeps the id it was saved with — the same round-trip rule the
+     * CLOUD node follows.
      */
     private fun engineWire(provider: CatalogCloudProvider?, previousWireId: String?): String? =
         provider?.let { CloudProviderMapper.toWireIdPreserving(it, previousWireId) }

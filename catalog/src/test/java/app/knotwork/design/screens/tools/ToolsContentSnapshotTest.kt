@@ -2,12 +2,16 @@ package app.knotwork.design.screens.tools
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
+import app.knotwork.design.components.misc.TestProbeTone
+import app.knotwork.design.components.misc.TestProbeUi
 import app.knotwork.design.theme.KnotworkTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -196,10 +200,118 @@ class ToolsContentSnapshotTest {
         McpServerConfigContent(form = ToolsPreview.addMcpNeedingCleartextConsent())
     }
 
-    private fun snapshot(name: String, dark: Boolean, content: @Composable () -> Unit) {
+    // ─── The form's Test connection row ────────────────────────────────────
+    // Captured on a tall device: the row sits after the credentials and headers, below the fold
+    // of a 760 dp screen.
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_idle_light() = snapshot(name = "add_mcp_test_idle", dark = false) {
+        McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestIdle())
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_idle_dark() = snapshot(name = "add_mcp_test_idle", dark = true) {
+        McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestIdle())
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_fontscale200_light() =
+        snapshot(name = "add_mcp_test_fontscale200", dark = false, fontScale = FONT_SCALE_200) {
+            McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestIdle())
+        }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_fontscale200_dark() =
+        snapshot(name = "add_mcp_test_fontscale200", dark = true, fontScale = FONT_SCALE_200) {
+            McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestIdle())
+        }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_reachable_light() = snapshot(name = "add_mcp_test_reachable", dark = false) {
+        McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestReachable())
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_reachable_dark() = snapshot(name = "add_mcp_test_reachable", dark = true) {
+        McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestReachable())
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_failed_handshake_light() = snapshot(name = "add_mcp_test_failed_handshake", dark = false) {
+        McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestHandshake())
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_failed_handshake_dark() = snapshot(name = "add_mcp_test_failed_handshake", dark = true) {
+        McpServerConfigContent(form = ToolsPreview.addMcpDefault(), test = ToolsPreview.mcpTestHandshake())
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun edit_mcp_test_failed_auth_fontscale200_light() =
+        snapshot(name = "edit_mcp_test_failed_auth_fontscale200", dark = false, fontScale = FONT_SCALE_200) {
+            McpServerConfigContent(form = ToolsPreview.editMcpWithHeaders(), test = ToolsPreview.mcpTestAuth())
+        }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun edit_mcp_test_failed_auth_fontscale200_dark() =
+        snapshot(name = "edit_mcp_test_failed_auth_fontscale200", dark = true, fontScale = FONT_SCALE_200) {
+            McpServerConfigContent(form = ToolsPreview.editMcpWithHeaders(), test = ToolsPreview.mcpTestAuth())
+        }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_disabled_invalid_light() = snapshot(name = "add_mcp_test_disabled_invalid", dark = false) {
+        McpServerConfigContent(
+            form = ToolsPreview.addMcpInvalid(),
+            test = ToolsPreview.mcpTestDisabled("Fix the address to test."),
+        )
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_disabled_invalid_dark() = snapshot(name = "add_mcp_test_disabled_invalid", dark = true) {
+        McpServerConfigContent(
+            form = ToolsPreview.addMcpInvalid(),
+            test = ToolsPreview.mcpTestDisabled("Fix the address to test."),
+        )
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_disabled_cleartext_light() = snapshot(name = "add_mcp_test_disabled_cleartext", dark = false) {
+        McpServerConfigContent(
+            form = ToolsPreview.addMcpNeedingCleartextConsent(),
+            test = ToolsPreview.mcpTestDisabled("Approve the unencrypted connection above to test."),
+        )
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = TALL)
+    fun add_mcp_test_disabled_cleartext_dark() = snapshot(name = "add_mcp_test_disabled_cleartext", dark = true) {
+        McpServerConfigContent(
+            form = ToolsPreview.addMcpNeedingCleartextConsent(),
+            test = ToolsPreview.mcpTestDisabled("Approve the unencrypted connection above to test."),
+        )
+    }
+
+    private fun snapshot(name: String, dark: Boolean, fontScale: Float = 1f, content: @Composable () -> Unit) {
         composeTestRule.setContent {
+            val baseDensity = LocalDensity.current
             KnotworkTheme(darkTheme = dark) {
-                CompositionLocalProvider(LocalKnotworkA11y provides FixedKnotworkA11y(reducedMotion = true)) {
+                CompositionLocalProvider(
+                    LocalKnotworkA11y provides FixedKnotworkA11y(reducedMotion = true, fontScale = fontScale),
+                    LocalDensity provides Density(density = baseDensity.density, fontScale = fontScale),
+                ) {
                     content()
                 }
             }
@@ -212,7 +324,32 @@ class ToolsContentSnapshotTest {
     }
 }
 
+/** A device tall enough to show the MCP form's test row. */
+private const val TALL = "w360dp-h1400dp-xhdpi"
+
+/** Font scale of the 200 % captures. */
+private const val FONT_SCALE_200 = 2f
+
 internal object ToolsPreview {
+
+    private fun mcpTest(tone: TestProbeTone, status: String, action: String = "Test again"): TestProbeUi =
+        TestProbeUi(label = "Test connection", tone = tone, status = status, actionLabel = action)
+
+    fun mcpTestIdle(): TestProbeUi =
+        mcpTest(TestProbeTone.Idle, "Connects with the values above and lists the tools. Saves nothing.", "Test")
+
+    fun mcpTestReachable(): TestProbeUi = mcpTest(TestProbeTone.Reachable, "Connected · 6 tools")
+
+    fun mcpTestHandshake(): TestProbeUi = mcpTest(
+        TestProbeTone.Failed,
+        "server.example.com accepted the connection but did not finish the MCP handshake in 30 s. " +
+            "Check that the URL is the server’s MCP endpoint.",
+    )
+
+    fun mcpTestAuth(): TestProbeUi =
+        mcpTest(TestProbeTone.Failed, "Credentials rejected (401). Check the token under Authentication.")
+
+    fun mcpTestDisabled(reason: String): TestProbeUi = mcpTest(TestProbeTone.Disabled, reason, "Test")
 
     private fun builtIns(): List<BuiltInToolRow> = listOf(
         BuiltInToolRow(

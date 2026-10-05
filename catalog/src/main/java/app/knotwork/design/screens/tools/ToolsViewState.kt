@@ -315,6 +315,8 @@ class McpServerConfigCallbacks(
     val onSubmit: () -> Unit = {},
     val onCancel: () -> Unit = {},
     val onApproveCleartext: () -> Unit = {},
+    val onTestRun: () -> Unit = {},
+    val onTestCancel: () -> Unit = {},
 )
 
 fun noopMcpServerConfigCallbacks(): McpServerConfigCallbacks = McpServerConfigCallbacks()

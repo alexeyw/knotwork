@@ -472,31 +472,21 @@ private fun <T> SegmentedChipRow(label: String, values: List<Pair<T, String>>, s
 
 /**
  * Optional engine selector shared by the structured node types
- * (INTENT_ROUTER / DECOMPOSITION / EVALUATION / IF_CONDITION / TOOL).
+ * (INTENT_ROUTER / DECOMPOSITION / EVALUATION / IF_CONDITION / TOOL / SKILL).
  *
  * Unlike the CLOUD node — which is always cloud — these nodes default to
- * on-device inference, so the first chip is `On-device` (a `null` provider) and
- * the remaining chips pick a concrete cloud provider that backs the node's
- * structured-output gate. `Auto` is intentionally omitted: structured nodes
- * select a concrete provider, never runtime auto-detection.
+ * on-device inference, so the first option is *On-device* (a `null` provider) and
+ * the rest pick a concrete cloud provider that backs the node's structured-output
+ * gate. *Auto* is intentionally omitted: structured nodes select a concrete
+ * provider, never runtime auto-detection. Every provider appears by name, with
+ * what this device would use or that it is not set up here ([EngineField]).
  *
  * @param selected the currently selected provider, or `null` for on-device.
  * @param onSelect invoked with the new selection (`null` ⇒ on-device).
  */
 @Composable
 private fun EngineProviderRow(selected: CloudProvider?, onSelect: (CloudProvider?) -> Unit) {
-    SegmentedChipRow<CloudProvider?>(
-        label = stringResource(R.string.knotwork_node_field_engine),
-        values = listOf(
-            null to stringResource(R.string.knotwork_node_field_engine_on_device),
-            CloudProvider.OPEN_AI to "OpenAI",
-            CloudProvider.ANTHROPIC to "Anthropic",
-            CloudProvider.GOOGLE to "Google",
-            CloudProvider.COMPATIBLE to "Compatible",
-        ),
-        selected = selected,
-        onSelect = onSelect,
-    )
+    EngineField(selected = selected, onSelect = onSelect)
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -589,18 +579,7 @@ private fun CloudFormBody(
     onPickFromLibrary: PromptLibraryHook?,
     onSavePreset: SavePresetHook?,
 ) {
-    SegmentedChipRow(
-        label = stringResource(R.string.knotwork_node_field_provider),
-        values = listOf(
-            CloudProvider.AUTO to "Auto",
-            CloudProvider.OPEN_AI to "OpenAI",
-            CloudProvider.ANTHROPIC to "Anthropic",
-            CloudProvider.GOOGLE to "Google",
-            CloudProvider.COMPATIBLE to "Compatible",
-        ),
-        selected = config.provider,
-        onSelect = { next -> onChange(config.copy(provider = next)) },
-    )
+    CloudProviderField(selected = config.provider, onSelect = { next -> onChange(config.copy(provider = next)) })
     // The cloud-model id field is intentionally absent from the sheet —
     // cloud-provider model ids are
     // configured once per provider in Settings → External providers and

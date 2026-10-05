@@ -79,8 +79,10 @@ import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.controls.KnotworkSegmentedControl
 import app.knotwork.design.components.lists.KnotworkSectionHeader
 import app.knotwork.design.components.misc.EmptyState
+import app.knotwork.design.components.misc.KnotworkTestProbeRow
 import app.knotwork.design.components.misc.KnotworkWarningBanner
 import app.knotwork.design.components.misc.StripedPlaceholder
+import app.knotwork.design.components.misc.TestProbeUi
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.screens.settings.KnotworkHelpEntry
 import app.knotwork.design.screens.settings.KnotworkHintPanel
@@ -1276,6 +1278,12 @@ fun ToolDetailContent(
  * The host composable (app-layer screen) owns the [AddMcpServerForm]
  * state and translates submissions into persistence calls; this
  * composable renders the chrome and dispatches per-field callbacks.
+ *
+ * @param form The values being edited.
+ * @param modifier Layout modifier from the caller.
+ * @param callbacks Per-field edits, the buttons and the test row.
+ * @param test The *Test connection* row, which checks the values above without saving them;
+ *   `null` hides it.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -1283,6 +1291,7 @@ fun McpServerConfigContent(
     form: AddMcpServerForm,
     modifier: Modifier = Modifier,
     callbacks: McpServerConfigCallbacks = noopMcpServerConfigCallbacks(),
+    test: TestProbeUi? = null,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -1432,6 +1441,12 @@ fun McpServerConfigContent(
                 text = stringResource(R.string.knotwork_tools_form_headers_add),
                 onClick = callbacks.onHeaderAdd,
             )
+
+            // After the last field the check reads (the credentials and headers) and above the
+            // buttons, because those save and the test does not.
+            test?.let { row ->
+                KnotworkTestProbeRow(state = row, onRun = callbacks.onTestRun, onCancel = callbacks.onTestCancel)
+            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

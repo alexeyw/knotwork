@@ -53,16 +53,18 @@ not a decision about file formats. See
 
 ### Which cloud providers are supported?
 
-Five: OpenAI, Anthropic, Google Gemini, DeepSeek, and a self-hosted **Ollama**
-server. All of them are opt-in and bring-your-own-key. They are offered during
-onboarding and live afterwards under **Settings → Models → External providers**.
+Hosted: OpenAI, Anthropic, Google Gemini, DeepSeek, OpenRouter and Groq, each with
+your own key. Your own server: **Ollama**, or any server that speaks the OpenAI
+API. All of them are opt-in. They live under **Settings → Models → External
+providers**, and **Test connection** on each provider's screen checks the key and
+address without sending a prompt.
 
 ### Can I point it at my own OpenAI-compatible endpoint?
 
-Not unless it speaks the Ollama API. The provider list is a closed set of five,
-so a base URL is configurable **only** for Ollama — Groq, vLLM, LM Studio's
-OpenAI-compatible mode and a plain OpenAI-shaped endpoint on your own VPS have
-nowhere to go. See [Known limitations](#known-limitations).
+Yes — add an **OpenAI-compatible server** and enter its address the way the server
+documents it, including `/v1` (vLLM, LM Studio and llama.cpp all serve the API
+there). A key is optional; with none, no `Authorization` header is sent. Pick the
+model after **Test connection** brings the server's list, or type its id.
 
 ### My Ollama server is not on my home network. Will it work?
 
@@ -432,12 +434,6 @@ entry](troubleshooting.md#memory-search-isnt-finding-an-obvious-entry).
 These are current, deliberate, and stated without softening. Each one says what
 would change it.
 
-- **No arbitrary OpenAI-compatible endpoint.** The provider list is a closed set
-  of five, and a base URL is configurable only for Ollama. Revisited on the
-  first request filed publicly as an issue. Two people have asked for it so far
-  — one in private testing, one in a public thread — which is two independent
-  requests, not the filed issue the condition names, and does not reorder the
-  work.
 - **No OAuth anywhere.** Not for MCP servers, not for model downloads. Bearer,
   Basic and API-key headers are what exist. Revisited with the first external
   report of a real server that cannot be reached any other way.

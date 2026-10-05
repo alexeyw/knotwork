@@ -20,7 +20,8 @@ end-to-end:
 
 - On-device LLM inference through LiteRT-LM, with optional
   bring-your-own-key cloud providers (OpenAI, Anthropic, Google,
-  DeepSeek, Ollama).
+  DeepSeek, OpenRouter, Groq) and servers you run (Ollama, any
+  OpenAI-compatible server).
 - Graph-driven pipeline execution with a full in-app editor, a standalone
   browser editor, and a pipeline library with per-chat binding.
 - Tool calling through AppFunctions (local) and MCP (external servers),

@@ -6,6 +6,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.streaming.StreamFrame
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.PipelineExecutionDefaults
+import app.knotwork.android.domain.engine.AutoProvider
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.CloudLlmModelResolver
@@ -36,7 +37,7 @@ import javax.inject.Inject
  *
  * Streams a response from one of the supported cloud LLM providers ([CloudProvider]) using
  * the Koog client abstraction. The active provider is either taken from `node.cloudProvider`
- * or, when the node is set to `"auto"`, the first of [AUTO_ORDER] with a configured API key —
+ * or, when the node is set to `"auto"`, the first of [AutoProvider.ORDER] with a configured API key —
  * never a provider outside that list. The fully assembled `inputText` is sent verbatim:
  * `NodeContextBuilder` has already concatenated the context blocks selected by
  * [NodeContextConfig][app.knotwork.android.domain.models.NodeContextConfig], so the executor
@@ -306,13 +307,12 @@ class CloudLlmNodeExecutor @Inject constructor(
     }
 
     /**
-     * Picks the first provider of [AUTO_ORDER] for which an API key is configured.
+     * Picks the first provider of [AutoProvider.ORDER] for which an API key is configured.
      *
      * Returns `null` when none has a key, which the caller surfaces to the user as
      * "No cloud provider is configured".
      */
-    private suspend fun autoDetectProvider(): CloudProvider? =
-        AUTO_ORDER.firstOrNull { !apiKeyRepository.getApiKey(it).first().isNullOrBlank() }
+    private suspend fun autoDetectProvider(): CloudProvider? = AutoProvider.resolve(apiKeyRepository)
 
     /**
      * Whether an absent finish reason is evidence of a truncated answer for [provider].
@@ -344,23 +344,6 @@ class CloudLlmNodeExecutor @Inject constructor(
     }
 
     private companion object {
-        /**
-         * The providers `"auto"` chooses among, in the order it tries them — the historical
-         * routing priority, kept so existing pipelines keep their previous default.
-         *
-         * A list of its own rather than [CloudProvider.entries]: what `"auto"` may pick is a
-         * decision, not a consequence of adding a provider. A provider appended to the enum
-         * would otherwise start receiving every `"auto"` node's prompt the moment its key is
-         * saved, without the user ever choosing it. Ollama is absent for the same reason it
-         * always was — it has no key to detect.
-         */
-        val AUTO_ORDER: List<CloudProvider> = listOf(
-            CloudProvider.GOOGLE,
-            CloudProvider.ANTHROPIC,
-            CloudProvider.OPENAI,
-            CloudProvider.DEEPSEEK,
-        )
-
         /** The provider stopped sending without ever saying the answer was finished. */
         fun truncatedResponse(providerId: String): String =
             "The response from '$providerId' was cut off before it finished — the connection " +

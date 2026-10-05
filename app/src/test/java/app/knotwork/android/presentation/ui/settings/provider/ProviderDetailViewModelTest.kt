@@ -332,4 +332,41 @@ class ProviderDetailViewModelTest {
         assertTrue("$running", running is ConnectionTestState.Running)
         assertEquals(ConnectionTestState.Idle, vm.connectionTestState.value)
     }
+
+    @Test
+    fun `given an address a rule refuses when typed then the reason is set for the field`() = runTest {
+        every { settingsRepository.approvedCleartextOrigins } returns MutableStateFlow(emptySet())
+        every { settingsRepository.blockNetworkFromLocalModel } returns MutableStateFlow(true)
+        every { apiKeyRepository.getModel(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf(null)
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI_COMPATIBLE) } returns flowOf(null)
+        every { apiKeyRepository.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns MutableStateFlow(null)
+        val vm = ProviderDetailViewModel(apiKeyRepository, settingsRepository, mockk(relaxed = true), TestTimeSource())
+        vm.bind(ProviderId.OpenAiCompatible)
+        advanceUntilIdle()
+
+        vm.updateBaseUrl(ProviderId.OpenAiCompatible, "https://gpu-box.lan/v1")
+        advanceUntilIdle()
+        val refused = vm.uiState.value.addressRefusal
+        vm.updateBaseUrl(ProviderId.OpenAiCompatible, "http")
+        advanceUntilIdle()
+
+        assertEquals(AddressRefusal.HostNotLocal("gpu-box.lan"), refused)
+        assertEquals(
+            "Not an address yet — the field's error says so, not a rule.",
+            null,
+            vm.uiState.value.addressRefusal,
+        )
+    }
+
+    @Test
+    fun `given the model list when opened and closed then the state follows`() = runTest {
+        val vm = newViewModel()
+
+        vm.openModelSheet()
+        val open = vm.uiState.value.modelSheetOpen
+        vm.closeModelSheet()
+
+        assertTrue(open)
+        assertFalse(vm.uiState.value.modelSheetOpen)
+    }
 }

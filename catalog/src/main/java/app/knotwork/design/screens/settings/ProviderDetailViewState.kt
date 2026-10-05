@@ -1,40 +1,132 @@
 package app.knotwork.design.screens.settings
 
+import app.knotwork.design.components.misc.TestProbeUi
+
 /**
  * Everything the provider detail surface needs, already resolved.
  *
- * No provider enum: `:app` decides what a given provider has — Ollama a base URL
- * and no API key, the others a key and a model list — so adding a provider never
- * reaches this module.
+ * No provider enum: `:app` decides which fields a provider has — an address for a server the user
+ * runs, a fixed address for OpenRouter and Groq, a key, a built-in model list or a typed model id
+ * — so adding a provider never reaches this module. A field the provider has no use for is `null`
+ * and is not drawn.
  *
- * @property title Screen title, e.g. "OpenAI settings".
- * @property providerLabel The provider's own name, shown on the row.
+ * The fields come in the order a user fills them, and the test row sits between the last field it
+ * reads and the first one it feeds: address → key → *Test connection* → model.
+ *
+ * @property title Screen title: the provider's name.
  * @property backContentDescription Accessible label of the back control.
- * @property apiKey Current key, or `null` when the provider has none. `null` and
- *   `""` are different states: the first hides the field, the second shows an
- *   empty one the user has yet to fill.
- * @property apiKeyLabel Label of the key field.
- * @property model Current model id.
- * @property modelLabel Label of the model field.
- * @property availableModels Ids offered in the model dropdown; empty means the
- *   model is typed rather than picked.
- * @property ollama Base-URL and context-window inputs, when the provider has them.
+ * @property address The server address, for a server the user runs.
  * @property cleartextConsent Pending consent for an unencrypted origin, or `null`.
+ * @property fixedAddress Where a provider with a fixed address sends, shown read-only.
+ * @property apiKey The key field, or `null` for a provider that takes none.
+ * @property test The *Test connection* row.
+ * @property model The model field.
+ * @property contextWindow The context-window field, for a provider that has one.
+ * @property modelSheet The model list, while it is open.
  * @property retry The cloud-retry policy, which applies to every provider.
  */
 data class ProviderDetailViewState(
     val title: String,
-    val providerLabel: String,
     val backContentDescription: String,
-    val apiKey: String?,
-    val apiKeyLabel: String,
-    val model: String,
-    val modelLabel: String,
-    val availableModels: List<String>,
-    val ollama: OllamaProviderInputs? = null,
-    val cleartextConsent: CleartextConsentUi? = null,
+    val test: TestProbeUi,
+    val model: ProviderModelUi,
     val retry: CloudRetryViewState,
+    val address: ProviderAddressUi? = null,
+    val cleartextConsent: CleartextConsentUi? = null,
+    val fixedAddress: ProviderFixedAddressUi? = null,
+    val apiKey: ProviderKeyUi? = null,
+    val contextWindow: ProviderContextWindowUi? = null,
+    val modelSheet: ModelSheetUi? = null,
 )
+
+/**
+ * The address of a server the user runs.
+ *
+ * A reason the address cannot be used is said once, here, while it is typed: [error] when it is
+ * not an address at all, [refusal] when it is one a rule refuses — a warning, not an error, since
+ * the address is well-formed.
+ *
+ * @property label Field label.
+ * @property value The address as typed.
+ * @property placeholder Example address shown while empty.
+ * @property hint A note that stays under the field, e.g. "Include /v1".
+ * @property error Why the address is not an address, or `null`.
+ * @property refusal Why a rule refuses the address, or `null`.
+ */
+data class ProviderAddressUi(
+    val label: String,
+    val value: String,
+    val placeholder: String,
+    val hint: String? = null,
+    val error: String? = null,
+    val refusal: String? = null,
+)
+
+/**
+ * The fixed address of a provider such as OpenRouter: shown, never edited, without a field box —
+ * a box looks editable.
+ *
+ * @property label "Sends to".
+ * @property value The address.
+ */
+data class ProviderFixedAddressUi(val label: String, val value: String)
+
+/**
+ * The API key field.
+ *
+ * @property label Field label.
+ * @property value The key as typed; drawn masked.
+ * @property marker "optional" or "required", in the mono slot after the label; `null` for none.
+ * @property placeholder Example key prefix shown while empty.
+ * @property hint A note under the field.
+ */
+data class ProviderKeyUi(
+    val label: String,
+    val value: String,
+    val marker: String? = null,
+    val placeholder: String? = null,
+    val hint: String? = null,
+)
+
+/**
+ * The model field: a built-in list to pick from, or a typed id.
+ *
+ * @property label Field label.
+ * @property value The chosen or typed id.
+ * @property options A built-in list; non-empty makes the field a dropdown.
+ * @property marker "required", in the mono slot after the label; `null` for none.
+ * @property placeholder Example id shown while a typed field is empty.
+ * @property note A note under a typed field — what to do before a test, or that the server sent
+ *   no list.
+ * @property chooseLabel The label of the action that opens the server's list, shown on a typed
+ *   field once a test has brought one; `null` hides the action.
+ */
+data class ProviderModelUi(
+    val label: String,
+    val value: String,
+    val options: List<String> = emptyList(),
+    val marker: String? = null,
+    val placeholder: String? = null,
+    val note: String? = null,
+    val chooseLabel: String? = null,
+)
+
+/**
+ * The context-window field.
+ *
+ * @property label Field label.
+ * @property value Current value, as text so a partial input can be shown.
+ */
+data class ProviderContextWindowUi(val label: String, val value: String)
+
+/**
+ * The searchable list of a server's model ids.
+ *
+ * @property source Whose list it is, e.g. "OpenRouter".
+ * @property ids The ids, in the server's order.
+ * @property selected The id currently in the field; ticked in the list.
+ */
+data class ModelSheetUi(val source: String, val ids: List<String>, val selected: String)
 
 /**
  * The unencrypted-origin notice.
@@ -87,22 +179,30 @@ data class CloudRetryViewState(
  *
  * @property onBack Pop back to the provider picker.
  * @property onApiKeyChange The key field changed.
- * @property onModelChange The model field changed.
- * @property onOllamaBaseUrlChange The base-URL field changed.
- * @property onOllamaContextWindowChange The context-window field changed.
+ * @property onModelChange The model field changed, or a model was picked.
+ * @property onAddressChange The address field changed.
+ * @property onContextWindowChange The context-window field changed.
  * @property onApproveCleartextOrigin The user allowed the unencrypted origin.
  * @property onRetryAttemptsChange The attempts slider settled.
  * @property onRetryDelayChange The delay slider settled.
+ * @property onTestRun *Test* or *Test again* was pressed.
+ * @property onTestCancel *Cancel* was pressed on a running test.
+ * @property onChooseModel *Choose* was pressed on the model field.
+ * @property onModelSheetDismiss The model list was closed without a pick.
  */
 data class ProviderDetailCallbacks(
     val onBack: () -> Unit,
     val onApiKeyChange: (String) -> Unit,
     val onModelChange: (String) -> Unit,
-    val onOllamaBaseUrlChange: (String) -> Unit,
-    val onOllamaContextWindowChange: (String) -> Unit,
+    val onAddressChange: (String) -> Unit,
+    val onContextWindowChange: (String) -> Unit,
     val onApproveCleartextOrigin: () -> Unit,
     val onRetryAttemptsChange: (Int) -> Unit,
     val onRetryDelayChange: (Long) -> Unit,
+    val onTestRun: () -> Unit = {},
+    val onTestCancel: () -> Unit = {},
+    val onChooseModel: () -> Unit = {},
+    val onModelSheetDismiss: () -> Unit = {},
 )
 
 /** Inert callbacks, so a preview or a snapshot needs none. */
@@ -110,8 +210,8 @@ fun noopProviderDetailCallbacks(): ProviderDetailCallbacks = ProviderDetailCallb
     onBack = {},
     onApiKeyChange = {},
     onModelChange = {},
-    onOllamaBaseUrlChange = {},
-    onOllamaContextWindowChange = {},
+    onAddressChange = {},
+    onContextWindowChange = {},
     onApproveCleartextOrigin = {},
     onRetryAttemptsChange = {},
     onRetryDelayChange = {},

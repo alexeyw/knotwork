@@ -13,6 +13,27 @@ details.
 
 ## [Unreleased]
 
+### Added
+
+- **OpenRouter, Groq and a server you run.** Three more providers in Settings →
+  Models: OpenRouter and Groq with your own key, and any server that speaks the
+  OpenAI API — vLLM, LM Studio, llama.cpp — at the address you enter, with or
+  without a key. *Add provider* groups every provider into *Hosted* and *Your
+  own server*, and a provider's row says when it still needs a model.
+- **Test connection.** A provider's screen and the MCP server form can check the
+  values on the screen before you rely on them: a provider is asked for its
+  model list, an MCP server for its tools — no prompt, no tokens, one attempt,
+  nothing saved. A refusal says *Not sent* and which rule; a failure says what
+  happened and what to do.
+- **Choose a model from the server's list.** After a test, the model field of
+  OpenRouter, Groq, Ollama or your own server opens a searchable list of the ids
+  the server serves.
+- **Every provider by name on a node.** A Cloud node's *Provider* and the
+  *Engine* of the structured nodes open a list of every provider, with the model
+  each uses on this device or *not configured on this device*. The *Compatible*
+  tile, which stood for several providers at once, is gone; the browser editor
+  lists the same providers, grouped.
+
 ### Changed
 
 - **One rule decides where a request to your own server may go.** The check of

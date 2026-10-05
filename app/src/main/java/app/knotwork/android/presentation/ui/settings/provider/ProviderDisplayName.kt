@@ -18,5 +18,8 @@ fun ProviderId.displayName(): String = when (this) {
     ProviderId.Anthropic -> "Anthropic"
     ProviderId.Google -> "Google"
     ProviderId.DeepSeek -> "DeepSeek"
+    ProviderId.OpenRouter -> "OpenRouter"
+    ProviderId.Groq -> "Groq"
     ProviderId.Ollama -> "Ollama"
+    ProviderId.OpenAiCompatible -> "OpenAI-compatible server"
 }

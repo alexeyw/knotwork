@@ -169,6 +169,10 @@ data class LocalModelCardState(
  * @property model Currently selected model name; `null` when unset.
  * @property endpointHint Optional secondary line (e.g. Ollama base URL).
  * @property isLan `true` for LAN-local providers — drives the LAN pill.
+ * @property usesAddress `true` for a server the user runs: unconfigured, its row asks for the
+ *   server address rather than an API key.
+ * @property modelMissing `true` when the key or address is saved but no model is chosen for a
+ *   provider without a default one — the row ends in "no model selected", in warn ink.
  */
 data class ProviderRowState(
     val id: String,
@@ -177,6 +181,8 @@ data class ProviderRowState(
     val model: String?,
     val endpointHint: String?,
     val isLan: Boolean,
+    val usesAddress: Boolean = false,
+    val modelMissing: Boolean = false,
 )
 
 /**

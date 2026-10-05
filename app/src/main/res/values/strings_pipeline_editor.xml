@@ -129,4 +129,6 @@
         <item quantity="one">%d tool</item>
         <item quantity="other">%d tools</item>
     </plurals>
+    <!-- What a provider set up without a model of its own shows on the node sheet. -->
+    <string name="node_provider_default_model">default model</string>
 </resources>

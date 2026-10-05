@@ -5755,19 +5755,25 @@
      *  §8.2 sync table).
      * ==================================================================== */
 
-    // CLOUD provider options. The catalog enum is OPEN_AI/ANTHROPIC/GOOGLE/
-    // COMPATIBLE; the editor additionally offers "auto" (the domain
-    // AUTO_KEY sentinel) which the rich CloudConfig cannot express — it is an
-    // editor-only convenience persisted via the flat `cloudProvider` field.
-    // Ids match the catalog `CloudProvider` enum names so the `nodeConfig`
-    // envelope round-trips into the app's NodeConfigSheet. `AUTO` is a real
-    // catalog value (persisted as the flat `cloudProvider = "auto"` sentinel).
+    // CLOUD provider options: one per provider, in the order every provider
+    // surface of the app uses — the hosted ones, then the servers you run —
+    // grouped the same way (`group` becomes an <optgroup>). Ids match the
+    // catalog `CloudProvider` enum names so the `nodeConfig` envelope
+    // round-trips into the app's NodeConfigSheet. `AUTO` is a real catalog
+    // value (persisted as the flat `cloudProvider = "auto"` sentinel).
+    const PROVIDER_OPTIONS = [
+        { id: 'OPEN_AI',    label: 'OpenAI',     group: 'Hosted' },
+        { id: 'ANTHROPIC',  label: 'Anthropic',  group: 'Hosted' },
+        { id: 'GOOGLE',     label: 'Google',     group: 'Hosted' },
+        { id: 'DEEPSEEK',   label: 'DeepSeek',   group: 'Hosted' },
+        { id: 'OPENROUTER', label: 'OpenRouter', group: 'Hosted' },
+        { id: 'GROQ',       label: 'Groq',       group: 'Hosted' },
+        { id: 'OLLAMA',     label: 'Ollama',     group: 'Your own server' },
+        { id: 'OPENAI_COMPATIBLE', label: 'OpenAI-compatible server', group: 'Your own server' },
+    ];
     const CLOUD_PROVIDER_OPTIONS = [
-        { id: 'AUTO',      label: 'Auto (pick at runtime)' },
-        { id: 'OPEN_AI',   label: 'OpenAI' },
-        { id: 'ANTHROPIC', label: 'Anthropic' },
-        { id: 'GOOGLE',    label: 'Google' },
-        { id: 'COMPATIBLE', label: 'Compatible (DeepSeek / Ollama / OpenAI-compatible)' },
+        { id: 'AUTO', label: 'Auto — first configured of Google, Anthropic, OpenAI, DeepSeek' },
+        ...PROVIDER_OPTIONS,
     ];
 
     /**
@@ -5778,11 +5784,10 @@
     const UNKNOWN_WIRE_PREFIX = 'wire:';
 
     /**
-     * The tile a flat `cloudProvider` id names, read the way the app's executors
-     * read it (`CloudProvider.fromId`): case-insensitive, `gemini` as Google,
-     * every provider without a tile of its own (`deepseek`, `openrouter`, `groq`,
-     * `ollama`, `openai_compatible`) on the Compatible tile. Anything else — the
-     * `auto` sentinel included — names no provider (null).
+     * The option a flat `cloudProvider` id names, read the way the app's
+     * executors read it (`CloudProvider.fromId`): case-insensitive, `gemini` as
+     * Google, one option per provider. Anything else — the `auto` sentinel
+     * included — names no provider (null).
      */
     function wireToTile(flatId) {
         switch (String(flatId ?? '').toLowerCase()) {
@@ -5790,11 +5795,11 @@
             case 'anthropic': return 'ANTHROPIC';
             case 'google':
             case 'gemini':    return 'GOOGLE';
-            case 'deepseek':
-            case 'openrouter':
-            case 'groq':
-            case 'ollama':
-            case 'openai_compatible': return 'COMPATIBLE';
+            case 'deepseek':  return 'DEEPSEEK';
+            case 'openrouter': return 'OPENROUTER';
+            case 'groq':      return 'GROQ';
+            case 'ollama':    return 'OLLAMA';
+            case 'openai_compatible': return 'OPENAI_COMPATIBLE';
             default:          return null;
         }
     }
@@ -5802,10 +5807,8 @@
     /**
      * Maps the rich CLOUD `provider` value to the flat wire id, mirroring
      * `CloudProviderMapper.toWireIdPreserving`: the id the node was loaded with
-     * (`previousWire`) is kept while it still names the selected tile. Compatible
-     * covers both DeepSeek and Ollama, so writing the tile's canonical id would
-     * move a node from a LAN Ollama server to the hosted DeepSeek on the next
-     * save. An unknown id is written back unchanged.
+     * (`previousWire`) is kept while it still names the selected option, so its
+     * spelling survives a save. An unknown id is written back unchanged.
      */
     function richCloudToFlat(provider, previousWire) {
         if (typeof provider === 'string' && provider.startsWith(UNKNOWN_WIRE_PREFIX)) {
@@ -5819,7 +5822,11 @@
             case 'OPEN_AI':   return 'openai';
             case 'ANTHROPIC': return 'anthropic';
             case 'GOOGLE':    return 'google';
-            case 'COMPATIBLE': return 'deepseek';
+            case 'DEEPSEEK':  return 'deepseek';
+            case 'OPENROUTER': return 'openrouter';
+            case 'GROQ':      return 'groq';
+            case 'OLLAMA':    return 'ollama';
+            case 'OPENAI_COMPATIBLE': return 'openai_compatible';
             case 'AUTO':      return 'auto';
             default:          return 'auto';
         }
@@ -5842,11 +5849,8 @@
     // default to on-device inference, so the first option is on-device (empty
     // id) and the rest pick a concrete provider — Auto is intentionally absent.
     const ENGINE_PROVIDER_OPTIONS = [
-        { id: '',          label: 'On-device' },
-        { id: 'OPEN_AI',   label: 'OpenAI' },
-        { id: 'ANTHROPIC', label: 'Anthropic' },
-        { id: 'GOOGLE',    label: 'Google' },
-        { id: 'COMPATIBLE', label: 'Compatible (DeepSeek / Ollama / OpenAI-compatible)' },
+        { id: '', label: 'On-device' },
+        ...PROVIDER_OPTIONS,
     ];
 
     /**
@@ -6594,12 +6598,25 @@
         if (value != null && value !== '' && !options.some(o => o.id === value)) {
             options = [{ id: value, label: unknownLabel(value) }, ...options];
         }
+        // An option with a `group` goes under an <optgroup> of that name,
+        // consecutive options sharing one; the rest sit at the top level.
+        let group = null;
         options.forEach(o => {
             const opt = document.createElement('option');
             opt.value = o.id;
             opt.textContent = o.label;
             if (o.id === value) opt.selected = true;
-            sel.appendChild(opt);
+            if (o.group) {
+                if (!group || group.label !== o.group) {
+                    group = document.createElement('optgroup');
+                    group.label = o.group;
+                    sel.appendChild(group);
+                }
+                group.appendChild(opt);
+            } else {
+                group = null;
+                sel.appendChild(opt);
+            }
         });
         wrap.appendChild(sel);
         return wrap;

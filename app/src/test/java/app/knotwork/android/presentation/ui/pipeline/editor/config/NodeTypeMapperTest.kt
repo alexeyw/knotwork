@@ -34,14 +34,17 @@ class NodeTypeMapperTest {
     }
 
     @Test
-    fun `given catalog COMPATIBLE when toDomain then maps to DEEPSEEK`() {
-        assertEquals(DomainCloudProvider.DEEPSEEK, CloudProviderMapper.toDomain(CatalogCloudProvider.COMPATIBLE))
-    }
-
-    @Test
-    fun `given domain DEEPSEEK or OLLAMA when toCatalog then maps to COMPATIBLE`() {
-        assertEquals(CatalogCloudProvider.COMPATIBLE, CloudProviderMapper.toCatalog(DomainCloudProvider.DEEPSEEK))
-        assertEquals(CatalogCloudProvider.COMPATIBLE, CloudProviderMapper.toCatalog(DomainCloudProvider.OLLAMA))
+    fun `given every domain provider when mapped to the catalog and back then it is the same provider`() {
+        // One entry per provider: a node's provider survives the config sheet whichever it is. The
+        // catalog once had a Compatible tile for several, and saving could change which one ran.
+        DomainCloudProvider.entries.forEach { provider ->
+            assertEquals(provider, CloudProviderMapper.toDomain(CloudProviderMapper.toCatalog(provider)))
+        }
+        assertEquals(
+            "two domain providers share a catalog entry",
+            DomainCloudProvider.entries.size,
+            DomainCloudProvider.entries.map(CloudProviderMapper::toCatalog).toSet().size,
+        )
     }
 
     @Test
@@ -75,7 +78,8 @@ class NodeTypeMapperTest {
     @Test
     fun `given concrete catalog providers when toWireId then concrete wire id`() {
         assertEquals("openai", CloudProviderMapper.toWireId(CatalogCloudProvider.OPEN_AI))
-        assertEquals("deepseek", CloudProviderMapper.toWireId(CatalogCloudProvider.COMPATIBLE))
+        assertEquals("deepseek", CloudProviderMapper.toWireId(CatalogCloudProvider.DEEPSEEK))
+        assertEquals("openai_compatible", CloudProviderMapper.toWireId(CatalogCloudProvider.OPENAI_COMPATIBLE))
     }
 
     @Test
@@ -89,7 +93,7 @@ class NodeTypeMapperTest {
         // null = legacy "no provider" → OpenAI default (distinct from auto).
         assertEquals(CatalogCloudProvider.OPEN_AI, CloudProviderMapper.fromWireId(null))
         assertEquals(CatalogCloudProvider.ANTHROPIC, CloudProviderMapper.fromWireId("anthropic"))
-        assertEquals(CatalogCloudProvider.COMPATIBLE, CloudProviderMapper.fromWireId("ollama"))
+        assertEquals(CatalogCloudProvider.OLLAMA, CloudProviderMapper.fromWireId("ollama"))
     }
 
     @Test
@@ -100,14 +104,10 @@ class NodeTypeMapperTest {
     }
 
     @Test
-    fun `given a provider without a tile of its own when its node is saved unchanged then its id is kept`() {
-        // Until the node sheet names every provider, OpenRouter, Groq and a user's server sit
-        // on the Compatible tile; opening and saving such a node must not rewrite it to
-        // DeepSeek — that would send its prompts to a different company.
-        listOf("openrouter", "groq", "openai_compatible").forEach { id ->
-            assertEquals(CatalogCloudProvider.COMPATIBLE, CloudProviderMapper.fromWireId(id))
-            assertEquals(id, CloudProviderMapper.toWireIdPreserving(CatalogCloudProvider.COMPATIBLE, id))
-        }
+    fun `given a node saved with an id spelled its own way when saved unchanged then the spelling is kept`() {
+        // A browser-edited file may say "Ollama"; an unchanged save does not rewrite it.
+        assertEquals("Ollama", CloudProviderMapper.toWireIdPreserving(CatalogCloudProvider.OLLAMA, "Ollama"))
+        assertEquals("groq", CloudProviderMapper.toWireIdPreserving(CatalogCloudProvider.GROQ, "openrouter"))
     }
 
     @Test

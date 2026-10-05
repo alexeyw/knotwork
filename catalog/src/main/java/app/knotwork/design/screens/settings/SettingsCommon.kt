@@ -58,10 +58,13 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.knotwork.design.R
@@ -480,18 +483,55 @@ internal fun ProviderNavRow(row: ProviderRowState, onClick: () -> Unit) {
                     }
                 }
             }
-            val subtitle = when {
-                row.fingerprint == null -> androidx.compose.ui.res.stringResource(
-                    R.string.knotwork_settings_providers_not_configured,
-                )
-                row.endpointHint != null -> "${row.endpointHint} · ${row.model.orEmpty()}"
-                row.model != null -> "${row.fingerprint} · ${row.model}"
-                else -> row.fingerprint
-            }
-            Text(text = subtitle, style = KnotworkTextStyles.MonoSm, color = KnotworkTheme.extended.onSurfaceMuted)
+            ProviderRowSubtitle(row)
         }
         Icon(imageVector = AppIcons.ArrowR, contentDescription = null, tint = KnotworkTheme.extended.onSurfaceMuted)
     }
+}
+
+/**
+ * The second line of a [ProviderNavRow]: what is configured, or what is missing.
+ *
+ * Unconfigured, it asks for the one thing the provider cannot do without — a key, or for a
+ * server the user runs, its address. Configured without a model where the provider has no
+ * default, it ends in "no model selected" in warn ink: of all the rows, the only one that would
+ * fail if it were used.
+ */
+@Composable
+private fun ProviderRowSubtitle(row: ProviderRowState) {
+    val lead = row.endpointHint ?: row.fingerprint
+    if (lead == null) {
+        Text(
+            text = androidx.compose.ui.res.stringResource(
+                if (row.usesAddress) {
+                    R.string.knotwork_settings_providers_not_configured_address
+                } else {
+                    R.string.knotwork_settings_providers_not_configured
+                },
+            ),
+            style = KnotworkTextStyles.BodySm,
+            color = KnotworkTheme.extended.onSurfaceMuted,
+        )
+        return
+    }
+    val muted = KnotworkTheme.extended.onSurfaceMuted
+    val warn = KnotworkTheme.extended.signalWarn
+    val noModel = androidx.compose.ui.res.stringResource(R.string.knotwork_settings_providers_no_model)
+    val text = buildAnnotatedString {
+        withStyle(SpanStyle(color = muted)) {
+            append(lead)
+            when {
+                row.modelMissing -> append(" · ")
+                row.model != null -> append(" · ${row.model}")
+            }
+        }
+        if (row.modelMissing) {
+            withStyle(SpanStyle(color = warn, fontWeight = FontWeight.SemiBold)) {
+                append(noModel)
+            }
+        }
+    }
+    Text(text = text, style = KnotworkTextStyles.MonoSm)
 }
 
 // ─── System-instructions textarea ────────────────────────────────────────────

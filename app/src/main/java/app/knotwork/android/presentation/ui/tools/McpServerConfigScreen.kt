@@ -4,9 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.knotwork.android.presentation.ui.common.TestSubject
+import app.knotwork.android.presentation.ui.common.elapsedSecondsOf
+import app.knotwork.android.presentation.ui.common.toTestProbeUi
 import app.knotwork.design.screens.tools.McpServerConfigCallbacks
 import app.knotwork.design.screens.tools.McpServerConfigContent
 
@@ -26,6 +30,9 @@ fun McpServerConfigScreen(
 ) {
     val form by viewModel.form.collectAsStateWithLifecycle()
     val event by viewModel.events.collectAsStateWithLifecycle()
+    val test by viewModel.connectionTestState.collectAsStateWithLifecycle()
+    val elapsedSeconds by elapsedSecondsOf(test)
+    val context = LocalContext.current
 
     LaunchedEffect(event) {
         if (event is McpServerConfigViewModel.Event.Saved) {
@@ -50,12 +57,15 @@ fun McpServerConfigScreen(
         onSubmit = viewModel::onSubmit,
         onCancel = onCancel,
         onApproveCleartext = viewModel::onApproveCleartext,
+        onTestRun = viewModel::onTestConnection,
+        onTestCancel = viewModel::onCancelConnectionTest,
     )
 
     McpServerConfigContent(
         form = form,
         callbacks = callbacks,
         modifier = modifier.testTag(tag = MCP_SERVER_CONFIG_ROOT_TEST_TAG),
+        test = test.toTestProbeUi(context, TestSubject.Mcp, elapsedSeconds),
     )
 }
 

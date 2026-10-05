@@ -16,7 +16,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
 import app.knotwork.android.data.engine.KoogModelMapper
+import app.knotwork.android.domain.connection.AddressRefusal
+import app.knotwork.android.domain.connection.ConnectionCheckResult
+import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.connection.ConnectionPreconditions
+import app.knotwork.android.domain.connection.EndpointRule
 import app.knotwork.android.domain.connection.ProviderConnectionChecker
 import app.knotwork.android.domain.connection.ProviderConnectionDraft
 import app.knotwork.android.domain.constants.SettingsDefaults
@@ -27,14 +31,21 @@ import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.services.CleartextPolicy
 import app.knotwork.android.presentation.ui.common.ConnectionTest
 import app.knotwork.android.presentation.ui.common.ConnectionTestState
+import app.knotwork.android.presentation.ui.common.TestSubject
+import app.knotwork.android.presentation.ui.common.elapsedSecondsOf
+import app.knotwork.android.presentation.ui.common.toTestProbeUi
 import app.knotwork.design.screens.settings.CleartextConsentUi
 import app.knotwork.design.screens.settings.CloudRetryViewState
-import app.knotwork.design.screens.settings.KnotworkProviderRow
 import app.knotwork.design.screens.settings.LocalSettingsHints
-import app.knotwork.design.screens.settings.OllamaProviderInputs
+import app.knotwork.design.screens.settings.ModelSheetUi
+import app.knotwork.design.screens.settings.ProviderAddressUi
+import app.knotwork.design.screens.settings.ProviderContextWindowUi
 import app.knotwork.design.screens.settings.ProviderDetailCallbacks
 import app.knotwork.design.screens.settings.ProviderDetailContent
 import app.knotwork.design.screens.settings.ProviderDetailViewState
+import app.knotwork.design.screens.settings.ProviderFixedAddressUi
+import app.knotwork.design.screens.settings.ProviderKeyUi
+import app.knotwork.design.screens.settings.ProviderModelUi
 import app.knotwork.design.screens.settings.SettingsHint
 import app.knotwork.design.screens.settings.SettingsHintController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,13 +66,13 @@ import kotlin.time.TimeSource
  * Standalone editor for a single external LLM provider, reached from
  * the Settings → External providers nav-row.
  *
- * Wraps the catalog [KnotworkProviderRow] inside a top-level scaffold —
- * lets users tweak API key, model and (for Ollama) the LAN base URL and
- * context window without scrolling back inside the main Settings stack.
+ * Renders the catalog's provider form — the provider's address or key, *Test connection*, its
+ * model, and the retry policy — with every string resolved here, and ticks a running test's
+ * elapsed seconds.
  *
- * @param providerId Which provider to render. Determines which fields
- *   appear (Ollama gets two extra inputs).
+ * @param providerId Which provider to render. Determines which fields appear.
  * @param onBack Invoked when the user taps the system back button.
+ * @param viewModel The provider's values and the test row.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,21 +83,27 @@ fun ProviderDetailScreen(
 ) {
     LaunchedEffect(providerId) { viewModel.bind(providerId) }
     val uiState by viewModel.uiState.collectAsState()
+    val test by viewModel.connectionTestState.collectAsState()
+    val elapsedSeconds by elapsedSecondsOf(test)
     val context = LocalContext.current
     val hints = remember(context) { retryHints(context) }
 
     CompositionLocalProvider(LocalSettingsHints provides hints) {
         ProviderDetailContent(
-            state = uiState.toViewState(providerId, context),
+            state = uiState.toViewState(providerId, context, test, elapsedSeconds),
             callbacks = ProviderDetailCallbacks(
                 onBack = onBack,
                 onApiKeyChange = { value -> viewModel.updateKey(providerId, value) },
                 onModelChange = { value -> viewModel.updateModel(providerId, value) },
-                onOllamaBaseUrlChange = { value -> viewModel.updateBaseUrl(providerId, value) },
-                onOllamaContextWindowChange = viewModel::updateOllamaContextWindow,
+                onAddressChange = { value -> viewModel.updateBaseUrl(providerId, value) },
+                onContextWindowChange = viewModel::updateOllamaContextWindow,
                 onApproveCleartextOrigin = viewModel::approveCleartextOrigin,
                 onRetryAttemptsChange = viewModel::updateCloudRetryMaxAttempts,
                 onRetryDelayChange = viewModel::updateCloudRetryBaseDelayMs,
+                onTestRun = viewModel::startConnectionTest,
+                onTestCancel = viewModel::cancelConnectionTest,
+                onChooseModel = viewModel::openModelSheet,
+                onModelSheetDismiss = viewModel::closeModelSheet,
             ),
         )
     }
@@ -96,60 +113,190 @@ fun ProviderDetailScreen(
  * Projects the VM state onto the catalog's view state, resolving every string
  * here so the design module never learns which providers exist.
  *
- * The state holds the bound provider's values only; what the provider *uses* — a key, a
- * server address — comes from its [CloudProvider][app.knotwork.android.domain.models.CloudProvider]
- * shape, so a field the provider has no use for is hidden rather than shown empty. Ollama is
- * still named twice: its model is typed rather than chosen from a list, and the context
- * window is an Ollama setting.
+ * The fields come from the provider's [CloudProvider][app.knotwork.android.domain.models.CloudProvider]
+ * shape — an address for a server the user runs, a key where it takes one, a fixed address for
+ * OpenRouter and Groq, a built-in model list for the four providers Koog lists, a typed id
+ * otherwise — so a field the provider has no use for is hidden rather than shown empty.
  *
  * @param providerId Which provider the screen was opened for.
  * @param context Resource resolution.
+ * @param test The *Test connection* row's state.
+ * @param elapsedSeconds Seconds since a running test started.
  * @return The resolved view state.
  */
 @VisibleForTesting
-internal fun ProviderDetailUiState.toViewState(providerId: ProviderId, context: Context): ProviderDetailViewState {
-    val label = providerId.displayName()
+internal fun ProviderDetailUiState.toViewState(
+    providerId: ProviderId,
+    context: Context,
+    test: ConnectionTestState = ConnectionTestState.Idle,
+    elapsedSeconds: Long = 0,
+): ProviderDetailViewState {
+    val name = providerId.displayName()
     val provider = providerId.cloudProvider
-    val baseUrlError = context.getString(R.string.settings_ollama_base_url_error).takeIf { baseUrlInvalid }
+    val subject = if (provider.usesBaseUrl) TestSubject.OwnServer(name) else TestSubject.Hosted(name)
+    val listed = ((test as? ConnectionTestState.Finished)?.result as? ConnectionCheckResult.Reachable)?.items
     return ProviderDetailViewState(
-        title = context.getString(R.string.settings_provider_detail_title, label),
-        providerLabel = label,
+        title = name,
         backContentDescription = context.getString(R.string.common_back),
-        apiKey = apiKey.takeIf { provider.usesApiKey },
-        apiKeyLabel = context.getString(R.string.settings_provider_api_key_label, label),
-        model = model,
-        modelLabel = when (providerId) {
-            ProviderId.Ollama -> context.getString(R.string.settings_ollama_model_label)
-            else -> context.getString(R.string.settings_provider_model_label, label)
-        },
-        availableModels = when (providerId) {
-            ProviderId.OpenAi -> KoogModelMapper.getOpenAIModelIdList()
-            ProviderId.Anthropic -> KoogModelMapper.getAnthropicModelIdList()
-            ProviderId.Google -> KoogModelMapper.getGoogleModelIdList()
-            ProviderId.DeepSeek -> KoogModelMapper.getDeepSeekModelIdList()
-            ProviderId.Ollama -> emptyList()
-        },
-        ollama = if (providerId == ProviderId.Ollama) {
-            OllamaProviderInputs(
-                baseUrl = baseUrl,
-                baseUrlPlaceholder = context.getString(R.string.settings_ollama_base_url_placeholder),
-                baseUrlValidationError = baseUrlError,
-                contextWindow = ollamaContextWindow,
-                contextWindowLabel = context.getString(R.string.settings_ollama_context_label),
-                baseUrlLabel = context.getString(R.string.settings_ollama_base_url_label),
-            )
-        } else {
-            null
-        },
+        address = addressUi(providerId, context),
         cleartextConsent = cleartextConsentOrigin?.let { origin ->
             CleartextConsentUi(
                 body = context.getString(R.string.settings_cleartext_consent_body, origin),
                 actionLabel = context.getString(R.string.settings_cleartext_consent_action),
             )
         },
+        fixedAddress = fixedAddressOf(providerId)?.let {
+            ProviderFixedAddressUi(label = context.getString(R.string.settings_fixed_address_label), value = it)
+        },
+        apiKey = keyUi(providerId, context),
+        test = test.toTestProbeUi(context, subject, elapsedSeconds),
+        model = modelUi(providerId, context, test, listed),
+        contextWindow = if (providerId == ProviderId.Ollama) {
+            ProviderContextWindowUi(
+                label = context.getString(R.string.settings_ollama_context_label),
+                value = ollamaContextWindow,
+            )
+        } else {
+            null
+        },
+        modelSheet = listed?.takeIf { modelSheetOpen && it.isNotEmpty() }?.let { ids ->
+            ModelSheetUi(source = name, ids = ids, selected = model)
+        },
         retry = cloudRetryViewState(context),
     )
 }
+
+/** The address field of a server the user runs, with the reason it cannot be used, if any. */
+private fun ProviderDetailUiState.addressUi(providerId: ProviderId, context: Context): ProviderAddressUi? {
+    if (!providerId.cloudProvider.usesBaseUrl) return null
+    val ollama = providerId == ProviderId.Ollama
+    return ProviderAddressUi(
+        label = context.getString(
+            if (ollama) R.string.settings_ollama_base_url_label else R.string.settings_address_label,
+        ),
+        value = baseUrl,
+        placeholder = context.getString(
+            if (ollama) R.string.settings_ollama_base_url_placeholder else R.string.settings_address_placeholder_compat,
+        ),
+        hint = context.getString(R.string.settings_address_hint_v1).takeUnless { ollama },
+        error = when {
+            !baseUrlInvalid -> null
+            baseUrl.isBlank() -> context.getString(R.string.settings_address_error_empty)
+            else -> context.getString(R.string.settings_address_error_not_url)
+        },
+        refusal = when (val refusal = addressRefusal) {
+            is AddressRefusal.PublicCleartext ->
+                context.getString(R.string.settings_address_refused_public_http, refusal.host)
+            is AddressRefusal.HostNotLocal -> context.getString(
+                if (refusal.host.isIpLiteral()) {
+                    R.string.settings_address_refused_block_ip
+                } else {
+                    R.string.settings_address_refused_block_host
+                },
+                refusal.host,
+            )
+            // The banner above asks for this one; saying it twice would split the answer.
+            is AddressRefusal.CleartextNeedsApproval, null -> null
+        },
+    )
+}
+
+/** The key field, for a provider that takes one. */
+private fun ProviderDetailUiState.keyUi(providerId: ProviderId, context: Context): ProviderKeyUi? {
+    if (!providerId.cloudProvider.usesApiKey) return null
+    val compat = providerId == ProviderId.OpenAiCompatible
+    return ProviderKeyUi(
+        label = if (compat) {
+            context.getString(R.string.settings_key_label_compat)
+        } else {
+            context.getString(R.string.settings_provider_api_key_label, providerId.displayName())
+        },
+        value = apiKey,
+        marker = when (providerId) {
+            ProviderId.OpenAiCompatible -> context.getString(R.string.settings_marker_optional)
+            ProviderId.OpenRouter, ProviderId.Groq -> context.getString(R.string.settings_marker_required)
+            else -> null
+        },
+        placeholder = when (providerId) {
+            ProviderId.OpenAiCompatible -> context.getString(R.string.settings_key_placeholder_compat)
+            ProviderId.OpenRouter -> context.getString(R.string.settings_key_placeholder_openrouter)
+            ProviderId.Groq -> context.getString(R.string.settings_key_placeholder_groq)
+            else -> null
+        },
+        hint = context.getString(R.string.settings_key_hint_compat).takeIf { compat },
+    )
+}
+
+/**
+ * The model field: the built-in list for the four providers Koog lists, otherwise a typed id —
+ * with *Choose* once a test brought a list, and a note before it or when the server sent none.
+ */
+private fun ProviderDetailUiState.modelUi(
+    providerId: ProviderId,
+    context: Context,
+    test: ConnectionTestState,
+    listed: List<String>?,
+): ProviderModelUi {
+    builtInModels(providerId)?.let { options ->
+        return ProviderModelUi(
+            label = context.getString(R.string.settings_provider_model_label, providerId.displayName()),
+            value = model,
+            options = options,
+        )
+    }
+    val noList = ((test as? ConnectionTestState.Finished)?.result as? ConnectionCheckResult.Failed)
+        ?.failure == ConnectionFailure.NoModelList
+    val required = providerId.cloudProvider.requiresModel
+    return ProviderModelUi(
+        label = context.getString(
+            if (providerId ==
+                ProviderId.Ollama
+            ) {
+                R.string.settings_ollama_model_label
+            } else {
+                R.string.settings_model_label_free
+            },
+        ),
+        value = model,
+        marker = context.getString(R.string.settings_marker_required).takeIf { required },
+        placeholder = when (providerId) {
+            ProviderId.OpenAiCompatible -> context.getString(R.string.settings_model_placeholder_compat)
+            ProviderId.OpenRouter -> context.getString(R.string.settings_model_placeholder_openrouter)
+            ProviderId.Groq -> context.getString(R.string.settings_model_placeholder_groq)
+            else -> null
+        },
+        note = when {
+            noList -> context.getString(R.string.settings_model_note_no_list)
+            listed.isNullOrEmpty() -> context.getString(R.string.settings_model_note_before_test)
+            else -> null
+        },
+        chooseLabel = context.getString(R.string.settings_model_action_choose).takeIf { !listed.isNullOrEmpty() },
+    )
+}
+
+/** The built-in model list of a provider Koog lists, or `null` for one whose model is typed. */
+private fun builtInModels(providerId: ProviderId): List<String>? = when (providerId) {
+    ProviderId.OpenAi -> KoogModelMapper.getOpenAIModelIdList()
+    ProviderId.Anthropic -> KoogModelMapper.getAnthropicModelIdList()
+    ProviderId.Google -> KoogModelMapper.getGoogleModelIdList()
+    ProviderId.DeepSeek -> KoogModelMapper.getDeepSeekModelIdList()
+    ProviderId.OpenRouter, ProviderId.Groq, ProviderId.Ollama, ProviderId.OpenAiCompatible -> null
+}
+
+/**
+ * Where a provider with a fixed address sends, shown read-only. Spelled here rather than read from
+ * the client that builds the request — the screen does not reach a network client; a test holds
+ * the two equal.
+ */
+@VisibleForTesting
+internal fun fixedAddressOf(providerId: ProviderId): String? = when (providerId) {
+    ProviderId.OpenRouter -> "https://openrouter.ai/api"
+    ProviderId.Groq -> "https://api.groq.com/openai"
+    else -> null
+}
+
+/** Whether a host is an IP literal rather than a name — the two need different advice. */
+private fun String.isIpLiteral(): Boolean = all { it.isDigit() || it == '.' } || contains(':')
 
 /**
  * Resolves the cloud-retry sliders, bounds included.
@@ -240,6 +387,9 @@ private fun retryHints(context: Context): SettingsHintController = SettingsHintC
  * @property cleartextConsentOrigin The unencrypted private origin awaiting the user's approval.
  * @property cloudRetryMaxAttempts The global cloud-retry attempt budget.
  * @property cloudRetryBaseDelayMs The global cloud-retry base delay.
+ * @property addressRefusal Why the rules refuse [baseUrl], judged as it is typed by the rule a
+ *   request is held to ([EndpointRule]); `null` when they do not.
+ * @property modelSheetOpen Whether the server's model list is open over the form.
  */
 data class ProviderDetailUiState(
     val apiKey: String = "",
@@ -250,6 +400,8 @@ data class ProviderDetailUiState(
     val cleartextConsentOrigin: String? = null,
     val cloudRetryMaxAttempts: Int = SettingsDefaults.CLOUD_RETRY_MAX_ATTEMPTS_DEFAULT,
     val cloudRetryBaseDelayMs: Long = SettingsDefaults.CLOUD_RETRY_BASE_DELAY_MS_DEFAULT,
+    val addressRefusal: AddressRefusal? = null,
+    val modelSheetOpen: Boolean = false,
 )
 
 /**
@@ -364,8 +516,24 @@ class ProviderDetailViewModel @Inject constructor(
                         localOnly = inputs.localOnly,
                     ),
                 )
+                // Said once, under the address, while it is typed: the same rule a request is
+                // held to when it is sent.
+                val address = inputs.draft.baseUrl.orEmpty().trim()
+                val refusal = address.takeIf { provider.usesBaseUrl && CleartextPolicy.hostOf(it) != null }
+                    ?.let { EndpointRule.refusal(it, inputs.approvedCleartextOrigins, inputs.localOnly) }
+                _uiState.update { it.copy(addressRefusal = refusal) }
             }
             .launchIn(viewModelScope)
+    }
+
+    /** Opens the server's model list over the form; it lists what the last test brought. */
+    fun openModelSheet() {
+        _uiState.update { it.copy(modelSheetOpen = true) }
+    }
+
+    /** Closes the model list, after a pick or without one. */
+    fun closeModelSheet() {
+        _uiState.update { it.copy(modelSheetOpen = false) }
     }
 
     /**

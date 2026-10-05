@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.orchestrator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
+import app.knotwork.android.domain.engine.AutoProvider
 import app.knotwork.android.domain.engine.DefaultPipelineFactory
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
@@ -24,11 +25,13 @@ import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.pipelineio.PipelineJsonSerializer
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
+import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.repositories.isConfigured
 import app.knotwork.android.domain.services.PipelineCompositionValidator
 import app.knotwork.android.domain.services.findDependentPipelines
 import app.knotwork.android.domain.text.ImportedText
@@ -118,6 +121,7 @@ constructor(
     private val compositionValidator: PipelineCompositionValidator,
     private val promptVariableProviders: Set<@JvmSuppressWildcards PromptVariableProvider>,
     private val skillRepository: SkillRepository,
+    private val apiKeyRepository: ApiKeyRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -1264,6 +1268,26 @@ constructor(
     } catch (e: Exception) {
         Timber.w(e, "Failed to load skills for the SKILL node picker")
         emptyList()
+    }
+
+    /**
+     * What the node sheet's provider fields say about this device: every provider set up here
+     * (its credential, and a model where it has no default) with the model id it uses, and what
+     * a node set to *Auto* would run on — the rule the CLOUD executor applies ([AutoProvider]).
+     *
+     * Read when a sheet opens rather than kept as state: it changes only in Settings, which the
+     * editor is not on at the same time.
+     *
+     * @return The availability; a provider's model is `null` when it uses its default.
+     */
+    suspend fun loadProviderAvailability(): ProviderAvailability {
+        val configured = CloudProvider.entries.filter { apiKeyRepository.isConfigured(it) }
+        return ProviderAvailability(
+            models = configured.associateWith { provider ->
+                apiKeyRepository.getModel(provider).first()?.takeIf { it.isNotBlank() }
+            },
+            auto = AutoProvider.resolve(apiKeyRepository),
+        )
     }
 
     /**
