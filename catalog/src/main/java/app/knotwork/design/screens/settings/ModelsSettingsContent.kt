@@ -20,8 +20,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import app.knotwork.design.R
-import app.knotwork.design.components.buttons.KnotworkButtonSize
-import app.knotwork.design.components.buttons.KnotworkSecondaryButton
+import app.knotwork.design.components.misc.KnotworkTestProbeRow
+import app.knotwork.design.components.misc.TestProbeTone
+import app.knotwork.design.components.misc.TestProbeUi
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -139,39 +140,21 @@ private fun ActiveModelCard(state: LocalModelCardState) {
     }
 }
 
+/**
+ * The local backend's *Test backend* row, on the shared [KnotworkTestProbeRow]: idle with the last
+ * result, or failed when that result was an error. The probe runs in one go and reports through a
+ * snackbar, so the row has no running state of its own.
+ */
 @Composable
 private fun TestProbeRow(state: LocalModelCardState, onTest: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Icon(
-            imageVector = AppIcons.Bolt,
-            contentDescription = null,
-            tint = KnotworkTheme.extended.onSurfaceMuted,
-            modifier = Modifier.size(KnotworkTheme.spacing.sp5),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.knotwork_settings_local_model_test_title),
-                style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = state.testProbeText,
-                style = KnotworkTextStyles.MonoSm,
-                color = if (state.testProbeIsError) {
-                    KnotworkTheme.extended.signalError
-                } else {
-                    KnotworkTheme.extended.onSurfaceMuted
-                },
-            )
-        }
-        KnotworkSecondaryButton(
-            text = stringResource(R.string.knotwork_settings_local_model_test_run),
-            onClick = onTest,
-            size = KnotworkButtonSize.Sm,
-        )
-    }
+    KnotworkTestProbeRow(
+        state = TestProbeUi(
+            label = stringResource(R.string.knotwork_settings_local_model_test_title),
+            tone = if (state.testProbeIsError) TestProbeTone.Failed else TestProbeTone.Idle,
+            status = state.testProbeText,
+            actionLabel = stringResource(R.string.knotwork_settings_local_model_test_run),
+        ),
+        onRun = onTest,
+        onCancel = {},
+    )
 }

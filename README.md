@@ -76,9 +76,11 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
 
 - **Runs on your device.** On-device LLM inference through LiteRT-LM, with
   optional NPU/GPU acceleration; CPU-only works too, just slower. Cloud
-  providers (OpenAI, Anthropic, Google Gemini, DeepSeek, Ollama) are optional,
-  opt-in, and bring-your-own-key — nothing leaves the device unless you
-  configure it to.
+  providers (OpenAI, Anthropic, Google Gemini, DeepSeek, OpenRouter, Groq) and
+  a server you run (Ollama, or any OpenAI-compatible one — vLLM, LM Studio,
+  llama.cpp) are optional, opt-in, and bring-your-own-key — nothing leaves the
+  device unless you configure it to. *Test connection* checks a provider or an
+  MCP server before you rely on it, without sending a prompt.
 - **You build the pipeline.** A drag-and-drop editor with pan / pinch-zoom,
   snap-to-grid, a radial node picker, auto-layout, inline validation, and
   per-type configuration for all 14 node types — plus a standalone

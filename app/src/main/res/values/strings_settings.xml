@@ -47,13 +47,95 @@
     <!-- External providers list -->
     <string name="settings_ollama_base_url_label">Ollama base URL</string>
     <string name="settings_ollama_base_url_placeholder">http://192.168.1.100:11434</string>
-    <string name="settings_ollama_base_url_error">Base URL is required</string>
     <string name="settings_cleartext_consent_body">Traffic to %1$s is not encrypted. Anyone on the same network can read what you send. Approve it only if this address is a machine you trust on your own network.</string>
     <string name="settings_cleartext_consent_action">Approve unencrypted connection</string>
     <string name="settings_ollama_model_label">Ollama model name</string>
     <string name="settings_ollama_context_label">Ollama context window size</string>
     <string name="settings_provider_api_key_label">%1$s API key</string>
     <string name="settings_provider_model_label">%1$s model</string>
+
+    <!-- Provider forms: a server you run, OpenRouter, Groq -->
+    <string name="settings_address_label">Server address</string>
+    <string name="settings_address_placeholder_compat" translatable="false" tools:ignore="TypographyDashes">http://192.168.1.20:8000/v1</string>
+    <string name="settings_address_hint_v1">Include /v1 — most servers serve the OpenAI API under it.</string>
+    <string name="settings_address_error_empty">Enter the server address.</string>
+    <string name="settings_address_error_not_url">Not an address. It starts with http:// or https://.</string>
+    <string name="settings_address_refused_public_http">%1$s is on the public internet, and http:// would send your prompts unencrypted. Use https://.</string>
+    <string name="settings_address_refused_block_host">Block network from local model is on, so only this device and private IP addresses are allowed. %1$s is a host name: use the server’s IP address, or turn the setting off in Settings → Tools &amp; workspace.</string>
+    <string name="settings_address_refused_block_ip">Block network from local model is on, so only this device and private IP addresses are allowed, and %1$s is a public address. Use a private one, or turn the setting off in Settings → Tools &amp; workspace.</string>
+    <string name="settings_fixed_address_label">Sends to</string>
+    <string name="settings_key_label_compat">API key</string>
+    <string name="settings_marker_optional">optional</string>
+    <string name="settings_marker_required">required</string>
+    <string name="settings_key_hint_compat">Leave empty if the server has none. Sent as a Bearer token.</string>
+    <string name="settings_key_placeholder_compat" translatable="false" tools:ignore="TypographyDashes">sk-…</string>
+    <string name="settings_key_placeholder_openrouter" translatable="false" tools:ignore="TypographyDashes">sk-or-v1-…</string>
+    <string name="settings_key_placeholder_groq" translatable="false" tools:ignore="TypographyDashes">gsk_…</string>
+    <string name="settings_model_label_free">Model id</string>
+    <string name="settings_model_placeholder_compat" translatable="false" tools:ignore="TypographyDashes">qwen2.5-7b-instruct</string>
+    <string name="settings_model_placeholder_openrouter" translatable="false" tools:ignore="TypographyDashes">meta-llama/llama-3.3-70b-instruct</string>
+    <string name="settings_model_placeholder_groq" translatable="false" tools:ignore="TypographyDashes">llama-3.3-70b-versatile</string>
+    <string name="settings_model_note_before_test">Type the id, or run Test to choose from the server’s list.</string>
+    <string name="settings_model_action_choose">Choose</string>
+    <string name="settings_model_note_no_list">This server sent no model list. Type the id it serves.</string>
+
+    <!-- Add provider -->
+    <string name="settings_provider_picker_compat_desc">vLLM, LM Studio, llama.cpp, or any server that speaks the OpenAI API.</string>
+    <string name="settings_provider_picker_added">added</string>
+    <string name="settings_provider_group_hosted">Hosted</string>
+    <string name="settings_provider_group_own">Your own server</string>
+
+    <!-- Test connection -->
+    <string name="settings_test_label">Test connection</string>
+    <string name="settings_test_run">Test</string>
+    <string name="settings_test_cancel">Cancel</string>
+    <string name="settings_test_again">Test again</string>
+    <string name="settings_test_idle_provider">Asks for the model list. Sends no prompt and spends no tokens.</string>
+    <string name="settings_test_idle_mcp">Connects with the values above and lists the tools. Saves nothing.</string>
+    <string name="settings_test_disabled_no_address">Enter the server address to test.</string>
+    <string name="settings_test_disabled_bad_url">Fix the address to test.</string>
+    <string name="settings_test_disabled_no_key">Enter the API key to test.</string>
+    <string name="settings_test_disabled_cleartext">Approve the unencrypted connection above to test.</string>
+    <string name="settings_test_disabled_refused_address">This address is not allowed. The reason is above.</string>
+    <string name="settings_test_disabled_no_url">Enter the server URL to test.</string>
+    <string name="settings_test_running">Asking %1$s for its models · %2$d s</string>
+    <string name="settings_test_running_short">Asking %1$s for its models</string>
+    <string name="settings_test_running_mcp">Connecting to %1$s · %2$d s</string>
+    <string name="settings_test_running_mcp_short">Connecting to %1$s</string>
+    <plurals name="settings_test_ok_models">
+        <item quantity="one">Connected · %1$d model</item>
+        <item quantity="other">Connected · %1$d models</item>
+    </plurals>
+    <string name="settings_test_ok_zero">Connected · no models. The server is up but serves none yet: load one on it, then test again.</string>
+    <plurals name="settings_test_ok_tools">
+        <item quantity="one">Connected · %1$d tool</item>
+        <item quantity="other">Connected · %1$d tools</item>
+    </plurals>
+    <string name="settings_test_refused_head">Not sent.</string>
+    <string name="settings_test_refused_block_hosted">Block network from local model is on, and %1$s is on the internet. To use it, turn the setting off in Settings → Tools &amp; workspace.</string>
+    <string name="settings_test_refused_block_host">Block network from local model allows only this device and private IP addresses, and %1$s is neither. Use the server’s IP, or change the setting in Settings → Tools &amp; workspace.</string>
+    <string name="settings_test_refused_public_http">%1$s is on the public internet and the address is unencrypted. Use https://.</string>
+    <string name="settings_test_failed_key_hosted">Key rejected (%1$d). Paste it again, or make a new one in your %2$s account.</string>
+    <string name="settings_test_failed_key_own">Key rejected (%1$d). Check the key the server expects.</string>
+    <string name="settings_test_failed_key_missing">The server wants a key (%1$d). Enter it under API key.</string>
+    <string name="settings_test_failed_not_found">Nothing at %1$s (404). Most servers need the address to end in /v1.</string>
+    <string name="settings_test_failed_rate">Rate limited. %1$s asked to wait %2$d s. Test again after that.</string>
+    <string name="settings_test_failed_rate_no_wait">Rate limited by %1$s. Test again in a minute.</string>
+    <string name="settings_test_failed_server_hosted">Server error (%1$d) at %2$s. The problem is on their side: test again in a few minutes.</string>
+    <string name="settings_test_failed_server_own">Server error (%1$d). The server answered and then failed: check its log, then test again.</string>
+    <string name="settings_test_failed_dns">Can’t find %1$s. Check the spelling of the address.</string>
+    <string name="settings_test_failed_offline">Can’t reach %1$s. Check that this phone is online, then test again.</string>
+    <string name="settings_test_failed_conn_refused">%1$s refused the connection. Check that the server is running and listening on that port.</string>
+    <string name="settings_test_failed_timeout">No answer from %1$s in %2$d s. Check that it is running and reachable from this phone.</string>
+    <string name="settings_test_failed_silence">%1$s connected, then sent nothing for %2$d s. Restart the server, then test again.</string>
+    <string name="settings_test_failed_other">Unexpected answer (%1$d): “%2$s”. Check that the address is the API, not a web page — or type the model id below.</string>
+    <string name="settings_test_failed_other_no_body">Unexpected answer (%1$d). Check that the address is the API, not a web page — or type the model id below.</string>
+    <string name="settings_test_failed_no_list">The server answered, but not with a model list.</string>
+    <string name="settings_test_failed_handshake">%1$s accepted the connection but did not finish the MCP handshake in %2$d s. Check that the URL is the server’s MCP endpoint.</string>
+    <string name="settings_test_failed_not_mcp">%1$s answered, but not as an MCP server. Check the path: it is often /mcp or /sse.</string>
+    <string name="settings_test_failed_mcp_auth">Credentials rejected (%1$d). Check the token under Authentication.</string>
+    <string name="settings_test_failed_unknown">Couldn’t connect: %1$s</string>
+    <string name="settings_test_a11y_started">Testing connection</string>
 
     <!-- Memory card -->
     <string name="settings_memory_stat_chunks">Chunks</string>
@@ -183,7 +265,6 @@
 
     <!-- Provider picker / detail -->
     <string name="settings_provider_picker_title">Add provider</string>
-    <string name="settings_provider_detail_title">%1$s provider</string>
     <string name="settings_cloud_retry_title">Retry policy</string>
     <string name="settings_cloud_retry_attempts_title">Max attempts</string>
     <string name="settings_cloud_retry_delay_title">Base delay</string>

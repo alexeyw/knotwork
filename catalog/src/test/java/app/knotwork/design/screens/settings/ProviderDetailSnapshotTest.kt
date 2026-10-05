@@ -1,14 +1,16 @@
 package app.knotwork.design.screens.settings
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
@@ -23,17 +25,14 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Roborazzi baselines for the provider detail screen.
+ * Roborazzi baselines for the external providers: the list, the *Add provider* picker, each
+ * provider's form in its states, the *Test connection* row and the model list.
  *
- * The screen had **none**, because its composition lived entirely in `:app`.
- * That is how it grew a look of its own — its own title style, a grey
- * explanatory paragraph, bare Material sliders — without anything noticing:
- * there was nothing to compare it against. These captures are that comparison.
- *
- * The Ollama states are not padding. Ollama is the one provider whose shape
- * differs — no API key, a base URL, a context window — and the cleartext-consent
- * banner is a state a person only meets on a home network, which is exactly the
- * kind that goes unlooked-at until someone reports it.
+ * The screen had **none** while its composition lived in `:app`, which is how it grew a look of
+ * its own unnoticed. The states here are the ones the design hand-off names: every field shape (a
+ * hosted key with a built-in list, a server the user runs, a fixed address), every way an address
+ * is refused while it is typed, every state of the test row, and 200 % font scale where the test
+ * row and *Choose* move under their labels.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -42,107 +41,276 @@ class ProviderDetailSnapshotTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    // ─── A · the list and the picker ────────────────────────────────────────
+
     @Test
-    fun provider_detail_key_light() = snapshot("key", dark = false) {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
+    fun settings_models_providers_eight_light() = snapshot("settings_models_providers_eight", dark = false) {
+        ModelsSettingsContent(state = ProviderPreview.modelsProvidersEight())
     }
 
     @Test
-    fun provider_detail_key_dark() = snapshot("key", dark = true) {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
+    fun settings_models_providers_eight_dark() = snapshot("settings_models_providers_eight", dark = true) {
+        ModelsSettingsContent(state = ProviderPreview.modelsProvidersEight())
     }
 
     @Test
-    fun provider_detail_ollama_light() = snapshot("ollama", dark = false, expandRow = "Ollama") {
-        ProviderDetailContent(state = SettingsPreview.providerDetailOllama())
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun settings_models_providers_fontscale200_light() =
+        snapshot("settings_models_providers_fontscale200", dark = false, fontScale = FONT_SCALE_200) {
+            ModelsSettingsContent(state = ProviderPreview.modelsProvidersEight())
+        }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun settings_models_providers_fontscale200_dark() =
+        snapshot("settings_models_providers_fontscale200", dark = true, fontScale = FONT_SCALE_200) {
+            ModelsSettingsContent(state = ProviderPreview.modelsProvidersEight())
+        }
+
+    @Test
+    fun provider_picker_eight_light() = snapshot("provider_picker_eight", dark = false) {
+        ProviderPickerContent(state = ProviderPreview.providerPicker())
     }
 
     @Test
-    fun provider_detail_ollama_dark() = snapshot("ollama", dark = true, expandRow = "Ollama") {
-        ProviderDetailContent(state = SettingsPreview.providerDetailOllama())
+    fun provider_picker_eight_dark() = snapshot("provider_picker_eight", dark = true) {
+        ProviderPickerContent(state = ProviderPreview.providerPicker())
     }
 
     @Test
-    fun provider_detail_cleartext_light() = snapshot("cleartext", dark = false, expandRow = "Ollama") {
-        ProviderDetailContent(state = SettingsPreview.providerDetailCleartext())
-    }
+    fun provider_picker_fontscale200_light() =
+        snapshot("provider_picker_fontscale200", dark = false, fontScale = FONT_SCALE_200) {
+            ProviderPickerContent(state = ProviderPreview.providerPicker())
+        }
+
+    // ─── B · provider forms ─────────────────────────────────────────────────
 
     @Test
-    fun provider_detail_cleartext_dark() = snapshot("cleartext", dark = true, expandRow = "Ollama") {
-        ProviderDetailContent(state = SettingsPreview.providerDetailCleartext())
-    }
+    fun provider_detail_key_open_light() = detail("key_open", dark = false, ProviderPreview.providerDetail())
 
     @Test
-    fun provider_detail_invalid_url_light() = snapshot("invalid_url", dark = false, expandRow = "Ollama") {
-        ProviderDetailContent(state = SettingsPreview.providerDetailInvalidUrl())
-    }
+    fun provider_detail_key_open_dark() = detail("key_open", dark = true, ProviderPreview.providerDetail())
+
+    @Test
+    fun provider_detail_key_refused_light() =
+        detail("key_refused", dark = false, ProviderPreview.providerDetailKeyRefused())
+
+    @Test
+    fun provider_detail_key_refused_dark() =
+        detail("key_refused", dark = true, ProviderPreview.providerDetailKeyRefused())
+
+    @Test
+    fun provider_detail_ollama_light() = detail("ollama", dark = false, ProviderPreview.providerDetailOllama())
+
+    @Test
+    fun provider_detail_ollama_dark() = detail("ollama", dark = true, ProviderPreview.providerDetailOllama())
+
+    @Test
+    fun provider_detail_invalid_url_light() =
+        detail("invalid_url", dark = false, ProviderPreview.providerDetailInvalidUrl())
+
+    @Test
+    fun provider_detail_compat_empty_light() =
+        detail("compat_empty", dark = false, ProviderPreview.providerDetailCompatEmpty())
+
+    @Test
+    fun provider_detail_compat_empty_dark() =
+        detail("compat_empty", dark = true, ProviderPreview.providerDetailCompatEmpty())
 
     /**
-     * At 200 % the provider row's label and its trailing controls compete for one
-     * line, and the retry sliders' value labels sit beside titles free to wrap.
-     * Recording this is what keeps a clipped label from shipping unseen.
+     * At 200 % the field labels wrap, the markers follow them, and the test row's status and
+     * button move under its label.
      */
     @Test
-    fun provider_detail_font_scale_200_light() = snapshot("fontscale200", dark = false, fontScale = FONT_SCALE_200) {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun provider_detail_compat_fontscale200_light() =
+        detail("compat_fontscale200", dark = false, ProviderPreview.providerDetailCompatEmpty(), FONT_SCALE_200)
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun provider_detail_compat_fontscale200_dark() =
+        detail("compat_fontscale200", dark = true, ProviderPreview.providerDetailCompatEmpty(), FONT_SCALE_200)
+
+    @Test
+    fun provider_detail_compat_cleartext_light() =
+        detail("compat_cleartext", dark = false, ProviderPreview.providerDetailCompatCleartext())
+
+    @Test
+    fun provider_detail_compat_cleartext_dark() =
+        detail("compat_cleartext", dark = true, ProviderPreview.providerDetailCompatCleartext())
+
+    @Test
+    fun provider_detail_compat_refused_http_light() =
+        detail("compat_refused_http", dark = false, ProviderPreview.providerDetailCompatRefusedHttp())
+
+    @Test
+    fun provider_detail_compat_refused_http_dark() =
+        detail("compat_refused_http", dark = true, ProviderPreview.providerDetailCompatRefusedHttp())
+
+    @Test
+    fun provider_detail_compat_refused_block_light() =
+        detail("compat_refused_block", dark = false, ProviderPreview.providerDetailCompatRefusedBlock())
+
+    @Test
+    fun provider_detail_compat_refused_block_dark() =
+        detail("compat_refused_block", dark = true, ProviderPreview.providerDetailCompatRefusedBlock())
+
+    @Test
+    fun provider_detail_openrouter_empty_light() =
+        detail("openrouter_empty", dark = false, ProviderPreview.providerDetailOpenRouterEmpty())
+
+    @Test
+    fun provider_detail_openrouter_empty_dark() =
+        detail("openrouter_empty", dark = true, ProviderPreview.providerDetailOpenRouterEmpty())
+
+    @Test
+    fun provider_detail_openrouter_configured_light() =
+        detail("openrouter_configured", dark = false, ProviderPreview.providerDetailOpenRouterConfigured())
+
+    @Test
+    fun provider_detail_openrouter_configured_dark() =
+        detail("openrouter_configured", dark = true, ProviderPreview.providerDetailOpenRouterConfigured())
+
+    /** At 200 % *Choose* moves under the model field, and a long id wraps rather than being cut. */
+    @Test
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun provider_detail_openrouter_fontscale200_light() = detail(
+        "openrouter_fontscale200",
+        dark = false,
+        ProviderPreview.providerDetailOpenRouterConfigured(),
+        FONT_SCALE_200,
+    )
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun provider_detail_openrouter_fontscale200_dark() = detail(
+        "openrouter_fontscale200",
+        dark = true,
+        ProviderPreview.providerDetailOpenRouterConfigured(),
+        FONT_SCALE_200,
+    )
+
+    @Test
+    fun provider_detail_model_nolist_light() =
+        detail("model_nolist", dark = false, ProviderPreview.providerDetailModelNoList())
+
+    @Test
+    fun provider_detail_model_nolist_dark() =
+        detail("model_nolist", dark = true, ProviderPreview.providerDetailModelNoList())
+
+    // ─── The test row ──────────────────────────────────────────────────────
+
+    @Test
+    fun provider_detail_test_running_light() =
+        detail("test_running", dark = false, ProviderPreview.providerDetailTestRunning())
+
+    @Test
+    fun provider_detail_test_running_dark() =
+        detail("test_running", dark = true, ProviderPreview.providerDetailTestRunning())
+
+    @Test
+    fun provider_detail_test_reachable_light() =
+        detail("test_reachable", dark = false, ProviderPreview.providerDetailTestReachable())
+
+    @Test
+    fun provider_detail_test_reachable_dark() =
+        detail("test_reachable", dark = true, ProviderPreview.providerDetailTestReachable())
+
+    @Test
+    fun provider_detail_test_failed_light() =
+        detail("test_failed", dark = false, ProviderPreview.providerDetailTestFailed())
+
+    @Test
+    fun provider_detail_test_failed_dark() =
+        detail("test_failed", dark = true, ProviderPreview.providerDetailTestFailed())
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun provider_detail_test_failed_fontscale200_light() = detail(
+        "test_failed_fontscale200",
+        dark = false,
+        ProviderPreview.providerDetailTestFailed(),
+        FONT_SCALE_200,
+    )
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
+    fun provider_detail_test_failed_fontscale200_dark() = detail(
+        "test_failed_fontscale200",
+        dark = true,
+        ProviderPreview.providerDetailTestFailed(),
+        FONT_SCALE_200,
+    )
+
+    // ─── The model list ────────────────────────────────────────────────────
+
+    @Test
+    fun provider_detail_model_sheet_light() = snapshot("provider_detail_model_sheet", dark = false) {
+        ModelSheet()
     }
 
     @Test
-    fun provider_detail_font_scale_200_dark() = snapshot("fontscale200", dark = true, fontScale = FONT_SCALE_200) {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
+    fun provider_detail_model_sheet_dark() = snapshot("provider_detail_model_sheet", dark = true) {
+        ModelSheet()
     }
+
+    @Test
+    fun provider_detail_model_sheet_fontscale200_light() =
+        snapshot("provider_detail_model_sheet_fontscale200", dark = false, fontScale = FONT_SCALE_200) {
+            ModelSheet()
+        }
+
+    @Test
+    fun provider_detail_model_sheet_fontscale200_dark() =
+        snapshot("provider_detail_model_sheet_fontscale200", dark = true, fontScale = FONT_SCALE_200) {
+            ModelSheet()
+        }
+
+    // ─── Retry policy ──────────────────────────────────────────────────────
 
     /** The retry section's hint open — the panel has to have a baseline too. */
     @Test
     @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
-    fun provider_detail_retry_hint_light() = snapshot("retry_hint", dark = false, openHint = "CLOUD_RETRY_POLICY") {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
-    }
+    fun provider_detail_retry_hint_light() =
+        snapshot("provider_detail_retry_hint", dark = false, openHint = "CLOUD_RETRY_POLICY") {
+            ProviderDetailContent(state = ProviderPreview.providerDetail())
+        }
 
     /**
-     * The retry policy sits below the fold on a 760 dp screen. Captured on a
-     * taller device rather than by scrolling: the section is static, and without
-     * this it has no baseline at all — which is precisely how it grew its own
-     * visual language the first time.
+     * The retry policy sits below the fold on a 760 dp screen. Captured on a taller device rather
+     * than by scrolling: the section is static, and without this it has no baseline at all.
      */
     @Test
     @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
-    fun provider_detail_retry_light() = snapshot("retry", dark = false) {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
-    }
+    fun provider_detail_retry_light() = detail("retry", dark = false, ProviderPreview.providerDetail())
 
     @Test
     @Config(sdk = [36], qualifiers = "w360dp-h1400dp-xhdpi")
-    fun provider_detail_retry_dark() = snapshot("retry", dark = true) {
-        ProviderDetailContent(state = SettingsPreview.providerDetail())
+    fun provider_detail_retry_dark() = detail("retry", dark = true, ProviderPreview.providerDetail())
+
+    /** The model list as it opens over a form, searched for "llama-3.3". */
+    @Composable
+    private fun ModelSheet() {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
+            ModelPickerSheetContent(
+                state = ProviderPreview.modelSheet(),
+                onPick = {},
+                initialQuery = "llama-3.3",
+                focusSearch = false,
+            )
+        }
     }
 
-    /**
-     * The picker. One state, because it has one — a fixed list of five rows with
-     * no loading, empty or error branch to reach.
-     */
-    @Test
-    fun provider_picker_light() = snapshot("picker", dark = false) {
-        ProviderPickerContent(state = SettingsPreview.providerPicker())
-    }
-
-    @Test
-    fun provider_picker_dark() = snapshot("picker", dark = true) {
-        ProviderPickerContent(state = SettingsPreview.providerPicker())
-    }
-
-    @Test
-    fun provider_picker_font_scale_200_light() =
-        snapshot("picker_fontscale200", dark = false, fontScale = FONT_SCALE_200) {
-            ProviderPickerContent(state = SettingsPreview.providerPicker())
+    private fun detail(name: String, dark: Boolean, state: ProviderDetailViewState, fontScale: Float = 1f) =
+        snapshot("provider_detail_$name", dark = dark, fontScale = fontScale) {
+            ProviderDetailContent(state = state)
         }
 
     private fun snapshot(
-        name: String,
+        file: String,
         dark: Boolean,
         fontScale: Float = 1f,
         openHint: String? = null,
-        expandRow: String? = null,
         content: @Composable () -> Unit,
     ) {
         composeTestRule.setContent {
@@ -160,15 +328,10 @@ class ProviderDetailSnapshotTest {
                 ) { content() }
             }
         }
-        // The provider row owns its expanded flag internally and starts closed,
-        // so a capture taken as-is shows a chevron and nothing else — the base
-        // URL, the context window and the validation error would all be outside
-        // the frame while the file name promised they were in it.
-        expandRow?.let { composeTestRule.onNodeWithText(it).performClick() }
         val themeTag = if (dark) "dark" else "light"
         composeTestRule.onRoot().captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
-            filePath = "src/test/snapshots/provider_detail_${name}_$themeTag.png",
+            filePath = "src/test/snapshots/${file}_$themeTag.png",
         )
     }
 

@@ -34,13 +34,25 @@ sealed interface NodeConfig {
 data class LocalModelOption(val id: String, val displayName: String, val isActive: Boolean)
 
 /**
- * Cloud LLM provider for [CloudConfig].
+ * Cloud LLM provider for [CloudConfig] and the engine of the structured node types, one entry per
+ * provider the app can reach, in the order every provider surface shows them: the hosted ones,
+ * then the servers the user runs.
  *
  * [AUTO] defers the choice to runtime — the executor picks a provider from the
  * configured API keys. It maps to the domain `CloudProvider.AUTO_KEY` wire
  * sentinel (`"auto"`) rather than a concrete provider.
  */
-enum class CloudProvider { OPEN_AI, ANTHROPIC, GOOGLE, COMPATIBLE, AUTO }
+enum class CloudProvider {
+    OPEN_AI,
+    ANTHROPIC,
+    GOOGLE,
+    DEEPSEEK,
+    OPENROUTER,
+    GROQ,
+    OLLAMA,
+    OPENAI_COMPATIBLE,
+    AUTO,
+}
 
 /**
  * Configuration for [NodeType.INPUT] — pipeline entry contract.

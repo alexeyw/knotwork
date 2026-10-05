@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
 import app.knotwork.android.domain.models.AgentTool
+import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.NodeContextConfig
@@ -17,6 +18,7 @@ import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
 import app.knotwork.android.domain.prompt.PromptSegment
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
+import app.knotwork.android.domain.repositories.ApiKeyRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PromptPresetRepository
@@ -91,6 +93,7 @@ class OrchestratorViewModelTest {
     private lateinit var promptPresetRepository: PromptPresetRepository
     private lateinit var compositionValidator: PipelineCompositionValidator
     private lateinit var skillRepository: SkillRepository
+    private lateinit var apiKeyRepository: ApiKeyRepository
     private lateinit var providerDate: PromptVariableProvider
     private lateinit var providerTime: PromptVariableProvider
     private lateinit var viewModel: OrchestratorViewModel
@@ -138,6 +141,7 @@ class OrchestratorViewModelTest {
             every { getPresetsForType(any()) } returns flowOf(emptyList())
         }
         skillRepository = mockk(relaxed = true)
+        apiKeyRepository = mockk(relaxed = true)
         toolRepository = mockk()
         localModelRepository = mockk()
         settingsRepository = mockk(relaxed = true) {
@@ -196,6 +200,7 @@ class OrchestratorViewModelTest {
         compositionValidator,
         setOf(providerDate, providerTime),
         skillRepository,
+        apiKeyRepository,
     )
 
     @After
@@ -1625,4 +1630,31 @@ class OrchestratorViewModelTest {
 
         assertEquals(emptyList<PipelineTargetAvailability>(), viewModel.classifyPipelineTargets())
     }
+
+    @Test
+    fun `given providers set up here when the node sheet asks then each comes with its model and auto resolves`() =
+        runTest {
+            every { apiKeyRepository.getApiKey(any()) } answers {
+                flowOf(
+                    if (firstArg<CloudProvider>() in
+                        setOf(CloudProvider.OPENAI, CloudProvider.OPENROUTER)
+                    ) {
+                        "k"
+                    } else {
+                        null
+                    },
+                )
+            }
+            every { apiKeyRepository.getBaseUrl(any()) } returns flowOf(null)
+            every { apiKeyRepository.getModel(any()) } answers {
+                flowOf(if (firstArg<CloudProvider>() == CloudProvider.OPENAI) "gpt-4o-mini" else null)
+            }
+            val vm = buildViewModel()
+
+            val availability = vm.loadProviderAvailability()
+
+            // OpenRouter has a key but no model, and no default: not usable here, so not listed.
+            assertEquals(mapOf(CloudProvider.OPENAI to "gpt-4o-mini"), availability.models)
+            assertEquals(CloudProvider.OPENAI, availability.auto)
+        }
 }

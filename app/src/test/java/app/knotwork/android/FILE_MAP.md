@@ -229,6 +229,7 @@ Only Kotlin files appear inside the generated blocks.
     - `SettingsDefaultsTest.kt` - Pins the numeric values exposed by `SettingsDefaults` so a silent edit to a default value is caught at test time rather than at runtime by an end user.
     - `TimeAndIdConstantsTest.kt` - Pins the time-unit and notification-id constants exposed by `TimeAndIdConstants`.
   - `engine/` - Tests for the graph execution engine and its supporting abstractions.
+    - `AutoProviderTest.kt` - Unit tests for `AutoProvider` — what a node set to "auto" runs on.
     - `ChatHistoryWindowPlannerTest.kt` - Unit tests for `ChatHistoryWindowPlanner` — the pure planner that decides how a session's chat history is split into a summarised prefix and a verbatim live window.
     - `CheckpointReplayTest.kt` - Unit coverage for `CheckpointReplay`.
     - `CloudClientUnavailabilityTest.kt` - Unit tests for `CloudClientUnavailability.message` — each cause must name the setting that resolves it and must not borrow another cause's remedy.
@@ -535,6 +536,7 @@ Only Kotlin files appear inside the generated blocks.
       - `JournalExportDelegateTest.kt` - Behaviour of the shared journal-export half of the two journal ViewModels.
       - `JournalExportShareTest.kt` - The share half of the journal export — the part that touches the platform and therefore cannot be reached from the delegate's own tests.
       - `RunTerminationCopyMapperTest.kt` - Guards the single vocabulary of a stopped run.
+      - `TestSubjectTest.kt` - Every state of a test row resolved into its words — the copy the design hand-off fixed, per subject: a hosted provider, a server the user runs, an MCP server.
       - `UiTextTest.kt` - Unit tests for `UiText`.
     - `components/` - Tests for the pure helpers behind the app-side composables.
       - `TextFieldValueExtTest.kt` - Unit tests for `insertAtCursor`.
@@ -571,6 +573,7 @@ Only Kotlin files appear inside the generated blocks.
       - `presets/` - Tests for the preset gallery and its graph-flow preview.
         - `GraphFlowPreviewTest.kt` - Unit tests for the preset graph-flow preview.
         - `PipelinePresetsViewModelTest.kt` - Unit tests for `PipelinePresetsViewModel`.
+      - `ProviderAvailabilityTest.kt` - Unit tests for `toProviderChoices` — what the node sheet's provider fields are told.
     - `pipeline/` - Tests for the pipeline editor surface.
       - `editor/` - Tests for the editor screen and its state.
         - `canvas/` - Tests for the canvas geometry and hit-testing.
@@ -596,10 +599,12 @@ Only Kotlin files appear inside the generated blocks.
       - `PromptLibraryViewModelTest.kt` - Unit tests for `PromptLibraryViewModel`.
     - `settings/` - Tests for the settings screens and their catalogues.
       - `ExternalAutomationRowSummaryTest.kt` - Unit tests for the pure half of the external-automation Background rows.
+      - `ModelsSettingsDelegateTest.kt` - The provider rows of Settings → Models, as `ModelsSettingsDelegate` summarises them: one per provider in the order every provider surface uses, and the one state no row had before — a key saved with no model, for a provider that has no default.
       - `PendingMemoryImportTest.kt` - Unit tests for `PendingMemoryImport.warnings` — which notices the memory-import dialog raises about a staged file, and in what order.
       - `provider/` - Tests for the cloud-provider editor.
         - `ProviderDetailProjectionTest.kt` - Coverage for the projection that feeds the catalog's provider detail surface.
         - `ProviderDetailViewModelTest.kt` - Unit tests for `ProviderDetailViewModel` — the standalone editor backing the Settings → External providers detail screen.
+        - `ProviderPickerViewModelTest.kt` - Unit tests for `ProviderPickerViewModel` — which providers the picker marks *added*.
       - `runlimits/` - Tests for the run-limits surface.
         - `RunLimitsViewModelTest.kt` - Covers the one piece of real logic on the run-limits screen: when a background ceiling stops following the interactive one.
         - `TokenLimitScaleTest.kt` - The token track is logarithmic because the range spans three orders of magnitude.

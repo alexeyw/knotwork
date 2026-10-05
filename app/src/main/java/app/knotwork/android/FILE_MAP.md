@@ -284,6 +284,7 @@ Only Kotlin files appear inside the generated blocks.
     - `TimeAndIdConstants.kt` - Cross-module numeric constants for time-unit conversion (`MS_PER_SECOND`, `MS_PER_MINUTE`) and the notification-id partition range shared by approval-publish/receive paths.
     - `TransientCacheDirectory.kt` - Every directory the app creates under its cache to pass a file to another app, or to take one from it — and the one retention rule all of them share.
   - `engine/` - Engine interfaces and abstractions.
+    - `AutoProvider.kt` - What a node set to `"auto"` runs on: the first provider of `ORDER` with a saved API key.
     - `ChatHistoryWindowPlanner.kt` - Pure, clock-free planner that decides, per node execution, how a session's chat history splits into a summarised prefix (`ChatHistoryView.earlierSummary`) and a verbatim live window; bounds the over-budget history to the last N messages and flags graceful truncation when no summary is ready. Hosts the shared `CHARS_PER_TOKEN` token estimate.
     - `CheckpointReplay.kt` - Walks a resumed run's recorded prefix: for each node the interrupted run completed, hands back what it recorded instead of running it again.
     - `CloudClientUnavailability.kt` - Why a model client for a provider cannot be constructed right now.
@@ -766,6 +767,7 @@ Only Kotlin files appear inside the generated blocks.
       - `JournalExportDelegate.kt` - The export half of a journal screen's ViewModel: renders the journal on demand and reports what happened.
       - `OpenDocumentation.kt` - Opens a registry document in the browser; the single place `BuildConfig.DOCS_REF` is read, so the domain layer holds the path and never the URL.
       - `RunTerminationCopy.kt` - **The single place a typed run outcome becomes words.** Maps every `RunTerminationKind` to a tone, title, body, numbers line, one-clause banner and at most one action, and a `RunNoticeCause` to the advisory shown mid-run. Consumed identically by the chat tile, the strip above the composer, the background-run notification and the foreground service, so one event is worded once — six kinds used to render their own constant name to the user, and the ceiling message was assembled in the engine, persisted, and quoted verbatim in the docs. Retry is absent by construction: it re-runs the same turn into the same limit.
+      - `TestSubject.kt` - What a *Test connection* row checks, and the row's words for every state, refusal and failure of a hosted provider, a server the user runs or an MCP server; plus the ticker of a running test's elapsed seconds.
       - `UiText.kt` - Sealed `UiText` (`Resource` / `Dynamic` / `Joined` / `Empty`) used by `UiState`s to carry user-visible text without holding a `Context`.
       - `UiTextExt.kt` - `@Composable UiText.asString()` and `Context.resolve(UiText)` resolution helpers.
     - `components/` - Reusable UI components.
@@ -842,6 +844,7 @@ Only Kotlin files appear inside the generated blocks.
         - `PresetCategoryStyle.kt` - Theme-aware mapping from `PresetCategory` to its Knotwork accent colour + the shared `PresetCategoryBadge` chip used on every preset card.
         - `PresetPickerSheet.kt` - `ModalBottomSheet` exposing the bundled/user catalogue as a tap-to-instantiate picker with category chips and a graph-flow preview per card.
         - `SaveAsPresetDialog.kt` - `AlertDialog` capturing name/description/category/tags; shared by the library row overflow and the editor overflow.
+      - `ProviderAvailability.kt` - Which providers are set up on this device, for the node sheet's *Provider* and *Engine* fields.
     - `pipeline/` - Pipeline editor surface.
       - `editor/` - Production pipeline editor — toolbar, ZoomRail, MiniMap, FilterBar, EmptyPipelineState, DotGridBackground, ValidationAutoFix, copy/paste, search, grid toggle. Composes pipelines only; execution belongs to chat / triggers.
         - `bars/` - Editor chrome bars — toolbar, validation bar, node palette.

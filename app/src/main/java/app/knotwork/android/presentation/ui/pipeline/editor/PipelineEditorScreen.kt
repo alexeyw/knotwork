@@ -16,6 +16,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,12 +44,14 @@ import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.android.presentation.ui.components.PromptPreviewBottomSheet
 import app.knotwork.android.presentation.ui.orchestrator.OrchestratorViewModel
 import app.knotwork.android.presentation.ui.orchestrator.PromptPreviewState
+import app.knotwork.android.presentation.ui.orchestrator.ProviderAvailability
 import app.knotwork.android.presentation.ui.orchestrator.components.NodeContextConfigSection
 import app.knotwork.android.presentation.ui.orchestrator.components.PromptPresetPickerDialog
 import app.knotwork.android.presentation.ui.orchestrator.components.SavePromptAsPresetDialog
 import app.knotwork.android.presentation.ui.orchestrator.presets.PipelinePresetsViewModel
 import app.knotwork.android.presentation.ui.orchestrator.presets.PresetPickerSheet
 import app.knotwork.android.presentation.ui.orchestrator.presets.SaveAsPresetDialog
+import app.knotwork.android.presentation.ui.orchestrator.toProviderChoices
 import app.knotwork.android.presentation.ui.pipeline.editor.canvas.formatScalePercent
 import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeConfigCodec
 import app.knotwork.android.presentation.ui.pipeline.editor.config.NodeTypeMapper
@@ -66,6 +69,7 @@ import app.knotwork.design.components.dialogs.SingleFieldDialog
 import app.knotwork.design.components.dialogs.SingleFieldDialogUi
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.components.pipelineeditor.LocalModelOption
+import app.knotwork.design.components.pipelineeditor.LocalProviderChoices
 import app.knotwork.design.components.pipelineeditor.PipelineTargetDisabledReason
 import app.knotwork.design.components.pipelineeditor.PipelineTargetOption
 import app.knotwork.design.components.pipelineeditor.SkillConfig
@@ -639,123 +643,136 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                     skillsForNode = if (isSkillNode) viewModel.loadSkills() else emptyList()
                 }
                 val skillOptions = rememberSkillOptions(skillsForNode)
+                // Which providers are set up here, for the Provider / Engine fields: read when
+                // the sheet opens — it changes only in Settings.
+                var providerAvailability by remember(node.id) { mutableStateOf(ProviderAvailability()) }
+                LaunchedEffect(node.id) { providerAvailability = viewModel.loadProviderAvailability() }
+                val defaultModel = stringResource(R.string.node_provider_default_model)
+                val providerChoices = remember(providerAvailability, uiState.availableLocalModels, defaultModel) {
+                    providerAvailability.toProviderChoices(
+                        defaultModel = defaultModel,
+                        onDeviceModel = uiState.availableLocalModels.firstOrNull { it.isActive }?.name,
+                    )
+                }
                 // Baseline for the context section's inherited / overridden tags:
                 // the selected skill's own default context.
                 val skillContextBaseline = (workingConfig as? SkillConfig)
                     ?.skillId
                     ?.let { id -> skillsForNode.firstOrNull { it.id == id }?.contextConfig }
-                NodeConfigSheetHost(
-                    config = workingConfig,
-                    peerTitles = peerTitles,
-                    onChange = { next ->
-                        // When the user picks a *different* skill, reseed the
-                        // node's context from that skill's default so the node
-                        // inherits the skill's context out of the box; explicit
-                        // toggles the user makes afterwards still win.
-                        val previousSkillId = (editor.workingConfig as? SkillConfig)?.skillId
-                        if (next is SkillConfig && next.skillId != previousSkillId) {
-                            skillsForNode.firstOrNull { it.id == next.skillId }?.let { skill ->
-                                editor.workingContextConfig = skill.contextConfig
+                CompositionLocalProvider(LocalProviderChoices provides providerChoices) {
+                    NodeConfigSheetHost(
+                        config = workingConfig,
+                        peerTitles = peerTitles,
+                        onChange = { next ->
+                            // When the user picks a *different* skill, reseed the
+                            // node's context from that skill's default so the node
+                            // inherits the skill's context out of the box; explicit
+                            // toggles the user makes afterwards still win.
+                            val previousSkillId = (editor.workingConfig as? SkillConfig)?.skillId
+                            if (next is SkillConfig && next.skillId != previousSkillId) {
+                                skillsForNode.firstOrNull { it.id == next.skillId }?.let { skill ->
+                                    editor.workingContextConfig = skill.contextConfig
+                                }
                             }
-                        }
-                        editor.workingConfig = next
-                    },
-                    onCancel = {
-                        editor.configuringNodeId = null
-                        editor.workingConfig = null
-                        editor.workingContextConfig = null
-                    },
-                    onSave = { saved ->
-                        val mutated = NodeConfigCodec.apply(node, saved)
-                        // Preserve the user's edits to the per-node context
-                        // flags (Original task / Chat history / Long-term
-                        // memory / Tool results) which the catalog
-                        // `NodeConfigSheet` doesn't model — they're tracked
-                        // in `editor.workingContextConfig` and stitched
-                        // back here.
-                        val withContext = editor.workingContextConfig
-                            ?.let { mutated.copy(contextConfig = it) }
-                            ?: mutated
-                        editor.undoRedo.push(pipeline)
-                        viewModel.updateNodeFromEditor(node.id, withContext)
-                        editor.configuringNodeId = null
-                        editor.workingConfig = null
-                        editor.workingContextConfig = null
-                    },
-                    availableToolIds = uiState.availableTools.map { it.name },
-                    availableModels = uiState.availableLocalModels.map { model ->
-                        // The catalog `LocalModelOption.id` is the canonical identifier
-                        // written into `LiteRtConfig.modelId`. We use the model's `path`
-                        // because the runtime path is what the LiteRT engine actually
-                        // loads — and `NodeConfigCodec.deriveFromLegacy` already maps
-                        // legacy `node.modelPath` into `LiteRtConfig.modelId`, so the
-                        // catalog identifier stays consistent across read / write.
-                        LocalModelOption(
-                            id = model.path,
-                            displayName = model.name,
-                            isActive = model.isActive,
-                        )
-                    },
-                    onPickFromLibrary = { category, currentPrompt, apply ->
-                        // Categories emitted by the catalog are always LLM-driven NodeType
-                        // names (`"LITE_RT"` etc.); see NodeConfigForms — non-LLM forms
-                        // never expose the 📚 button. Defensive `runCatching` so a future
-                        // typo in the catalog doesn't crash the editor.
-                        val type = runCatching { NodeType.valueOf(category) }.getOrNull()
-                        if (type != null) {
-                            pendingLibrary = PendingPromptLibrary(
-                                nodeType = type,
-                                currentPrompt = currentPrompt,
-                                apply = apply,
+                            editor.workingConfig = next
+                        },
+                        onCancel = {
+                            editor.configuringNodeId = null
+                            editor.workingConfig = null
+                            editor.workingContextConfig = null
+                        },
+                        onSave = { saved ->
+                            val mutated = NodeConfigCodec.apply(node, saved)
+                            // Preserve the user's edits to the per-node context
+                            // flags (Original task / Chat history / Long-term
+                            // memory / Tool results) which the catalog
+                            // `NodeConfigSheet` doesn't model — they're tracked
+                            // in `editor.workingContextConfig` and stitched
+                            // back here.
+                            val withContext = editor.workingContextConfig
+                                ?.let { mutated.copy(contextConfig = it) }
+                                ?: mutated
+                            editor.undoRedo.push(pipeline)
+                            viewModel.updateNodeFromEditor(node.id, withContext)
+                            editor.configuringNodeId = null
+                            editor.workingConfig = null
+                            editor.workingContextConfig = null
+                        },
+                        availableToolIds = uiState.availableTools.map { it.name },
+                        availableModels = uiState.availableLocalModels.map { model ->
+                            // The catalog `LocalModelOption.id` is the canonical identifier
+                            // written into `LiteRtConfig.modelId`. We use the model's `path`
+                            // because the runtime path is what the LiteRT engine actually
+                            // loads — and `NodeConfigCodec.deriveFromLegacy` already maps
+                            // legacy `node.modelPath` into `LiteRtConfig.modelId`, so the
+                            // catalog identifier stays consistent across read / write.
+                            LocalModelOption(
+                                id = model.path,
+                                displayName = model.name,
+                                isActive = model.isActive,
                             )
-                        }
-                    },
-                    onSavePreset = { category, currentPrompt ->
-                        val type = runCatching { NodeType.valueOf(category) }.getOrNull()
-                        if (type != null) {
-                            pendingSavePreset = PendingSavePromptPreset(
-                                nodeType = type,
-                                systemPrompt = currentPrompt,
+                        },
+                        onPickFromLibrary = { category, currentPrompt, apply ->
+                            // Categories emitted by the catalog are always LLM-driven NodeType
+                            // names (`"LITE_RT"` etc.); see NodeConfigForms — non-LLM forms
+                            // never expose the 📚 button. Defensive `runCatching` so a future
+                            // typo in the catalog doesn't crash the editor.
+                            val type = runCatching { NodeType.valueOf(category) }.getOrNull()
+                            if (type != null) {
+                                pendingLibrary = PendingPromptLibrary(
+                                    nodeType = type,
+                                    currentPrompt = currentPrompt,
+                                    apply = apply,
+                                )
+                            }
+                        },
+                        onSavePreset = { category, currentPrompt ->
+                            val type = runCatching { NodeType.valueOf(category) }.getOrNull()
+                            if (type != null) {
+                                pendingSavePreset = PendingSavePromptPreset(
+                                    nodeType = type,
+                                    systemPrompt = currentPrompt,
+                                )
+                            }
+                        },
+                        availablePipelines = pipelineTargets,
+                        availableSkills = skillOptions,
+                        extraSection = {
+                            // Bind the legacy `NodeContextConfigSection` ("Input
+                            // Data" checkboxes) to `editor.workingContextConfig`
+                            // — the catalog `NodeConfigSheet` doesn't model
+                            // context flags (those are domain-level), so the
+                            // production sheet adds them via the `extraSection`
+                            // slot. Defaults to `ALL_ENABLED` if for any reason
+                            // the per-open initialisation didn't run.
+                            val ctx = editor.workingContextConfig
+                                ?: NodeContextConfig.ALL_ENABLED
+                            NodeContextConfigSection(
+                                originalTask = ctx.originalTask,
+                                chatHistory = ctx.chatHistory,
+                                longTermMemory = ctx.longTermMemory,
+                                toolResults = ctx.toolResults,
+                                onOriginalTaskChange = { next ->
+                                    editor.workingContextConfig =
+                                        ctx.copy(originalTask = next)
+                                },
+                                onChatHistoryChange = { next ->
+                                    editor.workingContextConfig =
+                                        ctx.copy(chatHistory = next)
+                                },
+                                onLongTermMemoryChange = { next ->
+                                    editor.workingContextConfig =
+                                        ctx.copy(longTermMemory = next)
+                                },
+                                onToolResultsChange = { next ->
+                                    editor.workingContextConfig =
+                                        ctx.copy(toolResults = next)
+                                },
+                                inheritedBaseline = skillContextBaseline,
                             )
-                        }
-                    },
-                    availablePipelines = pipelineTargets,
-                    availableSkills = skillOptions,
-                    extraSection = {
-                        // Bind the legacy `NodeContextConfigSection` ("Input
-                        // Data" checkboxes) to `editor.workingContextConfig`
-                        // — the catalog `NodeConfigSheet` doesn't model
-                        // context flags (those are domain-level), so the
-                        // production sheet adds them via the `extraSection`
-                        // slot. Defaults to `ALL_ENABLED` if for any reason
-                        // the per-open initialisation didn't run.
-                        val ctx = editor.workingContextConfig
-                            ?: NodeContextConfig.ALL_ENABLED
-                        NodeContextConfigSection(
-                            originalTask = ctx.originalTask,
-                            chatHistory = ctx.chatHistory,
-                            longTermMemory = ctx.longTermMemory,
-                            toolResults = ctx.toolResults,
-                            onOriginalTaskChange = { next ->
-                                editor.workingContextConfig =
-                                    ctx.copy(originalTask = next)
-                            },
-                            onChatHistoryChange = { next ->
-                                editor.workingContextConfig =
-                                    ctx.copy(chatHistory = next)
-                            },
-                            onLongTermMemoryChange = { next ->
-                                editor.workingContextConfig =
-                                    ctx.copy(longTermMemory = next)
-                            },
-                            onToolResultsChange = { next ->
-                                editor.workingContextConfig =
-                                    ctx.copy(toolResults = next)
-                            },
-                            inheritedBaseline = skillContextBaseline,
-                        )
-                    },
-                )
+                        },
+                    )
+                }
             }
         }
 

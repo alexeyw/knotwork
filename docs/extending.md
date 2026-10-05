@@ -688,14 +688,16 @@ To add a new external LLM provider:
    *Add provider* picker and the detail title all read that one function;
    [`ModelsSettingsDelegate`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/ModelsSettingsDelegate.kt)
    builds a row for every `ProviderId` by itself.
-3. For a standard cloud provider there is nothing else to wire in the editor:
+3. For a standard cloud provider there is little else to wire in the editor:
    [`ProviderDetailScreen`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDetailScreen.kt)
-   shows the fields the provider's shape asks for (`usesApiKey`,
-   `usesBaseUrl`) in the shared catalog
-   [`KnotworkProviderRow`](../catalog/src/main/java/app/knotwork/design/screens/settings/KnotworkProviderRow.kt);
-   add the provider's model list to `availableModels` in its `toViewState`.
-   Ollama additionally supplies an `OllamaProviderInputs` bundle for the
-   base-URL and context-window fields.
+   projects the fields the provider's shape asks for (`usesApiKey`,
+   `usesBaseUrl`, `requiresModel`) onto the catalog's
+   [`ProviderDetailContent`](../catalog/src/main/java/app/knotwork/design/screens/settings/ProviderDetailContent.kt)
+   form in `toViewState`: a built-in model list goes in `builtInModels`, a fixed
+   address in `fixedAddressOf`, and *Test connection* works through
+   `ProviderConnectionChecker` once the provider can list its models. The node
+   sheet's provider list and the browser editor take a new entry in the catalog's
+   `CloudProvider` enum and `CloudProviderMapper`.
 4. Persist the key and model through `ApiKeyRepository` (Keystore-backed)
    and `NetworkSettings` (retry budget, approved unencrypted origins),
    exactly as `ProviderDetailViewModel` already does for the built-in
@@ -714,7 +716,9 @@ the registry entry.
 
 The catalog composables that power these screens:
 
-- `KnotworkProviderRow` — collapsible provider card.
+- `ProviderDetailContent` — a provider's form: address, key, test row, model.
+- `KnotworkTestProbeRow` — the *Test connection* row and its states.
+- `ModelPickerSheet` — the searchable list of a server's model ids.
 - `KnotworkParamSlider` — branded labelled slider.
 - `KnotworkMonoTextArea` — multi-line mono text input.
 

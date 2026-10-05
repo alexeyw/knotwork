@@ -153,6 +153,12 @@ class SettingsViewModelTest {
         every { apiKeys.getModel(CloudProvider.DEEPSEEK) } returns MutableStateFlow<String?>(null)
         every { apiKeys.getBaseUrl(CloudProvider.OLLAMA) } returns MutableStateFlow<String?>(null)
         every { apiKeys.getModel(CloudProvider.OLLAMA) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getApiKey(CloudProvider.OPENROUTER) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.OPENROUTER) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getApiKey(CloudProvider.GROQ) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.GROQ) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getBaseUrl(CloudProvider.OPENAI_COMPATIBLE) } returns MutableStateFlow<String?>(null)
+        every { apiKeys.getModel(CloudProvider.OPENAI_COMPATIBLE) } returns MutableStateFlow<String?>(null)
         every { apiKeys.getOllamaContextWindowSize() } returns MutableStateFlow(4096)
 
         coEvery { identity.getIdentity(any()) } returns Identity(

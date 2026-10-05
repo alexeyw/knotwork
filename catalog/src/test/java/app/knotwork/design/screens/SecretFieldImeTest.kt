@@ -9,14 +9,14 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.screens.discover.DiscoverDetailContent
 import app.knotwork.design.screens.discover.DiscoverPreview
 import app.knotwork.design.screens.models.ModelsContent
 import app.knotwork.design.screens.models.ModelsPreview
-import app.knotwork.design.screens.settings.KnotworkProviderRow
+import app.knotwork.design.screens.settings.ProviderDetailContent
+import app.knotwork.design.screens.settings.ProviderPreview
 import app.knotwork.design.screens.tools.AddMcpServerForm
 import app.knotwork.design.screens.tools.McpAuthSelector
 import app.knotwork.design.screens.tools.McpHeaderRow
@@ -127,21 +127,18 @@ class SecretFieldImeTest {
 
     @Test
     fun `given a cloud provider's API key when focused then it asks for a password`() {
-        render {
-            KnotworkProviderRow(
-                title = "Anthropic",
-                keyValue = "sk-ant",
-                onKeyChange = {},
-                keyLabel = "API key",
-                modelValue = "claude",
-                onModelChange = {},
-                modelLabel = "Model",
-                availableModels = listOf("claude"),
-            )
-        }
-        rule.onNodeWithText("Anthropic").performClick()
+        // The model is a read-only dropdown here, so the key is the one editable field.
+        render { ProviderDetailContent(state = ProviderPreview.providerDetail()) }
 
         assertEquals(listOf(true), passwordFieldsAmong(fields()))
+    }
+
+    @Test
+    fun `given a server the user runs when focused then only its key asks for a password`() {
+        // Address, key, model id — in the order the form shows them.
+        render { ProviderDetailContent(state = ProviderPreview.providerDetailCompatEmpty()) }
+
+        assertEquals(listOf(false, true, false), passwordFieldsAmong(fields()))
     }
 
     @Test

@@ -151,6 +151,7 @@ class ModelsSettingsDelegate(
                 model = model?.takeIf { it.isNotBlank() },
                 isLanLocal = provider.usesBaseUrl,
                 endpointHint = credential?.takeIf { provider.usesBaseUrl && it.isNotBlank() },
+                modelMissing = provider.requiresModel && !credential.isNullOrBlank() && model.isNullOrBlank(),
             )
         }
     }

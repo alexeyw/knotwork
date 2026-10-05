@@ -537,6 +537,28 @@
     <string name="knotwork_settings_providers_add">Add provider</string>
     <string name="knotwork_settings_providers_lan">LAN</string>
     <string name="knotwork_settings_providers_not_configured">Not configured · tap to add API key</string>
+    <string name="knotwork_settings_providers_not_configured_address">Not configured · tap to add the server address</string>
+    <string name="knotwork_settings_providers_no_model">no model selected</string>
+
+    <string name="knotwork_node_provider_auto">Auto</string>
+    <string name="knotwork_node_provider_not_configured">not configured on this device</string>
+    <string name="knotwork_node_provider_auto_line">first configured of Google, Anthropic, OpenAI, DeepSeek</string>
+    <string name="knotwork_node_provider_auto_resolved">on this device → %1$s</string>
+    <string name="knotwork_node_provider_on_device_line">on-device model</string>
+    <string name="knotwork_node_provider_picker_note">Providers not configured here still save: a pipeline can run on another device.</string>
+    <string name="knotwork_node_provider_hint_cloud">If %1$s is not set up on the device that runs this, the node fails and names the reason.</string>
+    <string name="knotwork_node_provider_hint_engine">If %1$s is not set up on the device that runs this, the node runs on the on-device model and writes a console line.</string>
+    <string name="knotwork_node_provider_hint_auto">Uses the first configured of Google, Anthropic, OpenAI, DeepSeek — never OpenRouter, Groq or your own server. If none is set up, the node fails and names the reason.</string>
+    <string name="knotwork_node_provider_group_hosted">Hosted</string>
+    <string name="knotwork_node_provider_group_own">Your own server</string>
+
+    <string name="knotwork_model_sheet_title">Choose a model</string>
+    <string name="knotwork_model_sheet_count" tools:ignore="PluralsCandidate">%1$d from %2$s</string>
+    <string name="knotwork_model_sheet_search">Search model ids</string>
+    <plurals name="knotwork_model_sheet_matches">
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
 
     <string name="knotwork_settings_notifications_scheduled_results">Scheduled task results</string>
     <string name="knotwork_settings_share_pipeline_title">Pipeline for sharing</string>

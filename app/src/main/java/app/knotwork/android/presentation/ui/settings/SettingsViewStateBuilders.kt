@@ -143,6 +143,8 @@ internal fun buildModelsViewState(uiState: SettingsUiState, context: Context): M
                 model = summary.model,
                 endpointHint = summary.endpointHint,
                 isLan = summary.isLanLocal,
+                usesAddress = summary.id.cloudProvider.usesBaseUrl,
+                modelMissing = summary.modelMissing,
             )
         },
         restartRequiredMessage = stringResource(R.string.settings_restart_required_message)

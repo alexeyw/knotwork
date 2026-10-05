@@ -184,14 +184,14 @@ class NodeConfigCodecTest {
 
     @Test
     fun `given Ollama CLOUD node when decoded and re-applied then it stays Ollama`() {
-        // The privacy regression: `COMPATIBLE` is one tile for two domain providers,
-        // and the catalog->domain direction resolved it to DeepSeek. Opening an Ollama
-        // node's config sheet and saving it — without touching the provider — pointed
-        // a LAN-local node at a third-party endpoint, silently.
+        // The privacy regression: a single Compatible tile once stood for two domain
+        // providers, and the catalog->domain direction resolved it to DeepSeek. Opening
+        // an Ollama node's config sheet and saving it — without touching the provider —
+        // pointed a LAN-local node at a third-party endpoint, silently.
         val src = node(NodeType.CLOUD, "Cloud").copy(cloudProvider = "ollama")
 
         val decoded = NodeConfigCodec.decode(src) as CloudConfig
-        assertEquals(CloudProvider.COMPATIBLE, decoded.provider)
+        assertEquals(CloudProvider.OLLAMA, decoded.provider)
 
         val applied = NodeConfigCodec.apply(src, decoded)
 
@@ -219,14 +219,13 @@ class NodeConfigCodecTest {
     }
 
     @Test
-    fun `given a non-compatible node when the user picks COMPATIBLE then it resolves to DeepSeek`() {
-        // A fresh pick of the shared tile has no prior compatible provider to preserve,
-        // so it falls through to the tile's canonical instance.
+    fun `given a node when the user picks a server they run then that server is saved`() {
         val src = node(NodeType.CLOUD, "Cloud").copy(cloudProvider = "google")
 
-        val applied = NodeConfigCodec.apply(src, CloudConfig(title = "Cloud", provider = CloudProvider.COMPATIBLE))
+        val applied =
+            NodeConfigCodec.apply(src, CloudConfig(title = "Cloud", provider = CloudProvider.OPENAI_COMPATIBLE))
 
-        assertEquals("deepseek", applied.cloudProvider)
+        assertEquals("openai_compatible", applied.cloudProvider)
     }
 
     @Test
@@ -600,11 +599,11 @@ class NodeConfigCodecTest {
     fun `given Decomposition engineProvider when apply-then-decode then preserved through the flat provider`() {
         val src = node(NodeType.DECOMPOSITION, "Plan")
         val config =
-            DecompositionConfig(title = "Plan", planningPrompt = "split it", engineProvider = CloudProvider.COMPATIBLE)
+            DecompositionConfig(title = "Plan", planningPrompt = "split it", engineProvider = CloudProvider.GROQ)
 
         val applied = NodeConfigCodec.apply(src, config)
         val decoded = NodeConfigCodec.decode(applied) as DecompositionConfig
 
-        assertEquals(CloudProvider.COMPATIBLE, decoded.engineProvider)
+        assertEquals(CloudProvider.GROQ, decoded.engineProvider)
     }
 }
