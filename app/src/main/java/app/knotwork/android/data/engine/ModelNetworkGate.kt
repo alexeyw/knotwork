@@ -1,5 +1,7 @@
 package app.knotwork.android.data.engine
 
+import app.knotwork.android.domain.connection.AddressRefusal
+import app.knotwork.android.domain.connection.EndpointRule
 import app.knotwork.android.domain.engine.CloudClientUnavailability
 import app.knotwork.android.domain.repositories.NetworkSettings
 import app.knotwork.android.domain.services.CleartextPolicy
@@ -56,21 +58,32 @@ class ModelNetworkGate @Inject constructor(private val networkSettings: NetworkS
      * an OpenAI-compatible server — may be reached, applying both rules that concern it: while
      * the restriction is on the host must be local ([LocalOnlyPolicy]), whatever the scheme;
      * and unencrypted traffic must go only to an approved private address ([CleartextPolicy]).
+     * The decision is [EndpointRule]'s — the one the transport applies to every hop and the
+     * settings form shows while an address is typed.
      *
      * @param url The configured, non-blank server address.
      * @return The refusal, or `null` when a connection may be opened.
      */
     suspend fun endpointRefusal(url: String): CloudClientUnavailability? {
-        if (isLocalOnlyMode() && !LocalOnlyPolicy.isLocalEndpoint(url)) {
-            val host = CleartextPolicy.hostOf(url)
-            Timber.w("ModelNetworkGate: server at %s refused — not a local address in local-only mode", host)
-            return CloudClientUnavailability.EndpointNotLocal(host)
+        val approved = networkSettings.approvedCleartextOrigins.first()
+        return when (val refusal = EndpointRule.refusal(url, approved, isLocalOnlyMode())) {
+            is AddressRefusal.HostNotLocal -> {
+                val host = CleartextPolicy.hostOf(url)
+                Timber.w("ModelNetworkGate: server at %s refused — not a local address in local-only mode", host)
+                CloudClientUnavailability.EndpointNotLocal(host)
+            }
+            is AddressRefusal.PublicCleartext -> cleartextRefused(CleartextPolicy.Verdict.PublicRefused)
+            is AddressRefusal.CleartextNeedsApproval ->
+                cleartextRefused(CleartextPolicy.Verdict.NeedsApproval(refusal.origin))
+            null -> null
         }
-        val verdict = CleartextPolicy.classify(url, networkSettings.approvedCleartextOrigins.first())
-        return CleartextPolicy.refusalMessage(verdict)?.let { reason ->
-            Timber.w("ModelNetworkGate: server refused — %s", reason)
-            CloudClientUnavailability.CleartextRefused(reason)
-        }
+    }
+
+    /** [CloudClientUnavailability.CleartextRefused] worded by [CleartextPolicy.refusalMessage] for [verdict]. */
+    private fun cleartextRefused(verdict: CleartextPolicy.Verdict): CloudClientUnavailability {
+        val reason = checkNotNull(CleartextPolicy.refusalMessage(verdict)) { "a refused verdict has a message" }
+        Timber.w("ModelNetworkGate: server refused — %s", reason)
+        return CloudClientUnavailability.CleartextRefused(reason)
     }
 
     /**

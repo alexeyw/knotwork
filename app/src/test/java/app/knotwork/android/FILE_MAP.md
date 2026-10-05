@@ -63,6 +63,7 @@ Only Kotlin files appear inside the generated blocks.
   - `engine/` - Tests for the inference engines, client factories and the task queue.
     - `KoogClientFactoryTest.kt` - Tests for KoogClientFactory.
     - `KoogClientFactoryTimeoutTest.kt` - Guards the network deadlines applied to cloud clients.
+    - `KoogProviderConnectionCheckerTest.kt` - `KoogProviderConnectionChecker` on the wire: the request each provider's check sends, what it makes of the answer, and that a refused check sends nothing and tells the privacy indicator nothing.
     - `KoogStructuredInferenceClientFactoryTest.kt` - Unit tests for `KoogStructuredInferenceClientFactory` — the cloud-backed `app.knotwork.android.domain.engine.structured.StructuredInferenceClient` seam for the structured-output gate.
     - `KoogTimeoutReflection.kt` - Reads the `ConnectionTimeoutConfig` a Koog provider client was built with.
     - `KoogTransportFactoryTest.kt` - Unit tests for `KoogTransportFactory`.
@@ -122,9 +123,11 @@ Only Kotlin files appear inside the generated blocks.
   - `mcp/` - Tests for the MCP client and the single connection pool.
     - `KoogMcpClientSessionTest.kt` - Session-lifecycle regression tests for `KoogMcpClient`, covering a defect found by a directed on-device MCP test: on the device a tool call failed with `-32000 No valid session ID provided`, and the wire capture showed sessions being opened and abandoned faster than anything was using them.
     - `KoogMcpClientTest.kt` - Tests for KoogMcpClient.
+    - `KoogMcpConnectionCheckerTest.kt` - `KoogMcpConnectionChecker` against a stub MCP server, through the real `KoogMcpClient`: what a check of a form finds, that it leaves no session behind, and that a refused check opens nothing.
     - `McpConnectionPoolTest.kt` - Unit tests for `McpConnectionPool` — the single owner of live MCP connections.
   - `network/` - Tests for the OkHttp guards, the download path and the Hugging Face client.
     - `AndroidModelDownloadManagerTest.kt` - Tests for AndroidModelDownloadManager.
+    - `ConnectionFailureClassifierTest.kt` - Unit tests for `ConnectionFailureClassifier`.
     - `huggingface/` - Tests for the Hugging Face Hub client.
       - `HuggingFaceModelApiTest.kt` - Unit tests for `HuggingFaceModelApi`'s part in the More tab's privacy indicator.
     - `ResumableFileDownloaderTest.kt` - Covers the streaming downloader, with the weight on the paths that only matter once a transfer can be interrupted: resuming a partial file, refusing to resume when that would corrupt the result, and never letting an unfinished transfer sit at the final file name where it would pass for an installed model.
@@ -212,6 +215,9 @@ Only Kotlin files appear inside the generated blocks.
       - `LocalAppFunctionManagerTest.kt` - Unit tests for `LocalAppFunctionManager`.
       - `SearchToolTest.kt` - Unit tests for `SearchTool`.
 - `domain/` - Tests for the domain layer.
+  - `connection/` - Tests of the connection-check rules: the address rule and the preconditions a Test button is disabled by.
+    - `ConnectionPreconditionsTest.kt` - Unit tests for `ConnectionPreconditions` — why a Test button is disabled, and the first thing a check asks.
+    - `EndpointRuleTest.kt` - Unit tests for `EndpointRule` — the one decision the address gate, the per-hop check and the settings form read.
   - `constants/` - Tests for the domain-level constants.
     - `DefaultPromptsTest.kt` - Smoke + contract coverage for `DefaultPrompts`.
     - `DocumentationLinksTest.kt` - Drift guard for the generated `DocumentationLinks` registry as the app reads it.
@@ -525,6 +531,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ConsoleCopyPayloadsTest.kt` - Unit tests for `ConsoleCopyPayloads`.
         - `ContentReportIssueUrlTest.kt` - Unit tests for `contentReportIssueUrl`.
     - `common/` - Tests for the shared presentation helpers.
+      - `ConnectionTestTest.kt` - Unit tests for `ConnectionTest`, the state of a Test connection row.
       - `JournalExportDelegateTest.kt` - Behaviour of the shared journal-export half of the two journal ViewModels.
       - `JournalExportShareTest.kt` - The share half of the journal export — the part that touches the platform and therefore cannot be reached from the delegate's own tests.
       - `RunTerminationCopyMapperTest.kt` - Guards the single vocabulary of a stopped run.

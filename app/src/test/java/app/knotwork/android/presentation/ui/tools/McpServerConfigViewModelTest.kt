@@ -1,12 +1,17 @@
 package app.knotwork.android.presentation.ui.tools
 
 import androidx.lifecycle.SavedStateHandle
+import app.knotwork.android.domain.connection.AddressRefusal
+import app.knotwork.android.domain.connection.ConnectionCheckResult
+import app.knotwork.android.domain.connection.ConnectionRefusal
+import app.knotwork.android.domain.connection.McpConnectionChecker
 import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
 import app.knotwork.android.domain.models.UpdateMcpServerResult
 import app.knotwork.android.domain.repositories.McpServerRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.presentation.ui.common.ConnectionTestState
 import app.knotwork.design.screens.tools.McpAuthSelector
 import app.knotwork.design.screens.tools.McpHeaderRow
 import app.knotwork.design.screens.tools.McpTransportOption
@@ -29,6 +34,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.TestTimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class McpServerConfigViewModelTest {
@@ -52,13 +58,18 @@ class McpServerConfigViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm(originalUrl: String? = null): McpServerConfigViewModel = McpServerConfigViewModel(
+    private fun vm(
+        originalUrl: String? = null,
+        checker: McpConnectionChecker = mockk(relaxed = true),
+    ): McpServerConfigViewModel = McpServerConfigViewModel(
         savedStateHandle = SavedStateHandle(
             if (originalUrl != null) mapOf(McpServerConfigViewModel.EXTRA_ORIGINAL_URL to originalUrl) else emptyMap(),
         ),
         toolSettings = settings,
         networkSettings = settings,
         mcpServerRepository = mcp,
+        connectionChecker = checker,
+        timeSource = TestTimeSource(),
     )
 
     @Test
@@ -328,5 +339,84 @@ class McpServerConfigViewModelTest {
             advanceUntilIdle()
 
             assertEquals("http://192.168.1.42:8080", viewModel.form.value.cleartextConsentOrigin)
+        }
+
+    @Test
+    fun `given an empty form when opened then the Test row waits for a URL`() = runTest {
+        val viewModel = vm()
+        advanceUntilIdle()
+
+        assertEquals(
+            ConnectionTestState.Disabled(ConnectionRefusal.MissingAddress),
+            viewModel.connectionTestState.value,
+        )
+    }
+
+    @Test
+    fun `given URLs the form or the rules refuse when typed then the Test row says why`() = runTest {
+        val viewModel = vm()
+
+        viewModel.onUrlChange("ftp://mcp.example.com/mcp")
+        advanceUntilIdle()
+        val scheme = viewModel.connectionTestState.value
+        viewModel.onUrlChange("http://mcp.example.com/mcp")
+        advanceUntilIdle()
+        val public = viewModel.connectionTestState.value
+        viewModel.onUrlChange("http://192.168.1.20:8080/mcp")
+        advanceUntilIdle()
+        val unapproved = viewModel.connectionTestState.value
+
+        assertEquals(ConnectionTestState.Disabled(ConnectionRefusal.NotAnAddress), scheme)
+        assertEquals(ConnectionTestState.Disabled(AddressRefusal.PublicCleartext("mcp.example.com")), public)
+        assertEquals(
+            ConnectionTestState.Disabled(AddressRefusal.CleartextNeedsApproval("http://192.168.1.20:8080")),
+            unapproved,
+        )
+    }
+
+    @Test
+    fun `given a URL and a token when Test is pressed then the form's values are checked and nothing is saved`() =
+        runTest {
+            val checker = mockk<McpConnectionChecker>()
+            coEvery { checker.check(any()) } returns ConnectionCheckResult.Reachable(listOf("echo"))
+            val viewModel = vm(checker = checker)
+            viewModel.onUrlChange("https://mcp.example.com/mcp")
+            viewModel.onAuthTypeSelect(McpAuthSelector.BEARER)
+            viewModel.onBearerTokenChange("tok")
+            advanceUntilIdle()
+
+            viewModel.onTestConnection()
+            advanceUntilIdle()
+
+            assertEquals(
+                ConnectionTestState.Finished(ConnectionCheckResult.Reachable(listOf("echo"))),
+                viewModel.connectionTestState.value,
+            )
+            coVerify {
+                checker.check(match { it.url == "https://mcp.example.com/mcp" && it.auth == McpAuth.Bearer("tok") })
+            }
+            coVerify(exactly = 0) { settings.addMcpServer(any()) }
+        }
+
+    @Test
+    fun `given a result when the name changes then it stays, and when the token changes then it is dropped`() =
+        runTest {
+            val checker = mockk<McpConnectionChecker>()
+            coEvery { checker.check(any()) } returns ConnectionCheckResult.Reachable(listOf("echo"))
+            val viewModel = vm(checker = checker)
+            viewModel.onUrlChange("https://mcp.example.com/mcp")
+            advanceUntilIdle()
+            viewModel.onTestConnection()
+            advanceUntilIdle()
+
+            viewModel.onNameChange("My server")
+            advanceUntilIdle()
+            val afterRename = viewModel.connectionTestState.value
+            viewModel.onAuthTypeSelect(McpAuthSelector.BEARER)
+            viewModel.onBearerTokenChange("tok")
+            advanceUntilIdle()
+
+            assertTrue("$afterRename", afterRename is ConnectionTestState.Finished)
+            assertEquals(ConnectionTestState.Idle, viewModel.connectionTestState.value)
         }
 }

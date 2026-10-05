@@ -21,6 +21,7 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogClientFactory.kt` - Factory for Koog clients; data-layer impl of `domain/engine/CloudLlmClientFactory`. Every constructed client is retry-wrapped via `CloudRetryWrapper` and carries an explicit `ConnectionTimeoutConfig` (60 s socket / 30 s connect / 900 s request) — the per-read socket value bounds provider silence rather than answer length. `createClient` threads a `CloudRetryListener` for console observability; it is the one entry point for every caller, `delegate_task` included.
     - `KoogCloudLlmModelResolver.kt` - Data-layer impl of `domain/engine/CloudLlmModelResolver`; owns per-provider default model ids and Ollama context-window lookup.
     - `KoogModelMapper.kt` - Maps string identifiers to Koog LLModel constants.
+    - `KoogProviderConnectionChecker.kt` - `ProviderConnectionChecker` on the Koog clients a run uses: the model list of each provider, asked once, with the values in the form.
     - `KoogStructuredInferenceClientFactory.kt` - Data-layer impl of `domain/engine/structured/CloudStructuredInferenceClientFactory`; builds a retry-wrapped Koog client, detects native JSON via `LLModel.capabilities`, and exposes a `StructuredInferenceClient` that collapses the streamed response for the gate.
     - `KoogTransportFactory.kt` - The transport every Koog model client the app builds runs on: Koog's own Ktor client, extended to check every hop (first request and each redirect) against `ModelHopRule` and to record the `Retry-After` of each error answer for the retry policy.
     - `LiteRTLlmEngine.kt` - LiteRT LLM engine implementation.
@@ -135,11 +136,14 @@ Only Kotlin files appear inside the generated blocks.
     - `ModelPerformanceMapper.kt` - Entity ↔ domain mappers for `ModelPerformanceSample`.
   - `mcp/` - Model Context Protocol (MCP) clients.
     - `KoogMcpClient.kt` - Koog MCP client implementation.
+    - `KoogMcpConnectionChecker.kt` - `McpConnectionChecker` on a client of its own: connect with the values in the form, list the tools, disconnect.
     - `McpClient.kt` - Generic MCP client interface/impl.
     - `McpConnectionPool.kt` - The single `@Singleton` owner of live MCP connections, keyed by server URL and holding the config each client was connected with (so edited auth/transport actually reconnects). Shared by `McpServerRepositoryImpl` (Tools-screen health + TTL tool-list cache) and `ToolRepositoryImpl` (the agent's real calls); before it existed each kept its own pool, so the health indicator could describe a session the next tool call would not use. Locking is per URL and scoped to connect/invalidate via the `withServer { }` block — never held while a caller uses the client, so concurrent tool calls to one server do not serialise.
+    - `McpHandshakeTimeoutException.kt` - An MCP server accepted the connection and did not complete the handshake within `after`.
   - `network/` - Network handling.
     - `AndroidModelDownloadManager.kt` - `ModelDownloadManager` impl over WorkManager: enqueues a unique-per-file `ModelDownloadWorker` (KEEP, so re-entering a screen attaches instead of starting a second copy) and projects `WorkInfo` onto `DownloadState`; `cancelDownload` cancels that unique work. `observeDownload` / `observeActiveDownload` are the observe-only entry points a returning screen uses to re-attach (the file name travels as a work **tag**, since `WorkInfo` exposes tags but not input data) — they never enqueue. A cancelled download ends the stream with no terminal state.
     - `CleartextGuardInterceptor.kt` - OkHttp interceptor refusing unencrypted requests to public hosts on the shared client (`http_request`, model downloads, Hugging Face discovery). The manifest permits cleartext app-wide because Android cannot express "any private-LAN address"; this restores the public-host half of that protection in app code, per request, so a redirect cannot downgrade an https call mid-flight.
+    - `ConnectionFailureClassifier.kt` - Names what went wrong when a connection check that sent a request failed.
     - `huggingface/` - Read-only Hugging Face Hub client for model discovery.
       - `HuggingFaceApiException.kt` - `IOException` subtype carrying the Hub HTTP status code.
       - `HuggingFaceBaseUrl.kt` - `@Qualifier` for the injected Hub base URL (production = public Hub; tests = mock server).
@@ -254,6 +258,13 @@ Only Kotlin files appear inside the generated blocks.
   - `PromptTemplateModule.kt` - Hilt multibinding module for prompt variable providers.
   - `SettingsModule.kt` - Hilt bindings of the settings sections and of the transitional `SettingsRepository` composite.
 - `domain/` - Domain layer containing core business logic and Use Cases.
+  - `connection/` - Connection checks (Test connection): what a check found, why it sent nothing, the one address rule a request is held to, and the checker contracts.
+    - `ConnectionCheckResult.kt` - What one connection check found: the server answered with its list, a rule kept the request from being sent, or the request was sent and failed.
+    - `ConnectionPreconditions.kt` - What stops a connection check before it sends anything, judged from the form and the network settings — the reason the Test button is disabled, and the first thing a check that runs asks.
+    - `ConnectionRefusal.kt` - Why a connection check sent nothing: what it would need is missing, or a rule refuses the address before a request leaves the device.
+    - `EndpointRule.kt` - The rule every request to a server the user runs is held to, decided once: while "Block network from local model" is on the host must be this device or a private address (`LocalOnlyPolicy`); and unencrypted traffic may go only to a private address the user approved (`CleartextPolicy`).
+    - `McpConnectionChecker.kt` - Checks that an MCP server can be reached with the values in its form, by connecting and listing its tools — one attempt, nothing saved.
+    - `ProviderConnectionChecker.kt` - Checks that a model provider can be reached with the values in its settings form, by asking for its model list — no prompt, no tokens, one attempt.
   - `constants/` - Domain-level constants.
     - `BundledPresetCatalog.kt` - Declared presentation order of the bundled pipeline-preset catalogue (`DISPLAY_ORDER`: onboarding scenarios → showcases → build-your-own templates) plus `rankOf`. Applied by `LocalPipelinePresetRepositoryImpl.getBundledPresets`, which would otherwise emit presets in `AssetManager.list()` (alphabetical) order; `PipelinePresetCatalogValidationTest` requires every user-facing bundled preset to be ranked here.
     - `DefaultPrompts.kt` - Default system prompts.
@@ -748,6 +759,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ReportResponseDialog.kt` - Stateless dialog collecting a flag against a model-authored message (category chips + note), plus `contentReportIssueUrl` — the prefilled `issues/new` URL, truncated to a browser-safe length after percent-encoding. No delivery of its own: the screen offers clipboard or issue tracker.
     - `common/` - Cross-screen presentation helpers.
       - `ClipboardText.kt` - Shared system-clipboard plain-text helpers: `readPlainClipboardText(context)` backing the HuggingFace-token "Paste" actions on the Models and Discover screens, and `writePlainClipboardText(context, label, text)` backing the external-automation "how another app calls this" copy action. The writer posts no confirmation of its own — every supported Android version shows one.
+      - `ConnectionTest.kt` - The Test connection row of a settings form: whether it can run, its run, and what it found.
       - `ImageAttachmentBlockCopy.kt` - The chat composer's words for each `ImageAttachmentBlock`; the share target uses shorter `share_image_blocked_*` strings because a toast holds two lines on Android 12+.
       - `JournalExport.kt` - Platform half of the journal export, shared by the trigger journal and the external-request journal: the MIME type and filename stems, the `generatedAt` / filename stamps (the **same** ones `TriggerJournalDumpReceiver` writes, so an adb dump and an in-app export are one document), the `FileProvider` share — staged as a file, never `EXTRA_TEXT`, because a 2 000-row journal would blow the Binder budget — and the SAF document write. Its staging directory is `TransientCacheDirectory.JOURNAL_EXPORT`, a sibling of the workspace share copies' `shared/`.
       - `JournalExportActionHandlers.kt` - `rememberJournalExportHandlers` — the Compose wiring both journal screens use: a `CreateDocument` picker opened with a concrete MIME type, the share sheet, and a snackbar for **every** outcome including the empty-journal save (reported with its count, since the file exists either way). Written once so the two screens cannot word the same operation differently, or drop it silently.

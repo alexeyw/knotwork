@@ -15,6 +15,13 @@ details.
 
 ### Changed
 
+- **One rule decides where a request to your own server may go.** The check of
+  an address before a model client is built and the check of every redirect each
+  repeated the same two rules — *Block network from local model* and the
+  unencrypted-connection rule. They now read one function, which a settings form
+  can also ask while an address is typed, so the form and the request cannot
+  disagree.
+
 - **A condition node says when it could not use its provider.** A TOOL node, a
   router or a decomposition that could not reach the provider it was set to use
   ran on the on-device model and wrote a console line saying so; a condition

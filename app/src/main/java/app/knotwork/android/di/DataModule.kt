@@ -2,6 +2,7 @@ package app.knotwork.android.di
 
 import app.knotwork.android.data.audio.AudioRecorderImpl
 import app.knotwork.android.data.engine.DefaultTextEmbedderFactory
+import app.knotwork.android.data.engine.KoogProviderConnectionChecker
 import app.knotwork.android.data.engine.LiteRTLlmEngine
 import app.knotwork.android.data.engine.MediaPipeTextEmbeddingEngine
 import app.knotwork.android.data.engine.OpenClAccelerationProbe
@@ -19,6 +20,7 @@ import app.knotwork.android.data.local.TransientCacheSweeperImpl
 import app.knotwork.android.data.local.crypto.AeadCipher
 import app.knotwork.android.data.local.crypto.AndroidKeystoreAeadCipher
 import app.knotwork.android.data.mcp.KoogMcpClientFactory
+import app.knotwork.android.data.mcp.KoogMcpConnectionChecker
 import app.knotwork.android.data.mcp.McpClientFactory
 import app.knotwork.android.data.network.AndroidModelDownloadManager
 import app.knotwork.android.data.repositories.AssetBundledDocumentationRepository
@@ -53,6 +55,8 @@ import app.knotwork.android.data.repositories.TriggerRepositoryImpl
 import app.knotwork.android.data.repositories.UsageTelemetryRepositoryImpl
 import app.knotwork.android.data.services.WorkManagerMemoryReembedScheduler
 import app.knotwork.android.data.services.WorkManagerTriggerScheduler
+import app.knotwork.android.domain.connection.McpConnectionChecker
+import app.knotwork.android.domain.connection.ProviderConnectionChecker
 import app.knotwork.android.domain.engine.HardwareAccelerationProbe
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.TaskQueueManager
@@ -273,6 +277,22 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindMcpServerRepository(repository: McpServerRepositoryImpl): McpServerRepository
+
+    /**
+     * Binds [KoogProviderConnectionChecker] to [ProviderConnectionChecker] — the provider
+     * screen's Test connection, on the clients and the transport a run uses.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindProviderConnectionChecker(checker: KoogProviderConnectionChecker): ProviderConnectionChecker
+
+    /**
+     * Binds [KoogMcpConnectionChecker] to [McpConnectionChecker] — the MCP server form's Test
+     * connection, on a throwaway client outside the connection pool.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindMcpConnectionChecker(checker: KoogMcpConnectionChecker): McpConnectionChecker
 
     /**
      * Binds the [MetricsRepositoryImpl] implementation to the [MetricsRepository] interface.

@@ -134,6 +134,11 @@ interface Tool {
   while the agent used another. The pool's per-URL lock is held only
   across connect / invalidate — never while a caller uses the client, or
   concurrent tool calls to one server would serialise behind it.
+- The one MCP connection outside the pool is a **connection check**
+  (`KoogMcpConnectionChecker`): a form being edited is not a saved server, so
+  the check connects a throwaway client with the form's values, lists the tools
+  and disconnects. Through the pool it would replace the live connection of the
+  server being edited with one built from unsaved values.
 - Connections are lazy: they open on first use and close when the agent
   session ends.
 - Every MCP call is wrapped in `try`/`catch` that **re-throws
@@ -203,6 +208,13 @@ interface Tool {
   in `OpenAiCompatibleClients` — OpenRouter and Groq at fixed addresses, a server
   the user runs at the address they enter (with `/v1`; paths relative to it) and
   with no `Authorization` header when it has no key. No further Koog module.
+- **A connection check is a run's request without the run.**
+  `KoogProviderConnectionChecker` builds the client `KoogClientFactory` builds, on
+  the same transport and deadlines, and asks for the model list once — no retry
+  policy, no prompt. OpenRouter's key is checked first at `/api/v1/key`: its model
+  list answers any key, or none. What stops a check before it sends is
+  `ConnectionPreconditions` (domain), which the settings form reads too, so a Test
+  button never promises what the check refuses.
 - **The gate also owns one tool.** `search_tool` asks
   `ModelNetworkGate.networkToolRefusal` before it opens its connection, and
   `ToolRepositoryImpl` withholds it from the catalogue while the restriction is
