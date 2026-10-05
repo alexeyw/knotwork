@@ -13,6 +13,7 @@ import app.knotwork.android.data.repositories.ClarificationRepositoryImpl
 import app.knotwork.android.domain.engine.ChatHistoryWindowPlanner
 import app.knotwork.android.domain.engine.GraphExecutionEngine
 import app.knotwork.android.domain.engine.NodeContextBuilder
+import app.knotwork.android.domain.engine.RunHeaders
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.engine.executors.ClarificationNodeExecutor
 import app.knotwork.android.domain.engine.executors.CloudLlmNodeExecutor
@@ -71,6 +72,7 @@ import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.services.NativeMemorySampler
+import app.knotwork.android.domain.services.RunEnvironment
 import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.ParkedRunResumer
@@ -601,6 +603,15 @@ internal class GoldenTraceHarness(
             ResolveRunCeilingsUseCase(settings),
             pending,
             ceilingNotifier,
+            RunHeaders(
+                generationSettings = settings,
+                seedSource = { RUN_SEED },
+                environment = object : RunEnvironment {
+                    override val appVersion = "golden (1)"
+                    override val runtimeVersion = "LiteRT-LM golden"
+                    override val device = "Golden Reference Phone · Android 16"
+                },
+            ),
         )
         return engine
     }
@@ -616,6 +627,9 @@ internal class GoldenTraceHarness(
         return object : SettingsRepository by goldenStrict(log) {
             override val systemPromptPrefix = flowOf("[golden prefix] Answer in plain words.")
             override val structuredOutputMaxRepairs = flowOf(3)
+            override val temperature = flowOf(0.55f)
+            override val topK = flowOf(17)
+            override val topP = flowOf(0.85f)
             override val toolApprovalPolicy = flowOf(chosen.approvalPolicy)
             override val blockDestructiveTools = flowOf(chosen.blockDestructiveTools)
             override val toolCallTimeoutMs = flowOf(APPROVAL_WINDOW_MS)
@@ -770,6 +784,9 @@ internal class GoldenTraceHarness(
         return object : LocalModelRepository by goldenStrict(log) {
             override suspend fun getActiveModel(): LocalModel = active
 
+            override suspend fun currentFileHash(path: String): String? =
+                MODEL_SHA256.takeIf { path == GoldenModel.MODEL_PATH }
+
             override fun getAllModels(): Flow<List<LocalModel>> = MutableStateFlow(listOf(active))
         }
     }
@@ -881,6 +898,12 @@ internal class GoldenTraceHarness(
 
         /** The live approval window — half the shipped default. */
         private const val APPROVAL_WINDOW_MS = 30_000L
+
+        /** The seed of every golden root run: fixed, so the derived call seeds are too. */
+        private const val RUN_SEED = 20_261_005
+
+        /** The registry's hash of the golden model file. */
+        private const val MODEL_SHA256 = "90d3e1c1a5b4f6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5"
 
         /** Virtual-time step of the driver loop — below every delay the engine uses. */
         private const val STEP_MS = 100L

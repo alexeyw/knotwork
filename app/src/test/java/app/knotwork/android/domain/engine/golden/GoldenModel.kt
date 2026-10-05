@@ -20,6 +20,7 @@ import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
 import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.RouteLabels
@@ -78,14 +79,18 @@ internal class GoldenModel(
         override val isVisionEnabled: Boolean = false
         override val isAudioEnabled: Boolean = false
         override val activeBackend: LocalBackend = LocalBackend.CPU
+        override val activeContextLength: Int = CONTEXT_WINDOW
 
         override fun transcribe(audioPath: String, prompt: String): Flow<String> =
             log.violation("No golden scenario sends audio")
 
         // Cold, as the real engine's stream is: the call happens — and is recorded — when a
         // node collects the stream, not when it builds it.
-        override fun generateResponseStream(prompt: String, imagePath: String?, temperature: Float?): Flow<String> =
-            flow { chunks(answer("local", prompt, temperature, imagePath)).forEach { emit(it) } }
+        override fun generateResponseStream(
+            prompt: String,
+            imagePath: String?,
+            sampling: LocalSampling?,
+        ): Flow<String> = flow { chunks(answer("local", prompt, sampling.describe(), imagePath)).forEach { emit(it) } }
 
         override fun close() = log.record("model.close")
 
@@ -111,7 +116,7 @@ internal class GoldenModel(
         CloudStructuredInferenceClientFactory { provider, onToken ->
             CloudStructuredClient(
                 inference = StructuredInferenceClient { prompt, temperature ->
-                    answer("cloud-structured ${provider.id}", prompt, temperature, imagePath = null)
+                    answer("cloud-structured ${provider.id}", prompt, temperature.describe(), imagePath = null)
                         .also { answer -> chunks(answer).forEach { onToken(it) } }
                 },
                 supportsNativeJson = false,
@@ -132,7 +137,7 @@ internal class GoldenModel(
                 val answer = answer(
                     "cloud ${provider.id} model=${model.id} prompt=${prompt.id} tools=${tools.size}",
                     text,
-                    temperature = prompt.params.temperature?.toFloat(),
+                    sampling = prompt.params.temperature?.toFloat().describe(),
                     imagePath = null,
                 )
                 chunks(answer).forEach { emit(StreamFrame.TextDelta(it)) }
@@ -145,7 +150,19 @@ internal class GoldenModel(
         override fun close() = Unit
     }
 
-    private fun answer(seam: String, prompt: String, temperature: Float?, imagePath: String?): String {
+    /**
+     * How a local call was sampled, as the trace shows it: the seed and sampler a run passes,
+     * or `default` for the engine's own choice. A refactoring that dropped the run's sampling,
+     * or derived another seed, changes this line.
+     */
+    private fun LocalSampling?.describe(): String =
+        this?.let { "seed=${it.seed} t=${it.sampler.temperature} k=${it.sampler.topK} p=${it.sampler.topP}" }
+            ?: "sampling=default"
+
+    /** A cloud call's temperature as the trace shows it. */
+    private fun Float?.describe(): String = "temperature=${this ?: "default"}"
+
+    private fun answer(seam: String, prompt: String, sampling: String, imagePath: String?): String {
         val position = tracker.current ?: log.violation("A model was called outside any node ($seam)")
         val visitKey = "${position.runId}/${position.node.id}/${position.visit}"
         val call = (callsPerVisit[visitKey] ?: 0) + 1
@@ -153,7 +170,7 @@ internal class GoldenModel(
         val answer = script.answerFor(rootPipelineId, position.pipeline.id, position.node.id, position.visit, call)
             ?: defaultAnswer(position)
         log.record(
-            "model $seam node=${position.node.id} call=$call temperature=${temperature ?: "default"} " +
+            "model $seam node=${position.node.id} call=$call $sampling " +
                 "image=${if (imagePath == null) "none" else "attached"}",
             "prompt" to prompt,
             "answer" to answer,
@@ -203,6 +220,9 @@ internal class GoldenModel(
 
         /** Id of the cloud model every provider resolves to. */
         const val CLOUD_MODEL_ID: String = "golden-cloud-model"
+
+        /** The context window the golden engine reports, in tokens. */
+        const val CONTEXT_WINDOW: Int = 4096
 
         /** The tool an auto-select node picks unless the scenario scripts another. */
         private const val DEFAULT_AUTO_TOOL = "search_tool"

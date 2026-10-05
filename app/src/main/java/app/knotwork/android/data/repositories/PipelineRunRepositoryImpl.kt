@@ -5,7 +5,9 @@ import app.knotwork.android.data.local.models.PipelineRunEntity
 import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunCeilingAxis
+import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.models.RunTerminationKind
 import app.knotwork.android.domain.models.RunTerminationReason
@@ -374,6 +376,23 @@ class PipelineRunRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setHeader(runId: String, header: RunHeader) {
+        absorbing("setHeader") {
+            withContext(Dispatchers.IO) {
+                pipelineRunDao.setHeader(
+                    runId = runId,
+                    seed = header.seed,
+                    temperature = header.sampler.temperature,
+                    topK = header.sampler.topK,
+                    topP = header.sampler.topP,
+                    appVersion = header.appVersion,
+                    runtimeVersion = header.runtimeVersion,
+                    device = header.device,
+                )
+            }
+        }
+    }
+
     override suspend fun countRootRunsByOriginSince(origin: RunOrigin, sinceEpochMs: Long): Int =
         absorbing("countRootRunsByOriginSince") {
             withContext(Dispatchers.IO) { pipelineRunDao.countRootRunsByOriginSince(origin.name, sinceEpochMs) }
@@ -551,6 +570,13 @@ private fun PipelineRun.toEntity(): PipelineRunEntity = PipelineRunEntity(
     stepsSpent = stepsSpent,
     tokensSpent = tokensSpent,
     terminationReason = terminationReason?.name,
+    headerSeed = header?.seed,
+    headerTemperature = header?.sampler?.temperature,
+    headerTopK = header?.sampler?.topK,
+    headerTopP = header?.sampler?.topP,
+    headerAppVersion = header?.appVersion,
+    headerRuntimeVersion = header?.runtimeVersion,
+    headerDevice = header?.device,
 )
 
 /**
@@ -586,4 +612,47 @@ private fun PipelineRunEntity.toDomain(): PipelineRun = PipelineRun(
     terminationReason = terminationReason?.let { name ->
         RunTerminationKind.entries.firstOrNull { it.name == name }
     },
+    header = headerOrNull(),
 )
+
+/**
+ * The stored header as one value, or `null` unless all seven columns are set —
+ * the DAO writes them in one statement, so a partial header is no header.
+ */
+private fun PipelineRunEntity.headerOrNull(): RunHeader? {
+    val seed = headerSeed ?: return null
+    val sampler = headerSamplerOrNull() ?: return null
+    val environment = headerEnvironmentOrNull() ?: return null
+    return RunHeader(
+        seed = seed,
+        sampler = sampler,
+        appVersion = environment.appVersion,
+        runtimeVersion = environment.runtimeVersion,
+        device = environment.device,
+    )
+}
+
+/** The header's sampler, or `null` when one of its three columns is missing. */
+private fun PipelineRunEntity.headerSamplerOrNull(): RunSampler? {
+    val temperature = headerTemperature ?: return null
+    val topK = headerTopK ?: return null
+    val topP = headerTopP ?: return null
+    return RunSampler(temperature = temperature, topK = topK, topP = topP)
+}
+
+/** The header's versions and device, or `null` when one of their columns is missing. */
+private fun PipelineRunEntity.headerEnvironmentOrNull(): HeaderEnvironment? {
+    val appVersion = headerAppVersion ?: return null
+    val runtimeVersion = headerRuntimeVersion ?: return null
+    val device = headerDevice ?: return null
+    return HeaderEnvironment(appVersion = appVersion, runtimeVersion = runtimeVersion, device = device)
+}
+
+/**
+ * The environment part of a stored header.
+ *
+ * @property appVersion The app version.
+ * @property runtimeVersion The inference runtime and its version.
+ * @property device The device descriptor.
+ */
+private data class HeaderEnvironment(val appVersion: String, val runtimeVersion: String, val device: String)

@@ -3,7 +3,9 @@ package app.knotwork.android.domain.engine.executors
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.engine.NodeInference
 import app.knotwork.android.domain.engine.executors.ToolCallParser.ToolCall
+import app.knotwork.android.domain.engine.structured.CloudCallNotingClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.CollectingRepairListener
 import app.knotwork.android.domain.engine.structured.EngineStructuredInferenceClient
@@ -118,7 +120,7 @@ class ToolNodeExecutor @Inject constructor(
         // local LiteRT engine backs it. Tool selection / arguments are JSON
         // objects, so a provider with native JSON support drops the repair
         // budget to zero (trust-but-verify).
-        val resolution = resolveInference(node) ?: return@flow
+        val resolution = resolveInference(node, scope.inference) ?: return@flow
         val inference = resolution.first
         val maxRepairs = if (resolution.second) 0 else configuredMaxRepairs
 
@@ -173,13 +175,14 @@ class ToolNodeExecutor @Inject constructor(
      */
     private suspend fun FlowCollector<NodeOutput>.resolveInference(
         node: NodeModel,
+        nodeInference: NodeInference,
     ): Pair<StructuredInferenceClient, Boolean>? {
         val providerId = node.cloudProvider?.takeIf { it.isNotBlank() }
         if (providerId != null) {
             val provider = CloudProvider.fromId(providerId)
             val cloud = provider?.let { cloudStructuredFactory.create(it) { } }
-            if (cloud != null) {
-                return cloud.inference to cloud.supportsNativeJson
+            if (provider != null && cloud != null) {
+                return CloudCallNotingClient(provider.id, nodeInference, cloud.inference) to cloud.supportsNativeJson
             }
             emit(
                 NodeOutput.Console(
@@ -195,7 +198,7 @@ class ToolNodeExecutor @Inject constructor(
             emit(NodeOutput.Result(NodeExecutionResult(error = errorMsg)))
             return null
         }
-        return EngineStructuredInferenceClient(llmEngine) to false
+        return EngineStructuredInferenceClient(llmEngine, nodeInference) to false
     }
 
     /**

@@ -131,6 +131,9 @@ class ShowcaseCompositionIntegrationTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         settingsRepository = mockk(relaxed = true)
         every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
 
@@ -174,7 +177,7 @@ class ShowcaseCompositionIntegrationTest {
 
         engine = buildEngine()
 
-        every { llmEngine.generateResponseStream(any()) } answers { flowOf(scriptFor(firstArg())) }
+        every { llmEngine.generateResponseStream(any(), any(), any()) } answers { flowOf(scriptFor(firstArg())) }
         every { settingsRepository.pipelineMaxNestingDepth } returns flowOf(3)
         every { settingsRepository.pipelineMaxSteps } returns flowOf(50)
         every { settingsRepository.pipelineMaxStepsBackground } returns flowOf(15)

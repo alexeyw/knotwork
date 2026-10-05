@@ -2,6 +2,8 @@ package app.knotwork.android.domain.engine
 
 import app.knotwork.android.domain.engine.executors.NodeExecutorFactory
 import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
+import app.knotwork.android.domain.models.RunHeader
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.ChatRepository
@@ -14,8 +16,12 @@ import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.CeilingNotifier
+import app.knotwork.android.domain.services.RunEnvironment
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * Builds a [GraphExecutionEngine] for a test from the flat list of dependencies the
@@ -47,6 +53,7 @@ fun testGraphExecutionEngine(
     resolveRunCeilingsUseCase: ResolveRunCeilingsUseCase,
     pendingInteractionRepository: PendingInteractionRepository,
     ceilingNotifier: CeilingNotifier,
+    runHeaders: RunHeaders = fixedRunHeaders(),
 ): GraphExecutionEngine = GraphExecutionEngine(
     nodeExecutorFactory = nodeExecutorFactory,
     toolNodeExecutor = toolNodeExecutor,
@@ -72,4 +79,35 @@ fun testGraphExecutionEngine(
         retrieveRelevantMemoryUseCase = retrieveRelevantMemoryUseCase,
         memoryRepository = memoryRepository,
     ),
+    runHeaders = runHeaders,
+)
+
+/** The header every run of a [fixedRunHeaders] factory starts with. */
+val TEST_RUN_HEADER: RunHeader = RunHeader(
+    seed = 1234,
+    sampler = RunSampler(temperature = 0.7, topK = 40, topP = 0.9),
+    appVersion = "test (1)",
+    runtimeVersion = "LiteRT-LM test",
+    device = "Test Device · Android 16",
+)
+
+/**
+ * A header factory that always yields [header] — for engine tests that do not
+ * test the header and must not depend on the settings mock stubbing a sampler.
+ *
+ * @param header The header each fresh run gets.
+ * @return The factory.
+ */
+fun fixedRunHeaders(header: RunHeader = TEST_RUN_HEADER): RunHeaders = RunHeaders(
+    generationSettings = mockk {
+        every { temperature } returns flowOf(header.sampler.temperature.toFloat())
+        every { topK } returns flowOf(header.sampler.topK)
+        every { topP } returns flowOf(header.sampler.topP.toFloat())
+    },
+    seedSource = { header.seed },
+    environment = object : RunEnvironment {
+        override val appVersion: String = header.appVersion
+        override val runtimeVersion: String = header.runtimeVersion
+        override val device: String = header.device
+    },
 )

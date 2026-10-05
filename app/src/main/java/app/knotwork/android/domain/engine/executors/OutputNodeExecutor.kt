@@ -84,7 +84,7 @@ class OutputNodeExecutor @Inject constructor(
                 return@flow
             }
 
-            val responseStream = llmEngine.generateResponseStream(fullPrompt)
+            val responseStream = scope.inference.local(llmEngine, fullPrompt)
             val accumulatedResponse = StringBuilder()
             var emittedThinking = false
 

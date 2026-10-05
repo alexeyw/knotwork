@@ -16,6 +16,7 @@ run.running golden pipeline=subtask_lookup graphHash=7a41c81f07c0ad362d5e8f42080
 driver start
 crash.key active_pipeline_id=subtask_lookup
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden subtask_lookup/node-1 INPUT #1
 state Stage step=1 of=4 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | The input is a single subtask from a task plan, possibly wrapped in workflow instructions. It has been routed here because it needs a factual lookup. Turn it into a Wikipedia search term for the lookup that runs in the very next step. Your output becomes the search term.
@@ -64,13 +65,14 @@ state Streaming thinking=1 answering=5
       | Subtask Query Builder answer, visit 1.
 metrics.update tokens=6
 modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=3 run=golden node-2 LITE_RT visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=82327d1a24b3 output=9c8b5f7dbee6
 metrics.node LITE_RT tokens=6
 run.spend golden steps=2 tokens=6
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=6
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden node-2 LITE_RT depth=0 visit=0 tokens=6 in=04b8fe28cb0b out=9c8b5f7dbee6
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -79,19 +81,19 @@ trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=6
       | What is the tallest mountain on Earth?
     output:
       | Subtask Query Builder answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=4)
-state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=6 (= trace.node seq=5)
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=5)
 visit golden subtask_lookup/node-3 TOOL #1
 state Stage step=3 of=4 TOOL
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=node-3 call=1 temperature=default image=none
+model local node=node-3 call=1 seed=943585322 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that generates arguments for a specific tool.
       |
@@ -130,17 +132,18 @@ chat.save SYSTEM final=false model=null
       | Observation from search_tool: Search results for "Wikipedia Lookup (subtask)":
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
+trace.model.local seq=7 run=golden node-3 TOOL visit=0 call=0 depth=0 seed=943585322 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=c009af31c078 output=b7787e4f7dd5
 metrics.node TOOL tokens=null
 run.spend golden steps=3 tokens=6
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.console seq=7 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.console seq=9 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
-trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=search_tool
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden node-3 TOOL depth=0 visit=0 tokens=null tool=search_tool in=1f3b051ca9b8 out=a2b946976019
     input:
       | --- Previous Node Output ---
       | Subtask Query Builder answer, visit 1.
@@ -149,14 +152,14 @@ trace.node seq=8 run=golden node-3 TOOL depth=0 tokens=null tool=search_tool
       | 1. Wikipedia Lookup (subtask) — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup (subtask) — a second recorded source.
 trace.flush
-state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
-state NodeIO node-3 TOOL depth=0 (= trace.node seq=8)
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=10)
+state NodeIO node-3 TOOL depth=0 (= trace.node seq=10)
 visit golden subtask_lookup/node-4 OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=11)
 chat.save AGENT final=true model=Golden Model
     content:
       | Search results for "Wikipedia Lookup (subtask)":

@@ -2,10 +2,13 @@ package app.knotwork.android.domain.engine
 
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ConsoleEventType
+import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import io.mockk.coEvery
@@ -59,7 +62,14 @@ class RunConsoleTest {
 
         console.push(ConsoleEventType.NodeExecution, "▶ LITE_RT")
         console.recordMemorySnapshot(listOf(chunk(1)))
-        console.recordNodeIo(node(NodeType.LITE_RT), "in", "out", durationMs = 5L, result = null)
+        console.recordNodeIo(
+            node(NodeType.LITE_RT),
+            visit = 0,
+            inputText = "in",
+            outputText = "out",
+            durationMs = 5L,
+            result = null,
+        )
         console.push(ConsoleEventType.NodeExecution, "✓ LITE_RT in 5ms")
 
         assertEquals(listOf(7L, 8L, 9L, 10L), appended.map { it.seq })
@@ -99,7 +109,14 @@ class RunConsoleTest {
         val console = console(depth = 2)
 
         console.push(ConsoleEventType.NodeExecution, "▶ INPUT")
-        console.recordNodeIo(node(NodeType.LITE_RT), "in", "out", durationMs = 1L, result = null)
+        console.recordNodeIo(
+            node(NodeType.LITE_RT),
+            visit = 0,
+            inputText = "in",
+            outputText = "out",
+            durationMs = 1L,
+            result = null,
+        )
 
         val event = (emitted.last() as AgentOrchestratorState.ConsoleLog).events.single()
         assertEquals("[Translator] ▶ INPUT", event.message)
@@ -114,7 +131,14 @@ class RunConsoleTest {
 
         console.push(ConsoleEventType.NodeExecution, "▶ TOOL")
         console.recordMemorySnapshot(listOf(chunk(1)))
-        console.recordNodeIo(node(NodeType.TOOL), "in", "out", durationMs = 1L, result = null)
+        console.recordNodeIo(
+            node(NodeType.TOOL),
+            visit = 0,
+            inputText = "in",
+            outputText = "out",
+            durationMs = 1L,
+            result = null,
+        )
         console.push(ConsoleEventType.NodeExecution, "✓ TOOL in 1ms")
 
         assertTrue(appended.isEmpty())
@@ -135,7 +159,14 @@ class RunConsoleTest {
             resolvedToolName = "search_tool",
         )
 
-        console().recordNodeIo(node(NodeType.INTENT_ROUTER), "the input", "the output", durationMs = 30L, result)
+        console().recordNodeIo(
+            node(NodeType.INTENT_ROUTER),
+            visit = 2,
+            inputText = "the input",
+            outputText = "the output",
+            durationMs = 30L,
+            result = result,
+        )
 
         val record = appended.single() as RunTraceRecord.NodeIo
         assertEquals("n-INTENT_ROUTER", record.nodeId)
@@ -147,7 +178,69 @@ class RunConsoleTest {
         assertEquals(true, record.conditionResult)
         assertEquals("billing", record.routingKey)
         assertEquals("search_tool", record.resolvedToolName)
+        assertEquals(2, record.visit)
+        // The record carries the SHA-256 of both texts, so an export shows they were not altered.
+        assertEquals(TraceHashing.sha256Hex("the input"), record.inputSha256)
+        assertEquals(TraceHashing.sha256Hex("the output"), record.outputSha256)
     }
+
+    @Test
+    fun `given an on-device call when recorded then it keeps prompt, output, hashes and what produced it`() = runTest {
+        val sampling = LocalSampling(RunSampler(temperature = 0.7, topK = 40, topP = 0.9), seed = 99)
+        val pending = PendingModelCall.Local(
+            nodeId = "n",
+            nodeType = "LITE_RT",
+            visit = 1,
+            call = 0,
+            sampling = sampling,
+            modelPath = "/m/gemma.litertlm",
+            backend = LocalBackend.GPU,
+            contextWindow = 4096,
+            hadImage = false,
+            prompt = "the prompt",
+            output = "the output",
+        )
+
+        console(depth = 1).recordModelCall(pending, modelSha256 = "abc")
+
+        val record = appended.single() as RunTraceRecord.LocalModelCall
+        assertEquals("run-1", record.runId)
+        assertEquals(1, record.visit)
+        assertEquals(1, record.depth)
+        assertEquals(sampling, record.sampling)
+        assertEquals("abc", record.modelSha256)
+        assertEquals(LocalBackend.GPU, record.backend)
+        assertEquals(4096, record.contextWindow)
+        assertEquals(TraceHashing.sha256Hex("the prompt"), record.promptSha256)
+        assertEquals(TraceHashing.sha256Hex("the output"), record.outputSha256)
+    }
+
+    @Test
+    fun `given a cloud call when recorded then only the provider and model are kept`() = runTest {
+        console().recordModelCall(
+            PendingModelCall.Cloud(nodeId = "n", nodeType = "CLOUD", visit = 0, call = 0, "anthropic", "claude"),
+            modelSha256 = "ignored",
+        )
+
+        val record = appended.single() as RunTraceRecord.CloudModelCall
+        assertEquals("anthropic", record.provider)
+        assertEquals("claude", record.model)
+    }
+
+    @Test
+    fun `given a model call in a run that is not persisted then nothing is recorded and no number is taken`() =
+        runTest {
+            val console = console(runId = null)
+
+            console.recordModelCall(
+                PendingModelCall.Cloud(nodeId = "n", nodeType = "CLOUD", visit = 0, call = 0, "anthropic", null),
+                modelSha256 = null,
+            )
+            console.push(ConsoleEventType.NodeExecution, "✓ CLOUD in 1ms")
+
+            assertTrue(appended.isEmpty())
+            assertEquals(0L, (emitted.last() as AgentOrchestratorState.ConsoleLog).events.single().seq)
+        }
 
     @Test
     fun `given the memory a run retrieved then the snapshot carries the chunks`() = runTest {
@@ -162,9 +255,30 @@ class RunConsoleTest {
     fun `given a TOOL or CLOUD node then its record is flushed at once, any other waits for the batch`() = runTest {
         val console = console()
 
-        console.recordNodeIo(node(NodeType.LITE_RT), "in", "out", durationMs = 1L, result = null)
-        console.recordNodeIo(node(NodeType.TOOL), "in", "out", durationMs = 1L, result = null)
-        console.recordNodeIo(node(NodeType.CLOUD), "in", "out", durationMs = 1L, result = null)
+        console.recordNodeIo(
+            node(NodeType.LITE_RT),
+            visit = 0,
+            inputText = "in",
+            outputText = "out",
+            durationMs = 1L,
+            result = null,
+        )
+        console.recordNodeIo(
+            node(NodeType.TOOL),
+            visit = 0,
+            inputText = "in",
+            outputText = "out",
+            durationMs = 1L,
+            result = null,
+        )
+        console.recordNodeIo(
+            node(NodeType.CLOUD),
+            visit = 0,
+            inputText = "in",
+            outputText = "out",
+            durationMs = 1L,
+            result = null,
+        )
 
         assertEquals(listOf("append", "append", "flush", "append", "flush"), calls)
     }

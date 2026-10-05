@@ -52,6 +52,7 @@ constructor(
     private val resolveRunCeilingsUseCase: ResolveRunCeilingsUseCase,
     private val runRecords: RunRecordWriter.Factory,
     private val nodeInputs: NodeInputComposer.Factory,
+    private val runHeaders: RunHeaders,
 ) {
 
     /**
@@ -332,6 +333,7 @@ constructor(
             graph = graph,
             call = LiveNodeStep.NodeCall(sessionId, userPrompt, runId),
             resuming = replay.resuming,
+            localModelRepository = localModelRepository,
             beforeOutput = { noteUndeliveredImage() },
         )
 
@@ -377,6 +379,12 @@ constructor(
      * the window it had rather than starting blind — which matters precisely
      * because a run that parks often is a run in a loop.
      *
+     * The header is read back the same way: a resumed run keeps the seed and
+     * sampler its first attempt chose, so every on-device call of the run — before
+     * and after a pause — is reproducible from one header. A run starting for the
+     * first time (or one recorded before headers existed) chooses and records one
+     * now.
+     *
      * @param runId Id of the root run record, or `null` for a non-persisted run.
      * @param root The root overload's image and origin arguments.
      * @param records The run's record, whose spend seeds the ledger.
@@ -386,6 +394,7 @@ constructor(
         val ceilings = resolveRunCeilingsUseCase(root.origin)
         val spent = records.spendSoFar()
         val delivery = root.imageInput?.let { RunImageDelivery(it) }
+        val header = records.recordedHeader() ?: runHeaders.fresh().also { records.recordHeader(it) }
         return RunTreeContext(
             depth = 0,
             budget = RunBudgetLedger(
@@ -404,6 +413,7 @@ constructor(
             imagePresent = delivery != null || root.runHadImage,
             generatingModel = RunGeneratingModel(),
             origin = root.origin,
+            header = header,
         )
     }
 

@@ -6,6 +6,7 @@ import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunBudgetLedger
+import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunSpend
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
@@ -22,7 +23,8 @@ import javax.inject.Singleton
  * The record is what outlives the process. An interrupted run reports the node it
  * stopped on; a parked run resumes by reading back its spend and its WAITING_*
  * status; an answer finds the question it answers in the pending-interaction
- * store. The engine owns only these mid-run writes — the RUNNING transition at
+ * store; a resumed run keeps the seed and sampler its header recorded. The
+ * engine owns only these writes — the RUNNING transition at
  * the start and every terminal status belong to the task queue (and, for a
  * sub-pipeline, to `PipelineNodeExecutor`).
  *
@@ -51,6 +53,26 @@ class RunRecordWriter private constructor(
      * @return The recorded spend, or none for a run that is not persisted.
      */
     suspend fun spendSoFar(): RunSpend = runId?.let { stores.pipelineRunRepository.getSpend(it) } ?: RunSpend()
+
+    /**
+     * The header a previous attempt of this run chose, so a resumed run keeps its
+     * seed and sampler instead of drawing new ones.
+     *
+     * @return The recorded header, or `null` for a run not persisted, one starting
+     *   for the first time, or one recorded before headers existed.
+     */
+    suspend fun recordedHeader(): RunHeader? = runId?.let { stores.pipelineRunRepository.getRun(it)?.header }
+
+    /**
+     * Records the header a run starting for the first time has chosen. Skipped for
+     * a run that is not persisted.
+     *
+     * @param header The run's header.
+     */
+    suspend fun recordHeader(header: RunHeader) {
+        val id = runId ?: return
+        stores.pipelineRunRepository.setHeader(id, header)
+    }
 
     /**
      * Consumes the record of a ceiling question this run parked on, if it is

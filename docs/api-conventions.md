@@ -30,6 +30,13 @@ layering rationale, see [`architecture.md`](architecture.md).
   not see it. The Flow overload cannot report that native work has ended
   once its collector is gone. Closing earlier crashes the process inside
   LiteRT-LM.
+- **Inside a pipeline run, reach the on-device model only through the node's
+  `NodeInference`** (`scope.inference.local(engine, prompt)`), never
+  `generateResponseStream` directly. It runs the call on the run header's sampler
+  with a seed derived from the run seed and records the full prompt and output,
+  which is what makes a run checkable. `generateResponseStream(sampling = null)`
+  — the user's sampler and a fresh seed — is for work outside a run only.
+  `LocalInferenceSeamKonsistTest` pins the direct callers.
 - Log memory usage before and after model load with `Timber.d`.
 
 ```kotlin

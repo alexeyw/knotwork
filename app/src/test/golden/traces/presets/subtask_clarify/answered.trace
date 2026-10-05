@@ -16,6 +16,7 @@ run.running golden pipeline=subtask_clarify graphHash=314b1603a69eb437fb1e414c97
 driver start
 crash.key active_pipeline_id=subtask_clarify
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden subtask_clarify/node-1 INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ CLARIFICATION
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are a Clarification Generator inside a task-execution loop. The current subtask needs information or a decision that only the user can provide before the agent can continue. Using the subtask and the overall goal, produce ONE short, specific question that unblocks it.
       |
@@ -78,14 +79,15 @@ state AwaitingClarification request=#1 timeoutMs=60000
       | The second one
 driver clarification Answer(text=The first one) request=#1 → LiveResumed
 journal.hitl golden Resolved(resolution=ANSWERED)
+trace.model.local seq=3 run=golden node-2 CLARIFICATION visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=1f8d5a59a357 output=db4478292f55
 run.status golden RUNNING
 metrics.node CLARIFICATION tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ CLARIFICATION in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden node-2 CLARIFICATION depth=0 tokens=null
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden node-2 CLARIFICATION depth=0 visit=0 tokens=null in=55cd0be732ce out=00806be08d13
     input:
       | --- Original Task ---
       | Book a table for dinner.
@@ -95,14 +97,14 @@ trace.node seq=4 run=golden node-2 CLARIFICATION depth=0 tokens=null
     output:
       | Q: Clarify: which one do you mean?
       | A: The first one
-state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=4)
-state NodeIO node-2 CLARIFICATION depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=CLARIFICATION depth=0 tokens=null (= trace.node seq=5)
+state NodeIO node-2 CLARIFICATION depth=0 (= trace.node seq=5)
 visit golden subtask_clarify/node-3 OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 chat.save AGENT final=true model=Golden Model
     content:
       | Q: Clarify: which one do you mean?

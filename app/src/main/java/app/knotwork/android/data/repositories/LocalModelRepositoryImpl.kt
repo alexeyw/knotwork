@@ -8,12 +8,14 @@ import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.ModelFileHash
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.ModelPerformanceRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -101,9 +103,18 @@ class LocalModelRepositoryImpl @Inject constructor(
         localModelDao.findByPath(path)?.toDomain()
     }
 
-    override suspend fun currentFileHash(path: String): String? = withContext(Dispatchers.IO) {
-        val hash = localModelDao.findByPath(path)?.toDomain()?.fileHash
-        hash?.sha256?.takeIf { hash.describesFile(File(path)) }
+    override suspend fun currentFileHash(path: String): String? = try {
+        withContext(Dispatchers.IO) {
+            val hash = localModelDao.findByPath(path)?.toDomain()?.fileHash
+            hash?.sha256?.takeIf { hash.describesFile(File(path)) }
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        // Read on the run path for every on-device call it records: a registry that
+        // cannot be read costs the call its checksum, never the run.
+        Timber.w(e, "Model file hash unavailable; recording the call without it")
+        null
     }
 
     override suspend fun modelsNeedingFileHash(): List<LocalModel> = withContext(Dispatchers.IO) {

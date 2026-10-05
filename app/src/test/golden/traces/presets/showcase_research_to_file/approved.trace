@@ -16,6 +16,7 @@ run.running golden pipeline=showcase_research_to_file graphHash=17d278953f669c32
 driver start
 crash.key active_pipeline_id=showcase_research_to_file
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden showcase_research_to_file/input INPUT #1
 state Stage step=1 of=7 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=query_builder call=1 temperature=default image=none
+model local node=query_builder call=1 seed=208014635 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You prepare the user's question for a Wikipedia lookup that runs in the very next step. Your output becomes the search term. Write the search term in the user's language (en-US) so the lookup targets the matching Wikipedia edition. Output only the search term: a short noun phrase naming the main topic or entity, the way a Wikipedia article would be titled. No question marks, no full sentences, no quotation marks, no explanation, and no leading phrases like Search term. Strip conversational filler and second-person framing and keep just the topic. For a specific entity such as a person, place, work, event or concept, name it as precisely as you can. If several topics are mixed in, pick the single most central one. Output the search term only.
@@ -54,13 +55,14 @@ state Streaming thinking=1 answering=4
       | Query Builder answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=3 run=golden query_builder LITE_RT visit=0 call=0 depth=0 seed=208014635 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=5eed0caa8752 output=ea4ba06a793c
 metrics.node LITE_RT tokens=5
 run.spend golden steps=2 tokens=5
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden query_builder LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden query_builder LITE_RT depth=0 visit=0 tokens=5 in=1ae120fc9635 out=ea4ba06a793c
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -69,19 +71,19 @@ trace.node seq=4 run=golden query_builder LITE_RT depth=0 tokens=5
       | Compare how solar and wind power grew over the last decade.
     output:
       | Query Builder answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=4)
-state NodeIO query_builder LITE_RT depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=5)
+state NodeIO query_builder LITE_RT depth=0 (= trace.node seq=5)
 visit golden showcase_research_to_file/search TOOL #1
 state Stage step=3 of=7 TOOL
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=search call=1 temperature=default image=none
+model local node=search call=1 seed=977523684 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that generates arguments for a specific tool.
       |
@@ -120,17 +122,18 @@ chat.save SYSTEM final=false model=null
       | Observation from search_tool: Search results for "Wikipedia Lookup":
       | 1. Wikipedia Lookup — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup — a second recorded source.
+trace.model.local seq=7 run=golden search TOOL visit=0 call=0 depth=0 seed=977523684 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=3e9be4de5adb output=10b20d7564d0
 metrics.node TOOL tokens=null
 run.spend golden steps=3 tokens=5
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.console seq=7 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.console seq=9 run=golden depth=0 ToolCall
     message:
       | search_tool
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=7)
-trace.node seq=8 run=golden search TOOL depth=0 tokens=null tool=search_tool
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=9)
+trace.node seq=10 run=golden search TOOL depth=0 visit=0 tokens=null tool=search_tool in=c84e83f4b328 out=e5f0e6b3ff84
     input:
       | --- Previous Node Output ---
       | Query Builder answer, visit 1.
@@ -139,16 +142,16 @@ trace.node seq=8 run=golden search TOOL depth=0 tokens=null tool=search_tool
       | 1. Wikipedia Lookup — a recorded encyclopedia summary.
       | 2. Wikipedia Lookup — a second recorded source.
 trace.flush
-state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=8)
-state NodeIO search TOOL depth=0 (= trace.node seq=8)
+state PipelineTrace steps=2 last=TOOL depth=0 tokens=null (= trace.node seq=10)
+state NodeIO search TOOL depth=0 (= trace.node seq=10)
 visit golden showcase_research_to_file/distiller LITE_RT #1
 state Stage step=4 of=7 LITE_RT
-trace.console seq=9 run=golden depth=0 NodeExecution
+trace.console seq=11 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=8 (= trace.console run=golden seq=9)
+state ConsoleLog run=golden events=8 (= trace.console run=golden seq=11)
 model.load path=null vision=false audio=false
-model local node=distiller call=1 temperature=default image=none
+model local node=distiller call=1 seed=653326647 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are preparing raw reference material before a report is written. Your input contains the user's original question and a raw article extract that may be long, repetitive, or say No results found. Today is 15 September 2026. Write your entire output in English, whatever language the user writes in. This step's output is read by later steps, not by the user — the step that writes the final answer translates it back into the user's language. Produce a compact fact digest for the next step. Keep only facts relevant to the question, one fact per line in the form Subject - aspect: value. Copy each figure exactly as written. When a figure is given in two units, keep only one unit and drop the other, and never place two numbers next to each other. Keep one value per aspect; if sources conflict, keep the first one and ignore the rest. If a needed fact is missing or the lookup failed, write Subject - aspect: not found, and do not guess. No intro, no conclusion, no prose, only the fact lines. Output the fact lines only.
@@ -169,13 +172,14 @@ state Streaming thinking=1 answering=4
       | Research Distiller answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=12 run=golden distiller LITE_RT visit=0 call=0 depth=0 seed=653326647 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=b75c7b80ae34 output=e16a5440ab07
 metrics.node LITE_RT tokens=5
 run.spend golden steps=4 tokens=10
-trace.console seq=10 run=golden depth=0 NodeExecution
+trace.console seq=13 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=9 (= trace.console run=golden seq=10)
-trace.node seq=11 run=golden distiller LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=9 (= trace.console run=golden seq=13)
+trace.node seq=14 run=golden distiller LITE_RT depth=0 visit=0 tokens=5 in=f541dc517676 out=e16a5440ab07
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -186,16 +190,16 @@ trace.node seq=11 run=golden distiller LITE_RT depth=0 tokens=5
       | 2. Wikipedia Lookup — a second recorded source.
     output:
       | Research Distiller answer, visit 1.
-state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=5 (= trace.node seq=11)
-state NodeIO distiller LITE_RT depth=0 (= trace.node seq=11)
+state PipelineTrace steps=3 last=LITE_RT depth=0 tokens=5 (= trace.node seq=14)
+state NodeIO distiller LITE_RT depth=0 (= trace.node seq=14)
 visit golden showcase_research_to_file/synthesis LITE_RT #1
 state Stage step=5 of=7 LITE_RT
-trace.console seq=12 run=golden depth=0 NodeExecution
+trace.console seq=15 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=10 (= trace.console run=golden seq=12)
+state ConsoleLog run=golden events=10 (= trace.console run=golden seq=15)
 model.load path=null vision=false audio=false
-model local node=synthesis call=1 temperature=default image=none
+model local node=synthesis call=1 seed=905659348 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You write a short report and hand it to a file-writing step. Your input contains the user's original question and a list of distilled facts. Today is 15 September 2026. The report body is what the user will read, so write it in the user's language (en-US). The file path is not: build the slug from ASCII letters, digits and hyphens only, transliterating the topic into English if necessary — a non-ASCII path is rejected by the workspace. Output one JSON object and nothing else. The object has exactly two string keys. The first key is path: a workspace-relative file path of the form reports/<slug>.md, where <slug> is a short lowercase name built from the main topic using only letters, digits and hyphens. The second key is content: the full Markdown report as a single string. The report starts with a level-one heading naming the topic, then a few short plain paragraphs that answer the question using only the distilled facts. Do not invent facts that are not in the input. Do not add code fences, comments, or any text before or after the JSON object. Output only the JSON object.
@@ -214,13 +218,14 @@ state Streaming thinking=1 answering=3
       | Synthesis answer, visit 1.
 metrics.update tokens=4
 modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+trace.model.local seq=16 run=golden synthesis LITE_RT visit=0 call=0 depth=0 seed=905659348 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=ac40ada976cf output=242cb91120e0
 metrics.node LITE_RT tokens=4
 run.spend golden steps=5 tokens=14
-trace.console seq=13 run=golden depth=0 NodeExecution
+trace.console seq=17 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=11 (= trace.console run=golden seq=13)
-trace.node seq=14 run=golden synthesis LITE_RT depth=0 tokens=4
+state ConsoleLog run=golden events=11 (= trace.console run=golden seq=17)
+trace.node seq=18 run=golden synthesis LITE_RT depth=0 visit=0 tokens=4 in=662d7229f7e8 out=242cb91120e0
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -229,19 +234,19 @@ trace.node seq=14 run=golden synthesis LITE_RT depth=0 tokens=4
       | Research Distiller answer, visit 1.
     output:
       | Synthesis answer, visit 1.
-state PipelineTrace steps=4 last=LITE_RT depth=0 tokens=4 (= trace.node seq=14)
-state NodeIO synthesis LITE_RT depth=0 (= trace.node seq=14)
+state PipelineTrace steps=4 last=LITE_RT depth=0 tokens=4 (= trace.node seq=18)
+state NodeIO synthesis LITE_RT depth=0 (= trace.node seq=18)
 visit golden showcase_research_to_file/write_report TOOL #1
 state Stage step=6 of=7 TOOL
-trace.console seq=15 run=golden depth=0 NodeExecution
+trace.console seq=19 run=golden depth=0 NodeExecution
     message:
       | ▶ TOOL
-state ConsoleLog run=golden events=12 (= trace.console run=golden seq=15)
+state ConsoleLog run=golden events=12 (= trace.console run=golden seq=19)
 state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=write_report call=1 temperature=default image=none
+model local node=write_report call=1 seed=502222510 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that generates arguments for a specific tool.
       |
@@ -285,33 +290,34 @@ state ObservationResult write_file
 chat.save SYSTEM final=false model=null
     content:
       | Observation from write_file: Wrote 31 characters to notes/golden.md.
+trace.model.local seq=20 run=golden write_report TOOL visit=0 call=0 depth=0 seed=502222510 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=06ad8fc950fc output=6c03f2720f90
 metrics.node TOOL tokens=null
 run.spend golden steps=6 tokens=14
-trace.console seq=16 run=golden depth=0 NodeExecution
+trace.console seq=21 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=13 (= trace.console run=golden seq=16)
-trace.console seq=17 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=13 (= trace.console run=golden seq=21)
+trace.console seq=22 run=golden depth=0 ToolCall
     message:
       | write_file
-state ConsoleLog run=golden events=14 (= trace.console run=golden seq=17)
-trace.node seq=18 run=golden write_report TOOL depth=0 tokens=null tool=write_file
+state ConsoleLog run=golden events=14 (= trace.console run=golden seq=22)
+trace.node seq=23 run=golden write_report TOOL depth=0 visit=0 tokens=null tool=write_file in=782eeae23324 out=9125bf5ea5c3
     input:
       | --- Previous Node Output ---
       | Synthesis answer, visit 1.
     output:
       | Wrote 31 characters to notes/golden.md.
 trace.flush
-state PipelineTrace steps=5 last=TOOL depth=0 tokens=null (= trace.node seq=18)
-state NodeIO write_report TOOL depth=0 (= trace.node seq=18)
+state PipelineTrace steps=5 last=TOOL depth=0 tokens=null (= trace.node seq=23)
+state NodeIO write_report TOOL depth=0 (= trace.node seq=23)
 visit golden showcase_research_to_file/output OUTPUT #1
 state Stage step=7 of=7 OUTPUT
-trace.console seq=19 run=golden depth=0 NodeExecution
+trace.console seq=24 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=15 (= trace.console run=golden seq=19)
+state ConsoleLog run=golden events=15 (= trace.console run=golden seq=24)
 model.load path=null vision=false audio=false
-model local node=output call=1 temperature=default image=none
+model local node=output call=1 seed=1655855552 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Your input is a confirmation that a file was written to the agent workspace, in the form Wrote N bytes to 'reports/<name>.md'. Reply to the user with a single short line: Report saved to <path>, where <path> is the path taken exactly from that confirmation. If the input is instead an error message, relay it plainly in one sentence. Do not add anything else.
       |
@@ -333,6 +339,7 @@ chat.save AGENT final=true model=Golden Model
 end Completed
     finalResponse:
       | Reply answer, visit 1.
+trace.model.local seq=25 run=golden output OUTPUT visit=0 call=0 depth=0 seed=1655855552 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=4553394dbb41 output=3e04df0320c3
 metrics.node OUTPUT tokens=null
 run.spend golden steps=7 tokens=14
 trace.flush

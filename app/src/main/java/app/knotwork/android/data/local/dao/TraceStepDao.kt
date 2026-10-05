@@ -4,11 +4,13 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import app.knotwork.android.data.local.models.ModelCallEntity
 import app.knotwork.android.data.local.models.TraceStepEntity
 
 /**
- * Data Access Object for [TraceStepEntity] — the persistent pipeline-run
- * trace. The write surface is deliberately batch-only: every production
+ * Data Access Object for the persistent pipeline-run trace: [TraceStepEntity]
+ * rows and the [ModelCallEntity] rows that share their `seq` numbering. The write surface is deliberately batch-only: every production
  * insert goes through the buffered run-trace recorder, so a per-row insert
  * path would only invite per-event SQLCipher commits back onto the
  * streaming hot path. Per-session reads and deletes are likewise absent —
@@ -38,6 +40,39 @@ interface TraceStepDao {
      */
     @Query("SELECT * FROM trace_steps WHERE runId = :runId ORDER BY seq ASC")
     suspend fun getTraceStepsForRun(runId: String): List<TraceStepEntity>
+
+    /**
+     * Inserts a batch of model-call records. Called only from [insertBatch], so
+     * the calls land in the same transaction as the trace rows buffered with them.
+     *
+     * @param calls The model calls to insert, in their in-run order.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertModelCalls(calls: List<ModelCallEntity>)
+
+    /**
+     * Writes one flushed batch of the run-trace recorder — trace rows and model
+     * calls — in a single transaction, so a crash never keeps a node's record
+     * without the model calls made before it, or the other way round.
+     *
+     * @param steps The trace rows of the batch.
+     * @param calls The model calls of the batch.
+     */
+    @Transaction
+    suspend fun insertBatch(steps: List<TraceStepEntity>, calls: List<ModelCallEntity>) {
+        if (steps.isNotEmpty()) insertTraceSteps(steps)
+        if (calls.isNotEmpty()) insertModelCalls(calls)
+    }
+
+    /**
+     * Returns the model calls of one pipeline run ordered by the in-run sequence
+     * number; merged with [getTraceStepsForRun] by `seq` into the run's trace.
+     *
+     * @param runId The pipeline run id.
+     * @return The run's model calls, oldest first.
+     */
+    @Query("SELECT * FROM model_calls WHERE runId = :runId ORDER BY seq ASC")
+    suspend fun getModelCallsForRun(runId: String): List<ModelCallEntity>
 
     /**
      * Retention: deletes legacy trace rows written before run-trace

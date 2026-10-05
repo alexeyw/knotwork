@@ -60,6 +60,13 @@ import androidx.room.PrimaryKey
  *   `1` a direct sub-pipeline, …). Projected back into the console so a sub-pipeline's logs,
  *   vars and trace spans render nested under the `PIPELINE` node that spawned them. Defaults
  *   to `0` for legacy and top-level rows.
+ * @property visit Zero-based visit index of the node within its run invocation, for
+ *   `NODE_IO` rows; ties the row to the model calls of the same visit (`model_calls`).
+ *   `null` for other kinds and for rows written before `MIGRATION_66_67`.
+ * @property inputSha256 Lowercase hex SHA-256 of [inputText] for `NODE_IO` rows; `null` for
+ *   other kinds and for rows written before `MIGRATION_66_67`.
+ * @property outputSha256 Lowercase hex SHA-256 of [outputText] for `NODE_IO` rows; `null` for
+ *   other kinds and for rows written before `MIGRATION_66_67`.
  */
 @Entity(
     tableName = "trace_steps",
@@ -98,6 +105,9 @@ data class TraceStepEntity(
     val routingKey: String? = null,
     val resolvedToolName: String? = null,
     val depth: Int = 0,
+    val visit: Int? = null,
+    val inputSha256: String? = null,
+    val outputSha256: String? = null,
 ) {
     companion object {
         /** [recordKind] value of a per-node input/output record. */

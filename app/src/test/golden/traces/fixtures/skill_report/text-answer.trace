@@ -16,6 +16,7 @@ run.running golden pipeline=fixture-skill-report graphHash=967a87cec91d49e0fbb00
 driver start
 crash.key active_pipeline_id=fixture-skill-report
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden fixture-skill-report/input INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ SKILL
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=report call=1 temperature=default image=none
+model local node=report call=1 seed=646052473 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are a report writer. Use the information the user gives you to write a clear, well-structured report in plain prose. Start with a short overview, then cover the key points one paragraph at a time, and end with a brief conclusion. Keep the language simple and factual. When the report is ready, save it to a file using the write_file tool, then tell the user the name of the file you saved. Today is 15 September 2026.
@@ -54,13 +55,14 @@ state Streaming thinking=1 answering=5
       | Write the report answer, visit 1.
 metrics.update tokens=6
 modelPerformance.record path=/models/golden-model.litertlm tokens=6 benchmark=false
+trace.model.local seq=3 run=golden report SKILL visit=0 call=0 depth=0 seed=646052473 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=fcf03a493899 output=33ca7b4cb072
 metrics.node SKILL tokens=6
 run.spend golden steps=2 tokens=6
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ SKILL in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden report SKILL depth=0 tokens=6
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden report SKILL depth=0 visit=0 tokens=6 in=1ae120fc9635 out=33ca7b4cb072
     input:
       | --- Original Task ---
       | Compare how solar and wind power grew over the last decade.
@@ -69,14 +71,14 @@ trace.node seq=4 run=golden report SKILL depth=0 tokens=6
       | Compare how solar and wind power grew over the last decade.
     output:
       | Write the report answer, visit 1.
-state PipelineTrace steps=1 last=SKILL depth=0 tokens=6 (= trace.node seq=4)
-state NodeIO report SKILL depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=SKILL depth=0 tokens=6 (= trace.node seq=5)
+state NodeIO report SKILL depth=0 (= trace.node seq=5)
 visit golden fixture-skill-report/output OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 chat.save AGENT final=true model=Golden Model
     content:
       | Write the report answer, visit 1.

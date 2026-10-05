@@ -2,6 +2,7 @@ package app.knotwork.android.domain.engine
 
 import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.Result
 import kotlinx.coroutines.flow.Flow
 
@@ -83,12 +84,23 @@ interface LlmInferenceEngine {
     val activeBackend: LocalBackend?
 
     /**
+     * The context window, in tokens, the loaded engine was built with, or `null`
+     * when no model is loaded.
+     *
+     * Read from settings at load time and fixed until the next load, so it can
+     * differ from the setting's current value. Recorded with every on-device call
+     * of a run: on GPU the same seed reproduces the same text only with the same
+     * window (`decisions.md §70.6`).
+     */
+    val activeContextLength: Int?
+
+    /**
      * Transcribes a single audio clip into text using the loaded multimodal
      * model. This is a **preprocessing** step that runs *before* any pipeline:
      * voice input never travels the execution graph — only the resulting text
      * does, as an ordinary editable message. It therefore has its own entry
      * point rather than overloading [generateResponseStream] (whose
-     * image/temperature contract belongs to graph inference).
+     * image/sampling contract belongs to graph inference).
      *
      * @param audioPath Absolute filesystem path of the audio clip to transcribe
      *   (a 16 kHz mono PCM WAV produced by the recorder, or a copy of a picked
@@ -112,17 +124,19 @@ interface LlmInferenceEngine {
      *   prompt content; this requires the engine to have been initialized with
      *   [initialize]'s `enableVision = true`, which the caller guarantees by
      *   loading the model in vision mode before issuing an image generation.
-     * @param temperature Optional sampling-temperature override for this single
-     *   generation. When `null` (the default for every ordinary call) the engine
-     *   leaves the model's built-in sampler untouched, so normal generation is
-     *   unaffected. When non-`null` the engine drives a deterministic-leaning
-     *   sampler at the requested temperature — used by the structured-output
-     *   repair loop (see
-     *   [app.knotwork.android.domain.engine.structured.StructuredOutputGate.REPAIR_TEMPERATURE])
-     *   to nudge a stumbling model towards a schema-obedient retry.
+     * @param sampling The sampler and seed to generate with, or `null` for the
+     *   engine's own choice: the user's sampler (Settings → Generation) and a
+     *   fresh random seed. A pipeline run always passes one — the run's sampler
+     *   and a seed derived from the run seed, or the fixed repair sampling — so
+     *   the call can be recorded and repeated (see [NodeInference]); `null` is
+     *   for work outside a run, where nothing is recorded.
      * @return A [Flow] of strings representing the generated tokens as they are produced.
      */
-    fun generateResponseStream(prompt: String, imagePath: String? = null, temperature: Float? = null): Flow<String>
+    fun generateResponseStream(
+        prompt: String,
+        imagePath: String? = null,
+        sampling: LocalSampling? = null,
+    ): Flow<String>
 
     /**
      * Closes the engine and releases any underlying resources.

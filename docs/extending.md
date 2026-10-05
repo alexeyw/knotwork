@@ -65,6 +65,8 @@ class MyNewNodeExecutor @Inject constructor(
         inputText: String,
         sessionId: String,
         originalPrompt: String,
+        runId: String?,
+        scope: ExecutionScope,
     ): Flow<NodeOutput> = flow {
         // 1. emit NodeOutput.State events for progress
         // 2. emit exactly one terminal NodeOutput.Result at the end
@@ -86,6 +88,15 @@ Contract reminders:
   with the matching `DefaultPrompts.<Node>.SYSTEM_FALLBACK` so an
   unset prompt does not produce an empty system message:
   `val sp = node.systemPrompt ?: DefaultPrompts.MyNode.SYSTEM_FALLBACK`.
+- If your executor calls the **on-device** model, call it through the visit's
+  `scope.inference.local(engine, prompt)` — never
+  `LlmInferenceEngine.generateResponseStream` directly. The scope's inference
+  runs the call on the run's sampler with a seed derived from the run seed and
+  records the full prompt and answer, which is what makes a run checkable later;
+  a direct call would run on a random seed and leave no record
+  (`LocalInferenceSeamKonsistTest` fails the build). A node that answers through
+  a **cloud** client notes each call with `scope.inference.cloudCall(provider,
+  model)` (a structured client: wrap it in `CloudCallNotingClient`).
 
 ### 1.3. Register the executor in the factory
 

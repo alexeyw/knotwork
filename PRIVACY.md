@@ -56,7 +56,14 @@ backup or in a transfer to a new device
 
 - Chat sessions and messages, including image and audio attachments you add.
 - Long-term memory entries derived from your conversations.
-- Pipelines, presets, prompt templates, and their run traces.
+- Pipelines, presets, prompt templates, and their run traces. A run trace
+  keeps, for every call a pipeline step made to the on-device model, the whole
+  text the model read and wrote — instructions, the parts of your chat history
+  and memory the step included, and the answer — with the seed and settings it
+  ran on, so the run can be checked later. It is deleted with the run, under
+  the same retention setting.
+- A checksum (SHA-256) of each downloaded model file, so a run can name the
+  exact model it used.
 - Files in the agent workspace — what the agent wrote and what you imported.
 - Triggers, scheduled tasks, and the trigger journal.
 - The journal of requests other apps sent (section 3.6).

@@ -16,10 +16,11 @@ import kotlinx.coroutines.flow.FlowCollector
  * in one sequence.
  *
  * Every console line the run shows, and every record its persistent trace keeps —
- * the console line itself, the memory snapshot, each node's input/output pair —
- * takes the next `seq`. Uniqueness within a run is what lets the console
- * deduplicate the replay/live seam by `seq`, so a resumed run starts from the
- * interrupted run's next number instead of colliding with its persisted records.
+ * the console line itself, the memory snapshot, each model call, each node's
+ * input/output pair — takes the next `seq`. Uniqueness within a run is what lets
+ * the console deduplicate the replay/live seam by `seq`, so a resumed run starts
+ * from the interrupted run's next number instead of colliding with its persisted
+ * records.
  *
  * Console lines go two ways: into the persistent trace (for a persisted run) and
  * to the screen, as a fresh [AgentOrchestratorState.ConsoleLog] snapshot of every
@@ -137,7 +138,12 @@ class RunConsole(
      * limit rather than a side effect on the world. For an on-device node a
      * repeat is lost time only, and the record waits for the next batch.
      *
+     * Both texts are hashed here ([TraceHashing]), the one place every node's
+     * record passes, so an export or a later check can show the record was not
+     * altered.
+     *
      * @param node The node that ran.
+     * @param visit Its zero-based visit index in this invocation.
      * @param inputText What it executed on.
      * @param outputText What it produced (its input, for a node that produced nothing).
      * @param durationMs How long it took.
@@ -145,6 +151,7 @@ class RunConsole(
      */
     suspend fun recordNodeIo(
         node: NodeModel,
+        visit: Int,
         inputText: String,
         outputText: String,
         durationMs: Long,
@@ -167,11 +174,70 @@ class RunConsole(
                 routingKey = result?.routingKey,
                 resolvedToolName = result?.resolvedToolName,
                 depth = depth,
+                visit = visit,
+                inputSha256 = TraceHashing.sha256Hex(inputText),
+                outputSha256 = TraceHashing.sha256Hex(outputText),
             ),
         )
         if (node.type == NodeType.TOOL || node.type == NodeType.CLOUD) {
             runTraceRepository.flush()
         }
+    }
+
+    /**
+     * Records a model call a node finished, numbered in the same sequence as the
+     * node's console lines and its input/output record — before the latter, since
+     * the node made the call while it ran. Nothing is recorded, and no number is
+     * taken, for a run that is not persisted.
+     *
+     * An on-device call keeps its full prompt and output with their hashes: that
+     * is what a later check repeats. A cloud call keeps only which provider and
+     * model were asked.
+     *
+     * @param pending The finished call.
+     * @param modelSha256 SHA-256 of the model file an on-device call ran on, from
+     *   the model registry, or `null` when it is not known (yet); ignored for a
+     *   cloud call.
+     */
+    suspend fun recordModelCall(pending: PendingModelCall, modelSha256: String?) {
+        val id = runId ?: return
+        val record = when (pending) {
+            is PendingModelCall.Local -> RunTraceRecord.LocalModelCall(
+                runId = id,
+                sessionId = sessionId,
+                seq = nextSeq++,
+                timestamp = System.currentTimeMillis(),
+                nodeId = pending.nodeId,
+                nodeType = pending.nodeType,
+                visit = pending.visit,
+                call = pending.call,
+                depth = depth,
+                sampling = pending.sampling,
+                modelPath = pending.modelPath,
+                modelSha256 = modelSha256,
+                backend = pending.backend,
+                contextWindow = pending.contextWindow,
+                hadImage = pending.hadImage,
+                prompt = pending.prompt,
+                output = pending.output,
+                promptSha256 = TraceHashing.sha256Hex(pending.prompt),
+                outputSha256 = TraceHashing.sha256Hex(pending.output),
+            )
+            is PendingModelCall.Cloud -> RunTraceRecord.CloudModelCall(
+                runId = id,
+                sessionId = sessionId,
+                seq = nextSeq++,
+                timestamp = System.currentTimeMillis(),
+                nodeId = pending.nodeId,
+                nodeType = pending.nodeType,
+                visit = pending.visit,
+                call = pending.call,
+                depth = depth,
+                provider = pending.provider,
+                model = pending.model,
+            )
+        }
+        runTraceRepository.append(record)
     }
 
     /**

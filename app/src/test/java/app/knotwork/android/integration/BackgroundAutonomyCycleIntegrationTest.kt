@@ -216,9 +216,12 @@ class BackgroundAutonomyCycleIntegrationTest {
             // ── Phase 1: schedule — the run starts and hangs on the LLM node ──
             val processA = buildProcess(
                 llmEngine = mockk<LlmInferenceEngine> {
+                    every { currentModelPath } returns null
+                    every { activeBackend } returns null
+                    every { activeContextLength } returns null
                     // The local model never returns: the process will "die"
                     // mid-inference on the LITE_RT node.
-                    every { generateResponseStream(any()) } returns flow { awaitCancellation() }
+                    every { generateResponseStream(any(), any(), any()) } returns flow { awaitCancellation() }
                 },
             )
             val runId = AgentOrchestratorUseCase(processA.taskQueueManager)
@@ -494,7 +497,10 @@ class BackgroundAutonomyCycleIntegrationTest {
      */
     private fun scriptedLlmEngine(): LlmInferenceEngine = mockk {
         every { currentModelPath } returns null
-        every { generateResponseStream(any()) } answers {
+        // A recorded on-device call notes what the engine ran on.
+        every { activeBackend } returns null
+        every { activeContextLength } returns null
+        every { generateResponseStream(any(), any(), any()) } answers {
             val prompt = firstArg<String>()
             flowOf(
                 when {

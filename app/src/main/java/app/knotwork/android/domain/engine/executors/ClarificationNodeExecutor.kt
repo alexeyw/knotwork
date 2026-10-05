@@ -117,7 +117,7 @@ class ClarificationNodeExecutor @Inject constructor(
 
         val accumulatedResponse = StringBuilder()
         try {
-            llmEngine.generateResponseStream(fullPrompt).collect { token ->
+            scope.inference.local(llmEngine, fullPrompt).collect { token ->
                 accumulatedResponse.append(token)
                 emit(NodeOutput.State(AgentOrchestratorState.Thinking(accumulatedResponse.toString())))
             }

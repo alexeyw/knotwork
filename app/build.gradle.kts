@@ -219,6 +219,12 @@ android {
         // tarball build).
         buildConfigField("String", "GIT_SHA", "\"${resolveGitSha()}\"")
 
+        // The on-device inference runtime's version, recorded in every pipeline
+        // run's header: LiteRT-LM exposes no version at runtime, and a repeat of a
+        // run is promised to match only on the same runtime. Read from the version
+        // catalog, so the recorded value is the version the APK was built against.
+        buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertlm.get()}\"")
+
         // Build date surfaced in the Settings top-app-bar
         // subtitle (`v0.9.2 · alpha · 2026.05.18`). Captured at configuration
         // time as an epoch-millis Long so the formatter on the screen owns

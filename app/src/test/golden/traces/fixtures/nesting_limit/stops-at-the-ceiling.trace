@@ -16,6 +16,7 @@ run.running golden pipeline=fixture-nesting-limit graphHash=c7fbdc4a0335626d1893
 driver start
 crash.key active_pipeline_id=fixture-nesting-limit
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden fixture-nesting-limit/input INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution

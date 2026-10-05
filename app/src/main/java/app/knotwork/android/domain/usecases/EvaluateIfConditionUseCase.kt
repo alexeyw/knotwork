@@ -2,6 +2,8 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.LlmInferenceEngine
+import app.knotwork.android.domain.engine.NodeInference
+import app.knotwork.android.domain.engine.structured.CloudCallNotingClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.EngineStructuredInferenceClient
 import app.knotwork.android.domain.engine.structured.GateResult
@@ -83,6 +85,10 @@ class EvaluateIfConditionUseCase @Inject constructor(
      * @param repairListener Sink the gate reports repair attempts to; defaults to
      *   [RepairListener.NONE]. The executor passes a buffering listener so it can
      *   surface each attempt as a console line.
+     * @param inference The node's way to the model. Inside a run the executor
+     *   passes the visit's recording inference, so an on-device classification
+     *   runs on the run's sampler and seed and is recorded; defaults to
+     *   [NodeInference.Unrecorded] for a caller outside a run.
      * @return The [Outcome] carrying the branch decision and whether the gate failed.
      */
     suspend operator fun invoke(
@@ -90,6 +96,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
         inputText: String,
         hasImage: Boolean = false,
         repairListener: RepairListener = RepairListener.NONE,
+        inference: NodeInference = NodeInference.Unrecorded,
     ): Outcome {
         require(node.type == NodeType.IF_CONDITION) { "Node must be an IF_CONDITION type" }
 
@@ -110,7 +117,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
         // 3. Evaluate using LLM (through the gate) if a prompt is provided
         val conditionPrompt = node.conditionPrompt
         if (!conditionPrompt.isNullOrBlank()) {
-            return evaluateWithGate(node, conditionPrompt, inputText, repairListener)
+            return evaluateWithGate(node, conditionPrompt, inputText, repairListener, nodeInference = inference)
         }
 
         return Outcome(value = false)
@@ -149,6 +156,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
      * @param conditionPrompt The user-authored condition to classify against.
      * @param inputText The upstream text being classified.
      * @param repairListener Sink for repair attempts during the gate run.
+     * @param nodeInference The node's way to the model (see [invoke]).
      * @return `True`/`False` on a valid verdict; the `False` default with
      *   [Outcome.gateFailed] set when the gate exhausts its repairs or errors.
      */
@@ -157,6 +165,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
         conditionPrompt: String,
         inputText: String,
         repairListener: RepairListener,
+        nodeInference: NodeInference,
     ): Outcome {
         val prompt = DefaultPrompts.renderTemplate(
             DefaultPrompts.IfCondition.EVALUATION_TEMPLATE,
@@ -166,7 +175,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
             ),
         )
         val maxRepairs = runSettings.structuredOutputMaxRepairs.first()
-        val (inference, unavailableProvider) = resolveInference(node)
+        val (inference, unavailableProvider) = resolveInference(node, nodeInference)
 
         val result = try {
             structuredOutputGate.runToken(
@@ -204,15 +213,22 @@ class EvaluateIfConditionUseCase @Inject constructor(
      *
      * The use case streams no tokens, so the cloud client's token hook is a no-op.
      *
+     * @param node The IF_CONDITION node.
+     * @param nodeInference The node's way to the model: the local client runs through
+     *   it, and a cloud client notes each of its calls with it.
      * @return The client, and the id of the provider that was chosen but could not be used.
      */
-    private suspend fun resolveInference(node: NodeModel): Pair<StructuredInferenceClient, String?> {
+    private suspend fun resolveInference(
+        node: NodeModel,
+        nodeInference: NodeInference,
+    ): Pair<StructuredInferenceClient, String?> {
         val providerId = node.cloudProvider?.takeIf { it.isNotBlank() }
-        val cloud = providerId?.let { CloudProvider.fromId(it) }?.let { cloudStructuredFactory.create(it) { } }
-        return if (cloud != null) {
-            cloud.inference to null
+        val provider = providerId?.let { CloudProvider.fromId(it) }
+        val cloud = provider?.let { cloudStructuredFactory.create(it) { } }
+        return if (provider != null && cloud != null) {
+            CloudCallNotingClient(provider.id, nodeInference, cloud.inference) to null
         } else {
-            EngineStructuredInferenceClient(llmInferenceEngine) to providerId
+            EngineStructuredInferenceClient(llmInferenceEngine, nodeInference) to providerId
         }
     }
 

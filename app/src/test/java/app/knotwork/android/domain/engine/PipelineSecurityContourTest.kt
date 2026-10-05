@@ -124,6 +124,9 @@ class PipelineSecurityContourTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         toolRepository = mockk()
         chatRepository = mockk(relaxed = true)
         settingsRepository = mockk()
@@ -258,7 +261,7 @@ class PipelineSecurityContourTest {
         )
 
         // The arg-generation pass returns the per-tool JSON; everything else is irrelevant.
-        every { llmEngine.generateResponseStream(any()) } answers {
+        every { llmEngine.generateResponseStream(any(), any(), any()) } answers {
             val prompt = firstArg<String>()
             flowOf(
                 when {

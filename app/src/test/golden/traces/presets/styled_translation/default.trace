@@ -16,6 +16,7 @@ run.running golden pipeline=styled_translation graphHash=6556985d5139497c30f7bf0
 driver start
 crash.key active_pipeline_id=styled_translation
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden styled_translation/node-1 INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You translate the user's input text. TARGET: translate into Chilean Spanish (Spanish as actually spoken in Chile). REGISTER: use the everyday, casual register — natural, colloquial Chilean speech. To translate formally instead, replace the previous sentence with: use the official, formal register. To translate into a different language, change the TARGET line. Preserve the meaning, tone and politeness level of the original; keep names, numbers and line breaks. Do not add notes, alternatives or explanations. Output only the translated text.
@@ -53,26 +54,27 @@ state Streaming thinking=1 answering=3
       | Translate answer, visit 1.
 metrics.update tokens=4
 modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+trace.model.local seq=3 run=golden node-2 LITE_RT visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=ae05bd05efe4 output=f9a1cd339e14
 metrics.node LITE_RT tokens=4
 run.spend golden steps=2 tokens=4
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden node-2 LITE_RT depth=0 tokens=4
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden node-2 LITE_RT depth=0 visit=0 tokens=4 in=2c92e03f6de4 out=f9a1cd339e14
     input:
       | --- Previous Node Output ---
       | Translate 'good morning' into French.
     output:
       | Translate answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=4)
-state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=4 (= trace.node seq=5)
+state NodeIO node-2 LITE_RT depth=0 (= trace.node seq=5)
 visit golden styled_translation/node-3 OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 chat.save AGENT final=true model=Golden Model
     content:
       | Translate answer, visit 1.

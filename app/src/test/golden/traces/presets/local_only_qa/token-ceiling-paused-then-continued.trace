@@ -16,6 +16,7 @@ run.running golden pipeline=local_only_qa graphHash=58c48685ef51e8afa00f2aed1130
 driver start
 crash.key active_pipeline_id=local_only_qa
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden local_only_qa/input INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ LITE_RT
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=lite_rt call=1 temperature=default image=none
+model local node=lite_rt call=1 seed=1974857103 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are a concise on-device assistant running on Golden Model. Today is 15 September 2026. Answer the user's question directly in one or two short paragraphs. Do not invent facts; if you do not know, say so plainly.
@@ -56,18 +57,19 @@ state Streaming thinking=1 answering=4
       | Local LLM answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=3 run=golden lite_rt LITE_RT visit=0 call=0 depth=0 seed=1974857103 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=74561c8a2e49 output=84a7b5efa403
 metrics.node LITE_RT tokens=5
 run.spend golden steps=2 tokens=5
-trace.console seq=3 run=golden depth=0 RunCeiling
+trace.console seq=4 run=golden depth=0 RunCeiling
     message:
       | soft-ceiling: 5/3 tokens
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
 state RunNotice ApproachingCeiling(axis=TOKENS, spent=5, hardLimit=3)
-trace.console seq=4 run=golden depth=0 NodeExecution
+trace.console seq=5 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=4)
-trace.node seq=5 run=golden lite_rt LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+trace.node seq=6 run=golden lite_rt LITE_RT depth=0 visit=0 tokens=5 in=04b8fe28cb0b out=84a7b5efa403
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -76,14 +78,14 @@ trace.node seq=5 run=golden lite_rt LITE_RT depth=0 tokens=5
       | What is the tallest mountain on Earth?
     output:
       | Local LLM answer, visit 1.
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=5)
-state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=5)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=6)
+state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=6)
 pending.save golden CEILING request=none axis=TOKENS limit=3 spent=5
 notify.ceiling run=golden breach=HardCeilingBreach(axis=TOKENS, limit=3, spent=5)
-trace.console seq=6 run=golden depth=0 RunCeiling
+trace.console seq=7 run=golden depth=0 RunCeiling
     message:
       | token-ceiling: 5/3 tokens — paused
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
 run.status golden WAITING_CEILING
 trace.flush
 state WaitingForCeilingRaise axis=TOKENS limit=3 spent=5
@@ -106,35 +108,35 @@ pending.delete golden kind=CEILING
 notify.ceiling.cancel
 visit golden local_only_qa/input INPUT #1
 state Stage step=1 of=3 INPUT
-trace.console seq=7 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ▶ INPUT
-state ConsoleLog run=golden events=1 (= trace.console run=golden seq=7)
+state ConsoleLog run=golden events=1 (= trace.console run=golden seq=8)
 metrics.node INPUT tokens=null
 run.spend golden steps=2 tokens=5
-trace.console seq=8 run=golden depth=0 RunCeiling
+trace.console seq=9 run=golden depth=0 RunCeiling
     message:
       | soft-ceiling: 5/6 tokens
-state ConsoleLog run=golden events=2 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=2 (= trace.console run=golden seq=9)
 state RunNotice ApproachingCeiling(axis=TOKENS, spent=5, hardLimit=6)
-trace.console seq=9 run=golden depth=0 NodeExecution
-    message:
-      | ✓ INPUT in <ms>ms
-state ConsoleLog run=golden events=3 (= trace.console run=golden seq=9)
-visit golden local_only_qa/lite_rt LITE_RT #1
-state Stage step=2 of=3 LITE_RT
 trace.console seq=10 run=golden depth=0 NodeExecution
     message:
-      | ↻ LITE_RT replayed from checkpoint
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=10)
-state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=5)
-state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=5)
-visit golden local_only_qa/output OUTPUT #1
-state Stage step=3 of=3 OUTPUT
+      | ✓ INPUT in <ms>ms
+state ConsoleLog run=golden events=3 (= trace.console run=golden seq=10)
+visit golden local_only_qa/lite_rt LITE_RT #1
+state Stage step=2 of=3 LITE_RT
 trace.console seq=11 run=golden depth=0 NodeExecution
     message:
+      | ↻ LITE_RT replayed from checkpoint
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=11)
+state PipelineTrace steps=1 last=LITE_RT depth=0 tokens=5 (= trace.node seq=6)
+state NodeIO lite_rt LITE_RT depth=0 (= trace.node seq=6)
+visit golden local_only_qa/output OUTPUT #1
+state Stage step=3 of=3 OUTPUT
+trace.console seq=12 run=golden depth=0 NodeExecution
+    message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=11)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=12)
 chat.save AGENT final=true model=Golden Model
     content:
       | Local LLM answer, visit 1.

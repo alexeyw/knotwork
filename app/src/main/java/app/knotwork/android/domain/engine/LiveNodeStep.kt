@@ -13,6 +13,7 @@ import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.diagnostic
+import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -42,6 +43,8 @@ import timber.log.Timber
  * @param graph The running graph, for a routing node's choices.
  * @param call Who runs it: the session, the invocation's prompt and run id.
  * @param resuming Whether this invocation resumes an interrupted run.
+ * @param localModelRepository The model registry, for the file hash recorded with
+ *   each on-device call.
  * @param beforeOutput Called just before an OUTPUT node's executor runs — the last
  *   moment the engine may still push a console line ahead of `Completed`.
  */
@@ -56,6 +59,7 @@ class LiveNodeStep(
     private val graph: PipelineGraph,
     private val call: NodeCall,
     private val resuming: Boolean,
+    private val localModelRepository: LocalModelRepository,
     private val beforeOutput: suspend () -> Unit,
 ) {
 
@@ -74,15 +78,10 @@ class LiveNodeStep(
      * @param node The node the walk has reached.
      * @param carriedInput The text the run carried to it.
      * @param carriedByModel Whether a model wrote [carriedInput].
-     * @param pipelineVisitIndex This visit's index when [node] is a PIPELINE node.
+     * @param visitIndex This visit's zero-based index to [node].
      * @return The node's result, or that the walk has ended.
      */
-    suspend fun run(
-        node: NodeModel,
-        carriedInput: String,
-        carriedByModel: Boolean,
-        pipelineVisitIndex: Int,
-    ): LiveOutcome {
+    suspend fun run(node: NodeModel, carriedInput: String, carriedByModel: Boolean, visitIndex: Int): LiveOutcome {
         console.push(ConsoleEventType.NodeExecution, "▶ ${node.type.name}")
 
         // Give UI time to render the stage before CPU-heavy inference starts
@@ -99,9 +98,12 @@ class LiveNodeStep(
         // the context blocks it opted into.
         val prepared = inputs.prepare(node, carriedInput)
         val startMs = System.currentTimeMillis()
+        // The node's only way to its model this visit: seeds each on-device call
+        // from the run seed and keeps it until it is recorded below.
+        val inference = RecordingNodeInference(tree, prepared.node, visitIndex)
         val scope = ExecutionScope(
             run = tree,
-            pipelineVisitIndex = pipelineVisitIndex,
+            visitIndex = visitIndex,
             // A routing node validates its key against the labels of its own
             // outgoing edges — surfaced so the executor can constrain (and repair
             // towards) a key that matches a branch.
@@ -109,6 +111,7 @@ class LiveNodeStep(
             // The run's image goes to the first vision-eligible node of the tree only.
             imagePath = inputs.takeImage(node),
             inputWrittenByModel = carriedByModel,
+            inference = inference,
         )
         // Before the terminal OUTPUT node runs: its executor emits `Completed`,
         // after which no further console line may be pushed (it would shift the
@@ -125,6 +128,9 @@ class LiveNodeStep(
             // WAITING_* status — the user's response resumes the run from its
             // checkpoint later, possibly in another process. Flush the buffered
             // trace first so the checkpoint is complete up to this exact node.
+            // The visit's model calls go into the trace before anything else this
+            // step records — they happened while the node ran.
+            recordModelCalls(inference)
             if (collected.parked) {
                 console.push(ConsoleEventType.NodeExecution, "⏸ ${node.type.name} parked awaiting user response")
                 console.flush()
@@ -150,6 +156,8 @@ class LiveNodeStep(
             // still goes to Timber for its stack trace — the crash-reporting tree
             // redacts every record it forwards — but the text surfaced and
             // persisted from here is redacted at this line.
+            // The calls a failed node made are still what the model was asked.
+            recordModelCalls(inference)
             val safeMessage = CloudErrorSanitizer.redactSecrets(e.message ?: "Unknown error")
             Timber.tag(
                 "PipelineDebug",
@@ -162,6 +170,20 @@ class LiveNodeStep(
         metricsRepository.recordNodeExecution(node.type, durationMs, result?.tokenCount)
         charge(node, result)
         return LiveOutcome.Ran(result, prepared.input, durationMs)
+    }
+
+    /**
+     * Writes the model calls [inference] kept during the visit into the trace,
+     * each on-device call with the registry's hash of the file it ran on.
+     *
+     * @param inference The visit's inference.
+     */
+    private suspend fun recordModelCalls(inference: RecordingNodeInference) {
+        for (pending in inference.drain()) {
+            val modelSha256 = (pending as? PendingModelCall.Local)?.modelPath
+                ?.let { localModelRepository.currentFileHash(it) }
+            console.recordModelCall(pending, modelSha256)
+        }
     }
 
     /** Forwards what the executor emits and keeps its result and whether it parked. */

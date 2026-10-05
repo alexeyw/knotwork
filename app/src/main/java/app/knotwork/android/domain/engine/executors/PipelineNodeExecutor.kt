@@ -47,7 +47,7 @@ import javax.inject.Provider
  * is *deterministic* — `"<parentRunId>::<nodeId>::<visitIndex>"` — so a resume
  * that re-reaches this node recomputes the exact same id and continues the
  * existing child run instead of starting a fresh one (see *Resume* below). The
- * [ExecutionScope.pipelineVisitIndex] disambiguates a PIPELINE node that runs
+ * [ExecutionScope.visitIndex] disambiguates a PIPELINE node that runs
  * more than once (inside a `QUEUE_PROCESSOR` loop), and is re-derived
  * deterministically on resume.
  *
@@ -144,15 +144,16 @@ class PipelineNodeExecutor @Inject constructor(
         // Non-persisted runs (editor test runs) keep the original semantics:
         // no child run record, no resume, just a recursive in-memory execution.
         if (runId == null) {
-            runNonPersistedChild(targetGraph, sessionId, inputText, scope)
+            runNonPersistedChild(targetGraph, sessionId, inputText, node.id, scope)
             return@flow
         }
 
-        val childRunId = childRunId(runId, node.id, scope.pipelineVisitIndex)
+        val childRunId = childRunId(runId, node.id, scope.visitIndex)
         when (val prep = prepareChildRun(childRunId, runId, sessionId, inputText, targetGraph)) {
             // prepareChildRun already emitted the failure for the abort case.
             ChildPrep.Aborted -> return@flow
-            is ChildPrep.Ready -> runPersistedChild(targetGraph, sessionId, inputText, childRunId, prep.resume, scope)
+            is ChildPrep.Ready ->
+                runPersistedChild(targetGraph, sessionId, inputText, childRunId, prep.resume, node.id, scope)
         }
     }
 
@@ -165,6 +166,7 @@ class PipelineNodeExecutor @Inject constructor(
         targetGraph: PipelineGraph,
         sessionId: String,
         inputText: String,
+        nodeId: String,
         scope: ExecutionScope,
     ) {
         var finalResponse: String? = null
@@ -177,7 +179,7 @@ class PipelineNodeExecutor @Inject constructor(
                 graph = targetGraph,
                 runId = null,
                 resume = null,
-                tree = scope.run.nested(),
+                tree = scope.run.nested(nodeId, scope.visitIndex),
             ).collect { state ->
                 when (state) {
                     is AgentOrchestratorState.Completed -> finalResponse = state.finalResponse
@@ -211,6 +213,7 @@ class PipelineNodeExecutor @Inject constructor(
         inputText: String,
         childRunId: String,
         childResume: ResumeContext?,
+        nodeId: String,
         scope: ExecutionScope,
     ) {
         var finalResponse: String? = null
@@ -224,7 +227,7 @@ class PipelineNodeExecutor @Inject constructor(
                 graph = targetGraph,
                 runId = childRunId,
                 resume = childResume,
-                tree = scope.run.nested(),
+                tree = scope.run.nested(nodeId, scope.visitIndex),
             ).collect { state ->
                 when (state) {
                     is AgentOrchestratorState.Completed -> finalResponse = state.finalResponse

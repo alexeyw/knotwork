@@ -1,6 +1,7 @@
 package app.knotwork.android.data.repositories
 
 import app.knotwork.android.data.local.dao.TraceStepDao
+import app.knotwork.android.data.local.models.ModelCallEntity
 import app.knotwork.android.data.local.models.TraceStepEntity
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.MemoryChunk
@@ -37,6 +38,15 @@ class RunTraceRepositoryImplTest {
     @Before
     fun setup() {
         traceStepDao = mockk(relaxed = true)
+        // The batch write is a Room transaction around the two inserts; the relaxed
+        // mock would swallow it, so it runs the interface's own body here and the
+        // cases below keep observing the trace-row insert.
+        coEvery { traceStepDao.insertBatch(any(), any()) } coAnswers {
+            val steps = firstArg<List<TraceStepEntity>>()
+            val calls = secondArg<List<ModelCallEntity>>()
+            if (steps.isNotEmpty()) traceStepDao.insertTraceSteps(steps)
+            if (calls.isNotEmpty()) traceStepDao.insertModelCalls(calls)
+        }
         repository = RunTraceRepositoryImpl(traceStepDao)
     }
 

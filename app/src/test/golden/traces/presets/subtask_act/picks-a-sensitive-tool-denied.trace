@@ -16,6 +16,7 @@ run.running golden pipeline=subtask_act graphHash=a716f52979ae506debaaed19b93300
 driver start
 crash.key active_pipeline_id=subtask_act
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden subtask_act/node-1 INPUT #1
 state Stage step=1 of=3 INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -38,7 +39,7 @@ state Streaming thinking=1
     text:
       | Analyzing task for tool execution...
 model.load path=null vision=false audio=false
-model local node=node-2 call=1 temperature=default image=none
+model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
     prompt:
       | You are an AI assistant that selects the best tool for a given task and generates arguments.
       |
@@ -93,31 +94,32 @@ run.status golden RUNNING
 state ObservationResult write_file
     result:
       | Execution denied by user
+trace.model.local seq=3 run=golden node-2 TOOL visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=37be15490364 output=3490a9cf1259
 metrics.node TOOL tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ TOOL in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.console seq=4 run=golden depth=0 ToolCall
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.console seq=5 run=golden depth=0 ToolCall
     message:
       | write_file
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=4)
-trace.node seq=5 run=golden node-2 TOOL depth=0 tokens=null tool=write_file
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+trace.node seq=6 run=golden node-2 TOOL depth=0 visit=0 tokens=null tool=write_file in=db6d0dc5432d out=ef9e23627b64
     input:
       | --- Previous Node Output ---
       | Book a table for dinner.
     output:
       | Execution denied by user
 trace.flush
-state PipelineTrace steps=1 last=TOOL depth=0 tokens=null (= trace.node seq=5)
-state NodeIO node-2 TOOL depth=0 (= trace.node seq=5)
+state PipelineTrace steps=1 last=TOOL depth=0 tokens=null (= trace.node seq=6)
+state NodeIO node-2 TOOL depth=0 (= trace.node seq=6)
 visit golden subtask_act/node-3 OUTPUT #1
 state Stage step=3 of=3 OUTPUT
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=7 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=7)
 chat.save AGENT final=true model=Golden Model
     content:
       | Execution denied by user

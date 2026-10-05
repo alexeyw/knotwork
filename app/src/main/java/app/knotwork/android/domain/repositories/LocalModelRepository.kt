@@ -127,7 +127,8 @@ interface LocalModelRepository {
      *
      * @param path Absolute path of the model file.
      * @return The lowercase hex SHA-256, or `null` when no row names the file,
-     *   the file has not been hashed yet, it changed since, or it is gone.
+     *   the file has not been hashed yet, it changed since, it is gone, or the
+     *   registry cannot be read — never a failure, since a run asks on its path.
      */
     suspend fun currentFileHash(path: String): String?
 

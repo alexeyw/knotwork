@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -109,4 +110,14 @@ class LocalModelRepositoryImplTest {
 
         coVerify(exactly = 1) { localModelDao.deleteModelById(8) }
     }
+
+    @Test
+    fun `given the registry cannot be read when a run asks for a file hash then it gets none instead of a failure`() =
+        runTest {
+            // Read on the run path for every on-device call it records: a storage
+            // failure must cost the call its checksum, not end the run.
+            coEvery { localModelDao.findByPath(any()) } throws IllegalStateException("database unavailable")
+
+            assertNull(repository.currentFileHash("/m/gemma.litertlm"))
+        }
 }

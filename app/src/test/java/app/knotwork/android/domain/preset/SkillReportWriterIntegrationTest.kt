@@ -134,6 +134,9 @@ class SkillReportWriterIntegrationTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         toolRepository = mockk(relaxed = true)
         settingsRepository = mockk(relaxed = true)
         every { settingsRepository.workspaceReadTokenBudget } returns flowOf(2_000)
@@ -168,7 +171,7 @@ class SkillReportWriterIntegrationTest {
             writeFileExecutor.execute(secondArg(), thirdArg())
         }
 
-        every { llmEngine.generateResponseStream(any()) } answers { flowOf(llmReply) }
+        every { llmEngine.generateResponseStream(any(), any(), any()) } answers { flowOf(llmReply) }
         engine = buildEngine()
     }
 

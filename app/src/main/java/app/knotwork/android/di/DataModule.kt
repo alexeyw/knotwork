@@ -1,11 +1,13 @@
 package app.knotwork.android.di
 
 import app.knotwork.android.data.audio.AudioRecorderImpl
+import app.knotwork.android.data.engine.AndroidRunEnvironment
 import app.knotwork.android.data.engine.DefaultTextEmbedderFactory
 import app.knotwork.android.data.engine.KoogProviderConnectionChecker
 import app.knotwork.android.data.engine.LiteRTLlmEngine
 import app.knotwork.android.data.engine.MediaPipeTextEmbeddingEngine
 import app.knotwork.android.data.engine.OpenClAccelerationProbe
+import app.knotwork.android.data.engine.SecureRandomRunSeedSource
 import app.knotwork.android.data.engine.TaskQueueManagerImpl
 import app.knotwork.android.data.engine.TextEmbedderFactory
 import app.knotwork.android.data.local.AgentWorkspaceImpl
@@ -104,6 +106,8 @@ import app.knotwork.android.domain.services.MemoryReembedScheduler
 import app.knotwork.android.domain.services.ModelFileHashScheduler
 import app.knotwork.android.domain.services.ModelFileHasher
 import app.knotwork.android.domain.services.NativeMemorySampler
+import app.knotwork.android.domain.services.RunEnvironment
+import app.knotwork.android.domain.services.RunSeedSource
 import app.knotwork.android.domain.services.TransientCacheSweeper
 import app.knotwork.android.domain.services.TriggerScheduler
 import dagger.Binds
@@ -523,6 +527,22 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindModelFileHashScheduler(scheduler: WorkManagerModelFileHashScheduler): ModelFileHashScheduler
+
+    /**
+     * Binds [SecureRandomRunSeedSource] to [RunSeedSource] — draws the seed a
+     * pipeline run's on-device calls derive their seeds from.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindRunSeedSource(source: SecureRandomRunSeedSource): RunSeedSource
+
+    /**
+     * Binds [AndroidRunEnvironment] to [RunEnvironment] — the app version,
+     * runtime version and device a run's header records.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindRunEnvironment(environment: AndroidRunEnvironment): RunEnvironment
 
     /**
      * Binds [AudioCaptureStoreImpl] to [AudioCaptureStore] — the ephemeral

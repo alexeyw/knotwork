@@ -146,6 +146,9 @@ class CloudLlmNodeExecutor @Inject constructor(
         // Privacy-status pulse for the More tab footer. Recorded right before
         // the network call so the timestamp reflects the actual outbound moment.
         networkActivityTracker.recordOutbound()
+        // Marks the visit as answered in the cloud: a hosted model takes no seed the
+        // app controls, so a later check reports it as not repeatable.
+        scope.inference.cloudCall(selectedProvider.id, model.id)
         val responseStream = client.executeStreaming(prompt("default") { user(fullPrompt) }, model)
 
         val accumulatedResponse = StringBuilder()

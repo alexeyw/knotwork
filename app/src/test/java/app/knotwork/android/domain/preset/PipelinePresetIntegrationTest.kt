@@ -132,6 +132,9 @@ class PipelinePresetIntegrationTest {
     fun setup() {
         llmEngine = mockk()
         every { llmEngine.currentModelPath } returns null
+        // A recorded on-device call notes what the engine ran on.
+        every { llmEngine.activeBackend } returns null
+        every { llmEngine.activeContextLength } returns null
         toolRepository = mockk(relaxed = true)
         chatRepository = mockk(relaxed = true)
         getContextWindowUseCase = mockk()
@@ -248,7 +251,7 @@ class PipelinePresetIntegrationTest {
             ceilingNotifier,
         )
 
-        every { llmEngine.generateResponseStream(any()) } returns flowOf(cannedAnswer)
+        every { llmEngine.generateResponseStream(any(), any(), any()) } returns flowOf(cannedAnswer)
         coEvery { getContextWindowUseCase(any()) } returns ""
         coEvery { retrieveRelevantMemoryUseCase(any()) } returns emptyList()
         every { chatRepository.getMessagesForSession(any()) } returns flowOf(emptyList())

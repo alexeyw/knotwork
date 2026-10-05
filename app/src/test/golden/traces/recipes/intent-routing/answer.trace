@@ -16,6 +16,7 @@ run.running golden pipeline=recipe-intent-routing graphHash=2dd0f9fe0556dbe9275f
 driver start
 crash.key active_pipeline_id=recipe-intent-routing
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden recipe-intent-routing/input INPUT #1
 state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -35,7 +36,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
       | ▶ INTENT_ROUTER
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
 model.load path=null vision=false audio=false
-model local node=router call=1 temperature=default image=none
+model local node=router call=1 seed=1976315216 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Classify the user's message. Output EXACTLY one keyword and nothing else: Answer (you can reply from what you already know), Search (the reply needs a fact you would have to look up), Ask (the message is too vague to act on). Today is 15 September 2026.
       |
@@ -56,13 +57,14 @@ model local node=router call=1 temperature=default image=none
 state Streaming thinking=1
     text:
       | Answer
+trace.model.local seq=3 run=golden router INTENT_ROUTER visit=0 call=0 depth=0 seed=1976315216 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=ed2c1c484ae4 output=b2a3aa602762
 metrics.node INTENT_ROUTER tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ INTENT_ROUTER in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=Answer
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden router INTENT_ROUTER depth=0 visit=0 tokens=null routingKey=Answer in=41cf12eb0fc2 out=b2a3aa602762
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -75,16 +77,16 @@ trace.node seq=4 run=golden router INTENT_ROUTER depth=0 tokens=null routingKey=
       | What is the tallest mountain on Earth?
     output:
       | Answer
-state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=4)
-state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=INTENT_ROUTER depth=0 tokens=null (= trace.node seq=5)
+state NodeIO router INTENT_ROUTER depth=0 (= trace.node seq=5)
 visit golden recipe-intent-routing/answer LITE_RT #1
 state Stage step=3 of=4 LITE_RT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 model.load path=null vision=false audio=false
-model local node=answer call=1 temperature=default image=none
+model local node=answer call=1 seed=1628932899 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are a concise assistant running on Golden Model. Today is 15 September 2026. Answer the user's question directly in one short paragraph.
@@ -105,13 +107,14 @@ state Streaming thinking=1 answering=3
       | Answer answer, visit 1.
 metrics.update tokens=4
 modelPerformance.record path=/models/golden-model.litertlm tokens=4 benchmark=false
+trace.model.local seq=7 run=golden answer LITE_RT visit=0 call=0 depth=0 seed=1628932899 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=ed6d3a0acaf5 output=425a98138a5e
 metrics.node LITE_RT tokens=4
 run.spend golden steps=3 tokens=4
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden answer LITE_RT depth=0 tokens=4
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.node seq=9 run=golden answer LITE_RT depth=0 visit=0 tokens=4 in=04b8fe28cb0b out=425a98138a5e
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -120,14 +123,14 @@ trace.node seq=7 run=golden answer LITE_RT depth=0 tokens=4
       | What is the tallest mountain on Earth?
     output:
       | Answer answer, visit 1.
-state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=4 (= trace.node seq=7)
-state NodeIO answer LITE_RT depth=0 (= trace.node seq=7)
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=4 (= trace.node seq=9)
+state NodeIO answer LITE_RT depth=0 (= trace.node seq=9)
 visit golden recipe-intent-routing/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=10)
 chat.save AGENT final=true model=Golden Model
     content:
       | Answer answer, visit 1.

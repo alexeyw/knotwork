@@ -7,6 +7,7 @@ import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
+import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeModel
@@ -22,12 +23,15 @@ import app.knotwork.android.domain.models.RunImageDelivery
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunTerminationReason
+import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.models.RunTreeContext
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
+import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
@@ -59,6 +63,7 @@ class LiveNodeStepTest {
     private val executor = ScriptedExecutor()
     private val factory: NodeExecutorFactory = mockk { every { getExecutor(any()) } returns executor }
     private val metrics: MetricsRepository = mockk(relaxed = true)
+    private val localModelRepository: LocalModelRepository = mockk(relaxed = true)
     private val runs: PipelineRunRepository = mockk(relaxed = true)
     private val trace: RunTraceRepository = mockk(relaxed = true)
     private val emitted = mutableListOf<AgentOrchestratorState>()
@@ -122,6 +127,7 @@ class LiveNodeStepTest {
         graph = graph,
         call = LiveNodeStep.NodeCall("s", "the task", "run-1"),
         resuming = resuming,
+        localModelRepository = localModelRepository,
         beforeOutput = { calls += "beforeOutput" },
     )
 
@@ -143,7 +149,7 @@ class LiveNodeStepTest {
             NodeOutput.Result(NodeExecutionResult(outputText = "answer", tokenCount = 12, tokensEstimated = false)),
         )
 
-        val outcome = step(tree).run(node(NodeType.LITE_RT), "carried", carriedByModel = true, pipelineVisitIndex = 0)
+        val outcome = step(tree).run(node(NodeType.LITE_RT), "carried", carriedByModel = true, visitIndex = 0)
 
         val ran = outcome as LiveOutcome.Ran
         assertEquals("answer", ran.result?.outputText)
@@ -311,22 +317,87 @@ class LiveNodeStepTest {
 
             step(
                 tree,
-            ).run(node(NodeType.INTENT_ROUTER, id = "router"), "in", carriedByModel = true, pipelineVisitIndex = 3)
+            ).run(node(NodeType.INTENT_ROUTER, id = "router"), "in", carriedByModel = true, visitIndex = 3)
             val routerScope = executor.lastScope!!
             step(tree).run(node(NodeType.LITE_RT, config = carriedOnly.copy(originalTask = true)), "in", false, 0)
             val visionScope = executor.lastScope!!
 
             assertEquals(tree, routerScope.run)
-            assertEquals(3, routerScope.pipelineVisitIndex)
+            assertEquals(3, routerScope.visitIndex)
             assertEquals(listOf("billing", "support"), routerScope.routingChoices)
             assertTrue(routerScope.inputWrittenByModel)
             assertNull(routerScope.imagePath)
             assertEquals("/img.jpg", visionScope.imagePath)
         }
 
+    /** An engine that answers every prompt with "ok", for nodes that call the model through their scope. */
+    private val engine: LlmInferenceEngine = mockk {
+        every { currentModelPath } returns "/m/gemma.litertlm"
+        every { activeBackend } returns LocalBackend.CPU
+        every { activeContextLength } returns 2048
+        every { generateResponseStream(any(), any(), any()) } returns flowOf("ok")
+    }
+
+    /** A node that calls the model once through its scope, then emits [after]. */
+    private fun callsTheModelThen(vararg after: NodeOutput): (ExecutionScope) -> Flow<NodeOutput> = { scope ->
+        flow {
+            scope.inference.local(engine, "the prompt").collect { }
+            after.forEach { emit(it) }
+        }
+    }
+
+    private fun recordedCalls(): List<RunTraceRecord.LocalModelCall> {
+        val appended = mutableListOf<RunTraceRecord>()
+        coVerify(atLeast = 0) { trace.append(capture(appended)) }
+        return appended.filterIsInstance<RunTraceRecord.LocalModelCall>()
+    }
+
+    @Test
+    fun `given a node that called the model when it finishes then the call is recorded with the file hash`() = runTest {
+        coEvery { localModelRepository.currentFileHash("/m/gemma.litertlm") } returns "sha-1"
+        executor.script = callsTheModelThen(NodeOutput.Result(NodeExecutionResult(outputText = "ok")))
+
+        step().run(node(NodeType.LITE_RT, id = "llm"), "in", carriedByModel = false, visitIndex = 2)
+
+        val call = recordedCalls().single()
+        assertEquals("llm", call.nodeId)
+        assertEquals(2, call.visit)
+        assertEquals("sha-1", call.modelSha256)
+        assertEquals("the prompt", call.prompt)
+        assertEquals("ok", call.output)
+    }
+
+    @Test
+    fun `given a node that called the model when it parks then the call is recorded before the park`() = runTest {
+        executor.script = callsTheModelThen(
+            NodeOutput.State(AgentOrchestratorState.SuspendedInBackground(PendingInteractionKind.APPROVAL)),
+        )
+
+        val outcome = step().run(node(NodeType.TOOL), "in", carriedByModel = false, visitIndex = 0)
+
+        assertEquals(LiveOutcome.Parked, outcome)
+        assertEquals(1, recordedCalls().size)
+    }
+
+    @Test
+    fun `given a node that called the model when it fails then the call is still recorded`() = runTest {
+        executor.script = { scope ->
+            flow {
+                scope.inference.local(engine, "the prompt").collect { }
+                throw IllegalStateException("boom")
+            }
+        }
+
+        val outcome = step().run(node(NodeType.SUMMARY), "in", carriedByModel = false, visitIndex = 0)
+
+        assertEquals(LiveOutcome.Failed, outcome)
+        assertEquals(1, recordedCalls().size)
+    }
+
     /** An executor whose output the test scripts, recording the scope it was handed. */
     private inner class ScriptedExecutor : NodeExecutor {
         var outputs: Flow<NodeOutput> = flowOf()
+        var script: ((ExecutionScope) -> Flow<NodeOutput>)? = null
         var lastScope: ExecutionScope? = null
         var lastInput: String? = null
 
@@ -341,7 +412,7 @@ class LiveNodeStepTest {
             calls += "execute ${node.type.name}"
             lastScope = scope
             lastInput = inputText
-            return outputs
+            return script?.invoke(scope) ?: outputs
         }
     }
 }

@@ -25,9 +25,11 @@ class RunTreeContextTest {
             origin = RunOrigin.TRIGGER,
         )
 
-        val child = parent.nested()
+        val child = parent.nested("p", visitIndex = 1)
 
         assertEquals(3, child.depth)
+        // The same header, so the whole tree derives its seeds from one run seed.
+        assertSame(parent.header, child.header)
         assertSame(parent.budget, child.budget)
         assertSame(parent.stuckDetector, child.stuckDetector)
         assertSame(parent.contextNotes, child.contextNotes)
@@ -36,6 +38,21 @@ class RunTreeContextTest {
         assertEquals(true, child.imagePresent)
         assertEquals(RunOrigin.TRIGGER, child.origin)
         assertEquals(2, parent.depth)
+    }
+
+    @Test
+    fun `given two nestings when their seed paths are compared then node and visit both tell them apart`() {
+        val root = RunTreeContext.standalone()
+
+        val first = root.nested("p", visitIndex = 0)
+        val secondVisit = root.nested("p", visitIndex = 1)
+        val otherNode = root.nested("q", visitIndex = 0)
+        val grandchild = first.nested("p", visitIndex = 0)
+
+        assertEquals("", root.seedPath)
+        assertEquals("/p#0", first.seedPath)
+        assertEquals("/p#0/p#0", grandchild.seedPath)
+        assertEquals(4, setOf(root.seedPath, first.seedPath, secondVisit.seedPath, otherNode.seedPath).size)
     }
 
     @Test

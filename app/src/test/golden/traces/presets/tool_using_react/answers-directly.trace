@@ -16,6 +16,7 @@ run.running golden pipeline=tool_using_react graphHash=89ceb48be0c58629934d5b35b
 driver start
 crash.key active_pipeline_id=tool_using_react
 crash.key active_model=Golden Model
+run.header golden seed=20261005 t=0.55 k=17 p=0.85 app=golden (1) runtime=LiteRT-LM golden device=Golden Reference Phone · Android 16
 visit golden tool_using_react/input INPUT #1
 state Stage step=1 of=null INPUT
 trace.console seq=0 run=golden depth=0 NodeExecution
@@ -34,7 +35,7 @@ trace.console seq=2 run=golden depth=0 NodeExecution
     message:
       | ▶ IF_CONDITION
 state ConsoleLog run=golden events=3 (= trace.console run=golden seq=2)
-model local node=needs_tool call=1 temperature=default image=none
+model local node=needs_tool call=1 seed=1014368355 t=0.55 k=17 p=0.85 image=none
     prompt:
       | Evaluate the following text against the condition: "Answering the user's request well requires looking something up in an external source — a fact, a figure, a date, a definition, or anything about a specific person, place, work, event or organisation that the assistant should not answer from memory alone.
       |
@@ -47,27 +48,28 @@ model local node=needs_tool call=1 temperature=default image=none
       | Reply strictly with 'true' or 'false'.
     answer:
       | False
+trace.model.local seq=3 run=golden needs_tool IF_CONDITION visit=0 call=0 depth=0 seed=1014368355 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=79cea049a89e output=60a33e6cf515
 metrics.node IF_CONDITION tokens=null
 run.spend golden steps=2 tokens=0
-trace.console seq=3 run=golden depth=0 NodeExecution
+trace.console seq=4 run=golden depth=0 NodeExecution
     message:
       | ✓ IF_CONDITION in <ms>ms
-state ConsoleLog run=golden events=4 (= trace.console run=golden seq=3)
-trace.node seq=4 run=golden needs_tool IF_CONDITION depth=0 tokens=null condition=false
+state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
+trace.node seq=5 run=golden needs_tool IF_CONDITION depth=0 visit=0 tokens=null condition=false in=0ffacc02a295 out=0ffacc02a295
     input:
       | What is the tallest mountain on Earth?
     output:
       | What is the tallest mountain on Earth?
-state PipelineTrace steps=1 last=IF_CONDITION depth=0 tokens=null (= trace.node seq=4)
-state NodeIO needs_tool IF_CONDITION depth=0 (= trace.node seq=4)
+state PipelineTrace steps=1 last=IF_CONDITION depth=0 tokens=null (= trace.node seq=5)
+state NodeIO needs_tool IF_CONDITION depth=0 (= trace.node seq=5)
 visit golden tool_using_react/direct_answer LITE_RT #1
 state Stage step=3 of=4 LITE_RT
-trace.console seq=5 run=golden depth=0 NodeExecution
+trace.console seq=6 run=golden depth=0 NodeExecution
     message:
       | ▶ LITE_RT
-state ConsoleLog run=golden events=5 (= trace.console run=golden seq=5)
+state ConsoleLog run=golden events=5 (= trace.console run=golden seq=6)
 model.load path=null vision=false audio=false
-model local node=direct_answer call=1 temperature=default image=none
+model local node=direct_answer call=1 seed=878688895 t=0.55 k=17 p=0.85 image=none
     prompt:
       | [golden prefix] Answer in plain words.
       | You are an on-device assistant running on Golden Model. Today is 15 September 2026. The previous step established that this request needs no external lookup — answer it yourself.
@@ -90,13 +92,14 @@ state Streaming thinking=1 answering=4
       | Direct Answer answer, visit 1.
 metrics.update tokens=5
 modelPerformance.record path=/models/golden-model.litertlm tokens=5 benchmark=false
+trace.model.local seq=7 run=golden direct_answer LITE_RT visit=0 call=0 depth=0 seed=878688895 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=5a4ff0257c87 output=f29ffc9bcf9d
 metrics.node LITE_RT tokens=5
 run.spend golden steps=3 tokens=5
-trace.console seq=6 run=golden depth=0 NodeExecution
+trace.console seq=8 run=golden depth=0 NodeExecution
     message:
       | ✓ LITE_RT in <ms>ms
-state ConsoleLog run=golden events=6 (= trace.console run=golden seq=6)
-trace.node seq=7 run=golden direct_answer LITE_RT depth=0 tokens=5
+state ConsoleLog run=golden events=6 (= trace.console run=golden seq=8)
+trace.node seq=9 run=golden direct_answer LITE_RT depth=0 visit=0 tokens=5 in=04b8fe28cb0b out=f29ffc9bcf9d
     input:
       | --- Original Task ---
       | What is the tallest mountain on Earth?
@@ -105,14 +108,14 @@ trace.node seq=7 run=golden direct_answer LITE_RT depth=0 tokens=5
       | What is the tallest mountain on Earth?
     output:
       | Direct Answer answer, visit 1.
-state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=7)
-state NodeIO direct_answer LITE_RT depth=0 (= trace.node seq=7)
+state PipelineTrace steps=2 last=LITE_RT depth=0 tokens=5 (= trace.node seq=9)
+state NodeIO direct_answer LITE_RT depth=0 (= trace.node seq=9)
 visit golden tool_using_react/output OUTPUT #1
 state Stage step=4 of=4 OUTPUT
-trace.console seq=8 run=golden depth=0 NodeExecution
+trace.console seq=10 run=golden depth=0 NodeExecution
     message:
       | ▶ OUTPUT
-state ConsoleLog run=golden events=7 (= trace.console run=golden seq=8)
+state ConsoleLog run=golden events=7 (= trace.console run=golden seq=10)
 chat.save AGENT final=true model=Golden Model
     content:
       | Direct Answer answer, visit 1.
