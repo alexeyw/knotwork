@@ -274,6 +274,24 @@ answer it produced.
 Where the file goes after the share sheet is decided by the app you pick, and
 that app's own policy applies from that point on.
 
+### 3.8 Run trace export (you share the file)
+
+A finished run's trace can be exported from the console — **Export trace** in
+the run header — to the system share sheet or to a file you pick, by an explicit
+action. There is no network on that path; a build-time architecture check fails
+the build if any network dependency reaches the export code.
+
+Unlike the journals, this file holds **everything the on-device model read
+during the run**: every prompt in full, so the memory excerpts and the chat
+history placed inside them, every answer, the run's message, the seed and
+sampler, each node's input and output, and their hashes. It names the model
+file by its file name, not by where it is stored. Share it as you would share
+the conversation itself. Where it goes after the share sheet is decided by the
+app you pick.
+
+Checking a run (**Verify**) and starting it again with its seed do not export
+anything: both run on the device.
+
 ---
 
 ## 4. What never leaves your device

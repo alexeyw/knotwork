@@ -12,6 +12,7 @@ import app.knotwork.android.domain.models.ClarificationRequest
 import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.LocalModel
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
@@ -25,6 +26,7 @@ import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunCeilingAxis
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.repositories.ChatRepository
@@ -59,6 +61,12 @@ import app.knotwork.android.domain.usecases.SubmitClarificationAnswerUseCase
 import app.knotwork.android.domain.usecases.TranscribeAudioUseCase
 import app.knotwork.android.domain.usecases.TranscriptionOutcome
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
+import app.knotwork.android.domain.verification.DescribeRunUseCase
+import app.knotwork.android.domain.verification.Reproducibility
+import app.knotwork.android.domain.verification.RunAgainAvailability
+import app.knotwork.android.domain.verification.RunAgainRequest
+import app.knotwork.android.domain.verification.RunDescription
+import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
 import app.knotwork.design.components.chat.ChatContent
@@ -159,6 +167,7 @@ class ChatHomeViewModelTest {
     private lateinit var archiveChatUseCase: ArchiveChatUseCase
     private lateinit var unarchiveChatUseCase: UnarchiveChatUseCase
     private lateinit var exportChatUseCase: ExportChatUseCase
+    private val runUseCases: ChatHomeRunUseCases = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -299,6 +308,7 @@ class ChatHomeViewModelTest {
         archiveChatUseCase,
         exportChatUseCase,
         unarchiveChatUseCase,
+        runUseCases,
     ).also { vm ->
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.
@@ -669,6 +679,70 @@ class ChatHomeViewModelTest {
             }
             assertEquals("typed while reading the error", viewModel.state.value.composer.value)
         }
+
+    @Test
+    fun `given the run strip when a run is started again with its seed then the send carries its pipeline and seed`() =
+        runTest(testDispatcher) {
+            every { llmInferenceEngine.isInitialized } returns true
+            every { settingsRepository.localModelBackend } returns flowOf("CPU")
+            var observedSession = ""
+            every { pipelineRunRepository.observeRunsForSession(any()) } answers {
+                observedSession = firstArg()
+                flowOf(listOf(finishedRun(observedSession)))
+            }
+            val sampling = LocalSampling(RunSampler(0.3, 12, 0.5), seed = 1_482_913)
+            val describeRun = mockk<DescribeRunUseCase>()
+            coEvery { describeRun(any()) } answers {
+                RunDescription(
+                    run = finishedRun(observedSession),
+                    models = emptyList(),
+                    localCalls = 0,
+                    cloudCalls = 0,
+                    digest = null,
+                    reproducibility = Reproducibility.Promised(emptySet(), usedCloud = false),
+                    verify = VerifyAvailability.NoLocalCalls,
+                    runAgain = RunAgainAvailability.Available(
+                        RunAgainRequest(observedSession, "recorded-pipeline", "Daily brief", "the message", sampling),
+                    ),
+                )
+            }
+            every { runUseCases.describeRun } returns describeRun
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+
+            viewModel.run.runAgain()
+            viewModel.run.confirmRunAgain()
+            advanceUntilIdle()
+
+            coVerify {
+                agentOrchestratorUseCase(
+                    sessionId = sessionId,
+                    userPrompt = "the message",
+                    pipelineId = "recorded-pipeline",
+                    attachment = null,
+                    displayContent = null,
+                    origin = any(),
+                    // A new turn in the thread: the question shows above the new answer.
+                    persistUserMessage = true,
+                    samplingOverride = sampling,
+                )
+            }
+        }
+
+    /** A finished chat run of [sessionId]. */
+    private fun finishedRun(sessionId: String) = PipelineRun(
+        id = "recorded-run",
+        sessionId = sessionId,
+        pipelineId = "recorded-pipeline",
+        origin = RunOrigin.CHAT,
+        status = PipelineRunStatus.COMPLETED,
+        currentNodeId = null,
+        startedAt = 0L,
+        finishedAt = 1L,
+        errorMessage = null,
+        graphContentHash = null,
+    )
 
     @Test
     fun `retryAfterError never re-runs a row imported from a chat file`() = runTest(testDispatcher) {

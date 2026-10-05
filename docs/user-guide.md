@@ -627,6 +627,43 @@ parent pipeline fast-forwards through the work it already finished, then
 continues the sub-pipeline from where it stopped — neither the parent
 nor the child re-runs a node that already completed.
 
+### The run header: seed, verify, run again, export
+
+Between the console's handle and its tabs sits one line about the run the
+console shows — `seed 1 482 913 · CPU · Gemma 4 E2B · t 0.7`. Tap it to open
+**This run**: the seed, the sampler, each model with its backend, context window
+and the SHA-256 of its file, the app and runtime versions, the device, and the
+run's **digest** — one SHA-256 over what the run produced. The seed and both
+hashes have a copy button; copying always takes the full value.
+
+Below the fields, one sentence says what is promised: a run on **CPU** repeats
+byte for byte on this device with the same model file, seed, sampler and input;
+on **GPU** the context window must also be the same. Nothing is promised on the
+NPU, for a run that read an image, for a cloud model's answer, or on another
+device. Under each node in **Traces** and **Vars**, two chips show the first 8
+characters of its input and output hash; a tap copies all 64.
+
+Three actions follow:
+
+- **Verify** re-runs every recorded on-device call from its own recorded prompt,
+  with its recorded sampler and seed, and compares each answer byte for byte.
+  Tools are never run again — their recorded output stands — and cloud calls are
+  skipped. A check with more than 3 calls, or 30 s or more of model time, asks
+  first. If the backend, the GPU window or the model file differs from the run,
+  Verify stays off and says what to change, and where.
+- **Run again with this seed** starts a new run of the same message on the same
+  pipeline with the recorded seed and sampler. Memory, chat history and tool
+  results are read again and tools run with the usual approvals, so the answer
+  repeats only if every input is the same. Offered for chat and share runs
+  without an image.
+- **Export trace** saves or shares one JSON file: the header, every record with
+  its hashes, and the digest. It holds everything the model read in the run —
+  prompts, memory excerpts and the chat history inside them — and stays on the
+  device unless you share it.
+
+Hashes show that an export and a repeat match. They do not prove who produced a
+run: nothing is signed.
+
 ### Reopening a chat while a run is in flight
 
 Closing the chat — or the whole app UI — no longer disconnects you from

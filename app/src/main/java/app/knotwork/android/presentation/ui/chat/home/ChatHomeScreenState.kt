@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.design.components.chat.ComposerVoiceNotice
 import app.knotwork.design.screens.chat.ChatHomeConsoleState
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
+import app.knotwork.design.screens.chat.ChatHomeRunState
 import app.knotwork.design.screens.chat.ChatHomeThreadRow
 
 /**
@@ -66,6 +67,8 @@ import app.knotwork.design.screens.chat.ChatHomeThreadRow
  *   a terminal state or the user sends again.
  * @property imageViewer target of the full-screen image viewer, or `null`
  *   when the viewer is closed.
+ * @property run the surfaces of the run the console shows: the check's sheet, the
+ *   confirmations and the export sheet.
  * @property sendingUserTurn the message the user has just sent, shown as a
  *   pending bubble until its stored row reaches [messages], or `null` when
  *   nothing is in that window. Kept apart from [messages] because the display
@@ -88,6 +91,7 @@ data class ChatHomeScreenState(
     val runNotice: RunNoticeCause? = null,
     val imageViewer: ImageViewerTarget? = null,
     val sendingUserTurn: SendingUserTurn? = null,
+    val run: ChatHomeRunState = ChatHomeRunState(),
 )
 
 /**

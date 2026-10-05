@@ -7,6 +7,7 @@ package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.models.ClarificationRequest
 import app.knotwork.android.domain.models.LocalModel
+import app.knotwork.android.presentation.ui.common.JournalExportDelegate
 import app.knotwork.design.components.console.ConsoleFilter
 import app.knotwork.design.components.console.ConsoleLine
 import app.knotwork.design.components.console.ConsoleSnap
@@ -188,6 +189,12 @@ internal fun mockChatHomeViewModel(
     every { transferDelegate.importErrorEvents } returns MutableSharedFlow()
     every { transferDelegate.memorySaveEvents } returns MutableSharedFlow()
     every { vm.transfer } returns transferDelegate
+    val runExport = mockk<JournalExportDelegate>(relaxed = true)
+    every { runExport.events } returns MutableSharedFlow()
+    val runDelegate = mockk<ChatHomeRunDelegate>(relaxed = true)
+    every { runDelegate.events } returns MutableSharedFlow()
+    every { runDelegate.export } returns runExport
+    every { vm.run } returns runDelegate
 
     return vm to ChatHomeMockHandles(
         state = stateFlow,

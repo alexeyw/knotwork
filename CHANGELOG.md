@@ -46,8 +46,15 @@ details.
   byte for byte; tools and cloud models are never run again. A finished run also
   has a digest — one SHA-256 over what it produced, the same for a repeat that
   produces the same — and can be exported as one JSON file with its header, every
-  record and the digest, or started again with its own seed and sampler. The
-  check, the export and the repeat come to the console with their screen.
+  record and the digest, or started again with its own seed and sampler.
+- **The run header in the console.** One line above the console's tabs says what
+  the run ran with — `seed · backend · model · t`. Open it for every field, the
+  model file's SHA-256, the run digest, what is promised about repeating the run,
+  and three actions: **Verify**, **Run again with this seed** and **Export trace**.
+  An action that is not available says why next to it; a backend or window that no
+  longer matches names both values and where to change it. The check runs in its
+  own sheet, node by node, and says which node diverged first. Each node in
+  **Traces** and **Vars** shows its input and output hash; a tap copies it.
 - **Each installed model file has a SHA-256.** The app reads a model file once,
   in the background, after it is downloaded — and once for every model installed
   before this release — and keeps the checksum with the model. A file replaced on

@@ -80,6 +80,8 @@ class VerificationToolIsolationKonsistTest {
             "LlmInferenceEngine",
             "ReadRecordedRunTreeUseCase",
             "BuildRunTraceExportUseCase",
+            "PlanRunVerificationUseCase",
+            "PlanRunAgainWithSeedUseCase",
             // Value types of the check's own models.
             "String",
             "Int",
@@ -103,6 +105,10 @@ class VerificationToolIsolationKonsistTest {
             "LocalSampling",
             "RunAgainRequest",
             "RunAgainNotOfferedReason",
+            "List<RunModelUse>",
+            "Reproducibility",
+            "VerifyAvailability",
+            "RunAgainAvailability",
         )
 
         /** What could run a tool, or dispatch a node that does. */

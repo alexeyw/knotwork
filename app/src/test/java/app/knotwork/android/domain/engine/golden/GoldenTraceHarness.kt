@@ -51,6 +51,7 @@ import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.Role
+import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.models.Skill
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.models.TriggerHitlEvent
@@ -489,6 +490,7 @@ internal class GoldenTraceHarness(
             return
         }
         val record = trace.matchingNodeIo(last.nodeName, last.depth, last.outputText)
+            ?.takeIf { hashesAgree(last.nodeName, last.inputSha256, last.outputSha256, it) }
         if (record != null) {
             log.record("$header (= trace.node seq=${record.seq})")
         } else {
@@ -519,10 +521,30 @@ internal class GoldenTraceHarness(
         }
     }
 
+    /**
+     * Whether a live state's hashes are the ones its trace record carries — what the
+     * console's hash chips show, live and replayed alike. A sub-pipeline's row shows
+     * none, so its state carries none.
+     */
+    private fun hashesAgree(
+        nodeType: String,
+        inputSha256: String?,
+        outputSha256: String?,
+        record: RunTraceRecord.NodeIo,
+    ): Boolean = if (nodeType == NodeType.PIPELINE.name) {
+        inputSha256 == null && outputSha256 == null
+    } else {
+        inputSha256 == record.inputSha256 && outputSha256 == record.outputSha256
+    }
+
     /** A `NodeIO` state normally repeats the trace record; only a divergence is spelled out. */
     private fun recordNodeIo(state: AgentOrchestratorState.NodeIO) {
         val record = trace.lastNodeIo(state.nodeId, state.depth)
-        if (record != null && record.inputText == state.input && record.outputText == state.output) {
+        if (record != null &&
+            record.inputText == state.input &&
+            record.outputText == state.output &&
+            hashesAgree(state.nodeType, state.inputSha256, state.outputSha256, record)
+        ) {
             log.record(
                 "state NodeIO ${state.nodeId} ${state.nodeType} depth=${state.depth} (= trace.node seq=${record.seq})",
             )

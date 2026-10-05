@@ -296,6 +296,12 @@ class RunWalk(
         }
         if (node.type == NodeType.INPUT || node.type == NodeType.OUTPUT) return
         val outputText = step.result?.outputText ?: carried
+        // The console shows each node's two hashes — the ones the trace record
+        // carries, computed by the same function — so a live run and its replay
+        // show the same chips. A sub-pipeline's row has none of its own.
+        val hashed = node.type != NodeType.PIPELINE
+        val inputSha256 = if (hashed) TraceHashing.sha256Hex(step.input) else null
+        val outputSha256 = if (hashed) TraceHashing.sha256Hex(outputText) else null
         traceSteps.add(
             AgentOrchestratorState.TraceStep(
                 nodeName = node.type.name,
@@ -303,6 +309,8 @@ class RunWalk(
                 durationMs = step.durationMs,
                 tokenCount = step.result?.tokenCount,
                 depth = tree.depth,
+                inputSha256 = inputSha256,
+                outputSha256 = outputSha256,
             ),
         )
         // Write-through into the persistent run trace, which a checkpoint resume
@@ -325,6 +333,8 @@ class RunWalk(
                 input = step.input,
                 output = outputText,
                 depth = tree.depth,
+                inputSha256 = inputSha256,
+                outputSha256 = outputSha256,
             ),
         )
     }

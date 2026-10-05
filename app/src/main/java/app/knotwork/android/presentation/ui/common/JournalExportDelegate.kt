@@ -84,12 +84,16 @@ sealed interface JournalExportEvent {
  *   "generated at" label — one of the `Export…JournalUseCase`s.
  * @property ioDispatcher Dispatcher carrying the document write; injected so a
  *   test can drive it on the test scheduler.
+ * @property fileNameFor Names the file an export taken at a moment becomes. The
+ *   journals stamp it with that moment ([journalExportFileName]); an export whose
+ *   document was rendered earlier — and shown with its name — passes that name.
  */
 class JournalExportDelegate(
     private val scope: CoroutineScope,
     private val fileNameStem: String,
     private val buildDocument: suspend (generatedAtLabel: String) -> JournalExportDocument,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val fileNameFor: (Date) -> String = { journalExportFileName(fileNameStem, it) },
 ) {
 
     private val _events = MutableSharedFlow<JournalExportEvent>(extraBufferCapacity = 1)
@@ -106,7 +110,7 @@ class JournalExportDelegate(
      *
      * @return The timestamped filename.
      */
-    fun newFileName(): String = journalExportFileName(fileNameStem)
+    fun newFileName(): String = fileNameFor(Date())
 
     /** Renders the journal and asks the screen to hand it to the share sheet. */
     fun share() {
@@ -122,7 +126,7 @@ class JournalExportDelegate(
                 } else {
                     JournalExportEvent.Share(
                         document = document,
-                        fileName = journalExportFileName(fileNameStem, now),
+                        fileName = fileNameFor(now),
                     )
                 },
             )

@@ -8,6 +8,7 @@ import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.HardCeilingBreach
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.PipelineSamplePrompt
@@ -153,6 +154,7 @@ constructor(
     private val archiveChatUseCase: ArchiveChatUseCase,
     private val exportChatUseCase: ExportChatUseCase,
     private val unarchiveChatUseCase: UnarchiveChatUseCase,
+    private val runUseCases: ChatHomeRunUseCases,
 ) : ViewModel() {
 
     private val _state: MutableStateFlow<ChatHomeScreenState> = MutableStateFlow(ChatHomeScreenState())
@@ -259,6 +261,34 @@ constructor(
         runTraceRepository = runTraceRepository,
         pipelineRunRepository = pipelineRunRepository,
         traceProjectionDispatcher = { traceProjectionDispatcher },
+    )
+
+    /**
+     * Run-strip delegate: what the console's run ran with, its check, starting it
+     * again with its seed, and its trace export. The screen calls `viewModel.run.*`.
+     */
+    val run: ChatHomeRunDelegate = ChatHomeRunDelegate(
+        scope = viewModelScope,
+        state = _state,
+        pipelineRunRepository = pipelineRunRepository,
+        useCases = runUseCases,
+        generationSettings = settingsRepository,
+        // A finished run started again with its own seed and sampler: the run's
+        // message again, on the pipeline it executed, as a new turn in the thread.
+        // The console closes so the answer shows as it arrives.
+        startRunAgain = { request ->
+            if (request.sessionId == _state.value.thread.currentSessionId) {
+                console.closeConsole()
+                launchRun(
+                    sessionId = request.sessionId,
+                    prompt = request.userPrompt,
+                    displayContent = null,
+                    readyAttachment = null,
+                    pipelineId = request.pipelineId,
+                    samplingOverride = request.sampling,
+                )
+            }
+        },
     )
 
     /**
@@ -537,6 +567,10 @@ constructor(
      * @param displayContent what the user's bubble shows, when it differs from
      *   [prompt] (an image-only message has an empty caption but a real prompt).
      * @param readyAttachment attachment to carry with the turn, if any.
+     * @param persistUserMessage whether the run writes the user message into the chat.
+     * @param pipelineId the pipeline to run; `null` takes the chat's bound one.
+     * @param samplingOverride a recorded run's seed and sampler, for a run started
+     *   again with them; `null` for a fresh seed and the current sampler.
      */
     private fun launchRun(
         sessionId: String,
@@ -544,8 +578,10 @@ constructor(
         displayContent: String?,
         readyAttachment: MessageAttachment?,
         persistUserMessage: Boolean = true,
+        pipelineId: String? = null,
+        samplingOverride: LocalSampling? = null,
     ) {
-        val pipelineId = threads.sessionsSnapshot().firstOrNull { it.id == sessionId }?.pipelineId
+        val runPipelineId = pipelineId ?: threads.sessionsSnapshot().firstOrNull { it.id == sessionId }?.pipelineId
 
         // Fresh run = fresh cumulative log upstream; the baseline carried
         // over from a previous run's mid-stream Clear no longer applies
@@ -594,10 +630,11 @@ constructor(
             agentOrchestratorUseCase(
                 sessionId = sessionId,
                 userPrompt = prompt,
-                pipelineId = pipelineId,
+                pipelineId = runPipelineId,
                 attachment = readyAttachment,
                 displayContent = displayContent,
                 persistUserMessage = persistUserMessage,
+                samplingOverride = samplingOverride,
             )
                 .catch { error ->
                     _state.update {
@@ -890,6 +927,7 @@ constructor(
         }
         observeMessages(threadId)
         reattach.reattachToRun(threadId)
+        run.observe(threadId)
         viewModelScope.launch {
             settingsRepository.setCurrentChatSessionId(threadId)
             // The pipelines / sessions flows do not re-emit on a thread
@@ -961,6 +999,7 @@ constructor(
             }
             observeMessages(sessionId)
             reattach.reattachToRun(sessionId)
+            run.observe(sessionId)
         }
     }
 

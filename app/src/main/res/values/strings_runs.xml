@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The run strip's snackbars and the run trace export's outcomes; the strip's own copy lives in the catalog. -->
+<resources>
+    <string name="run_copied_seed">Seed copied</string>
+    <string name="run_copied_sha">Model SHA-256 copied</string>
+    <string name="run_copied_digest">Run digest copied</string>
+    <!-- %1$s = Input or Output, %2$s = the node's name as the row shows it. -->
+    <string name="run_copied_hash">%1$s hash of “%2$s” copied</string>
+    <string name="run_hash_input">Input</string>
+    <string name="run_hash_output">Output</string>
+    <string name="run_copied_verification_hash">Hash copied</string>
+    <string name="run_again_snackbar">Running again with seed %1$s. The answer repeats only if every input is the same.</string>
+    <string name="run_trace_export_chooser_title">Share run trace</string>
+    <string name="run_trace_export_save_failed">Couldn\'t save the run trace</string>
+    <string name="run_trace_export_render_failed">Couldn\'t read the run trace</string>
+    <plurals name="run_trace_export_saved">
+        <item quantity="one">Saved %1$d record</item>
+        <item quantity="other">Saved %1$d records</item>
+    </plurals>
+</resources>

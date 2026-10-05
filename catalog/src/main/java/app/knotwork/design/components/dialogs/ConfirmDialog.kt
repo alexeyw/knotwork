@@ -2,11 +2,17 @@
 
 package app.knotwork.design.components.dialogs
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import app.knotwork.design.components.buttons.KnotworkTextButton
+import app.knotwork.design.theme.KnotworkTheme
 
 /**
  * Everything [ConfirmDialog] renders.
@@ -41,18 +47,41 @@ data class ConfirmDialogUi(
  * destructive action, some did not, so "this deletes something" was a signal
  * the user could only sometimes rely on.
  *
+ * A question whose answer needs more than one sentence — a count, an estimate in
+ * mono, an inset — passes [content] instead of a body. It scrolls, and the two
+ * buttons stay where they are, at any font scale.
+ *
  * @param ui Resolved copy.
  * @param onConfirm The affirmative CTA was tapped.
  * @param onDismiss Cancel, or the scrim.
  * @param modifier Optional layout modifier applied to the dialog.
+ * @param content The body, drawn instead of [ConfirmDialogUi.body] when given.
  */
 @Composable
-fun ConfirmDialog(ui: ConfirmDialogUi, onConfirm: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+fun ConfirmDialog(
+    ui: ConfirmDialogUi,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
         title = { Text(ui.title) },
-        text = if (ui.body.isBlank()) null else ({ Text(ui.body) }),
+        text = when {
+            content != null -> (
+                {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        content = content,
+                    )
+                }
+                )
+            ui.body.isBlank() -> null
+            else -> ({ Text(ui.body) })
+        },
         // The design system's text button, not Material's: it already owns what
         // "destructive" looks like, and the sites this replaced were split
         // between the two — which is how the tint became unreliable.

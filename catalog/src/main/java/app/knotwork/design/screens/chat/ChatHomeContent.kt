@@ -84,6 +84,7 @@ import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleEntryStrip
 import app.knotwork.design.components.console.ConsolePane
 import app.knotwork.design.components.console.ConsoleSnap
+import app.knotwork.design.components.console.RunHeaderStrip
 import app.knotwork.design.components.misc.KnotworkLoader
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -218,6 +219,7 @@ fun ChatHomeContent(
         if (state.console.snap != null) {
             ChatHomeConsoleOverlay(state = state, callbacks = callbacks)
         }
+        ChatHomeRunSurfaces(run = state.run, callbacks = callbacks.run)
     }
 }
 
@@ -1052,6 +1054,23 @@ private fun ChatHomeConsoleOverlay(state: ChatHomeViewState, callbacks: ChatHome
             onCopyVar = callbacks.onConsoleCopyVar,
             onCopySpan = callbacks.onConsoleCopySpan,
             onFilterByLineSource = callbacks.onConsoleFilterByLineSource,
+            onCopyHash = callbacks.run.onCopyHash,
+            runHeader = state.console.runHeader?.let { header ->
+                {
+                    RunHeaderStrip(
+                        header = header,
+                        expanded = state.console.runHeaderExpanded,
+                        onToggle = callbacks.run.onToggleHeader,
+                        onCopySeed = callbacks.run.onCopySeed,
+                        onCopyModelSha = callbacks.run.onCopyModelSha,
+                        onCopyDigest = callbacks.run.onCopyDigest,
+                        onVerify = callbacks.run.onVerify,
+                        onRunAgain = callbacks.run.onRunAgain,
+                        onExport = callbacks.run.onExport,
+                        onOpenSettings = callbacks.run.onOpenSettings,
+                    )
+                }
+            },
         )
     }
 }

@@ -125,6 +125,13 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   token ceilings counted across the whole run tree — so an automation that
   starts looping cannot quietly spend your cloud key — and a run stopped that
   way says so instead of looking broken.
+- **Runs you can check.** Every run keeps its seed, sampler, versions and the
+  SHA-256 of each model file it used. From the console you can **verify** a
+  finished run — its on-device calls are repeated from their recorded prompts
+  and compared byte for byte, tools never run again — **run it again with the
+  same seed**, or **export its trace** as one JSON file with every hash and a
+  run digest. Promised on CPU, and on GPU at the same context window, on the
+  same device; not on the NPU, not on another phone, and nothing is signed.
 - **Remembers what matters.** Long-term memory with semantic retrieval (RAG)
   over past conversations, automatic fact extraction, manual "Save to memory,"
   and a memory manager with search, provenance, compaction, and JSON

@@ -953,6 +953,16 @@ it, so they cannot disagree about the shape of a run.
    `RunHeaders.fresh` takes them instead of a fresh seed and the current sampler —
    unless the run already has a header, as a resumed one does. Everything else is
    read again: it is a new run on today's inputs.
+7. **In the console.** `ChatHomeRunDelegate` follows the console's run — the
+   session's active root run, else its latest — and re-describes it through
+   `DescribeRunUseCase` whenever the run's status or the backend and window the
+   next load would use change, so a mismatch appears and clears as the user fixes
+   it. The catalog's `RunHeaderStrip` draws it in a slot of `ConsolePane` between
+   the handle and the tabs; the check runs in `VerificationSheet`, whose frames
+   `VerificationProgress` folds from `VerifyRunUseCase`'s events. Each node's input
+   and output hash on the Traces and Vars tabs comes from `RunWalk` for a live run
+   and from the trace record for a replayed one — the same function, so the chips
+   agree. Share and save reuse the journal exports' delegate and handlers.
 
 ## 4. Integrations
 

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The run strip, the run check, starting a run again with its seed, and the trace
+    export. Copy from the design hand-off; the one promise is worded the same way
+    everywhere and nothing goes wider than what was measured: CPU and GPU (GPU at the
+    same window) on this device, never the NPU, never another device.
+-->
+<resources>
+    <!-- A · the collapsed run line. Seed · backend · model · temperature; wraps, never ellipsised. -->
+    <string name="knotwork_run_line">seed %1$s · %2$s · %3$s · t %4$s</string>
+    <!-- A run with no on-device call recorded yet: no backend or model to name. -->
+    <string name="knotwork_run_line_seed_only">seed %1$s · t %2$s</string>
+    <string name="knotwork_run_line_cloud_suffix">%1$s · + cloud</string>
+    <string name="knotwork_run_line_cloud_only">cloud only · not repeatable</string>
+    <string name="knotwork_run_line_pre_version">no run header · recorded before runs kept one</string>
+    <string name="knotwork_run_line_a11y">Run header, %1$s. Double-tap to expand.</string>
+    <string name="knotwork_run_line_open_a11y">Run header, expanded. Double-tap to collapse.</string>
+
+    <!-- A · the expanded header's fields. -->
+    <string name="knotwork_run_title">This run</string>
+    <string name="knotwork_run_field_seed">seed</string>
+    <string name="knotwork_run_field_sampler">sampler</string>
+    <string name="knotwork_run_sampler_value">t %1$s · top-k %2$d · top-p %3$s</string>
+    <string name="knotwork_run_field_model">model</string>
+    <string name="knotwork_run_model_value">%1$s · %2$s · window %3$s</string>
+    <string name="knotwork_run_model_none">none on this device</string>
+    <string name="knotwork_run_field_sha">sha-256</string>
+    <!-- The run's calls carry no file checksum: the file was still being hashed when the run used it. -->
+    <string name="knotwork_run_sha_not_recorded">not recorded · the file had no SHA-256 yet</string>
+    <string name="knotwork_run_field_cloud">cloud</string>
+    <string name="knotwork_run_cloud_some">used · not repeatable</string>
+    <string name="knotwork_run_cloud_all">answered every model call</string>
+    <string name="knotwork_run_field_app">app</string>
+    <string name="knotwork_run_app_value">%1$s · %2$s</string>
+    <string name="knotwork_run_field_device">device</string>
+    <string name="knotwork_run_field_digest">digest</string>
+    <string name="knotwork_run_field_digest_a11y">Run digest</string>
+    <string name="knotwork_run_digest_pending">when the run finishes</string>
+    <string name="knotwork_run_now_tag">now %1$s</string>
+    <string name="knotwork_run_copy_seed_cd">Copy seed</string>
+    <string name="knotwork_run_copy_sha_cd">Copy model SHA-256</string>
+    <string name="knotwork_run_copy_digest_cd">Copy run digest</string>
+    <!-- A full hash is never read out: %1$s = what it is, %2$s = its first 8 characters, spaced in pairs. -->
+    <string name="knotwork_run_hash_full_a11y">%1$s, 64 characters, starting %2$s</string>
+    <string name="knotwork_run_hash_model_a11y">Model SHA-256</string>
+
+    <!-- A · the promise. -->
+    <string name="knotwork_run_repro_head">Repeats byte for byte on this device</string>
+    <string name="knotwork_run_repro_cpu">On CPU, with the same model file, seed, sampler and input.</string>
+    <string name="knotwork_run_repro_gpu">On GPU, with the same model file, seed, sampler, input and context window.</string>
+    <string name="knotwork_run_repro_head_mixed">On-device calls repeat byte for byte on this device</string>
+    <string name="knotwork_run_repro_mixed_cloud">Cloud answers are not repeatable.</string>
+    <string name="knotwork_run_repro_limit">Not promised on the NPU or on another device.</string>
+    <string name="knotwork_run_repro_npu_head">Not promised: this run used the NPU</string>
+    <string name="knotwork_run_repro_npu_body">Answers on the NPU are not checked to repeat. For runs that repeat, choose CPU or GPU in Settings.</string>
+    <string name="knotwork_run_repro_cloud_head">Not promised: every answer came from a cloud model</string>
+    <string name="knotwork_run_repro_cloud_body">This app cannot repeat a cloud model’s answer. The versions above still record what ran on this phone.</string>
+    <string name="knotwork_run_repro_image_head">Not promised: this run read an image</string>
+    <string name="knotwork_run_repro_image_body">Runs that read an image are not checked to repeat.</string>
+    <string name="knotwork_run_repro_pre_version">Recorded before the app kept seeds and hashes, so this run cannot be verified or repeated.</string>
+
+    <!-- B · the three actions. A disabled row keeps its reason as its second line. -->
+    <string name="knotwork_run_action_verify">Verify</string>
+    <plurals name="knotwork_run_action_verify_line">
+        <item quantity="one">Re-runs %1$d on-device call · about %2$s</item>
+        <item quantity="other">Re-runs %1$d on-device calls · about %2$s</item>
+    </plurals>
+    <!-- No estimate: a call recorded without its duration. -->
+    <plurals name="knotwork_run_action_verify_line_count">
+        <item quantity="one">Re-runs %1$d on-device call</item>
+        <item quantity="other">Re-runs %1$d on-device calls</item>
+    </plurals>
+    <plurals name="knotwork_run_action_verify_line_npu">
+        <item quantity="one">%1$d call ran on the NPU · it cannot be re-run</item>
+        <item quantity="other">%1$d calls ran on the NPU · none can be re-run</item>
+    </plurals>
+    <string name="knotwork_run_action_seed">Run again with this seed</string>
+    <string name="knotwork_run_action_seed_line">Same seed and sampler; the answer repeats only if every input is the same.</string>
+    <string name="knotwork_run_action_export">Export trace</string>
+    <string name="knotwork_run_action_export_line">JSON · header, records, hashes, run digest</string>
+    <string name="knotwork_run_action_export_line_pre">JSON · records only, no seed or hashes</string>
+    <string name="knotwork_run_action_busy">Available when the run finishes.</string>
+    <string name="knotwork_run_action_dimmed_a11y">%1$s, dimmed. %2$s</string>
+    <string name="knotwork_run_verify_no_local">Nothing to re-run: no answer in this run came from the on-device model.</string>
+    <string name="knotwork_run_verify_pre_version">Not available: no seed was recorded.</string>
+    <!-- The backend is chosen on the Settings home and on the model's card; the window in Settings → Generation. -->
+    <string name="knotwork_run_verify_mismatch_backend">Recorded on %1$s; the app now runs on %2$s. To verify, choose %1$s in Settings.</string>
+    <string name="knotwork_run_verify_mismatch_window">Recorded with a %1$s window; the app now uses %2$s. To verify, set %1$s in Settings → Generation.</string>
+    <string name="knotwork_run_verify_mismatch_both">Recorded on %1$s with a %2$s window; the app now runs on %3$s. To verify, choose %1$s in Settings and a %2$s window in Settings → Generation.</string>
+    <string name="knotwork_run_verify_model_missing">%1$s, the model this run used, is no longer on this device. Download it again to verify.</string>
+    <string name="knotwork_run_verify_model_changed">The %1$s file on this device is not the one this run used: its SHA-256 differs.</string>
+    <string name="knotwork_run_verify_hash_pending">Available once the model file’s SHA-256 is computed.</string>
+    <string name="knotwork_run_verify_open_settings">Settings</string>
+    <string name="knotwork_run_verify_open_generation_settings">Generation settings</string>
+    <string name="knotwork_run_seed_not_image">Not offered for runs that read an image.</string>
+    <string name="knotwork_run_seed_not_background">Not offered for runs a trigger started.</string>
+    <string name="knotwork_run_seed_not_pre_version">Not offered: no seed was recorded.</string>
+    <string name="knotwork_run_seed_not_pipeline_deleted">Not offered: the pipeline this run used was deleted.</string>
+
+    <!-- C · confirm a check. Shown when there are more than 3 on-device calls or 30 s or more of recorded model time. -->
+    <string name="knotwork_run_verify_confirm_title">Verify this run?</string>
+    <plurals name="knotwork_run_verify_confirm_body">
+        <item quantity="one">Re-runs the on-device model once from the recorded prompt, with seed %2$s, and compares the answer byte for byte. Tools are not run again: their recorded output stands.</item>
+        <item quantity="other">Re-runs the on-device model %1$d times from the recorded prompts, with seed %2$s, and compares each answer byte for byte. Tools are not run again: their recorded output stands.</item>
+    </plurals>
+    <plurals name="knotwork_run_verify_confirm_cloud">
+        <item quantity="one">%1$d cloud call is skipped: it cannot be verified.</item>
+        <item quantity="other">%1$d cloud calls are skipped: they cannot be verified.</item>
+    </plurals>
+    <string name="knotwork_run_verify_confirm_time">About %1$s — each call takes about as long as its node did.</string>
+    <string name="knotwork_run_verify_confirm_busy">The on-device model is busy until it finishes. You can cancel.</string>
+    <string name="knotwork_run_verify_confirm_ok">Verify</string>
+    <string name="knotwork_run_dialog_cancel">Cancel</string>
+
+    <!-- C · the check's sheet. -->
+    <string name="knotwork_run_verify_title">Verify run</string>
+    <string name="knotwork_run_verify_sub">seed %1$s · %2$s · %3$s</string>
+    <string name="knotwork_run_verify_close_cd">Close</string>
+    <plurals name="knotwork_run_verify_progress">
+        <item quantity="one">%1$d of %2$d call · about %3$s left</item>
+        <item quantity="other">%1$d of %2$d calls · about %3$s left</item>
+    </plurals>
+    <plurals name="knotwork_run_verify_progress_count">
+        <item quantity="one">%1$d of %2$d call</item>
+        <item quantity="other">%1$d of %2$d calls</item>
+    </plurals>
+    <string name="knotwork_run_verify_cancel">Cancel</string>
+    <string name="knotwork_run_verify_node_waiting">Waiting</string>
+    <string name="knotwork_run_verify_node_checking">Re-running call %1$d of %2$d</string>
+    <plurals name="knotwork_run_verify_node_matched">
+        <item quantity="one">Matched</item>
+        <item quantity="other">Matched · %1$d calls</item>
+    </plurals>
+    <string name="knotwork_run_verify_node_diverged">Diverged at call %1$d of %2$d</string>
+    <string name="knotwork_run_verify_node_unchecked">Not checked</string>
+    <string name="knotwork_run_verify_hash_recorded">recorded %1$s</string>
+    <string name="knotwork_run_verify_hash_replayed">replayed %1$s</string>
+    <string name="knotwork_run_nv_tool">Tool not run again · its recorded output stands</string>
+    <string name="knotwork_run_nv_cloud">Answered by a cloud model · cannot be re-run here</string>
+    <string name="knotwork_run_nv_no_call">No model call</string>
+    <string name="knotwork_run_nv_npu">Ran on the NPU · not checked to repeat</string>
+    <string name="knotwork_run_nv_image">Read an image · not checked to repeat</string>
+    <string name="knotwork_run_nv_model_not_recorded">The model file had no SHA-256 yet · cannot be re-run</string>
+    <string name="knotwork_run_verify_node_a11y">%1$s, %2$s.</string>
+
+    <!-- C · the check's result. -->
+    <plurals name="knotwork_run_verify_all_head">
+        <item quantity="one">The %1$d call matched</item>
+        <item quantity="other">All %1$d calls matched</item>
+    </plurals>
+    <string name="knotwork_run_verify_all_body">Every on-device answer is byte for byte the one recorded.</string>
+    <plurals name="knotwork_run_verify_all_body_nv">
+        <item quantity="one">%1$d node could not be verified; it says why.</item>
+        <item quantity="other">%1$d nodes could not be verified; each says why.</item>
+    </plurals>
+    <plurals name="knotwork_run_verify_div_head">
+        <item quantity="one">%1$d node diverged</item>
+        <item quantity="other">%1$d nodes diverged</item>
+    </plurals>
+    <string name="knotwork_run_verify_div_body">“%1$s” gave a different answer at call %2$d of %3$d. Each call is re-run from its own recorded prompt, so later nodes were checked on their own.</string>
+    <string name="knotwork_run_verify_none_head">Nothing could be verified</string>
+    <string name="knotwork_run_verify_none_body">No call in this run can be re-run and compared. Each node says why.</string>
+    <plurals name="knotwork_run_verify_cancelled_head">
+        <item quantity="one">Cancelled after %1$d of %2$d call</item>
+        <item quantity="other">Cancelled after %1$d of %2$d calls</item>
+    </plurals>
+    <string name="knotwork_run_verify_cancelled_body">The calls checked so far matched. The rest were not checked.</string>
+    <string name="knotwork_run_verify_cancelled_body_diverged">The rest were not checked.</string>
+    <!-- Another run changed the loaded model, backend or window while the check ran. -->
+    <plurals name="knotwork_run_verify_stopped_head">
+        <item quantity="one">Stopped after %1$d of %2$d call</item>
+        <item quantity="other">Stopped after %1$d of %2$d calls</item>
+    </plurals>
+    <string name="knotwork_run_verify_failed_head">The on-device model could not load</string>
+    <string name="knotwork_run_verify_failed_body">%1$s did not load (%2$s), so nothing was compared.</string>
+    <string name="knotwork_run_verify_again">Verify again</string>
+    <string name="knotwork_run_not_signed">Hashes show this export and a repeat match. They do not prove who produced it — nothing is signed.</string>
+
+    <!-- D · hashes on Traces and Vars rows: the first 8 characters, a tap copies all 64. -->
+    <string name="knotwork_run_hash_in">in %1$s</string>
+    <string name="knotwork_run_hash_out">out %1$s</string>
+    <string name="knotwork_run_hash_input">Input</string>
+    <string name="knotwork_run_hash_output">Output</string>
+    <string name="knotwork_run_hash_short_a11y">%1$s hash %2$s. Double-tap to copy the full SHA-256.</string>
+
+    <!-- E · start again with the seed. -->
+    <string name="knotwork_run_seed_confirm_title">Run again with seed %1$s?</string>
+    <string name="knotwork_run_seed_confirm_body">A new run of “%1$s” on today’s inputs: memory, chat history and tool results are read again, and tools run again with the usual approvals.</string>
+    <string name="knotwork_run_seed_confirm_ok">Run</string>
+
+    <!-- F · export. -->
+    <string name="knotwork_run_export_title">Export trace</string>
+    <string name="knotwork_run_export_file">%1$s · %2$s</string>
+    <string name="knotwork_run_export_body">The file holds everything the model read in this run: prompts, memory excerpts, and the chat history inside those prompts. It stays on this device unless you share it.</string>
+    <string name="knotwork_run_export_share">Share</string>
+    <string name="knotwork_run_export_save">Save to file</string>
+</resources>

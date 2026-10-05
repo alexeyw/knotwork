@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.chat.home
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ConsoleEvent
 import app.knotwork.android.domain.models.ConsoleEventType
+import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.design.components.console.ConsoleLevel
 import app.knotwork.design.components.console.ConsoleLine
@@ -118,6 +119,8 @@ fun traceStepToConsoleSpan(trace: AgentOrchestratorState.TraceStep, startedAtMs:
         startedAt = TIMESTAMP_FORMATTER.format(Instant.ofEpochMilli(startedAtMs)),
         status = SpanStatus.Ok,
         depth = trace.depth,
+        inputSha256 = trace.inputSha256,
+        outputSha256 = trace.outputSha256,
     )
 
 /**
@@ -142,12 +145,16 @@ fun nodeIoToVarRows(io: AgentOrchestratorState.NodeIO): List<ConsoleVarRow> {
             key = CONSOLE_VAR_KEY_INPUT,
             valueJson = JSONObject.quote(io.input),
             depth = io.depth,
+            inputSha256 = io.inputSha256,
+            outputSha256 = io.outputSha256,
         ),
         ConsoleVarRow(
             node = node,
             key = CONSOLE_VAR_KEY_OUTPUT,
             valueJson = JSONObject.quote(io.output),
             depth = io.depth,
+            inputSha256 = io.inputSha256,
+            outputSha256 = io.outputSha256,
         ),
     )
 }
@@ -205,6 +212,8 @@ fun nodeIoRecordToNodeIo(record: RunTraceRecord.NodeIo): AgentOrchestratorState.
     input = record.inputText,
     output = record.outputText,
     depth = record.depth,
+    inputSha256 = record.inputSha256.takeUnless { record.nodeType == NodeType.PIPELINE.name },
+    outputSha256 = record.outputSha256.takeUnless { record.nodeType == NodeType.PIPELINE.name },
 )
 
 /**
@@ -223,6 +232,8 @@ fun nodeIoRecordToConsoleSpan(record: RunTraceRecord.NodeIo): ConsoleTraceSpan =
     startedAt = TIMESTAMP_FORMATTER.format(Instant.ofEpochMilli(record.timestamp)),
     status = SpanStatus.Ok,
     depth = record.depth,
+    inputSha256 = record.inputSha256.takeUnless { record.nodeType == NodeType.PIPELINE.name },
+    outputSha256 = record.outputSha256.takeUnless { record.nodeType == NodeType.PIPELINE.name },
 )
 
 /**

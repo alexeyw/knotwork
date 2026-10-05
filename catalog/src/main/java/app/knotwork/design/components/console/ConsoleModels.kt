@@ -114,8 +114,19 @@ data class ConsoleLine(
  * @property depth pipeline-nesting level of the run that produced the row
  * (`0` top-level, `1` a direct sub-pipeline, …). The Vars tab indents the node
  * group by this level so a sub-pipeline's nodes nest under the spawning node.
+ * @property inputSha256 SHA-256 of the node's input, shown as a chip under the
+ *   node's section header; `null` hides it (a sub-pipeline has no hash of its own).
+ *   A node group shares one value, read from its first row.
+ * @property outputSha256 SHA-256 of the node's output, as [inputSha256].
  */
-data class ConsoleVarRow(val node: String, val key: String, val valueJson: String, val depth: Int = 0)
+data class ConsoleVarRow(
+    val node: String,
+    val key: String,
+    val valueJson: String,
+    val depth: Int = 0,
+    val inputSha256: String? = null,
+    val outputSha256: String? = null,
+)
 
 /** Outcome of a [ConsoleTraceSpan]. Drives the trailing chip in the trace row. */
 enum class SpanStatus {
@@ -136,6 +147,9 @@ enum class SpanStatus {
  * @property depth pipeline-nesting level of the run that produced the span
  * (`0` top-level, `1` a direct sub-pipeline, …). The Traces tab indents the
  * span by this level so a sub-pipeline's spans nest under the `PIPELINE` node.
+ * @property inputSha256 SHA-256 of the node's input, shown as a chip under the
+ *   bar; `null` hides it (a sub-pipeline has no hash of its own).
+ * @property outputSha256 SHA-256 of the node's output, as [inputSha256].
  */
 data class ConsoleTraceSpan(
     val name: String,
@@ -143,4 +157,6 @@ data class ConsoleTraceSpan(
     val startedAt: String,
     val status: SpanStatus,
     val depth: Int = 0,
+    val inputSha256: String? = null,
+    val outputSha256: String? = null,
 )

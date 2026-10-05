@@ -65,8 +65,10 @@ import app.knotwork.android.domain.report.ContentReportComposer
 import app.knotwork.android.domain.report.ContentReportReason
 import app.knotwork.android.presentation.ui.chat.CHAT_EXPORT_MIME_JSON
 import app.knotwork.android.presentation.ui.chat.toShareChooser
+import app.knotwork.android.presentation.ui.common.JournalExportCopy
 import app.knotwork.android.presentation.ui.common.RunTerminationAction
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
+import app.knotwork.android.presentation.ui.common.rememberJournalExportHandlers
 import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
@@ -74,6 +76,8 @@ import app.knotwork.design.components.chat.AudioSourceChooserSheet
 import app.knotwork.design.components.chat.ChatContextAction
 import app.knotwork.design.components.chat.ImageViewer
 import app.knotwork.design.components.chat.SourceChooserSheet
+import app.knotwork.design.components.console.HashKind
+import app.knotwork.design.components.console.RunSettingsTarget
 import app.knotwork.design.components.controls.KnotworkField
 import app.knotwork.design.components.controls.KnotworkTextField
 import app.knotwork.design.components.dialogs.ConfirmDialog
@@ -83,6 +87,7 @@ import app.knotwork.design.components.knotworkMarkdownTypography
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chat.ChatHomeCallbacks
 import app.knotwork.design.screens.chat.ChatHomeContent
+import app.knotwork.design.screens.chat.ChatHomeRunCallbacks
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 import com.mikepenz.markdown.m3.Markdown
@@ -114,6 +119,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * @param onOpenRunLimits deep-link callback into the run-limits screen, offered
  *   on a run that a ceiling stopped — the one action that can change the
  *   outcome, where retrying the same turn cannot.
+ * @param onOpenGenerationSettings opens Settings → Generation, where the run strip
+ *   sends a context-window mismatch.
  * @param modifier optional layout modifier applied to the screen root.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,6 +132,7 @@ fun ChatHomeScreen(
     onOpenModels: () -> Unit = {},
     onOpenArchive: () -> Unit = {},
     onOpenRunLimits: () -> Unit = {},
+    onOpenGenerationSettings: () -> Unit = {},
 ) {
     // Single subscription to the consolidated screen state — the immutable
     // sub-structures (composer, console, pending, thread, model, tokens)
@@ -239,6 +247,45 @@ fun ChatHomeScreen(
     LaunchedEffect(viewModel) {
         viewModel.pipelineBinding.pipelineFallbackEvents.collect {
             snackbarHostState.showSnackbar(message = pipelineFallbackMessage)
+        }
+    }
+    val runCopiedSeed = stringResource(R.string.run_copied_seed)
+    val runCopiedSha = stringResource(R.string.run_copied_sha)
+    val runCopiedDigest = stringResource(R.string.run_copied_digest)
+    val runCopiedHashTemplate = stringResource(R.string.run_copied_hash)
+    val runHashInput = stringResource(R.string.run_hash_input)
+    val runHashOutput = stringResource(R.string.run_hash_output)
+    val runCopiedVerificationHash = stringResource(R.string.run_copied_verification_hash)
+    val runAgainTemplate = stringResource(R.string.run_again_snackbar)
+    val runTraceExport = rememberJournalExportHandlers(
+        delegate = viewModel.run.export,
+        snackbarHostState = snackbarHostState,
+        copy = JournalExportCopy.RunTrace,
+    )
+    LaunchedEffect(viewModel) {
+        viewModel.run.events.collect { event ->
+            when (event) {
+                is RunHeaderEvent.Copy -> {
+                    clipboardManager.setText(AnnotatedString(event.text))
+                    val message = when (val what = event.what) {
+                        Copied.Seed -> runCopiedSeed
+                        Copied.ModelSha -> runCopiedSha
+                        Copied.Digest -> runCopiedDigest
+                        Copied.VerificationHash -> runCopiedVerificationHash
+                        is Copied.NodeHash -> runCopiedHashTemplate.format(
+                            if (what.kind == HashKind.INPUT) runHashInput else runHashOutput,
+                            what.node,
+                        )
+                    }
+                    snackbarHostState.showSnackbar(message = message)
+                }
+                is RunHeaderEvent.RunningAgain ->
+                    snackbarHostState.showSnackbar(message = runAgainTemplate.format(event.seed))
+                is RunHeaderEvent.OpenSettings -> when (event.target) {
+                    RunSettingsTarget.SETTINGS -> onOpenSettings()
+                    RunSettingsTarget.GENERATION -> onOpenGenerationSettings()
+                }
+            }
         }
     }
     LaunchedEffect(viewModel) {
@@ -430,6 +477,31 @@ fun ChatHomeScreen(
         },
         onConsoleClear = viewModel.console::requestConsoleClear,
         onCloseConsole = viewModel.console::closeConsole,
+        run = ChatHomeRunCallbacks(
+            onToggleHeader = viewModel.run::toggleHeader,
+            onCopySeed = viewModel.run::copySeed,
+            onCopyModelSha = viewModel.run::copyModelSha,
+            onCopyDigest = viewModel.run::copyDigest,
+            onVerify = viewModel.run.verification::verify,
+            onRunAgain = viewModel.run::runAgain,
+            onExport = viewModel.run::openExport,
+            onOpenSettings = viewModel.run::openSettings,
+            onCopyHash = viewModel.run::copyNodeHash,
+            onConfirmVerify = viewModel.run.verification::confirm,
+            onDismissVerifyConfirm = viewModel.run.verification::dismissConfirm,
+            onConfirmRunAgain = viewModel.run::confirmRunAgain,
+            onDismissRunAgainConfirm = viewModel.run::dismissRunAgainConfirm,
+            onCancelVerification = viewModel.run.verification::cancel,
+            onVerifyAgain = viewModel.run.verification::again,
+            onCopyVerificationHash = viewModel.run::copyVerificationHash,
+            onCloseVerification = viewModel.run.verification::close,
+            onShareExport = viewModel.run::shareExport,
+            onSaveExport = {
+                viewModel.run.dismissExport()
+                runTraceExport.onSave()
+            },
+            onDismissExport = viewModel.run::dismissExport,
+        ),
         onHitlAllowOnce = viewModel.hitl::approveTool,
         onHitlReject = viewModel.hitl::rejectTool,
         onHitlTypedConfirmChange = viewModel.hitl::onTypedConfirmChange,
