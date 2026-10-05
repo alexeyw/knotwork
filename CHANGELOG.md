@@ -54,7 +54,8 @@ details.
   An action that is not available says why next to it; a backend or window that no
   longer matches names both values and where to change it. The check runs in its
   own sheet, node by node, and says which node diverged first. Each node in
-  **Traces** and **Vars** shows its input and output hash; a tap copies it.
+  **Traces** and **Vars** shows its input and output hash; a tap copies it. The
+  header says the actions work while the run is kept, and where run history is set.
 - **Each installed model file has a SHA-256.** The app reads a model file once,
   in the background, after it is downloaded — and once for every model installed
   before this release — and keeps the checksum with the model. A file replaced on

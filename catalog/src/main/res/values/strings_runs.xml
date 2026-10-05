@@ -80,6 +80,8 @@
     <string name="knotwork_run_action_export_line">JSON · header, records, hashes, run digest</string>
     <string name="knotwork_run_action_export_line_pre">JSON · records only, no seed or hashes</string>
     <string name="knotwork_run_action_busy">Available when the run finishes.</string>
+    <!-- Under the three actions: a run, its trace and its record go together when retention removes them. -->
+    <string name="knotwork_run_kept_note">Verify, Run again and Export work while this run is kept. How much run history stays is set in Settings → Privacy.</string>
     <string name="knotwork_run_action_dimmed_a11y">%1$s, dimmed. %2$s</string>
     <string name="knotwork_run_verify_no_local">Nothing to re-run: no answer in this run came from the on-device model.</string>
     <string name="knotwork_run_verify_pre_version">Not available: no seed was recorded.</string>
