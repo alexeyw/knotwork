@@ -292,6 +292,8 @@ fun ChatHomeScreenState.toViewState(
         // flight, so it can coexist with any visual — generating, or a HITL
         // gate held open — rather than belonging to one of them.
         runNotice = runNotice?.toCatalog(resolveText),
+        // The run's surfaces sit over the console, whatever the chat is doing.
+        run = run,
     )
 }
 

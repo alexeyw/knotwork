@@ -2,6 +2,8 @@ package app.knotwork.android.presentation.ui.common
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +32,44 @@ import java.io.IOException
 private data class PendingExportMessage(val sequence: Int, val text: UiText)
 
 /**
+ * What the share chooser and the outcome messages call an exported document.
+ *
+ * @property chooserTitle The share chooser's title.
+ * @property shareFailed No app could receive the file.
+ * @property saveFailed The picked file could not be written.
+ * @property renderFailed Nothing could be produced to share or save.
+ * @property saved The plural saying how many entries were saved.
+ */
+data class JournalExportCopy(
+    @StringRes val chooserTitle: Int,
+    @StringRes val shareFailed: Int,
+    @StringRes val saveFailed: Int,
+    @StringRes val renderFailed: Int,
+    @PluralsRes val saved: Int,
+) {
+    /** The two journals' copy, and the defaults. */
+    companion object {
+        /** The trigger and external-request journals. */
+        val Journal: JournalExportCopy = JournalExportCopy(
+            chooserTitle = R.string.journal_export_chooser_title,
+            shareFailed = R.string.journal_export_share_failed,
+            saveFailed = R.string.journal_export_save_failed,
+            renderFailed = R.string.journal_export_render_failed,
+            saved = R.plurals.journal_export_saved,
+        )
+
+        /** A run's trace. */
+        val RunTrace: JournalExportCopy = JournalExportCopy(
+            chooserTitle = R.string.run_trace_export_chooser_title,
+            shareFailed = R.string.journal_export_share_failed,
+            saveFailed = R.string.run_trace_export_save_failed,
+            renderFailed = R.string.run_trace_export_render_failed,
+            saved = R.plurals.run_trace_export_saved,
+        )
+    }
+}
+
+/**
  * The two journal-export actions a screen hands to its top bar.
  *
  * @property onShare Renders the journal and opens the system share sheet.
@@ -54,15 +94,17 @@ class JournalExportActionHandlers(val onShare: () -> Unit, val onSave: () -> Uni
  *
  * @param delegate The ViewModel's export half.
  * @param snackbarHostState Host every outcome is reported on.
+ * @param copy What the chooser and the outcome messages call the document.
  * @return The handlers to pass into the screen's top-bar actions.
  */
 @Composable
 fun rememberJournalExportHandlers(
     delegate: JournalExportDelegate,
     snackbarHostState: SnackbarHostState,
+    copy: JournalExportCopy = JournalExportCopy.Journal,
 ): JournalExportActionHandlers {
     val context = LocalContext.current
-    val chooserTitle = stringResource(R.string.journal_export_chooser_title)
+    val chooserTitle = stringResource(copy.chooserTitle)
 
     // Outcomes are held as UiText and resolved in composition below, rather than
     // read off `Context` inside the collector: the `LocalContextGetResourceValueCall`
@@ -98,7 +140,7 @@ fun rememberJournalExportHandlers(
         if (stream != null) {
             delegate.saveTo(stream)
         } else {
-            pending = PendingExportMessage(++emitted, UiText(R.string.journal_export_save_failed))
+            pending = PendingExportMessage(++emitted, UiText(copy.saveFailed))
         }
     }
 
@@ -114,18 +156,18 @@ fun rememberJournalExportHandlers(
                     )
                     // A share sheet that opened needs no confirmation — the user is
                     // looking at it. Only its absence has to be said out loud.
-                    if (shared) null else UiText(R.string.journal_export_share_failed)
+                    if (shared) null else UiText(copy.shareFailed)
                 }
 
                 is JournalExportEvent.Saved -> UiText.Plural(
-                    id = R.plurals.journal_export_saved,
+                    id = copy.saved,
                     quantity = event.entryCount,
                     args = listOf(event.entryCount),
                 )
 
-                JournalExportEvent.SaveFailed -> UiText(R.string.journal_export_save_failed)
+                JournalExportEvent.SaveFailed -> UiText(copy.saveFailed)
 
-                JournalExportEvent.RenderFailed -> UiText(R.string.journal_export_render_failed)
+                JournalExportEvent.RenderFailed -> UiText(copy.renderFailed)
             }
             if (text != null) pending = PendingExportMessage(++emitted, text)
         }

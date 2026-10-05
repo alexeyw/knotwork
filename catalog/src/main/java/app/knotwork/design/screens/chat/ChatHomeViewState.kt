@@ -9,12 +9,19 @@ import app.knotwork.design.components.chat.ComposerAttachment
 import app.knotwork.design.components.chat.ComposerState
 import app.knotwork.design.components.chat.ComposerVoiceNotice
 import app.knotwork.design.components.console.ConsoleFilter
+import app.knotwork.design.components.console.ConsoleHashCopy
 import app.knotwork.design.components.console.ConsoleLine
 import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleSource
 import app.knotwork.design.components.console.ConsoleTab
 import app.knotwork.design.components.console.ConsoleTraceSpan
 import app.knotwork.design.components.console.ConsoleVarRow
+import app.knotwork.design.components.console.RunAgainConfirmUi
+import app.knotwork.design.components.console.RunExportUi
+import app.knotwork.design.components.console.RunHeaderUi
+import app.knotwork.design.components.console.RunSettingsTarget
+import app.knotwork.design.components.console.VerificationUi
+import app.knotwork.design.components.console.VerifyConfirmUi
 
 /**
  * Visual variant of the chat-home surface. Drives chrome differences
@@ -151,6 +158,9 @@ data class ChatHomeSamplePromptCard(val id: String, val title: String, val tools
  * @property vars Vars-tab data.
  * @property traces Traces-tab data.
  * @property filter source filter applied to [logs].
+ * @property runHeader the run strip of the run the console shows, or `null` when
+ *   there is none (a chat with no run yet).
+ * @property runHeaderExpanded whether the run strip is open.
  */
 data class ChatHomeConsoleState(
     /**
@@ -176,6 +186,71 @@ data class ChatHomeConsoleState(
      * `onConsoleSearchToggle` callback.
      */
     val searchQuery: String? = null,
+    val runHeader: RunHeaderUi? = null,
+    val runHeaderExpanded: Boolean = false,
+)
+
+/**
+ * The surfaces of the run the console shows, over the console: the check's sheet,
+ * the two confirmations and the export sheet. Each is `null` while closed.
+ *
+ * @property verification the check's sheet.
+ * @property verifyConfirm the confirmation before a long check.
+ * @property runAgainConfirm the confirmation before starting the run again with its seed.
+ * @property export the trace export sheet.
+ */
+data class ChatHomeRunState(
+    val verification: VerificationUi? = null,
+    val verifyConfirm: VerifyConfirmUi? = null,
+    val runAgainConfirm: RunAgainConfirmUi? = null,
+    val export: RunExportUi? = null,
+)
+
+/**
+ * What the run strip and its surfaces ask the host to do.
+ *
+ * @property onToggleHeader opens or closes the run strip.
+ * @property onCopySeed copies the seed.
+ * @property onCopyModelSha copies a model file's full SHA-256.
+ * @property onCopyDigest copies the run digest.
+ * @property onVerify starts the check, or asks first when it is long.
+ * @property onRunAgain asks before starting the run again with its seed.
+ * @property onExport opens the trace export.
+ * @property onOpenSettings opens where a mismatch is fixed.
+ * @property onCopyHash copies a node's input or output hash from the Vars or Traces tab.
+ * @property onConfirmVerify starts the check after its confirmation.
+ * @property onDismissVerifyConfirm closes the check's confirmation.
+ * @property onConfirmRunAgain starts the run again after its confirmation.
+ * @property onDismissRunAgainConfirm closes that confirmation.
+ * @property onCancelVerification stops the check.
+ * @property onVerifyAgain starts the check again.
+ * @property onCopyVerificationHash copies a recorded or replayed hash.
+ * @property onCloseVerification closes the check's sheet.
+ * @property onShareExport hands the export to the share sheet.
+ * @property onSaveExport saves the export to a file.
+ * @property onDismissExport closes the export sheet.
+ */
+class ChatHomeRunCallbacks(
+    val onToggleHeader: () -> Unit = {},
+    val onCopySeed: () -> Unit = {},
+    val onCopyModelSha: (String) -> Unit = {},
+    val onCopyDigest: () -> Unit = {},
+    val onVerify: () -> Unit = {},
+    val onRunAgain: () -> Unit = {},
+    val onExport: () -> Unit = {},
+    val onOpenSettings: (RunSettingsTarget) -> Unit = {},
+    val onCopyHash: (ConsoleHashCopy) -> Unit = {},
+    val onConfirmVerify: () -> Unit = {},
+    val onDismissVerifyConfirm: () -> Unit = {},
+    val onConfirmRunAgain: () -> Unit = {},
+    val onDismissRunAgainConfirm: () -> Unit = {},
+    val onCancelVerification: () -> Unit = {},
+    val onVerifyAgain: () -> Unit = {},
+    val onCopyVerificationHash: (String) -> Unit = {},
+    val onCloseVerification: () -> Unit = {},
+    val onShareExport: () -> Unit = {},
+    val onSaveExport: () -> Unit = {},
+    val onDismissExport: () -> Unit = {},
 )
 
 /**
@@ -213,6 +288,7 @@ data class ChatHomeConsoleState(
  * @property console console-pane snapshot, used when [visualState] is
  *   [ChatHomeVisualState.ConsoleExpanded].
  * @property samplePrompts suggestion chips rendered in the empty state.
+ * @property run the surfaces of the run the console shows.
  */
 data class ChatHomeViewState(
     val visualState: ChatHomeVisualState,
@@ -302,6 +378,7 @@ data class ChatHomeViewState(
      * still has to carry [errorMessage].
      */
     val explainedInThread: Boolean = false,
+    val run: ChatHomeRunState = ChatHomeRunState(),
 ) {
     init {
         require(
@@ -363,6 +440,8 @@ class ChatHomeCallbacks(
     val onConsoleCopyAll: () -> Unit = {},
     val onConsoleClear: () -> Unit = {},
     val onCloseConsole: () -> Unit = {},
+    /** The run strip and its surfaces. */
+    val run: ChatHomeRunCallbacks = ChatHomeRunCallbacks(),
     val onHitlAllowOnce: () -> Unit = {},
     val onHitlAllowAlways: (() -> Unit)? = null,
     val onHitlReject: () -> Unit = {},

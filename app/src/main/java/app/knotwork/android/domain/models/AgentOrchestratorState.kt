@@ -203,6 +203,9 @@ sealed interface AgentOrchestratorState {
      * @property depth Pipeline-nesting level of the run this step belongs to
      *   (`0` top-level, `1` direct sub-pipeline, …). The Traces tab nests a
      *   sub-pipeline's spans under the `PIPELINE` node that spawned them.
+     * @property inputSha256 SHA-256 of the node's input, as the trace records it;
+     *   `null` where none is shown.
+     * @property outputSha256 SHA-256 of the node's output, as the trace records it.
      */
     data class TraceStep(
         val nodeName: String,
@@ -210,6 +213,8 @@ sealed interface AgentOrchestratorState {
         val durationMs: Long = 0,
         val tokenCount: Int? = null,
         val depth: Int = 0,
+        val inputSha256: String? = null,
+        val outputSha256: String? = null,
     )
 
     /**
@@ -255,6 +260,9 @@ sealed interface AgentOrchestratorState {
      * @property depth Pipeline-nesting level of the run this node belongs to
      *   (`0` top-level, `1` direct sub-pipeline, …). The Vars tab renders a
      *   sub-pipeline's rows indented under the spawning `PIPELINE` node.
+     * @property inputSha256 SHA-256 of [input], as the trace records it; `null`
+     *   where none is shown.
+     * @property outputSha256 SHA-256 of [output], as the trace records it.
      */
     data class NodeIO(
         val nodeId: String,
@@ -262,6 +270,8 @@ sealed interface AgentOrchestratorState {
         val input: String,
         val output: String,
         val depth: Int = 0,
+        val inputSha256: String? = null,
+        val outputSha256: String? = null,
     ) : AgentOrchestratorState
 }
 

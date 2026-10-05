@@ -8,6 +8,7 @@ import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.HardCeilingBreach
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.PipelineSamplePrompt
@@ -153,6 +154,7 @@ constructor(
     private val archiveChatUseCase: ArchiveChatUseCase,
     private val exportChatUseCase: ExportChatUseCase,
     private val unarchiveChatUseCase: UnarchiveChatUseCase,
+    private val runUseCases: ChatHomeRunUseCases,
 ) : ViewModel() {
 
     private val _state: MutableStateFlow<ChatHomeScreenState> = MutableStateFlow(ChatHomeScreenState())
@@ -259,6 +261,42 @@ constructor(
         runTraceRepository = runTraceRepository,
         pipelineRunRepository = pipelineRunRepository,
         traceProjectionDispatcher = { traceProjectionDispatcher },
+    )
+
+    /**
+     * Run-strip delegate: what the console's run ran with, its check, starting it
+     * again with its seed, and its trace export. The screen calls `viewModel.run.*`.
+     */
+    val run: ChatHomeRunDelegate = ChatHomeRunDelegate(
+        scope = viewModelScope,
+        state = _state,
+        pipelineRunRepository = pipelineRunRepository,
+        useCases = runUseCases,
+        generationSettings = settingsRepository,
+        // A finished run started again with its own seed and sampler: the run's
+        // message again, on the pipeline it executed, as a new turn in the thread.
+        // The console closes so the answer shows as it arrives.
+        // Like a send, it never starts behind a generation in progress, and it loads
+        // the model first when the model was released while the app was idle.
+        startRunAgain = { request ->
+            val start = {
+                launchRun(
+                    sessionId = request.sessionId,
+                    prompt = request.userPrompt,
+                    displayContent = null,
+                    readyAttachment = null,
+                    pipelineId = request.pipelineId,
+                    samplingOverride = request.sampling,
+                )
+            }
+            val idle = _state.value.visual !is ChatHomeUiState.Generating
+            val starts = request.sessionId == _state.value.thread.currentSessionId && idle
+            if (starts) {
+                console.closeConsole()
+                if (llmInferenceEngine.isInitialized) start() else loadModelThenSend(send = start)
+            }
+            starts
+        },
     )
 
     /**
@@ -537,6 +575,10 @@ constructor(
      * @param displayContent what the user's bubble shows, when it differs from
      *   [prompt] (an image-only message has an empty caption but a real prompt).
      * @param readyAttachment attachment to carry with the turn, if any.
+     * @param persistUserMessage whether the run writes the user message into the chat.
+     * @param pipelineId the pipeline to run; `null` takes the chat's bound one.
+     * @param samplingOverride a recorded run's seed and sampler, for a run started
+     *   again with them; `null` for a fresh seed and the current sampler.
      */
     private fun launchRun(
         sessionId: String,
@@ -544,8 +586,10 @@ constructor(
         displayContent: String?,
         readyAttachment: MessageAttachment?,
         persistUserMessage: Boolean = true,
+        pipelineId: String? = null,
+        samplingOverride: LocalSampling? = null,
     ) {
-        val pipelineId = threads.sessionsSnapshot().firstOrNull { it.id == sessionId }?.pipelineId
+        val runPipelineId = pipelineId ?: threads.sessionsSnapshot().firstOrNull { it.id == sessionId }?.pipelineId
 
         // Fresh run = fresh cumulative log upstream; the baseline carried
         // over from a previous run's mid-stream Clear no longer applies
@@ -594,10 +638,11 @@ constructor(
             agentOrchestratorUseCase(
                 sessionId = sessionId,
                 userPrompt = prompt,
-                pipelineId = pipelineId,
+                pipelineId = runPipelineId,
                 attachment = readyAttachment,
                 displayContent = displayContent,
                 persistUserMessage = persistUserMessage,
+                samplingOverride = samplingOverride,
             )
                 .catch { error ->
                     _state.update {
@@ -676,8 +721,11 @@ constructor(
      * [ChatHomeUiState.Error] without clearing the composer, so Retry — or the
      * user, after registering a model in Settings — can resend. Tracked via
      * [modelLoadJob] so [stopGeneration] can cancel the pending send.
+     *
+     * @param send What goes out once the model is loaded: the composer's draft by
+     *   default; the run strip passes a run started again with its seed.
      */
-    private fun loadModelThenSend() {
+    private fun loadModelThenSend(send: () -> Unit = ::sendMessage) {
         _state.update { it.copy(visual = ChatHomeUiState.Generating(preparingModel = true)) }
         modelLoadJob?.cancel()
         modelLoadJob = viewModelScope.launch {
@@ -694,7 +742,7 @@ constructor(
                         // resting visual is derived from the live receiver so a
                         // message emission that landed during the load is honoured.
                         _state.update { it.copy(visual = it.restingVisual()) }
-                        sendMessage()
+                        send()
                     } else {
                         // Defensive: a reported success that somehow left the
                         // engine uninitialised must not loop back into another
@@ -890,6 +938,7 @@ constructor(
         }
         observeMessages(threadId)
         reattach.reattachToRun(threadId)
+        run.observe(threadId)
         viewModelScope.launch {
             settingsRepository.setCurrentChatSessionId(threadId)
             // The pipelines / sessions flows do not re-emit on a thread
@@ -961,6 +1010,7 @@ constructor(
             }
             observeMessages(sessionId)
             reattach.reattachToRun(sessionId)
+            run.observe(sessionId)
         }
     }
 

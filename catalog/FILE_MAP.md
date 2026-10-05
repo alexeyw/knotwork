@@ -79,6 +79,14 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ConsoleEntryStrip.kt` - the console's own entry point: `console │ [NODE] idle · ready ⌃`. One element in two positions — above the composer when closed, the console sheet's own header when open. It carries the literal word because `Role.Button` plus a content description was not enough to make it findable by eye.
     - `ConsoleModels.kt` - `ConsoleSnap`, `ConsoleTab`, `ConsoleSource`, `ConsoleLevel`, `ConsoleFilter`, `ConsoleLine`, `ConsoleVarRow`, `ConsoleTraceSpan`, `SpanStatus`.
     - `ConsolePane.kt` - bottom-sheet container with sticky header, three tabs, source-filter chips, and per-tab body.
+    - `HashChip.kt` - A copyable short-hash chip: the shared shape of the console chips and the recorded / replayed hashes of a diverged visit.
+    - `RunAgainConfirmDialog.kt` - The confirmation before starting a run again with its seed.
+    - `RunExportSheet.kt` - The trace export: the file's name and size in mono, what the file holds — every prompt the model read, memory excerpts and chat history inside them — the not-signed sentence, then Share and Save to file, as the journals offer them.
+    - `RunHeaderStrip.kt` - The run strip: the run the console belongs to, between the console's handle and its tabs.
+    - `RunHeaderUi.kt` - What the console's run strip shows about the run the console belongs to: one line collapsed, every recorded field, the promise and three actions expanded.
+    - `VerificationSheet.kt` - The check of a finished run, in its own sheet over the console, on the app's surface (it follows the theme; the console behind it stays dark).
+    - `VerificationUi.kt` - What the check's sheet shows: the run it checks, where the check stands, and every node visit of the run in run order with its verdict.
+    - `VerifyConfirmDialog.kt` - The confirmation before a long check: how many re-runs, from what, with which seed, compared how, and that tools are not run again; then the estimate in mono and that the model is busy until it finishes.
   - `controls/` - text-input + slider atoms per `inputs-and-chips.md` §1–§5.
     - `KnotworkCompactSlider.kt` - 4×18 dp pill thumb + 4 dp track.
     - `KnotworkField.kt` - caps-label + helper / error wrapper (M3 floating label intentionally off across the design system).
@@ -265,6 +273,8 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ChatHomeContentPreview.kt` - Android Studio `@Preview` group for the chat variants in both themes.
     - `ChatHomeDrawer.kt` - the alternate-nav drawer overlay extracted from `ChatHomeContent.kt`: sessions list, `+ New chat` pill, the thread row (`⋮` menu = Rename / Archive / — / Delete chat, plus a one-action Archive swipe and TalkBack custom actions; drops its status dot at font-scale 200 %) and the footer rows (`Archived chats` only when the count is positive, `Import chat`, `Settings`).
     - `ChatHomePreviewData.kt` - deterministic preview fixtures for the chat surface (thread, model, message rows, HITL / clarification cards).
+    - `ChatHomeRunPreview.kt` - Fixtures for the run strip, the check's sheet, the confirmations and the export sheet, over the chat with the console open.
+    - `ChatHomeRunSurfaces.kt` - The surfaces of the run the console shows: the check's sheet, the export sheet and the two confirmations, each drawn while its state is set.
     - `ChatHomeViewState.kt` - visual-state enum (Loading / Empty / Idle / Generating / HitlConfirm / Clarification / Error / DrawerOpen / ConsoleExpanded) + message / thread row models.
     - `ReportResponseDialog.kt` - Dialog collecting a user's flag against a model-authored message.
     - `ReportResponseDialogPreview.kt` - Preview fixtures for the content-report dialog.
@@ -432,6 +442,7 @@ matters.
     - `ConsoleFilterTest.kt` - Pure-JVM tests for `ConsoleFilter` — the predicate used by `ConsolePane`'s Logs tab to drop filtered-out sources.
     - `ConsoleSearchAffordanceTest.kt` - Pins the console's Search action to the Logs tab.
     - `ConsoleSnapTest.kt` - Documents the discrete `ConsoleSnap` heights as preview-only fixtures.
+    - `RunHeaderAffordanceTest.kt` - What the run strip, the hash chips and the check's sheet do when used: the line toggles, each copy button hands over the whole value, a disabled action does nothing yet stays readable, and a mismatch's button names where it is fixed.
   - `dialogs/` - the shared dialog shapes, currently the outcome family.
     - `DialogsSnapshotTest.kt` - Roborazzi baselines for the two field-free dialogs that moved out of the settings screen.
     - `OutcomeDialogSnapshotTest.kt` - Roborazzi baselines for the `OutcomeDialog` family — the four import outcomes and the re-import question, in one shape.
@@ -472,6 +483,8 @@ matters.
     - `ChatHomeEmptyFitTest.kt` - A new chat's suggestion cards must all be reachable, however little height the screen leaves them.
     - `HeroSnapshotTest.kt` - Roborazzi baselines for the README hero shots at the canonical pixel resolution promised in `README.md` (1080 × 2400, the de-facto-standard Pixel-class portrait viewport used by every modern Android-store marketing surface).
     - `ReportResponseDialogSnapshotTest.kt` - Roborazzi baselines for the content-report dialog.
+    - `RunHeaderSnapshotTest.kt` - Roborazzi baselines for the run strip in every state the design draws, the Traces and Vars hash chips, the run-again confirmation and the export sheet — over the chat with the console open, in both themes.
+    - `VerificationSheetSnapshotTest.kt` - Roborazzi baselines for the check of a run: its confirmation, the sheet while calls are repeated, and every ending — all matched, mixed with cloud calls, diverged, nothing verifiable, cancelled, the model failing to load — over the console, in both themes.
   - `chatarchive/` - the chat archive, including the font-scale-200 % layouts where the row sheds its decoration.
     - `ChatArchiveAccessibilityTest.kt` - Accessibility audit of the chat-archive surface.
     - `ChatArchiveContentSnapshotTest.kt` - Roborazzi baselines for the chat-archive surface across its documented states in both themes, plus the two font-scale-200 % layouts where the row sheds its decoration.

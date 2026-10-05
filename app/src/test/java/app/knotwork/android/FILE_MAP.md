@@ -504,6 +504,7 @@ Only Kotlin files appear inside the generated blocks.
       - `ListWorkspaceUseCaseTest.kt` - Verifies that `ListWorkspaceUseCase` bundles the listing + usage and short-circuits on failure.
       - `PreviewWorkspaceFileUseCaseTest.kt` - Verifies `PreviewWorkspaceFileUseCase` delegates with the fixed preview budget.
   - `verification/` - Tests of the run check: the plan's refusals and visit kinds, the repeat and its stops, the reproducibility policy, and the check end to end on a golden-harness run with the tool catalogue refusing calls.
+    - `DescribeRunUseCaseTest.kt` - `DescribeRunUseCase`: what the run header shows — the model files the calls used, how much a cloud model answered, the digest, the promise, and whether the check and the start-again are offered — from one reading of the run.
     - `ExportRunTraceUseCaseTest.kt` - The run trace export — `ExportRunTraceUseCase` over `BuildRunTraceExportUseCase`: the header, every record of every run in tree order with its hashes and the full prompts, and the digest; a run recorded before headers as records only; nothing for a run still going.
     - `PlanRunAgainWithSeedUseCaseTest.kt` - `PlanRunAgainWithSeedUseCase`: offered for a finished chat or share run without an image, on the pipeline it executed, with its own seed and sampler — and otherwise named why not.
     - `PlanRunVerificationUseCaseTest.kt` - `PlanRunVerificationUseCase`: whether a finished run can be checked here now, and the plan — every visit in run order, sub-pipelines in place, each with the calls it repeats or the reason it does not.
@@ -555,10 +556,13 @@ Only Kotlin files appear inside the generated blocks.
         - `ChatHomeConsoleMappingTest.kt` - Unit coverage for the pure-Kotlin mappers in `ChatHomeConsoleMapping`.
         - `ChatHomeConsoleStreamingTest.kt` - Coverage for `ChatHomeViewModel` console pane aggregation: how the orchestrator-emitted `ConsoleLog` / `PipelineTrace` / `NodeIO` states are projected into the three console-pane tabs, and how Clear / Copy / Tab callbacks interact with the resulting flows.
         - `ChatHomeMockFactoryCoverageTest.kt` - Guards the instrumented mock factory against a one-shot event flow it does not stub.
+        - `ChatHomeRunDelegateTest.kt` - `ChatHomeRunDelegate`: the strip follows the console's run, a long check asks first and a short one starts, the check's events fill the sheet, a start-again asks then hands the recorded seed to the send path, and the export renders before its sheet opens.
         - `ChatHomeStateMappingTest.kt` - Pure-Kotlin unit tests for `ChatHomeScreenState.toViewState` — the boundary mapper between the aggregated screen state owned by `:app` and the `app.knotwork.design.screens.chat.ChatHomeViewState` consumed by the stateless `ChatHomeContent` in `:catalog`.
         - `ChatHomeViewModelTest.kt` - Unit-tests for `ChatHomeViewModel`.
         - `ConsoleCopyPayloadsTest.kt` - Unit tests for `ConsoleCopyPayloads`.
         - `ContentReportIssueUrlTest.kt` - Unit tests for `contentReportIssueUrl`.
+        - `RunDisplayTest.kt` - The run strip's projection of a run: numbers written for reading, the line and fields per case, the promise's wording, the actions' reasons, and when a check asks first.
+        - `VerificationProgressTest.kt` - `VerificationProgress`: the check's sheet frame by frame — the first repeated visit checking, calls advancing within a visit, a settled visit handing over to the next, the time left shrinking, and each ending leaving the visits it never reached as "not checked".
     - `common/` - Tests for the shared presentation helpers.
       - `ConnectionTestTest.kt` - Unit tests for `ConnectionTest`, the state of a Test connection row.
       - `JournalExportDelegateTest.kt` - Behaviour of the shared journal-export half of the two journal ViewModels.

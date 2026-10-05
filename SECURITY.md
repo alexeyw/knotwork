@@ -426,6 +426,16 @@ new risk surface, and the design constrains it deliberately:
   failed run's error message, which can quote the failing call — and never a
   run's prompt or answer. Once the share sheet hands the file to
   another app, that app's handling is outside this threat model.
+- **A run's trace can be exported, by you, over no network — and it carries the
+  prompts.** *Export trace* in the console writes one finished run to the share
+  sheet or a picked file on an explicit action; a separate architecture check
+  keeps network clients off that path. Unlike the journals, the file holds every
+  full prompt the on-device model read (memory excerpts and chat history
+  included) and every answer, so it is as sensitive as the conversation. The
+  hashes and the run digest in it show that a repeat matches the record; they
+  are not a signature and prove nothing about who produced the run. *Verify*
+  repeats only recorded on-device model calls and never runs a tool — an
+  architecture check refuses any dependency that could reach one.
 - **Each trigger owns one bound chat.** A trigger's runs land in a single chat
   session named after it (recurring fires accumulate there), so the results of an
   autonomous run are visible and auditable in the same encrypted store as the

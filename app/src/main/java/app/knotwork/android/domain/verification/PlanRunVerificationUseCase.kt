@@ -41,11 +41,19 @@ class PlanRunVerificationUseCase @Inject constructor(
      * @param rootRunId The run the console shows.
      * @return Whether the check can start, with the plan when it can.
      */
-    suspend operator fun invoke(rootRunId: String): VerifyAvailability {
-        val tree = readRecordedRunTree(rootRunId)
-        val header = tree?.root?.header
+    suspend operator fun invoke(rootRunId: String): VerifyAvailability =
+        readRecordedRunTree(rootRunId)?.let { invoke(it) } ?: VerifyAvailability.PreVersion
+
+    /**
+     * Plans the check of a run tree already read — so a caller that shows the run
+     * and offers its check reads the record once.
+     *
+     * @param tree The recorded run tree.
+     * @return Whether the check can start, with the plan when it can.
+     */
+    suspend operator fun invoke(tree: RecordedRunTree): VerifyAvailability {
+        val header = tree.root.header
         return when {
-            tree == null -> VerifyAvailability.PreVersion
             !tree.root.status.isTerminal -> VerifyAvailability.Busy
             header == null -> VerifyAvailability.PreVersion
             else -> availabilityOf(tree, header)
