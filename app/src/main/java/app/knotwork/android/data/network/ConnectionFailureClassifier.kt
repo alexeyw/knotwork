@@ -10,7 +10,10 @@ import app.knotwork.android.domain.engine.CloudErrorSanitizer
 import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.plugins.sse.SSEClientException
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.ContentConvertException
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpError
@@ -118,14 +121,23 @@ internal object ConnectionFailureClassifier {
         }
     }
 
-    /** A success whose body is not what was asked for: the wrong content type, or the wrong shape. */
+    /**
+     * A success whose body is not what was asked for: the wrong content type, or the wrong shape.
+     *
+     * Over SSE only a success that is not an event stream counts: Ktor wraps any failure inside an
+     * open SSE session in the same exception, carrying the event stream's own 200, and a stream that
+     * broke is not an address that is not MCP.
+     */
     private fun isNotTheList(error: Throwable): Boolean = when (error) {
-        is SSEClientException -> error.response?.status?.isSuccess() == true
+        is SSEClientException -> error.response?.let { it.status.isSuccess() && !it.isEventStream() } == true
         is StreamableHttpError -> error.code?.let { it <= 0 } == true
         is SerializationException, is ContentConvertException, is NoTransformationFoundException -> true
         is NotTheListException -> true
         else -> false
     }
+
+    private fun HttpResponse.isEventStream(): Boolean =
+        contentType()?.withoutParameters() == ContentType.Text.EventStream
 
     private fun transportFailure(chain: List<Throwable>, context: Context): ConnectionFailure? = when {
         chain.any { it is UnknownHostException } -> ConnectionFailure.UnknownHost

@@ -4,7 +4,8 @@ import app.knotwork.android.domain.models.CloudProvider
 
 /**
  * Checks that a model provider can be reached with the values in its settings form, by asking for
- * its model list — no prompt, no tokens, one attempt.
+ * its model list — no prompt, no tokens, one attempt. (OpenRouter's key is checked first: its model
+ * list answers any key.)
  *
  * The check is held to the rules a run is: the same gate, the same per-hop check of redirects, the
  * same deadlines. It reads the values the user entered rather than the saved ones, so it answers

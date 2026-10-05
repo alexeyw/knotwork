@@ -27,7 +27,7 @@ import kotlin.time.TimeSource
  *   cancelled and a result is dropped: the row goes back to [ConnectionTestState.Idle], or to
  *   [ConnectionTestState.Disabled] with the new reason.
  * - **Nothing outlives the form.** The check runs in the ViewModel's scope, so leaving the screen
- *   cancels it, and the next visit starts idle.
+ *   cancels it, and the next visit starts without a result.
  *
  * @property scope Where checks run — the owning ViewModel's scope.
  * @property timeSource The clock a running check's start is marked on.

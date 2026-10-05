@@ -7,7 +7,10 @@ import ai.koog.prompt.executor.clients.LLMClientException
 import app.knotwork.android.data.engine.HopRefusedException
 import app.knotwork.android.data.mcp.McpHandshakeTimeoutException
 import app.knotwork.android.domain.connection.ConnectionFailure
+import io.ktor.client.HttpClient
 import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.plugins.sse.SSE
+import io.ktor.client.plugins.sse.sse
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -223,4 +226,41 @@ class ConnectionFailureClassifierTest {
             )
         }
     }
+
+    /** What a real Ktor SSE client throws for [response], with [inSession] run once the session opens. */
+    private suspend fun sseFailure(response: MockResponse, inSession: () -> Unit = {}): Throwable =
+        MockWebServer().use { server ->
+            server.start()
+            server.enqueue(response)
+            HttpClient { install(SSE) }.use { client ->
+                try {
+                    withTimeout(10.seconds) { client.sse(server.url("/sse").toString()) { inSession() } }
+                    fail("expected the SSE session to fail")
+                    error("unreachable")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    e
+                }
+            }
+        }
+
+    @Test
+    fun `given an SSE address answering with a web page when classified then it is not MCP`() = runBlocking {
+        val page = MockResponse.Builder().code(200).addHeader("Content-Type", "text/html").body("<html/>").build()
+
+        assertEquals(ConnectionFailure.NotMcp, classify(sseFailure(page), context(mcp = true)))
+    }
+
+    @Test
+    fun `given an SSE stream that broke after it opened when classified then it is not taken for a wrong address`() =
+        runBlocking {
+            // Ktor wraps a failure inside an open session with the stream's own 200 response.
+            val stream = MockResponse.Builder().code(200).addHeader("Content-Type", "text/event-stream")
+                .chunkedBody(": keep-alive\n\n", maxChunkSize = 64).build()
+
+            val failure = classify(sseFailure(stream) { throw IOException("stream dropped") }, context(mcp = true))
+
+            assertEquals(ConnectionFailure.Other("stream dropped"), failure)
+        }
 }
