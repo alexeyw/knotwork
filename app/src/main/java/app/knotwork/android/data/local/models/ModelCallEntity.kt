@@ -50,6 +50,8 @@ import androidx.room.PrimaryKey
  * @property outputSha256 SHA-256 of [output].
  * @property cloudProvider Provider id of a cloud call.
  * @property cloudModel Model id of a cloud call, when known.
+ * @property durationMs How long a local call's stream took; added in v68
+ *   (`MIGRATION_67_68`), `null` for a call recorded before it.
  */
 @Entity(
     tableName = "model_calls",
@@ -97,6 +99,7 @@ data class ModelCallEntity(
     val outputSha256: String? = null,
     val cloudProvider: String? = null,
     val cloudModel: String? = null,
+    val durationMs: Long? = null,
 ) {
     /** The [engine] discriminator values. */
     companion object {

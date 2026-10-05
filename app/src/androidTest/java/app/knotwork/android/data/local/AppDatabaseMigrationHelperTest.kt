@@ -865,4 +865,31 @@ class AppDatabaseMigrationHelperTest {
             }
         }
     }
+
+    /**
+     * v67 → v68 adds `model_calls.durationMs`. A call recorded before the migration keeps its
+     * row with no duration — the run check then counts calls instead of estimating time. The
+     * schema must match the exported `68.json`.
+     */
+    @Test
+    fun migrate67to68_leavesExistingCallsWithoutDuration() {
+        helper.createDatabase(TEST_DB, 67).use { db ->
+            db.execSQL("INSERT INTO chat_sessions(id, name, updatedAt) VALUES('s1', 'chat', 0)")
+            db.execSQL(
+                "INSERT INTO pipeline_runs(id, sessionId, pipelineId, origin, status, startedAt, hadImage) " +
+                    "VALUES('r1', 's1', 'p1', 'CHAT', 'COMPLETED', 1, 0)",
+            )
+            db.execSQL(
+                "INSERT INTO model_calls(runId, sessionId, seq, timestamp, depth, nodeId, nodeType, visit, " +
+                    "callIndex, engine, hadImage) VALUES('r1', 's1', 0, 1, 0, 'n', 'LITE_RT', 0, 0, 'LOCAL', 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 68, true, AppDatabase.MIGRATION_67_68).use { db ->
+            db.query("SELECT durationMs FROM model_calls WHERE runId = 'r1'").use { c ->
+                assertTrue("the pre-existing call must survive the migration", c.moveToFirst())
+                assertTrue("a pre-existing call has no duration", c.isNull(0))
+            }
+        }
+    }
 }

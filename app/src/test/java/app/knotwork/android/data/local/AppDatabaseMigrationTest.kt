@@ -1224,4 +1224,24 @@ class AppDatabaseMigrationTest {
             statements.drop(11),
         )
     }
+
+    @Test
+    fun `MIGRATION_67_68 targets versions 67 to 68`() {
+        val migration = AppDatabase.MIGRATION_67_68
+
+        assertEquals(67, migration.startVersion)
+        assertEquals(68, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_67_68 adds the call duration as a nullable column`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statement = slot<String>()
+
+        AppDatabase.MIGRATION_67_68.migrate(db)
+
+        verify(exactly = 1) { db.execSQL(capture(statement)) }
+        // A call recorded before the migration has no duration; the check then counts calls.
+        assertEquals("ALTER TABLE `model_calls` ADD COLUMN `durationMs` INTEGER", statement.captured)
+    }
 }

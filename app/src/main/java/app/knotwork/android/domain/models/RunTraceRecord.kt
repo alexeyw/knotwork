@@ -163,6 +163,9 @@ sealed class RunTraceRecord {
      * @property output The full text the model streamed back, unprocessed.
      * @property promptSha256 Lowercase hex SHA-256 of [prompt] (UTF-8).
      * @property outputSha256 Lowercase hex SHA-256 of [output] (UTF-8).
+     * @property durationMs How long the call's stream took, or `null` for a call
+     *   recorded before durations were kept. A check estimates its own length
+     *   from it: repeating a call costs about what the call cost.
      */
     data class LocalModelCall(
         override val runId: String,
@@ -184,6 +187,7 @@ sealed class RunTraceRecord {
         val output: String,
         val promptSha256: String,
         val outputSha256: String,
+        val durationMs: Long? = null,
     ) : RunTraceRecord()
 
     /**

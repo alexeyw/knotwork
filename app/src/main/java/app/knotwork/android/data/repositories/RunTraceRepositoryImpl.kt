@@ -440,6 +440,7 @@ private fun RunTraceRecord.LocalModelCall.toEntity(): ModelCallEntity = ModelCal
     output = output,
     promptSha256 = promptSha256,
     outputSha256 = outputSha256,
+    durationMs = durationMs,
 )
 
 /**
@@ -522,6 +523,7 @@ private fun ModelCallEntity.toLocalRecordOrNull(): RunTraceRecord.LocalModelCall
         output = texts.output,
         promptSha256 = texts.promptSha256,
         outputSha256 = texts.outputSha256,
+        durationMs = durationMs,
     )
 }
 

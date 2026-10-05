@@ -65,6 +65,8 @@ import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.ModelPerformanceRepository
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.repositories.PipelineRunRepository
+import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.TriggerJournalRepository
@@ -190,6 +192,17 @@ internal class GoldenTraceHarness(
     private val submitApproval = SubmitApprovalDecisionUseCase(queue, pending, resumer)
     private val submitClarification = SubmitClarificationAnswerUseCase(clarificationRepository, pending, resumer)
     private val submitCeiling = SubmitCeilingDecisionUseCase(pending, runs, resumer)
+
+    /** The run records of the scenario, for a test that reads the finished run tree. */
+    internal val runRecords: PipelineRunRepository get() = runs
+
+    /** The durable run trace of the scenario, for a test that reads the finished run tree. */
+    internal val runTrace: RunTraceRepository get() = trace
+
+    /** From now on any tool execution is a violation (see [GoldenToolRepository.refuseCalls]). */
+    internal fun refuseToolCalls() {
+        tools.refuseCalls = true
+    }
 
     /**
      * Runs the scenario to its end — a terminal state, or a park the scenario does not

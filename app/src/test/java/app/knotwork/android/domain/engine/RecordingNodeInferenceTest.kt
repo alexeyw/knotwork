@@ -86,6 +86,7 @@ class RecordingNodeInferenceTest {
         assertEquals(LocalBackend.GPU, call.backend)
         assertEquals(4096, call.contextWindow)
         assertTrue(call.hadImage)
+        assertTrue("a duration is measured", call.durationMs >= 0L)
         assertTrue("a drained call is gone", inference.drain().isEmpty())
     }
 

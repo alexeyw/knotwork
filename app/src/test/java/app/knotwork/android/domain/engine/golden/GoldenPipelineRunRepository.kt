@@ -123,7 +123,11 @@ internal class GoldenPipelineRunRepository(private val log: GoldenEventLog, priv
         return applied
     }
 
-    override suspend fun getDescendantRuns(rootRunId: String): List<PipelineRun> = unused("getDescendantRuns")
+    override suspend fun getDescendantRuns(rootRunId: String): List<PipelineRun> {
+        // No run path reads this; a test reading a finished run tree (the run check) does.
+        val children = runs.values.filter { it.parentRunId == rootRunId }.sortedBy { it.id }
+        return children.flatMap { listOf(it) + getDescendantRuns(it.id) }
+    }
 
     override suspend fun countRootRunsByOriginSince(origin: RunOrigin, sinceEpochMs: Long): Int =
         unused("countRootRunsByOriginSince")

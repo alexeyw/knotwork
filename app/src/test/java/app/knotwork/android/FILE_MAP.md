@@ -57,6 +57,7 @@ Only Kotlin files appear inside the generated blocks.
   - `TranscriptJoinKonsistTest.kt` - Census of the idiom that let stored content forge a turn of its own inside a prompt: a speaker label and a message body spliced into one string template, `"${message.role.name}: ${message.content}"`.
   - `TransientCacheDirectoryGuardTest.kt` - Every directory the app creates under its cache is an entry of `TransientCacheDirectory` — and therefore swept by the daily maintenance pass.
   - `UsageTelemetryNoNetworkKonsistTest.kt` - Konsist guard enforcing the core privacy promise of the local usage-telemetry feature: **nothing on the telemetry path may make a network call.**
+  - `VerificationToolIsolationKonsistTest.kt` - The check of a past run cannot run a tool.
   - `WorkspaceToolsDocumentedTest.kt` - Pins the three places that enumerate the tools able to read and write the agent's workspace to the tools that actually can.
 - `data/` - Tests for the data layer.
   - `audio/` - Tests for voice-input capture and the WAV header builder.
@@ -327,6 +328,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RunNoticeCauseTest.kt` - The live-only advisory raised while a run is still going.
     - `RunTerminationReasonTest.kt` - Unit tests for `RunTerminationReason` and its persisted discriminator.
     - `RunTreeContextTest.kt` - Unit coverage for `RunTreeContext`.
+    - `RunTreeIdsTest.kt` - `RunTreeIds`: a child run id is derived from its parent, node and visit, and read back.
     - `ToolApprovalPolicyTest.kt` - Unit tests for `ToolApprovalPolicy`.
     - `TriggerTelemetryTest.kt` - Pins the stable `telemetryKind` strings for every `TriggerCondition` variant.
   - `pipelineio/` - Tests for the pipeline import/export gateway.
@@ -500,6 +502,12 @@ Only Kotlin files appear inside the generated blocks.
       - `ImportFileToWorkspaceUseCaseTest.kt` - Verifies `ImportFileToWorkspaceUseCase`'s collision policy, basename sanitisation and free-name logic.
       - `ListWorkspaceUseCaseTest.kt` - Verifies that `ListWorkspaceUseCase` bundles the listing + usage and short-circuits on failure.
       - `PreviewWorkspaceFileUseCaseTest.kt` - Verifies `PreviewWorkspaceFileUseCase` delegates with the fixed preview budget.
+  - `verification/` - Tests of the run check: the plan's refusals and visit kinds, the repeat and its stops, the reproducibility policy, and the check end to end on a golden-harness run with the tool catalogue refusing calls.
+    - `PlanRunVerificationUseCaseTest.kt` - `PlanRunVerificationUseCase`: whether a finished run can be checked here now, and the plan — every visit in run order, sub-pipelines in place, each with the calls it repeats or the reason it does not.
+    - `RunReproducibilityPolicyTest.kt` - `RunReproducibilityPolicy` promises only what was measured on the reference device: CPU and GPU (GPU at the same window) on the same device; not the NPU, not an image, not a cloud model, not a run recorded before seeds.
+    - `RunVerificationGoldenTest.kt` - The run check end to end, on a run the real engine made: the golden harness runs `showcase_full_agent` / `task-every-subpipeline` — a router, a decomposition, four sub-pipelines, two of them running a tool — and the check then plans and repeats it from the recorded trace alone.
+    - `VerificationFixtures.kt` - Records for the verification tests: a finished run with a header, and model calls and node records shaped as the engine writes them.
+    - `VerifyRunUseCaseTest.kt` - `VerifyRunUseCase`: each recorded call is sent again from its own prompt with its own sampler and seed, on the model it ran on, and its answer compared by SHA-256.
 - `editor/` - Guard over the browser pipeline editor: its context configuration must still mirror the domain sources.
   - `BrowserEditorContextConfigGuardTest.kt` - Drift guard for the browser pipeline editor's hand-maintained `defaultContextConfig(typeId)` JS function in `pipeline-editor.html`.
 - `integration/` - Background-run integration tests wiring real components end to end — the trigger path, the external-automation path and the autonomy cycle.

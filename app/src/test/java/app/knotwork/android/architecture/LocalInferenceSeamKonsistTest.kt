@@ -19,7 +19,10 @@ import org.junit.Test
  *  - work that is never part of a run's answer: chat-history compression and
  *    memory compaction (after a run), the backend probe and the benchmark
  *    (Settings), and `search_tool` condensing a page — a tool's own model use is
- *    part of the tool, whose recorded output a check never re-runs.
+ *    part of the tool, whose recorded output a check never re-runs;
+ *  - the check of a finished run (`VerifyRunUseCase`), which repeats a recorded
+ *    call with the sampler and seed the record holds — it must not go through a
+ *    `NodeInference`, which would seed it anew and record it again.
  *
  * An unlisted caller fails, and so does a listed one that disappeared, so the
  * list cannot rot into an allowance for code that no longer exists.
@@ -82,6 +85,7 @@ class LocalInferenceSeamKonsistTest {
             "$JAVA/domain/usecases/RunBenchmarkUseCase.kt",
             "$JAVA/domain/usecases/RunBenchmarkUseCase.kt",
             "$JAVA/domain/usecases/TestBackendUseCase.kt",
+            "$JAVA/domain/verification/VerifyRunUseCase.kt",
         ).sorted()
     }
 }

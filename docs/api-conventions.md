@@ -35,7 +35,9 @@ layering rationale, see [`architecture.md`](architecture.md).
   `generateResponseStream` directly. It runs the call on the run header's sampler
   with a seed derived from the run seed and records the full prompt and output,
   which is what makes a run checkable. `generateResponseStream(sampling = null)`
-  — the user's sampler and a fresh seed — is for work outside a run only.
+  — the user's sampler and a fresh seed — is for work outside a run only; the
+  check of a finished run (`VerifyRunUseCase`) calls it directly with the sampler
+  and seed a recorded call holds.
   `LocalInferenceSeamKonsistTest` pins the direct callers.
 - Log memory usage before and after model load with `Timber.d`.
 
