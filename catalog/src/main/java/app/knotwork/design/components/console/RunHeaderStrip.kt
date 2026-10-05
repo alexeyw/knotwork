@@ -589,6 +589,17 @@ private fun Actions(
         enabled = !actions.busy,
         onClick = onExport,
     )
+    // The record is what all three read; retention removes it with the run.
+    Text(
+        text = stringResource(R.string.knotwork_run_kept_note),
+        style = KnotworkTextStyles.MonoSm,
+        color = fg.copy(alpha = RUN_DIM_ALPHA),
+        modifier = Modifier.padding(
+            start = KnotworkTheme.spacing.sp3,
+            end = KnotworkTheme.spacing.sp3,
+            bottom = KnotworkTheme.spacing.sp3,
+        ),
+    )
 }
 
 /** The check's row, with a mismatch's reason in warn and its settings button. */

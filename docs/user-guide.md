@@ -664,6 +664,10 @@ Three actions follow:
 Hashes show that an export and a repeat match. They do not prove who produced a
 run: nothing is signed.
 
+All three work while the run is kept. Run history is kept per chat and for a number
+of days — **Settings → Privacy → Keep run history per chat** and **Run history max
+age** — and a run removed by them takes its trace, and its check, with it.
+
 ### Reopening a chat while a run is in flight
 
 Closing the chat — or the whole app UI — no longer disconnects you from
