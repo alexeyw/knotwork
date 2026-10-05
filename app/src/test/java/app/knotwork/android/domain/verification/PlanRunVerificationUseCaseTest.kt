@@ -166,6 +166,23 @@ class PlanRunVerificationUseCaseTest {
     }
 
     @Test
+    fun `given a sub-pipeline whose PIPELINE node failed when planned then its calls are still planned`() = runTest {
+        // A failed PIPELINE node writes no record of its own; its child run still holds the calls.
+        val child = RunTreeIds.child(ROOT, "pipe", 0)
+        coEvery { runs.getRun(ROOT) } returns run(status = PipelineRunStatus.FAILED)
+        coEvery { runs.getDescendantRuns(ROOT) } returns
+            listOf(run(id = child, parentRunId = ROOT, pipelineId = "child"))
+        traces[ROOT] = listOf(localCall(0, "llm"), nodeIo(1, "llm", "LITE_RT"))
+        traces[child] = listOf(localCall(0, "inner", runId = child))
+
+        val plan = plan()
+
+        assertEquals(listOf("llm", "pipe", "inner"), plan.visits.map { it.nodeId })
+        assertEquals(VisitKind.SubPipeline, plan.visits[1].kind)
+        assertEquals(2, plan.calls)
+    }
+
+    @Test
     fun `given the model file gone, unhashed or replaced when planned then the check names the model`() = runTest {
         givenRun(localCall(0, "llm"))
 

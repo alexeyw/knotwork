@@ -85,6 +85,10 @@ class PlanRunVerificationUseCase @Inject constructor(
     /**
      * The visits of [run] in the order the run made them, each `PIPELINE` visit
      * followed by its sub-pipeline's visits one level deeper.
+     *
+     * A `PIPELINE` node that failed wrote no record of its own, yet the child run
+     * it started holds calls the check must not lose: such a visit is recovered
+     * from the child's id and listed after the recorded ones.
      */
     private suspend fun visitsOf(
         run: PipelineRun,
@@ -95,7 +99,13 @@ class PlanRunVerificationUseCase @Inject constructor(
         val labels = run.pipelineId?.let { pipelineRepository.getPipelineById(it) }?.nodes
             ?.associate { it.id to it.label }.orEmpty()
         val trace = traces[run.id].orEmpty()
-        return visitKeysOf(trace).flatMap { key ->
+        val recorded = visitKeysOf(trace)
+        val unrecorded = runs.values.filter { it.parentRunId == run.id }
+            .mapNotNull { RunTreeIds.parentVisit(it.id, run.id) }
+            .filter { (nodeId, visit) -> recorded.none { it.nodeId == nodeId && it.visit == visit } }
+            .map { (nodeId, visit) -> VisitKey(nodeId, NodeType.PIPELINE.name, visit) }
+            .sortedWith(compareBy({ it.nodeId }, { it.visit }))
+        return (recorded + unrecorded).flatMap { key ->
             val visit = plannedVisit(run.id, depth, key, labels[key.nodeId] ?: key.nodeId, trace)
             val child = runs[RunTreeIds.child(run.id, key.nodeId, key.visit)]
             if (visit.kind == VisitKind.SubPipeline && child != null) {

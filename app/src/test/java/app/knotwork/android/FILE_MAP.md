@@ -328,6 +328,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RunNoticeCauseTest.kt` - The live-only advisory raised while a run is still going.
     - `RunTerminationReasonTest.kt` - Unit tests for `RunTerminationReason` and its persisted discriminator.
     - `RunTreeContextTest.kt` - Unit coverage for `RunTreeContext`.
+    - `RunTreeIdsTest.kt` - `RunTreeIds`: a child run id is derived from its parent, node and visit, and read back.
     - `ToolApprovalPolicyTest.kt` - Unit tests for `ToolApprovalPolicy`.
     - `TriggerTelemetryTest.kt` - Pins the stable `telemetryKind` strings for every `TriggerCondition` variant.
   - `pipelineio/` - Tests for the pipeline import/export gateway.
