@@ -98,8 +98,7 @@ class RunVerificationGoldenTest {
     private suspend fun plan(harness: GoldenTraceHarness): VerificationPlan {
         val calls = recordedCalls(harness)
         val availability = PlanRunVerificationUseCase(
-            harness.runRecords,
-            harness.runTrace,
+            ReadRecordedRunTreeUseCase(harness.runRecords, harness.runTrace),
             models(calls),
             mockk<PipelineRepository> { coEvery { getPipelineById(any()) } returns null },
             mockk<GenerationSettings> {

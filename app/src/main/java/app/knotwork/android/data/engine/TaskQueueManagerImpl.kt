@@ -611,6 +611,9 @@ class TaskQueueManagerImpl @Inject constructor(
                 // retrieval key instead of its generic authored prompt
                 // (DESCRIPTION.md §6.10.1).
                 origin = task.origin,
+                // A run started again with a recorded run's seed; the engine ignores
+                // it for a run that already has a header, as a resumed one does.
+                samplingOverride = task.samplingOverride,
             )
                 // Safety valve: the worker is serial, so a run that never
                 // emits again would hold every other chat hostage (F13).

@@ -46,6 +46,10 @@ import java.util.UUID
  *   shows just the thumbnail (empty display content) while [prompt] carries the
  *   internal default instruction that travels the graph. `null` means the saved
  *   message uses [prompt] verbatim (the common case).
+ * @property samplingOverride The seed and sampler of a recorded run, when this
+ *   task starts that run again with them ("Run again with this seed"): the new
+ *   run's header takes both instead of a fresh seed and the current sampler.
+ *   `null` — the default — for every other task.
  */
 data class AgentTask(
     val id: String = UUID.randomUUID().toString(),
@@ -59,4 +63,5 @@ data class AgentTask(
     val attachment: MessageAttachment? = null,
     val persistUserMessage: Boolean = true,
     val displayContent: String? = null,
+    val samplingOverride: LocalSampling? = null,
 )

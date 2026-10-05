@@ -6,12 +6,9 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineRun
 import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunTraceRecord
-import app.knotwork.android.domain.models.RunTreeIds
 import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
-import app.knotwork.android.domain.repositories.PipelineRunRepository
-import app.knotwork.android.domain.repositories.RunTraceRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -26,15 +23,13 @@ import javax.inject.Inject
  * person would fix them in: a run still going, a run recorded before seeds, a
  * run with nothing on-device, then the model file, then the settings.
  *
- * @property pipelineRunRepository The run records.
- * @property runTraceRepository The runs' traces.
+ * @property readRecordedRunTree The run tree and its traces.
  * @property localModelRepository The model registry, for the file checksums.
  * @property pipelineRepository The pipelines, for the node labels.
  * @property generationSettings The backend and window the next load would use.
  */
 class PlanRunVerificationUseCase @Inject constructor(
-    private val pipelineRunRepository: PipelineRunRepository,
-    private val runTraceRepository: RunTraceRepository,
+    private val readRecordedRunTree: ReadRecordedRunTreeUseCase,
     private val localModelRepository: LocalModelRepository,
     private val pipelineRepository: PipelineRepository,
     private val generationSettings: GenerationSettings,
@@ -47,23 +42,22 @@ class PlanRunVerificationUseCase @Inject constructor(
      * @return Whether the check can start, with the plan when it can.
      */
     suspend operator fun invoke(rootRunId: String): VerifyAvailability {
-        val root = pipelineRunRepository.getRun(rootRunId)
+        val tree = readRecordedRunTree(rootRunId)
+        val header = tree?.root?.header
         return when {
-            root == null -> VerifyAvailability.PreVersion
-            !root.status.isTerminal -> VerifyAvailability.Busy
-            root.header == null -> VerifyAvailability.PreVersion
-            else -> availabilityOf(root, root.header)
+            tree == null -> VerifyAvailability.PreVersion
+            !tree.root.status.isTerminal -> VerifyAvailability.Busy
+            header == null -> VerifyAvailability.PreVersion
+            else -> availabilityOf(tree, header)
         }
     }
 
-    /** Whether the finished, recorded run [root] can be checked here now, with the plan when it can. */
-    private suspend fun availabilityOf(root: PipelineRun, header: RunHeader): VerifyAvailability {
-        val runs = listOf(root) + pipelineRunRepository.getDescendantRuns(root.id)
-        val traces = runs.associate { it.id to runTraceRepository.getTraceForRun(it.id) }
-        val records = traces.values.flatten()
+    /** Whether the finished, recorded run [tree] can be checked here now, with the plan when it can. */
+    private suspend fun availabilityOf(tree: RecordedRunTree, header: RunHeader): VerifyAvailability {
+        val records = tree.records
         if (records.none { it is RunTraceRecord.LocalModelCall }) return VerifyAvailability.NoLocalCalls
 
-        val visits = visitsOf(root, runs.associateBy { it.id }, traces, depth = 0)
+        val visits = visitsOf(tree, tree.root, depth = 0)
         val repeated = visits.flatMap { it.calls }
         val mismatch = mismatchOf(repeated)
         return if (mismatch != null) {
@@ -71,7 +65,7 @@ class PlanRunVerificationUseCase @Inject constructor(
         } else {
             VerifyAvailability.Available(
                 VerificationPlan(
-                    rootRunId = root.id,
+                    rootRunId = tree.root.id,
                     header = header,
                     visits = visits,
                     cloudCalls = records.count { it is RunTraceRecord.CloudModelCall },
@@ -90,26 +84,17 @@ class PlanRunVerificationUseCase @Inject constructor(
      * it started holds calls the check must not lose: such a visit is recovered
      * from the child's id and listed after the recorded ones.
      */
-    private suspend fun visitsOf(
-        run: PipelineRun,
-        runs: Map<String, PipelineRun>,
-        traces: Map<String, List<RunTraceRecord>>,
-        depth: Int,
-    ): List<PlannedVisit> {
+    private suspend fun visitsOf(tree: RecordedRunTree, run: PipelineRun, depth: Int): List<PlannedVisit> {
         val labels = run.pipelineId?.let { pipelineRepository.getPipelineById(it) }?.nodes
             ?.associate { it.id to it.label }.orEmpty()
-        val trace = traces[run.id].orEmpty()
-        val recorded = visitKeysOf(trace)
-        val unrecorded = runs.values.filter { it.parentRunId == run.id }
-            .mapNotNull { RunTreeIds.parentVisit(it.id, run.id) }
-            .filter { (nodeId, visit) -> recorded.none { it.nodeId == nodeId && it.visit == visit } }
+        val trace = tree.traceOf(run.id)
+        val unrecorded = tree.unrecordedPipelineVisits(run.id)
             .map { (nodeId, visit) -> VisitKey(nodeId, NodeType.PIPELINE.name, visit) }
-            .sortedWith(compareBy({ it.nodeId }, { it.visit }))
-        return (recorded + unrecorded).flatMap { key ->
+        return (visitKeysOf(trace) + unrecorded).flatMap { key ->
             val visit = plannedVisit(run.id, depth, key, labels[key.nodeId] ?: key.nodeId, trace)
-            val child = runs[RunTreeIds.child(run.id, key.nodeId, key.visit)]
+            val child = tree.childAt(run.id, key.nodeId, key.visit)
             if (visit.kind == VisitKind.SubPipeline && child != null) {
-                listOf(visit) + visitsOf(child, runs, traces, depth + 1)
+                listOf(visit) + visitsOf(tree, child, depth + 1)
             } else {
                 listOf(visit)
             }
@@ -117,13 +102,14 @@ class PlanRunVerificationUseCase @Inject constructor(
     }
 
     /** The distinct node visits of [trace], ordered by their first record. */
-    private fun visitKeysOf(trace: List<RunTraceRecord>): List<VisitKey> = trace.sortedBy { it.seq }.mapNotNull {
-        when (it) {
-            is RunTraceRecord.NodeIo -> it.visit?.let { visit -> VisitKey(it.nodeId, it.nodeType, visit) }
-            is RunTraceRecord.LocalModelCall -> VisitKey(it.nodeId, it.nodeType, it.visit)
-            is RunTraceRecord.CloudModelCall -> VisitKey(it.nodeId, it.nodeType, it.visit)
+    private fun visitKeysOf(trace: List<RunTraceRecord>): List<VisitKey> = trace.mapNotNull { record ->
+        val nodeType = when (record) {
+            is RunTraceRecord.NodeIo -> record.nodeType
+            is RunTraceRecord.LocalModelCall -> record.nodeType
+            is RunTraceRecord.CloudModelCall -> record.nodeType
             is RunTraceRecord.ConsoleEntry, is RunTraceRecord.MemorySnapshot -> null
         }
+        record.visitKey()?.let { (nodeId, visit) -> nodeType?.let { VisitKey(nodeId, it, visit) } }
     }.distinctBy { it.nodeId to it.visit }
 
     /** What the check does with one visit, from the calls the visit recorded. */

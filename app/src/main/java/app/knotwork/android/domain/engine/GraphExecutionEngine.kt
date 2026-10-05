@@ -7,6 +7,7 @@ import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
 import app.knotwork.android.domain.models.ExecutionScope
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.ResumeContext
@@ -135,6 +136,10 @@ constructor(
      *   [RunOrigin.CHAT] (the interactive, unchanged behaviour) so editor test runs and
      *   any caller that does not care keep the old semantics. Every sub-pipeline of
      *   the run inherits it through [RunTreeContext.origin].
+     * @param samplingOverride The seed and sampler of a recorded run, for a run
+     *   started again with them: the run's header takes both instead of a fresh
+     *   seed and the current sampler. Ignored when the run already has a header —
+     *   a resumed run keeps its own. `null` (the default) is an ordinary run.
      * @return A cold flow of orchestrator states describing the run.
      */
     operator fun invoke(
@@ -146,8 +151,15 @@ constructor(
         imageInput: EngineImageInput? = null,
         runHadImage: Boolean = false,
         origin: RunOrigin = RunOrigin.CHAT,
-    ): Flow<AgentOrchestratorState> =
-        invoke(sessionId, userPrompt, graph, runId, resume, RunEntry.Root(imageInput, runHadImage, origin))
+        samplingOverride: LocalSampling? = null,
+    ): Flow<AgentOrchestratorState> = invoke(
+        sessionId,
+        userPrompt,
+        graph,
+        runId,
+        resume,
+        RunEntry.Root(imageInput, runHadImage, origin, samplingOverride),
+    )
 
     /**
      * Runs [graph] inside an existing run tree — the sub-pipeline a `PIPELINE`
@@ -194,8 +206,14 @@ constructor(
          * @property imageInput See the root overload's `imageInput`.
          * @property runHadImage See the root overload's `runHadImage`.
          * @property origin See the root overload's `origin`.
+         * @property samplingOverride See the root overload's `samplingOverride`.
          */
-        class Root(val imageInput: EngineImageInput?, val runHadImage: Boolean, val origin: RunOrigin) : RunEntry {
+        class Root(
+            val imageInput: EngineImageInput?,
+            val runHadImage: Boolean,
+            val origin: RunOrigin,
+            val samplingOverride: LocalSampling?,
+        ) : RunEntry {
             override val depth: Int get() = 0
         }
 
@@ -383,10 +401,10 @@ constructor(
      * sampler its first attempt chose, so every on-device call of the run — before
      * and after a pause — is reproducible from one header. A run starting for the
      * first time (or one recorded before headers existed) chooses and records one
-     * now.
+     * now — from the seed and sampler it was started again with, when it was.
      *
      * @param runId Id of the root run record, or `null` for a non-persisted run.
-     * @param root The root overload's image and origin arguments.
+     * @param root The root overload's image, origin and sampling arguments.
      * @param records The run's record, whose spend seeds the ledger.
      * @return The tree at depth `0`.
      */
@@ -394,7 +412,8 @@ constructor(
         val ceilings = resolveRunCeilingsUseCase(root.origin)
         val spent = records.spendSoFar()
         val delivery = root.imageInput?.let { RunImageDelivery(it) }
-        val header = records.recordedHeader() ?: runHeaders.fresh().also { records.recordHeader(it) }
+        val header = records.recordedHeader()
+            ?: runHeaders.fresh(root.samplingOverride).also { records.recordHeader(it) }
         return RunTreeContext(
             depth = 0,
             budget = RunBudgetLedger(

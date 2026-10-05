@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTask
 import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.EngineImageInput
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.NodeModel
@@ -16,6 +17,7 @@ import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.models.TaskPriority
@@ -283,6 +285,31 @@ class TaskQueueManagerImplTest {
             )
         }
     }
+
+    @Test
+    fun `enqueueTask started again with a recorded seed passes its seed and sampler to the engine`() =
+        testScope.runTest {
+            val recorded = LocalSampling(RunSampler(temperature = 0.3, topK = 12, topP = 0.5), seed = 1_482_913)
+            val samplingSlot = slot<LocalSampling>()
+            every {
+                graphExecutionEngine.invoke(
+                    sessionId = any(),
+                    userPrompt = any(),
+                    graph = any(),
+                    runId = any(),
+                    resume = any(),
+                    imageInput = any(),
+                    runHadImage = any(),
+                    origin = any(),
+                    samplingOverride = capture(samplingSlot),
+                )
+            } returns flowOf(AgentOrchestratorState.Completed("ok"))
+
+            taskQueueManager.enqueueTask(AgentTask(sessionId = "s1", prompt = "hi", samplingOverride = recorded))
+            advanceUntilIdle()
+
+            assertEquals(recorded, samplingSlot.captured)
+        }
 
     /**
      * When an [AgentTask] carries a `pipelineId`, the queue

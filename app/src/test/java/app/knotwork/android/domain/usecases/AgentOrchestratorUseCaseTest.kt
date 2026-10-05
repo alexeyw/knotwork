@@ -3,7 +3,9 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTask
+import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.RunOrigin
+import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.TaskPriority
 import app.knotwork.android.domain.models.ToolRisk
 import io.mockk.every
@@ -104,6 +106,21 @@ class AgentOrchestratorUseCaseTest {
 
         verify { taskQueueManager.enqueueTask(match { it.pipelineId == null }) }
     }
+
+    @Test
+    fun `given a recorded seed and sampler when invoked then the task carries them and an ordinary send none`() =
+        runTest {
+            val enqueued = mutableListOf<AgentTask>()
+            every { taskQueueManager.enqueueTask(capture(enqueued)) } returns Unit
+            every { taskQueueManager.observeTaskState(sessionId) } returns
+                flowOf(AgentOrchestratorState.Completed("done"))
+            val recorded = LocalSampling(RunSampler(temperature = 0.3, topK = 12, topP = 0.5), seed = 1_482_913)
+
+            useCase(sessionId, "hi", pipelineId = "p", samplingOverride = recorded).toList()
+            useCase(sessionId, "hi").toList()
+
+            assertEquals(listOf(recorded, null), enqueued.map { it.samplingOverride })
+        }
 
     @Test
     fun `enqueueScheduled enqueues a SCHEDULER-origin NORMAL-priority task and returns its id`() {

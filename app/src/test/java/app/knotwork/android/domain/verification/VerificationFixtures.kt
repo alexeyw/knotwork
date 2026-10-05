@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.verification
 
 import app.knotwork.android.domain.engine.TraceHashing
+import app.knotwork.android.domain.models.ConsoleEventType
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.PipelineRun
@@ -105,19 +106,46 @@ internal object VerificationFixtures {
             model = null,
         )
 
-    /** A node's input/output record. */
-    fun nodeIo(seq: Long, nodeId: String, nodeType: String, visit: Int? = 0, runId: String = ROOT) =
-        RunTraceRecord.NodeIo(
-            runId = runId,
-            sessionId = SESSION,
-            seq = seq,
-            timestamp = seq,
-            nodeId = nodeId,
-            nodeType = nodeType,
-            inputText = "in",
-            outputText = "out",
-            durationMs = 1L,
-            tokenCount = null,
-            visit = visit,
-        )
+    /** A node's input/output record, hashed as the engine hashes it unless [hashed] is `false`. */
+    fun nodeIo(
+        seq: Long,
+        nodeId: String,
+        nodeType: String,
+        visit: Int? = 0,
+        runId: String = ROOT,
+        input: String = "in",
+        output: String = "out",
+        hashed: Boolean = true,
+    ) = RunTraceRecord.NodeIo(
+        runId = runId,
+        sessionId = SESSION,
+        seq = seq,
+        timestamp = seq,
+        nodeId = nodeId,
+        nodeType = nodeType,
+        inputText = input,
+        outputText = output,
+        durationMs = 1L,
+        tokenCount = null,
+        visit = visit,
+        inputSha256 = if (hashed) TraceHashing.sha256Hex(input) else null,
+        outputSha256 = if (hashed) TraceHashing.sha256Hex(output) else null,
+    )
+
+    /** A console line. */
+    fun console(seq: Long, message: String, runId: String = ROOT) = RunTraceRecord.ConsoleEntry(
+        runId = runId,
+        sessionId = SESSION,
+        seq = seq,
+        timestamp = seq,
+        type = ConsoleEventType.SystemMessage,
+        message = message,
+    )
+
+    /** A recorded tree of [runs], each run's trace taken from [traces]. */
+    fun tree(vararg runs: PipelineRun, traces: Map<String, List<RunTraceRecord>>) = RecordedRunTree(
+        root = runs.first(),
+        runs = runs.associateBy { it.id },
+        traces = traces,
+    )
 }
