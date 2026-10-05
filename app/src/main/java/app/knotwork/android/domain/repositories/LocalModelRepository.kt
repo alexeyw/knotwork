@@ -3,6 +3,7 @@ package app.knotwork.android.domain.repositories
 import app.knotwork.android.domain.models.ActiveModelMeta
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.ModelFileHash
+import app.knotwork.android.domain.models.ModelFileStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -140,6 +141,17 @@ interface LocalModelRepository {
      * @return The models still to hash; empty when every file is covered.
      */
     suspend fun modelsNeedingFileHash(): List<LocalModel>
+
+    /**
+     * Where the model file at [path] stands: missing, present without a current
+     * checksum, or present with one. Unlike [currentFileHash], which a run reads
+     * and which folds every "not known" into `null`, this keeps the three apart —
+     * a check of a past run names a different reason for each.
+     *
+     * @param path Absolute path of the model file.
+     * @return The file's status.
+     */
+    suspend fun fileStatus(path: String): ModelFileStatus
 
     /**
      * Stores the hash of the model with the given [id]. A targeted write: it

@@ -884,6 +884,43 @@ message into one node; audio never enters the graph at all).
 
 ---
 
+### 3.11. Checking a finished run
+
+A run records what it ran with (§3: the run header, `NodeInference`, `model_calls`).
+The check of a finished run lives in `domain/verification/` and repeats **only the
+recorded on-device model calls** — never the graph, a tool or a cloud model.
+
+```mermaid
+flowchart LR
+    Plan["PlanRunVerificationUseCase<br/>record only"] -- "Available(plan)" --> Verify["VerifyRunUseCase<br/>repeat each call"]
+    Plan -. reads .-> Record[("pipeline_runs · trace_steps · model_calls")]
+    Plan -. reads .-> Registry[("local_models<br/>checksum + stamp")]
+    Verify --> Load["LoadModelUseCase"]
+    Verify --> Engine["LlmInferenceEngine<br/>recorded prompt · sampler · seed"]
+```
+
+1. **Plan.** `PlanRunVerificationUseCase` reads the run tree, its traces, the model
+   registry and the generation settings, and loads nothing. It refuses a run that
+   is still going (`Busy`), one recorded before seeds (`PreVersion`), one with no
+   on-device call (`NoLocalCalls`), and — naming both values — a model file that
+   is gone, unhashed or replaced, or a backend or GPU window that differs from what
+   the next load would use (`Mismatch`). Otherwise it lists every node visit in
+   run order, sub-pipelines in place, each either repeated or not with its reason
+   (`RunReproducibilityPolicy`: tool, cloud, no model call, NPU, image, model not
+   recorded).
+2. **Repeat.** `VerifyRunUseCase` loads the file each call ran on, checks the
+   engine against the call — file, the backend it actually runs on, the GPU window —
+   sends the recorded prompt with the recorded sampler and seed, and compares the
+   answer's SHA-256 with the recorded one. The engine is checked again after the
+   call, so a run that loads another model in between stops the check instead of
+   letting it compare on the wrong file. Calls are repeated from their own
+   prompts, so a difference in one node does not affect the next.
+3. **No tool, ever.** The package depends only on the record, the registry, the
+   loader and the engine; `VerificationToolIsolationKonsistTest` refuses any other
+   constructor dependency and any mention of a tool, an executor or the graph
+   engine, and `RunVerificationGoldenTest` runs the check on a real run with the
+   tool catalogue set to fail on any call.
+
 ## 4. Integrations
 
 ### 4.1. LiteRT-LM (on-device inference)

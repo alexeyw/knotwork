@@ -181,6 +181,7 @@ class RunRecordPersistenceTest {
             output = "the output",
             promptSha256 = "p-sha",
             outputSha256 = "o-sha",
+            durationMs = 1_234L,
         )
 
         val CLOUD_CALL = RunTraceRecord.CloudModelCall(

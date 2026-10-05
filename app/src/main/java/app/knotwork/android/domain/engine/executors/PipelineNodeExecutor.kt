@@ -13,6 +13,7 @@ import app.knotwork.android.domain.models.ResumeContext
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.RunTraceRecord
+import app.knotwork.android.domain.models.RunTreeIds
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunSettings
@@ -463,12 +464,12 @@ class PipelineNodeExecutor @Inject constructor(
         )
 
         /**
-         * Builds the deterministic child run id of a sub-pipeline run:
-         * `"<parentRunId>::<nodeId>::<visitIndex>"`. Determinism is the
-         * mechanism that lets a resume find and continue the same child run
+         * Builds the deterministic child run id of a sub-pipeline run — see
+         * [RunTreeIds.child], the one place the scheme is written. Determinism is
+         * the mechanism that lets a resume find and continue the same child run
          * rather than starting a new one.
          */
         fun childRunId(parentRunId: String, nodeId: String, visitIndex: Int): String =
-            "$parentRunId::$nodeId::$visitIndex"
+            RunTreeIds.child(parentRunId, nodeId, visitIndex)
     }
 }

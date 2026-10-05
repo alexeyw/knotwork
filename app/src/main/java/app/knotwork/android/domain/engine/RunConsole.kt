@@ -222,6 +222,7 @@ class RunConsole(
                 output = pending.output,
                 promptSha256 = TraceHashing.sha256Hex(pending.prompt),
                 outputSha256 = TraceHashing.sha256Hex(pending.output),
+                durationMs = pending.durationMs,
             )
             is PendingModelCall.Cloud -> RunTraceRecord.CloudModelCall(
                 runId = id,

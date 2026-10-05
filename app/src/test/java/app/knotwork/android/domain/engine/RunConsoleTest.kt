@@ -199,6 +199,7 @@ class RunConsoleTest {
             hadImage = false,
             prompt = "the prompt",
             output = "the output",
+            durationMs = 1_234L,
         )
 
         console(depth = 1).recordModelCall(pending, modelSha256 = "abc")
@@ -213,6 +214,7 @@ class RunConsoleTest {
         assertEquals(4096, record.contextWindow)
         assertEquals(TraceHashing.sha256Hex("the prompt"), record.promptSha256)
         assertEquals(TraceHashing.sha256Hex("the output"), record.outputSha256)
+        assertEquals(1_234L, record.durationMs)
     }
 
     @Test

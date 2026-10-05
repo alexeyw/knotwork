@@ -6,6 +6,7 @@ import app.knotwork.android.data.mappers.toEntity
 import app.knotwork.android.domain.models.ActiveModelMeta
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.ModelFileHash
+import app.knotwork.android.domain.models.ModelFileStatus
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.ModelPerformanceRepository
 import kotlinx.coroutines.CancellationException
@@ -126,6 +127,16 @@ class LocalModelRepositoryImpl @Inject constructor(
                 // unless its stored hash still describes it.
                 file.isFile && model.fileHash?.describesFile(file) != true
             }
+    }
+
+    override suspend fun fileStatus(path: String): ModelFileStatus = withContext(Dispatchers.IO) {
+        val model = localModelDao.findByPath(path)?.toDomain()
+        val file = File(path)
+        when {
+            model == null || !file.isFile -> ModelFileStatus.Missing
+            model.fileHash?.describesFile(file) == true -> ModelFileStatus.Hashed(model.fileHash.sha256)
+            else -> ModelFileStatus.HashPending
+        }
     }
 
     override suspend fun recordFileHash(id: Long, hash: ModelFileHash): Unit = withContext(Dispatchers.IO) {

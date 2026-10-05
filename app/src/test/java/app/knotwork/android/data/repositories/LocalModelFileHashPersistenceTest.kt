@@ -4,6 +4,7 @@ import androidx.room.Room
 import app.knotwork.android.data.local.AppDatabase
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.ModelFileHash
+import app.knotwork.android.domain.models.ModelFileStatus
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -123,6 +124,25 @@ class LocalModelFileHashPersistenceTest {
 
         assertEquals("abc123", repository.currentFileHash(file.path))
     }
+
+    @Test
+    fun `given each state of a model file when its status is read then missing, pending and hashed are told apart`() =
+        runTest {
+            val file = modelFile("a.litertlm", "weights")
+            val id = repository.insertModel(model(file))
+            assertEquals(ModelFileStatus.HashPending, repository.fileStatus(file.path))
+
+            repository.recordFileHash(id, stampOf(file, sha = "abc123"))
+            assertEquals(ModelFileStatus.Hashed("abc123"), repository.fileStatus(file.path))
+
+            file.writeText("other weights")
+            file.setLastModified(file.lastModified() + 60_000L)
+            assertEquals(ModelFileStatus.HashPending, repository.fileStatus(file.path))
+
+            file.delete()
+            assertEquals(ModelFileStatus.Missing, repository.fileStatus(file.path))
+            assertEquals(ModelFileStatus.Missing, repository.fileStatus(File(folder.root, "unknown").path))
+        }
 
     private fun modelFile(name: String, content: String): File = folder.newFile(name).apply { writeText(content) }
 

@@ -413,6 +413,7 @@ Only Kotlin files appear inside the generated blocks.
     - `MemorySummary.kt` - Lightweight memory projection (id/text/timestamp) used by `$MEMORY_SUMMARY`.
     - `MessageAttachment.kt` - Image attached to a user `ChatMessage`: store-relative `path`, `mimeType` (always `image/jpeg` this phase), and downscaled pixel `width`/`height`. Pure-Kotlin value class carried on `ChatMessage` and `AgentTask`.
     - `ModelFileHash.kt` - The SHA-256 of an installed model file, with the stamp of the file it was computed from.
+    - `ModelFileStatus.kt` - Where an installed model file stands with its checksum, as a check of a past run needs to tell: a run can be repeated only on the file it ran on, and the checksum is how that is known.
     - `ModelPerformanceSample.kt` - One persisted inference measurement (TTFT / decode tok-s / total / peak native heap / `isBenchmark`), keyed by model path; `fromTimings(...)` derives the figures from raw timings (shared by executor + benchmark). Also hosts `ModelPerformanceSummary` (rolling-average fold; excludes degenerate 0-ttft / 0-decode samples from the means, keeps the window count, or `null` when empty).
     - `NetworkState.kt` - Network state model.
     - `NodeContextConfig.kt` - Per-node selection of pipeline context blocks (chat history, original task, previous node output, long-term memory, tool results) injected on every execution.
@@ -456,6 +457,7 @@ Only Kotlin files appear inside the generated blocks.
     - `RunTerminationReason.kt` - The single typed vocabulary for why a run stopped (`RunTerminationKind` is its persisted discriminator): ceilings, the stuck-detector (`NO_PROGRESS`), the queue's silence watchdog (`RUN_STALLED`), an expired approval window, a changed graph, a dead process, a user discard. The stuck-detector's `NO_PROGRESS` and the watchdog's `RUN_STALLED` are deliberately separate rather than one label: a run repeating itself and a run emitting nothing are opposite shapes, and one wording would tell a user whose tool hung that work kept repeating. Replaces recovering the cause by matching the error message text. `diagnostic()` renders the terse, greppable form for the run console and `pipeline_runs.errorMessage`; the sentence a person reads is resolved from the kind in presentation, so a log line and a user message cannot drift into each other. One exception, documented where it lives: the trigger journal renders the persisted message directly, so `TriggerRunOutcomeMapper` substitutes a sentence for `NO_PROGRESS` — kept byte-identical to the presentation string by a test, because `domain` cannot read resources.
     - `RunTraceRecord.kt` - Sealed domain model of one persistent run-trace record: `NodeIo` (per-node input/output snapshot incl. recorded `conditionResult` / `routingKey` / `resolvedToolName` for checkpoint replay), `ConsoleEntry` (persisted console event) and `MemorySnapshot` (chunks resolved by the run's single lazy memory retrieval), all carrying `runId` / `sessionId` / per-run `seq` / `timestamp` and a nesting `depth` for nested-console rendering.
     - `RunTreeContext.kt` - What every engine invocation of one run tree shares: the root run and each sub-pipeline a `PIPELINE` node starts under it.
+    - `RunTreeIds.kt` - How the runs of one run tree are named.
     - `SharedPayload.kt` - Normalised `ACTION_SEND` content (text and/or image URI) produced by `ParseSharedContentUseCase`; `isEmpty` drops a no-op share.
     - `Skill.kt` - Domain model of a reusable skill (`instruction` + `toolAllowlist: List<String>?` + `contextConfig` + `isBundled` + timestamps). `toolAllowlist` null = all tools, empty = no tools, non-empty = subset; exposes `toolRestriction` (`SkillToolRestriction` ALL/NONE/SUBSET).
     - `SkillImportOutcome.kt` - Sealed parse outcome for skill JSON (`Success` / `SchemaMismatch` / `Failure`), mirroring `PromptPresetImportOutcome`.
@@ -710,6 +712,12 @@ Only Kotlin files appear inside the generated blocks.
       - `ListWorkspaceUseCase.kt` - Loads the workspace listing + usage together as a `WorkspaceListing`, short-circuiting on the first failure.
       - `PreviewWorkspaceFileUseCase.kt` - Reads a bounded text preview (`PREVIEW_MAX_BYTES` = 64 KiB) for the preview sheet.
       - `StageWorkspaceFileForShareUseCase.kt` - Stages a copy of a workspace file for the system share sheet — the Files screen's **Share** action.
+  - `verification/` - Checking a finished run: plans the check from the record alone, then repeats each recorded on-device call (prompt, sampler, seed) and compares the answers by SHA-256 — never the graph, a tool or a cloud model.
+    - `PlanRunVerificationUseCase.kt` - Decides whether a finished run can be checked on this device now, and what the check will do.
+    - `RunReproducibilityPolicy.kt` - What the app promises about repeating a run — written once, read by the check and by every surface that states the promise.
+    - `VerificationEvent.kt` - What a running check reports, in order: one `CallChecked` per repeated call, one `VisitSettled` per visit whose calls are all done, and one terminal event — `Finished`, `Stopped` or `Failed`.
+    - `VerificationPlan.kt` - What a check of a finished run will do, decided before it starts: every node visit of the run tree in the order the run made them, and for each either the on-device calls it will repeat or why it will not.
+    - `VerifyRunUseCase.kt` - Checks a finished run by repeating its on-device model calls.
 - `presentation/` - UI and presentation layer.
   - `common/` - Cross-feature presentation utilities.
     - `BoundedText.kt` - What reading a picked file within a size limit produced.

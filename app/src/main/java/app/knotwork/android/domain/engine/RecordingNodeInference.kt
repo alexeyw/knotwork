@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.TimeSource
 
 /**
  * The [NodeInference] of one node visit inside a run: seeds every on-device
@@ -56,10 +57,12 @@ class RecordingNodeInference(private val tree: RunTreeContext, private val node:
         val backend = engine.activeBackend
         val contextWindow = engine.activeContextLength
         val output = StringBuilder()
+        val started = TimeSource.Monotonic.markNow()
         engine.generateResponseStream(prompt, imagePath, sampling).collect { chunk ->
             output.append(chunk)
             emit(chunk)
         }
+        val durationMs = started.elapsedNow().inWholeMilliseconds
         pending.add(
             PendingModelCall.Local(
                 nodeId = node.id,
@@ -73,6 +76,7 @@ class RecordingNodeInference(private val tree: RunTreeContext, private val node:
                 hadImage = imagePath != null,
                 prompt = prompt,
                 output = output.toString(),
+                durationMs = durationMs,
             ),
         )
     }
@@ -123,6 +127,8 @@ sealed interface PendingModelCall {
      * @property hadImage Whether an image was sent with the prompt.
      * @property prompt The full text sent.
      * @property output The full text streamed back.
+     * @property durationMs How long the stream took, from the call to its last
+     *   chunk — what a later check expects the repeat to cost.
      */
     data class Local(
         override val nodeId: String,
@@ -136,6 +142,7 @@ sealed interface PendingModelCall {
         val hadImage: Boolean,
         val prompt: String,
         val output: String,
+        val durationMs: Long,
     ) : PendingModelCall
 
     /**

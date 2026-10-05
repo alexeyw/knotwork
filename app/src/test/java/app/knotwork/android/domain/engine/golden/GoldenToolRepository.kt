@@ -25,7 +25,14 @@ internal class GoldenToolRepository(private val log: GoldenEventLog) : ToolRepos
 
     override suspend fun getAllLocalTools(): List<AgentTool> = getAvailableTools()
 
+    /**
+     * When `true`, any tool execution is a violation: a test reading a finished run (the run
+     * check) switches it on, so a path that runs a tool fails the test instead of acting.
+     */
+    var refuseCalls: Boolean = false
+
     override suspend fun executeTool(name: String, arguments: String, context: ToolExecutionContext): String {
+        if (refuseCalls) log.violation("Tool '$name' was executed after the run ended — a check must never run a tool")
         val output = recordedOutput(name, arguments)
         log.record(
             "tool.execute $name risk=${context.gatedRisk} session=${context.sessionId}",
