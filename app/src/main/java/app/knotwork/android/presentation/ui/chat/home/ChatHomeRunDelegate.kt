@@ -128,7 +128,8 @@ internal const val RUN_TRACE_EXPORT_STEM: String = "run-trace"
  * @property useCases The use cases behind the strip.
  * @property generationSettings The backend and window the next load would use.
  * @property startRunAgain Starts a run again with a recorded run's seed — the
- *   ViewModel's send path, which owns the generating state.
+ *   ViewModel's send path, which owns the generating state — and says whether it
+ *   did (it does not while another generation is going on).
  */
 class ChatHomeRunDelegate(
     private val scope: CoroutineScope,
@@ -136,7 +137,7 @@ class ChatHomeRunDelegate(
     private val pipelineRunRepository: PipelineRunRepository,
     private val useCases: ChatHomeRunUseCases,
     private val generationSettings: GenerationSettings,
-    private val startRunAgain: (RunAgainRequest) -> Unit,
+    private val startRunAgain: (RunAgainRequest) -> Boolean,
 ) {
 
     private val _events = MutableSharedFlow<RunHeaderEvent>(extraBufferCapacity = 1)
@@ -146,6 +147,7 @@ class ChatHomeRunDelegate(
 
     private var sessionJob: Job? = null
     private var description: RunDescription? = null
+    private var sessionId: String? = null
     private var exportDocument: RunTraceExportDocument? = null
     private var exportFileName: String? = null
 
@@ -179,6 +181,7 @@ class ChatHomeRunDelegate(
     fun observe(sessionId: String) {
         sessionJob?.cancel()
         verification.close()
+        this.sessionId = sessionId
         description = null
         state.update {
             it.copy(console = it.console.copy(runHeader = null, runHeaderExpanded = false), run = ChatHomeRunState())
@@ -266,8 +269,7 @@ class ChatHomeRunDelegate(
     fun confirmRunAgain() {
         val request = (description?.runAgain as? RunAgainAvailability.Available)?.request
         state.update { it.withRun { run -> run.copy(runAgainConfirm = null) } }
-        if (request == null) return
-        startRunAgain(request)
+        if (request == null || !startRunAgain(request)) return
         _events.tryEmit(RunHeaderEvent.RunningAgain(RunDisplay.grouped(request.sampling.seed)))
     }
 
@@ -303,6 +305,9 @@ class ChatHomeRunDelegate(
     /** Re-reads the run [runId] and projects it onto the strip; `null` clears it. */
     private suspend fun describe(runId: String?) {
         val described = runId?.let { useCases.describeRun(it) }
+        // A re-read started for the previous chat may finish after the switch; it
+        // must not put that chat's run on the new one's strip.
+        if (described != null && described.run.sessionId != sessionId) return
         description = described
         state.update { it.copy(console = it.console.copy(runHeader = described?.toRunHeaderUi())) }
     }

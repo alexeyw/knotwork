@@ -31,8 +31,10 @@ import app.knotwork.design.components.console.HashKind
 import app.knotwork.design.components.console.RunSettingsTarget
 import app.knotwork.design.components.console.VerificationStageUi
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,9 +61,9 @@ class ChatHomeRunDelegateTest {
     private val header = RunHeader(1_482_913, RunSampler(0.7, 40, 0.95), "app", "runtime", "device")
     private val request = RunAgainRequest("s", "p", "Daily brief", "hi", LocalSampling(header.sampler, header.seed))
 
-    private fun run(id: String, status: PipelineRunStatus, parent: String? = null) = PipelineRun(
+    private fun run(id: String, status: PipelineRunStatus, parent: String? = null, session: String = "s") = PipelineRun(
         id = id,
-        sessionId = "s",
+        sessionId = session,
         pipelineId = "p",
         origin = RunOrigin.CHAT,
         status = status,
@@ -95,7 +97,7 @@ class ChatHomeRunDelegateTest {
 
     private var checkCalls = 2
     private fun description(runId: String) = RunDescription(
-        run = run(runId, PipelineRunStatus.COMPLETED),
+        run = run(runId, PipelineRunStatus.COMPLETED, session = if (runId == OTHER_RUN) OTHER_SESSION else "s"),
         models = listOf(RunModelUse("Gemma", "sha", LocalBackend.CPU, 4096)),
         localCalls = checkCalls,
         cloudCalls = 0,
@@ -118,10 +120,14 @@ class ChatHomeRunDelegateTest {
     )
     private val runRepository: PipelineRunRepository = mockk {
         every { observeRunsForSession("s") } returns runs
+        every { observeRunsForSession(OTHER_SESSION) } returns
+            flowOf(listOf(run(OTHER_RUN, PipelineRunStatus.COMPLETED, session = OTHER_SESSION)))
     }
+    private var slowRead: CompletableDeferred<Unit>? = null
     private val describeRun: DescribeRunUseCase = mockk {
-        coEvery { this@mockk.invoke(any()) } answers {
+        coEvery { this@mockk.invoke(any()) } coAnswers {
             val id = firstArg<String>()
+            if (id != OTHER_RUN) slowRead?.await()
             described += id
             description(id)
         }
@@ -143,6 +149,7 @@ class ChatHomeRunDelegateTest {
     }
     private val state = MutableStateFlow(ChatHomeScreenState())
     private val startedAgain = mutableListOf<RunAgainRequest>()
+    private var startsAgain = true
 
     private fun TestScope.delegate() = ChatHomeRunDelegate(
         scope = backgroundScope,
@@ -150,7 +157,10 @@ class ChatHomeRunDelegateTest {
         pipelineRunRepository = runRepository,
         useCases = ChatHomeRunUseCases(describeRun, verifyRun, exportRunTrace),
         generationSettings = settings,
-        startRunAgain = { startedAgain += it },
+        startRunAgain = {
+            startedAgain += it
+            startsAgain
+        },
     )
 
     @Test
@@ -235,6 +245,22 @@ class ChatHomeRunDelegateTest {
         }
 
     @Test
+    fun `given a start-again the send path declines when confirmed then nothing is announced`() =
+        runTest(UnconfinedTestDispatcher()) {
+            startsAgain = false
+            val delegate = delegate()
+            val events = mutableListOf<RunHeaderEvent>()
+            backgroundScope.launch { delegate.events.collect { events += it } }
+            delegate.observe("s")
+
+            delegate.runAgain()
+            delegate.confirmRunAgain()
+
+            assertEquals(listOf(request), startedAgain)
+            assertEquals(emptyList<RunHeaderEvent>(), events)
+        }
+
+    @Test
     fun `given an export when opened then the document is rendered first and its size shown`() =
         runTest(UnconfinedTestDispatcher()) {
             val delegate = delegate()
@@ -274,6 +300,24 @@ class ChatHomeRunDelegateTest {
         }
 
     @Test
+    fun `given a re-read of the previous chat still going when the chat changes then the new chat keeps its strip`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val delegate = delegate()
+            delegate.observe("s")
+            slowRead = CompletableDeferred()
+            delegate.toggleHeader()
+
+            delegate.observe(OTHER_SESSION)
+            slowRead?.complete(Unit)
+
+            // The strip now describes the new chat's run, whatever the late read returned.
+            assertEquals(listOf("active", "other", "active"), described)
+            delegate.openExport()
+            coVerify(exactly = 1) { exportRunTrace(OTHER_RUN, any()) }
+            coVerify(exactly = 0) { exportRunTrace("active", any()) }
+        }
+
+    @Test
     fun `given the strip when toggled then it opens and closes, and a new session closes it`() =
         runTest(UnconfinedTestDispatcher()) {
             val delegate = delegate()
@@ -284,4 +328,9 @@ class ChatHomeRunDelegateTest {
             delegate.observe("s")
             assertEquals(false, state.value.console.runHeaderExpanded)
         }
+
+    private companion object {
+        const val OTHER_SESSION = "t"
+        const val OTHER_RUN = "other"
+    }
 }

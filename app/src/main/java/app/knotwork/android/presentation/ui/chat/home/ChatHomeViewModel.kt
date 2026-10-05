@@ -276,9 +276,10 @@ constructor(
         // A finished run started again with its own seed and sampler: the run's
         // message again, on the pipeline it executed, as a new turn in the thread.
         // The console closes so the answer shows as it arrives.
+        // Like a send, it never starts behind a generation in progress, and it loads
+        // the model first when the model was released while the app was idle.
         startRunAgain = { request ->
-            if (request.sessionId == _state.value.thread.currentSessionId) {
-                console.closeConsole()
+            val start = {
                 launchRun(
                     sessionId = request.sessionId,
                     prompt = request.userPrompt,
@@ -288,6 +289,13 @@ constructor(
                     samplingOverride = request.sampling,
                 )
             }
+            val idle = _state.value.visual !is ChatHomeUiState.Generating
+            val starts = request.sessionId == _state.value.thread.currentSessionId && idle
+            if (starts) {
+                console.closeConsole()
+                if (llmInferenceEngine.isInitialized) start() else loadModelThenSend(send = start)
+            }
+            starts
         },
     )
 
@@ -713,8 +721,11 @@ constructor(
      * [ChatHomeUiState.Error] without clearing the composer, so Retry — or the
      * user, after registering a model in Settings — can resend. Tracked via
      * [modelLoadJob] so [stopGeneration] can cancel the pending send.
+     *
+     * @param send What goes out once the model is loaded: the composer's draft by
+     *   default; the run strip passes a run started again with its seed.
      */
-    private fun loadModelThenSend() {
+    private fun loadModelThenSend(send: () -> Unit = ::sendMessage) {
         _state.update { it.copy(visual = ChatHomeUiState.Generating(preparingModel = true)) }
         modelLoadJob?.cancel()
         modelLoadJob = viewModelScope.launch {
@@ -731,7 +742,7 @@ constructor(
                         // resting visual is derived from the live receiver so a
                         // message emission that landed during the load is honoured.
                         _state.update { it.copy(visual = it.restingVisual()) }
-                        sendMessage()
+                        send()
                     } else {
                         // Defensive: a reported success that somehow left the
                         // engine uninitialised must not loop back into another

@@ -77,6 +77,7 @@ import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleSnap
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -724,6 +725,60 @@ class ChatHomeViewModelTest {
                     displayContent = null,
                     origin = any(),
                     // A new turn in the thread: the question shows above the new answer.
+                    persistUserMessage = true,
+                    samplingOverride = sampling,
+                )
+            }
+        }
+
+    @Test
+    fun `given the model was released when a run is started again with its seed then it loads the model first`() =
+        runTest(testDispatcher) {
+            var modelLoaded = false
+            every { llmInferenceEngine.isInitialized } answers { modelLoaded }
+            coEvery { loadModelUseCase() } answers {
+                modelLoaded = true
+                Result.Success(Unit)
+            }
+            every { settingsRepository.localModelBackend } returns flowOf("CPU")
+            var observedSession = ""
+            every { pipelineRunRepository.observeRunsForSession(any()) } answers {
+                observedSession = firstArg()
+                flowOf(listOf(finishedRun(observedSession)))
+            }
+            val sampling = LocalSampling(RunSampler(0.3, 12, 0.5), seed = 7)
+            val describeRun = mockk<DescribeRunUseCase>()
+            coEvery { describeRun(any()) } answers {
+                RunDescription(
+                    run = finishedRun(observedSession),
+                    models = emptyList(),
+                    localCalls = 0,
+                    cloudCalls = 0,
+                    digest = null,
+                    reproducibility = Reproducibility.Promised(emptySet(), usedCloud = false),
+                    verify = VerifyAvailability.NoLocalCalls,
+                    runAgain = RunAgainAvailability.Available(
+                        RunAgainRequest(observedSession, "recorded-pipeline", "Daily brief", "the message", sampling),
+                    ),
+                )
+            }
+            every { runUseCases.describeRun } returns describeRun
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            viewModel.run.runAgain()
+            viewModel.run.confirmRunAgain()
+            advanceUntilIdle()
+
+            coVerifyOrder {
+                loadModelUseCase()
+                agentOrchestratorUseCase(
+                    sessionId = any(),
+                    userPrompt = "the message",
+                    pipelineId = "recorded-pipeline",
+                    attachment = null,
+                    displayContent = null,
+                    origin = any(),
                     persistUserMessage = true,
                     samplingOverride = sampling,
                 )
