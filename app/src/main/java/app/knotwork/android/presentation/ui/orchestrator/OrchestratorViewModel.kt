@@ -1278,16 +1278,23 @@ constructor(
      * Read when a sheet opens rather than kept as state: it changes only in Settings, which the
      * editor is not on at the same time.
      *
-     * @return The availability; a provider's model is `null` when it uses its default.
+     * @return The availability; a provider's model is `null` when it uses its default. Empty when
+     *   the stored values cannot be read — the fields then show every provider as not set up,
+     *   which still lets the user choose one.
      */
-    suspend fun loadProviderAvailability(): ProviderAvailability {
+    suspend fun loadProviderAvailability(): ProviderAvailability = try {
         val configured = CloudProvider.entries.filter { apiKeyRepository.isConfigured(it) }
-        return ProviderAvailability(
+        ProviderAvailability(
             models = configured.associateWith { provider ->
                 apiKeyRepository.getModel(provider).first()?.takeIf { it.isNotBlank() }
             },
             auto = AutoProvider.resolve(apiKeyRepository),
         )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "Failed to read which providers are set up for the node sheet")
+        ProviderAvailability()
     }
 
     /**

@@ -437,6 +437,18 @@ class ProviderDetailViewModel @Inject constructor(
     private var boundProvider: CloudProvider? = null
 
     init {
+        // The model list shows what the last test brought. When that result is dropped — the
+        // values it ran with changed — the list closes with it, so the next test does not open
+        // it unasked.
+        connectionTest.state
+            .onEach { state ->
+                val listed = (state as? ConnectionTestState.Finished)?.result is ConnectionCheckResult.Reachable
+                if (!listed) _uiState.update { it.copy(modelSheetOpen = false) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    init {
         // The cloud-retry policy is global (applies to every provider), so it is
         // bound once on construction rather than per-provider in [bind].
         networkSettings.cloudRetryMaxAttempts

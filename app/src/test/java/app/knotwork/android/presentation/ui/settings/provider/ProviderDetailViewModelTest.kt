@@ -369,4 +369,24 @@ class ProviderDetailViewModelTest {
         assertTrue(open)
         assertFalse(vm.uiState.value.modelSheetOpen)
     }
+
+    @Test
+    fun `given the model list open when the result it lists is dropped then the list closes`() = runTest {
+        // Left open, the flag would open the list by itself after the next successful test.
+        val checker = mockk<ProviderConnectionChecker> {
+            every { destination(any(), any()) } returns "192.168.1.20"
+            coEvery { check(any(), any()) } returns ConnectionCheckResult.Reachable(listOf("llama3.2:3b"))
+        }
+        val vm = boundOllama(checker)
+        vm.startConnectionTest()
+        advanceUntilIdle()
+        vm.openModelSheet()
+        val openBefore = vm.uiState.value.modelSheetOpen
+
+        vm.updateBaseUrl(ProviderId.Ollama, "http://192.168.1.21:11434")
+        advanceUntilIdle()
+
+        assertTrue(openBefore)
+        assertFalse(vm.uiState.value.modelSheetOpen)
+    }
 }

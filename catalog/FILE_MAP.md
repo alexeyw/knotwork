@@ -512,6 +512,7 @@ matters.
   - `SecretFieldImeTest.kt` - Every field that takes a credential tells the keyboard it is a password.
   - `settings/` - the settings hub and its category sub-screens, including the hint affordance, the search surface, and the provider / run-limits details.
     - `HeroSnapshotTest.kt` - Roborazzi baseline for the README "Settings" hero shot at the canonical 1080 × 2400 resolution.
+    - `ModelPickerSheetTest.kt` - Behaviour of `ModelPickerSheetContent`: what a server's list becomes, and what a pick returns.
     - `ProviderDetailSnapshotTest.kt` - Roborazzi baselines for the provider detail screen.
     - `ProviderPreview.kt` - Preview fixtures of the external providers: the Models list with all eight rows, the *Add provider* picker, each provider form in its states, and the model list.
     - `RunLimitsSnapshotTest.kt` - Roborazzi baselines for the run-limits screen.

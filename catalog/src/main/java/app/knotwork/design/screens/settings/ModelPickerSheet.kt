@@ -101,8 +101,10 @@ fun ModelPickerSheetContent(
 ) {
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     val matches = remember(state.ids, query) {
+        // A server may list an id twice; each id is one row and one list key.
+        val ids = state.ids.distinct()
         val needle = query.trim()
-        if (needle.isEmpty()) state.ids else state.ids.filter { it.contains(needle, ignoreCase = true) }
+        if (needle.isEmpty()) ids else ids.filter { it.contains(needle, ignoreCase = true) }
     }
     var announcedCount by remember { mutableIntStateOf(matches.size) }
     LaunchedEffect(matches.size) {
