@@ -20,10 +20,10 @@ import javax.inject.Inject
  * close to: the same fact reworded, an update of it, or a different fact.
  *
  * Embedding similarity finds the candidate but cannot make this call. On the
- * bundled on-device embedder two wordings of one fact, a correction of it, and a
- * different fact of the same shape ("allergic to peanuts" / "allergic to cats") all
- * score above [MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD], and Cyrillic text
- * collapses to nearly one direction. The judge therefore reads the two texts: it
+ * bundled on-device embedder a rewording of a fact, a correction of it, and a
+ * different fact of the same shape ("allergic to peanuts" / "allergic to cats") can
+ * all score above [MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD], and Cyrillic
+ * text collapses to nearly one direction. The judge therefore reads the two texts: it
  * runs [DefaultPrompts.MemorySupersede.INSTRUCTION] once through the local model,
  * constrained by [StructuredOutputGate.runToken] to one verdict word, with the same
  * repair ceiling and counter as the other structured-output consumers.
@@ -85,7 +85,7 @@ class MemorySupersedeJudge @Inject constructor(
         }
     }
 
-    /** Shared constants and the prompt builder, also used by the on-device measurement. */
+    /** Shared constants and the prompt builder, public so a measurement can send the exact prompt. */
     companion object {
         private const val TAG = "MemorySupersedeJudge"
 

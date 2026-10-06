@@ -539,7 +539,7 @@ object DefaultPrompts {
      * local model what the new fact is relative to the stored one: the same fact
      * reworded, an update of it, or a different fact. Embedding similarity alone
      * cannot tell — on the bundled on-device embedder two different facts of the
-     * same shape ("allergic to peanuts" / "allergic to cats") score as close as
+     * same shape ("allergic to peanuts" / "allergic to cats") can score as close as
      * two wordings of one fact.
      *
      * Like [MemoryExtraction], this sub-object is a code-level inference prompt,
