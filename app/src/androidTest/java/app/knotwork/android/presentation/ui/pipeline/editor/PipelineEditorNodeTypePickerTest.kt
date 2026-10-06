@@ -33,13 +33,14 @@ class PipelineEditorNodeTypePickerTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private var picked: NodeType? = null
+    private val pickedTypes = mutableListOf<NodeType>()
+    private val picked: NodeType? get() = pickedTypes.firstOrNull()
     private var dismissed = 0
 
     private fun render() {
         composeTestRule.setContent {
             KnotworkTheme {
-                NodeTypePickerSheet(onPick = { picked = it }, onDismiss = { dismissed++ })
+                NodeTypePickerSheet(onPick = { pickedTypes += it }, onDismiss = { dismissed++ })
             }
         }
     }
@@ -64,6 +65,26 @@ class PipelineEditorNodeTypePickerTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { picked != null }
 
         assertEquals(NodeType.LITE_RT, picked)
+        assertEquals(0, dismissed)
+    }
+
+    @Test
+    fun nodeTypePicker_secondTapWhileHiding_addsNothingMore() {
+        render()
+        composeTestRule.waitForIdle()
+
+        // Freeze the clock so the sheet is still on screen, hiding, when the
+        // second row is tapped.
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.onNodeWithTag(rowTag(NodeType.LITE_RT)).performClick()
+        composeTestRule.mainClock.advanceTimeByFrame()
+        composeTestRule.onNodeWithTag(rowTag(NodeType.CLOUD)).performClick()
+        composeTestRule.onNodeWithContentDescription("Close").performClick()
+        composeTestRule.mainClock.autoAdvance = true
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { picked != null }
+        composeTestRule.waitForIdle()
+
+        assertEquals(listOf(NodeType.LITE_RT), pickedTypes)
         assertEquals(0, dismissed)
     }
 

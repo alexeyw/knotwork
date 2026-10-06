@@ -14,6 +14,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -46,6 +47,9 @@ private val HANDLE_HEIGHT = 4.dp
  * - **One sheet at a time.** A pick first hides this sheet and only then
  *   reports the type, so the node's configuration sheet, which the caller
  *   opens next, never rises over a picker still on screen. Close does the same.
+ * - **One answer per opening.** The sheet still takes taps while it hides, so
+ *   a second row tapped in that moment would add a second node; once a pick
+ *   or Close is under way, further ones are ignored.
  * - **A drag handle that is not a TalkBack stop.** The Material handle is a
  *   focusable control; Close and Back already dismiss, so the handle here is
  *   drawn as a mark only. The sheet still drags by its whole surface.
@@ -63,9 +67,15 @@ internal fun NodeTypePickerSheet(onPick: (NodeType) -> Unit, onDismiss: () -> Un
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf("") }
+    var settling by remember { mutableStateOf(false) }
     val hideThen: (() -> Unit) -> Unit = { action ->
-        scope.launch { sheetState.hide() }.invokeOnCompletion {
-            if (!sheetState.isVisible) action()
+        if (!settling) {
+            settling = true
+            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                // A hide that did not finish (the user grabbed the sheet) leaves it open
+                // and answerable again.
+                if (sheetState.isVisible) settling = false else action()
+            }
         }
     }
     ModalBottomSheet(
