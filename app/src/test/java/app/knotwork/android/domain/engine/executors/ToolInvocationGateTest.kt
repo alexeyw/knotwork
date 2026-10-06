@@ -15,6 +15,7 @@ import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
 import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import io.mockk.coEvery
@@ -524,8 +525,7 @@ class ToolInvocationGateTest {
         val recordTriggerHitlEvent: RecordTriggerHitlEventUseCase = mockk(relaxed = true)
         private val settingsRepository: SettingsRepository = mockk(relaxed = true)
         val approvalNotifier: ApprovalNotifier = mockk(relaxed = true)
-        val resolveRequestContext: ResolveApprovalRequestContextUseCase =
-            mockk<ResolveApprovalRequestContextUseCase>().also { coEvery { it(any()) } returns null }
+        val resolveRequestContext: ResolveApprovalRequestContextUseCase = ApprovalRequestContextFixtures.none()
 
         /** How many times the tool actually ran. */
         var executions = 0

@@ -81,10 +81,11 @@ interface TriggerJournalDao {
     suspend fun recordHitlGateResolved(runId: String, resolution: String)
 
     /**
-     * Returns the id of the trigger whose `FIRED` row carries [runId].
+     * Returns the id of the trigger whose journal row carries [runId].
      *
-     * Served by the `runId` index. A run is started by at most one firing, so
-     * at most one row matches; `LIMIT 1` keeps the answer single regardless.
+     * Only a firing writes a run id onto its row, so the row is the `FIRED` one
+     * that started the run. Served by the `runId` index; a run is started by at
+     * most one firing, and `LIMIT 1` keeps the answer single regardless.
      *
      * @param runId Id of the root run a firing started.
      * @return the trigger id, or `null` when no row carries [runId].

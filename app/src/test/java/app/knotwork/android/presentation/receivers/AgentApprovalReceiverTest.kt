@@ -12,6 +12,7 @@ import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import app.knotwork.android.presentation.notifications.ApprovalNotificationManager
@@ -65,8 +66,7 @@ class AgentApprovalReceiverTest {
         pendingInteractionRepository = mockk(relaxed = true)
         approvalNotifier = mockk(relaxed = true)
         clarificationNotifier = mockk(relaxed = true)
-        resolveRequestContext =
-            mockk<ResolveApprovalRequestContextUseCase>().also { coEvery { it(any()) } returns null }
+        resolveRequestContext = ApprovalRequestContextFixtures.none()
         receiver = AgentApprovalReceiver().also { instance ->
             // Bypass Hilt's auto-inject — flip the generated `injected` flag and assign
             // the `@Inject lateinit var`s directly. See class KDoc for rationale.
