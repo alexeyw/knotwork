@@ -2175,8 +2175,8 @@ Tap the search icon to open semantic search. Your query is embedded and
 the list is re-ranked by relevance, so a search for "berlin" surfaces the
 timezone note even though it never contains that word. Each result shows
 its ranking score: how well the entry matches, plus the small bonuses a
-recent or pinned entry earns — which is why a strong match can read
-slightly above 1.00.
+recent, pinned or hand-saved entry earns — which is why a strong match can
+read slightly above 1.00.
 
 ### What the agent recalls, and when
 
@@ -2199,6 +2199,11 @@ sees. Which entries those are is decided in this order:
 - **Pinned entries are always in.** Pinning skips the gate, adds the largest
   bonus, and sorts the entry first — it is the one way to guarantee a fact is
   recalled.
+- **Your own wording wins a tie.** An entry you saved by hand gets the smallest
+  bonus of all: when it and an auto-extracted entry match about equally well
+  and are about as old, yours is recalled first, and if the two say the same
+  thing, yours is the one kept. It never gets an entry past the gate, and a
+  much newer auto-extracted entry still ranks above an old one of yours.
 - **The original wins over a summary of it.** If compaction has merged some
   facts into a summary and one of those facts is still stored word-for-word, the
   original is what the agent is shown. A summary is a paraphrase written by the

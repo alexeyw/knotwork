@@ -11,8 +11,9 @@ import kotlin.math.sin
 
 /**
  * Unit tests for [MemoryReranker]. Each ranking rule — the additive recency
- * bonus, the pinned boost, the threshold filter and the near-duplicate collapse
- * — is exercised in isolation, plus the edge cases (clock skew, zero half-life,
+ * bonus, the pinned boost, the bonus of a hand-saved chunk, the threshold filter
+ * and the near-duplicate collapse — is exercised in isolation. A test chunk is
+ * an extracted fact unless a test says otherwise, plus the edge cases (clock skew, zero half-life,
  * unrelated chunks that share a text prefix, chunks awaiting a re-embed).
  */
 class MemoryRerankerTest {
@@ -42,7 +43,7 @@ class MemoryRerankerTest {
         timestamp: Long = now,
         isPinned: Boolean = false,
         embedding: FloatArray = unit(id * DISTINCT_ANGLE_DEGREES),
-        source: MemorySource = MemorySource.Manual,
+        source: MemorySource = MemorySource.ChatSession(sessionId = "session"),
     ): MemoryChunk = MemoryChunk(
         id = id,
         text = text,
@@ -163,6 +164,93 @@ class MemoryRerankerTest {
         assertEquals(listOf(1L, 2L), result.map { it.first.id })
         // pinned final = 0.3 + 0.2 boost + 0.15 full recency bonus = 0.65
         assertEquals(0.65f, result.first().second, EPSILON)
+    }
+
+    // endregion
+
+    // region the user's own wording
+
+    @Test
+    fun `given a hand-saved chunk when reranked then its score carries the manual bonus`() {
+        val manual = chunk(id = 1, source = MemorySource.Manual)
+
+        val result = reranker.rerank(
+            candidates = listOf(manual to 0.8f),
+            nowMillis = now,
+            halfLifeDays = 30,
+            threshold = 0f,
+            limit = 5,
+        )
+
+        // 0.8 + 0.15 full recency bonus + 0.03 manual bonus = 0.98
+        assertEquals(0.98f, result.single().second, EPSILON)
+    }
+
+    @Test
+    fun `given equal relevance and age when one chunk was saved by hand then it ranks above the extracted one`() {
+        val extracted = chunk(id = 1)
+        val manual = chunk(id = 2, source = MemorySource.Manual)
+
+        val result = reranker.rerank(
+            candidates = listOf(extracted to 0.8f, manual to 0.8f),
+            nowMillis = now,
+            halfLifeDays = 30,
+            threshold = 0f,
+            limit = 5,
+        )
+
+        assertEquals(listOf(2L, 1L), result.map { it.first.id })
+    }
+
+    @Test
+    fun `given an extracted restatement of a hand-saved chunk when reranked then the hand-saved wording survives`() {
+        // The two say the same thing (5° apart, cosine 0.996): the collapse keeps one,
+        // and at equal relevance and age it is the one the user wrote.
+        val extracted = chunk(id = 1, embedding = unit(0.0))
+        val manual = chunk(id = 2, embedding = unit(5.0), source = MemorySource.Manual)
+
+        val result = reranker.rerank(
+            candidates = listOf(extracted to 0.8f, manual to 0.8f),
+            nowMillis = now,
+            halfLifeDays = 30,
+            threshold = 0f,
+            limit = 5,
+        )
+
+        assertEquals(listOf(2L), result.map { it.first.id })
+    }
+
+    @Test
+    fun `given a stale hand-saved chunk and a fresh extracted one when reranked then freshness still wins`() {
+        // The manual bonus breaks ties; it does not outweigh a half-life of age:
+        // 0.8 + 0.075 + 0.03 = 0.905 against 0.8 + 0.15 = 0.95.
+        val manual = chunk(id = 1, timestamp = now - 30 * DAY, source = MemorySource.Manual)
+        val extracted = chunk(id = 2, timestamp = now)
+
+        val result = reranker.rerank(
+            candidates = listOf(manual to 0.8f, extracted to 0.8f),
+            nowMillis = now,
+            halfLifeDays = 30,
+            threshold = 0f,
+            limit = 5,
+        )
+
+        assertEquals(listOf(2L, 1L), result.map { it.first.id })
+    }
+
+    @Test
+    fun `given a hand-saved chunk just below threshold when reranked then the manual bonus does not buy it in`() {
+        val manual = chunk(id = 1, source = MemorySource.Manual)
+
+        val result = reranker.rerank(
+            candidates = listOf(manual to 0.54f),
+            nowMillis = now,
+            halfLifeDays = 30,
+            threshold = 0.55f,
+            limit = 5,
+        )
+
+        assertTrue(result.isEmpty())
     }
 
     // endregion

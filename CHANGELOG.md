@@ -70,6 +70,12 @@ details.
 
 ### Changed
 
+- **Your own wording wins a tie in memory recall.** A memory you saved by hand
+  now earns a small bonus in ranking — the smallest of the bonuses, below
+  freshness and pinning. When it and an auto-extracted entry match about
+  equally well and are about as old, yours is recalled first, and when the two
+  say the same thing, yours is the one kept. The bonus never gets an entry past
+  the similarity threshold.
 - **A delegated task returns its whole answer and no longer writes it to
   memory.** `delegate_task` used to save the cloud model's full answer as a
   memory entry marked *Saved manually* and return only its first 100 characters
