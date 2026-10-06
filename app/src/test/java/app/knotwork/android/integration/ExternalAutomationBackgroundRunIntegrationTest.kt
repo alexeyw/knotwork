@@ -11,6 +11,7 @@ import app.knotwork.android.data.repositories.PendingInteractionRepositoryImpl
 import app.knotwork.android.data.repositories.PipelineRunRepositoryImpl
 import app.knotwork.android.data.repositories.RunTraceRepositoryImpl
 import app.knotwork.android.data.repositories.TriggerJournalRepositoryImpl
+import app.knotwork.android.data.repositories.TriggerRepositoryImpl
 import app.knotwork.android.domain.constants.ExternalAutomationContract
 import app.knotwork.android.domain.engine.ChatHistoryWindowPlanner
 import app.knotwork.android.domain.engine.LlmInferenceEngine
@@ -63,6 +64,7 @@ import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.ParkedRunResumer
 import app.knotwork.android.domain.usecases.PendingSubmissionOutcome
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
 import app.knotwork.android.domain.usecases.ResumePipelineRunUseCase
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
@@ -438,6 +440,11 @@ class ExternalAutomationBackgroundRunIntegrationTest {
             chatRepository,
             pendingRepository,
             recordTriggerHitlEvent = recordTriggerHitlEvent,
+            resolveRequestContext = ResolveApprovalRequestContextUseCase(
+                runRepository,
+                triggerJournal,
+                TriggerRepositoryImpl(database.triggerDao()),
+            ),
         )
         val toolNodeExecutor = ToolNodeExecutor(
             llmEngine,

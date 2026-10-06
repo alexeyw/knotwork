@@ -32,6 +32,8 @@ import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceCli
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.engine.testGraphExecutionEngine
 import app.knotwork.android.domain.models.AgentTool
+import app.knotwork.android.domain.models.ApprovalRequestContext
+import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NetworkState
@@ -78,6 +80,7 @@ import app.knotwork.android.domain.usecases.ParkedRunResumer
 import app.knotwork.android.domain.usecases.PendingSubmissionOutcome
 import app.knotwork.android.domain.usecases.RecordTriggerEvaluationUseCase
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
 import app.knotwork.android.domain.usecases.ResumePipelineRunUseCase
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
@@ -371,8 +374,19 @@ class TriggerBackgroundRunIntegrationTest {
                     process.pendingRepository.getForRun(runId) != null &&
                     process.taskQueueManager.pendingApproval(SESSION_ID) == null
             }
+            // Both notifications name the trigger and show the prompt the run
+            // was fired with — read back through the real journal and run store.
+            val asked = ApprovalRequestContext(
+                source = ApprovalRequestSource.Trigger(name = TRIGGER_NAME),
+                request = USER_PROMPT,
+                shortened = false,
+                hadImage = false,
+            )
             verify(atLeast = 1) {
-                process.approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any())
+                process.approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any(), asked)
+            }
+            verify(exactly = 1) {
+                process.approvalNotifier.sendPersistentApprovalRequest(runId, any(), any(), any(), any(), any(), asked)
             }
 
             // ── Approve from the notification — the run resumes and completes ──
@@ -499,6 +513,11 @@ class TriggerBackgroundRunIntegrationTest {
             chatRepository,
             pendingRepository,
             recordTriggerHitlEvent = recordTriggerHitlEvent,
+            resolveRequestContext = ResolveApprovalRequestContextUseCase(
+                runRepository,
+                triggerJournal,
+                TriggerRepositoryImpl(database.triggerDao()),
+            ),
         )
         val toolNodeExecutor = ToolNodeExecutor(
             llmEngine,

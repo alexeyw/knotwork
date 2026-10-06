@@ -118,6 +118,7 @@ class ApprovalRequestAddressingTest {
             chatRepository = mockk(relaxed = true),
             pendingInteractionRepository = pendingInteractionRepository,
             recordTriggerHitlEvent = mockk(relaxed = true),
+            resolveRequestContext = ApprovalRequestContextFixtures.none(),
         )
         private val taskQueueManager: TaskQueueManager = mockk(relaxed = true)
         val useCase = SubmitApprovalDecisionUseCase(taskQueueManager, pendingInteractionRepository, parkedRunResumer)

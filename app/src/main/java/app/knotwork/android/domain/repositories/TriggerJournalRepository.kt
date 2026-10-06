@@ -68,6 +68,19 @@ interface TriggerJournalRepository {
     suspend fun recordHitlEvent(runId: String, event: TriggerHitlEvent)
 
     /**
+     * Returns the id of the trigger whose firing started run [runId], read from
+     * the journal row written when it fired. Lets an approval raised in a
+     * trigger's run name that trigger — the run record itself does not carry it.
+     *
+     * Best-effort like every journal read: an unreadable store answers `null`,
+     * the same as a run no trigger started.
+     *
+     * @param runId Id of the **root** run — the id the journal row carries.
+     * @return the trigger id, or `null` when no row links [runId] to a trigger.
+     */
+    suspend fun findTriggerIdForRun(runId: String): String?
+
+    /**
      * Observes the journal of a single trigger, newest evaluation first. Backs
      * the per-trigger journal UI.
      *

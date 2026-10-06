@@ -283,6 +283,7 @@ class ChatHomeHitlDelegate(
                         arguments = approval.arguments,
                         risk = approval.risk,
                         requestId = approval.requestId,
+                        context = approval.context,
                     ),
                 ),
                 composer = it.composer.copy(typedConfirm = ""),

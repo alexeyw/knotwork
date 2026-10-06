@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
+import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.HardCeilingBreach
@@ -36,6 +37,7 @@ import app.knotwork.android.domain.usecases.CheckImageAttachmentUseCase
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.GetContextWindowUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.ResumePipelineRunUseCase
 import app.knotwork.android.domain.usecases.SaveMessageToMemoryUseCase
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
@@ -155,6 +157,7 @@ constructor(
     private val exportChatUseCase: ExportChatUseCase,
     private val unarchiveChatUseCase: UnarchiveChatUseCase,
     private val runUseCases: ChatHomeRunUseCases,
+    private val resolveApprovalRequestContext: ResolveApprovalRequestContextUseCase,
 ) : ViewModel() {
 
     private val _state: MutableStateFlow<ChatHomeScreenState> = MutableStateFlow(ChatHomeScreenState())
@@ -393,11 +396,14 @@ constructor(
         clarificationRepository = clarificationRepository,
         pendingInteractionRepository = pendingInteractionRepository,
         resumePipelineRunUseCase = resumePipelineRunUseCase,
+        resolveApprovalRequestContext = resolveApprovalRequestContext,
         attachToLiveRun = ::attachToLiveRun,
         replayTrace = console::replayTrace,
-        restoreApproval = { hitl.handleWaitingForApproval(it) },
-        restoreClarification = { hitl.handleAwaitingClarification(it) },
-        restoreCeilingPause = { hitl.restoreCeilingPause(it) },
+        restoredCards = RestoredCardSeams(
+            approval = { hitl.handleWaitingForApproval(it) },
+            clarification = { hitl.handleAwaitingClarification(it) },
+            ceilingPause = { hitl.restoreCeilingPause(it) },
+        ),
     )
 
     /**
@@ -1406,8 +1412,16 @@ data class PipelineSummary(
  * @property requestId identity of the request this card shows. The card's
  *   answer names it, so it settles this request or nothing — which is also what
  *   makes the risk above the right one to decide the typed confirmation by.
+ * @property context what the run was asked to do, shown above the call; `null`
+ *   when there is nothing to show.
  */
-data class HitlPending(val toolName: String, val arguments: String, val risk: ToolRisk, val requestId: String)
+data class HitlPending(
+    val toolName: String,
+    val arguments: String,
+    val risk: ToolRisk,
+    val requestId: String,
+    val context: ApprovalRequestContext? = null,
+)
 
 /**
  * Snapshot of the session's interrupted run, exposed through

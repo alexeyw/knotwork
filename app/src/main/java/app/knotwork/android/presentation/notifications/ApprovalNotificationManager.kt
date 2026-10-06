@@ -11,6 +11,7 @@ import androidx.core.net.toUri
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
 import app.knotwork.android.domain.constants.NotificationIds
+import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
@@ -101,6 +102,7 @@ class ApprovalNotificationManager @Inject constructor(
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
      * @param risk Risk classification, drives the channel / icon / title selection.
+     * @param requestContext What the run was asked to do; not shown yet.
      */
     override fun sendApprovalRequest(
         sessionId: String,
@@ -108,6 +110,7 @@ class ApprovalNotificationManager @Inject constructor(
         toolName: String,
         arguments: String,
         risk: ToolRisk,
+        requestContext: ApprovalRequestContext?,
     ) {
         // If the user is currently on the chat screen for this session, they will see the inline prompt.
         if (activeSessionTracker.activeSessionId.value == sessionId) {
@@ -173,6 +176,7 @@ class ApprovalNotificationManager @Inject constructor(
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
      * @param risk Risk classification, drives the channel / icon / title / actions.
+     * @param requestContext What the run was asked to do; not shown yet.
      */
     override fun sendPersistentApprovalRequest(
         runId: String,
@@ -181,6 +185,7 @@ class ApprovalNotificationManager @Inject constructor(
         toolName: String,
         arguments: String,
         risk: ToolRisk,
+        requestContext: ApprovalRequestContext?,
     ) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         ensureChannelsRegistered(notificationManager)

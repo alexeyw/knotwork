@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.models.AgentOrchestratorState
+import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.NodeExecutionResult
 import app.knotwork.android.domain.models.NodeOutput
@@ -18,6 +19,7 @@ import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.repositories.ToolSettings
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
@@ -69,6 +71,10 @@ import javax.inject.Singleton
  * this session waits on" would let the answer given for one request authorise
  * another.
  *
+ * A raised gate also carries what the run was asked to do — the root run's
+ * request, resolved once by [ResolveApprovalRequestContextUseCase] — so the card
+ * and both notifications show the call next to the request it came from.
+ *
  * Marked `@Singleton` because [activeApprovalDeferreds] holds per-session
  * pending approval requests that must outlive any individual node execution
  * and be reachable from the UI / notification resume path regardless of which
@@ -82,6 +88,7 @@ class ToolInvocationGate @Inject constructor(
     private val chatRepository: ChatRepository,
     private val pendingInteractionRepository: PendingInteractionRepository,
     private val recordTriggerHitlEvent: RecordTriggerHitlEventUseCase,
+    private val resolveRequestContext: ResolveApprovalRequestContextUseCase,
 ) {
 
     private val activeApprovalDeferreds = ConcurrentHashMap<String, PendingApprovalHolder>()
@@ -300,10 +307,27 @@ class ToolInvocationGate @Inject constructor(
             // case looking like "this run never asked for anything".
             recordTriggerHitlEvent(runId, TriggerHitlEvent.Raised(PendingInteractionKind.APPROVAL))
             val requestId = UUID.randomUUID().toString()
-            val approvalRequest =
-                AgentOrchestratorState.WaitingForApproval(resolvedToolName, resolvedToolArgs, risk, requestId)
+            // What the run was asked to do travels with the request, so every
+            // surface shows the call next to the request it was derived from.
+            // Resolved once, here: it is the same for the live and the parked
+            // phase, and a lookup that fails only leaves it out.
+            val requestContext = resolveRequestContext(runId)
+            val approvalRequest = AgentOrchestratorState.WaitingForApproval(
+                resolvedToolName,
+                resolvedToolArgs,
+                risk,
+                requestId,
+                requestContext,
+            )
             emit(NodeOutput.State(approvalRequest))
-            approvalNotifier.sendApprovalRequest(sessionId, requestId, resolvedToolName, resolvedToolArgs, risk)
+            approvalNotifier.sendApprovalRequest(
+                sessionId,
+                requestId,
+                resolvedToolName,
+                resolvedToolArgs,
+                risk,
+                requestContext,
+            )
 
             // Register deferred before any suspension point so a fast approval is not dropped
             val deferred = CompletableDeferred<Boolean>()
@@ -334,7 +358,8 @@ class ToolInvocationGate @Inject constructor(
                     deferred.await()
                 } else {
                     Timber.tag("PipelineDebug").w("Live approval phase timed out for session: %s", sessionId)
-                    val request = ParkedApprovalRequest(requestId, resolvedToolName, resolvedToolArgs, risk)
+                    val request =
+                        ParkedApprovalRequest(requestId, resolvedToolName, resolvedToolArgs, risk, requestContext)
                     if (runId != null && parkRun(runId, sessionId, request)) {
                         // Two-phase wait, second phase: the run parks on its
                         // durable pending record instead of failing. No
@@ -547,6 +572,7 @@ class ToolInvocationGate @Inject constructor(
                 toolName = request.toolName,
                 arguments = request.arguments,
                 risk = request.risk,
+                requestContext = request.context,
             )
         }
         return saved
@@ -560,11 +586,13 @@ class ToolInvocationGate @Inject constructor(
      * @property toolName Tool name of the staged call.
      * @property arguments Argument string of the staged call.
      * @property risk Risk classification of the staged call.
+     * @property context What the run was asked to do, as the live phase showed it.
      */
     private data class ParkedApprovalRequest(
         val requestId: String,
         val toolName: String,
         val arguments: String,
         val risk: ToolRisk,
+        val context: ApprovalRequestContext?,
     )
 }

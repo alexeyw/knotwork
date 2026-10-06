@@ -368,6 +368,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AgentTask.kt` - Agent task model.
     - `AgentTool.kt` - Agent tool model.
     - `AppError.kt` - App error model.
+    - `ApprovalRequestContext.kt` - What the run waiting for an approval was asked to do — shown next to the tool call, so the user judges the call against the request it was derived from instead of on its own.
     - `BundledDocument.kt` - One document that ships inside the APK, as the reader needs it.
     - `ChatHistorySummary.kt` - Domain model of a session's cached compressed-history summary (`sessionId`, `summary`, incremental `coveredMessageCount` cursor, `updatedAt`).
     - `ChatImportException.kt` - Why a chat file could not be imported, in words this app wrote.
@@ -594,6 +595,7 @@ Only Kotlin files appear inside the generated blocks.
   - `skillio/` - JSON serialisation gateway for skill import/export.
     - `SkillJsonSerializer.kt` - Two-way `Skill` ↔ schema-versioned JSON (org.json). Omits `toolAllowlist` when null so "all tools" round-trips back to null; never throws (maps errors to `SkillImportOutcome.Failure`).
   - `text/` - Pure-Kotlin text helpers.
+    - `ApprovalRequestText.kt` - Ceilings for the request an approval shows next to the tool call: the text a run was asked to do, and the name of the trigger that asked it.
     - `ImportedText.kt` - Ceilings for text the app quotes back from a file the user picked — an import error, a dialog line.
     - `TitleText.kt` - `String.collapseWhitespace()` + `String.toSingleLineTitle(maxLength, ellipsis)`, shared by chat auto-rename and share-session naming so their single-line-title logic cannot drift.
   - `triggerio/` - JSON serialisation gateway for automation-trigger conditions.
@@ -676,6 +678,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ResetLockedDatabaseUseCase.kt` - Wraps `DatabaseResetService` for the splash recovery screen's typed-confirm "erase all data" action.
     - `ResetSamplingDefaultsUseCase.kt` - Resets temperature / top-K / top-P / max context / max steps to the documented defaults.
     - `ResetToRecommendedDefaultsUseCase.kt` - Restores every tunable preference to its `SettingsDefaults` value (backs Settings → Privacy → "Reset all settings"); never touches user data/config.
+    - `ResolveApprovalRequestContextUseCase.kt` - Finds what the run behind an approval was asked to do, for the approval card and notification to show next to the tool call.
     - `ResolveDocumentationLinkUseCase.kt` - Decides what tapping a link inside a bundled document should do.
     - `ResolveEntryInferenceUseCase.kt` - Classifies the inference entry of the pipeline a chat session would run (`EntryInferenceKind` = `LOCAL` / `CLOUD` / `NONE`) by resolving the bound-or-default graph: `CLOUD` when the `INPUT` successor is a cloud node, `LOCAL` when a vision sink (`LITE_RT` node with `originalTask`) is reachable from `INPUT`, else `NONE`. Mirrors the engine's delivery predicate so the multimodal send-time pre-flight blocks cloud-first / non-vision-model / no-sink pipelines instead of silently dropping the image.
     - `ResolveLaunchableSurfacePipelineUseCase.kt` - Resolves the pipeline an `EntrySurface` would **run**: its binding, but only while the bound pipeline still exists.

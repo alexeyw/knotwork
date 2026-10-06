@@ -53,6 +53,7 @@ import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.services.NativeMemorySampler
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.ParkedRunResumer
 import app.knotwork.android.domain.usecases.PendingSubmissionOutcome
@@ -270,7 +271,7 @@ class BackgroundAutonomyCycleIntegrationTest {
                     processB.pendingRepository.getForRun(runId) != null
             }
             verify(atLeast = 1) {
-                processB.approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any())
+                processB.approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any(), any())
             }
             // The resumed engine executed the LLM step live (the interrupted
             // run never completed it) and its record is now part of the
@@ -356,6 +357,7 @@ class BackgroundAutonomyCycleIntegrationTest {
             chatRepository,
             pendingRepository,
             recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+            resolveRequestContext = ApprovalRequestContextFixtures.none(),
         )
         val toolNodeExecutor = ToolNodeExecutor(
             llmEngine,

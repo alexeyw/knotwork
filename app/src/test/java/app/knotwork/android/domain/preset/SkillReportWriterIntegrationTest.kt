@@ -58,6 +58,7 @@ import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.services.NativeMemorySampler
 import app.knotwork.android.domain.skillio.SkillJsonSerializer
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
@@ -265,6 +266,7 @@ class SkillReportWriterIntegrationTest {
             chatRepository,
             mockk<PendingInteractionRepository>(relaxed = true),
             recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+            resolveRequestContext = ApprovalRequestContextFixtures.none(),
         )
         val toolNodeExecutor = ToolNodeExecutor(
             llmEngine,

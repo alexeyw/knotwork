@@ -63,6 +63,7 @@ class NotificationFamilyIsolationTest {
             "send_email",
             "{}",
             ToolRisk.SENSITIVE,
+            null,
         )
 
         assertEquals("posting the approval must not replace the question", 2, shade().size())

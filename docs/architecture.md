@@ -1102,13 +1102,24 @@ HITL contract (live):
   - `SENSITIVE` — asks unless the policy is `Never`.
   - `READ_ONLY` — asks only under `All`.
   - A call that must wait emits
-    `AgentOrchestratorState.WaitingForApproval(toolName, args, risk, requestId)`
+    `AgentOrchestratorState.WaitingForApproval(toolName, args, risk, requestId, context)`
     and suspends on a `CompletableDeferred` registered for that one request
     until the user resolves it via the chat console row, the system
     notification action, or the configured timeout.
 - `WaitingForApproval` carries the resolved `risk` so the chat console
   can render a coloured risk chip (`READ` / `SENS` / `DEST`) next to the
   tool name without re-resolving.
+- `context` is what the run was asked to do, for the approval surfaces to
+  show next to the call. `ResolveApprovalRequestContextUseCase` resolves it
+  once per raised gate: the executing run is walked up to the **root** of its
+  tree (a sub-pipeline's own input is not the user's request), the root's
+  recorded prompt becomes the request — made one display-safe line and
+  clamped — and a trigger's run is named through the trigger journal. The
+  state and both notifications carry the same value. The parked record keeps
+  no copy: the notification re-post and the restored chat card resolve it
+  again from the record's run id, since the root run keeps its prompt while
+  it waits. The lookup is best-effort — a failure leaves `context` empty and
+  never fails the gate.
 - The notification fallback (`ApprovalNotificationManager`) uses two
   `IMPORTANCE_HIGH` channels: `AgentApprovalChannel` for `SENSITIVE` /
   opt-in `READ_ONLY` and `AgentApprovalDestructiveChannel` for

@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.models.AgentOrchestratorState
+import app.knotwork.android.domain.models.ApprovalRequestContext
+import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.PendingDecision
 import app.knotwork.android.domain.models.PendingInteraction
@@ -14,6 +16,7 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -346,7 +349,15 @@ class ToolInvocationGateTest {
             fixture.dispatchUntil { it is AgentOrchestratorState.SuspendedInBackground }
 
             verify {
-                fixture.approvalNotifier.sendPersistentApprovalRequest(RUN_ID, SESSION_ID, any(), TOOL, ARGS, any())
+                fixture.approvalNotifier.sendPersistentApprovalRequest(
+                    RUN_ID,
+                    SESSION_ID,
+                    any(),
+                    TOOL,
+                    ARGS,
+                    any(),
+                    any(),
+                )
             }
             verify(exactly = 0) { fixture.approvalNotifier.cancelApprovalNotification(any()) }
         }
@@ -429,12 +440,64 @@ class ToolInvocationGateTest {
                 TOOL,
                 ARGS,
                 ToolRisk.SENSITIVE,
+                any(),
             )
         }
         coVerify {
             fixture.pendingInteractionRepository.save(match { it.requestId == raised.requestId })
         }
         verify(exactly = 0) { fixture.approvalNotifier.cancelApprovalNotification(any()) }
+    }
+
+    @Test
+    fun `given the request behind the run when a gate is raised then the card and both notifications carry it`() =
+        runTest {
+            // Looked up once, when the gate is raised: the live phase and the
+            // park show the same request, and the lookup reads storage.
+            val fixture =
+                Fixture(policy = ToolApprovalPolicy.SensitiveOrDestructive, risk = ToolRisk.SENSITIVE, record = null)
+            coEvery { fixture.resolveRequestContext(RUN_ID) } returns ASKED
+
+            val outputs = fixture.dispatch()
+
+            val raised = outputs.filterStates<AgentOrchestratorState.WaitingForApproval>().single()
+            assertEquals(ASKED, raised.context)
+            verify {
+                fixture.approvalNotifier.sendApprovalRequest(
+                    SESSION_ID,
+                    raised.requestId,
+                    TOOL,
+                    ARGS,
+                    ToolRisk.SENSITIVE,
+                    ASKED,
+                )
+            }
+            verify {
+                fixture.approvalNotifier.sendPersistentApprovalRequest(
+                    RUN_ID,
+                    SESSION_ID,
+                    raised.requestId,
+                    TOOL,
+                    ARGS,
+                    ToolRisk.SENSITIVE,
+                    ASKED,
+                )
+            }
+            coVerify(exactly = 1) { fixture.resolveRequestContext(any()) }
+        }
+
+    @Test
+    fun `given a recorded answer applied on resume when no gate is raised then no request is looked up`() = runTest {
+        val fixture = Fixture(
+            policy = ToolApprovalPolicy.SensitiveOrDestructive,
+            risk = ToolRisk.SENSITIVE,
+            record = parkedRecord(PendingDecision.APPROVED, recordedRisk = ToolRisk.SENSITIVE),
+        )
+
+        fixture.dispatch()
+
+        assertEquals(1, fixture.executions)
+        coVerify(exactly = 0) { fixture.resolveRequestContext(any()) }
     }
 
     /**
@@ -461,6 +524,8 @@ class ToolInvocationGateTest {
         val recordTriggerHitlEvent: RecordTriggerHitlEventUseCase = mockk(relaxed = true)
         private val settingsRepository: SettingsRepository = mockk(relaxed = true)
         val approvalNotifier: ApprovalNotifier = mockk(relaxed = true)
+        val resolveRequestContext: ResolveApprovalRequestContextUseCase =
+            mockk<ResolveApprovalRequestContextUseCase>().also { coEvery { it(any()) } returns null }
 
         /** How many times the tool actually ran. */
         var executions = 0
@@ -486,6 +551,7 @@ class ToolInvocationGateTest {
                 chatRepository = mockk(relaxed = true),
                 pendingInteractionRepository = pendingInteractionRepository,
                 recordTriggerHitlEvent = recordTriggerHitlEvent,
+                resolveRequestContext = resolveRequestContext,
             )
         }
 
@@ -537,6 +603,14 @@ class ToolInvocationGateTest {
         const val SESSION_ID = "session-1"
         const val TOOL = "some_tool"
         const val ARGS = """{"path":"notes.md"}"""
+
+        /** The request a trigger's run was started with, as the resolver finds it. */
+        val ASKED = ApprovalRequestContext(
+            source = ApprovalRequestSource.Trigger(name = "Morning briefing"),
+            request = "Check the weather and save a note",
+            shortened = false,
+            hadImage = false,
+        )
 
         /**
          * The approval record a run parked on, answered with [decision] and
