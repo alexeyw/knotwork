@@ -1174,6 +1174,10 @@ tasks.named("check") { dependsOn(verifyDialogInventory) }
 val browserEditorHtmlFile = file("$rootDir/pipeline-editor.html")
 val browserEditorNodeTypeFile =
     file("$projectDir/src/main/java/app/knotwork/android/domain/models/NodeType.kt")
+// Every node type's name and one-line description — the app's own texts. Read by
+// this generator (palette label and tooltip) and by the cookbook's (each entry's opening
+// sentence), so neither document keeps a copy of its own.
+val nodeTypeStringsFile = file("$rootDir/catalog/src/main/res/values/strings_node_types.xml")
 val browserEditorDefaultPromptsFile =
     file("$projectDir/src/main/java/app/knotwork/android/domain/constants/DefaultPrompts.kt")
 val browserEditorPromptModuleFile =
@@ -1204,6 +1208,7 @@ val browserEditorRouteLabelsFile =
 val browserEditorInputFiles: Set<File> = browserEditorClassSourceFiles + browserEditorPresetFiles +
     browserEditorTemplateFiles + setOf(
         browserEditorNodeTypeFile,
+        nodeTypeStringsFile,
         browserEditorDefaultPromptsFile,
         browserEditorPromptModuleFile,
         browserEditorToolsModuleFile,
@@ -1228,6 +1233,7 @@ val generateBrowserEditorConstants by tasks.registering {
         val rendered = BrowserEditorConstantsGenerator.render(
             html = current,
             nodeTypeSource = browserEditorNodeTypeFile.readText(),
+            nodeTypeStringsSource = nodeTypeStringsFile.readText(),
             defaultPromptsSource = browserEditorDefaultPromptsFile.readText(),
             promptTemplateModuleSource = browserEditorPromptModuleFile.readText(),
             localToolsModuleSource = browserEditorToolsModuleFile.readText(),
@@ -1334,6 +1340,7 @@ val verifyBrowserEditorConstants by tasks.registering {
         val drifted = BrowserEditorConstantsGenerator.drift(
             html = browserEditorHtmlFile.readText(),
             nodeTypeSource = browserEditorNodeTypeFile.readText(),
+            nodeTypeStringsSource = nodeTypeStringsFile.readText(),
             defaultPromptsSource = browserEditorDefaultPromptsFile.readText(),
             promptTemplateModuleSource = browserEditorPromptModuleFile.readText(),
             localToolsModuleSource = browserEditorToolsModuleFile.readText(),
@@ -1495,7 +1502,8 @@ tasks.named("check") { dependsOn(verifyExternalAutomationDocs) }
 //
 // `generateCookbookDocs` rebuilds the AUTO-GEN blocks from the sources that
 // define a node — the domain enum, the `:catalog` mirror, the ports factory,
-// the context defaults, the config hierarchy and the default prompts;
+// the context defaults, the config hierarchy, the default prompts and the
+// app's own node-type names and descriptions (`strings_node_types.xml`);
 // `verifyCookbookDocs` (wired into `check`) fails the build on drift. The pure
 // generation logic lives in `buildSrc` (`CookbookDocsGenerator`) and is
 // unit-tested there.
@@ -1531,6 +1539,7 @@ val cookbookInputFiles: Set<File> = setOf(
     cookbookNodeContextConfigFile,
     cookbookNodeConfigFile,
     cookbookDefaultPromptsFile,
+    nodeTypeStringsFile,
 )
 
 // Built inline in each task action rather than by a shared helper: a `doLast`
@@ -1554,6 +1563,7 @@ val generateCookbookDocs by tasks.registering {
                 nodeContextConfig = cookbookNodeContextConfigFile.readText(),
                 nodeConfig = cookbookNodeConfigFile.readText(),
                 defaultPrompts = cookbookDefaultPromptsFile.readText(),
+                nodeTypeStrings = nodeTypeStringsFile.readText(),
             ),
         )
         if (rendered != current) {
@@ -1580,6 +1590,7 @@ val verifyCookbookDocs by tasks.registering {
                 nodeContextConfig = cookbookNodeContextConfigFile.readText(),
                 nodeConfig = cookbookNodeConfigFile.readText(),
                 defaultPrompts = cookbookDefaultPromptsFile.readText(),
+                nodeTypeStrings = nodeTypeStringsFile.readText(),
             ),
         )
         if (drifted.isNotEmpty()) {

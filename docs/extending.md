@@ -192,18 +192,32 @@ quietly undo it, and a local-first product whose editor needs a CDN is a
 contradiction a reader will find.
 
 The editor is also the most common place where changes drift out of sync —
-every change to the `NodeType` set must be reflected here in **three**
+every change to the `NodeType` set must be reflected here in **two**
 places:
 
-1. `NODE_TYPES` array (around line 827) — add a row with `id`,
-   `label`, `color`, `icon`, `inputs`, `outputs`. Match the
+1. The `NODE_TYPES` array is generated: add the type's `color`, `icon`,
+   `inputs` and `outputs` to `BrowserEditorConstantsGenerator.NODE_TYPE_META`
+   and run `./gradlew :app:generateBrowserEditorConstants`. Match the
    inputs/outputs to your executor's connector shape (most types are
    `1/1`; `INPUT` is `0/1`; `OUTPUT` is `1/0`; branching types like
-   `IF_CONDITION` and `QUEUE_PROCESSOR` are `1/2`).
-2. `defaultContextConfig(typeId)` (around line 972) — add a `case`
+   `IF_CONDITION` and `QUEUE_PROCESSOR` are `1/2`). The palette `label`
+   and its hover `tooltip` are not written here — they are the type's name
+   and one-line description from the node-type resource file (below).
+2. `defaultContextConfig(typeId)` — add a `case`
    that returns the same flags as your Kotlin `defaultForType` branch.
-3. `NODE_TYPE_TOOLTIPS` (around line 1059) — add a one-line tooltip
-   for the palette item.
+
+**The name and the one-line description** are written once, in
+[`catalog/src/main/res/values/strings_node_types.xml`](../catalog/src/main/res/values/strings_node_types.xml)
+(`knotwork_node_type_<id>_name` and `knotwork_node_type_<id>_description`),
+and mapped in `NodeType.text` (`catalog/.../pipelineeditor/NodeTypeText.kt`),
+whose exhaustive `when` stops a type without them from compiling. They are
+the app's own text for the type; the cookbook opens the type's entry with the
+description and the browser editor's palette uses both. A
+description is **one sentence of at most 85 characters** — two lines or fewer
+in the picker on a 360 dp phone; anything more belongs in the cookbook entry's
+continuation. The file is plain text only: the generators that read it refuse
+an over-long description, a second sentence, markup, format arguments and
+escapes other than `\'` and `\"`.
 
 If your node has a custom default system prompt, also add it to
 `DEFAULT_SYSTEM_PROMPTS` (around line 855) so the editor seeds new
@@ -242,12 +256,13 @@ target pipeline, `SKILL` → skill), there are two extra obligations:
 
 The public node reference in [`docs/cookbook.md`](cookbook.md) is the
 other mirror, and unlike the HTML it is generated: add the type to
-`CookbookDocsGenerator.NODE_DOC_META` with a reader-facing sentence, give
-every field of its `NodeConfig` a verdict in `FIELD_REACH`, then run
+`CookbookDocsGenerator.NODE_DOC_META` with the sentences that continue its
+one-line description in the entry (or `null` when the description says it
+all), give every field of its `NodeConfig` a verdict in `FIELD_REACH`, then run
 `./gradlew :app:generateCookbookDocs` and commit the result.
 `verifyCookbookDocs` fails the build until you do, and generation itself
-fails if either table is missing an entry — the reference cannot silently
-lose a node type or a field.
+fails if any table or the resource file is missing an entry — the reference
+cannot silently lose a node type or a field.
 
 ### 1.7. Tests
 
@@ -1517,7 +1532,7 @@ double-check it for every recipe in this guide.**
 
 | You changed …                | Files you must also update                                                                                                                                                                                                                                          |
 |------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| A new `NodeType`             | `domain/models/NodeType.kt` · a new `NodeExecutor` implementation · `domain/engine/executors/NodeExecutorFactory.kt` · `domain/models/NodeContextConfig.kt` (`defaultForType`) · `domain/models/PipelineGraph.kt` (`validate`, if special invariants) · `buildtools/BrowserEditorConstantsGenerator.kt` (`NODE_TYPE_META`) + run `./gradlew :app:generateBrowserEditorConstants` · `buildtools/CookbookDocsGenerator.kt` (`NODE_DOC_META` + a `FIELD_REACH` entry per config field) + run `./gradlew :app:generateCookbookDocs` · **`pipeline-editor.html`** (`defaultContextConfig`, `NODE_TYPE_TOOLTIPS`, optional `DEFAULT_SYSTEM_PROMPTS`; for typed config also `defaultRichConfig` / `richToFlat` / `encodeRichEnvelope` / `decodeRichEnvelope` / `deriveRichFromFlat` / `renderFormFields` / `validateRichConfig`) · executor unit test · `GraphExecutionEngineTest` |
+| A new `NodeType`             | `domain/models/NodeType.kt` · a new `NodeExecutor` implementation · `domain/engine/executors/NodeExecutorFactory.kt` · `domain/models/NodeContextConfig.kt` (`defaultForType`) · `domain/models/PipelineGraph.kt` (`validate`, if special invariants) · `catalog/.../res/values/strings_node_types.xml` (name + one-line description) and `catalog/.../pipelineeditor/NodeTypeText.kt` (`NodeType.text`) · `buildtools/BrowserEditorConstantsGenerator.kt` (`NODE_TYPE_META`) + run `./gradlew :app:generateBrowserEditorConstants` · `buildtools/CookbookDocsGenerator.kt` (`NODE_DOC_META` + a `FIELD_REACH` entry per config field) + run `./gradlew :app:generateCookbookDocs` · **`pipeline-editor.html`** (`defaultContextConfig`, optional `DEFAULT_SYSTEM_PROMPTS`; for typed config also `defaultRichConfig` / `richToFlat` / `encodeRichEnvelope` / `decodeRichEnvelope` / `deriveRichFromFlat` / `renderFormFields` / `validateRichConfig`) · executor unit test · `GraphExecutionEngineTest` |
 | A node type that **references another entity by id** (`PIPELINE` / `SKILL`) | the flat `NodeModel` field (`targetPipelineId` / `skillId`) · `domain/pipelineio/PipelineJsonSerializer.kt` (emit + read the id in the flat `config` block) · `domain/models/PipelineGraph.kt` (`validate` → `MissingTargetPipeline` / `MissingSkill`) · `domain/services/PipelineCompositionValidator.kt` (transitive cycle / depth) · **`pipeline-editor.html`** (flat `config` key in `exportToJson`/`importFromJson`, reference form, self-ref + unresolved-id validation, node badge) · `PipelineJsonSerializerTest` round-trip |
 | A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · `NodeConfigForms.kt` + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec · **`pipeline-editor.html`** envelope encode/decode so the field round-trips — and, if its verdict is `RoundTripOnly`, **no** control in `renderFormFields`: `verifyBrowserEditorConstants` fails on a form control for a field no run reads. A `Runtime` field needs the whole chain instead — read from the flat `config` in `importFromJson`, set in `deriveRichFromFlat`, a control in `renderFormFields`, written by `encodeRichEnvelope` and `richToFlat`, exported by `exportToJson`, and never read from the envelope in `decodeRichEnvelope` (the one exception is the closed `LEGACY_ENVELOPE_FALLBACK` list in `BrowserEditorRuntimeFieldGuard`, for files older editors wrote); the same task names the missing link. The browser's import may read only `config` keys the app's importer reads (`CONFIG_KEYS` in `PipelineJsonSerializer`) — `BrowserEditorImportParityGuard` |
 | A new `Tool`                 | a new `LocalToolExecutor` implementation · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · declare `ToolRisk` correctly · executor unit test · optional Compose test if new UI                                                                            |

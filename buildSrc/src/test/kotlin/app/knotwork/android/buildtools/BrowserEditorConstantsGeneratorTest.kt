@@ -4,6 +4,7 @@ import app.knotwork.android.buildtools.BrowserEditorConstantsGenerator.Generatio
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -39,6 +40,22 @@ class BrowserEditorConstantsGeneratorTest {
             OUTPUT,
         }
     """.trimIndent()
+
+    /**
+     * A resource file naming every type of [nodeTypeSource]: `Name of LITE_RT` /
+     * `Description of LITE_RT.`, and so on. INPUT's description carries an
+     * escaped apostrophe and quotes, so the emitted string is shown to stay a
+     * single JavaScript literal.
+     */
+    private val nodeTypeStringsSource: String = buildString {
+        append("<resources>\n")
+        BrowserEditorConstantsGenerator.parseNodeTypeNames(nodeTypeSource).forEach { id ->
+            val description = if (id == "INPUT") "The run\\'s start &amp; &quot;entry&quot;." else "Description of $id."
+            append("    <string name=\"${NodeTypeStrings.resourceName(id, "name")}\">Name of $id</string>\n")
+            append("    <string name=\"${NodeTypeStrings.resourceName(id, "description")}\">$description</string>\n")
+        }
+        append("</resources>\n")
+    }
 
     private val promptModuleSource = """
         @Module
@@ -230,19 +247,58 @@ class BrowserEditorConstantsGeneratorTest {
 
     // ---- Emitters & cross-checks ---- //
 
+    private val nodeTypeTexts get() = BrowserEditorConstantsGenerator.parseNodeTypeTexts(nodeTypeStringsSource)
+
     @Test
     fun `emitNodeTypes lists palette order and includes all enum ids`() {
         val enumNames = BrowserEditorConstantsGenerator.parseNodeTypeNames(nodeTypeSource)
-        val js = BrowserEditorConstantsGenerator.emitNodeTypes(enumNames)
+        val js = BrowserEditorConstantsGenerator.emitNodeTypes(enumNames, nodeTypeTexts)
         assertTrue(js.contains("const NODE_TYPES = ["))
-        assertTrue(js.contains("{ id: \"INPUT\", label: \"Input\", color: \"#607D8B\", icon: \"▶\", inputs: 0, outputs: 1 },"))
+        assertTrue(
+            js,
+            js.contains(
+                "{ id: \"INPUT\", label: \"Name of INPUT\", color: \"#607D8B\", icon: \"▶\", inputs: 0, outputs: 1,\n" +
+                    "          tooltip: \"The run's start & \\\"entry\\\".\" },",
+            ),
+        )
         // INPUT must appear before LITE_RT (palette order, not enum order).
         assertTrue(js.indexOf("\"INPUT\"") < js.indexOf("\"LITE_RT\""))
     }
 
+    @Test
+    fun `emitNodeTypes gives every type the name and description of the resource file`() {
+        val enumNames = BrowserEditorConstantsGenerator.parseNodeTypeNames(nodeTypeSource)
+        val js = BrowserEditorConstantsGenerator.emitNodeTypes(enumNames, nodeTypeTexts)
+
+        enumNames.filter { it != "INPUT" }.forEach { id ->
+            assertTrue(id, js.contains("label: \"Name of $id\""))
+            assertTrue(id, js.contains("tooltip: \"Description of $id.\""))
+        }
+    }
+
     @Test(expected = GenerationException::class)
     fun `emitNodeTypes throws when an enum id has no metadata`() {
-        BrowserEditorConstantsGenerator.emitNodeTypes(listOf("INPUT", "BRAND_NEW_TYPE"))
+        BrowserEditorConstantsGenerator.emitNodeTypes(listOf("INPUT", "BRAND_NEW_TYPE"), nodeTypeTexts)
+    }
+
+    @Test
+    fun `emitNodeTypes throws naming the type the resource file lacks`() {
+        val enumNames = BrowserEditorConstantsGenerator.parseNodeTypeNames(nodeTypeSource)
+        val error = assertThrows(GenerationException::class.java) {
+            BrowserEditorConstantsGenerator.emitNodeTypes(enumNames, nodeTypeTexts - "SKILL")
+        }
+        val message = error.message.orEmpty()
+        assertTrue(message, message.contains("strings_node_types.xml") && message.contains("SKILL"))
+    }
+
+    @Test
+    fun `parseNodeTypeTexts reports a refused file as a generation failure`() {
+        val error = assertThrows(GenerationException::class.java) {
+            BrowserEditorConstantsGenerator.parseNodeTypeTexts(
+                nodeTypeStringsSource.replace(">Description of SKILL.<", ">Description of %1\$s.<"),
+            )
+        }
+        assertTrue(error.message, error.message.orEmpty().contains("knotwork_node_type_skill_description"))
     }
 
     @Test
@@ -341,6 +397,7 @@ class BrowserEditorConstantsGeneratorTest {
     private fun render(html: String) = BrowserEditorConstantsGenerator.render(
         html = html,
         nodeTypeSource = nodeTypeSource,
+        nodeTypeStringsSource = nodeTypeStringsSource,
         defaultPromptsSource = defaultPromptsSource,
         promptTemplateModuleSource = promptModuleSource,
         localToolsModuleSource = toolsModuleSource,
@@ -351,6 +408,7 @@ class BrowserEditorConstantsGeneratorTest {
     private fun drift(html: String) = BrowserEditorConstantsGenerator.drift(
         html = html,
         nodeTypeSource = nodeTypeSource,
+        nodeTypeStringsSource = nodeTypeStringsSource,
         defaultPromptsSource = defaultPromptsSource,
         promptTemplateModuleSource = promptModuleSource,
         localToolsModuleSource = toolsModuleSource,
@@ -395,6 +453,7 @@ class BrowserEditorConstantsGeneratorTest {
         BrowserEditorConstantsGenerator.render(
             html = skeletonHtml(),
             nodeTypeSource = nodeTypeSource,
+            nodeTypeStringsSource = nodeTypeStringsSource,
             defaultPromptsSource = defaultPromptsSource,
             promptTemplateModuleSource = promptModuleSource,
             localToolsModuleSource = toolsModuleSource,

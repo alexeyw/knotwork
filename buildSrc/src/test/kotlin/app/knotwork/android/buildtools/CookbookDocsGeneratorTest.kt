@@ -33,6 +33,7 @@ class CookbookDocsGeneratorTest {
         nodeContextConfig = read("app/src/main/java/app/knotwork/android/domain/models/NodeContextConfig.kt"),
         nodeConfig = read("catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeConfig.kt"),
         defaultPrompts = read("app/src/main/java/app/knotwork/android/domain/constants/DefaultPrompts.kt"),
+        nodeTypeStrings = read("catalog/src/main/res/values/strings_node_types.xml"),
     )
 
     private val skeleton = """
@@ -250,12 +251,102 @@ class CookbookDocsGeneratorTest {
     fun `given the rendered reference when read then every node type has a section`() {
         val rendered = CookbookDocsGenerator.render(skeleton, sources)
 
-        CookbookDocsGenerator.NODE_DOC_META.forEach { doc ->
+        CookbookDocsGenerator.buildNodes(sources).forEach { node ->
             assertTrue(
-                "The rendered reference has no section for ${doc.id}.",
-                rendered.contains("### ${doc.label} — `${doc.id}`"),
+                "The rendered reference has no section for ${node.doc.id}.",
+                rendered.contains("### ${node.name} — `${node.doc.id}`"),
             )
         }
+    }
+
+    @Test
+    fun `given the resource file when rendered then every entry opens with the app's description`() {
+        // The app's node picker and the cookbook share one sentence. The entry
+        // must open with it verbatim and only then continue, or the two would
+        // be two texts again with nothing to say they had drifted.
+        val texts = NodeTypeStrings.parse(sources.nodeTypeStrings)
+        val rendered = CookbookDocsGenerator.render(skeleton, sources)
+
+        CookbookDocsGenerator.NODE_DOC_META.forEach { doc ->
+            val text = texts.getValue(doc.id)
+            val opening = listOfNotNull(text.description, doc.continuation).joinToString(" ")
+            assertTrue(
+                "${doc.id}'s entry does not open with the app's description: $opening",
+                rendered.contains("### ${text.name} — `${doc.id}`\n\n$opening\n\n"),
+            )
+        }
+    }
+
+    @Test
+    fun `given a type changed only in the resource file when checked for drift then both node blocks are reported`() {
+        // The resource file is a source like the others: editing a description
+        // without regenerating must fail `verifyCookbookDocs`.
+        val rendered = CookbookDocsGenerator.render(skeleton, sources)
+        val edited = sources.copy(
+            nodeTypeStrings = sources.nodeTypeStrings.replace(
+                ">$decompositionDescription<",
+                ">${decompositionDescription.removeSuffix(".")} again.<",
+            ),
+        )
+        assertNotEquals("The edit did not apply.", sources, edited)
+
+        assertEquals(
+            listOf(CookbookDocsGenerator.BLOCK_NODE_REFERENCE, CookbookDocsGenerator.BLOCK_NODE_CONFIG),
+            CookbookDocsGenerator.drift(rendered, edited),
+        )
+    }
+
+    @Test
+    fun `given a node type missing from the resource file when rendered then generation fails naming it`() {
+        val withoutSummary = sources.copy(
+            nodeTypeStrings = sources.nodeTypeStrings.lines()
+                .filterNot { it.contains("knotwork_node_type_summary_") }
+                .joinToString("\n"),
+        )
+
+        val error = assertThrows(CookbookDocsGenerator.GenerationException::class.java) {
+            CookbookDocsGenerator.render(skeleton, withoutSummary)
+        }
+        assertTrue(
+            "The failure does not name the file and the type: ${error.message}",
+            error.message.orEmpty().contains("strings_node_types.xml") &&
+                error.message.orEmpty().contains("SUMMARY"),
+        )
+    }
+
+    @Test
+    fun `given a resource text the parser refuses when rendered then generation fails`() {
+        val withMarkup = sources.copy(
+            nodeTypeStrings = sources.nodeTypeStrings.replace(
+                ">$decompositionDescription<",
+                "><b>$decompositionDescription</b><",
+            ),
+        )
+
+        val error = assertThrows(CookbookDocsGenerator.GenerationException::class.java) {
+            CookbookDocsGenerator.render(skeleton, withMarkup)
+        }
+        assertTrue(
+            "The failure does not name the resource: ${error.message}",
+            error.message.orEmpty().contains("knotwork_node_type_decomposition_description"),
+        )
+    }
+
+    /**
+     * DECOMPOSITION's description as the resource file holds it — read rather
+     * than quoted, so the in-memory edits above keep working when the sentence
+     * is reworded. It holds nothing XML or Android escapes, so the raw XML body
+     * is the same text.
+     */
+    private val decompositionDescription: String
+        get() = NodeTypeStrings.parse(sources.nodeTypeStrings).getValue("DECOMPOSITION").description
+            .also { text ->
+                require(text.none { it in ESCAPED }) { "Pick a description with no escaped character." }
+            }
+
+    private companion object {
+        /** Characters whose XML body differs from the text the parser returns. */
+        const val ESCAPED = "'\"&<>"
     }
 
     private fun read(relativePath: String): String = File("../$relativePath").readText()

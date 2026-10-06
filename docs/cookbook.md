@@ -82,19 +82,19 @@ that it did.
 <!-- AUTO-GEN:NODE_REFERENCE -->
 | Node | What it does | In | Out | Context on a new node |
 |---|---|---|---|---|
-| **Input**<br>`INPUT` | Where the run starts: your message, a shared page, or the prompt a trigger carries. Exactly one per pipeline. | — | 1 | input forwarded as-is |
+| **Input**<br>`INPUT` | Where the run starts: your message, a shared page, or a trigger's prompt. Exactly one per pipeline. | — | 1 | input forwarded as-is |
 | **Output**<br>`OUTPUT` | Where the run ends and the answer reaches you. With no prompt of its own it forwards the previous node's text verbatim; give it one and it re-formats that text with one more model pass. Exactly one per pipeline. | 1 | — | nodeInput \* |
-| **LiteRT**<br>`LITE_RT` | One inference step on the model running on the phone. The default answering node, and the one to reach for unless a step genuinely needs a larger model. | 1 | 1 | originalTask, nodeInput |
+| **LiteRT**<br>`LITE_RT` | One inference step on the local model running on the phone. The default answering node, and the one to reach for unless a step genuinely needs a larger model. | 1 | 1 | originalTask, nodeInput |
 | **Cloud**<br>`CLOUD` | One inference step against a configured cloud provider. Everything this node is given leaves the device, so it is a node to place deliberately rather than by default. | 1 | 1 | chatHistory, originalTask, nodeInput |
-| **Intent Router**<br>`INTENT_ROUTER` | Sorts the incoming text into one of the classes you declare and sends the run down the matching branch — the way to give one pipeline several behaviours. | 1 | one per class, plus one per unnamed edge label | chatHistory, originalTask, nodeInput |
-| **If Condition**<br>`IF_CONDITION` | A two-way branch: a yes/no question about the input, or a deterministic check for whether the run carries an image. | 1 | True / False | input forwarded as-is |
-| **Clarification**<br>`CLARIFICATION` | Pauses the run to ask you a question and waits for the answer, which then becomes the node's output. The one node that deliberately stops mid-run. | 1 | 1 | originalTask, nodeInput |
-| **Tool**<br>`TOOL` | Calls one tool — a built-in, an AppFunction from another app, or one published by an MCP server — and passes the result on. Anything its risk level does not clear waits for your approval. | 1 | 1 | nodeInput |
+| **Intent Router**<br>`INTENT_ROUTER` | Sorts the incoming text into one of your classes and sends the run down its branch. It is the way to give one pipeline several behaviours. | 1 | one per class, plus one per unnamed edge label | chatHistory, originalTask, nodeInput |
+| **If Condition**<br>`IF_CONDITION` | A two-way branch: a yes/no question on the input, or a check for an attached image. The image check is deterministic: no model is asked. | 1 | True / False | input forwarded as-is |
+| **Clarification**<br>`CLARIFICATION` | Pauses the run to ask you a question, and your answer becomes the node's output. The one node that deliberately stops mid-run. | 1 | 1 | originalTask, nodeInput |
+| **Tool**<br>`TOOL` | Calls one tool, built-in or from another app or MCP server, and passes the result on. A tool from another app is an AppFunction. Anything its risk level does not clear waits for your approval. | 1 | 1 | nodeInput |
 | **Decomposition**<br>`DECOMPOSITION` | Turns one instruction into a list of subtasks. On its own it only produces the list; pair it with a Queue Processor to work through it. | 1 | 1 | originalTask, nodeInput |
-| **Queue Processor**<br>`QUEUE_PROCESSOR` | Walks a list of subtasks one at a time, sending each down the Item branch and taking the Done branch when the list is empty. The only node that can send a run backwards. | 1 | Item / Done | input forwarded as-is |
-| **Evaluation**<br>`EVALUATION` | Judges what the previous step produced and answers Pass, Retry or Fail — the node that lets a pipeline have another go instead of handing you a bad answer. | 1 | Pass / Retry† / Fail | originalTask, nodeInput, toolResults |
-| **Summary**<br>`SUMMARY` | Condenses what several earlier steps produced into one piece of text, typically just before the Output node at the end of a loop. | 1 | 1 | originalTask, nodeInput, toolResults |
-| **Pipeline**<br>`PIPELINE` | Runs another saved pipeline as a single step and returns its answer — a function call between pipelines, and the way to reuse a branch instead of copying it. | 1 | 1 | input forwarded as-is |
+| **Queue Processor**<br>`QUEUE_PROCESSOR` | Walks a list of subtasks one at a time down the Item branch, then the Done branch. The only node that can send a run backwards. | 1 | Item / Done | input forwarded as-is |
+| **Evaluation**<br>`EVALUATION` | Judges what the previous step produced and answers Pass, Retry or Fail. It is the node that lets a pipeline have another go instead of handing you a bad answer. | 1 | Pass / Retry† / Fail | originalTask, nodeInput, toolResults |
+| **Summary**<br>`SUMMARY` | Condenses what earlier steps produced into one piece of text, often after a loop. It typically sits just before the Output node. | 1 | 1 | originalTask, nodeInput, toolResults |
+| **Pipeline**<br>`PIPELINE` | Runs another saved pipeline as a single step and returns its answer. It works like a function call between pipelines, and it is the way to reuse a branch instead of copying it. | 1 | 1 | input forwarded as-is |
 | **Skill**<br>`SKILL` | Runs a reusable skill: a fixed instruction plus the list of tools that skill may use. The allowlist is enforced when a tool is called, not merely suggested in the prompt. | 1 | 1 | originalTask, nodeInput |
 
 † A port the node only has while its configuration asks for it, or an edge already uses it — see that node's own section below.
@@ -107,7 +107,7 @@ that it did.
 <!-- AUTO-GEN:NODE_CONFIG -->
 ### Input — `INPUT`
 
-Where the run starts: your message, a shared page, or the prompt a trigger carries. Exactly one per pipeline.
+Where the run starts: your message, a shared page, or a trigger's prompt. Exactly one per pipeline.
 
 - **Ports.** No inbound port; one unlabelled outbound port.
 - **Context on a new node.** This type ignores the context configuration — it forwards the upstream text unchanged.
@@ -129,7 +129,7 @@ Where the run ends and the answer reaches you. With no prompt of its own it forw
 
 ### LiteRT — `LITE_RT`
 
-One inference step on the model running on the phone. The default answering node, and the one to reach for unless a step genuinely needs a larger model.
+One inference step on the local model running on the phone. The default answering node, and the one to reach for unless a step genuinely needs a larger model.
 
 - **Ports.** One inbound port; one unlabelled outbound port.
 - **Context on a new node.** `originalTask`, `nodeInput`.
@@ -157,7 +157,7 @@ One inference step against a configured cloud provider. Everything this node is 
 
 ### Intent Router — `INTENT_ROUTER`
 
-Sorts the incoming text into one of the classes you declare and sends the run down the matching branch — the way to give one pipeline several behaviours.
+Sorts the incoming text into one of your classes and sends the run down its branch. It is the way to give one pipeline several behaviours.
 
 - **Ports.** One inbound port; one outbound port per class declared on the node, and one per outgoing edge label no class names — the run chooses among the edge labels, so every one of them is drawn.
 - **Context on a new node.** `chatHistory`, `originalTask`, `nodeInput`.
@@ -173,7 +173,7 @@ Sorts the incoming text into one of the classes you declare and sends the run do
 
 ### If Condition — `IF_CONDITION`
 
-A two-way branch: a yes/no question about the input, or a deterministic check for whether the run carries an image.
+A two-way branch: a yes/no question on the input, or a check for an attached image. The image check is deterministic: no model is asked.
 
 - **Ports.** One inbound port; outbound ports **True**, **False**.
 - **Context on a new node.** This type ignores the context configuration — it forwards the upstream text unchanged.
@@ -190,7 +190,7 @@ A two-way branch: a yes/no question about the input, or a deterministic check fo
 
 ### Clarification — `CLARIFICATION`
 
-Pauses the run to ask you a question and waits for the answer, which then becomes the node's output. The one node that deliberately stops mid-run.
+Pauses the run to ask you a question, and your answer becomes the node's output. The one node that deliberately stops mid-run.
 
 - **Ports.** One inbound port; one unlabelled outbound port.
 - **Context on a new node.** `originalTask`, `nodeInput`.
@@ -205,7 +205,7 @@ Pauses the run to ask you a question and waits for the answer, which then become
 
 ### Tool — `TOOL`
 
-Calls one tool — a built-in, an AppFunction from another app, or one published by an MCP server — and passes the result on. Anything its risk level does not clear waits for your approval.
+Calls one tool, built-in or from another app or MCP server, and passes the result on. A tool from another app is an AppFunction. Anything its risk level does not clear waits for your approval.
 
 - **Ports.** One inbound port; one unlabelled outbound port.
 - **Context on a new node.** `nodeInput`.
@@ -235,7 +235,7 @@ Turns one instruction into a list of subtasks. On its own it only produces the l
 
 ### Queue Processor — `QUEUE_PROCESSOR`
 
-Walks a list of subtasks one at a time, sending each down the Item branch and taking the Done branch when the list is empty. The only node that can send a run backwards.
+Walks a list of subtasks one at a time down the Item branch, then the Done branch. The only node that can send a run backwards.
 
 - **Ports.** One inbound port; outbound ports **Item**, **Done**.
 - **Context on a new node.** This type ignores the context configuration — it forwards the upstream text unchanged.
@@ -248,7 +248,7 @@ Walks a list of subtasks one at a time, sending each down the Item branch and ta
 
 ### Evaluation — `EVALUATION`
 
-Judges what the previous step produced and answers Pass, Retry or Fail — the node that lets a pipeline have another go instead of handing you a bad answer.
+Judges what the previous step produced and answers Pass, Retry or Fail. It is the node that lets a pipeline have another go instead of handing you a bad answer.
 
 - **Ports.** One inbound port; outbound ports **Pass**, **Retry** (conditional), **Fail**.
 - **Context on a new node.** `originalTask`, `nodeInput`, `toolResults`.
@@ -263,7 +263,7 @@ Judges what the previous step produced and answers Pass, Retry or Fail — the n
 
 ### Summary — `SUMMARY`
 
-Condenses what several earlier steps produced into one piece of text, typically just before the Output node at the end of a loop.
+Condenses what earlier steps produced into one piece of text, often after a loop. It typically sits just before the Output node.
 
 - **Ports.** One inbound port; one unlabelled outbound port.
 - **Context on a new node.** `originalTask`, `nodeInput`, `toolResults`.
@@ -276,7 +276,7 @@ Condenses what several earlier steps produced into one piece of text, typically 
 
 ### Pipeline — `PIPELINE`
 
-Runs another saved pipeline as a single step and returns its answer — a function call between pipelines, and the way to reuse a branch instead of copying it.
+Runs another saved pipeline as a single step and returns its answer. It works like a function call between pipelines, and it is the way to reuse a branch instead of copying it.
 
 - **Ports.** One inbound port; one unlabelled outbound port.
 - **Context on a new node.** This type ignores the context configuration — it forwards the upstream text unchanged.
