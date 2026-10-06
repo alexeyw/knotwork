@@ -48,7 +48,7 @@ package app.knotwork.android.buildtools
  * against *different files read by different parsers*: the node set derived from
  * `:app`'s enum must equal the one derived from `:catalog`'s enum, from the
  * ports factory, from the context-defaults `when`, from the config hierarchy and
- * from the node-type resource file. Six independent walks over five files in two
+ * from the node-type resource file. Six independent walks over six files in two
  * modules have to agree before a table is emitted.
  *
  * The run-time verdicts carry a second guard that deliberately does not live
@@ -702,7 +702,9 @@ object CookbookDocsGenerator {
      *
      * This is the guard that matters. Comparing any one of these walks against
      * itself would agree precisely when that walk is wrong; five parsers over
-     * four files in two modules cannot fail in the same direction silently.
+     * five files in two modules cannot fail in the same direction silently.
+     * The sixth walk, over the node-type resource file, is checked beside this
+     * one in [buildNodes].
      *
      * @throws GenerationException naming the first set that disagrees.
      */

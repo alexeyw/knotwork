@@ -680,7 +680,7 @@ writes. So the two tables cannot drift apart, in either direction.
 
 The count guard matters more here than the drift check, because a generator
 paired with its own drift check agrees with itself exactly when it is wrong. So
-the node set is derived **six times over five files in two modules** — the
+the node set is derived **six times over six files in two modules** — the
 `:app` enum, the `:catalog` enum, the ports factory, the context-defaults
 `when`, the config hierarchy and the node-type resource file — and generation
 stops unless all six agree.
