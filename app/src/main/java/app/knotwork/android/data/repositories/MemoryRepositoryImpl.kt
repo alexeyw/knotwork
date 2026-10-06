@@ -3,12 +3,15 @@ package app.knotwork.android.data.repositories
 import app.knotwork.android.data.local.Converters
 import app.knotwork.android.data.local.TagsCsv
 import app.knotwork.android.data.local.dao.MemoryDao
+import app.knotwork.android.data.local.dao.MemoryHistoryDao
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.local.models.MemoryChunkVersionEntity
 import app.knotwork.android.data.mappers.toDomainOrNull
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.MemoryStats
 import app.knotwork.android.domain.models.MemorySummary
+import app.knotwork.android.domain.models.MemoryWithHistory
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.services.MemoryVectorSimilarity
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +25,18 @@ import javax.inject.Singleton
 /**
  * Implementation of [MemoryRepository] that uses Room as a local storage and performs
  * in-memory cosine similarity search for vector embeddings.
+ *
+ * @property memoryDao Reads and writes `memory_chunks`.
+ * @property converters Encodes and decodes embedding BLOBs.
+ * @property historyDao Loads imported chunks together with their earlier versions in
+ *   one transaction.
  */
 @Singleton
-class MemoryRepositoryImpl @Inject constructor(private val memoryDao: MemoryDao, private val converters: Converters) :
-    MemoryRepository {
+class MemoryRepositoryImpl @Inject constructor(
+    private val memoryDao: MemoryDao,
+    private val converters: Converters,
+    private val historyDao: MemoryHistoryDao,
+) : MemoryRepository {
 
     override suspend fun saveMemory(
         text: String,
@@ -163,16 +174,16 @@ class MemoryRepositoryImpl @Inject constructor(private val memoryDao: MemoryDao,
         memoryDao.getAllIds().toSet()
     }
 
-    override suspend fun insertImportedMemories(chunks: List<MemoryChunk>, needsReembedding: Boolean) {
-        if (chunks.isEmpty()) return
+    override suspend fun insertImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean) {
+        if (memories.isEmpty()) return
         withContext(Dispatchers.IO) {
-            memoryDao.insertMemories(chunks.toImportEntities(needsReembedding))
+            historyDao.importChunks(memories.toImportEntities(needsReembedding), replaceAll = false)
         }
     }
 
-    override suspend fun replaceImportedMemories(chunks: List<MemoryChunk>, needsReembedding: Boolean) =
+    override suspend fun replaceImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean) =
         withContext(Dispatchers.IO) {
-            memoryDao.replaceAll(chunks.toImportEntities(needsReembedding))
+            historyDao.importChunks(memories.toImportEntities(needsReembedding), replaceAll = true)
         }
 
     override suspend fun countMemoriesNeedingReembedding(): Int = withContext(Dispatchers.IO) {
@@ -208,20 +219,32 @@ class MemoryRepositoryImpl @Inject constructor(private val memoryDao: MemoryDao,
      * is already validated non-empty by the import parser, so this is a defensive
      * guard rather than an expected path).
      */
-    private fun List<MemoryChunk>.toImportEntities(needsReembedding: Boolean): List<MemoryChunkEntity> =
-        mapNotNull { chunk ->
-            val embeddingBlob = converters.fromFloatArray(chunk.embedding) ?: return@mapNotNull null
-            MemoryChunkEntity(
-                id = chunk.id,
-                text = chunk.text,
-                embedding = embeddingBlob,
-                timestamp = chunk.timestamp,
-                isPinned = chunk.isPinned,
-                source = chunk.source,
-                tagsCsv = TagsCsv.encode(chunk.tags),
-                needsReembedding = needsReembedding,
+    private fun List<MemoryWithHistory>.toImportEntities(
+        needsReembedding: Boolean,
+    ): List<Pair<MemoryChunkEntity, List<MemoryChunkVersionEntity>>> = mapNotNull { (chunk, history) ->
+        val embeddingBlob = converters.fromFloatArray(chunk.embedding) ?: return@mapNotNull null
+        val entity = MemoryChunkEntity(
+            id = chunk.id,
+            text = chunk.text,
+            embedding = embeddingBlob,
+            timestamp = chunk.timestamp,
+            isPinned = chunk.isPinned,
+            source = chunk.source,
+            tagsCsv = TagsCsv.encode(chunk.tags),
+            needsReembedding = needsReembedding,
+        )
+        val versions = history.map { version ->
+            MemoryChunkVersionEntity(
+                chunkId = 0L,
+                text = version.text,
+                source = version.source,
+                tagsCsv = TagsCsv.encode(version.tags),
+                capturedAt = version.capturedAt,
+                replacedAt = version.replacedAt,
             )
         }
+        entity to versions
+    }
 
     override suspend fun markMemoryReembedded(id: Long, embedding: FloatArray) = withContext(Dispatchers.IO) {
         val embeddingBlob = converters.fromFloatArray(embedding)

@@ -3,10 +3,13 @@ package app.knotwork.android.data.repositories
 import app.knotwork.android.data.local.Converters
 import app.knotwork.android.data.local.EmbeddingBlobCodec
 import app.knotwork.android.data.local.dao.MemoryDao
+import app.knotwork.android.data.local.dao.MemoryHistoryDao
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.local.models.MemoryChunkVersionEntity
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.MemorySummary
+import app.knotwork.android.domain.models.MemoryWithHistory
 import app.knotwork.android.domain.services.MemoryVectorSimilarity
 import io.mockk.mockk
 import org.junit.Assert.assertArrayEquals
@@ -20,14 +23,16 @@ import org.junit.Test
 class MemoryRepositoryImplTest {
 
     private lateinit var memoryDao: MemoryDao
+    private lateinit var historyDao: MemoryHistoryDao
     private lateinit var converters: Converters
     private lateinit var repository: MemoryRepositoryImpl
 
     @Before
     fun setup() {
         memoryDao = mockk(relaxed = true)
+        historyDao = mockk(relaxed = true)
         converters = Converters()
-        repository = MemoryRepositoryImpl(memoryDao, converters)
+        repository = MemoryRepositoryImpl(memoryDao, converters, historyDao)
     }
 
     /** Shorthand: encodes the given components into the stored BLOB form. */
@@ -292,8 +297,8 @@ class MemoryRepositoryImplTest {
     @Test
     fun `insertImportedMemories preserves id, provenance, pin state and flags re-embedding`() =
         kotlinx.coroutines.test.runTest {
-            val captured = io.mockk.slot<List<MemoryChunkEntity>>()
-            io.mockk.coEvery { memoryDao.insertMemories(capture(captured)) } returns Unit
+            val captured = io.mockk.slot<List<Pair<MemoryChunkEntity, List<MemoryChunkVersionEntity>>>>()
+            io.mockk.coEvery { historyDao.importChunks(capture(captured), replaceAll = false) } returns Unit
             val chunk = MemoryChunk(
                 id = 9,
                 text = "imported",
@@ -304,9 +309,9 @@ class MemoryRepositoryImplTest {
                 tags = listOf("preference"),
             )
 
-            repository.insertImportedMemories(listOf(chunk), needsReembedding = true)
+            repository.insertImportedMemories(listOf(MemoryWithHistory(chunk)), needsReembedding = true)
 
-            val entity = captured.captured.single()
+            val entity = captured.captured.single().first
             assertEquals(9L, entity.id)
             assertEquals("imported", entity.text)
             assertEquals(1_234L, entity.timestamp)
@@ -320,29 +325,30 @@ class MemoryRepositoryImplTest {
     @Test
     fun `insertImportedMemories is a no-op for an empty list`() = kotlinx.coroutines.test.runTest {
         repository.insertImportedMemories(emptyList(), needsReembedding = false)
-        io.mockk.coVerify(exactly = 0) { memoryDao.insertMemories(any()) }
+        io.mockk.coVerify(exactly = 0) { historyDao.importChunks(any(), any()) }
     }
 
     @Test
-    fun `replaceImportedMemories maps chunks and forwards to dao replaceAll`() = kotlinx.coroutines.test.runTest {
-        val captured = io.mockk.slot<List<MemoryChunkEntity>>()
-        io.mockk.coEvery { memoryDao.replaceAll(capture(captured)) } returns Unit
-        val chunk = MemoryChunk(
-            id = 5,
-            text = "replace me",
-            embedding = floatArrayOf(0.3f),
-            timestamp = 7L,
-            source = MemorySource.ChatSession("s"),
-        )
+    fun `replaceImportedMemories maps chunks and forwards them as a replacing import`() =
+        kotlinx.coroutines.test.runTest {
+            val captured = io.mockk.slot<List<Pair<MemoryChunkEntity, List<MemoryChunkVersionEntity>>>>()
+            io.mockk.coEvery { historyDao.importChunks(capture(captured), replaceAll = true) } returns Unit
+            val chunk = MemoryChunk(
+                id = 5,
+                text = "replace me",
+                embedding = floatArrayOf(0.3f),
+                timestamp = 7L,
+                source = MemorySource.ChatSession("s"),
+            )
 
-        repository.replaceImportedMemories(listOf(chunk), needsReembedding = false)
+            repository.replaceImportedMemories(listOf(MemoryWithHistory(chunk)), needsReembedding = false)
 
-        val entity = captured.captured.single()
-        assertEquals(5L, entity.id)
-        assertEquals("replace me", entity.text)
-        assertEquals(MemorySource.ChatSession("s"), entity.source)
-        assertEquals(false, entity.needsReembedding)
-    }
+            val entity = captured.captured.single().first
+            assertEquals(5L, entity.id)
+            assertEquals("replace me", entity.text)
+            assertEquals(MemorySource.ChatSession("s"), entity.source)
+            assertEquals(false, entity.needsReembedding)
+        }
 
     @Test
     fun `getMemoriesNeedingReembedding returns a corrupt-embedding row instead of dropping it`() =

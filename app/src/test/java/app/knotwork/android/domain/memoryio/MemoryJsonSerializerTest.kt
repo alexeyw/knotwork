@@ -4,6 +4,7 @@ import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemorySource
+import app.knotwork.android.domain.models.MemoryVersion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -335,6 +336,104 @@ class MemoryJsonSerializerTest {
         assertEquals(Int.MAX_VALUE.toLong(), idOf(Int.MAX_VALUE.toString()))
     }
 
+    @Test
+    fun `serialize then parse carries each chunk's earlier versions as its history`() {
+        // Given
+        val earlier = MemoryVersion(
+            id = 9L,
+            chunkId = 1L,
+            text = "Prefers light mode",
+            source = MemorySource.ChatSession("s1"),
+            tags = listOf("preference"),
+            capturedAt = 100L,
+            replacedAt = 200L,
+        )
+        val json = MemoryJsonSerializer.serialize(
+            chunks = listOf(
+                chunk(1, "Prefers dark mode", floatArrayOf(0.1f)),
+                chunk(2, "Lives in Berlin", floatArrayOf(0.2f)),
+            ),
+            embeddingProviderId = "use",
+            exportedAt = 0L,
+            history = mapOf(1L to listOf(earlier)),
+        )
+
+        // When
+        val document = (MemoryJsonSerializer.parse(json, nowMillis = NOW) as MemoryImportOutcome.Success).document
+
+        // Then — the ids are the store's to assign; everything else travels.
+        assertEquals(listOf(listOf(earlier.copy(id = 0L, chunkId = 0L)), emptyList()), document.histories)
+        assertEquals(listOf(earlier.copy(id = 0L, chunkId = 0L)), document.memories.first().history)
+    }
+
+    @Test
+    fun `a file without history parses with none`() {
+        val json = MemoryJsonSerializer.serialize(listOf(chunk(1, "x", floatArrayOf(0.1f))), "use", exportedAt = 0L)
+
+        val document = (MemoryJsonSerializer.parse(json) as MemoryImportOutcome.Success).document
+
+        assertTrue(document.histories.isEmpty())
+        assertTrue(document.memories.single().history.isEmpty())
+    }
+
+    @Test
+    fun `parse returns Failure when an earlier version is malformed`() {
+        listOf(
+            """{"text":"","capturedAt":1,"replacedAt":2}""",
+            """{"text":"x","replacedAt":2}""",
+            """{"text":"x","capturedAt":1,"replacedAt":0}""",
+            "7",
+        ).forEach { version ->
+            val json = """{"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+                "chunks":[{"text":"x","embedding":[0.1],"timestamp":5,"history":[$version]}]}"""
+
+            val outcome = MemoryJsonSerializer.parse(json)
+
+            assertTrue(version, outcome is MemoryImportOutcome.Failure)
+        }
+    }
+
+    @Test
+    fun `parse caps an earlier version's dates at the moment of import`() {
+        val json = """{"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+            "chunks":[{"text":"x","embedding":[0.1],"timestamp":5,
+                       "history":[{"text":"y","capturedAt":4102444800000,"replacedAt":4102444800000}]}]}"""
+
+        val version = (MemoryJsonSerializer.parse(json, nowMillis = NOW) as MemoryImportOutcome.Success)
+            .document.histories.single().single()
+
+        assertEquals(NOW, version.capturedAt)
+        assertEquals(NOW, version.replacedAt)
+    }
+
+    @Test
+    fun `parse keeps only the newest versions a chunk may hold`() {
+        val versions = (1..MemoryVersion.MAX_PER_CHUNK + 4).joinToString(",") { i ->
+            """{"text":"v$i","capturedAt":1,"replacedAt":$i}"""
+        }
+        val json = """{"schemaVersion":1,"embeddingProviderId":"use","exportedAt":0,
+            "chunks":[{"text":"x","embedding":[0.1],"timestamp":5,"history":[$versions]}]}"""
+
+        val history = (MemoryJsonSerializer.parse(json, nowMillis = NOW) as MemoryImportOutcome.Success)
+            .document.histories.single()
+
+        assertEquals(MemoryVersion.MAX_PER_CHUNK, history.size)
+        assertEquals("v${MemoryVersion.MAX_PER_CHUNK + 4}", history.first().text)
+        assertEquals("v5", history.last().text)
+    }
+
+    @Test
+    fun `every MemoryVersion field has a declared import policy`() {
+        // Same guard as for MemoryChunk: a field added to a version fails here until
+        // someone decides what an import does with it.
+        val fields = MemoryVersion::class.java.declaredFields
+            .filterNot { it.isSynthetic || java.lang.reflect.Modifier.isStatic(it.modifiers) }
+            .map { it.name }
+            .toSet()
+
+        assertEquals(VERSION_IMPORT_POLICY.keys, fields)
+    }
+
     /** What an import does with each [MemoryChunk] field. */
     private enum class Policy {
         /** Taken from the file as written. */
@@ -360,6 +459,17 @@ class MemoryJsonSerializerTest {
             "tags" to Policy.CARRIED,
             "useCount" to Policy.RESET,
             "lastUsedAt" to Policy.RESET,
+        )
+
+        /** What an import does with each [MemoryVersion] field. */
+        val VERSION_IMPORT_POLICY = mapOf(
+            "id" to Policy.RESET,
+            "chunkId" to Policy.RESET,
+            "text" to Policy.CARRIED,
+            "source" to Policy.CARRIED,
+            "tags" to Policy.CARRIED,
+            "capturedAt" to Policy.CAPPED,
+            "replacedAt" to Policy.CAPPED,
         )
     }
 }

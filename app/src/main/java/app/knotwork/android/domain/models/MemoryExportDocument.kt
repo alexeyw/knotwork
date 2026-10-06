@@ -21,10 +21,26 @@ package app.knotwork.android.domain.models
  * @property pinnedInFile How many chunks the file marked as pinned. The pins
  *   are not applied; the count lets the import dialog tell the user they were
  *   dropped. `0` for a document not read from a file.
+ * @property histories The earlier versions of each chunk, index-aligned with
+ *   [chunks]; empty when the file carries no history at all. A version from a file
+ *   is only ever history — an import never makes it a current chunk.
  */
 data class MemoryExportDocument(
     val embeddingProviderId: String,
     val exportedAt: Long,
     val chunks: List<MemoryChunk>,
     val pinnedInFile: Int = 0,
-)
+    val histories: List<List<MemoryVersion>> = emptyList(),
+) {
+    init {
+        require(histories.isEmpty() || histories.size == chunks.size) {
+            "histories must be empty or index-aligned with chunks"
+        }
+    }
+
+    /** Each chunk with its earlier versions, in file order. */
+    val memories: List<MemoryWithHistory>
+        get() = chunks.mapIndexed { index, chunk ->
+            MemoryWithHistory(chunk = chunk, history = histories.getOrElse(index) { emptyList() })
+        }
+}

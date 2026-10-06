@@ -68,7 +68,7 @@ class MemoryExtractionIntegrationTest {
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        repository = MemoryRepositoryImpl(database.memoryDao(), Converters())
+        repository = MemoryRepositoryImpl(database.memoryDao(), Converters(), database.memoryHistoryDao())
 
         llmInferenceEngine = mockk()
         loadModelUseCase = mockk()

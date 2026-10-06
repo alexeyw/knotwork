@@ -84,4 +84,12 @@ interface MemoryHistoryRepository {
      * @return The waiting updates; empty when none waits.
      */
     suspend fun getPendingUpdates(): List<MemoryPendingUpdate>
+
+    /**
+     * Every chunk's earlier versions, for an export.
+     *
+     * @return Versions by chunk id, the most recently replaced first; a chunk with
+     *   no history has no entry.
+     */
+    suspend fun getAllHistory(): Map<Long, List<MemoryVersion>>
 }

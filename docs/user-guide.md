@@ -2284,8 +2284,9 @@ after importing an older backup), the original is what the agent is shown.
 ### Exporting memory
 
 The overflow menu (⋮) on the Memory screen offers **Export memory**,
-which writes every chunk — text, embedding, tags, and metadata — to a
-JSON file via the system file picker, for backup or migration. The same
+which writes every chunk — text, embedding, tags, metadata, and the earlier
+versions it keeps after a correction — to a JSON file via the system file
+picker, for backup or migration. The same
 **Export** action lives under **Settings → Memory**, and the Memory
 screen's multi-select mode can export only the chosen entries.
 
@@ -2304,8 +2305,12 @@ and import the file on the new one:
    file, then choose a strategy:
    - **Merge** — add the imported chunks to whatever is already there,
      skipping any with an id that already exists. Nothing is deleted.
-   - **Replace all** — wipe the current memory (pinned entries included)
-     and load the file's chunks. Use this for a clean transfer.
+   - **Replace all** — wipe the current memory (pinned entries and their
+     earlier versions included) and load the file's chunks. Use this for a
+     clean transfer.
+
+   Each entry's earlier versions come with it and stay its history: an earlier
+   version never becomes an entry of its own.
 
 Two things are not taken from the file, whichever strategy you choose:
 

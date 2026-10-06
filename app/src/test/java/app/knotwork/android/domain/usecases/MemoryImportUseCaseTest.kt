@@ -5,6 +5,9 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryExportDocument
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemoryImportStrategy
+import app.knotwork.android.domain.models.MemorySource
+import app.knotwork.android.domain.models.MemoryVersion
+import app.knotwork.android.domain.models.MemoryWithHistory
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
@@ -71,7 +74,7 @@ class MemoryImportUseCaseTest {
     @Test
     fun `Merge inserts only chunks whose id is not already present`() = runTest {
         coEvery { repository.getExistingMemoryIds() } returns setOf(1L, 2L)
-        val captured = slot<List<MemoryChunk>>()
+        val captured = slot<List<MemoryWithHistory>>()
         coEvery { repository.insertImportedMemories(capture(captured), any()) } just Runs
 
         val doc = document("use", listOf(chunk(1), chunk(3)))
@@ -79,14 +82,44 @@ class MemoryImportUseCaseTest {
 
         assertEquals(1, result.imported)
         assertEquals(1, result.skipped)
-        assertEquals(listOf(3L), captured.captured.map { it.id })
+        assertEquals(listOf(3L), captured.captured.map { it.chunk.id })
         coVerify(exactly = 0) { repository.replaceImportedMemories(any(), any()) }
+    }
+
+    @Test
+    fun `given a file with history when Merge imports then each chunk carries its versions to the store`() = runTest {
+        // Given
+        coEvery { repository.getExistingMemoryIds() } returns setOf(1L)
+        val captured = slot<List<MemoryWithHistory>>()
+        coEvery { repository.insertImportedMemories(capture(captured), any()) } just Runs
+        val earlier = MemoryVersion(
+            id = 0L,
+            chunkId = 0L,
+            text = "Prefers coffee",
+            source = MemorySource.Manual,
+            tags = emptyList(),
+            capturedAt = 1L,
+            replacedAt = 2L,
+        )
+        val doc = MemoryExportDocument(
+            embeddingProviderId = "use",
+            exportedAt = 0L,
+            chunks = listOf(chunk(1), chunk(3)),
+            histories = listOf(listOf(earlier), listOf(earlier.copy(text = "Prefers juice"))),
+        )
+
+        // When
+        useCase.import(doc, MemoryImportStrategy.Merge)
+
+        // Then — the skipped chunk's history is skipped with it.
+        assertEquals(listOf(3L), captured.captured.map { it.chunk.id })
+        assertEquals(listOf("Prefers juice"), captured.captured.single().history.map { it.text })
     }
 
     @Test
     fun `Merge always inserts id-less chunks`() = runTest {
         coEvery { repository.getExistingMemoryIds() } returns setOf(1L)
-        val captured = slot<List<MemoryChunk>>()
+        val captured = slot<List<MemoryWithHistory>>()
         coEvery { repository.insertImportedMemories(capture(captured), any()) } just Runs
 
         // Two id-less (id == 0) chunks must both be inserted (Room auto-assigns
@@ -100,7 +133,7 @@ class MemoryImportUseCaseTest {
 
     @Test
     fun `Replace dedupes file-internal duplicate ids so the count matches stored rows`() = runTest {
-        val captured = slot<List<MemoryChunk>>()
+        val captured = slot<List<MemoryWithHistory>>()
         coEvery { repository.replaceImportedMemories(capture(captured), any()) } just Runs
 
         // Two chunks share id=5; @Insert REPLACE would collapse them to one row,
@@ -110,12 +143,12 @@ class MemoryImportUseCaseTest {
 
         assertEquals(2, result.imported)
         assertEquals(1, result.skipped)
-        assertEquals(listOf(5L, 6L), captured.captured.map { it.id })
+        assertEquals(listOf(5L, 6L), captured.captured.map { it.chunk.id })
     }
 
     @Test
     fun `Replace transactionally replaces with every chunk`() = runTest {
-        val captured = slot<List<MemoryChunk>>()
+        val captured = slot<List<MemoryWithHistory>>()
         coEvery { repository.replaceImportedMemories(capture(captured), any()) } just Runs
 
         val doc = document("use", listOf(chunk(1), chunk(2)))
@@ -123,7 +156,7 @@ class MemoryImportUseCaseTest {
 
         assertEquals(2, result.imported)
         assertEquals(0, result.skipped)
-        assertEquals(listOf(1L, 2L), captured.captured.map { it.id })
+        assertEquals(listOf(1L, 2L), captured.captured.map { it.chunk.id })
         coVerify(exactly = 1) { repository.replaceImportedMemories(any(), any()) }
     }
 

@@ -40,7 +40,7 @@ class MemoryConsolidationPersistenceTest {
             .allowMainThreadQueries()
             .build()
         dao = database.memoryDao()
-        repository = MemoryRepositoryImpl(dao, Converters())
+        repository = MemoryRepositoryImpl(dao, Converters(), database.memoryHistoryDao())
     }
 
     @After

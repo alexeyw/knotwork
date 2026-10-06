@@ -4,6 +4,7 @@ import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryExportDocument
 import app.knotwork.android.domain.models.MemoryImportOutcome
+import app.knotwork.android.domain.models.MemoryVersion
 import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
@@ -28,11 +29,29 @@ import org.json.JSONObject
  *       "source": { "type": "manual" },
  *       "timestamp": 1716990000000,
  *       "isPinned": false,
- *       "tags": ["preference"]
+ *       "tags": ["preference"],
+ *       "history": [
+ *         {
+ *           "text": "I prefer light mode.",
+ *           "source": { "type": "chat_session", "sessionId": "…" },
+ *           "tags": ["preference"],
+ *           "capturedAt": 1716000000000,
+ *           "replacedAt": 1716990000000
+ *         }
+ *       ]
  *     }
  *   ]
  * }
  * ```
+ *
+ * `history` is optional and additive — a file without it is the same version-1
+ * document, and an older reader ignores the key. It holds the chunk's earlier
+ * texts, the most recently replaced first, without embeddings: a version is never
+ * searched. On import a version is only ever history — it never becomes a current
+ * chunk — at most [MemoryVersion.MAX_PER_CHUNK] of the newest are kept, and its
+ * dates are capped at the moment of parsing like a chunk's `timestamp`. A chunk
+ * waiting to update a pinned one is written as an ordinary chunk: pins are not
+ * taken from a file, so neither is the pair.
  *
  * `embeddingProviderId` records which [app.knotwork.android.domain.services.EmbeddingProvider]
  * produced the stored vectors so the importer can detect a vector-space
@@ -82,6 +101,9 @@ object MemoryJsonSerializer {
     private const val KEY_TIMESTAMP = "timestamp"
     private const val KEY_IS_PINNED = "isPinned"
     private const val KEY_TAGS = "tags"
+    private const val KEY_HISTORY = "history"
+    private const val KEY_CAPTURED_AT = "capturedAt"
+    private const val KEY_REPLACED_AT = "replacedAt"
 
     /**
      * Renders [chunks] into the schema-versioned JSON form.
@@ -91,9 +113,16 @@ object MemoryJsonSerializer {
      *   on the document so an importing device can detect a vector-space
      *   mismatch.
      * @param exportedAt Epoch-millis to record as the export time.
+     * @param history Earlier versions by chunk id; a chunk without an entry is
+     *   written without a `history` key.
      * @return JSON text suitable for writing to a file.
      */
-    fun serialize(chunks: List<MemoryChunk>, embeddingProviderId: String, exportedAt: Long): String {
+    fun serialize(
+        chunks: List<MemoryChunk>,
+        embeddingProviderId: String,
+        exportedAt: Long,
+        history: Map<Long, List<MemoryVersion>> = emptyMap(),
+    ): String {
         val chunksJson = JSONArray()
         for (chunk in chunks) {
             val embeddingJson = JSONArray()
@@ -109,6 +138,7 @@ object MemoryJsonSerializer {
                     put(KEY_TIMESTAMP, chunk.timestamp)
                     put(KEY_IS_PINNED, chunk.isPinned)
                     put(KEY_TAGS, tagsJson)
+                    history[chunk.id]?.takeIf { it.isNotEmpty() }?.let { put(KEY_HISTORY, versionsJson(it)) }
                 },
             )
         }
@@ -163,6 +193,7 @@ object MemoryJsonSerializer {
         }
 
         val chunks = ArrayList<MemoryChunk>(chunksJson.length())
+        val histories = ArrayList<List<MemoryVersion>>(chunksJson.length())
         var pinnedInFile = 0
         for (i in 0 until chunksJson.length()) {
             val chunkJson = chunksJson.optJSONObject(i)
@@ -173,6 +204,12 @@ object MemoryJsonSerializer {
                     "embedding a non-empty array of finite numbers, and timestamp a positive epoch-millis value",
             )
             chunks.add(chunk)
+            histories.add(
+                parseHistory(chunkJson, nowMillis) ?: return MemoryImportOutcome.Failure(
+                    "Chunk at index $i has a malformed earlier version: its text must be non-blank and " +
+                        "capturedAt and replacedAt positive epoch-millis values",
+                ),
+            )
         }
 
         val document = MemoryExportDocument(
@@ -180,6 +217,7 @@ object MemoryJsonSerializer {
             exportedAt = exportedAt,
             chunks = chunks,
             pinnedInFile = pinnedInFile,
+            histories = if (histories.all { it.isEmpty() }) emptyList() else histories,
         )
         return if (foundVersion != CURRENT_SCHEMA_VERSION) {
             MemoryImportOutcome.SchemaMismatch(
@@ -248,6 +286,74 @@ object MemoryJsonSerializer {
             isPinned = false,
             source = MemorySourceJson.decode(json.optJSONObject(KEY_SOURCE)),
             tags = tags,
+        )
+    }
+
+    private fun versionsJson(versions: List<MemoryVersion>): JSONArray {
+        val array = JSONArray()
+        for (version in versions) {
+            val tagsJson = JSONArray()
+            for (tag in version.tags) tagsJson.put(tag)
+            array.put(
+                JSONObject().apply {
+                    put(KEY_TEXT, version.text)
+                    put(KEY_SOURCE, MemorySourceJson.encode(version.source))
+                    put(KEY_TAGS, tagsJson)
+                    put(KEY_CAPTURED_AT, version.capturedAt)
+                    put(KEY_REPLACED_AT, version.replacedAt)
+                },
+            )
+        }
+        return array
+    }
+
+    /**
+     * Reads a chunk's earlier versions. A missing `history` is no history; a
+     * malformed version fails the chunk, as a malformed required field does.
+     *
+     * @param json The chunk object.
+     * @param nowMillis Upper bound on both dates of a version.
+     * @return The newest [MemoryVersion.MAX_PER_CHUNK] versions, most recently
+     *   replaced first; `null` when a version is malformed.
+     */
+    private fun parseHistory(json: JSONObject, nowMillis: Long): List<MemoryVersion>? {
+        val array = json.optJSONArray(KEY_HISTORY) ?: return emptyList()
+        val versions = (0 until array.length()).map { index ->
+            array.optJSONObject(index)?.let { parseVersion(it, nowMillis) }
+        }
+        return if (versions.any { it == null }) {
+            null
+        } else {
+            versions.filterNotNull().sortedByDescending { it.replacedAt }.take(MemoryVersion.MAX_PER_CHUNK)
+        }
+    }
+
+    /**
+     * Reads one earlier version: its text, source, tags and both dates, the dates
+     * capped at [nowMillis]. The id and chunk id are assigned when it is stored.
+     *
+     * @param json The version object.
+     * @param nowMillis Upper bound on both dates.
+     * @return The version, or `null` when its text is blank or a date is missing.
+     */
+    private fun parseVersion(json: JSONObject, nowMillis: Long): MemoryVersion? {
+        val text = json.optString(KEY_TEXT)
+        val capturedAt = json.optLong(KEY_CAPTURED_AT)
+        val replacedAt = json.optLong(KEY_REPLACED_AT)
+        if (text.isBlank() || capturedAt <= 0L || replacedAt <= 0L) return null
+        val tagsJson = json.optJSONArray(KEY_TAGS)
+        return MemoryVersion(
+            id = 0L,
+            chunkId = 0L,
+            text = text,
+            source = MemorySourceJson.decode(json.optJSONObject(KEY_SOURCE)),
+            tags = if (tagsJson == null) {
+                emptyList()
+            } else {
+                (0 until tagsJson.length()).mapNotNull { tagsJson.optString(it).takeIf(String::isNotBlank) }
+            },
+            capturedAt = capturedAt.coerceAtMost(nowMillis),
+            replacedAt = replacedAt.coerceAtMost(nowMillis),
         )
     }
 }

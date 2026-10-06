@@ -26,30 +26,6 @@ interface MemoryDao {
     suspend fun insertMemory(memoryChunk: MemoryChunkEntity): Long
 
     /**
-     * Inserts a batch of memory chunks in a single transaction. Used by the
-     * memory import path; rows carrying an explicit non-zero `id` keep that id
-     * (so a round-trip preserves identity), while `id = 0` rows are
-     * auto-assigned. Conflicting ids are replaced.
-     *
-     * @param chunks The chunks to insert.
-     */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMemories(chunks: List<MemoryChunkEntity>)
-
-    /**
-     * Atomically replaces the whole table with [chunks]: deletes every row then
-     * inserts the batch in one transaction, so a Replace import can never leave
-     * the store empty if the insert fails partway.
-     *
-     * @param chunks The replacement rows.
-     */
-    @Transaction
-    suspend fun replaceAll(chunks: List<MemoryChunkEntity>) {
-        deleteAllMemories()
-        insertMemories(chunks)
-    }
-
-    /**
      * Projects the ids of every stored chunk. Backs the import Merge strategy's
      * duplicate check without deserialising any embeddings.
      *
