@@ -2201,8 +2201,8 @@ sees. Which entries those are is decided in this order:
   recalled.
 - **Your own wording wins a tie.** An entry you saved by hand gets the smallest
   bonus of all: when it and an auto-extracted entry match about equally well
-  and are about as old, yours is recalled first, and if the two say the same
-  thing, yours is the one kept. It never gets an entry past the gate, and a
+  and are about as old, yours is recalled first — and, if the two say the same
+  thing, it is the one kept. It never gets an entry past the gate, and a
   much newer auto-extracted entry still ranks above an old one of yours.
 - **The original wins over a summary of it.** If compaction has merged some
   facts into a summary and one of those facts is still stored word-for-word, the
