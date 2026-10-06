@@ -1144,4 +1144,32 @@
     <string name="knotwork_discover_license_accept">Accept &amp; install</string>
     <string name="knotwork_discover_license_cancel">Cancel</string>
 
+    <!-- ============ NodeTypePickerSheetBody ============ -->
+    <!-- The pipeline editor's sheet for adding a node. The node types' own names and
+         descriptions live in strings_node_types.xml; these are the sheet around them. -->
+
+    <!-- Sheet title; the same words as the editor's + button. -->
+    <string name="knotwork_node_picker_title">Add node</string>
+    <!-- Header close icon, contentDescription. -->
+    <string name="knotwork_node_picker_close">Close</string>
+    <!-- Search placeholder, and the field's accessibility label. -->
+    <string name="knotwork_node_picker_search_hint">Search node types</string>
+    <!-- The field's clear icon (contentDescription) and the no-match state's button. -->
+    <string name="knotwork_node_picker_search_clear">Clear search</string>
+    <!-- Group headings, in the order the sheet lists them. -->
+    <string name="knotwork_node_picker_group_io">Start and finish</string>
+    <string name="knotwork_node_picker_group_model">Run a model</string>
+    <string name="knotwork_node_picker_group_act">Ask and act</string>
+    <string name="knotwork_node_picker_group_branch">Branch</string>
+    <string name="knotwork_node_picker_group_list">Work through a list</string>
+    <!-- No type matches the search. %1$s is the query as typed. -->
+    <string name="knotwork_node_picker_no_match">No node type matches “%1$s”</string>
+    <!-- TalkBack: what double-tapping a row does. -->
+    <string name="knotwork_node_picker_a11y_row_action">Add to pipeline</string>
+    <!-- TalkBack: how many types match, read once typing pauses. %1$d is the count. -->
+    <plurals name="knotwork_node_picker_a11y_results">
+        <item quantity="one">%1$d node type</item>
+        <item quantity="other">%1$d node types</item>
+    </plurals>
+
 </resources>
