@@ -77,8 +77,12 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: 
     /** In-flight connection draft; `null` while the canvas is idle. */
     var connectionInProgress: ConnectionDraft? by mutableStateOf(null)
 
-    /** Canvas-space anchor for an open radial quick-add menu; `null` when closed. */
-    var quickAddAnchor: Pair<Float, Float>? by mutableStateOf(null)
+    /**
+     * Where a node picked in the "Add node" sheet will land, in canvas-local screen
+     * pixels: the long-press point, or the viewport centre for the `+` button.
+     * Non-null exactly while the sheet is open.
+     */
+    var nodePickerAnchor: Pair<Float, Float>? by mutableStateOf(null)
 
     /**
      * `true` when the mini-map overlay is visible. Toggled from the overflow
@@ -148,7 +152,7 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: 
     val canvasLayoutCoordinatesRef: CoordinatesRef = CoordinatesRef()
 
     /**
-     * Clears selection + connection draft + radial-menu anchor. Used by Escape / back-press
+     * Clears selection + connection draft + node-picker anchor. Used by Escape / back-press
      * before navigating away, and by the canvas-level tap handler.
      */
     fun clearTransient() {
@@ -156,7 +160,7 @@ class EditorState(undoCapacity: Int = EditorUndoRedo.DEFAULT_CAPACITY, density: 
         selectedEdgeId = null
         multiSelectMode = false
         connectionInProgress = null
-        quickAddAnchor = null
+        nodePickerAnchor = null
     }
 
     /**

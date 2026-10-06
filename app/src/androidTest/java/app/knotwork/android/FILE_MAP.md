@@ -74,8 +74,8 @@ Only Kotlin files appear inside the generated blocks.
         - `PipelineEditorMiniMapAndGridTest.kt` - Verifies the mini-map overlay renders the canonical OVERVIEW header (including the scale percent) and the close button dispatches `onClose`.
         - `PipelineEditorMultiSelectTest.kt` - Verifies the multi-select toolbar swap, count label, and the three actions (Cancel / Copy / Delete).
         - `PipelineEditorNodeConfigSheetTest.kt` - Verifies the catalog `NodeConfigSheet` form surfaces the per-type fields and round-trips edits + save.
+        - `PipelineEditorNodeTypePickerTest.kt` - The editor's "Add node" sheet, on a device, where its `ModalBottomSheet` lays out — the catalog's JVM tests can only photograph the body.
         - `PipelineEditorOverflowMenuTest.kt` - Verifies the overflow `DropdownMenu` wiring on `PipelineEditorScreen`.
-        - `PipelineEditorRadialMenuTest.kt` - Verifies the quick-add radial menu surfaces every catalog `NodeType` and dispatches the domain pick on tap.
         - `PipelineEditorSearchTest.kt` - Covers the search bar that overlays the canvas when the user picks "Find node…" from the overflow menu.
         - `PipelineEditorValidationBarTest.kt` - Verifies the validation bar header banner, per-error rows, the Auto-fix action, and the per-row `Go` deep-link.
     - `prompts/` - Compose tests for the prompt library.

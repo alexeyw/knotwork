@@ -43,20 +43,21 @@ import app.knotwork.android.presentation.ui.pipeline.editor.core.CanvasTransform
 import app.knotwork.android.presentation.ui.pipeline.editor.core.ConnectionDraft
 import app.knotwork.android.presentation.ui.pipeline.editor.core.EditorState
 import app.knotwork.android.presentation.ui.pipeline.editor.core.NodeCardFootprint
+import app.knotwork.android.presentation.ui.pipeline.editor.sheet.NodeTypePickerSheet
 import app.knotwork.design.components.pipelineeditor.NodeError
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 
 /**
  * Top-level editor canvas. Hosts pan / pinch zoom, all node renderers, the edge layer,
- * and the radial quick-add menu.
+ * and the "Add node" sheet.
  *
  * Responsibilities (kept here so the screen file stays a thin orchestrator):
  *  - Owns the `Box` modifier chain wiring pinch-to-zoom (`transformable`), one-finger
  *    canvas pan (`detectDragGestures`), and tap / long-press (`detectTapGestures`).
  *  - Renders the [EditorEdges] layer first (so it draws under nodes).
  *  - Renders one [EditorNode] per `PipelineGraph.nodes`.
- *  - Renders the [QuickAddRadialMenu] on top when an anchor is set.
+ *  - Shows the [NodeTypePickerSheet] while an anchor is set.
  *
  * Node positions are persisted in canvas units, which are dp (see [CanvasTransform]); the
  * [EditorState] transform projects them to screen pixels at render time, using the
@@ -73,7 +74,8 @@ import app.knotwork.design.theme.KnotworkTheme
  * @param errorsByNodeId map of node-id → optional inline error for the catalog NodeCard.
  * @param reducedMotion reduced-motion flag — gates animations longer than `motionSm`.
  * @param onMoveNode invoked on drag-end with the committed canvas-space delta.
- * @param onAddNode invoked when a quick-add tile is picked.
+ * @param onAddNode invoked with the type picked in the "Add node" sheet and the snapped
+ *   canvas-space point it lands at.
  * @param onAddConnection invoked when a connection draft drops on a valid target node.
  * @param onConnectionDropped invoked when a connection drag ends without a valid target
  * (released in empty space or back on the source node) so the screen can hint how
@@ -191,8 +193,8 @@ internal fun EditorCanvas(
                     onLongPress = { tapScreen ->
                         // Long-press hit-tests edges first — if the press lands on an edge,
                         // forward to `onLongPressEdge` (screen shows a "Remove connection?"
-                        // confirmation). Otherwise open the radial quick-add menu at the
-                        // long-press point. Two discoverable paths to delete a connection
+                        // confirmation). Otherwise open the "Add node" sheet; the picked node
+                        // lands at the long-press point. Two discoverable paths to delete a connection
                         // (tap-select + toolbar 🗑, OR long-press + confirm) so users find at
                         // least one of them.
                         val canvasX = editor.transform.screenToCanvasX(tapScreen.x)
@@ -207,7 +209,7 @@ internal fun EditorCanvas(
                         if (edgeId != null) {
                             onLongPressEdge(edgeId)
                         } else {
-                            editor.quickAddAnchor = tapScreen.x to tapScreen.y
+                            editor.nodePickerAnchor = tapScreen.x to tapScreen.y
                         }
                     },
                 )
@@ -415,18 +417,16 @@ internal fun EditorCanvas(
             )
         }
 
-        val anchor = editor.quickAddAnchor
+        val anchor = editor.nodePickerAnchor
         if (anchor != null) {
-            QuickAddRadialMenu(
-                screenAnchorX = anchor.first,
-                screenAnchorY = anchor.second,
+            NodeTypePickerSheet(
                 onPick = { type ->
                     val canvasX = editor.transform.screenToCanvasX(anchor.first)
                     val canvasY = editor.transform.screenToCanvasY(anchor.second)
-                    editor.quickAddAnchor = null
+                    editor.nodePickerAnchor = null
                     onAddNode(type, CanvasTransform.snapToGrid(canvasX), CanvasTransform.snapToGrid(canvasY))
                 },
-                onDismiss = { editor.quickAddAnchor = null },
+                onDismiss = { editor.nodePickerAnchor = null },
             )
         }
 
@@ -470,18 +470,18 @@ internal fun EditorCanvas(
             )
         }
 
-        // Floating `+` button anchored bottom-right. Tap opens the same radial
-        // quick-add menu the long-press-on-canvas gesture surfaces, but anchored
-        // at the viewport centre so the user always has a discoverable way to
-        // drop the first node — the empty-state helper text literally promises
-        // "Tap + to drop your first node". Hidden when the mini-map is open so
-        // the two bottom-right overlays don't collide.
+        // Floating `+` button anchored bottom-right. Tap opens the same "Add node"
+        // sheet the long-press-on-canvas gesture opens, but the node lands at the
+        // viewport centre, so the user always has a discoverable way to add the
+        // first node — the empty-state helper text promises "Tap + to add your
+        // first node". Hidden when the mini-map is open so the two bottom-right
+        // overlays don't collide.
         if (!editor.miniMapOpen) {
             FloatingActionButton(
                 onClick = {
                     val cx = viewportSize.first / 2f
                     val cy = viewportSize.second / 2f
-                    editor.quickAddAnchor = cx to cy
+                    editor.nodePickerAnchor = cx to cy
                 },
                 // Spec §2.3: regular FAB fill primary / on-primary, radius 16 (`shapes.lg`).
                 // Matches the memory / library FAB family rather than the M3 default

@@ -8,10 +8,9 @@ package app.knotwork.design.components.pipelineeditor
  * enums are kept name-for-name aligned; callers in `:app` translate via a
  * thin mapper when wiring the editor screen.
  *
- * Order matches the radial quick-add menu and the catalog harness layout
- * (input / outputs first, then LLM-driven, then control-flow, then post-
- * processing) so a designer scanning the snapshot reads the surface in the
- * same order as the prototype canvas.
+ * Order is the catalog harness layout (input / outputs first, then
+ * LLM-driven, then control-flow, then post-processing). Within each
+ * [NodeTypeGroup] the "Add node" sheet lists the types in this order too.
  */
 enum class NodeType {
     /** Pipeline entry point. Exactly one per graph. */

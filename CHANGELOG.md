@@ -96,6 +96,13 @@ details.
 
 ### Changed
 
+- **Adding a node opens a list you can read.** The editor's radial menu is gone:
+  on a phone its labels overlapped. The **+** button and a long-press on the
+  canvas now open an **Add node** sheet that lists every node type by what it is
+  for, each with its name and one-line description, and a search over them.
+  Nothing in it is cut at large font sizes. The node lands where you
+  long-pressed, or in the middle of the screen for **+**.
+
 - **One text says what each node type does.** A node type's name and its
   one-line description are written once, in the app, and the cookbook and the
   browser editor quote them; `check` fails if either drifts. The browser

@@ -49,7 +49,7 @@ import app.knotwork.design.components.pipelineeditor.NodeError
  * @param onOverflow `EditorToolbar` overflow tap — screen opens its own
  * `DropdownMenu` from here.
  * @param onMoveNode forwarded from the canvas drag handler — commits the canvas-space delta.
- * @param onAddNode forwarded from the radial quick-add menu.
+ * @param onAddNode forwarded from the "Add node" sheet: the picked type and its canvas point.
  * @param onAddConnection forwarded from a connection-draft drop onto an inbound port.
  * @param onConnectionDropped forwarded when a connection drag ends without a valid target.
  * @param onFocusNode forwarded from a `ValidationBar` row tap.

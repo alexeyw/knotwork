@@ -1328,9 +1328,16 @@ pan / zoom canvas with the following gestures:
   Equivalent to "double-tap the node".
 - **Long-press a node** — enter multi-select. Subsequent taps toggle
   membership; the top bar swaps for a count + Cancel / Delete cluster.
-- **Long-press the empty canvas** — opens a **radial quick-add menu**
-  with one labelled tile per node type. Picking a tile spawns the node
-  at the long-press point and immediately opens its configuration sheet.
+- **Add a node** — tap the **+** button, or long-press the empty canvas
+  where you want the node. Both open the **Add node** sheet: every node
+  type grouped by what it is for (Start and finish, Run a model, Ask and
+  act, Branch, Work through a list), each with its name and a one-line
+  description — the same sentence its entry in the
+  [pipeline cookbook](cookbook.md) opens with. Search matches the name,
+  the description and the type's id (`QUEUE_PROCESSOR`); every word you
+  type has to match. Picking a type closes the sheet, places the node —
+  at the long-press point, or the centre of the screen for **+** — and
+  opens its configuration sheet.
 - **Toolbar** — back arrow, the inline-editable pipeline name with a
   one-line status under it (`Editing · nodes N · edges N`, or the issue
   count when saving is blocked), and an overflow menu on the right. Every
@@ -1381,8 +1388,8 @@ Reach a node's per-type configuration by either:
 
 - **Tapping a node you've already selected** (single-tap → select,
   tap again → open the sheet); or
-- **Picking the node from the radial quick-add menu** — newly added
-  nodes open the sheet immediately.
+- **Picking a type in the Add node sheet** — newly added nodes open the
+  sheet immediately.
 
 The sheet is a modal bottom-sheet. Every node type — Input, Output,
 LiteRt, Cloud, IntentRouter, IfCondition, Clarification, Tool,
