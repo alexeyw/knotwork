@@ -136,6 +136,9 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `NodePorts.kt` - `OutboundPort` sealed class + `NodePorts` descriptor of inbound/outbound port topology per node type.
     - `NodeType.kt` - enum of the 12 editor node types (Input, Output, LiteRT, Cloud, IntentRouter, IfCondition, Clarification, Tool, Decomposition, QueueProcessor, Evaluation, Summary).
     - `NodeTypeColors.kt` - composables mapping `NodeType` to header tint, luminance-banded foreground, and display label.
+    - `NodeTypeGroup.kt` - What a node type is for, as the node-type picker groups the types.
+    - `NodeTypePickerSheetBody.kt` - The body of an "Add node" sheet for the pipeline editor: every node type, grouped by what it is for, each with its name and one-line description, and a search over them.
+    - `NodeTypeSearch.kt` - The node-type picker's search: which types a query keeps, grouped as the picker lists them.
     - `NodeTypeText.kt` - The string resources holding one node type's name and its one-line description — the app's own text for the type.
     - `PipelineEditorCatalogContent.kt` - scrollable harness exercising every pipeline-editor base component + theme previews.
     - `ProviderChoices.kt` - What the node sheet's provider fields know about this device: which providers are set up here and with which model, what *Auto* would pick, and the on-device model.
@@ -466,6 +469,9 @@ matters.
     - `NodeConfigSheetSnapshotTest.kt` - Visual baselines for the node configuration sheets.
     - `NodeConfigValidationTest.kt` - Tests for `NodeConfigValidation` — covers happy path + every failure mode listed in `node-specs.md` §Validation rules.
     - `NodePortsTest.kt` - Pure-JVM tests for `NodePorts.forType` — the single source for the outbound-port enumeration per node type.
+    - `NodeTypePickerSheetBodyTest.kt` - Behaviour of `NodeTypePickerSheetBody`: what a search keeps, what a tap returns, and what TalkBack is given.
+    - `NodeTypePickerSnapshotTest.kt` - Roborazzi baselines for the "Add node" sheet's body, one per state the design draws: the sheet as opened, a search that keeps several groups, one that keeps a single type, a search nothing matches, and the opened and searching sheets at 200 % font scale, where nothing may be cut.
+    - `NodeTypeSearchTest.kt` - The picker's grouping and search rules, without Compose.
     - `NodeTypeTextTest.kt` - `NodeType.text` maps every node type to its own name and description.
     - `PipelineEditorCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `PipelineEditorCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the NodeCard running pulse renders deterministically.
   - `prompt/` - baselines for the prompt-facing components.
