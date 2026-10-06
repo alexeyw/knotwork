@@ -1166,7 +1166,8 @@
     <string name="knotwork_node_picker_no_match">No node type matches “%1$s”</string>
     <!-- TalkBack: what double-tapping a row does. -->
     <string name="knotwork_node_picker_a11y_row_action">Add to pipeline</string>
-    <!-- TalkBack: how many types match, read once typing pauses. %1$d is the count. -->
+    <!-- TalkBack: the number of matching types, carried by the search field once typing
+         pauses. %1$d is the count. -->
     <plurals name="knotwork_node_picker_a11y_results">
         <item quantity="one">%1$d node type</item>
         <item quantity="other">%1$d node types</item>

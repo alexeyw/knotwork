@@ -72,7 +72,7 @@ const val NODE_TYPE_PICKER_SEARCH_TEST_TAG: String = "node_type_picker_search"
 /** Test tag prefix of a type's row; the [NodeType] name follows it. */
 const val NODE_TYPE_PICKER_ROW_TEST_TAG_PREFIX: String = "node_type_picker_row_"
 
-/** How long typing must pause before TalkBack is told how many types match. */
+/** How long typing must pause before the search field carries the number of matches. */
 private const val RESULTS_ANNOUNCE_DELAY_MS = 1_000L
 
 // Filtering motion, as the design specifies it; none at all under reduced motion.
@@ -109,9 +109,9 @@ private val NAME_TO_DESCRIPTION = 2.dp
  * - **One TalkBack stop per row** — name and description read together, the
  *   tile decorative, the action announced as [R.string.knotwork_node_picker_a11y_row_action].
  *   Group titles are headings, so heading navigation jumps group to group.
- * - **The count of matches is told once typing pauses**, as the search
- *   field's state description, not as a hidden node: a hidden live region
- *   would be a TalkBack stop nobody can see.
+ * - **The search field carries the number of matches** once typing pauses,
+ *   as its state description, which TalkBack reads with the field. Not a
+ *   hidden live region: that would be a TalkBack stop nobody can see.
  * - **The keyboard never picks.** The search action only hides it; a type is
  *   added by tapping its row.
  *
@@ -179,8 +179,9 @@ fun NodeTypePickerSheetBody(
 }
 
 /**
- * What TalkBack is told about the matches once typing pauses: the count, or
- * the no-match line. `null` while the field is empty or typing has not paused.
+ * The search field's state description once typing pauses: the number of
+ * matches, or the no-match line. `null` while the field is empty or typing
+ * has not paused.
  */
 @Composable
 private fun resultsDescription(query: String, count: Int): String? {
