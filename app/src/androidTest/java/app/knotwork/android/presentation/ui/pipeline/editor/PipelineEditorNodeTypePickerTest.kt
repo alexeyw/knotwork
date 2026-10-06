@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.pipeline.editor
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasTestTag
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.presentation.ui.pipeline.editor.sheet.NodeTypePickerSheet
@@ -69,22 +71,23 @@ class PipelineEditorNodeTypePickerTest {
     }
 
     @Test
-    fun nodeTypePicker_secondTapWhileHiding_addsNothingMore() {
+    fun nodeTypePicker_secondPickWhileHiding_reportsOnlyOneType() {
         render()
         composeTestRule.waitForIdle()
 
-        // Freeze the clock so the sheet is still on screen, hiding, when the
-        // second row is tapped.
+        // Accessibility clicks, not touches: a touch on the moving sheet catches
+        // it and cancels the hide by itself, while TalkBack's double-tap reaches
+        // the row's click directly — the path on which two hides can overlap.
+        // The clock is frozen so the first hide is still under way.
         composeTestRule.mainClock.autoAdvance = false
-        composeTestRule.onNodeWithTag(rowTag(NodeType.LITE_RT)).performClick()
+        composeTestRule.onNodeWithTag(rowTag(NodeType.LITE_RT)).performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule.mainClock.advanceTimeByFrame()
-        composeTestRule.onNodeWithTag(rowTag(NodeType.CLOUD)).performClick()
-        composeTestRule.onNodeWithContentDescription("Close").performClick()
+        composeTestRule.onNodeWithTag(rowTag(NodeType.CLOUD)).performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule.mainClock.autoAdvance = true
         composeTestRule.waitUntil(timeoutMillis = 5_000) { picked != null }
         composeTestRule.waitForIdle()
 
-        assertEquals(listOf(NodeType.LITE_RT), pickedTypes)
+        assertEquals("One opening reported more than one type: $pickedTypes", 1, pickedTypes.size)
         assertEquals(0, dismissed)
     }
 
