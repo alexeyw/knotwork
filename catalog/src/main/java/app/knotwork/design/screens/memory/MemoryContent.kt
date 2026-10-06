@@ -3,6 +3,7 @@
 
 package app.knotwork.design.screens.memory
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -712,6 +713,9 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
     var body by remember(detail.id, editing) { mutableStateOf(detail.body) }
     var tags by remember(detail.id, editing) { mutableStateOf(detail.tags) }
     var newTag by remember(detail.id, editing) { mutableStateOf("") }
+    // Keyed by entry: after *Use the update* the sheet switches to the pinned entry and
+    // must open at its top, not at the update's scroll offset.
+    val sheetScroll = remember(detail.id) { ScrollState(0) }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         // Scrim — dims the surface behind the sheet and dismisses on tap-outside.
@@ -779,7 +783,7 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
                 Column(
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(sheetScroll)
                         .padding(horizontal = KnotworkTheme.spacing.sp4)
                         .padding(bottom = KnotworkTheme.spacing.sp3),
                     verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
