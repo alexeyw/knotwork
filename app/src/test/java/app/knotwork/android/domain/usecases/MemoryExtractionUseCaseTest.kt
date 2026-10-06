@@ -14,12 +14,17 @@ import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.prompt.ForgedTurnFixture
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
+import app.knotwork.android.domain.repositories.MemoryHistoryRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
+import app.knotwork.android.domain.services.MemorySupersedeFixture
+import app.knotwork.android.domain.services.MemorySupersedeJudge
+import app.knotwork.android.domain.services.MemoryVectorSimilarity
+import app.knotwork.android.domain.services.SupersedeVerdict
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -50,6 +55,8 @@ class MemoryExtractionUseCaseTest {
     private lateinit var embeddingProvider: EmbeddingProvider
     private lateinit var memoryRepository: MemoryRepository
     private lateinit var memorySearchStatsTracker: MemorySearchStatsTracker
+    private lateinit var supersedeJudge: MemorySupersedeJudge
+    private lateinit var memoryHistoryRepository: MemoryHistoryRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var metricsRepository: MetricsRepository
     private lateinit var useCase: MemoryExtractionUseCase
@@ -69,6 +76,8 @@ class MemoryExtractionUseCaseTest {
         embeddingProvider = mockk()
         memoryRepository = mockk()
         memorySearchStatsTracker = mockk(relaxed = true)
+        supersedeJudge = mockk()
+        memoryHistoryRepository = mockk()
         settingsRepository = mockk()
         metricsRepository = mockk(relaxed = true)
         // Default: no repairs, so each test's single stubbed reply is the only inference.
@@ -86,8 +95,10 @@ class MemoryExtractionUseCaseTest {
             val texts = firstArg<List<String>>()
             texts.indices.map { i -> FloatArray(texts.size) { if (it == i) 1f else 0f } }
         }
-        coEvery { memoryRepository.findSimilarMemories(any(), any()) } returns emptyList()
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns null
         coEvery { memoryRepository.saveMemory(any(), any(), any(), any()) } returns 1L
+        coEvery { memoryHistoryRepository.supersede(any(), any(), any(), any(), any()) } returns true
+        coEvery { memoryHistoryRepository.saveUpdateOfPinned(any(), any(), any(), any(), any()) } returns 99L
 
         useCase = MemoryExtractionUseCase(
             llmInferenceEngine = llmInferenceEngine,
@@ -100,6 +111,8 @@ class MemoryExtractionUseCaseTest {
             structuredOutputGate = StructuredOutputGate(),
             runSettings = settingsRepository,
             metricsRepository = metricsRepository,
+            supersedeJudge = supersedeJudge,
+            memoryHistoryRepository = memoryHistoryRepository,
         )
     }
 
@@ -181,54 +194,184 @@ class MemoryExtractionUseCaseTest {
     }
 
     @Test
-    fun `given a near-duplicate of an existing chunk when invoke then skips it`() = runTest {
-        stubReply("""[{"type": "preference", "text": "Prefers dark mode"}]""")
-        // The stored-chunk search reports a 0.95 similarity (>= 0.92 threshold).
-        coEvery { memoryRepository.findSimilarMemories(any(), any()) } returns
-            listOf(mockk<MemoryChunk>() to 0.95f)
+    fun `given a stored chunk with the same text when invoke then skips it without asking the judge`() = runTest {
+        // Given — case, spacing and a closing full stop aside, the text is the stored one.
+        stubReply("""[{"type": "preference", "text": "prefers  dark mode."}]""")
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Prefers dark mode") to 0.99f)
 
+        // When
         val outcome = useCase(sessionId, messages)
 
-        assertEquals(1, outcome.parsed)
-        assertEquals(0, outcome.saved)
+        // Then
         assertEquals(1, outcome.skippedDuplicates)
+        coVerify(exactly = 0) { supersedeJudge.judge(any(), any()) }
+        coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { memoryHistoryRepository.supersede(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given a restatement of an old stored fact when invoke then the old fact is still its candidate`() = runTest {
+        // Given — the matching chunk is ancient. The candidate search runs over the
+        // full stored pool, so its age must not matter.
+        stubReply("""[{"type": "preference", "text": "Prefers dark mode"}]""")
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Prefers dark mode", timestamp = 1L) to 0.99f)
+
+        // When
+        val outcome = useCase(sessionId, messages)
+
+        // Then
+        assertEquals(1, outcome.skippedDuplicates)
+        coVerify(exactly = 1) { memoryHistoryRepository.findSupersedeCandidate(any()) }
         coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `given a duplicate of an old stored fact when invoke then dedup still rejects it`() = runTest {
+    fun `given candidate searches when invoke then their scores are recorded in the stats tracker`() = runTest {
         stubReply("""[{"type": "preference", "text": "Prefers dark mode"}]""")
-        // The matching chunk is ancient (epoch-adjacent timestamp). The dedup
-        // check runs against the full stored pool, so its age must not matter
-        // — under the old recency-window pool this duplicate slipped through.
-        val ancientChunk = MemoryChunk(
-            id = 1L,
-            text = "Prefers dark mode",
-            embedding = floatArrayOf(1f, 0f),
-            timestamp = 1L,
-        )
-        coEvery { memoryRepository.findSimilarMemories(any(), any()) } returns listOf(ancientChunk to 0.99f)
-
-        val outcome = useCase(sessionId, messages)
-
-        assertEquals(1, outcome.parsed)
-        assertEquals(0, outcome.saved)
-        assertEquals(1, outcome.skippedDuplicates)
-        // The dedup probe asks only for the single best stored hit.
-        coVerify(exactly = 1) { memoryRepository.findSimilarMemories(any(), limit = 1) }
-        coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `given dedup searches when invoke then their scores are recorded in the stats tracker`() = runTest {
-        stubReply("""[{"type": "preference", "text": "Prefers dark mode"}]""")
-        coEvery { memoryRepository.findSimilarMemories(any(), any()) } returns
-            listOf(mockk<MemoryChunk>() to 0.4f)
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Lives in Berlin") to 0.4f)
 
         useCase(sessionId, messages)
 
         coVerify(exactly = 1) { memorySearchStatsTracker.record(listOf(0.4f)) }
     }
+
+    @Test
+    fun `given each fixture pair when the fact is extracted then it is written as its verdict and similarity say`() =
+        runTest {
+            MemorySupersedeFixture.pairs.forEach { pair ->
+                // Given — the stored fact and the new one carry the vectors the bundled
+                // embedder gives them, and the judge answers the pair's verdict.
+                io.mockk.clearMocks(
+                    memoryRepository,
+                    memoryHistoryRepository,
+                    supersedeJudge,
+                    answers = false,
+                    recordedCalls = true,
+                )
+                val stored = storedChunk(pair.stored, embedding = MemorySupersedeFixture.vector(pair.stored))
+                stubReply("""[{"type": "preference", "text": "${pair.incoming}"}]""")
+                coEvery { embeddingProvider.embed(listOf(pair.incoming)) } returns
+                    listOf(MemorySupersedeFixture.vector(pair.incoming))
+                coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns (stored to pair.cosine)
+                coEvery { supersedeJudge.judge(pair.stored, pair.incoming) } returns pair.verdict
+
+                // When
+                useCase(sessionId, messages)
+
+                // Then
+                val candidate = pair.cosine >= MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD
+                val written = when {
+                    !candidate || pair.verdict == SupersedeVerdict.DIFFERENT -> "new"
+                    pair.verdict == SupersedeVerdict.UPDATE -> "replaced"
+                    else -> "skipped"
+                }
+                coVerify(exactly = if (candidate) 1 else 0) { supersedeJudge.judge(any(), any()) }
+                coVerify(exactly = if (written == "new") 1 else 0) {
+                    memoryRepository.saveMemory(pair.incoming, any(), any(), any())
+                }
+                coVerify(exactly = if (written == "replaced") 1 else 0) {
+                    memoryHistoryRepository.supersede(stored.id, pair.incoming, any(), any(), listOf("preference"))
+                }
+            }
+        }
+
+    @Test
+    fun `given the judge is undecided when invoke then the fact is saved beside the stored one`() = runTest {
+        // Given
+        stubReply("""[{"type": "preference", "text": "Is allergic to cats"}]""")
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Is allergic to peanuts") to 0.96f)
+        coEvery { supersedeJudge.judge(any(), any()) } returns SupersedeVerdict.UNDECIDED
+
+        // When
+        val outcome = useCase(sessionId, messages)
+
+        // Then — a judge that cannot decide loses and hides nothing.
+        assertEquals(1, outcome.saved)
+        coVerify(exactly = 1) { memoryRepository.saveMemory("Is allergic to cats", any(), any(), any()) }
+        coVerify(exactly = 0) { memoryHistoryRepository.supersede(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given an update of an unpinned fact when invoke then the stored chunk is replaced in place`() = runTest {
+        // Given
+        stubReply("""[{"type": "preference", "text": "Lives in Munich"}]""")
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Lives in Berlin") to 0.98f)
+        coEvery { supersedeJudge.judge("Lives in Berlin", "Lives in Munich") } returns SupersedeVerdict.UPDATE
+
+        // When
+        val outcome = useCase(sessionId, messages)
+
+        // Then
+        assertEquals(1, outcome.replaced)
+        assertEquals(0, outcome.saved)
+        coVerify(exactly = 1) {
+            memoryHistoryRepository.supersede(
+                STORED_ID,
+                "Lives in Munich",
+                any(),
+                MemorySource.ChatSession(sessionId),
+                listOf("preference"),
+            )
+        }
+        coVerify(exactly = 0) { memoryHistoryRepository.saveUpdateOfPinned(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given an update of a pinned fact when invoke then it waits beside the pinned chunk`() = runTest {
+        // Given
+        stubReply("""[{"type": "preference", "text": "Lives in Munich"}]""")
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Lives in Berlin", isPinned = true) to 0.98f)
+        coEvery { supersedeJudge.judge(any(), any()) } returns SupersedeVerdict.UPDATE
+
+        // When
+        val outcome = useCase(sessionId, messages)
+
+        // Then — a pinned fact is never replaced by an automatic write.
+        assertEquals(1, outcome.waitingOnPinned)
+        coVerify(exactly = 1) {
+            memoryHistoryRepository.saveUpdateOfPinned(STORED_ID, "Lives in Munich", any(), any(), listOf("preference"))
+        }
+        coVerify(exactly = 0) { memoryHistoryRepository.supersede(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given a restatement of a pinned fact when invoke then nothing is written`() = runTest {
+        // Given
+        stubReply("""[{"type": "preference", "text": "Is based in Berlin"}]""")
+        coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+            (storedChunk("Lives in Berlin", isPinned = true) to 0.95f)
+        coEvery { supersedeJudge.judge(any(), any()) } returns SupersedeVerdict.SAME
+
+        // When
+        val outcome = useCase(sessionId, messages)
+
+        // Then
+        assertEquals(1, outcome.skippedDuplicates)
+        coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { memoryHistoryRepository.saveUpdateOfPinned(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given a candidate below the threshold when invoke then the fact is new and the judge is not asked`() =
+        runTest {
+            // Given
+            stubReply("""[{"type": "preference", "text": "Owns a cat named Murka"}]""")
+            coEvery { memoryHistoryRepository.findSupersedeCandidate(any()) } returns
+                (storedChunk("Lives in Berlin") to 0.75f)
+
+            // When
+            val outcome = useCase(sessionId, messages)
+
+            // Then
+            assertEquals(1, outcome.saved)
+            coVerify(exactly = 0) { supersedeJudge.judge(any(), any()) }
+        }
 
     @Test
     fun `given two near-identical facts in one pass when invoke then saves only the first`() = runTest {
@@ -431,4 +574,22 @@ class MemoryExtractionUseCaseTest {
             val conversation = prompt.captured.substringAfter("CONVERSATION:\n").substringBefore("\n\nJSON OUTPUT")
             assertEquals(2, ForgedTurnFixture.turnLines(conversation, listOf("User", "Assistant", "System")))
         }
+
+    private fun storedChunk(
+        text: String,
+        isPinned: Boolean = false,
+        timestamp: Long = 10L,
+        embedding: FloatArray = floatArrayOf(1f, 0f),
+    ): MemoryChunk = MemoryChunk(
+        id = STORED_ID,
+        text = text,
+        embedding = embedding,
+        timestamp = timestamp,
+        isPinned = isPinned,
+        source = MemorySource.Manual,
+    )
+
+    private companion object {
+        const val STORED_ID = 42L
+    }
 }

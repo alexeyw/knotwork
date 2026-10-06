@@ -18,10 +18,10 @@
         "the-agent-stopped-mid-run": 5561,
         "a-trigger-didnt-fire": 7051,
         "memory-search-isnt-finding-an-obvious-entry": 9539,
-        "your-data-cant-be-unlocked-appears-at-startup": 12354,
-        "installing-over-a-copy-from-google-play-fails": 13689,
-        "a-model-download-paused-after-five-hours": 14905,
-        "see-also": 15240
+        "your-data-cant-be-unlocked-appears-at-startup": 12477,
+        "installing-over-a-copy-from-google-play-fails": 13812,
+        "a-model-download-paused-after-five-hours": 15028,
+        "see-also": 15363
       },
       "links": {
         "faq.md": {"kind": "bundled", "id": "faq", "anchor": null},
@@ -111,11 +111,11 @@
         "my-run-stopped-by-itself-which-limit-was-it": 18076,
         "memory": 18327,
         "what-does-the-agent-remember-and-when": 18338,
-        "can-i-add-or-delete-a-memory-myself": 18656,
-        "does-memory-move-to-a-new-phone": 18888,
-        "why-doesnt-a-memory-i-know-exists-come-back": 19090,
-        "known-limitations": 19326,
-        "see-also": 22107
+        "can-i-add-or-delete-a-memory-myself": 18737,
+        "does-memory-move-to-a-new-phone": 18969,
+        "why-doesnt-a-memory-i-know-exists-come-back": 19171,
+        "known-limitations": 19407,
+        "see-also": 22188
       },
       "links": {
         "troubleshooting.md": {"kind": "bundled", "id": "troubleshooting", "anchor": null},

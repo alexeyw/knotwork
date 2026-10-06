@@ -14,12 +14,15 @@ import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.prompt.ChatTranscript
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
+import app.knotwork.android.domain.repositories.MemoryHistoryRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
+import app.knotwork.android.domain.services.MemorySupersedeJudge
 import app.knotwork.android.domain.services.MemoryVectorSimilarity
+import app.knotwork.android.domain.services.SupersedeVerdict
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -44,13 +47,23 @@ import javax.inject.Inject
  *     ([DefaultPrompts.MemoryExtraction.SYSTEM_FALLBACK]) — resolving `$DATE`
  *     for temporal grounding — and run it once through the local LiteRT model.
  *  3. Parse the model's reply as a JSON array of `{type, text}` facts.
- *  4. For each fact, compute its embedding with the **active** provider and
- *     reject near-duplicates (cosine similarity ≥
- *     [MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD])
- *     of either an already-stored chunk (checked against the **full** stored
- *     pool — an old fact must stay dedup-visible no matter its age) or a fact
- *     accepted earlier in the same pass.
- *  5. Save the survivors tagged with [MemorySource.ChatSession].
+ *  4. Embed every fact with the **active** provider. A fact within
+ *     [MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD] of one accepted earlier
+ *     in the same pass is skipped.
+ *  5. Find the stored chunk nearest to each remaining fact (over the **full**
+ *     stored pool — an old fact must stay a candidate no matter its age). Below
+ *     the threshold, the fact is new. At or above it the vector has only found
+ *     a candidate: on the bundled embedder a rewording, a correction and a
+ *     different fact of the same shape all land there, so
+ *     [MemorySupersedeJudge] reads the two texts (an identical text is the same
+ *     fact without asking):
+ *     - [SupersedeVerdict.SAME] — nothing is written;
+ *     - [SupersedeVerdict.UPDATE] — the stored chunk is replaced in place and
+ *       keeps its old text as an earlier version; a pinned chunk is never
+ *       replaced, so the update is stored beside it as its waiting update;
+ *     - [SupersedeVerdict.DIFFERENT] or [SupersedeVerdict.UNDECIDED] — the fact
+ *       is saved as a new chunk, so a judge that fails loses and hides nothing.
+ *  6. New chunks are tagged with [MemorySource.ChatSession] and the fact type.
  *
  * **Which rows are read.** Only [Role.USER] and [Role.AGENT] — an allowlist, so
  * a role added later is excluded until someone decides otherwise. [Role.SYSTEM]
@@ -84,6 +97,10 @@ import javax.inject.Inject
  * @property runSettings Source of the configured repair ceiling
  *   ([RunSettings.structuredOutputMaxRepairs]).
  * @property metricsRepository Sink for the per-pass repair-attempt counter.
+ * @property supersedeJudge Decides whether a fact close to a stored chunk
+ *   restates it, updates it, or is a different fact.
+ * @property memoryHistoryRepository Finds a fact's nearest stored chunk and
+ *   replaces a chunk in place or stores a waiting update of a pinned one.
  */
 class MemoryExtractionUseCase @Inject constructor(
     private val llmInferenceEngine: LlmInferenceEngine,
@@ -96,6 +113,8 @@ class MemoryExtractionUseCase @Inject constructor(
     private val structuredOutputGate: StructuredOutputGate,
     private val runSettings: RunSettings,
     private val metricsRepository: MetricsRepository,
+    private val supersedeJudge: MemorySupersedeJudge,
+    private val memoryHistoryRepository: MemoryHistoryRepository,
 ) {
 
     /**
@@ -201,10 +220,11 @@ class MemoryExtractionUseCase @Inject constructor(
     }
 
     /**
-     * Embeds and stores every fact that is not a near-duplicate of an existing
-     * chunk or of a fact already accepted in this pass.
+     * Embeds every fact and writes it according to what it is relative to the
+     * nearest stored chunk: skipped, replacing that chunk, waiting on it when it is
+     * pinned, or new (see the class KDoc, steps 4–6).
      *
-     * @param sessionId Session recorded as the provenance of each saved chunk.
+     * @param sessionId Session recorded as the provenance of each written fact.
      * @param facts Parsed candidate facts.
      * @return Outcome counters for the pass.
      */
@@ -237,52 +257,64 @@ class MemoryExtractionUseCase @Inject constructor(
 
         val source = MemorySource.ChatSession(sessionId)
         val acceptedEmbeddings = mutableListOf<FloatArray>()
-        var saved = 0
-        var skipped = 0
+        var counts = MemoryExtractionOutcome(parsed = facts.size, saved = 0, skippedDuplicates = 0)
 
         for (i in facts.indices) {
+            val fact = facts[i]
             val embedding = embeddings[i]
-            if (isDuplicate(embedding, acceptedEmbeddings)) {
-                skipped++
+            if (acceptedEmbeddings.any { MemoryVectorSimilarity.cosine(embedding, it) >= NEAR_DUPLICATE }) {
+                counts = counts.copy(skippedDuplicates = counts.skippedDuplicates + 1)
                 continue
             }
-
-            memoryRepository.saveMemory(
-                text = facts[i].text,
-                embedding = embedding,
-                source = source,
-                // Persist the fact type as a tag so the Memory surface can
-                // render it (e.g. `fact` / `preference` / `project`).
-                tags = listOf(facts[i].type),
-            )
+            // Persist the fact type as a tag so the Memory surface can render it.
+            val tags = listOf(fact.type)
+            val candidate = memoryHistoryRepository.findSupersedeCandidate(embedding)
+            memorySearchStatsTracker.record(listOfNotNull(candidate?.second))
+            val stored = candidate?.takeIf { it.second >= NEAR_DUPLICATE }?.first
+            when (if (stored == null) SupersedeVerdict.DIFFERENT else verdictFor(stored.text, fact.text)) {
+                SupersedeVerdict.SAME -> {
+                    counts = counts.copy(skippedDuplicates = counts.skippedDuplicates + 1)
+                }
+                SupersedeVerdict.UPDATE -> {
+                    val target = checkNotNull(stored)
+                    if (target.isPinned) {
+                        memoryHistoryRepository.saveUpdateOfPinned(target.id, fact.text, embedding, source, tags)
+                        counts = counts.copy(waitingOnPinned = counts.waitingOnPinned + 1)
+                    } else {
+                        memoryHistoryRepository.supersede(target.id, fact.text, embedding, source, tags)
+                        counts = counts.copy(replaced = counts.replaced + 1)
+                    }
+                }
+                SupersedeVerdict.DIFFERENT, SupersedeVerdict.UNDECIDED -> {
+                    memoryRepository.saveMemory(text = fact.text, embedding = embedding, source = source, tags = tags)
+                    counts = counts.copy(saved = counts.saved + 1)
+                }
+            }
             acceptedEmbeddings += embedding
-            saved++
         }
-
-        return MemoryExtractionOutcome(parsed = facts.size, saved = saved, skippedDuplicates = skipped)
+        return counts
     }
 
     /**
-     * Decides whether [embedding] is a near-duplicate. A fact is a duplicate
-     * when its cosine similarity to either a stored chunk or a fact already
-     * accepted in this pass is at least
-     * [MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD]. The
-     * stored-chunk check runs against the **full** stored pool — an old fact
-     * must keep rejecting its re-extracted duplicates no matter its age.
+     * What [incoming] is relative to [stored]: the same fact when the two texts are
+     * identical up to case, spacing and a closing full stop — no model call for
+     * a fact re-extracted word for word — otherwise whatever [supersedeJudge] says.
      *
-     * @param embedding Embedding of the candidate fact.
-     * @param acceptedEmbeddings Embeddings accepted earlier in the same pass.
-     * @return `true` if the candidate should be skipped as a duplicate.
+     * @param stored Text of the stored chunk the new fact landed close to.
+     * @param incoming Text of the new fact.
+     * @return The verdict.
      */
-    private suspend fun isDuplicate(embedding: FloatArray, acceptedEmbeddings: List<FloatArray>): Boolean {
-        val hits = memoryRepository.findSimilarMemories(embedding, limit = 1)
-        memorySearchStatsTracker.record(hits.map { it.second })
-        val topStored = hits.firstOrNull()?.second ?: 0f
-        if (topStored >= MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD) return true
-        return acceptedEmbeddings.any {
-            MemoryVectorSimilarity.cosine(embedding, it) >= MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD
+    private suspend fun verdictFor(stored: String, incoming: String): SupersedeVerdict =
+        if (stored.normalisedFact() == incoming.normalisedFact()) {
+            SupersedeVerdict.SAME
+        } else {
+            supersedeJudge.judge(stored = stored, incoming = incoming)
         }
-    }
+
+    /** Lower-cased, whitespace-collapsed text without a closing full stop. */
+    private fun String.normalisedFact(): String = trim().trimEnd('.').trim().lowercase().split(WHITESPACE)
+        .filter { it.isNotEmpty() }
+        .joinToString(" ")
 
     /**
      * One parsed extraction fact: its [type] (a [VALID_FACT_TYPES] member,
@@ -336,16 +368,33 @@ class MemoryExtractionUseCase @Inject constructor(
 
         /** Recognised fact categories emitted by the extraction prompt. */
         val VALID_FACT_TYPES = setOf("preference", "event", "relation")
+
+        /** The near-duplicate threshold, at which a stored chunk becomes a candidate. */
+        const val NEAR_DUPLICATE = MemoryVectorSimilarity.NEAR_DUPLICATE_THRESHOLD
+
+        /** Separator of words when a fact's text is compared verbatim. */
+        val WHITESPACE = Regex("\\s+")
     }
 
     /**
      * Summary of a single extraction pass.
      *
      * @property parsed Number of well-formed facts parsed from the model reply.
-     * @property saved Number of novel facts persisted to memory.
-     * @property skippedDuplicates Number of facts dropped as near-duplicates.
+     * @property saved Number of facts written as new chunks.
+     * @property skippedDuplicates Number of facts not written because they say what
+     *   a stored chunk, or one accepted earlier in the pass, already says.
+     * @property replaced Number of stored chunks a fact replaced in place, keeping
+     *   the old text as an earlier version.
+     * @property waitingOnPinned Number of facts stored as the waiting update of a
+     *   pinned chunk.
      */
-    data class MemoryExtractionOutcome(val parsed: Int, val saved: Int, val skippedDuplicates: Int) {
+    data class MemoryExtractionOutcome(
+        val parsed: Int,
+        val saved: Int,
+        val skippedDuplicates: Int,
+        val replaced: Int = 0,
+        val waitingOnPinned: Int = 0,
+    ) {
         /** Shared constants for [MemoryExtractionOutcome]. */
         companion object {
             /** Result of a pass that did nothing (skipped, empty, or model unavailable). */

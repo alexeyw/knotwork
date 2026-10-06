@@ -39,6 +39,7 @@ import app.knotwork.android.data.repositories.LocalPipelinePresetRepositoryImpl
 import app.knotwork.android.data.repositories.LocalPipelineRepositoryImpl
 import app.knotwork.android.data.repositories.LocalPromptPresetRepositoryImpl
 import app.knotwork.android.data.repositories.McpServerRepositoryImpl
+import app.knotwork.android.data.repositories.MemoryHistoryRepositoryImpl
 import app.knotwork.android.data.repositories.MemoryRepositoryImpl
 import app.knotwork.android.data.repositories.MetricsRepositoryImpl
 import app.knotwork.android.data.repositories.ModelDiscoveryRepositoryImpl
@@ -74,6 +75,7 @@ import app.knotwork.android.domain.repositories.ExternalAutomationJournalReposit
 import app.knotwork.android.domain.repositories.IdentityRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.McpServerRepository
+import app.knotwork.android.domain.repositories.MemoryHistoryRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.ModelDiscoveryRepository
@@ -202,6 +204,13 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindMemoryRepository(repository: MemoryRepositoryImpl): MemoryRepository
+
+    /**
+     * Binds the [MemoryHistoryRepositoryImpl] implementation to the [MemoryHistoryRepository] interface.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindMemoryHistoryRepository(repository: MemoryHistoryRepositoryImpl): MemoryHistoryRepository
 
     /**
      * Binds the [AndroidModelDownloadManager] implementation to the [ModelDownloadManager] interface.

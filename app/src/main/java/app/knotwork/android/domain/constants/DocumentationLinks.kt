@@ -75,7 +75,7 @@ object DocumentationLinks {
             path = "docs/troubleshooting.md",
             anchor = null,
             delivery = Delivery.BUNDLED,
-            lineCount = 293,
+            lineCount = 295,
             sectionCount = 13,
         ),
         Entry(
@@ -83,7 +83,7 @@ object DocumentationLinks {
             path = "docs/faq.md",
             anchor = null,
             delivery = Delivery.BUNDLED,
-            lineCount = 486,
+            lineCount = 487,
             sectionCount = 9,
         ),
         Entry(
@@ -91,7 +91,7 @@ object DocumentationLinks {
             path = "docs/user-guide.md",
             anchor = null,
             delivery = Delivery.REMOTE,
-            lineCount = 3362,
+            lineCount = 3377,
             sectionCount = 22,
         ),
         Entry(
@@ -115,7 +115,7 @@ object DocumentationLinks {
             path = "docs/user-guide.md",
             anchor = "adding-an-mcp-server",
             delivery = Delivery.REMOTE,
-            lineCount = 3362,
+            lineCount = 3377,
             sectionCount = 22,
         ),
         Entry(
@@ -123,7 +123,7 @@ object DocumentationLinks {
             path = "docs/user-guide.md",
             anchor = "triggers",
             delivery = Delivery.REMOTE,
-            lineCount = 3362,
+            lineCount = 3377,
             sectionCount = 22,
         ),
     )

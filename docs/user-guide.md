@@ -2139,8 +2139,23 @@ fast back-and-forth is processed only once), it re-reads the recent
 conversation and distils the durable facts you stated — preferences,
 events, and relationships — into new memory chunks. Small talk, the
 assistant's own wording, and anything not explicitly stated are
-ignored, and a fact that closely matches one you already have is
-skipped rather than duplicated.
+ignored.
+
+When a new fact lands close to one you already have, the on-device model
+reads the two and decides what the new one is:
+
+- **The same fact in other words** — nothing is written.
+- **A change of it** ("now prefers English" after "prefers Russian") — the
+  entry is updated in place, and the text it replaces is kept in that entry's
+  history, so a correction never loses what it corrected.
+- **A different fact** ("allergic to cats" after "allergic to peanuts") — it is
+  saved as a new entry.
+
+If the model cannot tell, the new fact is saved as a new entry: nothing is lost
+or hidden. A **pinned** entry is never changed this way. A change of a pinned
+fact is saved as a separate entry that waits beside it, and the agent keeps
+using the pinned text until you choose. Facts you save by hand are always
+saved as new entries.
 
 It reads your messages and the assistant's replies — never tool results
 (a web lookup, a file the agent read, an MCP server's answer), not even when
@@ -2151,8 +2166,8 @@ a tool fetched is not put before the extractor as something you said. Text
 you share into the app from another app is recorded as your message,
 though, so it is read as yours.
 
-Each new chunk is tagged with the fact type it represents (`fact`,
-`preference`, `project`, …) and the chat it came from, so you can tell
+Each new chunk is tagged with the fact type it represents (`preference`,
+`event` or `relation`) and the chat it came from, so you can tell
 auto-saved memories apart from ones you saved by hand. You can watch
 this happen in the **Console** pane (the **Memory** filter) and review
 or delete the results on the Memory screen.

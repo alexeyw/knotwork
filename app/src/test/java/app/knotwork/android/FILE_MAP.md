@@ -162,6 +162,7 @@ Only Kotlin files appear inside the generated blocks.
     - `McpServerRepositoryImplTest.kt` - Unit tests for `McpServerRepositoryImpl`.
     - `MemoryConsolidationPersistenceTest.kt` - Verifies the compaction write path against a **real** in-memory Room database rather than a mocked DAO: consolidation must leave the store holding the summary and nothing it replaced.
     - `MemoryRepositoryImplTest.kt` - Tests for MemoryRepositoryImpl.
+    - `MemorySupersedePersistenceTest.kt` - Verifies the supersede write path against a **real** in-memory Room database: a newer statement replaces a chunk in place and the replaced text survives as an earlier version, an update of a pinned chunk waits beside it, and both kinds of link go with their chunks.
     - `MetricsRepositoryImplTest.kt` - Tests for `MetricsRepositoryImpl`: per-node aggregation and live-inference updates.
     - `ModelDiscoveryRepositoryImplTest.kt` - Unit tests for `ModelDiscoveryRepositoryImpl` backed by a `MockWebServer` instance standing in for the Hugging Face Hub.
     - `ModelPerformanceRepositoryImplTest.kt` - Unit tests for `ModelPerformanceRepositoryImpl`.

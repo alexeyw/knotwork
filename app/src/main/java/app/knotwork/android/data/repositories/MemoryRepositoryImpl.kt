@@ -4,6 +4,7 @@ import app.knotwork.android.data.local.Converters
 import app.knotwork.android.data.local.TagsCsv
 import app.knotwork.android.data.local.dao.MemoryDao
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.mappers.toDomainOrNull
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.MemoryStats
@@ -250,20 +251,7 @@ class MemoryRepositoryImpl @Inject constructor(private val memoryDao: MemoryDao,
      *
      * @return The domain chunk, or `null` if the embedding failed to decode.
      */
-    private fun MemoryChunkEntity.toMemoryChunkOrNull(): MemoryChunk? {
-        val embeddingArray = converters.toFloatArray(embedding) ?: return null
-        return MemoryChunk(
-            id = id,
-            text = text,
-            embedding = embeddingArray,
-            timestamp = timestamp,
-            isPinned = isPinned,
-            source = source,
-            tags = TagsCsv.decode(tagsCsv),
-            useCount = useCount,
-            lastUsedAt = lastUsedAt,
-        )
-    }
+    private fun MemoryChunkEntity.toMemoryChunkOrNull(): MemoryChunk? = toDomainOrNull(converters)
 
     /**
      * Calculates the cosine similarity between two vectors.

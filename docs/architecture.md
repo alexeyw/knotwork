@@ -252,9 +252,16 @@ Step-by-step notes:
    durable facts from the recent dialogue — the user's and the assistant's
    turns only; tool observations and other `SYSTEM` rows are never read —
    embeds them with the active
-   `EmbeddingProvider`, drops near-duplicates, and writes survivors to
-   `memory_chunks` tagged with `MemorySource.ChatSession`. This is
-   fire-and-forget background work and never blocks or fails the chat.
+   `EmbeddingProvider`, and finds each fact's nearest stored chunk. Below the
+   near-duplicate threshold the fact is new. At or above it the vector has only
+   found a candidate, so `MemorySupersedeJudge` asks the local model whether the
+   fact restates the chunk (skipped), updates it (the chunk is replaced in place
+   and its old text goes to `memory_chunk_history`; a pinned chunk is never
+   replaced — the update is stored beside it and linked in
+   `memory_pending_updates`), or is a different fact (saved as new, as is any
+   fact the judge cannot decide on). New facts go to `memory_chunks` tagged with
+   `MemorySource.ChatSession`. This is fire-and-forget background work and never
+   blocks or fails the chat.
 
 ### 2.1. Memory export / import and lazy re-embedding
 
@@ -316,11 +323,17 @@ flowchart TB
     subgraph Extraction["Extraction (after a run completes)"]
         Done[Pipeline Completed] --> Coord[MemoryAutoExtractionCoordinator<br/>debounce 30s · gate on autoExtractEnabled<br/>defer while agent busy]
         Coord --> Extract[MemoryExtractionUseCase<br/>LLM distils JSON facts]
-        Manual[Save to memory<br/>SaveMessageToMemoryUseCase] --> Embed
         Extract --> Embed[EmbeddingProvider.embed<br/>resolved per call]
-        Embed --> Dedup{cosine ≥ 0.92<br/>duplicate?}
-        Dedup -- yes --> Drop[skip]
-        Dedup -- no --> Store[(memory_chunks<br/>Room + SQLCipher)]
+        Embed --> Near{nearest stored chunk<br/>cosine ≥ 0.92?}
+        Near -- no --> Store[(memory_chunks<br/>Room + SQLCipher)]
+        Near -- yes --> Judge{MemorySupersedeJudge<br/>local model reads both}
+        Judge -- SAME --> Drop[skip]
+        Judge -- DIFFERENT / undecided --> Store
+        Judge -- UPDATE --> Replace[replace in place<br/>old text → memory_chunk_history]
+        Judge -- UPDATE of a pinned chunk --> Wait[waits beside it<br/>memory_pending_updates]
+        Replace --> Store
+        Wait --> Store
+        Manual[Save to memory<br/>SaveMessageToMemoryUseCase] --> ManualEmbed[EmbeddingProvider.embed] --> Store
     end
 
     subgraph Retrieval["Retrieval (next session, longTermMemory node)"]
@@ -1580,7 +1593,8 @@ Encryption applies to every table that may hold user-derived content:
 
 - `chat_messages`, `chat_sessions` — user messages and LLM replies.
 - `memory_chunks` — long-term memory fragments distilled from
-  conversations.
+  conversations; `memory_chunk_history` — the earlier texts of chunks a
+  newer statement replaced.
 - `trace_steps` — the persistent pipeline-run trace: per-node
   input/output snapshots and console log events, all derived from
   user input.
@@ -1693,7 +1707,7 @@ explicitly in [`SECURITY.md`](../SECURITY.md) (*Agent file workspace*).
 
 | Tier                          | What it holds                                                                                                  | At-rest protection                                                        |
 |-------------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| **Room DB** (`agent_database.db`) | `chat_messages`, `chat_sessions`, `memory_chunks`, `trace_steps`, `pipeline_runs`, `pending_interactions`, pipelines / presets / prompt templates | **SQLCipher** (full-database AES) under the app's Keystore-held passphrase |
+| **Room DB** (`agent_database.db`) | `chat_messages`, `chat_sessions`, `memory_chunks`, `memory_chunk_history`, `trace_steps`, `pipeline_runs`, `pending_interactions`, pipelines / presets / prompt templates | **SQLCipher** (full-database AES) under the app's Keystore-held passphrase |
 | **Keystore-backed stores** (`KeystoreBackedPrefsStore`) | SQLCipher passphrase, cloud-provider API keys, HuggingFace access token                                        | **AES-256-GCM per value**, key non-exportable in the Android Keystore      |
 | **DataStore** (Preferences)   | Non-sensitive settings: sampling params, timeouts, default pipeline id, opt-in flags, `allowed_http_domains`, `app_function_risk_overrides` | **FBE + app sandbox only** (plaintext within the sandbox; no app cipher)   |
 | **Agent workspace** (`files/agent_workspace/`) | Agent-produced and user-imported files (reports, exports, inputs)                                              | **FBE + app sandbox only** — *not* SQLCipher-encrypted (see `SECURITY.md`) |

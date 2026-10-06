@@ -41,7 +41,8 @@ storage and credentials:
   - `chat_messages` — user messages and model replies.
   - `chat_sessions` — chat metadata and pipeline bindings.
   - `memory_chunks` — fragments of long-term agent memory extracted from
-    prior conversations.
+    prior conversations, and `memory_chunk_history` — the earlier texts of
+    fragments a newer statement replaced.
   - `trace_steps` — the persistent pipeline-run trace: per-node inputs and
     outputs (with their SHA-256), console events, and resolved long-term-memory
     snapshots recorded while a run executes (this is what console replay and
@@ -713,6 +714,13 @@ oversight — and it works as follows:
   and the approval card shows it), and an external-automation request.
   `delegate_task` no longer writes the cloud model's answer to memory; it
   returns the answer to the step that called it, like any other tool result.
+  A fact that reaches memory can also **replace** a stored one: when it lands
+  close to an unpinned entry and the on-device model judges it an update, the
+  entry takes the new text and keeps the old one in its history. So an injected
+  fact can hide a stored fact from recall, not only add one. The old text stays
+  on the device, on the Memory screen; a pinned entry is never replaced, so
+  pinning is the way to hold a fact against this; and both facts go through
+  `ChatTranscript`, so neither can open a line in the judge's prompt.
 - **AppFunctions exposed by other installed apps are not on that list**, and
   the omission is deliberate rather than an oversight. Calling another app's
   AppFunction needs `EXECUTE_APP_FUNCTIONS`, which Android 16 grants to

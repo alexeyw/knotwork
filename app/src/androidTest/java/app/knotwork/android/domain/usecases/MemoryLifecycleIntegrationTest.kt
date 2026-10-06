@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.android.data.local.AppDatabase
 import app.knotwork.android.data.local.Converters
+import app.knotwork.android.data.repositories.MemoryHistoryRepositoryImpl
 import app.knotwork.android.data.repositories.MemoryRepositoryImpl
 import app.knotwork.android.domain.constants.TimeAndIdConstants
 import app.knotwork.android.domain.engine.LlmInferenceEngine
@@ -173,6 +174,14 @@ class MemoryLifecycleIntegrationTest {
             structuredOutputGate = StructuredOutputGate(),
             runSettings = settingsRepository,
             metricsRepository = metricsRepository,
+            // Strict: these scenarios write a new fact or one identical to a stored
+            // one, neither of which asks the judge.
+            supersedeJudge = mockk(),
+            memoryHistoryRepository = MemoryHistoryRepositoryImpl(
+                database.memoryDao(),
+                database.memoryHistoryDao(),
+                Converters(),
+            ),
         )
         retrieveUseCase = RetrieveRelevantMemoryUseCase(
             embeddingProviderResolver = embeddingProviderResolver,

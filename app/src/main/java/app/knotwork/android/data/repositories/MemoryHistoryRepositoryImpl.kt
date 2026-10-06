@@ -1,0 +1,106 @@
+package app.knotwork.android.data.repositories
+
+import app.knotwork.android.data.local.Converters
+import app.knotwork.android.data.local.TagsCsv
+import app.knotwork.android.data.local.dao.MemoryDao
+import app.knotwork.android.data.local.dao.MemoryHistoryDao
+import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.mappers.toDomainOrNull
+import app.knotwork.android.domain.models.MemoryChunk
+import app.knotwork.android.domain.models.MemoryPendingUpdate
+import app.knotwork.android.domain.models.MemorySource
+import app.knotwork.android.domain.models.MemoryVersion
+import app.knotwork.android.domain.repositories.MemoryHistoryRepository
+import app.knotwork.android.domain.services.MemoryVectorSimilarity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Room-backed [MemoryHistoryRepository]: candidate search over `memory_chunks`
+ * through [MemoryDao], and the in-place replacement, version history and waiting
+ * updates through [MemoryHistoryDao], whose multi-row writes are single transactions.
+ *
+ * @property memoryDao Reads the stored chunks for the candidate search.
+ * @property historyDao Replaces chunks, keeps their versions, links waiting updates.
+ * @property converters Encodes and decodes embedding BLOBs.
+ */
+@Singleton
+class MemoryHistoryRepositoryImpl @Inject constructor(
+    private val memoryDao: MemoryDao,
+    private val historyDao: MemoryHistoryDao,
+    private val converters: Converters,
+) : MemoryHistoryRepository {
+
+    override suspend fun findSupersedeCandidate(embedding: FloatArray): Pair<MemoryChunk, Float>? =
+        withContext(Dispatchers.Default) {
+            memoryDao.getAllMemories()
+                .asSequence()
+                .filterNot { it.needsReembedding }
+                .mapNotNull { entity -> entity.toDomainOrNull(converters) }
+                .map { chunk -> chunk to MemoryVectorSimilarity.cosine(embedding, chunk.embedding) }
+                .maxByOrNull { it.second }
+        }
+
+    override suspend fun supersede(
+        id: Long,
+        text: String,
+        embedding: FloatArray,
+        source: MemorySource,
+        tags: List<String>,
+    ): Boolean = withContext(Dispatchers.IO) {
+        historyDao.supersede(
+            id = id,
+            text = text,
+            embedding = encode(embedding),
+            source = source,
+            tags = tags,
+            nowMillis = System.currentTimeMillis(),
+            keepVersions = MemoryVersion.MAX_PER_CHUNK,
+        )
+    }
+
+    override suspend fun saveUpdateOfPinned(
+        pinnedId: Long,
+        text: String,
+        embedding: FloatArray,
+        source: MemorySource,
+        tags: List<String>,
+    ): Long = withContext(Dispatchers.IO) {
+        historyDao.saveUpdateOfPinned(
+            pinnedChunkId = pinnedId,
+            update = MemoryChunkEntity(
+                text = text,
+                embedding = encode(embedding),
+                timestamp = System.currentTimeMillis(),
+                source = source,
+                tagsCsv = TagsCsv.encode(tags),
+            ),
+            keepVersions = MemoryVersion.MAX_PER_CHUNK,
+        )
+    }
+
+    override suspend fun getHistory(chunkId: Long): List<MemoryVersion> = withContext(Dispatchers.IO) {
+        historyDao.getVersions(chunkId).map { version ->
+            MemoryVersion(
+                id = version.id,
+                chunkId = version.chunkId,
+                text = version.text,
+                source = version.source,
+                tags = TagsCsv.decode(version.tagsCsv),
+                capturedAt = version.capturedAt,
+                replacedAt = version.replacedAt,
+            )
+        }
+    }
+
+    override suspend fun getPendingUpdates(): List<MemoryPendingUpdate> = withContext(Dispatchers.IO) {
+        historyDao.getPendingUpdates().map { link ->
+            MemoryPendingUpdate(updateChunkId = link.updateChunkId, pinnedChunkId = link.pinnedChunkId)
+        }
+    }
+
+    private fun encode(embedding: FloatArray): ByteArray =
+        converters.fromFloatArray(embedding) ?: throw IllegalArgumentException("Failed to serialize embedding")
+}
