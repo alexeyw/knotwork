@@ -1742,7 +1742,7 @@ The app ships with the following tools:
 |------------------|---------------------------------------------------------------------------------------|
 | **search_tool**    | Looks up a topic on Wikipedia and returns a concise summary. **This tool leaves the device**, and it is the only built-in that does so without asking: the search term the model wrote is sent to `https://<language>.wikipedia.org`, and the tool is read-only, so no confirmation card appears. It is on from the first launch and the seeded pipeline calls it — turn it off with its switch here, or with *Block network from local model*, which withholds it. |
 | **schedule_task**  | Schedules a task to run later in the background (one-off or recurring).             |
-| **delegate_task**  | Hands a hard subtask to a configured cloud LLM and stores the result in memory. Only appears when at least one cloud provider has an API key configured. |
+| **delegate_task**  | Hands a hard subtask to a configured cloud LLM and returns its whole answer to the step that called it. The answer is not saved to memory. Only appears when at least one cloud provider has an API key configured. |
 | **read_file**      | Reads a text file from the agent's private workspace, truncated to a token budget so a long file never overflows the model's context; supports byte `offset`/`limit` paging. |
 | **list_files**     | Lists files in the workspace (optionally under a sub-directory) with their size and last-modified time. |
 | **find_files**     | Finds workspace files whose path matches a glob pattern (`*.md`, `reports/**`).      |

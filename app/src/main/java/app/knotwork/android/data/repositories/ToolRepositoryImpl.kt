@@ -151,8 +151,8 @@ class ToolRepositoryImpl @Inject constructor(
         val defaultModel = availableModels.first().id
         val delegateTool = AgentTool(
             name = "delegate_task",
-            description = "Delegates a complex or specialized task to an external LLM and saves the " +
-                "result to memory. ONLY use this tool if you need cloud reasoning.",
+            description = "Delegates a complex or specialized task to an external LLM and returns its " +
+                "answer. ONLY use this tool if you need cloud reasoning.",
             parameters = """
                 {
                   "type": "object",
