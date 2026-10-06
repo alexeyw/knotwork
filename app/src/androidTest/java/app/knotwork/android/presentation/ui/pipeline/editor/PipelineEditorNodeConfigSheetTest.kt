@@ -135,8 +135,10 @@ class PipelineEditorNodeConfigSheetTest {
             }
         }
 
+        // The field draws its label in capitals (`PROVIDER`); the string resource is the
+        // sentence-case word, so the match ignores case rather than pinning the styling.
         composeTestRule
-            .onNodeWithText(ctx.getString(KnotworkR.string.knotwork_node_field_provider))
+            .onNodeWithText(ctx.getString(KnotworkR.string.knotwork_node_field_provider), ignoreCase = true)
             .assertIsDisplayed()
     }
 
