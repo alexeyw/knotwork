@@ -178,6 +178,14 @@ private class InMemoryMemoryStore :
 
     override suspend fun getPendingUpdates(): List<MemoryPendingUpdate> = throw NotImplementedError()
 
+    override suspend fun applyWaitingUpdate(chunkId: Long): Long? = throw NotImplementedError()
+
+    override suspend fun discardWaitingUpdate(chunkId: Long): Long? = throw NotImplementedError()
+
+    override suspend fun setPinned(chunkId: Long, pinned: Boolean) = throw NotImplementedError()
+
+    override suspend fun deleteVersion(versionId: Long) = throw NotImplementedError()
+
     private fun load(memories: List<MemoryWithHistory>) {
         memories.forEach { (chunk, history) ->
             rows.add(chunk)

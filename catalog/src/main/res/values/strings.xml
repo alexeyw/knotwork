@@ -667,6 +667,40 @@
     <string name="knotwork_memory_detail_cancel">Cancel</string>
     <string name="knotwork_memory_detail_save">Save</string>
     <string name="knotwork_memory_detail_close">Close</string>
+    <!-- Earlier versions and pairs on the detail sheet and the list row. -->
+    <string name="knotwork_memory_hist_title">Earlier versions</string>
+    <plurals name="knotwork_memory_hist_count">
+        <item quantity="one">%1$d earlier version</item>
+        <item quantity="other">%1$d earlier versions</item>
+    </plurals>
+    <string name="knotwork_memory_hist_src_auto">Auto-extracted</string>
+    <string name="knotwork_memory_hist_src_manual">Saved manually</string>
+    <string name="knotwork_memory_hist_src_compact">Compacted</string>
+    <string name="knotwork_memory_hist_src_unknown">Unknown source</string>
+    <string name="knotwork_memory_hist_learned_from">Learned from Chat “%1$s”</string>
+    <string name="knotwork_memory_hist_captured">Captured %1$s</string>
+    <string name="knotwork_memory_hist_replaced">Replaced %1$s</string>
+    <string name="knotwork_memory_hist_version_more">More options for this version</string>
+    <string name="knotwork_memory_hist_delete_version">Delete this version</string>
+    <string name="knotwork_memory_dlg_delete_version_title">Delete this version?</string>
+    <string name="knotwork_memory_dlg_delete_version_body">The earlier text is removed from this memory’s history. The current text stays.</string>
+    <string name="knotwork_memory_edit_history_note">Your edit replaces the text without adding an earlier version.</string>
+    <string name="knotwork_memory_pair_pinned_title">An update is waiting</string>
+    <string name="knotwork_memory_pair_update_title">Updates a pinned memory</string>
+    <string name="knotwork_memory_pair_note">The agent uses the pinned text until you choose.</string>
+    <string name="knotwork_memory_pair_use">Use the update</string>
+    <string name="knotwork_memory_pair_keep">Keep pinned</string>
+    <string name="knotwork_memory_row_pair_pinned">Update waiting</string>
+    <string name="knotwork_memory_row_pair_update">Updates a pinned memory</string>
+    <plurals name="knotwork_memory_a11y_row_history">
+        <item quantity="one">%1$d earlier version</item>
+        <item quantity="other">%1$d earlier versions</item>
+    </plurals>
+    <string name="knotwork_memory_a11y_hist_show">Show earlier versions</string>
+    <string name="knotwork_memory_a11y_hist_hide">Hide earlier versions</string>
+    <string name="knotwork_memory_a11y_version">Earlier version %1$d of %2$d. %3$s. %4$s.</string>
+    <string name="knotwork_memory_a11y_pair_update_text">Update: %1$s</string>
+    <string name="knotwork_memory_a11y_pair_pinned_text">Pinned text: %1$s</string>
     <string name="knotwork_memory_meta_source">Source</string>
     <string name="knotwork_memory_meta_learned_from">Learned from</string>
     <string name="knotwork_memory_meta_captured">Captured</string>

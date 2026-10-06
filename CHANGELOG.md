@@ -27,9 +27,17 @@ details.
     entry's history;
   - a different fact, or one the model cannot place, is saved beside it.
 
-  A pinned entry is never changed: its update is saved beside it and waits. The
-  Memory screen does not show the history or the waiting update yet. Earlier
-  versions are stored in the encrypted database and deleted with their entry.
+  A pinned entry is never changed: its update is saved beside it and waits until
+  you choose. Earlier versions are stored in the encrypted database and deleted
+  with their entry.
+
+  On the Memory screen:
+  - a row shows how many earlier versions its entry keeps;
+  - an entry's sheet lists them under **Earlier versions**, and any one can be
+    deleted;
+  - an update waiting on a pinned entry is drawn under it, and either entry's
+    sheet offers **Use the update** or **Keep pinned**;
+  - unpinning an entry while an update waits applies the update.
   A memory export carries each entry's earlier versions, and an import brings
   them back as that entry's history only — never as entries of their own.
 

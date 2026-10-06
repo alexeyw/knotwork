@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
+import app.knotwork.android.domain.models.MemoryVersion
 import app.knotwork.android.domain.usecases.CompactionEstimate
 import app.knotwork.android.presentation.common.DisplayFormat
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
@@ -30,13 +31,17 @@ import app.knotwork.design.screens.memory.MemoryCategoryChip
 import app.knotwork.design.screens.memory.MemoryContent
 import app.knotwork.design.screens.memory.MemoryDateFilter
 import app.knotwork.design.screens.memory.MemoryEntryDetail
+import app.knotwork.design.screens.memory.MemoryPairRole
+import app.knotwork.design.screens.memory.MemoryPairView
 import app.knotwork.design.screens.memory.MemoryRow
 import app.knotwork.design.screens.memory.MemorySection
 import app.knotwork.design.screens.memory.MemorySortMode
 import app.knotwork.design.screens.memory.MemorySourceKind
 import app.knotwork.design.screens.memory.MemoryStatsHeader
+import app.knotwork.design.screens.memory.MemoryVersionView
 import app.knotwork.design.screens.memory.MemoryViewState
 import app.knotwork.design.screens.memory.MemoryVisualState
+import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +89,8 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
     // keystrokes and dialog-visibility toggles don't re-run the O(N) work.
     val listViewState = remember(
         uiState.memories,
+        uiState.history,
+        uiState.pendingUpdates,
         uiState.selectedCategory,
         uiState.sortMode,
         uiState.dateFilter,
@@ -131,6 +138,9 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
         onAddDismiss = viewModel::dismissAddDialog,
         onExportAll = viewModel::requestExportAll,
         onErrorRetry = viewModel::loadAllData,
+        onPairUse = { id -> id.toLongOrNull()?.let(viewModel.history::useUpdate) },
+        onPairKeep = { id -> id.toLongOrNull()?.let(viewModel.history::keepPinned) },
+        onVersionDelete = { id -> id.toLongOrNull()?.let(viewModel.history::deleteVersion) },
     )
 
     Box(modifier = Modifier.fillMaxSize().testTag(tag = MEMORY_ROOT_TEST_TAG)) {
@@ -158,6 +168,7 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
         else -> MemoryVisualState.Populated
     }
 
+    val facts = rowFacts()
     val sections = if (searchActive) {
         // Search results are a single relevance-ordered list (the order
         // retrieveScored returns) — no time bucketing, which would scatter the
@@ -166,22 +177,16 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
         if (hits.isEmpty()) {
             emptyList()
         } else {
-            listOf(
-                MemorySection(
-                    title = "",
-                    count = hits.size,
-                    rows = hits.map {
-                        it.first.toRow(it.second, nowMillis)
-                    },
-                ),
-            )
+            val rows = facts.withUpdatesUnderPinned(hits) { it.first.id }.map { (hit, child) ->
+                hit.first.toRow(hit.second, nowMillis, facts, child)
+            }
+            listOf(MemorySection(title = "", count = rows.count { !it.pairChild }, rows = rows))
         }
     } else {
-        val scored = memories
+        val filtered = memories
             .filter { it.matchesCategory(selectedCategory) }
             .filter { it.matchesDate(dateFilter, nowMillis) }
-            .map { it to null as Float? }
-        buildSections(scored, sortMode, nowMillis)
+        buildSections(filtered.map { it to null as Float? }, sortMode, nowMillis, facts, selectedCategory)
     }
 
     // Dialog visibility + the loaded estimate are authored live by the screen
@@ -198,7 +203,7 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
         searchEmpty = searchEmpty(),
         searchQuery = searchQuery,
         sections = sections,
-        expandedEntry = expanded?.toDetail(nowMillis, sessionNames),
+        expandedEntry = expanded?.toDetail(nowMillis, sessionNames, facts),
         errorMessage = null,
     )
 }
@@ -258,10 +263,23 @@ private fun buildSections(
     scored: List<Pair<MemoryChunk, Float?>>,
     sortMode: MemorySortMode,
     nowMillis: Long,
+    facts: MemoryRowFacts,
+    category: MemoryCategory,
 ): List<MemorySection> {
+    // A waiting update is never sorted on its own: it is drawn under its pinned entry,
+    // wherever that entry lands. It stays a row of its own only when its pinned entry
+    // is filtered out — or when a filter shows the pinned entry and not the update,
+    // except Pinned, which shows the update under its pinned entry anyway.
+    val visible = scored.mapTo(HashSet()) { it.first.id }
+    val attached = facts.pinnedToUpdate.filter { (pinnedId, update) ->
+        pinnedId in visible && (update.id in visible || category == MemoryCategory.Pinned)
+    }
+    val attachedIds = attached.values.mapTo(HashSet()) { it.id }
+    val topLevel = scored.filter { it.first.id !in attachedIds }
+
     // Bucket: Pinned first, then Today / This week / Earlier by timestamp.
-    val pinned = scored.filter { it.first.isPinned }
-    val rest = scored.filter { !it.first.isPinned }
+    val pinned = topLevel.filter { it.first.isPinned }
+    val rest = topLevel.filter { !it.first.isPinned }
     val today = rest.filter { nowMillis - it.first.timestamp < DAY_MS }
     val week = rest.filter {
         val age = nowMillis - it.first.timestamp
@@ -287,24 +305,96 @@ private fun buildSections(
             MemorySection(
                 title = title,
                 count = bucket.size,
-                rows = bucket.sorted().map { it.first.toRow(it.second, nowMillis) },
+                rows = bucket.sorted().flatMap { (chunk, score) ->
+                    listOfNotNull(
+                        chunk.toRow(score, nowMillis, facts, child = false),
+                        attached[chunk.id]?.toRow(null, nowMillis, facts, child = true),
+                    )
+                },
             )
         }
     }
 }
 
-private fun MemoryChunk.toRow(score: Float?, nowMillis: Long): MemoryRow = MemoryRow(
-    id = id.toString(),
-    title = title(),
-    body = text,
-    sourceKind = source.toKind(),
-    tags = tags,
-    relevanceScore = score?.let { String.format(Locale.US, "%.2f", it) },
-    timestampLabel = relativeShort(nowMillis - timestamp),
-    isPinned = isPinned,
-)
+/**
+ * What a row needs to know beyond its own chunk: how many earlier versions each entry
+ * keeps and which entries form a pair.
+ *
+ * @property historyCounts Earlier versions by chunk id.
+ * @property pinnedToUpdate Each pinned chunk id with the chunk of its waiting update.
+ * @property updateToPinned Each waiting update's id with the chunk it updates.
+ */
+private class MemoryRowFacts(
+    val historyCounts: Map<Long, Int>,
+    val pinnedToUpdate: Map<Long, MemoryChunk>,
+    val updateToPinned: Map<Long, MemoryChunk>,
+    val history: Map<Long, List<MemoryVersion>>,
+) {
+    /** The pair role of the chunk with [id], or `null`. */
+    fun roleOf(id: Long): MemoryPairRole? = when (id) {
+        in pinnedToUpdate -> MemoryPairRole.PinnedWithUpdate
+        in updateToPinned -> MemoryPairRole.UpdateOfPinned
+        else -> null
+    }
 
-private fun MemoryChunk.toDetail(nowMillis: Long, sessionNames: Map<String, String>): MemoryEntryDetail {
+    /**
+     * Orders [items] (already ranked) so a waiting update follows its pinned entry
+     * when both are present, at the pinned entry's position; a half without its
+     * partner keeps its own place.
+     *
+     * @return Each item with `true` when it is drawn as a child under its pinned entry.
+     */
+    fun <T> withUpdatesUnderPinned(items: List<T>, idOf: (T) -> Long): List<Pair<T, Boolean>> {
+        val byId = items.associateBy(idOf)
+        return items.flatMap { item ->
+            val id = idOf(item)
+            val pinnedId = updateToPinned[id]?.id
+            when {
+                pinnedId != null && pinnedId in byId -> emptyList()
+                else -> listOfNotNull(
+                    item to false,
+                    pinnedToUpdate[id]?.id?.let { updateId -> byId[updateId]?.let { it to true } },
+                )
+            }
+        }
+    }
+}
+
+private fun MemoryUiState.rowFacts(): MemoryRowFacts {
+    val byId = memories.associateBy { it.id }
+    val links = pendingUpdates.mapNotNull { link ->
+        val pinned = byId[link.pinnedChunkId]
+        val update = byId[link.updateChunkId]
+        if (pinned != null && update != null) pinned to update else null
+    }
+    return MemoryRowFacts(
+        historyCounts = history.mapValues { it.value.size },
+        pinnedToUpdate = links.associate { (pinned, update) -> pinned.id to update },
+        updateToPinned = links.associate { (pinned, update) -> update.id to pinned },
+        history = history,
+    )
+}
+
+private fun MemoryChunk.toRow(score: Float?, nowMillis: Long, facts: MemoryRowFacts, child: Boolean): MemoryRow =
+    MemoryRow(
+        id = id.toString(),
+        title = title(),
+        body = text,
+        sourceKind = source.toKind(),
+        tags = tags,
+        relevanceScore = score?.let { String.format(Locale.US, "%.2f", it) },
+        timestampLabel = relativeShort(nowMillis - timestamp),
+        isPinned = isPinned,
+        historyCount = facts.historyCounts[id] ?: 0,
+        pairRole = facts.roleOf(id),
+        pairChild = child,
+    )
+
+private fun MemoryChunk.toDetail(
+    nowMillis: Long,
+    sessionNames: Map<String, String>,
+    facts: MemoryRowFacts,
+): MemoryEntryDetail {
     val learnedFrom = (source as? MemorySource.ChatSession)?.sessionId?.let { id ->
         sessionNames[id]?.let { "Chat \"$it\"" }
     }
@@ -313,6 +403,12 @@ private fun MemoryChunk.toDetail(nowMillis: Long, sessionNames: Map<String, Stri
         "$useCount replies$last"
     } else {
         null
+    }
+    val role = facts.roleOf(id)
+    val other = when (role) {
+        MemoryPairRole.PinnedWithUpdate -> facts.pinnedToUpdate[id]
+        MemoryPairRole.UpdateOfPinned -> facts.updateToPinned[id]
+        null -> null
     }
     return MemoryEntryDetail(
         id = id.toString(),
@@ -326,8 +422,33 @@ private fun MemoryChunk.toDetail(nowMillis: Long, sessionNames: Map<String, Stri
         capturedLabel = formatCaptured(timestamp),
         usedInLabel = usedIn,
         isPinned = isPinned,
+        history = facts.history[id].orEmpty().map { version ->
+            MemoryVersionView(
+                id = version.id.toString(),
+                text = version.text,
+                sourceKind = version.source.toKind(),
+                learnedFrom = version.source.chatName(sessionNames),
+                capturedLabel = formatDate(version.capturedAt),
+                replacedLabel = formatDate(version.replacedAt),
+            )
+        },
+        pair = if (role != null && other != null) {
+            MemoryPairView(
+                role = role,
+                otherText = other.text,
+                otherSourceKind = other.source.toKind(),
+                otherLearnedFrom = other.source.chatName(sessionNames),
+                otherCapturedLabel = formatDate(other.timestamp),
+            )
+        } else {
+            null
+        },
     )
 }
+
+/** Name of the chat a [MemorySource.ChatSession] came from, when that chat still exists. */
+private fun MemorySource.chatName(sessionNames: Map<String, String>): String? =
+    (this as? MemorySource.ChatSession)?.sessionId?.let(sessionNames::get)
 
 private fun CompactionEstimate.toView(): CompactionEstimateView = CompactionEstimateView(
     removedLabel = "~$estimatedRemoved",
@@ -391,6 +512,10 @@ private const val MINUTES_PER_WEEK = 60L * 24 * 7
 private const val DAY_MS = 24L * 60 * 60 * 1000
 private const val WEEK_MS = 7L * DAY_MS
 private const val MONTH_MS = 30L * DAY_MS
+
+/** Formats a date in the locale's medium style (`2 Oct 2026`), as earlier versions show it. */
+private fun formatDate(timestamp: Long): String =
+    DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault()).format(Date(timestamp))
 
 /** Formats a capture timestamp as `yyyy-MM-dd · HH:mm` in the current locale. */
 private fun formatCaptured(timestamp: Long): String =

@@ -103,6 +103,11 @@ data class MemoryCategoryChip(val category: MemoryCategory, val count: Int)
  *   in search mode.
  * @property timestampLabel Relative time (e.g. `"2h"`).
  * @property isPinned Whether the row is pinned (drives the pin glyph).
+ * @property historyCount How many earlier versions the entry keeps; `0` hides the marker.
+ * @property pairRole The entry's half of a pair (a pinned entry with an update waiting,
+ *   or that update), or `null` when it is in no pair.
+ * @property pairChild `true` when the row is drawn inset under its pinned entry; an
+ *   update shown alone (its pinned entry filtered out) is not a child.
  */
 data class MemoryRow(
     val id: String,
@@ -113,6 +118,54 @@ data class MemoryRow(
     val relevanceScore: String?,
     val timestampLabel: String,
     val isPinned: Boolean,
+    val historyCount: Int = 0,
+    val pairRole: MemoryPairRole? = null,
+    val pairChild: Boolean = false,
+)
+
+/** Which half of a pair an entry is. */
+enum class MemoryPairRole {
+    /** A pinned entry with an update waiting beside it. */
+    PinnedWithUpdate,
+
+    /** An update waiting on a pinned entry. */
+    UpdateOfPinned,
+}
+
+/**
+ * One earlier version of an entry, as the detail sheet shows it.
+ *
+ * @property id Stable identity of the version.
+ * @property text The earlier text.
+ * @property sourceKind Where that text came from.
+ * @property learnedFrom Name of the chat it was learned from, or `null`.
+ * @property capturedLabel When it was first stored (medium date, e.g. `"2 Oct 2026"`).
+ * @property replacedLabel When a newer statement replaced it (same format).
+ */
+data class MemoryVersionView(
+    val id: String,
+    val text: String,
+    val sourceKind: MemorySourceKind,
+    val learnedFrom: String?,
+    val capturedLabel: String,
+    val replacedLabel: String,
+)
+
+/**
+ * The other half of a pair, as the detail sheet's pair block shows it.
+ *
+ * @property role The half the open entry is.
+ * @property otherText Text of the other half.
+ * @property otherSourceKind Where the other half's text came from.
+ * @property otherLearnedFrom Name of the chat the other half was learned from, or `null`.
+ * @property otherCapturedLabel When the other half was stored (medium date).
+ */
+data class MemoryPairView(
+    val role: MemoryPairRole,
+    val otherText: String,
+    val otherSourceKind: MemorySourceKind,
+    val otherLearnedFrom: String?,
+    val otherCapturedLabel: String,
 )
 
 /**
@@ -138,6 +191,8 @@ data class MemorySection(val title: String, val count: Int, val rows: List<Memor
  * @property capturedLabel Captured timestamp line.
  * @property usedInLabel "Used in N replies …" line, or `null` when never used.
  * @property isPinned Whether the entry is pinned.
+ * @property history Earlier versions, the most recently replaced first.
+ * @property pair The other half of the entry's pair, or `null` when it is in none.
  */
 data class MemoryEntryDetail(
     val id: String,
@@ -151,6 +206,8 @@ data class MemoryEntryDetail(
     val capturedLabel: String,
     val usedInLabel: String?,
     val isPinned: Boolean,
+    val history: List<MemoryVersionView> = emptyList(),
+    val pair: MemoryPairView? = null,
 )
 
 /**
@@ -203,7 +260,11 @@ data class MemoryViewState(
     val addDialogVisible: Boolean = false,
 )
 
-/** Callbacks emitted by `MemoryContent`. */
+/**
+ * Callbacks emitted by `MemoryContent`. `onPairUse` / `onPairKeep` carry the id of the
+ * entry whose sheet raised them — either half of the pair; `onVersionDelete` fires
+ * after the user confirmed the dialog.
+ */
 class MemoryCallbacks(
     val onBack: () -> Unit = {},
     val onSearchOpen: () -> Unit = {},
@@ -227,6 +288,9 @@ class MemoryCallbacks(
     val onAddDismiss: () -> Unit = {},
     val onExportAll: () -> Unit = {},
     val onErrorRetry: () -> Unit = {},
+    val onPairUse: (entryId: String) -> Unit = {},
+    val onPairKeep: (entryId: String) -> Unit = {},
+    val onVersionDelete: (versionId: String) -> Unit = {},
 )
 
 /** Convenience factory returning a callbacks bundle that ignores every event. */

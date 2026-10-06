@@ -92,4 +92,40 @@ interface MemoryHistoryRepository {
      *   no history has no entry.
      */
     suspend fun getAllHistory(): Map<Long, List<MemoryVersion>>
+
+    /**
+     * Applies the waiting update of a pair, given either half: the pinned chunk takes
+     * the update's text in place and stays pinned, its old text becomes its newest
+     * earlier version, and the update chunk is removed.
+     *
+     * @param chunkId Identifier of either half.
+     * @return Identifier of the chunk now holding the text, or `null` when the chunk is
+     *   in no pair.
+     */
+    suspend fun applyWaitingUpdate(chunkId: Long): Long?
+
+    /**
+     * Discards the waiting update of a pair, given either half; the pinned chunk stays
+     * as it is and the update is not kept as its history.
+     *
+     * @param chunkId Identifier of either half.
+     * @return Identifier of the pinned chunk, or `null` when the chunk is in no pair.
+     */
+    suspend fun discardWaitingUpdate(chunkId: Long): Long?
+
+    /**
+     * Pins or unpins a chunk, settling its pair: unpinning a pinned chunk with a waiting
+     * update applies the update; pinning a waiting update ends the pair and keeps both.
+     *
+     * @param chunkId Identifier of the chunk.
+     * @param pinned The new pin flag.
+     */
+    suspend fun setPinned(chunkId: Long, pinned: Boolean)
+
+    /**
+     * Deletes one earlier version of a chunk.
+     *
+     * @param versionId Identifier of the version.
+     */
+    suspend fun deleteVersion(versionId: Long)
 }

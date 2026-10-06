@@ -36,6 +36,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -302,7 +303,12 @@ private fun MemoryPopulated(state: MemoryViewState, callbacks: MemoryCallbacks, 
                 }
             }
             items(count = section.rows.size, key = { section.rows[it].id }) { index ->
-                MemoryListRow(row = section.rows[index], searching = searching, callbacks = callbacks)
+                val row = section.rows[index]
+                if (row.pairChild) {
+                    MemoryPairChildRow { MemoryListRow(row = row, searching = searching, callbacks = callbacks) }
+                } else {
+                    MemoryListRow(row = row, searching = searching, callbacks = callbacks)
+                }
             }
         }
     }
@@ -593,19 +599,22 @@ private fun MemoryListRow(row: MemoryRow, searching: Boolean, callbacks: MemoryC
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = { callbacks.onEntryPinToggle(row.id) }, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        imageVector = if (row.isPinned) AppIcons.PinOn else AppIcons.Pin,
-                        contentDescription = stringResource(
-                            if (row.isPinned) R.string.knotwork_memory_unpin else R.string.knotwork_memory_pin,
-                        ),
-                        tint = if (row.isPinned) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            KnotworkTheme.extended.onSurfaceMuted
-                        },
-                        modifier = Modifier.size(18.dp),
-                    )
+                // A waiting update is resolved on its sheet, so its row offers no pin.
+                if (row.pairRole != MemoryPairRole.UpdateOfPinned) {
+                    IconButton(onClick = { callbacks.onEntryPinToggle(row.id) }, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = if (row.isPinned) AppIcons.PinOn else AppIcons.Pin,
+                            contentDescription = stringResource(
+                                if (row.isPinned) R.string.knotwork_memory_unpin else R.string.knotwork_memory_pin,
+                            ),
+                            tint = if (row.isPinned) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                KnotworkTheme.extended.onSurfaceMuted
+                            },
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(CARD_TITLE_GAP))
@@ -616,6 +625,7 @@ private fun MemoryListRow(row: MemoryRow, searching: Boolean, callbacks: MemoryC
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            row.pairRole?.let { MemoryPairLine(role = it) }
             Spacer(modifier = Modifier.height(CARD_BODY_GAP))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -640,6 +650,7 @@ private fun MemoryListRow(row: MemoryRow, searching: Boolean, callbacks: MemoryC
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                if (row.historyCount > 0) MemoryHistoryMarker(count = row.historyCount)
                 Text(
                     text = row.timestampLabel,
                     style = MemoryType.timestamp,
@@ -720,12 +731,7 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(KnotworkTheme.spacing.sp4)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
-            ) {
+            Column(modifier = Modifier.padding(top = KnotworkTheme.spacing.sp4)) {
                 Box(
                     modifier = Modifier
                         .padding(bottom = KnotworkTheme.spacing.sp1)
@@ -735,7 +741,10 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
                         .background(KnotworkTheme.extended.outlineStrong)
                         .align(Alignment.CenterHorizontally),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = KnotworkTheme.spacing.sp4),
+                ) {
                     MemorySourceBadge(kind = detail.sourceKind)
                     Spacer(modifier = Modifier.width(KnotworkTheme.spacing.sp2))
                     Text(
@@ -765,59 +774,87 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
                         )
                     }
                 }
-                Text(
-                    text = detail.title,
-                    style = MemoryType.detailTitle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                if (editing) {
-                    OutlinedTextField(
-                        value = body,
-                        onValueChange = { body = it },
-                        textStyle = MemoryType.detailBody,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
+                // Only the content scrolls: up to ten earlier versions fit, and the
+                // Delete / Edit row stays in reach however long the sheet gets.
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = KnotworkTheme.spacing.sp4)
+                        .padding(bottom = KnotworkTheme.spacing.sp3),
+                    verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+                ) {
                     Text(
-                        text = detail.body,
-                        style = MemoryType.detailBody,
-                        color = KnotworkTheme.extended.onSurface2,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(KnotworkTheme.shapes.md)
-                            .background(KnotworkTheme.extended.surface2)
-                            .padding(KnotworkTheme.spacing.sp3),
+                        text = detail.title,
+                        style = MemoryType.detailTitle,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (editing) {
+                        OutlinedTextField(
+                            value = body,
+                            onValueChange = { body = it },
+                            textStyle = MemoryType.detailBody,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (detail.history.isNotEmpty()) MemoryEditHistoryNote()
+                    } else {
+                        Text(
+                            text = detail.body,
+                            style = MemoryType.detailBody,
+                            color = KnotworkTheme.extended.onSurface2,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(KnotworkTheme.shapes.md)
+                                .background(KnotworkTheme.extended.surface2)
+                                .padding(KnotworkTheme.spacing.sp3),
+                        )
+                    }
+                    MemoryTagEditor(
+                        tags = if (editing) tags else detail.tags,
+                        editing = editing,
+                        newTag = newTag,
+                        onNewTagChange = { newTag = it },
+                        onAddTag = {
+                            val t = newTag.trim()
+                            if (t.isNotEmpty() && t !in tags) tags = tags + t
+                            newTag = ""
+                        },
+                        onRemoveTag = { tags = tags - it },
+                    )
+                    if (!editing) {
+                        detail.pair?.let { MemoryPairBlock(entryId = detail.id, pair = it, callbacks = callbacks) }
+                        MemoryDetailMeta(detail = detail)
+                        if (detail.history.isNotEmpty()) {
+                            MemoryHistorySection(entryId = detail.id, history = detail.history, callbacks = callbacks)
+                        }
+                    }
+                }
+                HorizontalDivider(color = KnotworkTheme.extended.divider)
+                Box(
+                    modifier = Modifier.padding(
+                        start = KnotworkTheme.spacing.sp4,
+                        end = KnotworkTheme.spacing.sp3,
+                        top = KnotworkTheme.spacing.sp2,
+                        bottom = KnotworkTheme.spacing.sp3,
+                    ),
+                ) {
+                    MemoryDetailActions(
+                        editing = editing,
+                        onDelete = { callbacks.onEntryDelete(detail.id) },
+                        onCancel = if (editing) callbacks.onEntryEditCancel else callbacks.onCloseDetail,
+                        onPrimary = {
+                            if (editing) {
+                                callbacks.onEntryEditCommit(
+                                    detail.id,
+                                    body,
+                                    tags,
+                                )
+                            } else {
+                                callbacks.onEntryEditRequest(detail.id)
+                            }
+                        },
                     )
                 }
-                MemoryTagEditor(
-                    tags = if (editing) tags else detail.tags,
-                    editing = editing,
-                    newTag = newTag,
-                    onNewTagChange = { newTag = it },
-                    onAddTag = {
-                        val t = newTag.trim()
-                        if (t.isNotEmpty() && t !in tags) tags = tags + t
-                        newTag = ""
-                    },
-                    onRemoveTag = { tags = tags - it },
-                )
-                MemoryDetailMeta(detail = detail)
-                MemoryDetailActions(
-                    editing = editing,
-                    onDelete = { callbacks.onEntryDelete(detail.id) },
-                    onCancel = if (editing) callbacks.onEntryEditCancel else callbacks.onCloseDetail,
-                    onPrimary = {
-                        if (editing) {
-                            callbacks.onEntryEditCommit(
-                                detail.id,
-                                body,
-                                tags,
-                            )
-                        } else {
-                            callbacks.onEntryEditRequest(detail.id)
-                        }
-                    },
-                )
             }
         }
     }

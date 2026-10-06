@@ -2264,6 +2264,39 @@ captured, and how often it has been used in replies. From here you can
 **pin**, **edit** the text and tags, or **delete** the entry. Pinned
 entries float to the top and are never touched by compaction.
 
+### Earlier versions
+
+When a newer fact replaced an entry's text (see
+[Auto-extract](#auto-extract-from-conversations)), the entry keeps the text it
+had before. Its row shows a small history mark with the number of earlier
+versions, and its sheet lists them under **Earlier versions**, newest first, each
+with where it came from and when it was captured and replaced. The list opens
+collapsed; a long version shows six lines until you tap it.
+
+An earlier version is never shown to the agent. To remove one, open its ⋮ menu
+and choose **Delete this version** — the entry and its other versions stay.
+Deleting the entry deletes its history too, and so does clearing memory.
+Editing an entry yourself replaces its text without adding an earlier version.
+
+### An update waiting on a pinned entry
+
+A pinned entry is never changed automatically. When a newer fact changes it,
+the update is saved as a separate entry and drawn right under the pinned one:
+the pinned row says **Update waiting**, the update's row says **Updates a
+pinned memory**. Until you decide, the agent keeps using the pinned text.
+
+Open either entry and choose:
+
+- **Use the update** — the pinned entry takes the new text and stays pinned;
+  its old text becomes its newest earlier version, and the separate update
+  entry is removed.
+- **Keep pinned** — the update is removed; nothing else changes.
+
+Unpinning an entry while an update waits applies the update, since the pin was
+the only thing holding it back. Pinning the update instead keeps both entries,
+each as it is. At most one update waits on a pinned entry: a newer one replaces
+it.
+
 ### Compact Memory
 
 Tap **Compact** in the stats header to consolidate memory. A dialog
