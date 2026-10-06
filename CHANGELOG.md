@@ -136,6 +136,13 @@ details.
   output, `delegate_task`, memory embeddings — is now checked before each hop:
   unencrypted traffic only to an address you approved, and while *Block network
   from local model* is on, only to this device or your own network.
+- **A locked phone no longer shows or approves a tool call.** An approval
+  notification showed the tool and its arguments wherever the system showed
+  notification content, and its **Approve** could be sent without unlocking.
+  Approve now asks you to unlock first; **Deny** still works locked. Where Android
+  hides sensitive content on the lock screen, the approval, question and result
+  notifications show only their title. If your phone shows all notification
+  content on the lock screen, the full text still appears there.
 
 ### Tests
 

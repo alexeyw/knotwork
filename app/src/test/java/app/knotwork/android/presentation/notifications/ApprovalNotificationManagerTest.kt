@@ -456,4 +456,64 @@ class ApprovalNotificationManagerTest {
             Shadows.shadowOf(notificationManager()).getNotification(expectedId),
         )
     }
+
+    @Test
+    fun `given every phase and risk when posted then a locked screen shows the title only`() {
+        // The call and its arguments are what the model wrote from the
+        // conversation; where the system hides sensitive content they must not
+        // show, and nothing may be answered from there.
+        val surfaces = mapOf<String, (ToolRisk) -> Unit>(
+            "live" to { risk ->
+                manager.sendApprovalRequest("s1", "req-s1", "send_email", "{\"to\":\"anna@x\"}", risk, null)
+            },
+            "parked" to { risk ->
+                manager.sendPersistentApprovalRequest("run-1", "s1", "req-run-1", "send_email", "{}", risk, null)
+            },
+        )
+        for ((surface, post) in surfaces) {
+            for (risk in ToolRisk.entries) {
+                notificationManager().cancelAll()
+                post(risk)
+
+                val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+                val public = notification.publicVersion
+                assertEquals("$surface $risk visibility", Notification.VISIBILITY_PRIVATE, notification.visibility)
+                assertNotNull("$surface $risk has no lock-screen version", public)
+                assertEquals(
+                    "$surface $risk lock-screen title",
+                    notification.extras.getCharSequence(Notification.EXTRA_TITLE).toString(),
+                    public.extras.getCharSequence(Notification.EXTRA_TITLE).toString(),
+                )
+                assertEquals(
+                    "$surface $risk lock-screen text",
+                    null,
+                    public.extras.getCharSequence(Notification.EXTRA_TEXT),
+                )
+                assertEquals(
+                    "$surface $risk lock-screen big text",
+                    null,
+                    public.extras.getCharSequence(Notification.EXTRA_BIG_TEXT),
+                )
+                assertTrue("$surface $risk lock-screen actions", public.actions.isNullOrEmpty())
+                assertEquals("$surface $risk lock-screen channel", notification.channelId, public.channelId)
+            }
+        }
+    }
+
+    @Test
+    fun `given an approvable request in either phase when actions are inspected then only Approve needs unlock`() {
+        // Whoever holds a phone that shows all content on its lock screen
+        // must not be able to authorise the call; refusing it authorises nothing.
+        manager.sendApprovalRequest("s1", "req-s1", "send_email", "{}", ToolRisk.SENSITIVE, null)
+        manager.sendPersistentApprovalRequest("run-2", "s2", "req-run-2", "send_email", "{}", ToolRisk.SENSITIVE, null)
+
+        val notifications = Shadows.shadowOf(notificationManager()).allNotifications
+        assertEquals(2, notifications.size)
+        for (notification in notifications) {
+            val (approve, deny) = notification.actions.toList()
+            assertEquals(context.getString(R.string.chat_thought_approve), approve.title.toString())
+            assertTrue("Approve must ask for an unlock", approve.isAuthenticationRequired)
+            assertFalse("Deny must not ask for an unlock", deny.isAuthenticationRequired)
+        }
+    }
 }

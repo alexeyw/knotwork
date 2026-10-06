@@ -403,7 +403,12 @@ new risk surface, and the design constrains it deliberately:
   [docs/architecture.md](docs/architecture.md)). An answer
   settles only the request it was given for — the card and each notification
   carry that request's identity — so a second run waiting in the same chat
-  cannot be approved by the answer meant for the first. The
+  cannot be approved by the answer meant for the first. **A locked phone
+  neither shows the call nor approves it**: the notification's Approve asks
+  for the device to be unlocked before it is sent (Deny does not — refusing
+  authorises nothing), and where Android hides sensitive content the approval,
+  question and result notifications show their title only. A lock screen set
+  to show all content still shows the text; the setting is the user's. The
   background-execution arc — trigger fires → background run → notification →
   result in the bound chat, including the park-and-approve path — is covered
   end-to-end by an integration test.

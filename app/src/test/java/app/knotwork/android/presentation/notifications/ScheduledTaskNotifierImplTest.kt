@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.notifications
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -121,6 +122,20 @@ class ScheduledTaskNotifierImplTest {
         val postedShadow = Shadows.shadowOf(posted)
         assertEquals("Task completed", postedShadow.contentTitle)
         assertEquals("Summary is ready.", postedShadow.contentText)
+    }
+
+    @Test
+    fun `given a run's answer when notified then a locked screen shows the title only`() = runTest {
+        enable()
+
+        notifier.notifyCompleted("session-1", "Your blood test results are normal.")
+
+        val posted = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        val public = posted.publicVersion
+        assertEquals(Notification.VISIBILITY_PRIVATE, posted.visibility)
+        assertEquals("Task completed", public.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertEquals(null, public.extras.getCharSequence(Notification.EXTRA_TEXT))
+        assertEquals(null, public.extras.getCharSequence(Notification.EXTRA_BIG_TEXT))
     }
 
     @Test

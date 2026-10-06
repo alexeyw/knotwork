@@ -134,6 +134,8 @@ class ScheduledTaskNotifierImpl @Inject constructor(
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(chatDeepLinkIntent(sessionId))
             .setAutoCancel(true)
+            // The body is the run's answer, its failure, or a trigger's name.
+            .lockScreenVersion(context, NotificationChannels.TASK_RESULTS, icon, title)
             .build()
         NotificationManagerCompat.from(context).notify(notificationId(sessionId), notification)
     }
