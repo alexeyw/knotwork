@@ -355,4 +355,116 @@ class MemorySupersedePersistenceTest {
             assertEquals(listOf("Prefers coffee"), history.getHistory(8).map { it.text })
             assertEquals(setOf("Lives in Munich", "Prefers tea"), repository.getAllMemories().map { it.text }.toSet())
         }
+
+    private suspend fun pairOfBerlinAndMunich(): Long {
+        seed(id = 1, text = "Lives in Berlin", isPinned = true)
+        return history.saveUpdateOfPinned(1, "Lives in Munich", floatArrayOf(0f, 1f), MemorySource.ChatSession("s9"))
+    }
+
+    @Test
+    fun `given a pair when the update is used from either half then the pinned entry takes it and stays pinned`() =
+        runTest {
+            listOf(true, false).forEach { fromPinnedHalf ->
+                // Given
+                repository.deleteAllMemories()
+                val updateId = pairOfBerlinAndMunich()
+
+                // When
+                val holder = history.applyWaitingUpdate(if (fromPinnedHalf) 1L else updateId)
+
+                // Then
+                assertEquals(1L, holder)
+                val chunk = repository.getAllMemories().single()
+                assertEquals("Lives in Munich", chunk.text)
+                assertTrue(chunk.isPinned)
+                assertEquals(MemorySource.ChatSession("s9"), chunk.source)
+                assertEquals(listOf("Lives in Berlin"), history.getHistory(1).map { it.text })
+                assertTrue(history.getPendingUpdates().isEmpty())
+            }
+        }
+
+    @Test
+    fun `given a pair when the pinned entry is kept then the update is gone and nothing becomes history`() = runTest {
+        // Given
+        val updateId = pairOfBerlinAndMunich()
+
+        // When
+        val pinned = history.discardWaitingUpdate(updateId)
+
+        // Then
+        assertEquals(1L, pinned)
+        assertEquals(listOf("Lives in Berlin"), repository.getAllMemories().map { it.text })
+        assertTrue(history.getHistory(1).isEmpty())
+        assertTrue(history.getPendingUpdates().isEmpty())
+    }
+
+    @Test
+    fun `given a chunk in no pair when the update is used or kept then nothing changes`() = runTest {
+        seed(id = 1, text = "Lives in Berlin", isPinned = true)
+
+        assertNull(history.applyWaitingUpdate(1))
+        assertNull(history.discardWaitingUpdate(1))
+        assertEquals("Lives in Berlin", repository.getAllMemories().single().text)
+    }
+
+    @Test
+    fun `given a pair when the pinned entry is unpinned then its waiting update is applied in place`() = runTest {
+        // Given
+        pairOfBerlinAndMunich()
+
+        // When
+        history.setPinned(1, pinned = false)
+
+        // Then — unpinning removes the one exception to the replace rule.
+        val chunk = repository.getAllMemories().single()
+        assertEquals("Lives in Munich", chunk.text)
+        assertFalse(chunk.isPinned)
+        assertEquals(listOf("Lives in Berlin"), history.getHistory(1).map { it.text })
+        assertTrue(history.getPendingUpdates().isEmpty())
+    }
+
+    @Test
+    fun `given a pair when the update is pinned then the pair ends and both entries stay`() = runTest {
+        // Given
+        val updateId = pairOfBerlinAndMunich()
+
+        // When
+        history.setPinned(updateId, pinned = true)
+
+        // Then
+        assertTrue(history.getPendingUpdates().isEmpty())
+        val chunks = repository.getAllMemories().associateBy { it.id }
+        assertEquals("Lives in Berlin", chunks.getValue(1).text)
+        assertTrue(chunks.getValue(updateId).isPinned)
+    }
+
+    @Test
+    fun `given a chunk in no pair when it is pinned or unpinned then only its flag changes`() = runTest {
+        seed(id = 1, text = "Lives in Berlin")
+
+        history.setPinned(1, pinned = true)
+        assertTrue(repository.getAllMemories().single().isPinned)
+        history.setPinned(1, pinned = false)
+
+        val chunk = repository.getAllMemories().single()
+        assertFalse(chunk.isPinned)
+        assertEquals("Lives in Berlin", chunk.text)
+        assertTrue(history.getHistory(1).isEmpty())
+    }
+
+    @Test
+    fun `given a chunk with two versions when one is deleted then the other and the chunk stay`() = runTest {
+        // Given
+        seed(id = 1, text = "v0")
+        history.supersede(1, "v1", floatArrayOf(1f, 0f), MemorySource.Manual)
+        history.supersede(1, "v2", floatArrayOf(1f, 0f), MemorySource.Manual)
+        val (newest, oldest) = history.getHistory(1)
+
+        // When
+        history.deleteVersion(newest.id)
+
+        // Then
+        assertEquals(listOf(oldest.text), history.getHistory(1).map { it.text })
+        assertEquals("v2", repository.getAllMemories().single().text)
+    }
 }

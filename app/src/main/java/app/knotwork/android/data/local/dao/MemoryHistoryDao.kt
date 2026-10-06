@@ -278,4 +278,109 @@ interface MemoryHistoryDao {
             if (versions.isNotEmpty()) insertVersions(versions.map { it.copy(chunkId = id) })
         }
     }
+
+    /**
+     * The pair a chunk belongs to, as either half.
+     *
+     * @param chunkId Identifier of the pinned chunk or of its waiting update.
+     * @return The link, or `null` when the chunk is in no pair.
+     */
+    @Query("SELECT * FROM memory_pending_updates WHERE updateChunkId = :chunkId OR pinnedChunkId = :chunkId")
+    suspend fun getPairOf(chunkId: Long): MemoryPendingUpdateEntity?
+
+    /**
+     * Deletes one chunk; its versions and any pair link cascade.
+     *
+     * @param id Identifier of the chunk.
+     */
+    @Query("DELETE FROM memory_chunks WHERE id = :id")
+    suspend fun deleteChunk(id: Long)
+
+    /**
+     * Sets a chunk's pin flag, nothing else.
+     *
+     * @param id Identifier of the chunk.
+     * @param pinned The new flag.
+     */
+    @Query("UPDATE memory_chunks SET isPinned = :pinned WHERE id = :id")
+    suspend fun setPinnedFlag(id: Long, pinned: Boolean)
+
+    /**
+     * Ends a pair without touching either chunk.
+     *
+     * @param updateChunkId Identifier of the waiting update.
+     */
+    @Query("DELETE FROM memory_pending_updates WHERE updateChunkId = :updateChunkId")
+    suspend fun deletePendingUpdate(updateChunkId: Long)
+
+    /**
+     * Deletes one earlier version; the chunk and its other versions stay.
+     *
+     * @param versionId Identifier of the version.
+     */
+    @Query("DELETE FROM memory_chunk_history WHERE id = :versionId")
+    suspend fun deleteVersion(versionId: Long)
+
+    /**
+     * Applies the waiting update of a pair, given either half: the pinned chunk takes
+     * the update's text in place — keeping its pin, its old text becoming its newest
+     * earlier version — and the update chunk is deleted, which ends the pair.
+     *
+     * @param chunkId Identifier of either half.
+     * @param nowMillis When the update is applied, epoch millis.
+     * @param keepVersions How many earlier versions a chunk keeps at most.
+     * @return Identifier of the chunk now holding the text, or `null` when there was
+     *   no pair (nothing written).
+     */
+    @Transaction
+    suspend fun applyPendingUpdate(chunkId: Long, nowMillis: Long, keepVersions: Int): Long? {
+        val link = getPairOf(chunkId) ?: return null
+        val update = getMemoryById(link.updateChunkId) ?: return null
+        supersede(
+            id = link.pinnedChunkId,
+            text = update.text,
+            embedding = update.embedding,
+            source = update.source,
+            tags = TagsCsv.decode(update.tagsCsv),
+            nowMillis = nowMillis,
+            keepVersions = keepVersions,
+        )
+        deleteChunk(link.updateChunkId)
+        return link.pinnedChunkId
+    }
+
+    /**
+     * Discards the waiting update of a pair, given either half: the update chunk is
+     * deleted (the pinned chunk never said it, so it is not kept as history).
+     *
+     * @param chunkId Identifier of either half.
+     * @return Identifier of the pinned chunk, or `null` when there was no pair.
+     */
+    @Transaction
+    suspend fun discardPendingUpdate(chunkId: Long): Long? {
+        val link = getPairOf(chunkId) ?: return null
+        deleteChunk(link.updateChunkId)
+        return link.pinnedChunkId
+    }
+
+    /**
+     * Pins or unpins a chunk and settles its pair, if it is in one. Unpinning the
+     * pinned half removes the only exception to the replace rule, so its waiting
+     * update is applied in place. Pinning the waiting update makes it a fact the user
+     * keeps as it is, so the pair ends and both chunks stay.
+     *
+     * @param chunkId Identifier of the chunk.
+     * @param pinned The new pin flag.
+     * @param nowMillis When the change happens, epoch millis.
+     * @param keepVersions How many earlier versions a chunk keeps at most.
+     */
+    @Transaction
+    suspend fun setPinnedSettlingPair(chunkId: Long, pinned: Boolean, nowMillis: Long, keepVersions: Int) {
+        setPinnedFlag(chunkId, pinned)
+        val link = getPairOf(chunkId) ?: return
+        when {
+            !pinned && link.pinnedChunkId == chunkId -> applyPendingUpdate(chunkId, nowMillis, keepVersions)
+            pinned && link.updateChunkId == chunkId -> deletePendingUpdate(chunkId)
+        }
+    }
 }

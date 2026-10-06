@@ -1,8 +1,13 @@
 package app.knotwork.design.screens.memory
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.R
 import app.knotwork.design.theme.KnotworkTheme
@@ -80,5 +85,24 @@ class MemoryAffordanceTest {
         composeTestRule
             .onNodeWithContentDescription(string(R.string.knotwork_memory_search_cd))
             .assertExists()
+    }
+
+    @Test
+    fun `a sheet that switches to another entry opens at its top`() {
+        // Given — a long entry scrolled down, as after reading its earlier versions.
+        val long = "Prefers replies in English. ".repeat(60)
+        val first = MemoryPreview.historySheet().let { state ->
+            state.copy(expandedEntry = state.expandedEntry!!.copy(body = long))
+        }
+        var state by mutableStateOf(first)
+        composeTestRule.setContent { KnotworkTheme { MemoryContent(state = state) } }
+        composeTestRule.onNodeWithText("2 earlier versions").performScrollTo()
+
+        // When — *Use the update* moves the sheet to another, equally long entry.
+        state = first.copy(expandedEntry = first.expandedEntry!!.copy(id = "99", title = "Coffee order"))
+        composeTestRule.waitForIdle()
+
+        // Then
+        composeTestRule.onNodeWithText("Coffee order").assertIsDisplayed()
     }
 }

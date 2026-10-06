@@ -302,6 +302,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `HelpStrings.kt` - Every string the Help surfaces draw, supplied by the app's resources.
   - `memory/` - Long-term-memory pages.
     - `MemoryContent.kt` - Memory Manager surface (stats header, category chips, semantic search, provenance breakdown, entry cards).
+    - `MemoryHistorySection.kt` - The Memory screen's history and pair parts: the collapsible *Earlier versions* section with per-version delete, the row's earlier-versions marker and pair line, an update row drawn inset under its pinned entry, the sheet's pair block (*Use the update* / *Keep pinned*), and the edit-mode note.
     - `MemoryType.kt` - per-element typography overrides transcribed from the Memory Manager design spec.
     - `MemoryViewState.kt` - visual-state enum + sort/filter enums and segment / stat / category / row models.
   - `models/` - Local-models page and the performance card. Model discovery is `discover/`.

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.repositories.MemoryHistoryRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
@@ -38,8 +39,10 @@ import javax.inject.Inject
  *
  * Owns the loaded chunk list, the view selections (category / sort / date /
  * semantic search), inline edit + tag editing, manual add, manual compaction
- * (with a pre-run estimate), pin toggling, and full export. The screen maps the
- * exposed [MemoryUiState] to the catalog surface.
+ * (with a pre-run estimate), pin toggling, and full export. It also loads each
+ * entry's earlier versions and the updates waiting on pinned entries, and resolves
+ * a pair (*Use the update* / *Keep pinned*) or deletes one earlier version. The
+ * screen maps the exposed [MemoryUiState] to the catalog surface.
  */
 @HiltViewModel
 class MemoryViewModel @Inject constructor(
@@ -52,6 +55,7 @@ class MemoryViewModel @Inject constructor(
     private val memoryCompactionUseCase: MemoryCompactionUseCase,
     private val estimateCompactionUseCase: EstimateCompactionUseCase,
     private val retrieveRelevantMemoryUseCase: RetrieveRelevantMemoryUseCase,
+    private val memoryHistoryRepository: MemoryHistoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemoryUiState())
@@ -75,6 +79,15 @@ class MemoryViewModel @Inject constructor(
 
     private var searchJob: Job? = null
 
+    /** Resolves a pair and deletes earlier versions; the screen calls it as `viewModel.history.…`. */
+    val history = MemoryHistoryDelegate(
+        scope = viewModelScope,
+        state = _uiState,
+        memoryHistoryRepository = memoryHistoryRepository,
+        onChanged = ::refresh,
+        onFailed = { _messageEvents.tryEmit(MemoryMessage.EditError) },
+    )
+
     init {
         loadAllData()
     }
@@ -97,13 +110,18 @@ class MemoryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val memories = memoryRepository.getAllMemories()
+                val history = memoryHistoryRepository.getAllHistory()
+                val pendingUpdates = memoryHistoryRepository.getPendingUpdates()
                 val totalBytes = memoryRepository.observeStats().first().totalBytes
                 val lastCompactedAt = memorySettings.memoryLastCompactedAt.first()
+                val sources = memories.map { it.source } + history.values.flatten().map { it.source }
                 val sessionNames =
-                    resolveSessionNames(memories.mapNotNull { (it.source as? MemorySource.ChatSession)?.sessionId })
+                    resolveSessionNames(sources.mapNotNull { (it as? MemorySource.ChatSession)?.sessionId })
                 _uiState.update {
                     it.copy(
                         memories = memories,
+                        history = history,
+                        pendingUpdates = pendingUpdates,
                         totalBytes = totalBytes,
                         lastCompactedAt = lastCompactedAt,
                         sessionNames = sessionNames,
@@ -242,12 +260,13 @@ class MemoryViewModel @Inject constructor(
     fun togglePin(id: Long) {
         viewModelScope.launch {
             val current = _uiState.value.memories.firstOrNull { it.id == id } ?: return@launch
-            memoryRepository.setMemoryPinned(id = id, pinned = !current.isPinned)
+            // Through the history repository: unpinning an entry with a waiting update
+            // applies the update, and pinning a waiting update ends its pair.
+            memoryHistoryRepository.setPinned(chunkId = id, pinned = !current.isPinned)
             refresh()
         }
     }
 
-    /** Opens the Compact confirm dialog and loads the estimate. */
     fun showCompactDialog() {
         _uiState.update { it.copy(compactDialogVisible = true, compactEstimate = null) }
         viewModelScope.launch {

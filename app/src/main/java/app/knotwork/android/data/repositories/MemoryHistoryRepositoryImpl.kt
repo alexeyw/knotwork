@@ -96,6 +96,22 @@ class MemoryHistoryRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun applyWaitingUpdate(chunkId: Long): Long? = withContext(Dispatchers.IO) {
+        historyDao.applyPendingUpdate(chunkId, System.currentTimeMillis(), MemoryVersion.MAX_PER_CHUNK)
+    }
+
+    override suspend fun discardWaitingUpdate(chunkId: Long): Long? = withContext(Dispatchers.IO) {
+        historyDao.discardPendingUpdate(chunkId)
+    }
+
+    override suspend fun setPinned(chunkId: Long, pinned: Boolean) = withContext(Dispatchers.IO) {
+        historyDao.setPinnedSettlingPair(chunkId, pinned, System.currentTimeMillis(), MemoryVersion.MAX_PER_CHUNK)
+    }
+
+    override suspend fun deleteVersion(versionId: Long) = withContext(Dispatchers.IO) {
+        historyDao.deleteVersion(versionId)
+    }
+
     private fun encode(embedding: FloatArray): ByteArray =
         converters.fromFloatArray(embedding) ?: throw IllegalArgumentException("Failed to serialize embedding")
 

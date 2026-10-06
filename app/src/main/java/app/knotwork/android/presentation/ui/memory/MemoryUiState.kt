@@ -1,6 +1,8 @@
 package app.knotwork.android.presentation.ui.memory
 
 import app.knotwork.android.domain.models.MemoryChunk
+import app.knotwork.android.domain.models.MemoryPendingUpdate
+import app.knotwork.android.domain.models.MemoryVersion
 import app.knotwork.android.domain.usecases.CompactionEstimate
 import app.knotwork.design.screens.memory.MemoryCategory
 import app.knotwork.design.screens.memory.MemoryDateFilter
@@ -12,6 +14,8 @@ import app.knotwork.design.screens.memory.MemorySortMode
  * state; the screen maps this to the catalog `MemoryViewState`.
  *
  * @property memories All stored chunks (newest-first not guaranteed; the screen sorts).
+ * @property history Earlier versions by chunk id, the most recently replaced first.
+ * @property pendingUpdates Each update waiting on a pinned chunk.
  * @property totalBytes On-disk size of the memory table.
  * @property lastCompactedAt Epoch-millis of the last compaction (`0` = never).
  * @property sessionNames Session id → display name, for the detail "Learned from" line.
@@ -31,6 +35,8 @@ import app.knotwork.design.screens.memory.MemorySortMode
  */
 data class MemoryUiState(
     val memories: List<MemoryChunk> = emptyList(),
+    val history: Map<Long, List<MemoryVersion>> = emptyMap(),
+    val pendingUpdates: List<MemoryPendingUpdate> = emptyList(),
     val totalBytes: Long = 0L,
     val lastCompactedAt: Long = 0L,
     val sessionNames: Map<String, String> = emptyMap(),

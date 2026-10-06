@@ -2,9 +2,12 @@ package app.knotwork.android.presentation.ui.memory
 
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.MemoryChunk
+import app.knotwork.android.domain.models.MemoryPendingUpdate
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.MemoryStats
+import app.knotwork.android.domain.models.MemoryVersion
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.repositories.MemoryHistoryRepository
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
@@ -53,6 +56,7 @@ class MemoryViewModelTest {
     private lateinit var memoryCompactionUseCase: MemoryCompactionUseCase
     private lateinit var estimateCompactionUseCase: EstimateCompactionUseCase
     private lateinit var retrieveRelevantMemoryUseCase: RetrieveRelevantMemoryUseCase
+    private lateinit var memoryHistoryRepository: MemoryHistoryRepository
     private lateinit var viewModel: MemoryViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -79,6 +83,9 @@ class MemoryViewModelTest {
         memoryCompactionUseCase = mockk(relaxed = true)
         estimateCompactionUseCase = mockk(relaxed = true)
         retrieveRelevantMemoryUseCase = mockk(relaxed = true)
+        memoryHistoryRepository = mockk(relaxed = true)
+        coEvery { memoryHistoryRepository.getAllHistory() } returns emptyMap()
+        coEvery { memoryHistoryRepository.getPendingUpdates() } returns emptyList()
 
         coEvery { embeddingProviderResolver.resolve() } returns embeddingProvider
         coEvery { memoryRepository.getAllMemories() } returns emptyList()
@@ -101,6 +108,7 @@ class MemoryViewModelTest {
         memoryCompactionUseCase,
         estimateCompactionUseCase,
         retrieveRelevantMemoryUseCase,
+        memoryHistoryRepository,
     )
 
     private fun TestScope.collectMessages(): MutableList<MemoryMessage> {
@@ -267,7 +275,103 @@ class MemoryViewModelTest {
         viewModel.togglePin(3L)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify(exactly = 1) { memoryRepository.setMemoryPinned(id = 3L, pinned = true) }
+        coVerify(exactly = 1) { memoryHistoryRepository.setPinned(chunkId = 3L, pinned = true) }
+    }
+
+    @Test
+    fun `given history and a waiting update when loaded then both reach the ui state with their chat names`() =
+        runTest {
+            // Given
+            val version = MemoryVersion(1L, 3L, "old", MemorySource.ChatSession("s7"), emptyList(), 1L, 2L)
+            coEvery { memoryRepository.getAllMemories() } returns listOf(chunk(3), chunk(4))
+            coEvery { memoryHistoryRepository.getAllHistory() } returns mapOf(3L to listOf(version))
+            coEvery { memoryHistoryRepository.getPendingUpdates() } returns listOf(MemoryPendingUpdate(4L, 3L))
+            coEvery { chatRepository.getSessionById("s7") } returns
+                ChatSession(id = "s7", name = "Weekend plans", updatedAt = 0L)
+
+            // When
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then — a version's chat is named even when no current entry came from it.
+            val state = viewModel.uiState.value
+            assertEquals(listOf(version), state.history.getValue(3L))
+            assertEquals(listOf(MemoryPendingUpdate(4L, 3L)), state.pendingUpdates)
+            assertEquals("Weekend plans", state.sessionNames["s7"])
+        }
+
+    @Test
+    fun `given the update's sheet is open when the update is used then the sheet moves to the pinned entry`() =
+        runTest {
+            // Given
+            coEvery { memoryHistoryRepository.applyWaitingUpdate(4L) } returns 3L
+            viewModel = createViewModel()
+            viewModel.openEntry(4L)
+
+            // When
+            viewModel.history.useUpdate(4L)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            assertEquals(3L, viewModel.uiState.value.expandedId)
+            coVerify(atLeast = 2) { memoryRepository.getAllMemories() }
+        }
+
+    @Test
+    fun `given the update's sheet is open when the pinned entry is kept then the sheet closes`() = runTest {
+        // Given
+        coEvery { memoryHistoryRepository.discardWaitingUpdate(4L) } returns 3L
+        viewModel = createViewModel()
+        viewModel.openEntry(4L)
+
+        // When
+        viewModel.history.keepPinned(4L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        assertEquals(null, viewModel.uiState.value.expandedId)
+    }
+
+    @Test
+    fun `given the pinned entry's sheet is open when it is kept then the sheet stays on it`() = runTest {
+        // Given
+        coEvery { memoryHistoryRepository.discardWaitingUpdate(3L) } returns 3L
+        viewModel = createViewModel()
+        viewModel.openEntry(3L)
+
+        // When
+        viewModel.history.keepPinned(3L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        assertEquals(3L, viewModel.uiState.value.expandedId)
+    }
+
+    @Test
+    fun `given a version when it is deleted then the repository deletes it and the screen reloads`() = runTest {
+        viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.history.deleteVersion(12L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { memoryHistoryRepository.deleteVersion(12L) }
+        coVerify(atLeast = 2) { memoryHistoryRepository.getAllHistory() }
+    }
+
+    @Test
+    fun `given resolving a pair fails when the update is used then an EditError is emitted`() = runTest {
+        // Given
+        coEvery { memoryHistoryRepository.applyWaitingUpdate(any()) } throws IllegalStateException("db closed")
+        viewModel = createViewModel()
+        val messages = collectMessages()
+
+        // When
+        viewModel.history.useUpdate(4L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        assertEquals(listOf(MemoryMessage.EditError), messages)
     }
 
     @Test

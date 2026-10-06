@@ -5,9 +5,16 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.theme.KnotworkTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -85,6 +92,38 @@ class MemoryAccessibilityTest {
         // Error state collapses the chrome (no search / sort) and shows
         // Retry + Open diagnostics buttons.
         assertReachableNodes(min = ERROR_MIN_NODES)
+    }
+
+    @Test
+    fun memoryPairList_historyMarkerReadsAsEarlierVersions() {
+        render { MemoryContent(state = MemoryPreview.pairList()) }
+
+        // The marker is a glyph and a bare number; TalkBack must hear what it counts.
+        composeTestRule.onNodeWithContentDescription("2 earlier versions", substring = true, useUnmergedTree = true)
+            .assertExists()
+        composeTestRule.onAllNodesWithText("Update waiting", useUnmergedTree = true).assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Updates a pinned memory", useUnmergedTree = true).assertCountEquals(1)
+    }
+
+    @Test
+    fun memoryHistory_versionCarriesItsDescriptionAndDeleteAction() {
+        render { MemoryContent(state = MemoryPreview.historySheet()) }
+        composeTestRule.onNodeWithText("2 earlier versions").performClick()
+
+        val version = composeTestRule.onNodeWithContentDescription("Earlier version 1 of 2.", substring = true)
+        version.assertExists()
+        val actions = version.fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        assertEquals(listOf("Delete this version"), actions.map { it.label })
+    }
+
+    @Test
+    fun memoryPairSheet_bothResolutionsAreReachable() {
+        render { MemoryContent(state = MemoryPreview.pinnedPairSheet()) }
+
+        composeTestRule.onNodeWithText("Use the update").assertHasClickAction()
+        composeTestRule.onNodeWithText("Keep pinned").assertHasClickAction()
+        composeTestRule.onNodeWithContentDescription("Update: ", substring = true, useUnmergedTree = true)
+            .assertExists()
     }
 
     private fun render(content: @Composable () -> Unit) {
