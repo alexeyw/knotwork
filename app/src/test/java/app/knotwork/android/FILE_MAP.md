@@ -378,6 +378,9 @@ Only Kotlin files appear inside the generated blocks.
     - `MemoryAutoExtractionCoordinatorTest.kt` - Unit tests for `MemoryAutoExtractionCoordinator`.
     - `MemoryRerankerTest.kt` - Unit tests for `MemoryReranker`.
     - `MemorySearchStatsTrackerTest.kt` - Unit tests for `MemorySearchStatsTracker` — the session-scoped rolling window behind the Settings AVG SCORE stat cell.
+    - `MemorySupersedeFixture.kt` - The supersede fixture (`src/test/resources/memory/supersede_pairs.json`): pairs of a stored memory fact and a newly extracted one, each labelled with what the new fact is and the verdict the supersede judge must give, plus the embedding of every fact as recorded from the app's bundled on-device embedder.
+    - `MemorySupersedeFixtureTest.kt` - Holds the supersede fixture to what it claims: recorded from the embedder the app ships, reproducible with the app's own cosine, labelled consistently — and showing the reason the supersede rule asks a model rather than a threshold.
+    - `MemorySupersedeJudgeTest.kt` - Unit tests for `MemorySupersedeJudge`: verdict parsing through the real `StructuredOutputGate`, the fail-to-keep-both contract, cancellation, and the prompt layout that keeps a fact from opening a line of its own.
     - `MemoryVectorSimilarityTest.kt` - Unit tests for `MemoryVectorSimilarity` — the metric every stage of the memory subsystem shares, plus the near-duplicate threshold expressed in it.
     - `PipelineCompositionValidatorTest.kt` - Tests for PipelineCompositionValidator (cycles, depth limit, dangling targets).
     - `ScheduledTaskTagTest.kt` - Verifies `ScheduledTaskTag`: the label a scheduled task carries is the only thing the task monitor can say about it (a queued task's input data is not readable), so it has to survive a round trip through a plain tag string and degrade to `null` — never to a wrong label — on anything it does not recognise.
