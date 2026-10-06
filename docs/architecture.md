@@ -1125,6 +1125,13 @@ HITL contract (live):
   opt-in `READ_ONLY` and `AgentApprovalDestructiveChannel` for
   `DESTRUCTIVE`, with distinct icon and title so the destructive prompt
   is recognisable at a glance in the system shade.
+- Its **Approve** action requires an unlocked device
+  (`setAuthenticationRequired`); Deny does not. Every notification that
+  carries user or model text — approval, clarification, background-run
+  result — sets a title-only public version (`lockScreenVersion`), which is
+  what Android shows where it hides sensitive content.
+  `NotificationLockScreenGuardTest` refuses a notification builder without
+  one unless the file is listed with the reason its text is safe there.
 
 ### 4.3. Model Context Protocol (MCP)
 

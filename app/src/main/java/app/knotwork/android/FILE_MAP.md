@@ -738,6 +738,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ApprovalNotificationManager.kt` - Manager for approval notifications: transient live-phase prompts plus the persistent parked-run variant (ongoing, `REPOST` delete-intent, chat deep-link; DESTRUCTIVE offers Deny + "Review in chat" instead of a direct Approve).
     - `CeilingNotificationManager.kt` - Manager that posts the "a run is waiting on you" notification for runs paused at one of their own ceilings.
     - `ClarificationNotificationManager.kt` - `ClarificationNotifier` impl posting the ongoing "Agent needs your input" notification for parked clarifications (chat deep-link, `REPOST` delete-intent, own `AgentClarificationChannel`).
+    - `LockScreenVersion.kt` - Makes this notification show only its title where the system hides sensitive content — on a secure lock screen set to hide it, or while the screen is shared — and its full text once the device is unlocked.
     - `PreUpdateSlot.kt` - Clears a notification that a release before `NotificationIds` posted in its old slot.
     - `ScheduledTaskNotifierImpl.kt` - `ScheduledTaskNotifier` impl posting "Trigger fired" / "Task completed" / "Task failed" on the `TaskResultsChannel` with a `knotwork://chat/{threadId}` deep-link tap action (same per-session id, so the outcome supersedes the "fired" ping); double-gated on the settings toggle and POST_NOTIFICATIONS.
   - `receivers/` - Broadcast receivers.

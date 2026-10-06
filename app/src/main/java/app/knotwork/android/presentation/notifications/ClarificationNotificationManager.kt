@@ -40,9 +40,10 @@ class ClarificationNotificationManager @Inject constructor(@ApplicationContext p
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         ensureChannelRegistered(notificationManager)
 
+        val title = context.getString(R.string.clarification_notification_title)
         val notification = NotificationCompat.Builder(context, NotificationChannels.AGENT_CLARIFICATION)
             .setSmallIcon(R.drawable.ic_notif_question)
-            .setContentTitle(context.getString(R.string.clarification_notification_title))
+            .setContentTitle(title)
             .setContentText(question)
             .setStyle(NotificationCompat.BigTextStyle().bigText(question))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -51,6 +52,8 @@ class ClarificationNotificationManager @Inject constructor(@ApplicationContext p
             .setOnlyAlertOnce(true)
             .setAutoCancel(false)
             .setDeleteIntent(repostPendingIntent(sessionId, runId))
+            // The question is the model's, written from the conversation.
+            .lockScreenVersion(context, NotificationChannels.AGENT_CLARIFICATION, R.drawable.ic_notif_question, title)
             .build()
 
         notificationManager.notify(notificationId(sessionId), notification)

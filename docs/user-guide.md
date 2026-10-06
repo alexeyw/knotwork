@@ -722,6 +722,13 @@ Each notification and each card answers only the request it shows. If two
 runs are waiting in the same chat, each has its own notification, and a
 button for a request that has already been answered or stopped does nothing.
 
+**Approve** in a notification asks you to unlock the phone first; **Deny**
+works on a locked phone. Where Android hides sensitive content on the lock
+screen, an approval notification shows only its title — not the tool, its
+arguments or your request — and so do the notifications for a question the
+agent asks and for a background run's result. If your phone is set to show
+all notification content on the lock screen, they show in full there.
+
 An unanswered request does not fail the run. When the live waiting
 window elapses — say a scheduled run hits a sensitive tool at 6 a.m. —
 the run parks in a persistent waiting state and an ongoing notification

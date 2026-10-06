@@ -343,6 +343,14 @@ The Wi-Fi network name obtained under the location permission is used on the
 device to decide whether a trigger fires, and never leaves it. Background
 location is **not** requested.
 
+**Notifications on the lock screen.** A notification that carries what you or
+the model wrote — a tool call waiting for your approval, a question the agent
+asks you, a background run's answer — shows only its title where Android hides
+sensitive content: on a lock screen set to hide it, or while the screen is
+shared. If your phone is set to show all notification content on the lock
+screen, Android shows the full text there; that setting is yours. Approving a
+tool call from a notification asks you to unlock the phone first.
+
 ---
 
 ## 6. Children

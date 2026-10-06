@@ -35,6 +35,7 @@ Only Kotlin files appear inside the generated blocks.
   - `NetworkClientImports.kt` - The import prefixes that mean "this file can speak to the network", shared by every guard that asks the question: the allow-list `NetworkEgressInventoryKonsistTest` and the three deny-lists (`JournalExportNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest`, `UsageTelemetryNoNetworkKonsistTest`).
   - `NetworkEgressInventoryKonsistTest.kt` - Allow-list guard over every file that can open a network connection.
   - `NotificationIdSourceGuardTest.kt` - Keeps `app.knotwork.android.domain.constants.NotificationIds` the only place a notification id is decided.
+  - `NotificationLockScreenGuardTest.kt` - Keeps every notification that carries what the user or the model wrote down to its title where the system hides sensitive content (`lockScreenVersion`).
   - `OutboundBroadcastCensusTest.kt` - Census of the places the app sends a broadcast.
   - `PathContainmentGuardTest.kt` - A path prefix test lives in exactly one production file: `PathContainment`.
   - `PersistentStorageInventoryGuardTest.kt` - Every place the app keeps data between runs is in `StorageRoot`, with two decisions written down: nothing of it leaves the device through Android backup or device transfer, and whether the recovery wipe (*Erase data*) erases it.
@@ -531,6 +532,7 @@ Only Kotlin files appear inside the generated blocks.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
+    - `ClarificationNotificationManagerTest.kt` - Robolectric coverage for `ClarificationNotificationManager`: the parked run's question is the model's, written from the conversation, so where the system hides sensitive content the notification shows its title alone.
     - `NotificationFamilyIsolationTest.kt` - The notification families are posted by three managers that know nothing of each other; these tests pin what they share — the id space — against the real `NotificationManager`.
     - `ScheduledTaskNotifierImplTest.kt` - Robolectric coverage for `ScheduledTaskNotifierImpl` — the notifier that announces scheduled-run outcomes ("Task completed" / "Task failed") with a deep-link into the bound chat session.
   - `receivers/` - Tests for the broadcast receivers, including the external-automation entry point.

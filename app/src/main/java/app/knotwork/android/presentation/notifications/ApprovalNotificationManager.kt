@@ -143,6 +143,7 @@ class ApprovalNotificationManager @Inject constructor(
             .setStyle(NotificationCompat.BigTextStyle().bigText(shade.text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .lockScreenVersion(context, channelId, smallIcon, title)
             .addDecisionActions(
                 approvable = risk != ToolRisk.DESTRUCTIVE && shade.whole,
                 sessionId = sessionId,
@@ -218,6 +219,7 @@ class ApprovalNotificationManager @Inject constructor(
             .setOnlyAlertOnce(true)
             .setAutoCancel(false)
             .setDeleteIntent(decisionPendingIntent(address, ApprovalAction.REPOST, REPOST_OFFSET))
+            .lockScreenVersion(context, channelId, smallIcon, title)
             .addDecisionActions(
                 approvable = risk != ToolRisk.DESTRUCTIVE && shade.whole,
                 sessionId = sessionId,
@@ -269,6 +271,12 @@ class ApprovalNotificationManager @Inject constructor(
      * a factory so that no Approve intent is even created for either. Deny is
      * always offered — refusing needs no ceremony.
      *
+     * Approve asks for the device to be unlocked first. Left to the platform, an
+     * action on a locked device may be sent without it, and the shade of a phone
+     * set to show all notification content on its lock screen would let whoever
+     * holds the phone authorise the call. Deny needs no unlock: refusing
+     * authorises nothing.
+     *
      * @param approvable Whether the request may be approved from the shade.
      * @param sessionId Chat session the "Review in chat" link opens.
      * @param approveIntent Builds the Approve broadcast; invoked only when [approvable].
@@ -288,7 +296,15 @@ class ApprovalNotificationManager @Inject constructor(
                 chatDeepLinkIntent(sessionId),
             )
         } else {
-            addAction(R.drawable.ic_notif_done, context.getString(R.string.chat_thought_approve), approveIntent())
+            addAction(
+                NotificationCompat.Action.Builder(
+                    R.drawable.ic_notif_done,
+                    context.getString(R.string.chat_thought_approve),
+                    approveIntent(),
+                )
+                    .setAuthenticationRequired(true)
+                    .build(),
+            )
         }
         return addAction(R.drawable.ic_action_deny, context.getString(R.string.chat_thought_deny), denyIntent)
     }
