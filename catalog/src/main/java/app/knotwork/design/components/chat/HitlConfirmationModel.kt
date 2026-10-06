@@ -26,6 +26,8 @@ import app.knotwork.design.components.chips.Risk
  * @property arguments key → JSON-fragment pairs rendered inside the JSON
  * args mono block (insertion order preserved by the caller).
  * @property timestamp pre-formatted timestamp shown next to the risk pill.
+ * @property request what the run was asked to do, shown above the call;
+ * `null` draws the card without the block.
  */
 data class HitlConfirmationModel(
     val risk: Risk,
@@ -33,4 +35,5 @@ data class HitlConfirmationModel(
     val summary: String,
     val arguments: Map<String, String>,
     val timestamp: String,
+    val request: HitlRequestContext? = null,
 )

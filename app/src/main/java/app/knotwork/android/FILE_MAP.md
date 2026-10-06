@@ -734,6 +734,7 @@ Only Kotlin files appear inside the generated blocks.
   - `common/` - Cross-feature presentation utilities.
     - `BoundedText.kt` - What reading a picked file within a size limit produced.
     - `DisplayFormat.kt` - Shared display formatters (`formatBytes` byte-size ladder, `approxTokenCount`, `CHARS_PER_TOKEN`) so byte sizes / token estimates render identically across Memory and Settings instead of drifting between per-screen copies.
+    - `HitlRequestMapping.kt` - Maps what the run behind an approval was asked to do onto the catalog's model of it — the one translation the approval card and the approval notification both read, so the two cannot name a source differently.
   - `notifications/` - Notification handling.
     - `ApprovalNotificationManager.kt` - Manager for approval notifications: transient live-phase prompts plus the persistent parked-run variant (ongoing, `REPOST` delete-intent, chat deep-link; DESTRUCTIVE offers Deny + "Review in chat" instead of a direct Approve).
     - `CeilingNotificationManager.kt` - Manager that posts the "a run is waiting on you" notification for runs paused at one of their own ceilings.

@@ -8,6 +8,8 @@ import androidx.core.app.NotificationCompat
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.NotificationChannels
 import app.knotwork.android.domain.constants.NotificationIds
+import app.knotwork.android.domain.models.ApprovalRequestContext
+import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
 import app.knotwork.android.presentation.receivers.ApprovalAction
@@ -515,5 +517,117 @@ class ApprovalNotificationManagerTest {
             assertTrue("Approve must ask for an unlock", approve.isAuthenticationRequired)
             assertFalse("Deny must not ask for an unlock", deny.isAuthenticationRequired)
         }
+    }
+
+    @Test
+    fun `given the request behind a call in either phase when posted then it is the last line after a blank one`() {
+        val expectedCall = context.getString(
+            R.string.approval_notification_big_text,
+            "send_email",
+            "{\"to\":\"anna@x\"}",
+        )
+        val posts = mapOf<String, () -> Unit>(
+            "live" to {
+                manager.sendApprovalRequest(
+                    "s1",
+                    "req-1",
+                    "send_email",
+                    "{\"to\":\"anna@x\"}",
+                    ToolRisk.SENSITIVE,
+                    ASKED,
+                )
+            },
+            "parked" to {
+                manager.sendPersistentApprovalRequest(
+                    "run-1",
+                    "s1",
+                    "req-1",
+                    "send_email",
+                    "{\"to\":\"anna@x\"}",
+                    ToolRisk.SENSITIVE,
+                    ASKED,
+                )
+            },
+        )
+        for ((phase, post) in posts) {
+            notificationManager().cancelAll()
+            post()
+
+            val text = bigText()
+            assertEquals("$phase: $text", "$expectedCall\n\nYou asked: Email Anna the slides before lunch", text)
+        }
+    }
+
+    @Test
+    fun `given a long request when posted then the arguments stay whole and approvable and the request is clamped`() {
+        // The request authorises nothing and never counts toward the argument budget:
+        // a call short enough to approve from the shade stays approvable however long
+        // the request, and the request is cut on a word instead.
+        val long = ASKED.copy(request = "word ".repeat(80).trim() + "…", shortened = true)
+
+        manager.sendApprovalRequest("s1", "req-1", "send_email", "{\"to\":\"x\"}", ToolRisk.SENSITIVE, long)
+
+        val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        val requestLine = bigText().substringAfterLast("\n\n")
+        assertEquals(context.getString(R.string.chat_thought_approve), notification.actions.first().title.toString())
+        assertTrue("the request line is not clamped: $requestLine", requestLine.length <= "You asked: ".length + 120)
+        assertTrue(requestLine.endsWith("word…"))
+    }
+
+    @Test
+    fun `given arguments cut at the budget when posted then the call and the cut note come before the request`() {
+        val args = "{\"body\":\"" + "x".repeat(ApprovalNotificationManager.SHADE_ARGUMENT_BUDGET * 2) + "\"}"
+
+        manager.sendApprovalRequest("s1", "req-1", "send_email", args, ToolRisk.SENSITIVE, ASKED)
+
+        val text = bigText()
+        val cutNote = context.getString(R.string.approval_notification_arguments_cut)
+        assertTrue("cut note missing", text.contains(cutNote))
+        assertTrue("the request is not after the cut note", text.indexOf("You asked:") > text.indexOf(cutNote))
+        assertTrue("the request is not the last line", text.endsWith("You asked: Email Anna the slides before lunch"))
+        assertTrue("over the platform's text cap: ${text.length}", text.length <= PLATFORM_TEXT_CAP)
+    }
+
+    @Test
+    fun `given each source when posted then the request line names it as the chat card does`() {
+        val cases = mapOf(
+            ASKED.copy(source = ApprovalRequestSource.Trigger("Morning briefing")) to "Trigger “Morning briefing”: ",
+            ASKED.copy(source = ApprovalRequestSource.Trigger(null)) to "Deleted trigger: ",
+            ASKED.copy(source = ApprovalRequestSource.ScheduledTask) to "Scheduled by the agent: ",
+            ASKED.copy(source = ApprovalRequestSource.OtherApp) to "Another app asked: ",
+        )
+        for ((asked, prefix) in cases) {
+            notificationManager().cancelAll()
+            manager.sendApprovalRequest("s1", "req-1", "send_email", "{}", ToolRisk.SENSITIVE, asked)
+
+            assertTrue(
+                "${asked.source}: ${bigText()}",
+                bigText().endsWith(prefix + "Email Anna the slides before lunch"),
+            )
+        }
+    }
+
+    @Test
+    fun `given an image sent without text when posted then the request line says so`() {
+        val imageOnly = ASKED.copy(request = null, hadImage = true)
+
+        manager.sendApprovalRequest("s1", "req-1", "describe_image", "{}", ToolRisk.SENSITIVE, imageOnly)
+
+        assertTrue(bigText().endsWith("\n\nYou sent an image with no text."))
+    }
+
+    private fun bigText(): String = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        .extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
+
+    private companion object {
+        /** The platform's cap on every text a notification holds (`Notification.MAX_CHARSEQUENCE_LENGTH`). */
+        const val PLATFORM_TEXT_CAP = 1_024
+
+        val ASKED = ApprovalRequestContext(
+            source = ApprovalRequestSource.Chat,
+            request = "Email Anna the slides before lunch",
+            shortened = false,
+            hadImage = false,
+        )
     }
 }

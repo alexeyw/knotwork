@@ -14,11 +14,15 @@ import app.knotwork.android.domain.constants.NotificationIds
 import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.services.ApprovalNotifier
+import app.knotwork.android.domain.text.ApprovalRequestText
+import app.knotwork.android.domain.text.toDisplaySafeExcerpt
+import app.knotwork.android.presentation.common.toHitlRequestContext
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
 import app.knotwork.android.presentation.receivers.ApprovalAction
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import app.knotwork.android.presentation.ui.MainActivity
 import app.knotwork.android.presentation.ui.navigation.NavRoutes
+import app.knotwork.design.components.chat.label
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -102,7 +106,7 @@ class ApprovalNotificationManager @Inject constructor(
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
      * @param risk Risk classification, drives the channel / icon / title selection.
-     * @param requestContext What the run was asked to do; not shown yet.
+     * @param requestContext What the run was asked to do, shown last in the expanded text.
      */
     override fun sendApprovalRequest(
         sessionId: String,
@@ -133,7 +137,7 @@ class ApprovalNotificationManager @Inject constructor(
             ToolRisk.SENSITIVE, ToolRisk.READ_ONLY -> context.getString(R.string.approval_notification_title_sensitive)
         }
         val contentText = context.getString(R.string.approval_notification_text, toolName)
-        val shade = shadeText(toolName, arguments)
+        val shade = shadeText(toolName, arguments, requestContext)
         val address = RequestAddress(sessionId, requestId)
 
         val notification = NotificationCompat.Builder(context, channelId)
@@ -177,7 +181,7 @@ class ApprovalNotificationManager @Inject constructor(
      * @param toolName The name of the tool to be executed.
      * @param arguments The arguments to be passed to the tool.
      * @param risk Risk classification, drives the channel / icon / title / actions.
-     * @param requestContext What the run was asked to do; not shown yet.
+     * @param requestContext What the run was asked to do, shown last in the expanded text.
      */
     override fun sendPersistentApprovalRequest(
         runId: String,
@@ -204,7 +208,7 @@ class ApprovalNotificationManager @Inject constructor(
             ToolRisk.SENSITIVE, ToolRisk.READ_ONLY -> context.getString(R.string.approval_notification_title_sensitive)
         }
         val contentText = context.getString(R.string.approval_notification_waiting_text, toolName)
-        val shade = shadeText(toolName, arguments)
+        val shade = shadeText(toolName, arguments, requestContext)
         val deepLink = chatDeepLinkIntent(sessionId)
 
         val address = RequestAddress(sessionId, requestId, runId)
@@ -319,25 +323,55 @@ class ApprovalNotificationManager @Inject constructor(
     private data class ShadeText(val text: String, val whole: Boolean)
 
     /**
-     * Renders a request's expanded text, cutting the arguments at
-     * [SHADE_ARGUMENT_BUDGET] with a note that says so.
+     * Renders a request's expanded text: the call, its arguments cut at
+     * [SHADE_ARGUMENT_BUDGET] with a note that says so, and — last, after a blank
+     * line — what the run was asked to do.
+     *
+     * The request goes last because the expanded view shows a limited number of
+     * lines: placed above the call it could push the arguments out of sight, and
+     * Approve in the shade is offered only when the arguments are there whole. It
+     * is clamped on its own, never counted toward the argument budget, and
+     * authorises nothing.
      *
      * @param toolName The tool the request is for.
      * @param arguments The argument string the request would authorise.
+     * @param requestContext What the run was asked to do; `null` adds no line.
      * @return The text, and whether it carries the arguments whole.
      */
-    private fun shadeText(toolName: String, arguments: String): ShadeText {
-        if (arguments.length <= SHADE_ARGUMENT_BUDGET) {
-            return ShadeText(context.getString(R.string.approval_notification_big_text, toolName, arguments), true)
-        }
-        // Never split a surrogate pair: a lone high surrogate renders as a box.
-        val end = if (arguments[SHADE_ARGUMENT_BUDGET - 1].isHighSurrogate()) {
-            SHADE_ARGUMENT_BUDGET - 1
+    private fun shadeText(toolName: String, arguments: String, requestContext: ApprovalRequestContext?): ShadeText {
+        val call = if (arguments.length <= SHADE_ARGUMENT_BUDGET) {
+            ShadeText(context.getString(R.string.approval_notification_big_text, toolName, arguments), true)
         } else {
-            SHADE_ARGUMENT_BUDGET
+            // Never split a surrogate pair: a lone high surrogate renders as a box.
+            val end = if (arguments[SHADE_ARGUMENT_BUDGET - 1].isHighSurrogate()) {
+                SHADE_ARGUMENT_BUDGET - 1
+            } else {
+                SHADE_ARGUMENT_BUDGET
+            }
+            val shown = context.getString(R.string.approval_notification_big_text, toolName, arguments.take(end) + "…")
+            ShadeText(shown + "\n\n" + context.getString(R.string.approval_notification_arguments_cut), false)
         }
-        val shown = context.getString(R.string.approval_notification_big_text, toolName, arguments.take(end) + "…")
-        return ShadeText(shown + "\n\n" + context.getString(R.string.approval_notification_arguments_cut), false)
+        val asked = requestContext?.let(::requestLine) ?: return call
+        return call.copy(text = call.text + "\n\n" + asked)
+    }
+
+    /**
+     * The notification's line for what the run was asked: the same source label
+     * as the chat card, then the request clamped on a word to
+     * [ApprovalRequestText.MAX_NOTIFICATION_LENGTH].
+     *
+     * @param requestContext What the run was asked to do.
+     * @return The line; a fixed sentence for an image sent without text.
+     */
+    private fun requestLine(requestContext: ApprovalRequestContext): String {
+        val shown = requestContext.toHitlRequestContext()
+        val request = shown.request ?: return context.getString(R.string.approval_notification_request_image_only)
+        val label = shown.label.let { context.getString(it.text, *listOfNotNull(it.argument).toTypedArray()) }
+        return context.getString(
+            R.string.approval_notification_request_line,
+            label,
+            request.toDisplaySafeExcerpt(ApprovalRequestText.MAX_NOTIFICATION_LENGTH),
+        )
     }
 
     private fun ensureChannelsRegistered(notificationManager: NotificationManager) {

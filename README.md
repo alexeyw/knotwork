@@ -96,7 +96,8 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
 - **Tools, gated by you.** Local actions through AppFunctions Jetpack and
   external servers through the Model Context Protocol (MCP), with reusable
   **skills** (instruction + tool allowlist + context) as pipeline steps. Every
-  sensitive or destructive call stops for explicit confirmation — the allowlist
+  sensitive or destructive call stops for explicit confirmation, and the card
+  shows what you asked next to what the agent wants to run — the allowlist
   is enforced at the executor level, not merely suggested.
 - **Reaches you from outside the app.** A share target, launcher shortcuts, and
   a Quick Settings tile run your chosen pipeline over shared text/images or in

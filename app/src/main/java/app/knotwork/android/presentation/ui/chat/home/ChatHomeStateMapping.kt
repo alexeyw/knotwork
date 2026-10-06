@@ -2,6 +2,7 @@ package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.models.ClarificationRequest
 import app.knotwork.android.domain.models.RunNoticeCause
+import app.knotwork.android.presentation.common.toHitlRequestContext
 import app.knotwork.android.presentation.ui.common.RunTerminationCopy
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
 import app.knotwork.android.presentation.ui.common.RunTerminationTone
@@ -506,6 +507,7 @@ internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessa
                 summary = "",
                 arguments = argumentsMap,
                 timestamp = timestamp,
+                request = pending.context?.toHitlRequestContext(),
             ),
         ),
         metadata = ChatMetadata(timestamp = timestamp, model = modelName),

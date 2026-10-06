@@ -13,6 +13,9 @@
     <string name="approval_notification_waiting_text">Waiting for your approval to use %1$s.</string>
     <string name="approval_notification_review_in_chat">Review in chat</string>
     <string name="approval_notification_arguments_cut">The arguments are longer than this notification can show. Open the chat to read them all before approving.</string>
+    <!-- Last line of the expanded approval text, after a blank line: whose words, then the request. -->
+    <string name="approval_notification_request_line">%1$s: %2$s</string>
+    <string name="approval_notification_request_image_only">You sent an image with no text.</string>
 
     <!-- Clarification notification (background waiting for the user's answer) -->
     <string name="clarification_channel_name">Agent Questions</string>

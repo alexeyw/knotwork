@@ -1,5 +1,7 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.domain.models.ApprovalRequestContext
+import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.models.RunCeilingAxis
@@ -8,6 +10,8 @@ import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ComposerState
+import app.knotwork.design.components.chat.HitlRequestContext
+import app.knotwork.design.components.chat.HitlRequestSource
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleLevel
 import app.knotwork.design.components.console.ConsoleLine
@@ -343,6 +347,52 @@ class ChatHomeStateMappingTest {
         val confirmation = row.content as ChatContent.Confirmation
         assertEquals(Risk.Destructive, confirmation.model.risk)
         assertEquals(setOf("path"), confirmation.model.arguments.keys)
+    }
+
+    @Test
+    fun `a live pending confirmation shows what the run was asked above the call`() {
+        val asked = ApprovalRequestContext(
+            source = ApprovalRequestSource.Trigger(name = "Morning briefing"),
+            request = "Check the weather and save a note",
+            shortened = true,
+            hadImage = false,
+        )
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "write_file",
+                arguments = "{}",
+                risk = ToolRisk.SENSITIVE,
+                requestId = "req-1",
+                context = asked,
+            ),
+        )
+
+        val confirmation = row.content as ChatContent.Confirmation
+        assertEquals(
+            HitlRequestContext(
+                source = HitlRequestSource.Trigger(name = "Morning briefing"),
+                request = "Check the weather and save a note",
+                shortened = true,
+                hadImage = false,
+            ),
+            confirmation.model.request,
+        )
+    }
+
+    @Test
+    fun `a live pending confirmation without a request draws the card without one`() {
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "write_file",
+                arguments = "{}",
+                risk = ToolRisk.SENSITIVE,
+                requestId = "r",
+            ),
+        )
+
+        assertEquals(null, (row.content as ChatContent.Confirmation).model.request)
     }
 
     @Test

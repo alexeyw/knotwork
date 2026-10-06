@@ -530,6 +530,7 @@ Only Kotlin files appear inside the generated blocks.
 - `presentation/` - Tests for the presentation layer.
   - `common/` - Tests for the cross-feature presentation utilities.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
+    - `HitlRequestMappingTest.kt` - `toHitlRequestContext` — the one translation the approval card and the approval notification both read: every source keeps its meaning, a trigger keeps its name (or its lack of one), and the text and flags pass unchanged.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
     - `ClarificationNotificationManagerTest.kt` - Robolectric coverage for `ClarificationNotificationManager`: the parked run's question is the model's, written from the conversation, so where the system hides sensitive content the notification shows its title alone.
