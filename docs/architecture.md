@@ -328,7 +328,7 @@ flowchart TB
         Key --> Retrieve[RetrieveRelevantMemoryUseCase]
         Retrieve --> Search[findSimilarMemories<br/>cosine over the full table]
         Store --> Search
-        Search --> Rerank[MemoryReranker<br/>threshold · recency bonus · pinned boost<br/>verbatim over summaries · near-duplicate collapse]
+        Search --> Rerank[MemoryReranker<br/>threshold · recency bonus · pinned boost · manual bonus<br/>verbatim over summaries · near-duplicate collapse]
         Rerank --> Console[ConsoleEvent.MemoryAccess<br/>+ recordUsage]
         Console --> Block[NodeContextBuilder<br/>--- Long-Term Memory ---]
         Block --> LLM[Node executor → LLM]
@@ -363,7 +363,10 @@ Key invariants:
 3. **Pinned is sacred.** Pinned chunks carry an extra boost, bypass the
    threshold filter on retrieval, win any near-duplicate collapse they take
    part in, and are never compaction candidates — the one mechanism a user
-   has to guarantee a fact stays findable.
+   has to guarantee a fact stays findable. A chunk the user saved by hand
+   (`MemorySource.Manual`) carries a smaller flat bonus (0.03, below the 0.15
+   recency bonus), so at about equal relevance and age the user's wording
+   outranks a model's extraction; it never buys admission past the threshold.
 4. **Age never hides a fact.** `findSimilarMemories` scans the *entire*
    `memory_chunks` table on every query — there is no recency window on
    visibility — and `MemoryReranker` scores age as an **additive** bonus, so

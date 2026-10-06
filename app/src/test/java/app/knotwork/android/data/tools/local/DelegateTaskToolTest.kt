@@ -9,10 +9,7 @@ import app.knotwork.android.domain.engine.CloudClientUnavailability
 import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.CloudLlmModelResolver
 import app.knotwork.android.domain.models.CloudProvider
-import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.NetworkActivityTracker
-import app.knotwork.android.domain.services.EmbeddingProvider
-import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -35,9 +32,6 @@ class DelegateTaskToolTest {
 
     private lateinit var cloudLlmClientFactory: CloudLlmClientFactory
     private lateinit var cloudLlmModelResolver: CloudLlmModelResolver
-    private lateinit var memoryRepository: MemoryRepository
-    private lateinit var embeddingProviderResolver: EmbeddingProviderResolver
-    private lateinit var embeddingProvider: EmbeddingProvider
     private lateinit var resolvedModel: LLModel
     private lateinit var delegateTaskTool: DelegateTaskTool
     private lateinit var mockClient: LLMClient
@@ -47,14 +41,10 @@ class DelegateTaskToolTest {
     fun setup() {
         cloudLlmClientFactory = mockk()
         cloudLlmModelResolver = mockk()
-        memoryRepository = mockk(relaxed = true)
-        embeddingProviderResolver = mockk()
-        embeddingProvider = mockk()
         mockClient = mockk(relaxed = true)
         resolvedModel = mockk(relaxed = true)
         networkActivity = NetworkActivityTrackerImpl()
 
-        coEvery { embeddingProviderResolver.resolve() } returns embeddingProvider
         coEvery { cloudLlmModelResolver.resolveModel(any()) } returns resolvedModel
 
         delegateTaskTool = tool(networkActivity)
@@ -63,8 +53,6 @@ class DelegateTaskToolTest {
     private fun tool(tracker: NetworkActivityTracker) = DelegateTaskTool(
         cloudLlmClientFactory = cloudLlmClientFactory,
         cloudLlmModelResolver = cloudLlmModelResolver,
-        memoryRepository = memoryRepository,
-        embeddingProviderResolver = embeddingProviderResolver,
         networkActivityTracker = tracker,
     )
 
@@ -80,7 +68,6 @@ class DelegateTaskToolTest {
         givenClient(CloudProvider.ANTHROPIC, mockClient)
         coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } returns
             kotlinx.coroutines.flow.flowOf(StreamFrame.TextDelta("done"))
-        coEvery { embeddingProvider.embed("done") } returns floatArrayOf(0.1f)
 
         delegateTaskTool.executeDelegation("Summarise this", "anthropic")
 
@@ -95,7 +82,6 @@ class DelegateTaskToolTest {
             givenClient(CloudProvider.ANTHROPIC, mockClient)
             coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } returns
                 kotlinx.coroutines.flow.flowOf(StreamFrame.TextDelta("a"), StreamFrame.TextDelta("b"))
-            coEvery { embeddingProvider.embed("ab") } returns floatArrayOf(0.1f)
 
             tool.executeDelegation("Summarise this", "anthropic")
 
@@ -114,55 +100,19 @@ class DelegateTaskToolTest {
     }
 
     @Test
-    fun `executeDelegation returns success and saves to memory when client completes successfully`() {
-        runTest {
-            val targetModel = "anthropic"
-            val taskDescription = "Write a hello world app"
-            val mockResponseText = "Here is your hello world app"
-            val mockEmbedding = floatArrayOf(0.1f, 0.2f, 0.3f)
+    fun `given a completed delegation when executeDelegation then the whole answer is returned`() = runTest {
+        // Given — an answer far longer than the 100-character preview the tool once returned,
+        // when the full text went to long-term memory instead of to the caller.
+        val answer = "Here is your hello world app. ".repeat(20).trim()
+        givenClient(CloudProvider.ANTHROPIC, mockClient)
+        coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } returns
+            kotlinx.coroutines.flow.flowOf(StreamFrame.TextDelta(answer))
 
-            // Koog 1.0.0+: `executeStreaming` returns a `Flow<StreamFrame>` — the test
-            // routes the response via `StreamFrame.TextDelta`, not via a mock
-            // `Message.Response` (that class was renamed to `Message.Assistant` and
-            // no longer exposes a plain `.content` accessor anyway).
-            givenClient(CloudProvider.ANTHROPIC, mockClient)
-            coEvery { mockClient.models() } returns emptyList()
-            every { mockClient.llmProvider() } returns mockk(relaxed = true)
-            coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } returns
-                kotlinx.coroutines.flow.flowOf(StreamFrame.TextDelta(mockResponseText))
+        // When
+        val result = delegateTaskTool.executeDelegation("Write a hello world app", "anthropic")
 
-            coEvery { embeddingProvider.embed(mockResponseText) } returns mockEmbedding
-
-            val result = delegateTaskTool.executeDelegation(taskDescription, targetModel)
-
-            assertTrue(result.startsWith("Success: Task completed"))
-            coVerify(exactly = 1) { memoryRepository.saveMemory(mockResponseText, mockEmbedding) }
-        }
-    }
-
-    @Test
-    fun `executeDelegation still returns the delegated result when memory embedding fails`() {
-        runTest {
-            val targetModel = "anthropic"
-            val taskDescription = "Write a hello world app"
-            val mockResponseText = "Here is your hello world app"
-
-            givenClient(CloudProvider.ANTHROPIC, mockClient)
-            coEvery { mockClient.models() } returns emptyList()
-            every { mockClient.llmProvider() } returns mockk(relaxed = true)
-            coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } returns
-                kotlinx.coroutines.flow.flowOf(StreamFrame.TextDelta(mockResponseText))
-
-            // The (cloud) embedding call fails — the secondary memory write must
-            // not discard the primary delegated result.
-            coEvery { embeddingProvider.embed(mockResponseText) } throws RuntimeException("embedding backend down")
-
-            val result = delegateTaskTool.executeDelegation(taskDescription, targetModel)
-
-            assertTrue(result.startsWith("Success: Task completed"))
-            assertTrue(result.contains("memory save failed"))
-            coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
-        }
+        // Then
+        assertEquals("Success: Task completed by 'anthropic'. Response:\n$answer", result)
     }
 
     @Test
@@ -190,7 +140,6 @@ class DelegateTaskToolTest {
     fun `executeDelegation returns error when target model is unsupported`() = runTest {
         val result = delegateTaskTool.executeDelegation("Task", "unknown_model")
         assertTrue(result.startsWith("Error: Unsupported target model"))
-        coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
     }
 
     @Test
@@ -201,7 +150,6 @@ class DelegateTaskToolTest {
         val result = delegateTaskTool.executeDelegation("Task", "anthropic")
         assertTrue(result.startsWith("Error: Client for"))
         assertTrue(result.contains("no API key"))
-        coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
     }
 
     @Test
@@ -242,7 +190,6 @@ class DelegateTaskToolTest {
             val result = delegateTaskTool.executeDelegation("Task", "anthropic")
 
             assertTrue(result.startsWith("Error: Task delegation failed"))
-            coVerify(exactly = 0) { memoryRepository.saveMemory(any(), any(), any(), any()) }
         }
     }
 
@@ -253,7 +200,6 @@ class DelegateTaskToolTest {
         givenClient(CloudProvider.DEEPSEEK, mockClient)
         coEvery { mockClient.executeStreaming(any<Prompt>(), any<LLModel>()) } returns
             kotlinx.coroutines.flow.flowOf(StreamFrame.TextDelta("done"))
-        coEvery { embeddingProvider.embed("done") } returns floatArrayOf(0.1f)
 
         delegateTaskTool.executeDelegation("Task", "deepseek")
 

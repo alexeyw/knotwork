@@ -707,12 +707,12 @@ oversight — and it works as follows:
   What remains: the assistant's replies are read, and a reply can repeat what a
   tool returned, so an injection that gets the model to restate it in its
   answer can still reach the extractor, whose prompt tells the model to ignore
-  the assistant's own statements. Two other paths put untrusted text into
-  memory by design: `delegate_task` stores the cloud model's answer (it is
-  `SENSITIVE`, so it asks under the default policy), and text the user did not
-  type is read as the user's message — shared text, a `schedule_task`
-  instruction the model composed (`SENSITIVE`, and the approval card shows it),
-  and an external-automation request.
+  the assistant's own statements. One other path puts untrusted text into
+  memory by design: text the user did not type is read as the user's message —
+  shared text, a `schedule_task` instruction the model composed (`SENSITIVE`,
+  and the approval card shows it), and an external-automation request.
+  `delegate_task` no longer writes the cloud model's answer to memory; it
+  returns the answer to the step that called it, like any other tool result.
 - **AppFunctions exposed by other installed apps are not on that list**, and
   the omission is deliberate rather than an oversight. Calling another app's
   AppFunction needs `EXECUTE_APP_FUNCTIONS`, which Android 16 grants to

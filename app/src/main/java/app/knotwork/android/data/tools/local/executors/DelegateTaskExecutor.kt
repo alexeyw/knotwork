@@ -12,7 +12,7 @@ import javax.inject.Inject
  *
  * Parses the JSON arguments (`taskDescription`, optional `targetModel`) and delegates
  * to [DelegateTaskTool], which forwards the prompt to the configured cloud provider
- * and persists the response in long-term memory.
+ * and returns the provider's whole response as the tool result.
  */
 class DelegateTaskExecutor @Inject constructor(private val delegateTaskTool: DelegateTaskTool) : LocalToolExecutor {
 

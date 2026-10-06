@@ -13,11 +13,12 @@ import kotlin.math.pow
  * Pure cosine similarity is a blunt instrument: a stale chunk can outrank a
  * fresh one purely on lexical overlap, restatements of one fact clutter the
  * limited context budget, and user-pinned facts are treated no differently from
- * noise. This service layers five deterministic rules on top of the raw scores
+ * noise. This service layers six deterministic rules on top of the raw scores
  * to fix that, each of which is independently unit-testable:
  *
- *  1. **Additive scoring** — `final = similarity + recencyBonus + pinnedBoost`.
- *     Relevance is never scaled down; freshness and pinning only ever *add*.
+ *  1. **Additive scoring** — `final = similarity + recencyBonus + pinnedBoost +
+ *     manualBonus`. Relevance is never scaled down; freshness, pinning and the
+ *     user's own wording only ever *add*.
  *  2. **Recency bonus** — a chunk earns up to [RECENCY_BONUS] on top of its
  *     similarity, halving every `halfLifeDays` of age:
  *     `bonus = RECENCY_BONUS * 0.5^(daysSince / halfLifeDays)`. The bonus decays
@@ -26,12 +27,18 @@ import kotlin.math.pow
  *  3. **Pinned boost** — pinned chunks receive a flat [PINNED_BOOST], sort ahead
  *     of every non-pinned chunk, and are **exempt from the threshold filter**,
  *     so a deliberately curated fact is always surfaced ("always at the top").
- *  4. **Verbatim beats derived** — a consolidation summary
+ *  4. **The user's own wording** — a chunk the user saved by hand
+ *     ([MemorySource.Manual]) earns a small flat [MANUAL_SOURCE_BONUS]: at about
+ *     equal relevance and age, what the user wrote outranks what a model
+ *     extracted, including inside a group of near-duplicates. The smallest of
+ *     the bonuses, so freshness still decides between a stale manual entry and a
+ *     fresh extracted one.
+ *  5. **Verbatim beats derived** — a consolidation summary
  *     ([MemorySource.Compaction]) is dropped when the memory it was distilled
  *     from is itself in the pool, either by provenance (one of its
  *     `originalChunkIds` is present) or by meaning (a non-derived chunk
  *     restates it). The source outranks the paraphrase regardless of score.
- *  5. **Threshold filter, then near-duplicate collapse** — non-pinned chunks
+ *  6. **Threshold filter, then near-duplicate collapse** — non-pinned chunks
  *     whose **raw similarity** (not their bonused score — a bonus must never
  *     buy admission) falls below the caller's threshold are dropped before
  *     anything else, and among the survivors any chunk whose embedding is
@@ -206,13 +213,14 @@ class MemoryReranker @Inject constructor() {
 
     /**
      * Computes the post-ranking score for a single chunk:
-     * `similarity + recencyBonus + (pinned ? PINNED_BOOST : 0)`.
+     * `similarity + recencyBonus + (pinned ? PINNED_BOOST : 0) +
+     * (manual ? MANUAL_SOURCE_BONUS : 0)`.
      *
-     * Both adjustments are additive, so neither can push a relevant chunk below
-     * the similarity it earned — they reorder, they do not disqualify.
+     * Every adjustment is additive, so none can push a relevant chunk below the
+     * similarity it earned — they reorder, they do not disqualify.
      *
-     * @param chunk The chunk being scored (its `isPinned` / `timestamp` drive
-     *   the adjustments).
+     * @param chunk The chunk being scored (its `isPinned` / `timestamp` / `source`
+     *   drive the adjustments).
      * @param similarity The raw cosine similarity of [chunk] to the query.
      * @param nowMillis Reference time for the age calculation.
      * @param halfLifeDays Pre-validated (`>= 1`) recency half-life.
@@ -220,7 +228,8 @@ class MemoryReranker @Inject constructor() {
      */
     private fun finalScore(chunk: MemoryChunk, similarity: Float, nowMillis: Long, halfLifeDays: Int): Float {
         val pinned = if (chunk.isPinned) PINNED_BOOST else 0f
-        return similarity + recencyBonus(chunk.timestamp, nowMillis, halfLifeDays) + pinned
+        val manual = if (chunk.source == MemorySource.Manual) MANUAL_SOURCE_BONUS else 0f
+        return similarity + recencyBonus(chunk.timestamp, nowMillis, halfLifeDays) + pinned + manual
     }
 
     /**
@@ -250,6 +259,14 @@ class MemoryReranker @Inject constructor() {
          * user act and must outweigh mere recency.
          */
         const val RECENCY_BONUS: Double = 0.15
+
+        /**
+         * Flat bonus of a chunk the user saved by hand. The smallest bonus: on the
+         * bundled on-device embedder a related and an unrelated fact are only about
+         * 0.1–0.15 apart in similarity, so the source must break ties, not override
+         * relevance or freshness. A judgement, not a measurement.
+         */
+        const val MANUAL_SOURCE_BONUS: Float = 0.03f
 
         /** Base of the recency decay — `0.5` makes `halfLifeDays` a half-life. */
         const val HALVING_BASE: Double = 0.5

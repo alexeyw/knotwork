@@ -204,7 +204,8 @@ screen's search), work down this list:
 - **Another entry said the same thing.** Entries whose meaning nearly
   matches a better-ranked one are collapsed into it, so a reworded
   duplicate does not spend a second slot. The surviving copy is the
-  pinned one if there is one, otherwise the best-ranked.
+  pinned one if there is one, otherwise the best-ranked — and at about equal
+  relevance and age, one you saved by hand ranks above an extracted one.
 - **The entry is queued for re-embedding.** A chunk imported under a
   different embedding provider can't be matched until the background
   re-embed finishes (it scores ~0 in the meantime). Give it a moment, or

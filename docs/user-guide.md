@@ -1742,7 +1742,7 @@ The app ships with the following tools:
 |------------------|---------------------------------------------------------------------------------------|
 | **search_tool**    | Looks up a topic on Wikipedia and returns a concise summary. **This tool leaves the device**, and it is the only built-in that does so without asking: the search term the model wrote is sent to `https://<language>.wikipedia.org`, and the tool is read-only, so no confirmation card appears. It is on from the first launch and the seeded pipeline calls it — turn it off with its switch here, or with *Block network from local model*, which withholds it. |
 | **schedule_task**  | Schedules a task to run later in the background (one-off or recurring).             |
-| **delegate_task**  | Hands a hard subtask to a configured cloud LLM and stores the result in memory. Only appears when at least one cloud provider has an API key configured. |
+| **delegate_task**  | Hands a hard subtask to a configured cloud LLM and returns its whole answer to the step that called it. The answer is not saved to memory. Only appears when at least one cloud provider has an API key configured. |
 | **read_file**      | Reads a text file from the agent's private workspace, truncated to a token budget so a long file never overflows the model's context; supports byte `offset`/`limit` paging. |
 | **list_files**     | Lists files in the workspace (optionally under a sub-directory) with their size and last-modified time. |
 | **find_files**     | Finds workspace files whose path matches a glob pattern (`*.md`, `reports/**`).      |
@@ -2175,8 +2175,8 @@ Tap the search icon to open semantic search. Your query is embedded and
 the list is re-ranked by relevance, so a search for "berlin" surfaces the
 timezone note even though it never contains that word. Each result shows
 its ranking score: how well the entry matches, plus the small bonuses a
-recent or pinned entry earns — which is why a strong match can read
-slightly above 1.00.
+recent, pinned or hand-saved entry earns — which is why a strong match can
+read slightly above 1.00.
 
 ### What the agent recalls, and when
 
@@ -2199,6 +2199,11 @@ sees. Which entries those are is decided in this order:
 - **Pinned entries are always in.** Pinning skips the gate, adds the largest
   bonus, and sorts the entry first — it is the one way to guarantee a fact is
   recalled.
+- **Your own wording wins a tie.** An entry you saved by hand gets the smallest
+  bonus of all: when it and an auto-extracted entry match about equally well
+  and are about as old, yours is recalled first — and, if the two say the same
+  thing, it is the one kept. It never gets an entry past the gate, and a
+  much newer auto-extracted entry still ranks above an old one of yours.
 - **The original wins over a summary of it.** If compaction has merged some
   facts into a summary and one of those facts is still stored word-for-word, the
   original is what the agent is shown. A summary is a paraphrase written by the
