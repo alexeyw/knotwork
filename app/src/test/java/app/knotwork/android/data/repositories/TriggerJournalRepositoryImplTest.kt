@@ -259,6 +259,25 @@ class TriggerJournalRepositoryImplTest {
         assertTrue(repo.readAll().isEmpty())
     }
 
+    @Test
+    fun `given a run a trigger started when its trigger is looked up then the firing row names it`() = runTest {
+        val repo = repository()
+        repo.recordEvaluation(evaluation("skip", triggerId = "trig-2", verdict = TriggerEvaluationVerdict.ReArmed))
+        repo.recordEvaluation(evaluation("fire", triggerId = "trig-2", runId = "run-2"))
+        repo.recordEvaluation(evaluation("other", triggerId = "trig-3", runId = "run-3"))
+
+        assertEquals("trig-2", repo.findTriggerIdForRun("run-2"))
+        assertNull(repo.findTriggerIdForRun("run-chat"))
+    }
+
+    @Test
+    fun `given the dao read fails when a run's trigger is looked up then it answers none`() = runTest {
+        val failingDao = mockk<TriggerJournalDao>()
+        coEvery { failingDao.findTriggerIdByRunId(any()) } throws IllegalStateException("lookup boom")
+
+        assertNull(repository(failingDao).findTriggerIdForRun("run-2"))
+    }
+
     // --- Human-in-the-loop activity ---------------------------------------
 
     /** Reads back the single stored evaluation of `trig-1`. */

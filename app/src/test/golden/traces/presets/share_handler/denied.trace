@@ -105,10 +105,12 @@ model local node=node-3 call=1 seed=943585322 t=0.55 k=17 p=0.85 image=none
 journal.hitl golden Raised(kind=APPROVAL)
 run.status golden WAITING_APPROVAL
 trace.flush
-state WaitingForApproval tool=append_file risk=SENSITIVE request=#1
+state WaitingForApproval tool=append_file risk=SENSITIVE request=#1 asked=shared
     arguments:
       | {"path":"notes/golden.md","content":"Save capture — recorded content."}
-notify.approval request=#1 tool=append_file risk=SENSITIVE
+    asked:
+      | https://example.org/article — Ten habits of calm people
+notify.approval request=#1 tool=append_file risk=SENSITIVE asked=shared
 driver approval deny request=#1 → LiveResumed
 notify.approval.cancel request=#1
 journal.hitl golden Resolved(resolution=DENIED)

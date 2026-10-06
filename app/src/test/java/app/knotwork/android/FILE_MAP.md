@@ -389,6 +389,7 @@ Only Kotlin files appear inside the generated blocks.
   - `skillio/` - Tests for the skill export/import gateway.
     - `SkillJsonSerializerTest.kt` - Round-trip and edge-case contract for `SkillJsonSerializer`.
   - `text/` - Tests for the pure text helpers.
+    - `ApprovalRequestTextTest.kt` - `toDisplaySafeExcerpt` — the rule an approval applies to the request it shows next to the call: display-safe like every quoted value, and cut on a word so the excerpt does not end in half of one.
     - `ImportedTextTest.kt` - `toDisplaySafe` — the one rule every importer uses to quote a file back into the app's own sentence: every kind of line break, control and bidi character out, whitespace collapsed, length clamped without splitting a character.
     - `ImportMessageSafetyTest.kt` - Every way an importer can refuse a file, fed a value written to take over the error message.
     - `TitleTextTest.kt` - Unit tests for the shared single-line-title helpers.
@@ -398,6 +399,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AgentOrchestratorUseCaseTest.kt` - Tests for AgentOrchestratorUseCase.
     - `AppInitializationUseCaseTest.kt` - Unit tests for `AppInitializationUseCase`.
     - `ApprovalRequestAddressingTest.kt` - The decision channel end to end, from the surface that shows a request to the gate that waits on one: a real `SubmitApprovalDecisionUseCase` in front of a real `ToolInvocationGate`.
+    - `ApprovalRequestContextFixtures.kt` - Stand-ins for `ResolveApprovalRequestContextUseCase` in tests that build the approval gate but are not about what an approval shows.
     - `ArchiveChatUseCaseTest.kt` - Unit tests for `ArchiveChatUseCase`.
     - `AttachmentMessageContentTest.kt` - Unit tests for `AttachmentMessageContent`, the shared image-only message contract used by both the composer and the share target.
     - `automation/` - Tests for the external-automation use cases.
@@ -467,6 +469,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ResetLockedDatabaseUseCaseTest.kt` - Unit tests for `ResetLockedDatabaseUseCase`: the recovery wipe erases the database first, then the plain-text content that belongs to it — workspace, attachments, transient copies — and touches no file when the database survives.
     - `ResetSamplingDefaultsUseCaseTest.kt` - Unit tests for `ResetSamplingDefaultsUseCase`.
     - `ResetToRecommendedDefaultsUseCaseTest.kt` - Unit tests for `ResetToRecommendedDefaultsUseCase`.
+    - `ResolveApprovalRequestContextUseCaseTest.kt` - `ResolveApprovalRequestContextUseCase` — what an approval shows next to the call: the ROOT run's recorded request, labelled by where it came from, made display-safe, and never a reason for the approval itself to fail.
     - `ResolveDocumentationLinkUseCaseTest.kt` - Unit tests for `ResolveDocumentationLinkUseCase`.
     - `ResolveEntryInferenceUseCaseTest.kt` - Unit tests for `ResolveEntryInferenceUseCase`, over two-node `INPUT` → entry graphs, one per entry node type.
     - `ResolveLaunchableSurfacePipelineUseCaseTest.kt` - Unit tests for `ResolveLaunchableSurfacePipelineUseCase`: a surface runs only a pipeline that exists.

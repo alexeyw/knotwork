@@ -11,6 +11,7 @@ import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
@@ -65,6 +66,10 @@ class AgentApprovalReceiver : BroadcastReceiver() {
     /** Re-posts persistent ceiling-pause notifications on [ApprovalAction.REPOST]. */
     @Inject
     lateinit var ceilingNotifier: CeilingNotifier
+
+    /** Re-reads what the parked run was asked to do, for the re-posted approval notification. */
+    @Inject
+    lateinit var resolveApprovalRequestContext: ResolveApprovalRequestContextUseCase
 
     /**
      * Host scope of the suspending submission work bridged through
@@ -132,6 +137,9 @@ class AgentApprovalReceiver : BroadcastReceiver() {
                 toolName = pending.toolName.orEmpty(),
                 arguments = pending.toolArgs.orEmpty(),
                 risk = pending.risk ?: ToolRisk.SENSITIVE,
+                // Not stored on the record: the request is the root run's
+                // recorded prompt, which the run keeps while it waits.
+                requestContext = resolveApprovalRequestContext(pending.runId),
             )
             PendingInteractionKind.CLARIFICATION -> clarificationNotifier.sendPersistentClarificationRequest(
                 runId = pending.runId,

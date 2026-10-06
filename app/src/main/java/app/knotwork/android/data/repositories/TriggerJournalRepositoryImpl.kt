@@ -76,6 +76,12 @@ class TriggerJournalRepositoryImpl @Inject constructor(private val dao: TriggerJ
         }
     }
 
+    override suspend fun findTriggerIdForRun(runId: String): String? = absorbingStoreFailure(
+        { "Trigger-journal findTriggerIdForRun failed; returning null" },
+    ) {
+        withContext(dispatcher) { dao.findTriggerIdByRunId(runId) }
+    }
+
     override fun observeByTrigger(triggerId: String): Flow<List<TriggerEvaluation>> = dao.observeByTrigger(triggerId)
         .map { rows -> rows.mapNotNull { it.toDomainOrNull() } }
         // Degrade to an empty journal on a DAO/SQLCipher read error rather

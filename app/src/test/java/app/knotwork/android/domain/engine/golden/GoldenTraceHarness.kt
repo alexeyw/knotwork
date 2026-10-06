@@ -33,6 +33,8 @@ import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.engine.testGraphExecutionEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTask
+import app.knotwork.android.domain.models.ApprovalRequestContext
+import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.CloudProvider
@@ -72,6 +74,7 @@ import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.TriggerJournalRepository
+import app.knotwork.android.domain.repositories.TriggerRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
@@ -81,6 +84,7 @@ import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.ParkedRunResumer
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.ResolveRunCeilingsUseCase
 import app.knotwork.android.domain.usecases.ResumePipelineRunUseCase
 import app.knotwork.android.domain.usecases.RetrieveRelevantMemoryUseCase
@@ -183,6 +187,8 @@ internal class GoldenTraceHarness(
     private val clarificationNotifier = recordingClarificationNotifier()
     private val ceilingNotifier = recordingCeilingNotifier()
     private val recordHitlEvent = RecordTriggerHitlEventUseCase(recordingJournal(), runs)
+    private val resolveRequestContext =
+        ResolveApprovalRequestContextUseCase(runs, recordingJournal(), goldenStrict<TriggerRepository>(log))
     private val engine: GraphExecutionEngine = buildEngine()
     private val queue: TaskQueueManager = playedTaskQueue()
     private val resumer = ParkedRunResumer(
@@ -442,8 +448,11 @@ internal class GoldenTraceHarness(
             is AgentOrchestratorState.WaitingForApproval -> log.record(
                 "state WaitingForApproval tool=${state.toolName} risk=${state.risk} request=${log.alias(
                     state.requestId,
-                )}",
-                "arguments" to state.arguments,
+                )} ${state.context.goldenTag()}",
+                *listOfNotNull(
+                    "arguments" to state.arguments,
+                    state.context?.request?.let { "asked" to it },
+                ).toTypedArray(),
             )
             is AgentOrchestratorState.AwaitingClarification -> log.record(
                 "state AwaitingClarification request=${log.alias(
@@ -569,7 +578,15 @@ internal class GoldenTraceHarness(
         val loadModel = recordingLoadModel()
         val structuredGate = StructuredOutputGate()
         val providers = promptVariableProviders(localModels, memoryRepository)
-        val gate = ToolInvocationGate(tools, settings, approvalNotifier, chatRepository, pending, recordHitlEvent)
+        val gate = ToolInvocationGate(
+            tools,
+            settings,
+            approvalNotifier,
+            chatRepository,
+            pending,
+            recordHitlEvent,
+            resolveRequestContext,
+        )
         val toolNode = ToolNodeExecutor(
             model.localEngine,
             loadModel,
@@ -803,6 +820,11 @@ internal class GoldenTraceHarness(
         override suspend fun recordHitlEvent(runId: String, event: TriggerHitlEvent) {
             log.record("journal.hitl $runId $event")
         }
+
+        override suspend fun findTriggerIdForRun(runId: String): String? {
+            log.record("journal.triggerForRun $runId")
+            return null
+        }
     }
 
     private fun recordingLoadModel(): LoadModelUseCase = mockk<LoadModelUseCase>().also {
@@ -862,7 +884,10 @@ internal class GoldenTraceHarness(
             toolName: String,
             arguments: String,
             risk: ToolRisk,
-        ) = log.record("notify.approval request=${log.alias(requestId)} tool=$toolName risk=$risk")
+            requestContext: ApprovalRequestContext?,
+        ) = log.record(
+            "notify.approval request=${log.alias(requestId)} tool=$toolName risk=$risk ${requestContext.goldenTag()}",
+        )
 
         override fun sendPersistentApprovalRequest(
             runId: String,
@@ -871,10 +896,12 @@ internal class GoldenTraceHarness(
             toolName: String,
             arguments: String,
             risk: ToolRisk,
+            requestContext: ApprovalRequestContext?,
         ) {
             lastParkedApprovalRequestId = requestId
             log.record(
-                "notify.approval.persistent run=$runId request=${log.alias(requestId)} tool=$toolName risk=$risk",
+                "notify.approval.persistent run=$runId request=${log.alias(requestId)} tool=$toolName risk=$risk " +
+                    requestContext.goldenTag(),
             )
         }
 
@@ -882,6 +909,28 @@ internal class GoldenTraceHarness(
             log.record("notify.approval.cancel request=${log.alias(requestId)}")
 
         override fun cancelPreUpdateNotification(sessionId: String) = log.record("notify.approval.cancelPreUpdate")
+    }
+
+    /**
+     * Where an approval's request came from, as one trace token — the request
+     * text itself goes into the state's `asked` block.
+     */
+    private fun ApprovalRequestContext?.goldenTag(): String {
+        if (this == null) return "asked=none"
+        val from = when (val origin = source) {
+            ApprovalRequestSource.Chat -> "chat"
+            ApprovalRequestSource.Shared -> "shared"
+            is ApprovalRequestSource.Trigger -> "trigger(${origin.name ?: "unnamed"})"
+            ApprovalRequestSource.ScheduledTask -> "scheduled"
+            ApprovalRequestSource.QuickTile -> "tile"
+            ApprovalRequestSource.OtherApp -> "other-app"
+        }
+        val flags = listOfNotNull(
+            "shortened".takeIf { shortened },
+            "image".takeIf { hadImage },
+            "no-text".takeIf { request == null },
+        )
+        return (listOf("asked=$from") + flags).joinToString(" ")
     }
 
     private fun recordingClarificationNotifier(): ClarificationNotifier = object : ClarificationNotifier {

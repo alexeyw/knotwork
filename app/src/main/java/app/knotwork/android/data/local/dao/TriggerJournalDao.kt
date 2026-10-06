@@ -81,6 +81,19 @@ interface TriggerJournalDao {
     suspend fun recordHitlGateResolved(runId: String, resolution: String)
 
     /**
+     * Returns the id of the trigger whose journal row carries [runId].
+     *
+     * Only a firing writes a run id onto its row, so the row is the `FIRED` one
+     * that started the run. Served by the `runId` index; a run is started by at
+     * most one firing, and `LIMIT 1` keeps the answer single regardless.
+     *
+     * @param runId Id of the root run a firing started.
+     * @return the trigger id, or `null` when no row carries [runId].
+     */
+    @Query("SELECT triggerId FROM trigger_evaluations WHERE runId = :runId LIMIT 1")
+    suspend fun findTriggerIdByRunId(runId: String): String?
+
+    /**
      * Observes a single trigger's journal, newest evaluation first.
      *
      * @param triggerId The trigger whose evaluations to observe.

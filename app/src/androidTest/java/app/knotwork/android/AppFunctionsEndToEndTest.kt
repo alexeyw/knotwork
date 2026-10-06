@@ -18,6 +18,7 @@ import app.knotwork.android.domain.engine.executors.ToolNodeExecutor
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.AgentOrchestratorState
+import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeOutput
@@ -28,6 +29,7 @@ import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.testing.DeviceOnlyInstrumentedTest
 import dagger.hilt.android.EntryPointAccessors
 import io.mockk.coEvery
@@ -761,6 +763,7 @@ class AppFunctionsEndToEndTest {
                 toolName: String,
                 arguments: String,
                 risk: ToolRisk,
+                requestContext: ApprovalRequestContext?,
             ) {
                 // Notification side effects are not part of this test's contract; the gate
                 // suspension is observed through the WaitingForApproval state emission, not
@@ -775,6 +778,7 @@ class AppFunctionsEndToEndTest {
                 toolName: String,
                 arguments: String,
                 risk: ToolRisk,
+                requestContext: ApprovalRequestContext?,
             ) {
                 // Same rationale: the park is asserted through the durable record.
             }
@@ -799,6 +803,11 @@ class AppFunctionsEndToEndTest {
                 chatRepository = entryPoint.chatRepository(),
                 pendingInteractionRepository = entryPoint.pendingInteractionRepository(),
                 recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                // What an approval shows is not this test's contract either.
+                resolveRequestContext = mockk<ResolveApprovalRequestContextUseCase>().also {
+                    coEvery { it(any()) } returns
+                        null
+                },
             ),
             structuredOutputGate = StructuredOutputGate(),
             runSettings = entryPoint.settingsRepository(),

@@ -4,12 +4,16 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import app.knotwork.android.domain.models.ApprovalRequestContext
+import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
+import app.knotwork.android.domain.usecases.ResolveApprovalRequestContextUseCase
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import app.knotwork.android.presentation.notifications.ApprovalNotificationManager
 import io.mockk.coEvery
@@ -52,6 +56,7 @@ class AgentApprovalReceiverTest {
     private lateinit var pendingInteractionRepository: PendingInteractionRepository
     private lateinit var approvalNotifier: ApprovalNotifier
     private lateinit var clarificationNotifier: ClarificationNotifier
+    private lateinit var resolveRequestContext: ResolveApprovalRequestContextUseCase
     private lateinit var receiver: AgentApprovalReceiver
 
     @Before
@@ -61,6 +66,7 @@ class AgentApprovalReceiverTest {
         pendingInteractionRepository = mockk(relaxed = true)
         approvalNotifier = mockk(relaxed = true)
         clarificationNotifier = mockk(relaxed = true)
+        resolveRequestContext = ApprovalRequestContextFixtures.none()
         receiver = AgentApprovalReceiver().also { instance ->
             // Bypass Hilt's auto-inject — flip the generated `injected` flag and assign
             // the `@Inject lateinit var`s directly. See class KDoc for rationale.
@@ -71,6 +77,7 @@ class AgentApprovalReceiverTest {
             instance.pendingInteractionRepository = pendingInteractionRepository
             instance.approvalNotifier = approvalNotifier
             instance.clarificationNotifier = clarificationNotifier
+            instance.resolveApprovalRequestContext = resolveRequestContext
         }
     }
 
@@ -199,6 +206,15 @@ class AgentApprovalReceiverTest {
             requestedAt = 0L,
             requestId = "request-1",
         )
+        // The record keeps no copy of the request: the re-post reads it again
+        // from the parked run, so the notification shows what the live one did.
+        val asked = ApprovalRequestContext(
+            source = ApprovalRequestSource.Chat,
+            request = "Email Bob the report",
+            shortened = false,
+            hadImage = false,
+        )
+        coEvery { resolveRequestContext("run-1") } returns asked
 
         receiver.onReceive(context, intent(ApprovalAction.REPOST.action, "s1", runId = "run-1"))
 
@@ -210,6 +226,7 @@ class AgentApprovalReceiverTest {
                 toolName = "send_email",
                 arguments = "{\"to\":\"a@b.c\"}",
                 risk = ToolRisk.DESTRUCTIVE,
+                requestContext = asked,
             )
         }
         coVerify(exactly = 0) { submitDecision(any(), any(), any()) }
@@ -240,7 +257,7 @@ class AgentApprovalReceiverTest {
         receiver.onReceive(context, intent(ApprovalAction.REPOST.action, "s3", runId = "run-3"))
 
         verify(exactly = 0) {
-            approvalNotifier.sendPersistentApprovalRequest(any(), any(), any(), any(), any(), any())
+            approvalNotifier.sendPersistentApprovalRequest(any(), any(), any(), any(), any(), any(), any())
         }
         verify(exactly = 0) { clarificationNotifier.sendPersistentClarificationRequest(any(), any(), any()) }
     }

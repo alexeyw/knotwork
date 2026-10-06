@@ -82,6 +82,7 @@ import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.services.NativeMemorySampler
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import app.knotwork.android.domain.usecases.GetContextWindowUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
@@ -210,6 +211,7 @@ class GraphExecutionEngineTest {
                 chatRepository,
                 pendingInteractionRepository,
                 recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                resolveRequestContext = ApprovalRequestContextFixtures.none(),
             ),
             StructuredOutputGate(),
             settingsRepository,
@@ -1477,6 +1479,7 @@ class GraphExecutionEngineTest {
                     chatRepository,
                     pendingInteractionRepository,
                     recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                    resolveRequestContext = ApprovalRequestContextFixtures.none(),
                 ),
                 StructuredOutputGate(),
                 settingsRepository,
@@ -1543,6 +1546,7 @@ class GraphExecutionEngineTest {
                     chatRepository,
                     pendingInteractionRepository,
                     recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                    resolveRequestContext = ApprovalRequestContextFixtures.none(),
                 ),
                 StructuredOutputGate(),
                 settingsRepository,
@@ -1698,6 +1702,7 @@ class GraphExecutionEngineTest {
                         chatRepository,
                         pendingInteractionRepository,
                         recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                        resolveRequestContext = ApprovalRequestContextFixtures.none(),
                     ),
                     StructuredOutputGate(),
                     settingsRepository,
@@ -1759,6 +1764,7 @@ class GraphExecutionEngineTest {
                         chatRepository,
                         pendingInteractionRepository,
                         recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                        resolveRequestContext = ApprovalRequestContextFixtures.none(),
                     ),
                     StructuredOutputGate(),
                     settingsRepository,
@@ -2917,7 +2923,7 @@ class GraphExecutionEngineTest {
 
         val sawApproval = emissions.any { it is AgentOrchestratorState.WaitingForApproval }
         assertTrue("READ_ONLY tool must not pause for approval", !sawApproval)
-        verify(exactly = 0) { approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { approvalNotifier.sendApprovalRequest(any(), any(), any(), any(), any(), any()) }
         assertTrue(
             "Pipeline should reach Completed when HITL is skipped",
             emissions.any { it is AgentOrchestratorState.Completed },

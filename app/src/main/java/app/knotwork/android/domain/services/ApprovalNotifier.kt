@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.services
 
+import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ToolRisk
 
 /**
@@ -34,8 +35,17 @@ interface ApprovalNotifier {
      * @param toolName The name of the tool.
      * @param arguments The arguments passed to the tool.
      * @param risk Risk classification of the tool, used to pick channel / icon / copy / actions.
+     * @param requestContext What the run was asked to do, shown after the call; `null` when
+     *   there is nothing to show. Never counts toward what Approve authorises.
      */
-    fun sendApprovalRequest(sessionId: String, requestId: String, toolName: String, arguments: String, risk: ToolRisk)
+    fun sendApprovalRequest(
+        sessionId: String,
+        requestId: String,
+        toolName: String,
+        arguments: String,
+        risk: ToolRisk,
+        requestContext: ApprovalRequestContext?,
+    )
 
     /**
      * Sends the persistent-phase approval request for a parked run.
@@ -61,6 +71,8 @@ interface ApprovalNotifier {
      * @param toolName The name of the tool.
      * @param arguments The arguments passed to the tool.
      * @param risk Risk classification of the tool, used to pick channel / icon / actions.
+     * @param requestContext What the run was asked to do, shown after the call; `null` when
+     *   there is nothing to show. Never counts toward what Approve authorises.
      */
     fun sendPersistentApprovalRequest(
         runId: String,
@@ -69,6 +81,7 @@ interface ApprovalNotifier {
         toolName: String,
         arguments: String,
         risk: ToolRisk,
+        requestContext: ApprovalRequestContext?,
     )
 
     /**

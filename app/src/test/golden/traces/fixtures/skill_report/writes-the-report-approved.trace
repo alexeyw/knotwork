@@ -58,10 +58,12 @@ modelPerformance.record path=/models/golden-model.litertlm tokens=9 benchmark=fa
 journal.hitl golden Raised(kind=APPROVAL)
 run.status golden WAITING_APPROVAL
 trace.flush
-state WaitingForApproval tool=write_file risk=SENSITIVE request=#1
+state WaitingForApproval tool=write_file risk=SENSITIVE request=#1 asked=chat
     arguments:
       | {"path":"reports/golden.md","content":"# Report\nThe findings."}
-notify.approval request=#1 tool=write_file risk=SENSITIVE
+    asked:
+      | Compare how solar and wind power grew over the last decade.
+notify.approval request=#1 tool=write_file risk=SENSITIVE asked=chat
 driver approval approve request=#1 → LiveResumed
 notify.approval.cancel request=#1
 journal.hitl golden Resolved(resolution=APPROVED)

@@ -58,6 +58,7 @@ import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.services.NativeMemorySampler
+import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.EvaluateIfConditionUseCase
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import app.knotwork.android.domain.usecases.RecordTriggerHitlEventUseCase
@@ -370,6 +371,7 @@ class NestedResumeIntegrationTest {
                 chatRepository,
                 pendingInteractionRepository,
                 recordTriggerHitlEvent = mockk<RecordTriggerHitlEventUseCase>(relaxed = true),
+                resolveRequestContext = ApprovalRequestContextFixtures.none(),
             ),
             StructuredOutputGate(),
             settingsRepository,

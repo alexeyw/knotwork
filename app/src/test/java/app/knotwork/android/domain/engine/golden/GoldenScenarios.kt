@@ -139,6 +139,25 @@ internal object GoldenScenarios {
             parkResolutions = listOf(ParkResolution.Answer("The second one"))
         },
         preset(
+            "showcase_full_agent",
+            "task-nested-approval",
+            "A tool inside a sub-pipeline asks for approval; it shows the user's request, not the subtask's.",
+            PLAN_EVENING,
+        ) {
+            answers {
+                on("node-3", "Task")
+                on("node-13", "[\"Book a table for two\"]")
+                on("node-15", "Act")
+                on(
+                    "node-2",
+                    "{\"tool\": \"write_file\", \"arguments\": " +
+                        "{\"path\": \"plans/booking.md\", \"content\": \"Table for two at eight.\"}}",
+                    pipelineId = "subtask_act",
+                )
+            }
+            approvals = listOf(ApprovalAction.APPROVE)
+        },
+        preset(
             "showcase_research_to_file",
             "approved",
             "Research written to a file once the write is approved.",

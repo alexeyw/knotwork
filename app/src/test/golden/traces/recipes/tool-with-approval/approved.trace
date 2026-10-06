@@ -107,10 +107,12 @@ model local node=save call=1 seed=845101736 t=0.55 k=17 p=0.85 image=none
 journal.hitl golden Raised(kind=APPROVAL)
 run.status golden WAITING_APPROVAL
 trace.flush
-state WaitingForApproval tool=write_file risk=SENSITIVE request=#1
+state WaitingForApproval tool=write_file risk=SENSITIVE request=#1 asked=chat
     arguments:
       | {"path":"notes/golden.md","content":"Save it — recorded content."}
-notify.approval request=#1 tool=write_file risk=SENSITIVE
+    asked:
+      | Note that the boiler service is due in March.
+notify.approval request=#1 tool=write_file risk=SENSITIVE asked=chat
 driver approval approve request=#1 → LiveResumed
 notify.approval.cancel request=#1
 journal.hitl golden Resolved(resolution=APPROVED)
