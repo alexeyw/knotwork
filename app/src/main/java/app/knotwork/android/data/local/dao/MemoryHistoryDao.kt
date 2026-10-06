@@ -183,6 +183,11 @@ interface MemoryHistoryDao {
      * at most one update waits per pinned chunk. Otherwise [update] is inserted and
      * linked. One transaction either way.
      *
+     * The pinned chunk is read again inside the transaction, since the user may have
+     * changed it after the caller found it: if it is gone, [update] is stored as an
+     * ordinary chunk; if it is no longer pinned, the ordinary rule applies and
+     * [update] replaces it in place.
+     *
      * @param pinnedChunkId Identifier of the pinned chunk being updated.
      * @param update The new chunk to insert when no update waits yet.
      * @param keepVersions How many earlier versions a chunk keeps at most.
@@ -190,6 +195,19 @@ interface MemoryHistoryDao {
      */
     @Transaction
     suspend fun saveUpdateOfPinned(pinnedChunkId: Long, update: MemoryChunkEntity, keepVersions: Int): Long {
+        val pinned = getMemoryById(pinnedChunkId) ?: return insertChunk(update)
+        if (!pinned.isPinned) {
+            supersede(
+                id = pinnedChunkId,
+                text = update.text,
+                embedding = update.embedding,
+                source = update.source,
+                tags = TagsCsv.decode(update.tagsCsv),
+                nowMillis = update.timestamp,
+                keepVersions = keepVersions,
+            )
+            return pinnedChunkId
+        }
         val waiting = getPendingUpdateFor(pinnedChunkId)
         if (waiting != null) {
             supersede(

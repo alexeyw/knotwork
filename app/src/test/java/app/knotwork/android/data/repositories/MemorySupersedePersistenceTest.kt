@@ -206,6 +206,37 @@ class MemorySupersedePersistenceTest {
     }
 
     @Test
+    fun `given the pinned chunk is gone when an update of it is saved then the update is an ordinary chunk`() =
+        runTest {
+            // Given — the user deleted the pinned chunk after the extraction found it.
+            seed(id = 1, text = "Lives in Berlin", isPinned = true)
+            repository.deleteMemory(1)
+
+            // When
+            val id = history.saveUpdateOfPinned(1, "Lives in Munich", floatArrayOf(0f, 1f), MemorySource.Manual)
+
+            // Then
+            assertTrue(history.getPendingUpdates().isEmpty())
+            assertEquals(listOf(id), repository.getAllMemories().map { it.id })
+        }
+
+    @Test
+    fun `given the chunk was unpinned when an update of it is saved then it replaces the chunk in place`() = runTest {
+        // Given — the user unpinned the chunk after the extraction found it pinned.
+        seed(id = 1, text = "Lives in Berlin", isPinned = true)
+        repository.setMemoryPinned(1, pinned = false)
+
+        // When
+        val id = history.saveUpdateOfPinned(1, "Lives in Munich", floatArrayOf(0f, 1f), MemorySource.Manual)
+
+        // Then — the ordinary rule applies: no pair, the old text is history.
+        assertEquals(1L, id)
+        assertTrue(history.getPendingUpdates().isEmpty())
+        assertEquals("Lives in Munich", repository.getAllMemories().single().text)
+        assertEquals(listOf("Lives in Berlin"), history.getHistory(1).map { it.text })
+    }
+
+    @Test
     fun `given a waiting update when its pinned chunk is deleted then it becomes an ordinary chunk`() = runTest {
         // Given
         seed(id = 1, text = "Lives in Berlin", isPinned = true)

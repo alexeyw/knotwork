@@ -54,7 +54,7 @@ import javax.inject.Inject
  *     stored pool — an old fact must stay a candidate no matter its age). Below
  *     the threshold, the fact is new. At or above it the vector has only found
  *     a candidate: on the bundled embedder a rewording, a correction and a
- *     different fact of the same shape all land there, so
+ *     different fact of the same shape can all land there, so
  *     [MemorySupersedeJudge] reads the two texts (an identical text is the same
  *     fact without asking):
  *     - [SupersedeVerdict.SAME] — nothing is written;
@@ -280,9 +280,17 @@ class MemoryExtractionUseCase @Inject constructor(
                     if (target.isPinned) {
                         memoryHistoryRepository.saveUpdateOfPinned(target.id, fact.text, embedding, source, tags)
                         counts = counts.copy(waitingOnPinned = counts.waitingOnPinned + 1)
-                    } else {
-                        memoryHistoryRepository.supersede(target.id, fact.text, embedding, source, tags)
+                    } else if (memoryHistoryRepository.supersede(target.id, fact.text, embedding, source, tags)) {
                         counts = counts.copy(replaced = counts.replaced + 1)
+                    } else {
+                        // The chunk was deleted after it was found: the fact is new.
+                        memoryRepository.saveMemory(
+                            text = fact.text,
+                            embedding = embedding,
+                            source = source,
+                            tags = tags,
+                        )
+                        counts = counts.copy(saved = counts.saved + 1)
                     }
                 }
                 SupersedeVerdict.DIFFERENT, SupersedeVerdict.UNDECIDED -> {
