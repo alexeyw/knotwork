@@ -381,6 +381,16 @@ class ChatHomeStateMappingTest {
     }
 
     @Test
+    fun `two requests for the same tool are two rows so the second card opens fresh`() {
+        // The row id keys the card's composition: shared by two requests, the second
+        // card would inherit what the user expanded on the first.
+        val first = liveHitlRow(model, HitlPending("write_file", "{}", ToolRisk.SENSITIVE, requestId = "req-1"))
+        val second = liveHitlRow(model, HitlPending("write_file", "{}", ToolRisk.SENSITIVE, requestId = "req-2"))
+
+        assertNotEquals(first.id, second.id)
+    }
+
+    @Test
     fun `a live pending confirmation without a request draws the card without one`() {
         val row = liveHitlRow(
             modelName = model,

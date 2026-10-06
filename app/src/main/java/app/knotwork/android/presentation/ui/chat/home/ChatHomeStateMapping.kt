@@ -498,7 +498,9 @@ internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessa
     val timestamp = SimpleDateFormat(HITL_TIMESTAMP_PATTERN, Locale.getDefault())
         .format(Date(System.currentTimeMillis()))
     return ChatHomeMessageRow(
-        id = "a-hitl-${pending.toolName}",
+        // One row per request, not per tool: a second request for the same tool is a
+        // new card, so nothing the user opened on the previous one carries over.
+        id = "a-hitl-${pending.requestId}",
         role = ChatRole.Assistant,
         content = ChatContent.Confirmation(
             model = HitlConfirmationModel(

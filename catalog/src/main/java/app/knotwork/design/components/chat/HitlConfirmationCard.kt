@@ -256,6 +256,7 @@ private fun RequestBlock(request: HitlRequestContext, risk: Risk) {
     val collapsedLines = if (tight) REQUEST_COLLAPSED_MAX_LINES_TIGHT else REQUEST_COLLAPSED_MAX_LINES
     val label = request.label.let { stringResource(it.text, *listOfNotNull(it.argument).toTypedArray()) }
     val text = request.request
+    val unnamedTrigger = request.source == HitlRequestSource.Trigger(name = null)
     val description = when {
         text == null -> stringResource(R.string.knotwork_hitl_request_a11y_image_only)
         request.shortened -> stringResource(R.string.knotwork_hitl_request_a11y_shortened, label, text)
@@ -285,15 +286,7 @@ private fun RequestBlock(request: HitlRequestContext, risk: Risk) {
                 tint = KnotworkTheme.extended.onSurfaceMuted,
                 modifier = Modifier
                     .size(SourceGlyphSize)
-                    .alpha(
-                        if (request.source ==
-                            HitlRequestSource.Trigger(name = null)
-                        ) {
-                            UNNAMED_TRIGGER_GLYPH_ALPHA
-                        } else {
-                            1f
-                        },
-                    ),
+                    .alpha(if (unnamedTrigger) UNNAMED_TRIGGER_GLYPH_ALPHA else 1f),
             )
             Spacer(modifier = Modifier.width(SourceGlyphGap))
             Text(
