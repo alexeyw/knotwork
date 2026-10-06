@@ -15,8 +15,8 @@ package app.knotwork.android.buildtools
  *    [parseNodeTypeNames] reading `domain/models/NodeType.kt`; each type's
  *    name (`label`) and one-line description (`tooltip`, the palette item's
  *    hover text) come from the `:catalog` resource file
- *    `strings_node_types.xml` through [NodeTypeStrings] — the same two texts
- *    the app shows and `docs/cookbook.md` opens each entry with. The
+ *    `strings_node_types.xml` through [NodeTypeStrings] — the app's own two
+ *    texts, which `docs/cookbook.md` also opens each entry with. The
  *    editor-only presentation metadata (colour / icon / port counts / palette
  *    order) has no Kotlin source of truth and therefore lives in
  *    [NODE_TYPE_META]. All three are cross-checked: adding or removing a

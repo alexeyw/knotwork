@@ -6217,8 +6217,8 @@
         el.className = 'palette-item';
         el.draggable = true;
         el.dataset.type = t.id;
-        // The node type's one-line description — the sentence the app shows where a
-        // node type is chosen and the cookbook opens the type's entry with.
+        // The node type's one-line description — the app's own sentence for the type,
+        // which the cookbook also opens the type's entry with.
         el.title = t.tooltip;
         el.innerHTML = `<span class="icon">${t.icon}</span><span class="name">${t.label}</span>`;
         el.addEventListener('dragstart', e => {

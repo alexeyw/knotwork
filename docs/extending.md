@@ -210,9 +210,9 @@ places:
 [`catalog/src/main/res/values/strings_node_types.xml`](../catalog/src/main/res/values/strings_node_types.xml)
 (`knotwork_node_type_<id>_name` and `knotwork_node_type_<id>_description`),
 and mapped in `NodeType.text` (`catalog/.../pipelineeditor/NodeTypeText.kt`),
-whose exhaustive `when` stops a type without them from compiling. The app
-shows them where a node type is chosen; the cookbook opens the type's entry
-with the description and the browser editor's palette uses both. A
+whose exhaustive `when` stops a type without them from compiling. They are
+the app's own text for the type; the cookbook opens the type's entry with the
+description and the browser editor's palette uses both. A
 description is **one sentence of at most 85 characters** — two lines or fewer
 in the picker on a 360 dp phone; anything more belongs in the cookbook entry's
 continuation. The file is plain text only: the generators that read it refuse

@@ -4,9 +4,9 @@ package app.knotwork.android.buildtools
  * Reads the name and the one-line description of every pipeline node type
  * from `catalog/src/main/res/values/strings_node_types.xml`.
  *
- * **Why a string resource is the source.** The app shows both texts where a
- * node type is chosen, so they have to be resources the app can resolve. Two
- * documents repeat them — `docs/cookbook.md` opens each node's entry with the
+ * **Why a string resource is the source.** Both texts are the app's own — the
+ * editor's node-type picker is designed around them — so they have to be
+ * resources the app can resolve. Two documents repeat them — `docs/cookbook.md` opens each node's entry with the
  * description, and the browser editor's palette shows the name and the
  * description — and both used to carry a hand-written copy. The browser
  * editor's copy drifted: it described twelve of fourteen types, and its cloud
@@ -23,8 +23,9 @@ package app.knotwork.android.buildtools
  * the way Android collapses it in an unquoted string, so the copy reads exactly
  * as the app renders it.
  *
- * **A description is one short sentence.** The picker shows it under the name
- * with nothing cut, so its length is a layout budget, not a style preference:
+ * **A description is one short sentence.** The picker is designed to show it
+ * under the name with nothing cut, so its length is a layout budget, not a
+ * style preference:
  * at [DESCRIPTION_BUDGET] characters every description takes two lines or fewer
  * on a 360 dp phone (measured by the designer for the picker row). It must also
  * end a sentence, because the cookbook continues it with further sentences.

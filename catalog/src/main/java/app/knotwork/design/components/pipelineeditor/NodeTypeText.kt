@@ -5,7 +5,7 @@ import app.knotwork.design.R
 
 /**
  * The string resources holding one node type's name and its one-line
- * description, as the app shows them where a node type is chosen.
+ * description — the app's own text for the type.
  *
  * Both texts are written once, in `res/values/strings_node_types.xml`. The
  * public `docs/cookbook.md` opens each node's entry with the description and

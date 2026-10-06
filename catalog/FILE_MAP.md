@@ -136,7 +136,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `NodePorts.kt` - `OutboundPort` sealed class + `NodePorts` descriptor of inbound/outbound port topology per node type.
     - `NodeType.kt` - enum of the 12 editor node types (Input, Output, LiteRT, Cloud, IntentRouter, IfCondition, Clarification, Tool, Decomposition, QueueProcessor, Evaluation, Summary).
     - `NodeTypeColors.kt` - composables mapping `NodeType` to header tint, luminance-banded foreground, and display label.
-    - `NodeTypeText.kt` - The string resources holding one node type's name and its one-line description, as the app shows them where a node type is chosen.
+    - `NodeTypeText.kt` - The string resources holding one node type's name and its one-line description — the app's own text for the type.
     - `PipelineEditorCatalogContent.kt` - scrollable harness exercising every pipeline-editor base component + theme previews.
     - `ProviderChoices.kt` - What the node sheet's provider fields know about this device: which providers are set up here and with which model, what *Auto* would pick, and the on-device model.
   - `prompt/` - prompt-facing components: the preview sheet that shows a rendered prompt with its placeholders resolved, and its unresolved ones marked as errors.

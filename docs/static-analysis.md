@@ -642,15 +642,14 @@ A build-time verification task, wired into `check`, that regenerates the three
 and fails when the committed document differs.
 
 That last source is the one the app shares. Each entry opens with the type's
-name and one-line description exactly as the app shows them where a node type
-is chosen, read from the `:catalog` string resources through `NodeTypeStrings`
-(`buildSrc`), which refuses anything a verbatim copy would render differently —
-markup, format arguments, escapes other than `\'` and `\"` — and a description
-longer than one sentence of 85 characters, the two lines the picker gives it on
-a 360 dp phone. The browser
-editor's palette label and tooltip are generated from the same file
-(`verifyBrowserEditorConstants`), so rewording a description in the app
-rewords both documents or fails `check`.
+name and one-line description exactly as the app's string resources hold them,
+read from `:catalog` through `NodeTypeStrings` (`buildSrc`), which refuses
+anything a verbatim copy would render differently — markup, format arguments,
+escapes other than `\'` and `\"` — and a description longer than one sentence
+of 85 characters, the two lines the node-type picker is designed to give it on
+a 360 dp phone. The browser editor's palette label and tooltip are generated
+from the same file (`verifyBrowserEditorConstants`), so rewording a description
+in the app rewords both documents or fails `check`.
 
 Regenerate with:
 
@@ -674,7 +673,8 @@ the node really runs on appeared in no table at all. A reader who knew the
 system found the result confusing, which settled it.
 
 None of the three is unguarded. Generation fails when a node type is missing
-from that table or from the resource file, when a field has no verdict, when a sheet field writes a property no
+from that table or from the resource file, when a field has no verdict, when a
+sheet field writes a property no
 input row explains, or when an input row promises a control that no field
 writes. So the two tables cannot drift apart, in either direction.
 

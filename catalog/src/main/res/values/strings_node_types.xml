@@ -2,8 +2,8 @@
 <!--
     The name and the one-line description of every pipeline node type.
 
-    This file is the only place either is written. The app shows them where a
-    node type is chosen; `docs/cookbook.md` opens each node's entry with the
+    This file is the only place either is written: they are the app's own
+    text for each node type. `docs/cookbook.md` opens each node's entry with the
     description and the browser editor's palette uses both — the two documents
     are generated from this file (`:app:generateCookbookDocs`,
     `:app:generateBrowserEditorConstants`) and `check` fails when either has

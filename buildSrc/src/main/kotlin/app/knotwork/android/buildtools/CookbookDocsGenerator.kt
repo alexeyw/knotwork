@@ -28,8 +28,8 @@ package app.knotwork.android.buildtools
  *    `DefaultPrompts.getDefaultPromptForNodeType`;
  *  - **the node's name and its one-line description** — the `:catalog`
  *    resource file `strings_node_types.xml`, read through [NodeTypeStrings].
- *    The app shows the same two texts where a node type is chosen, so an
- *    entry's opening sentence is never a second copy of what the app says.
+ *    They are the app's own texts, so an entry's opening sentence is never a
+ *    second copy of what the app says.
  *
  * **What the sources cannot supply** is the rest of what a node is *for*, in
  * terms a reader who is not a contributor can use: the domain KDoc is written
@@ -92,7 +92,7 @@ object CookbookDocsGenerator {
      * @property defaultPrompts `:app` `domain/constants/DefaultPrompts.kt` —
      *   which types seed a `systemPrompt` on a freshly created node.
      * @property nodeTypeStrings `:catalog` `res/values/strings_node_types.xml` —
-     *   each type's name and one-line description, as the app shows them.
+     *   each type's name and one-line description, as the app's resources hold them.
      */
     data class Sources(
         val domainNodeType: String,
@@ -109,8 +109,8 @@ object CookbookDocsGenerator {
      * in the order the cookbook presents the types: entry and exit first, then
      * the inference nodes, then control flow, then post-processing.
      *
-     * The name and the description itself are not here: they are resources the
-     * app shows (`strings_node_types.xml`), and the entry quotes them.
+     * The name and the description itself are not here: they are the app's own
+     * resources (`strings_node_types.xml`), and the entry quotes them.
      *
      * @property id Must equal a `NodeType` enum constant name.
      * @property continuation The sentences that follow the description in the
@@ -546,9 +546,9 @@ object CookbookDocsGenerator {
      * source.
      *
      * @property doc The reader-facing metadata from [NODE_DOC_META].
-     * @property name The type's name, as the app shows it.
-     * @property summary The entry's opening paragraph: the one-line description
-     *   the app shows, followed by [NodeDoc.continuation].
+     * @property name The type's name, as the app's resources hold it.
+     * @property summary The entry's opening paragraph: the app's one-line
+     *   description, followed by [NodeDoc.continuation].
      * @property ports The port layout parsed from `NodePorts.forType`.
      * @property context The context blocks a freshly created node starts with.
      * @property usesContext Whether the engine consults that configuration.

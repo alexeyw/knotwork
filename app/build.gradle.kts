@@ -1174,7 +1174,7 @@ tasks.named("check") { dependsOn(verifyDialogInventory) }
 val browserEditorHtmlFile = file("$rootDir/pipeline-editor.html")
 val browserEditorNodeTypeFile =
     file("$projectDir/src/main/java/app/knotwork/android/domain/models/NodeType.kt")
-// Every node type's name and one-line description — the texts the app shows. Read by
+// Every node type's name and one-line description — the app's own texts. Read by
 // this generator (palette label and tooltip) and by the cookbook's (each entry's opening
 // sentence), so neither document keeps a copy of its own.
 val nodeTypeStringsFile = file("$rootDir/catalog/src/main/res/values/strings_node_types.xml")
@@ -1503,7 +1503,7 @@ tasks.named("check") { dependsOn(verifyExternalAutomationDocs) }
 // `generateCookbookDocs` rebuilds the AUTO-GEN blocks from the sources that
 // define a node — the domain enum, the `:catalog` mirror, the ports factory,
 // the context defaults, the config hierarchy, the default prompts and the
-// node-type names and descriptions the app shows (`strings_node_types.xml`);
+// app's own node-type names and descriptions (`strings_node_types.xml`);
 // `verifyCookbookDocs` (wired into `check`) fails the build on drift. The pure
 // generation logic lives in `buildSrc` (`CookbookDocsGenerator`) and is
 // unit-tested there.

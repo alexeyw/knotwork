@@ -260,7 +260,7 @@ class CookbookDocsGeneratorTest {
     }
 
     @Test
-    fun `given the resource file when rendered then every entry opens with the description the app shows`() {
+    fun `given the resource file when rendered then every entry opens with the app's description`() {
         // The app's node picker and the cookbook share one sentence. The entry
         // must open with it verbatim and only then continue, or the two would
         // be two texts again with nothing to say they had drifted.
@@ -284,8 +284,8 @@ class CookbookDocsGeneratorTest {
         val rendered = CookbookDocsGenerator.render(skeleton, sources)
         val edited = sources.copy(
             nodeTypeStrings = sources.nodeTypeStrings.replace(
-                ">Turns one instruction into a list of subtasks.<",
-                ">Turns one instruction into a numbered list of subtasks.<",
+                ">$decompositionDescription<",
+                ">${decompositionDescription.removeSuffix(".")} again.<",
             ),
         )
         assertNotEquals("The edit did not apply.", sources, edited)
@@ -318,8 +318,8 @@ class CookbookDocsGeneratorTest {
     fun `given a resource text the parser refuses when rendered then generation fails`() {
         val withMarkup = sources.copy(
             nodeTypeStrings = sources.nodeTypeStrings.replace(
-                ">Turns one instruction into a list of subtasks.<",
-                "><b>Turns</b> one instruction into a list of subtasks.<",
+                ">$decompositionDescription<",
+                "><b>$decompositionDescription</b><",
             ),
         )
 
@@ -331,6 +331,15 @@ class CookbookDocsGeneratorTest {
             error.message.orEmpty().contains("knotwork_node_type_decomposition_description"),
         )
     }
+
+    /**
+     * DECOMPOSITION's description as the resource file holds it — read rather
+     * than quoted, so the in-memory edits above keep working when the sentence
+     * is reworded. It has no apostrophe, so the raw XML body is the same text.
+     */
+    private val decompositionDescription: String
+        get() = NodeTypeStrings.parse(sources.nodeTypeStrings).getValue("DECOMPOSITION").description
+            .also { require('\'' !in it) { "Pick a description without an escape for these edits." } }
 
     private fun read(relativePath: String): String = File("../$relativePath").readText()
 }
