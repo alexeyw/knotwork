@@ -61,6 +61,12 @@ details.
   before this release — and keeps the checksum with the model. A file replaced on
   disk afterwards is read again. Groundwork for runs that can be checked later:
   the checksum names exactly which model file a run used.
+- **An approval shows what was asked.** The approval card puts the request the
+  run started from above the tool call — your message, shared text, a trigger's
+  name and prompt, another app's request, or an instruction the agent scheduled
+  itself, each labelled as such — so you can tell when the call does not match
+  what you asked. The approval notification adds it as its last line, after the
+  call. The request is shown as plain text, shortened if long.
 
 ### Changed
 

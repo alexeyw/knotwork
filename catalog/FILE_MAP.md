@@ -50,6 +50,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `HitlConfirmationCard.kt` - full HITL card (risk pill, tool name, summary, JSON args block, destructive type-confirm, action row).
     - `HitlConfirmationModel.kt` - immutable payload for `ChatContent.Confirmation`.
     - `HitlConfirmationState.kt` - pure-Kotlin gating helpers (Allow-enabled, Always-allow visibility, type-confirm word).
+    - `HitlRequestContext.kt` - What the run behind an approval was asked to do — the request block a `HitlConfirmationCard` shows above the call, so the user judges the call against the request it came from.
     - `ImageAttachmentCatalogContent.kt` - harness exercising the attachment components together (thumbnail states, image bubble with and without caption, composer attachment affordance, chooser rows) with deterministic images for the Roborazzi baseline.
     - `ImageThumbnail.kt` - Coil-backed attachment image (thumbnail or full-bleed) with its own **loading** and **missing-file** fallbacks — the latter is the state an attachment reaches once retention has swept the stored file.
     - `ImageViewer.kt` - full-screen viewer opened from a thumbnail: full-bleed image on an always-dark scrim (photo viewing reads the same in both themes), file name + dimensions in the top bar, an optional share action; no pinch-zoom.
@@ -424,8 +425,11 @@ matters.
     - `ChatCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the long-press scale + composer morph behave deterministically.
     - `ChatComposerTapTest.kt` - A tap anywhere on the composer belongs to the composer.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
+    - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
+    - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
     - `HitlConfirmationStateTest.kt` - Pure-JVM tests for `HitlConfirmationState` — the gating logic behind `HitlConfirmationCard`'s Allow CTA, Always-Allow visibility, and destructive typed-confirm row.
+    - `HitlRequestContextTest.kt` - `label` — the one place that names whose words a request is.
     - `ImageAttachmentCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ImageAttachmentCatalogContent` in both themes plus a reduced-motion variant.
     - `InterruptedRunCardTest.kt` - Behavioural coverage for `InterruptedRunCard` — the status card the chat stream pins when the session's most recent pipeline run died with its process.
   - `chips/` - chips and pills. The behavioural tests here exist for one reason: colour is never the only signal, so every variant must announce its state.
@@ -482,6 +486,7 @@ matters.
     - `ChatHomeContentSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatHomeContent` across every documented state of `compose/screens/README.md §C1`.
     - `ChatHomeEmptyFitTest.kt` - A new chat's suggestion cards must all be reachable, however little height the screen leaves them.
     - `HeroSnapshotTest.kt` - Roborazzi baselines for the README hero shots at the canonical pixel resolution promised in `README.md` (1080 × 2400, the de-facto-standard Pixel-class portrait viewport used by every modern Android-store marketing surface).
+    - `HitlConfirmationFitTest.kt` - The tallest approval card fits on the screen whole.
     - `ReportResponseDialogSnapshotTest.kt` - Roborazzi baselines for the content-report dialog.
     - `RunHeaderSnapshotTest.kt` - Roborazzi baselines for the run strip in every state the design draws, the Traces and Vars hash chips, the run-again confirmation and the export sheet — over the chat with the console open, in both themes.
     - `VerificationSheetSnapshotTest.kt` - Roborazzi baselines for the check of a run: its confirmation, the sheet while calls are repeated, and every ending — all matched, mixed with cloud calls, diverged, nothing verifiable, cancelled, the model failing to load — over the console, in both themes.

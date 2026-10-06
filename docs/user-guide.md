@@ -710,13 +710,27 @@ a colour-coded risk pill (`READ` / `SENS` / `DEST`), and **Approve** /
 **Deny** buttons. Destructive tools also require typing **yes** into a
 confirmation field before the **Approve** button is enabled.
 
+Above the tool call the card shows what the run was asked to do, so you
+can check the call against it — the agent may have understood you
+differently. A label says whose words they are: **You asked** for your
+message in the chat, **You shared**, **Trigger "name"** with the
+trigger's prompt, **Quick Settings tile**, **Another app asked**, or
+**Scheduled by the agent** for an instruction the agent wrote itself
+with `schedule_task`. A run inside a sub-pipeline shows the request that
+started the whole run, not the step's own input. A long request is
+shortened to three lines — tap it to read the rest. An image sent
+without text says so instead of quoting anything. Nothing on the card
+judges whether the call matches; that is your call.
+
 If that chat is not on screen when the request comes in, it also
 arrives as a notification. For read-only and sensitive tools it offers
 **Approve** and **Deny**. Destructive tools never execute from a
 notification — it offers **Deny** and a **Review in chat** link to the
 regular typed-confirm card. The same goes for a call whose arguments are
 longer than a notification can show: its text is cut with a note, and it is
-approved in the chat, where the card shows every argument.
+approved in the chat, where the card shows every argument. The request the
+run was asked is the notification's last line, after the call — shortened if
+it is long, and never in the way of the arguments.
 
 Each notification and each card answers only the request it shows. If two
 runs are waiting in the same chat, each has its own notification, and a

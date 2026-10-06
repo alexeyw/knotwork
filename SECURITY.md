@@ -725,7 +725,13 @@ oversight — and it works as follows:
 - The backstop is the **human-in-the-loop gate**: before a `SENSITIVE` or
   `DESTRUCTIVE` tool executes, the chat surfaces a confirmation card showing
   the **tool name and the exact arguments** the model produced, and the run
-  suspends until the user approves or denies. An injected instruction can
+  suspends until the user approves or denies. Above the call the card shows
+  the request the run was started with, labelled by where it came from — the
+  user's message, shared text, a trigger's prompt, another app's request, or
+  an instruction the agent scheduled, which is never labelled as the user's —
+  so a call that does not match what was asked can be seen as such. That text
+  is shown as one plain line: no markup, no links, line breaks and
+  direction-override characters flattened. An injected instruction can
   therefore *propose* a harmful call, but cannot *execute* it unreviewed. That
   holds under the default approval policy. Setting *Approve tool calls* to
   *Never* removes the card for `SENSITIVE` tools — writing a workspace file,

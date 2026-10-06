@@ -94,6 +94,12 @@ fun ChatCatalogContent() {
                             "calendar" to "\"work\"",
                         ),
                         timestamp = "09:18",
+                        request = HitlRequestContext(
+                            source = HitlRequestSource.Chat,
+                            request = "Book a team sync for tomorrow morning",
+                            shortened = false,
+                            hadImage = false,
+                        ),
                     ),
                 ),
                 metadata = ChatMetadata(timestamp = "09:18"),

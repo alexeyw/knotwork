@@ -65,6 +65,32 @@
     <string name="knotwork_hitl_args_expand">Expand arguments</string>
     <string name="knotwork_hitl_args_collapse">Collapse arguments</string>
 
+    <!-- Request block of the approval card: whose words the request is. The -->
+    <!-- request itself is the user's or another source's text, shown plainly. -->
+    <string name="knotwork_hitl_request_source_chat">You asked</string>
+    <string name="knotwork_hitl_request_source_chat_image">You asked, with an image</string>
+    <string name="knotwork_hitl_request_source_image_only">You sent an image</string>
+    <!-- Shown in place of the request when an image was sent without text. -->
+    <string name="knotwork_hitl_request_image_only_body">No text with it.</string>
+    <string name="knotwork_hitl_request_source_shared">You shared</string>
+    <!-- %1$s is the trigger's name; the request below it is the trigger's prompt. -->
+    <string name="knotwork_hitl_request_source_trigger">Trigger “%1$s”</string>
+    <string name="knotwork_hitl_request_source_trigger_deleted">Deleted trigger</string>
+    <!-- The agent composed this instruction through schedule_task: never "you asked". -->
+    <string name="knotwork_hitl_request_source_scheduled">Scheduled by the agent</string>
+    <string name="knotwork_hitl_request_source_tile">Quick Settings tile</string>
+    <string name="knotwork_hitl_request_source_other_app">Another app asked</string>
+    <!-- Click labels of the collapsible request block (TalkBack: "Double-tap to show all"). -->
+    <string name="knotwork_hitl_request_show_all">Show all</string>
+    <string name="knotwork_hitl_request_show_less">Show less</string>
+    <!-- TalkBack: the request block as one node. %1$s is the label, %2$s the request. -->
+    <string name="knotwork_hitl_request_a11y">%1$s: %2$s</string>
+    <!-- The visible ellipsis is not read reliably, so a clamped request says so. -->
+    <string name="knotwork_hitl_request_a11y_shortened">%1$s: %2$s. Shortened.</string>
+    <string name="knotwork_hitl_request_a11y_image_only">You sent an image with no text</string>
+    <!-- TalkBack description of the tool-name row when the card shows a request. -->
+    <string name="knotwork_hitl_call_a11y">Agent wants to use %1$s</string>
+
     <!-- ============ ClarificationCard ============ -->
 
     <!-- Default placeholder for the free-form clarification field if the caller -->

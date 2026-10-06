@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,9 +30,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
@@ -58,6 +67,37 @@ private const val SUMMARY_MAX_LINES = 3
 
 /** Collapsed line count for the JSON args block. */
 private const val JSON_COLLAPSED_MAX_LINES = 2
+
+/** Collapsed line count of the request block. */
+private const val REQUEST_COLLAPSED_MAX_LINES = 3
+
+/**
+ * Collapsed line count of the request block on a destructive card at a large
+ * font scale: the typed-confirm row needs the room, and the whole card must stay
+ * on a 360 x 760 dp screen at 200 %.
+ */
+private const val REQUEST_COLLAPSED_MAX_LINES_TIGHT = 2
+
+/** Font scale from which a destructive card collapses the request to [REQUEST_COLLAPSED_MAX_LINES_TIGHT]. */
+private const val TIGHT_FONT_SCALE = 1.5f
+
+/** Gap between the request block, its divider and the call — the card's gap pulled in by 4 dp. */
+private val RequestGap = 8.dp
+
+/** Size of the source glyph in the request label row. */
+private val SourceGlyphSize = 16.dp
+
+/** Gap between the source glyph and the label. */
+private val SourceGlyphGap = 6.dp
+
+/** Size of the request block's expand chevron. */
+private val RequestChevronSize = 18.dp
+
+/** Smallest height of the request block: it is one touch target. */
+private val RequestMinHeight = 48.dp
+
+/** Opacity of the source glyph of a trigger that can no longer be named. */
+private const val UNNAMED_TRIGGER_GLYPH_ALPHA = 0.6f
 
 /**
  * Human-in-the-loop confirmation card surfaced inside the assistant bubble
@@ -130,11 +170,19 @@ fun HitlConfirmationCard(
                 .padding(KnotworkTheme.spacing.sp4),
         ) {
             RiskPillRow(model = model)
-            Text(
-                text = model.toolName,
-                style = KnotworkTextStyles.MonoBase,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            val request = model.request
+            if (request == null) {
+                ToolNameRow(toolName = model.toolName, described = false)
+            } else {
+                // The request goes above the call: the card reads "you asked ->
+                // the agent wants to use -> allow?", and the call stays right
+                // above the buttons, the last thing read before deciding.
+                Column(verticalArrangement = Arrangement.spacedBy(RequestGap)) {
+                    RequestBlock(request = request, risk = model.risk)
+                    HorizontalDivider(color = KnotworkTheme.extended.divider)
+                    ToolNameRow(toolName = model.toolName, described = true)
+                }
+            }
             // A blank summary means the caller has no explanation to show. The
             // line is dropped rather than filled with the tool id, which would
             // print the same string twice and read as a rendering fault.
@@ -178,6 +226,125 @@ private fun RiskPillRow(model: HitlConfirmationModel) {
         )
     }
 }
+
+/**
+ * The tool id in mono. Next to a request it is described to TalkBack as what
+ * the agent wants to do, so the call reads as the answer to the request above it.
+ */
+@Composable
+private fun ToolNameRow(toolName: String, described: Boolean) {
+    val description = stringResource(R.string.knotwork_hitl_call_a11y, toolName)
+    Text(
+        text = toolName,
+        style = KnotworkTextStyles.MonoBase,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = if (described) Modifier.clearAndSetSemantics { contentDescription = description } else Modifier,
+    )
+}
+
+/**
+ * What the run was asked to do: a label naming whose words these are, then the
+ * request as plain body text — never markup, never a link — in its own reading
+ * direction. It collapses like the arguments; the whole block is the touch
+ * target and one TalkBack node, and it opens collapsed every time.
+ */
+@Composable
+private fun RequestBlock(request: HitlRequestContext, risk: Risk) {
+    var expanded by remember(request) { mutableStateOf(false) }
+    var overflows by remember(request) { mutableStateOf(false) }
+    val tight = risk == Risk.Destructive && LocalDensity.current.fontScale >= TIGHT_FONT_SCALE
+    val collapsedLines = if (tight) REQUEST_COLLAPSED_MAX_LINES_TIGHT else REQUEST_COLLAPSED_MAX_LINES
+    val label = request.label.let { stringResource(it.text, *listOfNotNull(it.argument).toTypedArray()) }
+    val text = request.request
+    val unnamedTrigger = request.source == HitlRequestSource.Trigger(name = null)
+    val description = when {
+        text == null -> stringResource(R.string.knotwork_hitl_request_a11y_image_only)
+        request.shortened -> stringResource(R.string.knotwork_hitl_request_a11y_shortened, label, text)
+        else -> stringResource(R.string.knotwork_hitl_request_a11y, label, text)
+    }
+    val clickLabel = stringResource(
+        if (expanded) R.string.knotwork_hitl_request_show_less else R.string.knotwork_hitl_request_show_all,
+    )
+    Column(
+        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = RequestMinHeight)
+            .then(
+                if (overflows) {
+                    Modifier.clickable(onClickLabel = clickLabel) { expanded = !expanded }
+                } else {
+                    Modifier
+                },
+            )
+            .semantics(mergeDescendants = true) { contentDescription = description },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = request.glyph,
+                contentDescription = null,
+                tint = KnotworkTheme.extended.onSurfaceMuted,
+                modifier = Modifier
+                    .size(SourceGlyphSize)
+                    .alpha(if (unnamedTrigger) UNNAMED_TRIGGER_GLYPH_ALPHA else 1f),
+            )
+            Spacer(modifier = Modifier.width(SourceGlyphGap))
+            Text(
+                text = label,
+                style = KnotworkTextStyles.LabelMd,
+                color = KnotworkTheme.extended.onSurfaceMuted,
+                modifier = Modifier
+                    .weight(1f)
+                    .clearAndSetSemantics {},
+            )
+            if (overflows) {
+                Icon(
+                    imageVector = if (expanded) AppIcons.ArrowUp else AppIcons.ArrowDown,
+                    contentDescription = null,
+                    tint = KnotworkPalette.Accent500,
+                    modifier = Modifier.size(RequestChevronSize),
+                )
+            }
+        }
+        if (text == null) {
+            Text(
+                text = stringResource(R.string.knotwork_hitl_request_image_only_body),
+                style = KnotworkTextStyles.BodyBase,
+                color = KnotworkTheme.extended.onSurface2,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        } else {
+            Text(
+                text = text,
+                style = KnotworkTextStyles.BodyBase.copy(textDirection = TextDirection.Content),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = if (expanded) Int.MAX_VALUE else collapsedLines,
+                overflow = TextOverflow.Ellipsis,
+                // Only the collapsed layout can tell whether there is more to show;
+                // once expanded the chevron stays so the block can collapse again.
+                onTextLayout = { layout -> if (!expanded) overflows = layout.hasVisualOverflow },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics {},
+            )
+        }
+    }
+}
+
+/** The glyph of a request's source: an image whenever the message carried one. */
+private val HitlRequestContext.glyph: ImageVector
+    get() = if (hadImage) {
+        AppIcons.Image
+    } else {
+        when (source) {
+            HitlRequestSource.Chat -> AppIcons.Chat
+            HitlRequestSource.Shared -> AppIcons.Share
+            is HitlRequestSource.Trigger -> AppIcons.Trigger
+            HitlRequestSource.ScheduledTask -> AppIcons.History
+            HitlRequestSource.QuickTile -> AppIcons.Bolt
+            HitlRequestSource.OtherApp -> AppIcons.External
+        }
+    }
 
 /** Collapsible mono JSON args block — surface2 background, 1 dp outlineVariant border. */
 @Composable

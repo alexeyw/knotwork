@@ -1119,7 +1119,10 @@ HITL contract (live):
   no copy: the notification re-post and the restored chat card resolve it
   again from the record's run id, since the root run keeps its prompt while
   it waits. The lookup is best-effort — a failure leaves `context` empty and
-  never fails the gate.
+  never fails the gate. The chat card shows it above the call; the
+  notification appends it as the last line of the expanded text, outside the
+  argument budget that decides whether Approve is offered there. Both read
+  one label rule (`HitlRequestContext.label` in `:catalog`).
 - The notification fallback (`ApprovalNotificationManager`) uses two
   `IMPORTANCE_HIGH` channels: `AgentApprovalChannel` for `SENSITIVE` /
   opt-in `READ_ONLY` and `AgentApprovalDestructiveChannel` for

@@ -11,6 +11,8 @@ import app.knotwork.design.components.chat.ChatRole
 import app.knotwork.design.components.chat.ClarificationCardModel
 import app.knotwork.design.components.chat.ComposerState
 import app.knotwork.design.components.chat.HitlConfirmationModel
+import app.knotwork.design.components.chat.HitlRequestContext
+import app.knotwork.design.components.chat.HitlRequestSource
 import app.knotwork.design.components.chat.InterruptedRunCardModel
 import app.knotwork.design.components.chat.RunCeilingPauseCardModel
 import app.knotwork.design.components.chips.Risk
@@ -41,6 +43,13 @@ internal object ChatHomePreview {
     /** Display name of the (mock) currently-active local model. */
     const val MODEL_NAME: String = "Gemma 2 · 2B"
 
+    /**
+     * The user's last message in the baseline conversation — and therefore the
+     * request an approval card raised in that run shows: the app never shows one
+     * the conversation does not hold.
+     */
+    const val LAST_REQUEST: String = "Add a 30-minute meeting tomorrow at 10:00 to discuss the rollout."
+
     /** Sample baseline conversation history used by Idle / Generating / HITL / Clarification / Error. */
     fun baselineMessages(): List<ChatHomeMessageRow> = listOf(
         ChatHomeMessageRow(
@@ -65,7 +74,7 @@ internal object ChatHomePreview {
         ChatHomeMessageRow(
             id = "u2",
             role = ChatRole.User,
-            content = ChatContent.Text("Add a 30-minute meeting tomorrow at 10:00 to discuss the rollout."),
+            content = ChatContent.Text(LAST_REQUEST),
             metadata = ChatMetadata(timestamp = "09:15"),
         ),
     )
@@ -263,20 +272,22 @@ internal object ChatHomePreview {
      * matrix covers all 3 risk variants so the snapshot baseline catches
      * palette / glyph regressions across every level defined in
      * `domain/models/ToolRisk.kt`.
+     *
+     * @param risk the card's risk tier.
+     * @param request what the card shows the run was asked; the user's last
+     *   message by default, as in the app. A request ending in an ellipsis is
+     *   treated as clamped.
      */
-    fun hitlConfirm(risk: Risk = Risk.Sensitive): ChatHomeViewState {
+    fun hitlConfirm(risk: Risk = Risk.Sensitive, request: String = LAST_REQUEST): ChatHomeViewState {
         val toolName = when (risk) {
             Risk.Readonly -> "calendar.read_events"
             Risk.Sensitive -> "calendar.create_event"
             Risk.Destructive -> "calendar.delete_event"
         }
-        val summary = when (risk) {
-            Risk.Readonly -> "List the next three events on your work calendar."
-            Risk.Sensitive ->
-                "Add a 30-minute meeting \"Rollout sync\" to your work calendar tomorrow at 10:00."
-            Risk.Destructive ->
-                "Permanently delete the meeting \"Old sync\" from your work calendar."
-        }
+        // The request above the call is the user's last message, as in the app;
+        // the live card has no agent-written summary, so the preview has none
+        // either. Under the destructive variant the pair reads as what the card
+        // exists to catch: "add a meeting" next to a call that deletes one.
         return ChatHomeViewState(
             visualState = ChatHomeVisualState.HitlConfirm,
             threadTitle = THREAD_TITLE,
@@ -288,11 +299,17 @@ internal object ChatHomePreview {
                     model = HitlConfirmationModel(
                         risk = risk,
                         toolName = toolName,
-                        summary = summary,
+                        summary = "",
                         arguments = mapOf(
                             "calendar" to "\"work\"",
                         ),
                         timestamp = "09:16",
+                        request = HitlRequestContext(
+                            source = HitlRequestSource.Chat,
+                            request = request,
+                            shortened = request.endsWith("…"),
+                            hadImage = false,
+                        ),
                     ),
                 ),
                 metadata = ChatMetadata(timestamp = "09:16", model = MODEL_NAME),
