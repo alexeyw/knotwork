@@ -637,8 +637,18 @@ cannot.
 A build-time verification task, wired into `check`, that regenerates the three
 `AUTO-GEN` blocks of the cookbook from the sources that define a node — the
 `NodeType` enum, the `:catalog` mirror of it, `NodePorts.forType`,
-`NodeContextConfig.defaultForType`, the `NodeConfig` hierarchy and
-`DefaultPrompts` — and fails when the committed document differs.
+`NodeContextConfig.defaultForType`, the `NodeConfig` hierarchy,
+`DefaultPrompts` and the node-type resource file `strings_node_types.xml` —
+and fails when the committed document differs.
+
+That last source is the one the app shares. Each entry opens with the type's
+name and one-line description exactly as the app shows them where a node type
+is chosen, read from the `:catalog` string resources through `NodeTypeStrings`
+(`buildSrc`), which refuses anything a verbatim copy would render differently —
+markup, format arguments, escapes other than `\'` and `\"`. The browser
+editor's palette label and tooltip are generated from the same file
+(`verifyBrowserEditorConstants`), so rewording a description in the app
+rewords both documents or fails `check`.
 
 Regenerate with:
 
@@ -648,8 +658,9 @@ Regenerate with:
 
 Three things the generator cannot read out of the sources are hand-maintained in
 [`CookbookDocsGenerator`](../buildSrc/src/main/kotlin/app/knotwork/android/buildtools/CookbookDocsGenerator.kt):
-the reader-facing sentence per node type (the domain KDoc is written for whoever
-implements an executor, not for whoever wires a pipeline), the per-field verdict
+the reader-facing sentences that continue each type's one-line description (the
+domain KDoc is written for whoever implements an executor, not for whoever wires
+a pipeline), the per-field verdict
 of whether a configuration field reaches the run, and — per node type — the list
 of what the node actually runs on.
 
@@ -660,16 +671,17 @@ barely overlap: the form shows a prompt box that goes nowhere while the prompt
 the node really runs on appeared in no table at all. A reader who knew the
 system found the result confusing, which settled it.
 
-None of the three is unguarded. Generation fails when a node type has no
-sentence, when a field has no verdict, when a sheet field writes a property no
+None of the three is unguarded. Generation fails when a node type is missing
+from that table or from the resource file, when a field has no verdict, when a sheet field writes a property no
 input row explains, or when an input row promises a control that no field
 writes. So the two tables cannot drift apart, in either direction.
 
 The count guard matters more here than the drift check, because a generator
 paired with its own drift check agrees with itself exactly when it is wrong. So
-the node set is derived **five times over four files in two modules** — the
+the node set is derived **six times over five files in two modules** — the
 `:app` enum, the `:catalog` enum, the ports factory, the context-defaults
-`when`, and the config hierarchy — and generation stops unless all five agree.
+`when`, the config hierarchy and the node-type resource file — and generation
+stops unless all six agree.
 
 ### `CookbookRuntimeReachTest` — the verdicts are checked against the codec
 

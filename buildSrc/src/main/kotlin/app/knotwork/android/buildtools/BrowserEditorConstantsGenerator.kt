@@ -12,11 +12,16 @@ package app.knotwork.android.buildtools
  * human from that loop for the drift-prone blocks:
  *
  *  - **`NODE_TYPES`** — the set and ordering guarantee comes from
- *    [parseNodeTypeNames] reading `domain/models/NodeType.kt`; the editor-only
- *    presentation metadata (label / colour / icon / port counts / palette
+ *    [parseNodeTypeNames] reading `domain/models/NodeType.kt`; each type's
+ *    name (`label`) and one-line description (`tooltip`, the palette item's
+ *    hover text) come from the `:catalog` resource file
+ *    `strings_node_types.xml` through [NodeTypeStrings] — the same two texts
+ *    the app shows and `docs/cookbook.md` opens each entry with. The
+ *    editor-only presentation metadata (colour / icon / port counts / palette
  *    order) has no Kotlin source of truth and therefore lives in
- *    [NODE_TYPE_META]. The two are cross-checked: adding or removing a
- *    `NodeType` without updating [NODE_TYPE_META] fails generation.
+ *    [NODE_TYPE_META]. All three are cross-checked: adding or removing a
+ *    `NodeType` without updating [NODE_TYPE_META] and the resource file fails
+ *    generation.
  *  - **`PROMPT_VARIABLES`** — fully derived: the active provider set and order
  *    come from the `@Binds @IntoSet` declarations in `di/PromptTemplateModule.kt`,
  *    each resolved to its `KEY` constant in the `*VariableProvider.kt` files under `data/prompt/`.
@@ -53,7 +58,6 @@ object BrowserEditorConstantsGenerator {
      * in the order the node should appear in the editor palette.
      *
      * @property id Must equal a `NodeType` enum constant name.
-     * @property label Human-facing palette label.
      * @property color Palette accent colour (hex).
      * @property icon Single-glyph palette icon.
      * @property inputs Number of input ports the drawflow node exposes.
@@ -61,7 +65,6 @@ object BrowserEditorConstantsGenerator {
      */
     data class NodeTypeMeta(
         val id: String,
-        val label: String,
         val color: String,
         val icon: String,
         val inputs: Int,
@@ -74,20 +77,20 @@ object BrowserEditorConstantsGenerator {
      * `NodeType` enum declaration order. The *set* of ids must equal the enum.
      */
     val NODE_TYPE_META: List<NodeTypeMeta> = listOf(
-        NodeTypeMeta("INPUT", "Input", "#607D8B", "▶", 0, 1),
-        NodeTypeMeta("OUTPUT", "Output", "#F44336", "⏹", 1, 0),
-        NodeTypeMeta("LITE_RT", "LiteRT", "#4CAF50", "🧠", 1, 1),
-        NodeTypeMeta("CLOUD", "Cloud", "#2196F3", "☁", 1, 1),
-        NodeTypeMeta("TOOL", "Tool", "#FF9800", "🛠", 1, 1),
-        NodeTypeMeta("IF_CONDITION", "If Condition", "#FFC107", "❓", 1, 2),
-        NodeTypeMeta("INTENT_ROUTER", "Intent Router", "#E91E63", "🧭", 1, 1),
-        NodeTypeMeta("DECOMPOSITION", "Decomposition", "#3F51B5", "🧩", 1, 1),
-        NodeTypeMeta("QUEUE_PROCESSOR", "Queue Processor", "#795548", "🔁", 1, 2),
-        NodeTypeMeta("EVALUATION", "Evaluation", "#009688", "✅", 1, 3),
-        NodeTypeMeta("SUMMARY", "Summary", "#8BC34A", "📝", 1, 1),
-        NodeTypeMeta("CLARIFICATION", "Clarification", "#9C27B0", "💬", 1, 1),
-        NodeTypeMeta("PIPELINE", "Pipeline", "#424DB2", "📦", 1, 1),
-        NodeTypeMeta("SKILL", "Skill", "#FFB300", "⭐", 1, 1),
+        NodeTypeMeta("INPUT", "#607D8B", "▶", 0, 1),
+        NodeTypeMeta("OUTPUT", "#F44336", "⏹", 1, 0),
+        NodeTypeMeta("LITE_RT", "#4CAF50", "🧠", 1, 1),
+        NodeTypeMeta("CLOUD", "#2196F3", "☁", 1, 1),
+        NodeTypeMeta("TOOL", "#FF9800", "🛠", 1, 1),
+        NodeTypeMeta("IF_CONDITION", "#FFC107", "❓", 1, 2),
+        NodeTypeMeta("INTENT_ROUTER", "#E91E63", "🧭", 1, 1),
+        NodeTypeMeta("DECOMPOSITION", "#3F51B5", "🧩", 1, 1),
+        NodeTypeMeta("QUEUE_PROCESSOR", "#795548", "🔁", 1, 2),
+        NodeTypeMeta("EVALUATION", "#009688", "✅", 1, 3),
+        NodeTypeMeta("SUMMARY", "#8BC34A", "📝", 1, 1),
+        NodeTypeMeta("CLARIFICATION", "#9C27B0", "💬", 1, 1),
+        NodeTypeMeta("PIPELINE", "#424DB2", "📦", 1, 1),
+        NodeTypeMeta("SKILL", "#FFB300", "⭐", 1, 1),
     )
 
     /**
@@ -168,6 +171,8 @@ object BrowserEditorConstantsGenerator {
      * @param html Current `pipeline-editor.html` content (must already contain
      * the `AUTO-GEN` markers for every entry in [BLOCKS]).
      * @param nodeTypeSource Content of `domain/models/NodeType.kt`.
+     * @param nodeTypeStringsSource Content of the `:catalog` resource file
+     * `strings_node_types.xml` — every type's name and one-line description.
      * @param defaultPromptsSource Content of `domain/constants/DefaultPrompts.kt`.
      * @param promptTemplateModuleSource Content of `di/PromptTemplateModule.kt`.
      * @param localToolsModuleSource Content of `di/LocalToolsModule.kt`.
@@ -181,6 +186,7 @@ object BrowserEditorConstantsGenerator {
     fun render(
         html: String,
         nodeTypeSource: String,
+        nodeTypeStringsSource: String,
         defaultPromptsSource: String,
         promptTemplateModuleSource: String,
         localToolsModuleSource: String,
@@ -189,6 +195,7 @@ object BrowserEditorConstantsGenerator {
     ): String {
         val blocks = generateBlocks(
             nodeTypeSource = nodeTypeSource,
+            nodeTypeStringsSource = nodeTypeStringsSource,
             defaultPromptsSource = defaultPromptsSource,
             promptTemplateModuleSource = promptTemplateModuleSource,
             localToolsModuleSource = localToolsModuleSource,
@@ -212,6 +219,7 @@ object BrowserEditorConstantsGenerator {
     fun drift(
         html: String,
         nodeTypeSource: String,
+        nodeTypeStringsSource: String,
         defaultPromptsSource: String,
         promptTemplateModuleSource: String,
         localToolsModuleSource: String,
@@ -220,6 +228,7 @@ object BrowserEditorConstantsGenerator {
     ): List<String> {
         val blocks = generateBlocks(
             nodeTypeSource = nodeTypeSource,
+            nodeTypeStringsSource = nodeTypeStringsSource,
             defaultPromptsSource = defaultPromptsSource,
             promptTemplateModuleSource = promptTemplateModuleSource,
             localToolsModuleSource = localToolsModuleSource,
@@ -233,6 +242,7 @@ object BrowserEditorConstantsGenerator {
     /** Builds every block's generated content, keyed by block name (no HTML mutation). */
     private fun generateBlocks(
         nodeTypeSource: String,
+        nodeTypeStringsSource: String,
         defaultPromptsSource: String,
         promptTemplateModuleSource: String,
         localToolsModuleSource: String,
@@ -251,7 +261,7 @@ object BrowserEditorConstantsGenerator {
             parseToolNameConst(src)
         }
         return listOf(
-            BLOCK_NODE_TYPES to emitNodeTypes(enumNames),
+            BLOCK_NODE_TYPES to emitNodeTypes(enumNames, parseNodeTypeTexts(nodeTypeStringsSource)),
             BLOCK_PROMPT_VARIABLES to emitPromptVariables(providerKeys),
             BLOCK_AVAILABLE_TOOLS to emitAvailableTools(toolIds),
             BLOCK_DEFAULT_PROMPTS to emitDefaultPrompts(defaultPromptsSource),
@@ -342,8 +352,29 @@ object BrowserEditorConstantsGenerator {
     //  Emitters (all produce content at the editor's 4-space base indent)
     // ------------------------------------------------------------------ //
 
-    /** Emits the `NODE_TYPES` array, validating [enumNames] against [NODE_TYPE_META]. */
-    fun emitNodeTypes(enumNames: List<String>): String {
+    /**
+     * Reads the node-type resource file, reporting a refusal as a generation failure.
+     *
+     * @param xml Content of `strings_node_types.xml`.
+     * @return Every type's name and one-line description, keyed by enum constant name.
+     * @throws GenerationException when [NodeTypeStrings] refuses the file.
+     */
+    fun parseNodeTypeTexts(xml: String): Map<String, NodeTypeStrings.Text> = try {
+        NodeTypeStrings.parse(xml)
+    } catch (e: NodeTypeStrings.ParseException) {
+        throw GenerationException(e.message ?: "strings_node_types.xml could not be read.")
+    }
+
+    /**
+     * Emits the `NODE_TYPES` array, validating [enumNames] against [NODE_TYPE_META]
+     * and against the resource file's [texts].
+     *
+     * @param enumNames The `NodeType` constants, from [parseNodeTypeNames].
+     * @param texts Every type's name and one-line description, from [parseNodeTypeTexts].
+     * @return The `const NODE_TYPES = [...]` block in palette order.
+     * @throws GenerationException when either table misses or invents a type.
+     */
+    fun emitNodeTypes(enumNames: List<String>, texts: Map<String, NodeTypeStrings.Text>): String {
         val metaIds = NODE_TYPE_META.map { it.id }.toSet()
         val enumSet = enumNames.toSet()
         if (metaIds != enumSet) {
@@ -355,10 +386,21 @@ object BrowserEditorConstantsGenerator {
                     (if (extra.isNotEmpty()) " Unknown node types in metadata: $extra." else ""),
             )
         }
+        if (texts.keys != enumSet) {
+            val missing = enumSet - texts.keys
+            val extra = texts.keys - enumSet
+            throw GenerationException(
+                "strings_node_types.xml is out of sync with NodeType.kt." +
+                    (if (missing.isNotEmpty()) " Missing name and description for: $missing." else "") +
+                    (if (extra.isNotEmpty()) " Unknown node types in the file: $extra." else ""),
+            )
+        }
         val rows = NODE_TYPE_META.joinToString(separator = "\n") { m ->
-            "        { id: ${jsonString(m.id)}, label: ${jsonString(m.label)}, " +
+            val text = texts.getValue(m.id)
+            "        { id: ${jsonString(m.id)}, label: ${scriptString(text.name)}, " +
                 "color: ${jsonString(m.color)}, icon: ${jsonString(m.icon)}, " +
-                "inputs: ${m.inputs}, outputs: ${m.outputs} },"
+                "inputs: ${m.inputs}, outputs: ${m.outputs},\n" +
+                "          tooltip: ${scriptString(text.description)} },"
         }
         return "    const NODE_TYPES = [\n$rows\n    ];"
     }

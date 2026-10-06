@@ -25,16 +25,21 @@ package app.knotwork.android.buildtools
  *  - **the configuration fields and their defaults** — the `NodeConfig` sealed
  *    hierarchy of `:catalog`, one data class per type;
  *  - **whether a fresh node carries a system prompt** —
- *    `DefaultPrompts.getDefaultPromptForNodeType`.
+ *    `DefaultPrompts.getDefaultPromptForNodeType`;
+ *  - **the node's name and its one-line description** — the `:catalog`
+ *    resource file `strings_node_types.xml`, read through [NodeTypeStrings].
+ *    The app shows the same two texts where a node type is chosen, so an
+ *    entry's opening sentence is never a second copy of what the app says.
  *
- * **The one thing the sources cannot supply** is what a node is *for* in a
- * sentence a reader who is not a contributor can use: the domain KDoc is written
+ * **What the sources cannot supply** is the rest of what a node is *for*, in
+ * terms a reader who is not a contributor can use: the domain KDoc is written
  * for the person implementing an executor ("Node representing a local LiteRT-LM
- * instance"). Those sentences, and the per-field run-time verdicts, live in
- * [NODE_DOC_META] and [FIELD_REACH] here. They are hand-written but not
- * unguarded: every node type must appear in the meta and every parsed field must
- * carry a verdict, so adding either without a decision fails generation rather
- * than quietly rendering a shorter table.
+ * instance"). The sentences that continue the description, and the per-field
+ * run-time verdicts, live in [NODE_DOC_META] and [FIELD_REACH] here. They are
+ * hand-written but not unguarded: every node type must appear in the meta and
+ * in the resource file, and every parsed field must carry a verdict, so adding
+ * any of them without a decision fails generation rather than quietly rendering
+ * a shorter table.
  *
  * **The failure mode this guards against.** A doc generator paired with its own
  * drift check can delete a real row and stay green — the verify task compares a
@@ -42,9 +47,9 @@ package app.knotwork.android.buildtools
  * Every parse step here therefore counts, and the counts are cross-checked
  * against *different files read by different parsers*: the node set derived from
  * `:app`'s enum must equal the one derived from `:catalog`'s enum, from the
- * ports factory, from the context-defaults `when`, and from the config
- * hierarchy. Five independent walks over four files in two modules have to agree
- * before a table is emitted.
+ * ports factory, from the context-defaults `when`, from the config hierarchy and
+ * from the node-type resource file. Six independent walks over five files in two
+ * modules have to agree before a table is emitted.
  *
  * The run-time verdicts carry a second guard that deliberately does not live
  * here: `CookbookRuntimeReachTest` in `:app` exercises the real
@@ -86,6 +91,8 @@ object CookbookDocsGenerator {
      *   data classes, their fields and their defaults.
      * @property defaultPrompts `:app` `domain/constants/DefaultPrompts.kt` —
      *   which types seed a `systemPrompt` on a freshly created node.
+     * @property nodeTypeStrings `:catalog` `res/values/strings_node_types.xml` —
+     *   each type's name and one-line description, as the app shows them.
      */
     data class Sources(
         val domainNodeType: String,
@@ -94,114 +101,61 @@ object CookbookDocsGenerator {
         val nodeContextConfig: String,
         val nodeConfig: String,
         val defaultPrompts: String,
+        val nodeTypeStrings: String,
     )
 
     /**
-     * Reader-facing metadata for one node type, in the order the cookbook
-     * presents them.
+     * What the cookbook says about one node type after its one-line description,
+     * in the order the cookbook presents the types: entry and exit first, then
+     * the inference nodes, then control flow, then post-processing.
      *
-     * The order is the editor's palette order (entry and exit first, then the
-     * inference nodes, then control flow, then post-processing), so a reader
-     * scanning the document meets the nodes in the same order as the radial
-     * quick-add menu.
+     * The name and the description itself are not here: they are resources the
+     * app shows (`strings_node_types.xml`), and the entry quotes them.
      *
      * @property id Must equal a `NodeType` enum constant name.
-     * @property label The name the editor shows on the node card.
-     * @property summary One sentence, written for someone wiring a pipeline
-     *   rather than someone implementing an executor.
+     * @property continuation The sentences that follow the description in the
+     *   node's entry, written for someone wiring a pipeline rather than someone
+     *   implementing an executor; `null` when the description says it all.
      */
-    data class NodeDoc(val id: String, val label: String, val summary: String)
+    data class NodeDoc(val id: String, val continuation: String?)
 
     /**
-     * The reader-facing sentence per node type. The *set* of ids must equal the
-     * `NodeType` enum; a type added without a sentence fails generation.
+     * The continuation per node type. The *set* of ids must equal the `NodeType`
+     * enum; a type added without a decision fails generation.
      */
     val NODE_DOC_META: List<NodeDoc> = listOf(
-        NodeDoc(
-            id = "INPUT",
-            label = "Input",
-            summary = "Where the run starts: your message, a shared page, or the prompt a trigger carries. " +
-                "Exactly one per pipeline.",
-        ),
+        NodeDoc(id = "INPUT", continuation = "Exactly one per pipeline."),
         NodeDoc(
             id = "OUTPUT",
-            label = "Output",
-            summary = "Where the run ends and the answer reaches you. With no prompt of its own it forwards " +
-                "the previous node's text verbatim; give it one and it re-formats that text with one more " +
-                "model pass. Exactly one per pipeline.",
+            continuation = "With no prompt of its own it forwards the previous node's text verbatim; give it one " +
+                "and it re-formats that text with one more model pass. Exactly one per pipeline.",
         ),
         NodeDoc(
             id = "LITE_RT",
-            label = "LiteRT",
-            summary = "One inference step on the model running on the phone. The default answering node, and " +
-                "the one to reach for unless a step genuinely needs a larger model.",
+            continuation = "The default answering node, and the one to reach for unless a step genuinely needs " +
+                "a larger model.",
         ),
         NodeDoc(
             id = "CLOUD",
-            label = "Cloud",
-            summary = "One inference step against a configured cloud provider. Everything this node is given " +
-                "leaves the device, so it is a node to place deliberately rather than by default.",
+            continuation = "Everything this node is given leaves the device, so it is a node to place " +
+                "deliberately rather than by default.",
         ),
-        NodeDoc(
-            id = "INTENT_ROUTER",
-            label = "Intent Router",
-            summary = "Sorts the incoming text into one of the classes you declare and sends the run down the " +
-                "matching branch — the way to give one pipeline several behaviours.",
-        ),
-        NodeDoc(
-            id = "IF_CONDITION",
-            label = "If Condition",
-            summary = "A two-way branch: a yes/no question about the input, or a deterministic check for " +
-                "whether the run carries an image.",
-        ),
-        NodeDoc(
-            id = "CLARIFICATION",
-            label = "Clarification",
-            summary = "Pauses the run to ask you a question and waits for the answer, which then becomes the " +
-                "node's output. The one node that deliberately stops mid-run.",
-        ),
-        NodeDoc(
-            id = "TOOL",
-            label = "Tool",
-            summary = "Calls one tool — a built-in, an AppFunction from another app, or one published by an " +
-                "MCP server — and passes the result on. Anything its risk level does not clear waits for " +
-                "your approval.",
-        ),
+        NodeDoc(id = "INTENT_ROUTER", continuation = null),
+        NodeDoc(id = "IF_CONDITION", continuation = null),
+        NodeDoc(id = "CLARIFICATION", continuation = "The one node that deliberately stops mid-run."),
+        NodeDoc(id = "TOOL", continuation = "Anything its risk level does not clear waits for your approval."),
         NodeDoc(
             id = "DECOMPOSITION",
-            label = "Decomposition",
-            summary = "Turns one instruction into a list of subtasks. On its own it only produces the list; " +
-                "pair it with a Queue Processor to work through it.",
+            continuation = "On its own it only produces the list; pair it with a Queue Processor to work " +
+                "through it.",
         ),
-        NodeDoc(
-            id = "QUEUE_PROCESSOR",
-            label = "Queue Processor",
-            summary = "Walks a list of subtasks one at a time, sending each down the Item branch and taking " +
-                "the Done branch when the list is empty. The only node that can send a run backwards.",
-        ),
-        NodeDoc(
-            id = "EVALUATION",
-            label = "Evaluation",
-            summary = "Judges what the previous step produced and answers Pass, Retry or Fail — the node that " +
-                "lets a pipeline have another go instead of handing you a bad answer.",
-        ),
-        NodeDoc(
-            id = "SUMMARY",
-            label = "Summary",
-            summary = "Condenses what several earlier steps produced into one piece of text, typically just " +
-                "before the Output node at the end of a loop.",
-        ),
-        NodeDoc(
-            id = "PIPELINE",
-            label = "Pipeline",
-            summary = "Runs another saved pipeline as a single step and returns its answer — a function call " +
-                "between pipelines, and the way to reuse a branch instead of copying it.",
-        ),
+        NodeDoc(id = "QUEUE_PROCESSOR", continuation = "The only node that can send a run backwards."),
+        NodeDoc(id = "EVALUATION", continuation = null),
+        NodeDoc(id = "SUMMARY", continuation = null),
+        NodeDoc(id = "PIPELINE", continuation = null),
         NodeDoc(
             id = "SKILL",
-            label = "Skill",
-            summary = "Runs a reusable skill: a fixed instruction plus the list of tools that skill may use. " +
-                "The allowlist is enforced when a tool is called, not merely suggested in the prompt.",
+            continuation = "The allowlist is enforced when a tool is called, not merely suggested in the prompt.",
         ),
     )
 
@@ -580,6 +534,9 @@ object CookbookDocsGenerator {
      * source.
      *
      * @property doc The reader-facing metadata from [NODE_DOC_META].
+     * @property name The type's name, as the app shows it.
+     * @property summary The entry's opening paragraph: the one-line description
+     *   the app shows, followed by [NodeDoc.continuation].
      * @property ports The port layout parsed from `NodePorts.forType`.
      * @property context The context blocks a freshly created node starts with.
      * @property usesContext Whether the engine consults that configuration.
@@ -591,6 +548,8 @@ object CookbookDocsGenerator {
      */
     data class NodeEntry(
         val doc: NodeDoc,
+        val name: String,
+        val summary: String,
         val ports: Ports,
         val context: List<String>,
         val usesContext: Boolean,
@@ -628,7 +587,7 @@ object CookbookDocsGenerator {
     /**
      * Parses every source and assembles one [NodeEntry] per node type.
      *
-     * @throws GenerationException when a source fails to parse, or when the five
+     * @throws GenerationException when a source fails to parse, or when the six
      *   independently-derived node sets disagree.
      */
     fun buildNodes(sources: Sources): List<NodeEntry> {
@@ -639,14 +598,19 @@ object CookbookDocsGenerator {
         val contextAware = parseContextAware(sources.nodeContextConfig)
         val configs = parseConfigClasses(sources.nodeConfig)
         val prompted = parsePromptedTypes(sources.defaultPrompts)
+        val texts = parseNodeTypeTexts(sources.nodeTypeStrings)
 
         crossCheck(domainTypes, catalogTypes, ports.keys, contexts.keys, configs.keys)
+        requireSameSet("strings_node_types.xml", domainTypes, texts.keys)
         checkExceptionsAreLive(contextAware)
 
         return NODE_DOC_META.map { doc ->
             val (configClass, params) = configs.getValue(doc.id)
+            val text = texts.getValue(doc.id)
             NodeEntry(
                 doc = doc,
+                name = text.name,
+                summary = listOfNotNull(text.description, doc.continuation).joinToString(" "),
                 ports = ports.getValue(doc.id),
                 context = contexts.getValue(doc.id),
                 usesContext = doc.id in contextAware,
@@ -656,6 +620,13 @@ object CookbookDocsGenerator {
                 inputs = RUNTIME_INPUTS.getValue(doc.id),
             )
         }.also(::checkInputsCoverWrittenProperties)
+    }
+
+    /** Reads the node-type resource file, reporting a refusal as a generation failure. */
+    private fun parseNodeTypeTexts(xml: String): Map<String, NodeTypeStrings.Text> = try {
+        NodeTypeStrings.parse(xml)
+    } catch (e: NodeTypeStrings.ParseException) {
+        throw GenerationException(e.message ?: "strings_node_types.xml could not be read.")
     }
 
     /**
@@ -770,8 +741,8 @@ object CookbookDocsGenerator {
         val out = StringBuilder("\n")
         out.append("| Node | What it does | In | Out | Context on a new node |\n|---|---|---|---|---|\n")
         nodes.forEach { node ->
-            out.append("| **").append(node.doc.label).append("**<br>`").append(node.doc.id).append("` | ")
-                .append(escapePipes(node.doc.summary)).append(" | ")
+            out.append("| **").append(node.name).append("**<br>`").append(node.doc.id).append("` | ")
+                .append(escapePipes(node.summary)).append(" | ")
                 .append(if (node.ports.inbound == 0) "—" else node.ports.inbound.toString()).append(" | ")
                 .append(describePorts(node.ports)).append(" | ")
                 .append(describeContext(node)).append(" |\n")
@@ -797,8 +768,8 @@ object CookbookDocsGenerator {
     private fun renderSections(nodes: List<NodeEntry>): String {
         val out = StringBuilder("\n")
         nodes.forEach { node ->
-            out.append("### ").append(node.doc.label).append(" — `").append(node.doc.id).append("`\n\n")
-            out.append(node.doc.summary).append("\n\n")
+            out.append("### ").append(node.name).append(" — `").append(node.doc.id).append("`\n\n")
+            out.append(node.summary).append("\n\n")
             out.append("- **Ports.** ").append(sentencePorts(node.ports)).append('\n')
             out.append("- **Context on a new node.** ").append(sentenceContext(node)).append("\n\n")
             out.append(renderDrivers(node))

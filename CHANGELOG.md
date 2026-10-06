@@ -96,6 +96,13 @@ details.
 
 ### Changed
 
+- **One text says what each node type does.** A node type's name and its
+  one-line description are written once, in the app, and the cookbook and the
+  browser editor quote them; `check` fails if either drifts. The browser
+  editor's palette tooltips were a separate, older text that covered twelve of
+  the fourteen types and listed only some of today's cloud providers — they now
+  show the sentence each cookbook entry opens with, for every type.
+
 - **Your own wording wins a tie in memory recall.** A memory you saved by hand
   now earns a small bonus in ranking — the smallest of the bonuses, below
   freshness and pinning. When it and an auto-extracted entry match about

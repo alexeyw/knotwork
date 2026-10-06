@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The name and the one-line description of every pipeline node type.
+
+    This file is the only place either is written. The app shows them where a
+    node type is chosen; `docs/cookbook.md` opens each node's entry with the
+    description and the browser editor's palette uses both — the two documents
+    are generated from this file (`:app:generateCookbookDocs`,
+    `:app:generateBrowserEditorConstants`) and `check` fails when either has
+    drifted from it.
+
+    Rules the generators enforce (`NodeTypeStrings` in buildSrc):
+      - every `NodeType` has exactly one `_name` and one `_description`, and the
+        file holds nothing else;
+      - plain text only: no markup, no format arguments, no escapes other than
+        \' and \";
+      - a description is one sentence. What the cookbook says after it lives in
+        `CookbookDocsGenerator.NODE_DOC_META`, never here.
+
+    Resource names: `knotwork_node_type_<node type id in lower case>_name` and
+    `..._description`.
+-->
+<resources>
+
+    <string name="knotwork_node_type_input_name">Input</string>
+    <string name="knotwork_node_type_input_description">Where the run starts: your message, a shared page, or the prompt a trigger carries.</string>
+
+    <string name="knotwork_node_type_output_name">Output</string>
+    <string name="knotwork_node_type_output_description">Where the run ends and the answer reaches you.</string>
+
+    <string name="knotwork_node_type_lite_rt_name">LiteRT</string>
+    <string name="knotwork_node_type_lite_rt_description">One inference step on the model running on the phone.</string>
+
+    <string name="knotwork_node_type_cloud_name">Cloud</string>
+    <string name="knotwork_node_type_cloud_description">One inference step against a configured cloud provider.</string>
+
+    <string name="knotwork_node_type_intent_router_name">Intent Router</string>
+    <string name="knotwork_node_type_intent_router_description">Sorts the incoming text into one of the classes you declare and sends the run down the matching branch — the way to give one pipeline several behaviours.</string>
+
+    <string name="knotwork_node_type_if_condition_name">If Condition</string>
+    <string name="knotwork_node_type_if_condition_description">A two-way branch: a yes/no question about the input, or a deterministic check for whether the run carries an image.</string>
+
+    <string name="knotwork_node_type_clarification_name">Clarification</string>
+    <string name="knotwork_node_type_clarification_description">Pauses the run to ask you a question and waits for the answer, which then becomes the node\'s output.</string>
+
+    <string name="knotwork_node_type_tool_name">Tool</string>
+    <string name="knotwork_node_type_tool_description">Calls one tool — a built-in, an AppFunction from another app, or one published by an MCP server — and passes the result on.</string>
+
+    <string name="knotwork_node_type_decomposition_name">Decomposition</string>
+    <string name="knotwork_node_type_decomposition_description">Turns one instruction into a list of subtasks.</string>
+
+    <string name="knotwork_node_type_queue_processor_name">Queue Processor</string>
+    <string name="knotwork_node_type_queue_processor_description">Walks a list of subtasks one at a time, sending each down the Item branch and taking the Done branch when the list is empty.</string>
+
+    <string name="knotwork_node_type_evaluation_name">Evaluation</string>
+    <string name="knotwork_node_type_evaluation_description">Judges what the previous step produced and answers Pass, Retry or Fail — the node that lets a pipeline have another go instead of handing you a bad answer.</string>
+
+    <string name="knotwork_node_type_summary_name">Summary</string>
+    <string name="knotwork_node_type_summary_description">Condenses what several earlier steps produced into one piece of text, typically just before the Output node at the end of a loop.</string>
+
+    <string name="knotwork_node_type_pipeline_name">Pipeline</string>
+    <string name="knotwork_node_type_pipeline_description">Runs another saved pipeline as a single step and returns its answer — a function call between pipelines, and the way to reuse a branch instead of copying it.</string>
+
+    <string name="knotwork_node_type_skill_name">Skill</string>
+    <string name="knotwork_node_type_skill_description">Runs a reusable skill: a fixed instruction plus the list of tools that skill may use.</string>
+
+</resources>
