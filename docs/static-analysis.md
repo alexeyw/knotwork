@@ -645,7 +645,9 @@ That last source is the one the app shares. Each entry opens with the type's
 name and one-line description exactly as the app shows them where a node type
 is chosen, read from the `:catalog` string resources through `NodeTypeStrings`
 (`buildSrc`), which refuses anything a verbatim copy would render differently —
-markup, format arguments, escapes other than `\'` and `\"`. The browser
+markup, format arguments, escapes other than `\'` and `\"` — and a description
+longer than one sentence of 85 characters, the two lines the picker gives it on
+a 360 dp phone. The browser
 editor's palette label and tooltip are generated from the same file
 (`verifyBrowserEditorConstants`), so rewording a description in the app
 rewords both documents or fails `check`.

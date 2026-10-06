@@ -100,6 +100,33 @@ class NodeTypeStringsTest {
     }
 
     @Test
+    fun `given a description at the budget when parsed then it is accepted`() {
+        val atBudget = "A".repeat(NodeTypeStrings.DESCRIPTION_BUDGET - 1) + "."
+        val parsed = NodeTypeStrings.parse(file(*pair("INPUT", "Input", atBudget)))
+
+        assertEquals(atBudget, parsed.getValue("INPUT").description)
+    }
+
+    @Test
+    fun `given a description one character over the budget when parsed then the length is named`() {
+        val over = "A".repeat(NodeTypeStrings.DESCRIPTION_BUDGET) + "."
+
+        val message = refusal(file(*pair("INPUT", "Input", over)))
+        assertTrue(message, message.contains("${NodeTypeStrings.DESCRIPTION_BUDGET + 1} characters"))
+    }
+
+    @Test
+    fun `given a description of two sentences when parsed then it is refused`() {
+        val message = refusal(file(*pair("INPUT", "Input", "Starts the run. Exactly one per pipeline.")))
+        assertTrue(message, message.contains("exactly one sentence"))
+    }
+
+    @Test
+    fun `given a description without a full stop when parsed then it is refused`() {
+        assertTrue(refusal(file(*pair("INPUT", "Input", "Starts the run"))).contains("exactly one sentence"))
+    }
+
+    @Test
     fun `given a name without its description when parsed then the type is named`() {
         val message = refusal(file(NodeTypeStrings.resourceName("SUMMARY", "name") to "Summary"))
         assertTrue(message, message.contains("SUMMARY has a name but no description"))

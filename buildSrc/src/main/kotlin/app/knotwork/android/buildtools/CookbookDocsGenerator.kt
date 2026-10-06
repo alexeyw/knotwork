@@ -140,19 +140,31 @@ object CookbookDocsGenerator {
             continuation = "Everything this node is given leaves the device, so it is a node to place " +
                 "deliberately rather than by default.",
         ),
-        NodeDoc(id = "INTENT_ROUTER", continuation = null),
-        NodeDoc(id = "IF_CONDITION", continuation = null),
+        NodeDoc(id = "INTENT_ROUTER", continuation = "It is the way to give one pipeline several behaviours."),
+        NodeDoc(id = "IF_CONDITION", continuation = "The image check is deterministic: no model is asked."),
         NodeDoc(id = "CLARIFICATION", continuation = "The one node that deliberately stops mid-run."),
-        NodeDoc(id = "TOOL", continuation = "Anything its risk level does not clear waits for your approval."),
+        NodeDoc(
+            id = "TOOL",
+            continuation = "A tool from another app is an AppFunction. Anything its risk level does not clear " +
+                "waits for your approval.",
+        ),
         NodeDoc(
             id = "DECOMPOSITION",
             continuation = "On its own it only produces the list; pair it with a Queue Processor to work " +
                 "through it.",
         ),
         NodeDoc(id = "QUEUE_PROCESSOR", continuation = "The only node that can send a run backwards."),
-        NodeDoc(id = "EVALUATION", continuation = null),
-        NodeDoc(id = "SUMMARY", continuation = null),
-        NodeDoc(id = "PIPELINE", continuation = null),
+        NodeDoc(
+            id = "EVALUATION",
+            continuation = "It is the node that lets a pipeline have another go instead of handing you a bad " +
+                "answer.",
+        ),
+        NodeDoc(id = "SUMMARY", continuation = "It typically sits just before the Output node."),
+        NodeDoc(
+            id = "PIPELINE",
+            continuation = "It works like a function call between pipelines, and it is the way to reuse a " +
+                "branch instead of copying it.",
+        ),
         NodeDoc(
             id = "SKILL",
             continuation = "The allowlist is enforced when a tool is called, not merely suggested in the prompt.",

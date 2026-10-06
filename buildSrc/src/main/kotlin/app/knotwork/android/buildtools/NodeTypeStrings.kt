@@ -22,6 +22,12 @@ package app.knotwork.android.buildtools
  * apostrophe (the resource compiler rejects it). Whitespace is collapsed
  * the way Android collapses it in an unquoted string, so the copy reads exactly
  * as the app renders it.
+ *
+ * **A description is one short sentence.** The picker shows it under the name
+ * with nothing cut, so its length is a layout budget, not a style preference:
+ * at [DESCRIPTION_BUDGET] characters every description takes two lines or fewer
+ * on a 360 dp phone (measured by the designer for the picker row). It must also
+ * end a sentence, because the cookbook continues it with further sentences.
  */
 object NodeTypeStrings {
 
@@ -35,6 +41,12 @@ object NodeTypeStrings {
      * @property description One sentence saying what the node is for.
      */
     data class Text(val name: String, val description: String)
+
+    /**
+     * The most characters a description may have: two lines or fewer in the
+     * node-type picker's row on a 360 dp phone at 100 % font scale.
+     */
+    const val DESCRIPTION_BUDGET: Int = 85
 
     private const val PREFIX = "knotwork_node_type_"
     private const val NAME_SUFFIX = "_name"
@@ -84,7 +96,29 @@ object NodeTypeStrings {
 
         (names.keys - descriptions.keys).forEach { throw ParseException("$it has a name but no description.") }
         (descriptions.keys - names.keys).forEach { throw ParseException("$it has a description but no name.") }
+        descriptions.forEach { (id, description) -> requireOneShortSentence(id, description) }
         return names.mapValues { (id, name) -> Text(name = name, description = descriptions.getValue(id)) }
+    }
+
+    /**
+     * Holds a description to the picker's budget and to being one sentence the
+     * cookbook can continue.
+     */
+    private fun requireOneShortSentence(id: String, description: String) {
+        val resource = resourceName(id, "description")
+        val length = description.codePointCount(0, description.length)
+        if (length > DESCRIPTION_BUDGET) {
+            throw ParseException(
+                "`$resource` is $length characters; a description has at most $DESCRIPTION_BUDGET, the two " +
+                    "lines the node-type picker gives it on a 360 dp phone. Move the rest into the cookbook " +
+                    "entry's continuation (CookbookDocsGenerator.NODE_DOC_META).",
+            )
+        }
+        if (!description.endsWith('.') || SENTENCE_BREAK.containsMatchIn(description)) {
+            throw ParseException(
+                "`$resource` must be exactly one sentence ending in a full stop; the cookbook entry continues it.",
+            )
+        }
     }
 
     /** Maps `knotwork_node_type_lite_rt_name` to `LITE_RT`. */
@@ -162,4 +196,5 @@ object NodeTypeStrings {
     private val OPENING = Regex("""<(?:string|plurals|string-array)\b""")
     private val ID_BODY = Regex("""[a-z][a-z0-9]*(?:_[a-z0-9]+)*""")
     private val WHITESPACE = Regex("""\s+""")
+    private val SENTENCE_BREAK = Regex("""[.!?]\s""")
 }

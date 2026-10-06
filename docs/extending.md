@@ -212,9 +212,12 @@ places:
 and mapped in `NodeType.text` (`catalog/.../pipelineeditor/NodeTypeText.kt`),
 whose exhaustive `when` stops a type without them from compiling. The app
 shows them where a node type is chosen; the cookbook opens the type's entry
-with the description and the browser editor's palette uses both. The file is
-plain text only: the generators that read it refuse markup, format arguments
-and escapes other than `\'` and `\"`.
+with the description and the browser editor's palette uses both. A
+description is **one sentence of at most 85 characters** — two lines or fewer
+in the picker on a 360 dp phone; anything more belongs in the cookbook entry's
+continuation. The file is plain text only: the generators that read it refuse
+an over-long description, a second sentence, markup, format arguments and
+escapes other than `\'` and `\"`.
 
 If your node has a custom default system prompt, also add it to
 `DEFAULT_SYSTEM_PROMPTS` (around line 855) so the editor seeds new
