@@ -335,11 +335,19 @@ class CookbookDocsGeneratorTest {
     /**
      * DECOMPOSITION's description as the resource file holds it — read rather
      * than quoted, so the in-memory edits above keep working when the sentence
-     * is reworded. It has no apostrophe, so the raw XML body is the same text.
+     * is reworded. It holds nothing XML or Android escapes, so the raw XML body
+     * is the same text.
      */
     private val decompositionDescription: String
         get() = NodeTypeStrings.parse(sources.nodeTypeStrings).getValue("DECOMPOSITION").description
-            .also { require('\'' !in it) { "Pick a description without an escape for these edits." } }
+            .also { text ->
+                require(text.none { it in ESCAPED }) { "Pick a description with no escaped character." }
+            }
+
+    private companion object {
+        /** Characters whose XML body differs from the text the parser returns. */
+        const val ESCAPED = "'\"&<>"
+    }
 
     private fun read(relativePath: String): String = File("../$relativePath").readText()
 }

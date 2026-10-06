@@ -4,15 +4,15 @@ package app.knotwork.android.buildtools
  * Reads the name and the one-line description of every pipeline node type
  * from `catalog/src/main/res/values/strings_node_types.xml`.
  *
- * **Why a string resource is the source.** Both texts are the app's own — the
- * editor's node-type picker is designed around them — so they have to be
- * resources the app can resolve. Two documents repeat them — `docs/cookbook.md` opens each node's entry with the
- * description, and the browser editor's palette shows the name and the
- * description — and both used to carry a hand-written copy. The browser
- * editor's copy drifted: it described twelve of fourteen types, and its cloud
- * provider list predated the providers the app had shipped. So the documents
- * now quote the resource file, and their generators read it through this one
- * parser.
+ * **Why a string resource is the source.** Both texts are the app's own, and
+ * the editor's node-type picker is designed around them, so they have to be
+ * resources the app can resolve. Two documents repeat them — `docs/cookbook.md`
+ * opens each node's entry with the description, and the browser editor's
+ * palette shows the name and the description — and both used to carry a
+ * hand-written copy. The browser editor's copy drifted: it described twelve of
+ * fourteen types, and its cloud provider list predated the providers the app
+ * had shipped. So the documents now quote the resource file, and their
+ * generators read it through this one parser.
  *
  * **Strict on purpose.** The text reaches Markdown and a JavaScript string as
  * well as the app, so anything whose meaning differs between Android's string
