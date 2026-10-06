@@ -533,6 +533,61 @@ object DefaultPrompts {
     }
 
     /**
+     * Prompt for the supersede judge
+     * ([app.knotwork.android.domain.services.MemorySupersedeJudge]). When a newly
+     * extracted fact lands embedding-close to a stored one, the judge asks the
+     * local model what the new fact is relative to the stored one: the same fact
+     * reworded, an update of it, or a different fact. Embedding similarity alone
+     * cannot tell — on the bundled on-device embedder two different facts of the
+     * same shape ("allergic to peanuts" / "allergic to cats") can score as close as
+     * two wordings of one fact.
+     *
+     * Like [MemoryExtraction], this sub-object is a code-level inference prompt,
+     * not a node `systemPrompt` — it is **not** mirrored into the browser editor
+     * (`pipeline-editor.html`) because no `NodeType` hosts it.
+     */
+    object MemorySupersede {
+        /** Verdict token: the new fact says the same thing as the stored one. */
+        const val VERDICT_SAME: String = "SAME"
+
+        /** Verdict token: the new fact changes the stored one, so the stored one no longer holds. */
+        const val VERDICT_UPDATE: String = "UPDATE"
+
+        /** Verdict token: the new fact is about something else, or both facts can hold at once. */
+        const val VERDICT_DIFFERENT: String = "DIFFERENT"
+
+        /**
+         * Instruction that precedes the two facts. The use case appends the stored
+         * fact and the new fact, each rendered through
+         * [app.knotwork.android.domain.prompt.ChatTranscript] so neither can open a
+         * line of its own; the line about indented lines describes that layout (a
+         * hint to the model, not the defence).
+         *
+         * Authored to fail towards keeping both facts: an update is claimed only
+         * when the stored fact can no longer be true, and two facts that can hold
+         * at once are different. A wrong `DIFFERENT` leaves both facts in memory;
+         * a wrong `UPDATE` hides the stored one in its history.
+         *
+         * Expected response: exactly one of [VERDICT_SAME], [VERDICT_UPDATE],
+         * [VERDICT_DIFFERENT].
+         */
+        val INSTRUCTION = """
+            You compare two facts that a personal AI assistant remembers about its user.
+            The STORED fact was remembered earlier. The NEW fact was just learned.
+
+            An indented line continues the fact above it.
+
+            Answer with exactly one word:
+            $VERDICT_SAME — the new fact says the same thing as the stored fact, in other words.
+            $VERDICT_UPDATE — the new fact is about the same thing and changes it, so the stored fact is no
+            longer true (a new value, a correction, it was cancelled, it stopped).
+            $VERDICT_DIFFERENT — the new fact is about something else, or both facts can be true at the same time.
+
+            If you are not sure, answer $VERDICT_DIFFERENT.
+        """.trimIndent()
+    }
+
+    /**
      * Prompt for the background chat-history compressor
      * ([app.knotwork.android.domain.usecases.CompressChatHistoryUseCase]). When a
      * session's verbatim history outgrows the configured token budget, the
