@@ -6,8 +6,10 @@ import app.knotwork.android.data.local.Converters
 import app.knotwork.android.data.local.EmbeddingBlobCodec
 import app.knotwork.android.data.local.dao.MemoryDao
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.MemoryVersion
+import app.knotwork.android.domain.models.MemoryWithHistory
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -42,7 +44,7 @@ class MemorySupersedePersistenceTest {
             .allowMainThreadQueries()
             .build()
         dao = database.memoryDao()
-        repository = MemoryRepositoryImpl(dao, Converters())
+        repository = MemoryRepositoryImpl(dao, Converters(), database.memoryHistoryDao())
         history = MemoryHistoryRepositoryImpl(dao, database.memoryHistoryDao(), Converters())
     }
 
@@ -299,4 +301,58 @@ class MemorySupersedePersistenceTest {
 
         assertNull(history.findSupersedeCandidate(floatArrayOf(1f, 0f)))
     }
+
+    private fun imported(id: Long, text: String, vararg earlier: String) = MemoryWithHistory(
+        chunk = MemoryChunk(id = id, text = text, embedding = floatArrayOf(1f, 0f), timestamp = 3L),
+        history = earlier.mapIndexed { index, version ->
+            MemoryVersion(
+                id = 0L,
+                chunkId = 0L,
+                text = version,
+                source = MemorySource.Manual,
+                tags = listOf("preference"),
+                capturedAt = 1L,
+                replacedAt = 2L + index,
+            )
+        },
+    )
+
+    @Test
+    fun `given a Replace import with history when loaded then the old history is gone and the file's is attached`() =
+        runTest {
+            // Given — a stored chunk with history of its own.
+            seed(id = 1, text = "Lives in Berlin")
+            history.supersede(1, "Lives in Munich", floatArrayOf(1f, 0f), MemorySource.Manual)
+
+            // When — one chunk keeps its id, one gets an id from the store.
+            repository.replaceImportedMemories(
+                listOf(imported(7, "Prefers tea", "Prefers coffee"), imported(0, "Owns a cat", "Owns a dog")),
+                needsReembedding = false,
+            )
+
+            // Then
+            val chunks = repository.getAllMemories().associateBy { it.text }
+            assertEquals(setOf("Prefers tea", "Owns a cat"), chunks.keys)
+            assertTrue(history.getHistory(1).isEmpty())
+            assertEquals(listOf("Prefers coffee"), history.getHistory(7).map { it.text })
+            val assigned = chunks.getValue("Owns a cat").id
+            assertEquals(listOf("Owns a dog"), history.getHistory(assigned).map { it.text })
+            assertEquals(listOf("preference"), history.getHistory(assigned).single().tags)
+        }
+
+    @Test
+    fun `given a Merge import with history when loaded then the stored chunks and their history are untouched`() =
+        runTest {
+            // Given
+            seed(id = 1, text = "Lives in Berlin")
+            history.supersede(1, "Lives in Munich", floatArrayOf(1f, 0f), MemorySource.Manual)
+
+            // When
+            repository.insertImportedMemories(listOf(imported(8, "Prefers tea", "Prefers coffee")), false)
+
+            // Then — an imported version is history only; it never becomes a chunk.
+            assertEquals(listOf("Lives in Berlin"), history.getHistory(1).map { it.text })
+            assertEquals(listOf("Prefers coffee"), history.getHistory(8).map { it.text })
+            assertEquals(setOf("Lives in Munich", "Prefers tea"), repository.getAllMemories().map { it.text }.toSet())
+        }
 }

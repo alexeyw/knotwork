@@ -14,9 +14,9 @@ import app.knotwork.android.domain.models.MemorySource
 /**
  * Data Access Object for the history of long-term memory chunks: replacing a chunk's
  * text in place while keeping the replaced text as an earlier version
- * (`memory_chunk_history`), and storing an update of a pinned chunk beside it
- * (`memory_pending_updates`). Each write that touches more than one row is a single
- * transaction.
+ * (`memory_chunk_history`), storing an update of a pinned chunk beside it
+ * (`memory_pending_updates`), and loading imported chunks with their versions. Each
+ * write that touches more than one row is a single transaction.
  */
 @Dao
 interface MemoryHistoryDao {
@@ -224,5 +224,58 @@ interface MemoryHistoryDao {
         val id = insertChunk(update)
         insertPendingUpdate(MemoryPendingUpdateEntity(updateChunkId = id, pinnedChunkId = pinnedChunkId))
         return id
+    }
+
+    /**
+     * Inserts an imported chunk, keeping its id when it has one. A conflicting id is
+     * replaced; the import passes no id the store already holds (Merge filters them,
+     * Replace has deleted every row first).
+     *
+     * @param chunk The chunk to insert.
+     * @return Its row id.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertImportedChunk(chunk: MemoryChunkEntity): Long
+
+    /**
+     * Writes several earlier versions.
+     *
+     * @param versions The versions to store.
+     */
+    @Insert
+    suspend fun insertVersions(versions: List<MemoryChunkVersionEntity>)
+
+    /** Deletes every chunk; their versions and waiting-update links cascade. */
+    @Query("DELETE FROM memory_chunks")
+    suspend fun deleteAllChunks()
+
+    /**
+     * Every earlier version of every chunk, grouped by chunk and the most recently
+     * replaced first within a chunk.
+     *
+     * @return All versions.
+     */
+    @Query("SELECT * FROM memory_chunk_history ORDER BY chunkId, replacedAt DESC, id DESC")
+    suspend fun getAllVersions(): List<MemoryChunkVersionEntity>
+
+    /**
+     * Loads imported chunks with their earlier versions in one transaction: a failed
+     * import leaves the store as it was. With [replaceAll] every stored chunk is
+     * deleted first — its history and waiting-update links with it — so a Replace
+     * import can never leave the store half-replaced.
+     *
+     * @param memories Each chunk with its versions (their `chunkId` is assigned here).
+     * @param replaceAll `true` for a Replace import, `false` for a Merge.
+     */
+    @Transaction
+    suspend fun importChunks(
+        memories: List<Pair<MemoryChunkEntity, List<MemoryChunkVersionEntity>>>,
+        replaceAll: Boolean,
+    ) {
+        if (replaceAll) deleteAllChunks()
+        for ((chunk, versions) in memories) {
+            val id = insertImportedChunk(chunk)
+            if (versions.isNotEmpty()) insertVersions(versions.map { it.copy(chunkId = id) })
+        }
     }
 }

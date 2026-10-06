@@ -286,6 +286,14 @@ imported unpinned (the count of pins the file carried,
 `MemoryExportDocument.pinnedInFile`, becomes a notice in the import dialog),
 and a `timestamp` later than the parse is capped to it.
 
+Each chunk carries its earlier versions (`memory_chunk_history`) under an
+optional `history` key — additive, so `schemaVersion` stays 1. On import a
+version is only ever history: it is stored with its chunk in the same
+transaction (`MemoryHistoryDao.importChunks`), never as a chunk of its own; at
+most ten of the newest are kept and their dates are capped like a chunk's. A
+chunk waiting to update a pinned one is exported as an ordinary chunk — pins
+are not taken from a file, so neither is the pair.
+
 When the document's embedding provider differs from the importing
 device's active **resolved** provider — `EmbeddingProviderResolver.resolve()`,
 which accounts for the on-device fallback when the selected provider is

@@ -37,6 +37,16 @@ data class MemoryVersion(
 }
 
 /**
+ * A memory chunk together with its earlier versions — the unit an export writes and
+ * an import loads, so a chunk's history travels with it.
+ *
+ * @property chunk The chunk.
+ * @property history Its earlier versions, the most recently replaced first; their
+ *   ids and chunk id are assigned when they are stored.
+ */
+data class MemoryWithHistory(val chunk: MemoryChunk, val history: List<MemoryVersion> = emptyList())
+
+/**
  * A memory chunk waiting to update a pinned chunk, which an automatic write never
  * replaces: the two form a pair until the user resolves it.
  *

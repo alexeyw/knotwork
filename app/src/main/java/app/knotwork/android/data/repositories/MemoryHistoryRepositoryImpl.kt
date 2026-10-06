@@ -5,6 +5,7 @@ import app.knotwork.android.data.local.TagsCsv
 import app.knotwork.android.data.local.dao.MemoryDao
 import app.knotwork.android.data.local.dao.MemoryHistoryDao
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.local.models.MemoryChunkVersionEntity
 import app.knotwork.android.data.mappers.toDomainOrNull
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryPendingUpdate
@@ -82,17 +83,11 @@ class MemoryHistoryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getHistory(chunkId: Long): List<MemoryVersion> = withContext(Dispatchers.IO) {
-        historyDao.getVersions(chunkId).map { version ->
-            MemoryVersion(
-                id = version.id,
-                chunkId = version.chunkId,
-                text = version.text,
-                source = version.source,
-                tags = TagsCsv.decode(version.tagsCsv),
-                capturedAt = version.capturedAt,
-                replacedAt = version.replacedAt,
-            )
-        }
+        historyDao.getVersions(chunkId).map { it.toDomain() }
+    }
+
+    override suspend fun getAllHistory(): Map<Long, List<MemoryVersion>> = withContext(Dispatchers.IO) {
+        historyDao.getAllVersions().groupBy(keySelector = { it.chunkId }, valueTransform = { it.toDomain() })
     }
 
     override suspend fun getPendingUpdates(): List<MemoryPendingUpdate> = withContext(Dispatchers.IO) {
@@ -103,4 +98,14 @@ class MemoryHistoryRepositoryImpl @Inject constructor(
 
     private fun encode(embedding: FloatArray): ByteArray =
         converters.fromFloatArray(embedding) ?: throw IllegalArgumentException("Failed to serialize embedding")
+
+    private fun MemoryChunkVersionEntity.toDomain(): MemoryVersion = MemoryVersion(
+        id = id,
+        chunkId = chunkId,
+        text = text,
+        source = source,
+        tags = TagsCsv.decode(tagsCsv),
+        capturedAt = capturedAt,
+        replacedAt = replacedAt,
+    )
 }

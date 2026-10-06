@@ -30,6 +30,8 @@ details.
   A pinned entry is never changed: its update is saved beside it and waits. The
   Memory screen does not show the history or the waiting update yet. Earlier
   versions are stored in the encrypted database and deleted with their entry.
+  A memory export carries each entry's earlier versions, and an import brings
+  them back as that entry's history only — never as entries of their own.
 
 - **OpenRouter, Groq and a server you run.** Three more providers in Settings →
   Models: OpenRouter and Groq with your own key, and any server that speaks the
