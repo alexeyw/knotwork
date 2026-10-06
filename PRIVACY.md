@@ -55,7 +55,10 @@ backup or in a transfer to a new device
 ([details](SECURITY.md#backup-and-device-transfer)):
 
 - Chat sessions and messages, including image and audio attachments you add.
-- Long-term memory entries derived from your conversations.
+- Long-term memory entries derived from your conversations. When a newer fact
+  replaces an entry's text, the replaced text is kept as that entry's history
+  (up to 10 earlier versions). It is deleted with the entry — when you delete
+  it, clear memory, or compaction merges it.
 - Pipelines, presets, prompt templates, and their run traces. A run trace
   keeps, for every call a pipeline step made to the on-device model, the whole
   text the model read and wrote — instructions, the parts of your chat history

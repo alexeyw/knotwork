@@ -222,9 +222,11 @@ screen's search), work down this list:
   `search_tool`, so a step that looked a fact up on Wikipedia reports a refusal
   naming the setting instead of returning an extract.
 - **It was never extracted.** Auto-extract only keeps durable facts
-  (preferences, events, relationships) and skips small talk and
-  near-duplicates. If a fact didn't make the cut, add it by hand with
-  **Save to memory** or the **Add memory** FAB.
+  (preferences, events, relationships) and skips small talk and facts
+  you already have. A change of a fact you have updates that entry instead
+  of adding one — or, for a pinned entry, waits beside it. If a fact didn't
+  make the cut, add it by hand with **Save to memory** or the **Add memory**
+  FAB.
 
 ## "Your data can't be unlocked" appears at startup
 

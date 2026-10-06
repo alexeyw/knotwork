@@ -406,7 +406,8 @@ mid-run](troubleshooting.md#the-agent-stopped-mid-run).
 
 Durable facts it extracted from conversations — preferences, events,
 relationships — retrieved by meaning when a node is set to read memory. Small
-talk and near-duplicates are skipped. See [What the agent recalls, and
+talk and facts it already has are skipped; a change of a fact updates the entry
+and keeps the old text in its history. See [What the agent recalls, and
 when](user-guide.md#what-the-agent-recalls-and-when).
 
 ### Can I add or delete a memory myself?

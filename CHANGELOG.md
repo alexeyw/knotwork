@@ -15,6 +15,22 @@ details.
 
 ### Added
 
+- **A correction replaces the fact it corrects.** Memory used to drop a newly
+  extracted fact whenever it was close to one already stored. A correction —
+  "now prefers English" after "prefers Russian" — was lost, and memory kept the
+  fact you had just contradicted. Closeness does not tell a correction from a
+  rewording, or from a different fact of the same shape ("allergic to cats"
+  after "allergic to peanuts"), so the on-device model now reads the two facts
+  and decides:
+  - the same fact is skipped;
+  - a change updates the entry in place and keeps the replaced text in the
+    entry's history;
+  - a different fact, or one the model cannot place, is saved beside it.
+
+  A pinned entry is never changed: its update is saved beside it and waits. The
+  Memory screen does not show the history or the waiting update yet. Earlier
+  versions are stored in the encrypted database and deleted with their entry.
+
 - **OpenRouter, Groq and a server you run.** Three more providers in Settings →
   Models: OpenRouter and Groq with your own key, and any server that speaks the
   OpenAI API — vLLM, LM Studio, llama.cpp — at the address you enter, with or

@@ -11,6 +11,7 @@ import app.knotwork.android.data.local.dao.ChatHistorySummaryDao
 import app.knotwork.android.data.local.dao.ExternalAutomationJournalDao
 import app.knotwork.android.data.local.dao.LocalModelDao
 import app.knotwork.android.data.local.dao.MemoryDao
+import app.knotwork.android.data.local.dao.MemoryHistoryDao
 import app.knotwork.android.data.local.dao.ModelPerformanceDao
 import app.knotwork.android.data.local.dao.PendingInteractionDao
 import app.knotwork.android.data.local.dao.PipelineDao
@@ -31,6 +32,8 @@ import app.knotwork.android.data.local.models.ConnectionEntity
 import app.knotwork.android.data.local.models.ExternalAutomationRequestEntity
 import app.knotwork.android.data.local.models.LocalModelEntity
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.local.models.MemoryChunkVersionEntity
+import app.knotwork.android.data.local.models.MemoryPendingUpdateEntity
 import app.knotwork.android.data.local.models.ModelCallEntity
 import app.knotwork.android.data.local.models.ModelPerformanceSampleEntity
 import app.knotwork.android.data.local.models.NodeEntity
@@ -67,6 +70,8 @@ import app.knotwork.android.data.local.models.UsagePipelineDayEntity
         ChatMessageEntity::class,
         ChatSessionEntity::class,
         MemoryChunkEntity::class,
+        MemoryChunkVersionEntity::class,
+        MemoryPendingUpdateEntity::class,
         PipelineEntity::class,
         NodeEntity::class,
         ConnectionEntity::class,
@@ -89,7 +94,7 @@ import app.knotwork.android.data.local.models.UsagePipelineDayEntity
         OnboardingMilestoneEntity::class,
         BackgroundPromptEntity::class,
     ],
-    version = 68,
+    version = 69,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -114,6 +119,13 @@ abstract class AppDatabase : RoomDatabase() {
      * @return The [MemoryDao] instance.
      */
     abstract fun memoryDao(): MemoryDao
+
+    /**
+     * Provides access to the MemoryHistoryDao.
+     *
+     * @return The [MemoryHistoryDao] instance.
+     */
+    abstract fun memoryHistoryDao(): MemoryHistoryDao
 
     /**
      * Provides access to the PipelineDao.
@@ -1679,6 +1691,50 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_67_68 = object : Migration(67, 68) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `model_calls` ADD COLUMN `durationMs` INTEGER")
+            }
+        }
+
+        /**
+         * v68 → v69: lets a newer statement of a memory fact replace the stored one
+         * without losing it.
+         *
+         * - `memory_chunk_history` keeps a chunk's earlier texts — the text, its
+         *   source, tags, when it was first stored and when it was replaced — and
+         *   cascades with its chunk.
+         * - `memory_pending_updates` links a chunk that updates a pinned chunk to that
+         *   chunk, at most one per pinned chunk (unique index), cascading from both.
+         *
+         * Both tables are new and start empty; `memory_chunks` is not touched, so no
+         * stored memory is rewritten by the upgrade.
+         */
+        val MIGRATION_68_69 = object : Migration(68, 69) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `memory_chunk_history` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chunkId` INTEGER NOT NULL, " +
+                        "`text` TEXT NOT NULL, `source` TEXT NOT NULL DEFAULT '{\"type\":\"unknown\"}', " +
+                        "`tagsCsv` TEXT NOT NULL DEFAULT '', `capturedAt` INTEGER NOT NULL, " +
+                        "`replacedAt` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`chunkId`) REFERENCES `memory_chunks`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_memory_chunk_history_chunkId` " +
+                        "ON `memory_chunk_history` (`chunkId`)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `memory_pending_updates` (" +
+                        "`updateChunkId` INTEGER NOT NULL, `pinnedChunkId` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`updateChunkId`), " +
+                        "FOREIGN KEY(`updateChunkId`) REFERENCES `memory_chunks`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                        "FOREIGN KEY(`pinnedChunkId`) REFERENCES `memory_chunks`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_memory_pending_updates_pinnedChunkId` " +
+                        "ON `memory_pending_updates` (`pinnedChunkId`)",
+                )
             }
         }
     }

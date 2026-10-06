@@ -20,6 +20,7 @@ import app.knotwork.android.data.local.dao.ChatHistorySummaryDao
 import app.knotwork.android.data.local.dao.ExternalAutomationJournalDao
 import app.knotwork.android.data.local.dao.LocalModelDao
 import app.knotwork.android.data.local.dao.MemoryDao
+import app.knotwork.android.data.local.dao.MemoryHistoryDao
 import app.knotwork.android.data.local.dao.ModelPerformanceDao
 import app.knotwork.android.data.local.dao.PendingInteractionDao
 import app.knotwork.android.data.local.dao.PipelineDao
@@ -224,6 +225,7 @@ object AppModule {
                 AppDatabase.MIGRATION_65_66,
                 AppDatabase.MIGRATION_66_67,
                 AppDatabase.MIGRATION_67_68,
+                AppDatabase.MIGRATION_68_69,
             )
             // No destructive fallback on upgrade: every version bump must supply an explicit
             // migration above so user data survives. Destructive recreation is kept only for the
@@ -249,6 +251,12 @@ object AppModule {
      */
     @Provides
     fun provideMemoryDao(database: AppDatabase): MemoryDao = database.memoryDao()
+
+    /**
+     * Provides the [MemoryHistoryDao] from the database.
+     */
+    @Provides
+    fun provideMemoryHistoryDao(database: AppDatabase): MemoryHistoryDao = database.memoryHistoryDao()
 
     /**
      * Provides the [PipelineDao] from the database.

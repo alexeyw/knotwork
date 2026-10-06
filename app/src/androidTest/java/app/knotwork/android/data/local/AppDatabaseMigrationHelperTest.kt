@@ -892,4 +892,40 @@ class AppDatabaseMigrationHelperTest {
             }
         }
     }
+
+    /**
+     * v68 → v69 adds `memory_chunk_history` and `memory_pending_updates`. A chunk stored
+     * before the migration keeps its row untouched, starts with no history, and the new
+     * tables cascade from it. The schema must match the exported `69.json`.
+     */
+    @Test
+    fun migrate68to69_keepsStoredMemoryAndCascadesHistory() {
+        helper.createDatabase(TEST_DB, 68).use { db ->
+            db.execSQL(
+                "INSERT INTO memory_chunks(id, text, embedding, timestamp, isPinned) " +
+                    "VALUES(7, 'Lives in Berlin', X'0000803F', 1, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 69, true, AppDatabase.MIGRATION_68_69).use { db ->
+            db.query("SELECT text FROM memory_chunks WHERE id = 7").use { c ->
+                assertTrue("the pre-existing chunk must survive the migration", c.moveToFirst())
+                assertEquals("Lives in Berlin", c.getString(0))
+            }
+            db.query("SELECT COUNT(*) FROM memory_chunk_history").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(0, c.getInt(0))
+            }
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db.execSQL(
+                "INSERT INTO memory_chunk_history(chunkId, text, capturedAt, replacedAt) " +
+                    "VALUES(7, 'Lived in Hamburg', 0, 1)",
+            )
+            db.execSQL("DELETE FROM memory_chunks WHERE id = 7")
+            db.query("SELECT COUNT(*) FROM memory_chunk_history").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("a chunk's history goes with it", 0, c.getInt(0))
+            }
+        }
+    }
 }

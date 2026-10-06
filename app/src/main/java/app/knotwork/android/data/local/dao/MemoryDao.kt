@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import app.knotwork.android.data.local.models.MemoryChunkEntity
+import app.knotwork.android.data.local.models.MemoryPendingUpdateEntity
 import app.knotwork.android.domain.models.MemorySummary
 import kotlinx.coroutines.flow.Flow
 
@@ -210,15 +211,20 @@ interface MemoryDao {
      * the candidate set for background compaction.
      *
      * Pinned chunks (`isPinned = 1`) are excluded so they are never touched by
-     * consolidation, and fresh chunks (`timestamp >= :olderThan`) are excluded
-     * so recently-learned facts keep their exact wording. The full embedding
-     * payload is returned because the compaction worker clusters on it.
+     * consolidation, fresh chunks (`timestamp >= :olderThan`) are excluded so
+     * recently-learned facts keep their exact wording, and an update waiting on a
+     * pinned chunk ([MemoryPendingUpdateEntity]) is excluded so a summary cannot
+     * dissolve the pair before the user resolves it. The full embedding payload is
+     * returned because the compaction worker clusters on it.
      *
      * @param olderThan Exclusive upper bound on `timestamp`; only rows strictly
      *   older than this are returned.
      * @return Candidate chunks ordered newest-first.
      */
-    @Query("SELECT * FROM memory_chunks WHERE isPinned = 0 AND timestamp < :olderThan ORDER BY timestamp DESC")
+    @Query(
+        "SELECT * FROM memory_chunks WHERE isPinned = 0 AND timestamp < :olderThan " +
+            "AND id NOT IN (SELECT updateChunkId FROM memory_pending_updates) ORDER BY timestamp DESC",
+    )
     suspend fun getCompactionCandidates(olderThan: Long): List<MemoryChunkEntity>
 
     /**

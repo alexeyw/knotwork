@@ -1244,4 +1244,29 @@ class AppDatabaseMigrationTest {
         // A call recorded before the migration has no duration; the check then counts calls.
         assertEquals("ALTER TABLE `model_calls` ADD COLUMN `durationMs` INTEGER", statement.captured)
     }
+
+    @Test
+    fun `MIGRATION_68_69 targets versions 68 to 69`() {
+        val migration = AppDatabase.MIGRATION_68_69
+
+        assertEquals(68, migration.startVersion)
+        assertEquals(69, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_68_69 creates the memory history and pending-update tables without touching memory_chunks`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statements = mutableListOf<String>()
+
+        AppDatabase.MIGRATION_68_69.migrate(db)
+
+        verify { db.execSQL(capture(statements)) }
+        assertEquals(4, statements.size)
+        assertTrue(statements[0].startsWith("CREATE TABLE IF NOT EXISTS `memory_chunk_history`"))
+        assertTrue(statements[0].contains("REFERENCES `memory_chunks`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE"))
+        assertTrue(statements[2].startsWith("CREATE TABLE IF NOT EXISTS `memory_pending_updates`"))
+        assertTrue(statements[3].startsWith("CREATE UNIQUE INDEX"))
+        // The upgrade adds two empty tables; no stored memory is rewritten.
+        assertTrue(statements.none { it.contains("ALTER TABLE `memory_chunks`") || it.contains("INSERT") })
+    }
 }
