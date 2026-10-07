@@ -1129,6 +1129,9 @@ val dialogInventoryAllowlist = mapOf(
         "Hosts the catalog's PromptPresetPickerSheet.",
     "app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/presets/PresetPickerSheet.kt" to
         "Hosts the catalog's PresetPickerSheetBody.",
+    "app/src/main/java/app/knotwork/android/presentation/ui/pipeline/editor/sheet/NodeTypePickerSheet.kt" to
+        "Hosts the catalog's NodeTypePickerSheetBody. Besides the wrapper it draws only the drag-handle " +
+        "mark, because Material's own handle is a TalkBack stop.",
 
     // ── Deliberate deviations. Each composes its own dialog, and each has a
     // reason that is not "nobody got to it".

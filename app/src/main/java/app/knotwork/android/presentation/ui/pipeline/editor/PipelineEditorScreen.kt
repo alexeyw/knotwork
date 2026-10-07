@@ -180,8 +180,8 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 editor.multiSelectMode = false
                 editor.selection = emptySet()
             }
-            editor.quickAddAnchor != null -> {
-                editor.quickAddAnchor = null
+            editor.nodePickerAnchor != null -> {
+                editor.nodePickerAnchor = null
             }
             editor.selectedEdgeId != null -> {
                 editor.selectedEdgeId = null
@@ -346,6 +346,11 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 // `uiState.currentPipeline.nodes.lastOrNull()` here would observe the
                 // pre-update snapshot since the StateFlow hasn't propagated yet.
                 val newId = viewModel.addNode(type, canvasX, canvasY)
+                // The new node shows selected between the "Add node" sheet leaving and
+                // its configuration sheet rising: the mark of where it landed.
+                editor.selectedEdgeId = null
+                editor.multiSelectMode = false
+                editor.selection = setOf(newId)
                 editor.configuringNodeId = newId
                 editor.workingConfig = NodeConfigCodec.defaultFor(
                     type = NodeTypeMapper.toCatalog(type),
@@ -370,10 +375,10 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
             },
             onLongPressEdge = { connectionId -> pendingEdgeDelete = connectionId },
             onStartWithInput = {
-                // Place INPUT at canvas origin (0, 0). The radial menu pattern
-                // typically anchors to where the user tapped — here the tap was
-                // a button, not the canvas, so we fall back to a sensible
-                // grid-aligned spot. The user can immediately drag it.
+                // Place INPUT at canvas origin (0, 0). The "Add node" sheet lands a
+                // node where the user long-pressed — here the tap was a button, not
+                // the canvas, so we fall back to a sensible grid-aligned spot. The
+                // user can immediately drag it.
                 editor.undoRedo.push(pipeline)
                 val newId = viewModel.addNode(NodeType.INPUT, x = 0f, y = 0f)
                 editor.configuringNodeId = newId

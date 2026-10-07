@@ -283,7 +283,7 @@ internal object NodeConfigCodec {
 
     /**
      * Builds a fresh default [NodeConfig] for [type] — used by the editor when the user picks
-     * a node from the radial quick-add menu and the [NodeConfigSheet] opens for the first time.
+     * a node in the "Add node" sheet and the [NodeConfigSheet] opens for the first time.
      *
      * @param type the catalog node type the form will render for.
      * @param title initial title (typically the node's label or the type's display label).

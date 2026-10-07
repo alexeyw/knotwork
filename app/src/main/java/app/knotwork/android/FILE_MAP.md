@@ -913,7 +913,6 @@ Only Kotlin files appear inside the generated blocks.
           - `EmptyPipelineState.kt` - Empty-canvas hero: brand-mark tile + helper copy + `Start with INPUT` / `From template` CTAs + canvas-geometry info pill.
           - `FilterBar.kt` - Top-edge `Find node…` bar (opened from overflow). Auto-focuses; submit centres on the first matching node and selects it.
           - `MiniMap.kt` - Bottom-right mini-map overlay (270 × 290 dp) with `OVERVIEW · 0.42×` header and per-type-hue node bricks + accent viewport rectangle. Exposes `formatScalePercent(scale)`.
-          - `QuickAddRadialMenu.kt` - 12-tile radial menu (one per node type) anchored at the long-press point; dispatches `onPick(type)`.
           - `ZoomRail.kt` - Always-visible right-edge `+` / `−` / `⤡` (fit-to-view) tile stack.
         - `config/` - Per-`NodeType` configuration sheets and the codec that moves their fields onto `NodeModel`.
           - `NodeConfigCodec.kt` - JSON ↔ catalog `NodeConfig` codec + legacy-field derivation for rows saved without config JSON + `defaultFor(type, title)` factory.
@@ -931,6 +930,7 @@ Only Kotlin files appear inside the generated blocks.
         - `PipelineEditorScreen.kt` - Stateful entry composable: subscribes to `OrchestratorViewModel` + `runState`, owns the screen-local `EditorState`, computes the toolbar subtitle / primary-action variant, hosts the overflow `DropdownMenu` (Undo / Redo / Rename… / Delete / Auto-layout / Mini-map / grid toggle / Find node… / Paste), the catalog `NodeConfigSheet`, the rename dialog, and the run-banner clock.
         - `sheet/` - Bottom-sheet hosts the editor opens over the canvas.
           - `NodeConfigSheetHost.kt` - Thin adapter exposing the catalog `NodeConfigSheet` (with all 12 per-type forms + validator) to the editor screen.
+          - `NodeTypePickerSheet.kt` - The pipeline editor's "Add node" sheet: the catalog's `NodeTypePickerSheetBody` inside a full-height `ModalBottomSheet`.
     - `prompts/` - Prompt Library screen components. The screen is wired end-to-end onto the new `PromptPreset` catalogue (bundled + user) — the legacy `PromptTemplate` source is no longer consulted here.
       - `PromptImportDialogHost.kt` - Maps each import outcome onto the shared `OutcomeDialog` family: info for a version/unknown-key note, **shield (not red)** for a refused capability — a ceiling that held is not an error — red only for "nothing was imported", and an icon-less question for the re-import decision. Node types are named by their raw enum, matching the tabs.
       - `PromptLibraryScreen.kt` - Slim mapper. Folds `PromptLibraryUiState` (bundled + user presets) into the catalog `PromptLibraryViewState`, hosts the editor `ModalBottomSheet` with `PromptEditorSheetBody`. Categories come from `PromptPresetConstants.LLM_DRIVEN_NODE_TYPES`. Also owns the two SAF surfaces — `OpenDocument` for import (filtering `text/markdown` **and** `text/*`, because most providers report a `.md` file as plain text) and `CreateDocument` for export — reading and writing off the main thread, plus the snackbar host.

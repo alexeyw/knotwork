@@ -8,12 +8,8 @@
     <string name="pipeline_editor_node_pipeline_no_target">No target pipeline</string>
     <string name="pipeline_editor_node_pipeline_missing">Pipeline not found</string>
 
-    <!-- Quick-add radial menu (long-press on canvas) -->
-    <string name="pipeline_editor_quick_add_title">Add node</string>
-    <string name="pipeline_editor_quick_add_close">Close add-node menu</string>
-
-    <!-- FAB tucked into the canvas bottom-right. Opens the radial quick-add menu
-         anchored at the viewport centre. -->
+    <!-- FAB tucked into the canvas bottom-right. Opens the "Add node" sheet; the
+         picked node lands at the viewport centre. -->
     <string name="pipeline_editor_fab_add_node">Add node</string>
 
     <!-- Validation bar -->
@@ -67,7 +63,7 @@
          earlier single-line "Long-press anywhere…" hint is superseded by
          the title + helper copy here. -->
     <string name="pipeline_editor_empty_title">Empty pipeline</string>
-    <string name="pipeline_editor_empty_helper">Tap + to drop your first node, or long-press anywhere on the canvas for the radial picker.</string>
+    <string name="pipeline_editor_empty_helper">Tap + to add your first node, or long-press the canvas where you want it.</string>
     <string name="pipeline_editor_empty_cta_start">Start with INPUT</string>
     <string name="pipeline_editor_empty_cta_template">From template</string>
     <!-- Info pill: "canvas: 1200 × 1600 · 24 dp grid · 1.00×". %1$d, %2$d = reference canvas geometry,

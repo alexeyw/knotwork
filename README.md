@@ -82,7 +82,7 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   device unless you configure it to. *Test connection* checks a provider or an
   MCP server before you rely on it, without sending a prompt.
 - **You build the pipeline.** A drag-and-drop editor with pan / pinch-zoom,
-  snap-to-grid, a radial node picker, auto-layout, inline validation, and
+  snap-to-grid, a searchable node-type picker, auto-layout, inline validation, and
   per-type configuration for all 14 node types — plus a standalone
   [browser editor](pipeline-editor.html) for authoring pipelines without
   launching the app: one HTML file with its graph library inlined, so it opens
