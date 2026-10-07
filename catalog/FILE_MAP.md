@@ -128,8 +128,12 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `EditorToolbar.kt` - editor top toolbar (back, inline-editable name, subtitle, overflow). No run action: the editor composes pipelines, it does not execute them.
     - `NodeCard.kt` - unified node card covering idle / selected / multi-selected / error states with dynamic port dots and header tint.
     - `NodeConfig.kt` - sealed `NodeConfig` interface + 12 per-type payload data classes (`InputConfig`, `OutputConfig`, …).
-    - `NodeConfigForms.kt` - per-type form bodies (12 variants) with shared helpers (`FieldLabel`, `InlineError`, `VariableChipsRow`).
+    - `NodeConfigFields.kt` - Field composables the node-config forms share: label, caption, inline error, prompt-variable chips, title and text fields, sliders, toggle, segmented chips and the engine-provider row.
+    - `NodeConfigFlowForms.kt` - Config forms of the nodes that steer the run: Input, Intent Router, If Condition, Clarification (with its quick replies) and Queue Processor.
+    - `NodeConfigForms.kt` - Per-type form dispatcher for `NodeConfigSheet`: the title field plus the form body matching the config's type.
+    - `NodeConfigModelForms.kt` - Config forms of the nodes that prompt a model: Output, LiteRT (with its local-model picker), Cloud, Decomposition, Evaluation and Summary.
     - `NodeConfigSheet.kt` - modal bottom sheet hosting the per-type forms with sticky Cancel/Save row and optional app-provided sections.
+    - `NodeConfigTargetForms.kt` - Config forms of the nodes that call something else — Tool, Pipeline and Skill — with their pickers and empty-state notes.
     - `NodeConfigValidation.kt` - pure-Kotlin validator for `NodeConfig` rules (title uniqueness, range bounds, JSON parsing) → field-keyed error map.
     - `NodeError.kt` - sealed `Validation` / `Runtime` error states surfaced on `NodeCard` borders and bodies.
     - `NodeIcons.kt` - `NodeType` → header glyph extension over `AppIcons`.
@@ -383,6 +387,8 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
   - `tools/` - Tools page and the `http_request` domain-allowlist editor.
     - `AllowedDomainsContent.kt` - pushed editor for the `http_request` host allowlist — the gesture that opts the device into outbound HTTP. Empty state (globe hero, the tool-is-off explanation, an amber risk note) and populated state (explainer + host list with per-row removal), mirroring the MCP-server editor's structure.
     - `AllowedDomainsViewState.kt` - screen state plus the sealed `AddHostState` feedback for the add-a-host field (`Idle` / `NormalizedPreview` / `Duplicate` / `Invalid`); only `NormalizedPreview` enables **Add**. Normalisation itself is the host's (`HttpRequestPolicy`) job.
+    - `McpServerConfigContent.kt` - Full-screen MCP-server configuration surface.
+    - `ToolDetailContent.kt` - Stateless tool-detail surface — schema preview + enable/disable toggle.
     - `ToolsContent.kt` - Tools surface (built-in AppFunctions section + MCP servers with expandable tool lists and connection states).
     - `ToolsViewState.kt` - visual-state enum + risk-tier / MCP connection enums + tool / server row models.
   - `triggers/` - automation-trigger surfaces (`TriggersContent` list with inline enable switch + health badge, `TriggerEditorContent` full-screen editor, `TriggerDeleteDialogContent`, and the detail below).

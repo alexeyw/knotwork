@@ -174,6 +174,15 @@ details.
   a listed one that is gone, so the list can only shrink. See
   [`docs/static-analysis.md`](docs/static-analysis.md#size-suppression-ratchet-verifysizesuppressions).
 
+- **The node settings forms and the tools screens are split into files.** The
+  forms of all fourteen node types sat in one 1,600-line file under an
+  exemption from the function-count limit, and the tools list, a tool's detail
+  page and the MCP server form shared another of 1,500 lines. The forms are now
+  grouped by what a node does — prompt a model, steer the run, or call a tool,
+  pipeline or skill — beside one file of the fields they share, and each tools
+  screen has its own file. Nothing on screen changes: every screenshot test
+  matches its committed image, and the forms no longer need the exemption.
+
 ### Fixed
 
 - **Cloud retries wait as long as the provider asks, and no longer retry what

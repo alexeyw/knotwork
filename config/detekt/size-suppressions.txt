@@ -31,7 +31,6 @@ app/src/main/java/app/knotwork/android/presentation/ui/settings/SettingsViewMode
 app/src/main/java/app/knotwork/android/presentation/ui/settings/SettingsViewModel.kt :: class SettingsViewModel :: TooManyFunctions
 app/src/main/java/app/knotwork/android/presentation/ui/skills/SkillLibraryViewModel.kt :: class SkillLibraryViewModel :: TooManyFunctions
 app/src/main/java/app/knotwork/android/presentation/ui/triggers/TriggersViewModel.kt :: class TriggersViewModel :: TooManyFunctions
-catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeConfigForms.kt :: (file) :: TooManyFunctions
 catalog/src/main/java/app/knotwork/design/screens/automation/ExternalAutomationJournalContent.kt :: (file) :: TooManyFunctions
 catalog/src/main/java/app/knotwork/design/screens/memory/MemoryContent.kt :: (file) :: TooManyFunctions
 catalog/src/main/java/app/knotwork/design/screens/onboarding/OnboardingContent.kt :: (file) :: TooManyFunctions
