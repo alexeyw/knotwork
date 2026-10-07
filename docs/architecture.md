@@ -1578,14 +1578,17 @@ hashed.
 Migration rules:
 
 - Schema migrations are explicit
-  (`Migration(oldVersion, newVersion) { … }`) and registered through
-  `addMigrations(...)` in `AppModule`. There is **no destructive fallback on
-  upgrade**, so an in-place version bump preserves user data; a missing
-  migration fails fast in development instead of silently dropping tables.
-  Destructive recreation is retained only on **downgrade**
-  (`fallbackToDestructiveMigrationOnDowngrade`), which forward migrations
-  cannot handle. The migrations across the exported-schema baseline range are
-  covered by a `MigrationTestHelper` regression suite.
+  (`Migration(oldVersion, newVersion) { … }`), one file per step under
+  `data/local/migrations/` (`Migration<old>To<new>.kt`), and registered
+  through one ordered list, `ALL_MIGRATIONS`, which `AppModule` passes to
+  `addMigrations(...)`. There is **no destructive fallback on upgrade**, so an
+  in-place version bump preserves user data; a missing migration fails fast in
+  development instead of silently dropping tables. Destructive recreation is
+  retained only on **downgrade** (`fallbackToDestructiveMigrationOnDowngrade`),
+  which forward migrations cannot handle. A JVM test fails when the list has a
+  gap or does not end at the schema version the build exports; a
+  `MigrationTestHelper` suite covers the steps across the exported-schema
+  range and runs the whole list from the oldest exported schema to the newest.
 - Auto-migrations are allowed for additive changes only.
 - DAO methods returning `Flow<T>` are annotated with `@Query` — no
   ad-hoc reactive wrapping.

@@ -6,6 +6,13 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.android.data.local.migrations.MIGRATION_17_18
+import app.knotwork.android.data.local.migrations.MIGRATION_18_19
+import app.knotwork.android.data.local.migrations.MIGRATION_19_20
+import app.knotwork.android.data.local.migrations.MIGRATION_20_21
+import app.knotwork.android.data.local.migrations.MIGRATION_21_22
+import app.knotwork.android.data.local.migrations.MIGRATION_22_23
+import app.knotwork.android.data.local.migrations.MIGRATION_23_24
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -62,7 +69,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 18, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_17_18.migrate(db)
+            MIGRATION_17_18.migrate(db)
             val ctxConfig = querySingleString(db, "SELECT context_config FROM pipeline_nodes WHERE id='n1'")
             assertTrue("ALL_ENABLED default JSON expected", ctxConfig.contains("\"chatHistory\":true"))
             assertTrue(ctxConfig.contains("\"originalTask\":true"))
@@ -79,7 +86,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 19, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_18_19.migrate(db)
+            MIGRATION_18_19.migrate(db)
             db.query("SELECT id, name, updatedAt, pipelineId FROM chat_sessions WHERE id='s1'").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("Alpha", c.getString(c.getColumnIndexOrThrow("name")))
@@ -99,7 +106,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 20, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_19_20.migrate(db)
+            MIGRATION_19_20.migrate(db)
             db.query("SELECT isFinal, isStarred FROM chat_messages").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("isFinal must back-fill to 1 for legacy rows", 1, c.getInt(0))
@@ -122,7 +129,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 21, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_20_21.migrate(db)
+            MIGRATION_20_21.migrate(db)
             db.query("SELECT config_json FROM pipeline_nodes WHERE id='n'").use { c ->
                 assertTrue(c.moveToFirst())
                 assertTrue("config_json default must be NULL for legacy rows", c.isNull(0))
@@ -140,7 +147,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 22, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_21_22.migrate(db)
+            MIGRATION_21_22.migrate(db)
             db.query("SELECT isStarred FROM chat_sessions WHERE id='s'").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("Session-level isStarred must back-fill to 0", 0, c.getInt(0))
@@ -157,7 +164,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 23, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_22_23.migrate(db)
+            MIGRATION_22_23.migrate(db)
             db.query("SELECT text, isPinned FROM memory_chunks").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("hello", c.getString(0))
@@ -174,7 +181,7 @@ class AppDatabaseMigrationTest {
         openAtVersion(version = 23, createSql = listOf(V22_MEMORY_CHUNKS)) { /* no seed needed */ }
 
         openAtVersion(version = 24, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_23_24.migrate(db)
+            MIGRATION_23_24.migrate(db)
 
             // Round-trip an insert + select to assert every column exists
             // with the expected type and nullability contract.
@@ -207,7 +214,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 24, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_23_24.migrate(db)
+            MIGRATION_23_24.migrate(db)
             db.query("SELECT text, timestamp FROM memory_chunks").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("preserved", c.getString(0))
@@ -250,12 +257,12 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 23, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_17_18.migrate(db)
-            AppDatabase.MIGRATION_18_19.migrate(db)
-            AppDatabase.MIGRATION_19_20.migrate(db)
-            AppDatabase.MIGRATION_20_21.migrate(db)
-            AppDatabase.MIGRATION_21_22.migrate(db)
-            AppDatabase.MIGRATION_22_23.migrate(db)
+            MIGRATION_17_18.migrate(db)
+            MIGRATION_18_19.migrate(db)
+            MIGRATION_19_20.migrate(db)
+            MIGRATION_20_21.migrate(db)
+            MIGRATION_21_22.migrate(db)
+            MIGRATION_22_23.migrate(db)
 
             // Spot-check the columns added along the way.
             db.query(
@@ -300,7 +307,7 @@ class AppDatabaseMigrationTest {
         }
 
         openAtVersion(version = 18, createSql = emptyList()) { db ->
-            AppDatabase.MIGRATION_17_18.migrate(db)
+            MIGRATION_17_18.migrate(db)
             // After the migration the row should carry the default JSON,
             // not NULL or empty string.
             val ctxConfig = querySingleString(db, "SELECT context_config FROM pipeline_nodes WHERE id='n'")

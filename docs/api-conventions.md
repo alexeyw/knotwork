@@ -283,6 +283,11 @@ interface Tool {
 - Database migrations must be explicit
   (`Migration(oldVersion, newVersion) { ... }`). Auto-migrations are
   allowed for additive changes only.
+- A schema bump adds one file, `data/local/migrations/Migration<old>To<new>.kt`,
+  declaring `MIGRATION_<old>_<new>`, and appends that constant to
+  `ALL_MIGRATIONS` — the only list the database builder registers.
+  `AppDatabaseMigrationChainTest` fails on a gap in the list or a list that
+  does not end at the schema version.
 - Always inject a `CoroutineDispatcher` into `DataSource` classes so they
   remain testable.
 

@@ -1,6 +1,41 @@
 package app.knotwork.android.data.local
 
 import androidx.sqlite.db.SupportSQLiteDatabase
+import app.knotwork.android.data.local.migrations.MIGRATION_17_18
+import app.knotwork.android.data.local.migrations.MIGRATION_21_22
+import app.knotwork.android.data.local.migrations.MIGRATION_29_30
+import app.knotwork.android.data.local.migrations.MIGRATION_30_31
+import app.knotwork.android.data.local.migrations.MIGRATION_34_35
+import app.knotwork.android.data.local.migrations.MIGRATION_38_39
+import app.knotwork.android.data.local.migrations.MIGRATION_39_40
+import app.knotwork.android.data.local.migrations.MIGRATION_40_41
+import app.knotwork.android.data.local.migrations.MIGRATION_41_42
+import app.knotwork.android.data.local.migrations.MIGRATION_42_43
+import app.knotwork.android.data.local.migrations.MIGRATION_43_44
+import app.knotwork.android.data.local.migrations.MIGRATION_44_45
+import app.knotwork.android.data.local.migrations.MIGRATION_45_46
+import app.knotwork.android.data.local.migrations.MIGRATION_46_47
+import app.knotwork.android.data.local.migrations.MIGRATION_47_48
+import app.knotwork.android.data.local.migrations.MIGRATION_48_49
+import app.knotwork.android.data.local.migrations.MIGRATION_49_50
+import app.knotwork.android.data.local.migrations.MIGRATION_50_51
+import app.knotwork.android.data.local.migrations.MIGRATION_51_52
+import app.knotwork.android.data.local.migrations.MIGRATION_52_53
+import app.knotwork.android.data.local.migrations.MIGRATION_53_54
+import app.knotwork.android.data.local.migrations.MIGRATION_54_55
+import app.knotwork.android.data.local.migrations.MIGRATION_55_56
+import app.knotwork.android.data.local.migrations.MIGRATION_56_57
+import app.knotwork.android.data.local.migrations.MIGRATION_57_58
+import app.knotwork.android.data.local.migrations.MIGRATION_59_60
+import app.knotwork.android.data.local.migrations.MIGRATION_60_61
+import app.knotwork.android.data.local.migrations.MIGRATION_61_62
+import app.knotwork.android.data.local.migrations.MIGRATION_62_63
+import app.knotwork.android.data.local.migrations.MIGRATION_63_64
+import app.knotwork.android.data.local.migrations.MIGRATION_64_65
+import app.knotwork.android.data.local.migrations.MIGRATION_65_66
+import app.knotwork.android.data.local.migrations.MIGRATION_66_67
+import app.knotwork.android.data.local.migrations.MIGRATION_67_68
+import app.knotwork.android.data.local.migrations.MIGRATION_68_69
 import app.knotwork.android.domain.models.NodeContextConfig
 import io.mockk.mockk
 import io.mockk.slot
@@ -11,7 +46,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Verifies the [AppDatabase.MIGRATION_17_18] script.
+ * Verifies the [MIGRATION_17_18] script.
  *
  * The migration must:
  * 1. Be registered for versions 17 → 18.
@@ -25,7 +60,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_17_18 targets versions 17 to 18`() {
-        val migration = AppDatabase.MIGRATION_17_18
+        val migration = MIGRATION_17_18
 
         assertEquals(17, migration.startVersion)
         assertEquals(18, migration.endVersion)
@@ -36,7 +71,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_17_18.migrate(db)
+        MIGRATION_17_18.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -60,7 +95,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_21_22 targets versions 21 to 22`() {
-        val migration = AppDatabase.MIGRATION_21_22
+        val migration = MIGRATION_21_22
 
         assertEquals(21, migration.startVersion)
         assertEquals(22, migration.endVersion)
@@ -71,7 +106,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_21_22.migrate(db)
+        MIGRATION_21_22.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -98,7 +133,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_17_18.migrate(db)
+        MIGRATION_17_18.migrate(db)
         verify { db.execSQL(capture(sqlSlot)) }
 
         // Pull the literal between the first pair of single quotes — that is
@@ -115,7 +150,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_29_30 targets versions 29 to 30`() {
-        val migration = AppDatabase.MIGRATION_29_30
+        val migration = MIGRATION_29_30
 
         assertEquals(29, migration.startVersion)
         assertEquals(30, migration.endVersion)
@@ -126,7 +161,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_29_30.migrate(db)
+        MIGRATION_29_30.migrate(db)
 
         verify(exactly = 3) { db.execSQL(capture(statements)) }
 
@@ -165,7 +200,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_30_31 targets versions 30 to 31`() {
-        val migration = AppDatabase.MIGRATION_30_31
+        val migration = MIGRATION_30_31
 
         assertEquals(30, migration.startVersion)
         assertEquals(31, migration.endVersion)
@@ -176,7 +211,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_30_31.migrate(db)
+        MIGRATION_30_31.migrate(db)
 
         // CREATE new + INSERT SELECT + DROP + RENAME + 2 index recreations.
         verify(exactly = 6) { db.execSQL(capture(statements)) }
@@ -230,7 +265,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_34_35 targets versions 34 to 35`() {
-        val migration = AppDatabase.MIGRATION_34_35
+        val migration = MIGRATION_34_35
 
         assertEquals(34, migration.startVersion)
         assertEquals(35, migration.endVersion)
@@ -241,7 +276,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_34_35.migrate(db)
+        MIGRATION_34_35.migrate(db)
 
         // ALTER pipeline_runs + CREATE INDEX + ALTER trace_steps.
         verify(exactly = 3) { db.execSQL(capture(statements)) }
@@ -277,7 +312,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_38_39 targets versions 38 to 39`() {
-        val migration = AppDatabase.MIGRATION_38_39
+        val migration = MIGRATION_38_39
 
         assertEquals(38, migration.startVersion)
         assertEquals(39, migration.endVersion)
@@ -288,7 +323,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_38_39.migrate(db)
+        MIGRATION_38_39.migrate(db)
 
         verify(exactly = 4) { db.execSQL(capture(statements)) }
         val joined = statements.joinToString(" | ").uppercase()
@@ -307,7 +342,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_39_40 targets versions 39 to 40`() {
-        val migration = AppDatabase.MIGRATION_39_40
+        val migration = MIGRATION_39_40
 
         assertEquals(39, migration.startVersion)
         assertEquals(40, migration.endVersion)
@@ -318,7 +353,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_39_40.migrate(db)
+        MIGRATION_39_40.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(statements)) }
         val sql = statements.single().uppercase()
@@ -332,7 +367,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_40_41 targets versions 40 to 41`() {
-        val migration = AppDatabase.MIGRATION_40_41
+        val migration = MIGRATION_40_41
 
         assertEquals(40, migration.startVersion)
         assertEquals(41, migration.endVersion)
@@ -343,7 +378,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_40_41.migrate(db)
+        MIGRATION_40_41.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(statements)) }
         val sql = statements.single().uppercase()
@@ -357,7 +392,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_41_42 targets versions 41 to 42`() {
-        val migration = AppDatabase.MIGRATION_41_42
+        val migration = MIGRATION_41_42
 
         assertEquals(41, migration.startVersion)
         assertEquals(42, migration.endVersion)
@@ -368,7 +403,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_41_42.migrate(db)
+        MIGRATION_41_42.migrate(db)
 
         // CREATE TABLE + CREATE INDEX.
         verify(exactly = 2) { db.execSQL(capture(statements)) }
@@ -399,7 +434,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_42_43 targets versions 42 to 43`() {
-        val migration = AppDatabase.MIGRATION_42_43
+        val migration = MIGRATION_42_43
 
         assertEquals(42, migration.startVersion)
         assertEquals(43, migration.endVersion)
@@ -410,7 +445,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_42_43.migrate(db)
+        MIGRATION_42_43.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -428,7 +463,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_43_44 targets versions 43 to 44`() {
-        val migration = AppDatabase.MIGRATION_43_44
+        val migration = MIGRATION_43_44
 
         assertEquals(43, migration.startVersion)
         assertEquals(44, migration.endVersion)
@@ -439,7 +474,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_43_44.migrate(db)
+        MIGRATION_43_44.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -453,7 +488,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_44_45 targets versions 44 to 45`() {
-        val migration = AppDatabase.MIGRATION_44_45
+        val migration = MIGRATION_44_45
 
         assertEquals(44, migration.startVersion)
         assertEquals(45, migration.endVersion)
@@ -464,7 +499,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_44_45.migrate(db)
+        MIGRATION_44_45.migrate(db)
 
         // CREATE TABLE + CREATE INDEX.
         verify(exactly = 2) { db.execSQL(capture(statements)) }
@@ -503,7 +538,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_45_46 targets versions 45 to 46`() {
-        val migration = AppDatabase.MIGRATION_45_46
+        val migration = MIGRATION_45_46
 
         assertEquals(45, migration.startVersion)
         assertEquals(46, migration.endVersion)
@@ -514,7 +549,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_45_46.migrate(db)
+        MIGRATION_45_46.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -529,7 +564,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_46_47 targets versions 46 to 47`() {
-        val migration = AppDatabase.MIGRATION_46_47
+        val migration = MIGRATION_46_47
 
         assertEquals(46, migration.startVersion)
         assertEquals(47, migration.endVersion)
@@ -540,7 +575,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_46_47.migrate(db)
+        MIGRATION_46_47.migrate(db)
 
         // CREATE TABLE usage_counter + CREATE TABLE usage_active_day.
         verify(exactly = 2) { db.execSQL(capture(statements)) }
@@ -571,7 +606,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_47_48 targets versions 47 to 48`() {
-        val migration = AppDatabase.MIGRATION_47_48
+        val migration = MIGRATION_47_48
 
         assertEquals(47, migration.startVersion)
         assertEquals(48, migration.endVersion)
@@ -582,7 +617,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_47_48.migrate(db)
+        MIGRATION_47_48.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -597,7 +632,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_48_49 targets versions 48 to 49`() {
-        val migration = AppDatabase.MIGRATION_48_49
+        val migration = MIGRATION_48_49
 
         assertEquals(48, migration.startVersion)
         assertEquals(49, migration.endVersion)
@@ -608,7 +643,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_48_49.migrate(db)
+        MIGRATION_48_49.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -622,7 +657,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_49_50 targets versions 49 to 50`() {
-        val migration = AppDatabase.MIGRATION_49_50
+        val migration = MIGRATION_49_50
 
         assertEquals(49, migration.startVersion)
         assertEquals(50, migration.endVersion)
@@ -633,7 +668,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_49_50.migrate(db)
+        MIGRATION_49_50.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
         val sql = sqlSlot.captured.uppercase()
@@ -656,7 +691,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_50_51 targets versions 50 to 51`() {
-        val migration = AppDatabase.MIGRATION_50_51
+        val migration = MIGRATION_50_51
 
         assertEquals(50, migration.startVersion)
         assertEquals(51, migration.endVersion)
@@ -667,7 +702,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlots = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_50_51.migrate(db)
+        MIGRATION_50_51.migrate(db)
 
         // One CREATE TABLE plus the two index creations.
         verify(exactly = 3) { db.execSQL(capture(sqlSlots)) }
@@ -693,7 +728,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_51_52 targets versions 51 to 52`() {
-        val migration = AppDatabase.MIGRATION_51_52
+        val migration = MIGRATION_51_52
 
         assertEquals(51, migration.startVersion)
         assertEquals(52, migration.endVersion)
@@ -704,7 +739,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_51_52.migrate(db)
+        MIGRATION_51_52.migrate(db)
 
         // Purely additive: one CREATE TABLE, no existing table touched.
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
@@ -726,7 +761,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_52_53 targets versions 52 to 53`() {
-        val migration = AppDatabase.MIGRATION_52_53
+        val migration = MIGRATION_52_53
 
         assertEquals(52, migration.startVersion)
         assertEquals(53, migration.endVersion)
@@ -737,7 +772,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_52_53.migrate(db)
+        MIGRATION_52_53.migrate(db)
 
         // Purely additive: one ALTER TABLE, no data rewrite.
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
@@ -760,7 +795,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_53_54 targets versions 53 to 54`() {
-        val migration = AppDatabase.MIGRATION_53_54
+        val migration = MIGRATION_53_54
 
         assertEquals(53, migration.startVersion)
         assertEquals(54, migration.endVersion)
@@ -771,7 +806,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_53_54.migrate(db)
+        MIGRATION_53_54.migrate(db)
 
         // Purely additive: one ALTER TABLE, no data rewrite.
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
@@ -799,7 +834,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_54_55 targets versions 54 to 55`() {
-        val migration = AppDatabase.MIGRATION_54_55
+        val migration = MIGRATION_54_55
 
         assertEquals(54, migration.startVersion)
         assertEquals(55, migration.endVersion)
@@ -810,7 +845,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_54_55.migrate(db)
+        MIGRATION_54_55.migrate(db)
 
         // Purely additive: one ALTER TABLE, no data rewrite.
         verify(exactly = 1) { db.execSQL(capture(sqlSlot)) }
@@ -833,7 +868,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_55_56 targets versions 55 to 56`() {
-        val migration = AppDatabase.MIGRATION_55_56
+        val migration = MIGRATION_55_56
 
         assertEquals(55, migration.startVersion)
         assertEquals(56, migration.endVersion)
@@ -844,7 +879,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_55_56.migrate(db)
+        MIGRATION_55_56.migrate(db)
 
         // Purely additive: four ALTER TABLEs, no data rewrite.
         verify(exactly = 4) { db.execSQL(capture(sqlSlot)) }
@@ -878,7 +913,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_56_57 targets versions 56 to 57`() {
-        val migration = AppDatabase.MIGRATION_56_57
+        val migration = MIGRATION_56_57
 
         assertEquals(56, migration.startVersion)
         assertEquals(57, migration.endVersion)
@@ -889,7 +924,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val sqlSlot = slot<String>()
 
-        AppDatabase.MIGRATION_56_57.migrate(db)
+        MIGRATION_56_57.migrate(db)
 
         // Purely additive: one CREATE TABLE, no existing table touched and no
         // back-fill (the historical counters carry no dates to back-fill from).
@@ -914,7 +949,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_57_58 targets versions 57 to 58`() {
-        val migration = AppDatabase.MIGRATION_57_58
+        val migration = MIGRATION_57_58
 
         assertEquals(57, migration.startVersion)
         assertEquals(58, migration.endVersion)
@@ -927,7 +962,7 @@ class AppDatabaseMigrationTest {
         // assertion would silently inspect one statement and pass.
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_57_58.migrate(db)
+        MIGRATION_57_58.migrate(db)
 
         // Purely additive: one CREATE TABLE plus its two indices, no existing table
         // touched and no back-fill.
@@ -970,7 +1005,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_59_60 targets versions 59 to 60`() {
-        val migration = AppDatabase.MIGRATION_59_60
+        val migration = MIGRATION_59_60
 
         assertEquals(59, migration.startVersion)
         assertEquals(60, migration.endVersion)
@@ -981,7 +1016,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_59_60.migrate(db)
+        MIGRATION_59_60.migrate(db)
 
         verify(exactly = 5) { db.execSQL(capture(statements)) }
         listOf(
@@ -1006,7 +1041,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_60_61 targets versions 60 to 61`() {
-        val migration = AppDatabase.MIGRATION_60_61
+        val migration = MIGRATION_60_61
 
         assertEquals(60, migration.startVersion)
         assertEquals(61, migration.endVersion)
@@ -1017,7 +1052,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_60_61.migrate(db)
+        MIGRATION_60_61.migrate(db)
 
         verify(exactly = 5) { db.execSQL(capture(statements)) }
 
@@ -1052,7 +1087,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_61_62 targets versions 61 to 62`() {
-        val migration = AppDatabase.MIGRATION_61_62
+        val migration = MIGRATION_61_62
 
         assertEquals(61, migration.startVersion)
         assertEquals(62, migration.endVersion)
@@ -1063,7 +1098,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_61_62.migrate(db)
+        MIGRATION_61_62.migrate(db)
 
         verify(exactly = 2) { db.execSQL(capture(statements)) }
         val (alter, backfill) = statements
@@ -1080,7 +1115,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_62_63 targets versions 62 to 63`() {
-        val migration = AppDatabase.MIGRATION_62_63
+        val migration = MIGRATION_62_63
 
         assertEquals(62, migration.startVersion)
         assertEquals(63, migration.endVersion)
@@ -1091,7 +1126,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statement = slot<String>()
 
-        AppDatabase.MIGRATION_62_63.migrate(db)
+        MIGRATION_62_63.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(statement)) }
         // NOT NULL with DEFAULT 0 must match the entity's `@ColumnInfo(defaultValue = "0")`
@@ -1104,7 +1139,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_63_64 targets versions 63 to 64`() {
-        val migration = AppDatabase.MIGRATION_63_64
+        val migration = MIGRATION_63_64
 
         assertEquals(63, migration.startVersion)
         assertEquals(64, migration.endVersion)
@@ -1115,7 +1150,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statement = slot<String>()
 
-        AppDatabase.MIGRATION_63_64.migrate(db)
+        MIGRATION_63_64.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(statement)) }
         // Must match the exported v64 schema's createSql, or Room's validation
@@ -1129,7 +1164,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_64_65 targets versions 64 to 65`() {
-        val migration = AppDatabase.MIGRATION_64_65
+        val migration = MIGRATION_64_65
 
         assertEquals(64, migration.startVersion)
         assertEquals(65, migration.endVersion)
@@ -1140,7 +1175,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statement = slot<String>()
 
-        AppDatabase.MIGRATION_64_65.migrate(db)
+        MIGRATION_64_65.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(statement)) }
         // NOT NULL with DEFAULT 0 must match the entity's `@ColumnInfo(defaultValue = "0")`
@@ -1153,7 +1188,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_65_66 targets versions 65 to 66`() {
-        val migration = AppDatabase.MIGRATION_65_66
+        val migration = MIGRATION_65_66
 
         assertEquals(65, migration.startVersion)
         assertEquals(66, migration.endVersion)
@@ -1164,7 +1199,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_65_66.migrate(db)
+        MIGRATION_65_66.migrate(db)
 
         verify(exactly = 3) { db.execSQL(capture(statements)) }
         // Nullable with no default: a row installed before the migration has never
@@ -1181,7 +1216,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_66_67 targets versions 66 to 67`() {
-        val migration = AppDatabase.MIGRATION_66_67
+        val migration = MIGRATION_66_67
 
         assertEquals(66, migration.startVersion)
         assertEquals(67, migration.endVersion)
@@ -1192,7 +1227,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_66_67.migrate(db)
+        MIGRATION_66_67.migrate(db)
 
         verify(exactly = 13) { db.execSQL(capture(statements)) }
         // Additive with no back-fill: a run recorded before the migration has no header,
@@ -1227,7 +1262,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_67_68 targets versions 67 to 68`() {
-        val migration = AppDatabase.MIGRATION_67_68
+        val migration = MIGRATION_67_68
 
         assertEquals(67, migration.startVersion)
         assertEquals(68, migration.endVersion)
@@ -1238,7 +1273,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statement = slot<String>()
 
-        AppDatabase.MIGRATION_67_68.migrate(db)
+        MIGRATION_67_68.migrate(db)
 
         verify(exactly = 1) { db.execSQL(capture(statement)) }
         // A call recorded before the migration has no duration; the check then counts calls.
@@ -1247,7 +1282,7 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun `MIGRATION_68_69 targets versions 68 to 69`() {
-        val migration = AppDatabase.MIGRATION_68_69
+        val migration = MIGRATION_68_69
 
         assertEquals(68, migration.startVersion)
         assertEquals(69, migration.endVersion)
@@ -1258,7 +1293,7 @@ class AppDatabaseMigrationTest {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
         val statements = mutableListOf<String>()
 
-        AppDatabase.MIGRATION_68_69.migrate(db)
+        MIGRATION_68_69.migrate(db)
 
         verify { db.execSQL(capture(statements)) }
         assertEquals(4, statements.size)

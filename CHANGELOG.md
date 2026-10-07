@@ -223,6 +223,14 @@ details.
   the safety net for restructuring the engine without changing what it does. See
   [`docs/testing.md`](docs/testing.md#golden-run-traces).
 
+- **A database upgrade step can no longer be left out unnoticed.** The app
+  upgrades its database through a list of steps, one per schema version, and
+  the list was written out by hand. A step missing from it built, passed every
+  test, and failed only when an installed app with data was updated. The test
+  suite now checks that the list has no gap and ends at the current schema, and
+  the emulator suite runs the whole list from the oldest saved schema to the
+  newest. Each step now sits in a file of its own.
+
 ## [0.11.1] - 2026-10-02
 
 ### Changed

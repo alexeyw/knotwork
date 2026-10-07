@@ -90,7 +90,7 @@ Only Kotlin files appear inside the generated blocks.
   - `local/` - Tests for Room, DataStore, the encrypted stores and the filesystem-backed stores.
     - `AgentWorkspaceImplTest.kt` - Verifies the `AgentWorkspaceImpl` foundation: the path-traversal containment boundary (the single canonicalisation gate), the per-file and total-size quotas at their exact boundaries, the text/binary read distinction, and the overwrite semantics — each surfaced as a typed `WorkspaceError`.
     - `ApiKeyManagerTest.kt` - Tests for ApiKeyManager.
-    - `AppDatabaseMigrationTest.kt` - Verifies the `AppDatabase.MIGRATION_17_18` script.
+    - `AppDatabaseMigrationTest.kt` - Verifies the Room migration scripts on the JVM, starting with `MIGRATION_17_18`.
     - `AttachmentStoreImplTest.kt` - Verifies `AttachmentStoreImpl`: aspect-preserving downscale to the longest-side cap (never a square crop), JPEG re-encode, ingest of invalid bytes, the content-URI ingest path, and the delete / list surface used by retention.
     - `AudioCaptureStoreImplTest.kt` - Unit tests for `AudioCaptureStoreImpl`, the ephemeral voice-input clip store.
     - `ConvertersTest.kt` - Unit tests for `Converters`, focusing on the `NodeContextConfig` JSON round trip and its legacy-row fallback contract.
@@ -109,6 +109,8 @@ Only Kotlin files appear inside the generated blocks.
     - `EncryptedDbPassphraseProviderTest.kt` - Verifies the loss-protection invariant of `EncryptedDbPassphraseProvider`: the passphrase is generated only when no database file exists, and any failure to read it back while the database is present surfaces as `DbPassphraseUnavailableException` instead of a silent regeneration that would destroy the user's encrypted data.
     - `ImageCaptureStoreImplTest.kt` - Verifies `ImageCaptureStoreImpl`: the camera's full-resolution original — the only copy that keeps its EXIF — is deleted on every way out of the store, and a URI that is not one of its captures can reach no file.
     - `McpServerCollisionCheckTest.kt` - Pure-Kotlin unit coverage for `McpServerCollisionCheck.detectCollision`.
+    - `migrations/` - Guards on the registered list of Room schema migrations.
+      - `AppDatabaseMigrationChainTest.kt` - Guards `ALL_MIGRATIONS`, the one list of schema migrations the database builder registers.
     - `PathContainmentTest.kt` - Verifies `PathContainment` on a real filesystem: `..`, a sibling sharing the root's name as a prefix, and a symlink out are all refused — the three ways a prefix test on the string as written lets a path escape.
     - `settings/` - Tests of the settings section stores' shared read helper.
       - `PreferencesOrEmptyTest.kt` - `preferencesOrEmpty`: readable preferences pass through, an `IOException` becomes empty preferences, any other failure propagates.
