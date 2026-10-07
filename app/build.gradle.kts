@@ -711,8 +711,8 @@ kover {
                     "*_Provide*Factory$*",
                     "dagger.hilt.internal.*",
                     "hilt_aggregated_deps.*",
-                    // Room-generated DAO implementations and the database impl
-                    // (the schema migrations themselves are bundled inside it).
+                    // Room-generated DAO implementations and the database impl.
+                    // The schema migrations (`data.local.migrations`) are measured.
                     "*_Impl",
                     "*_Impl$*",
                     "app.knotwork.android.data.local.AppDatabase",

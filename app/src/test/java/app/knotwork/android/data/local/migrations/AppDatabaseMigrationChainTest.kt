@@ -35,7 +35,7 @@ class AppDatabaseMigrationChainTest {
     }
 
     @Test
-    fun `given the registered list when read then it starts at the oldest version an install can hold`() {
+    fun `given the registered list when read then it starts at the oldest version the app upgrades from`() {
         // Then
         assertEquals(OLDEST_UPGRADABLE_VERSION, ALL_MIGRATIONS.first().startVersion)
     }
