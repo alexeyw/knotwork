@@ -83,6 +83,68 @@ Only Kotlin files appear inside the generated blocks.
     - `ForeignContentUri.kt` - The rule a URI handed to the app by someone else must pass before the app opens it: it is a `content://` URI served by **another** app's provider.
     - `ImageCaptureStoreImpl.kt` - Filesystem-backed `ImageCaptureStore` rooted at `cacheDir/images/` (`TransientCacheDirectory.CAMERA_CAPTURE`) — the directory `res/xml/file_paths.xml` exposes to the camera app through the app's `FileProvider`.
     - `McpServerCollisionCheck.kt` - Pure helper that detects when an `updateMcpServer` call would persist a duplicate URL row (editing server A's URL to match an existing server B's URL). Extracted from `SettingsManager.updateMcpServer` so the decision matrix is unit-testable without DataStore plumbing.
+    - `migrations/` - Room schema migrations, one file per version step, and `ALL_MIGRATIONS`, the ordered list the database builder registers.
+      - `AppDatabaseMigrations.kt` - Every schema migration of `app.knotwork.android.data.local.AppDatabase`, oldest first.
+      - `Migration10To11.kt` - Migration from version 10 to 11.
+      - `Migration11To12.kt` - Migration from version 11 to 12.
+      - `Migration12To13.kt` - Migration from version 12 to 13.
+      - `Migration13To14.kt` - Migration from version 13 to 14.
+      - `Migration14To15.kt` - Migration from version 14 to 15.
+      - `Migration15To16.kt` - Migration from version 15 to 16.
+      - `Migration16To17.kt` - Migration from version 16 to 17.
+      - `Migration17To18.kt` - Migration from version 17 to 18.
+      - `Migration18To19.kt` - Migration from version 18 to 19 — pipeline binding to chat.
+      - `Migration19To20.kt` - Adds the `isFinal` and `isStarred` columns to `chat_messages`.
+      - `Migration20To21.kt` - Migration from version 20 to 21 — pipeline editor.
+      - `Migration21To22.kt` - Migration from version 21 to 22 — chat-session favorites.
+      - `Migration22To23.kt` - Migration from version 22 to 23 — memory chunk pinning.
+      - `Migration23To24.kt` - Migration from version 23 to 24 — pipeline presets.
+      - `Migration24To25.kt` - Migration from version 24 to 25 — prompt presets.
+      - `Migration25To26.kt` - Migration from version 25 to 26 — memory chunk provenance.
+      - `Migration26To27.kt` - Migration from version 26 to 27.
+      - `Migration27To28.kt` - Migration from version 27 to 28 — memory export/import.
+      - `Migration28To29.kt` - Migration from version 28 to 29 — binary embedding storage.
+      - `Migration29To30.kt` - Migration from version 29 to 30.
+      - `Migration30To31.kt` - Migration from version 30 to 31 — persistent run trace.
+      - `Migration31To32.kt` - Migration from version 31 to 32 — checkpoint/resume support.
+      - `Migration32To33.kt` - Migration from version 32 to 33 — persistent background HITL.
+      - `Migration33To34.kt` - Adds the nullable `targetPipelineId` column to `pipeline_nodes`.
+      - `Migration34To35.kt` - Migration from version 34 to 35 — nested-pipeline run tree and trace nesting level.
+      - `Migration35To36.kt` - v35 → v36: adds the `skills` table backing the skill catalogue (bundled + user skills).
+      - `Migration36To37.kt` - Adds the nullable `skillId` column to `pipeline_nodes`, backing `NodeType.SKILL` nodes.
+      - `Migration37To38.kt` - Adds the `chat_history_summaries` table backing long-session chat compression.
+      - `Migration38To39.kt` - Adds the image-attachment columns to `chat_messages`: the store-relative path, MIME type, and pixel dimensions of an image attached to a user message.
+      - `Migration39To40.kt` - Adds the `supportsVision` flag to `local_models`.
+      - `Migration40To41.kt` - Adds the `supportsAudio` flag to `local_models`.
+      - `Migration41To42.kt` - Adds the `model_performance_samples` table backing the model screen's Performance card (per-model TTFT, decode speed and peak native memory) and the controlled benchmark.
+      - `Migration42To43.kt` - Adds an index on `chat_messages.sessionId`, the filter column of every hot chat query (loading a chat, deleting a session's messages, collecting its attachment paths).
+      - `Migration43To44.kt` - Adds the nullable `modelName` column to `chat_messages` so an AGENT answer records the model that generated it (snapshotted at save time) and the chat keeps attributing it correctly after the active model is switched.
+      - `Migration44To45.kt` - Adds the `triggers` table backing user-defined automation triggers (a persisted `condition → bound pipeline` rule).
+      - `Migration45To46.kt` - Adds the `sessionId` column to the `triggers` table backing the bound chat session a trigger's background runs land in.
+      - `Migration46To47.kt` - Adds the local usage-telemetry tables backing the privacy-preserving Usage statistics screen.
+      - `Migration47To48.kt` - v47 → v48: adds the nullable `conditionHasImage` flag to `pipeline_nodes`, backing the IF_CONDITION node's "branch True when the input carries an image" deterministic check.
+      - `Migration48To49.kt` - v48 → v49: adds the non-null `hadImage` flag to `pipeline_runs`, recording whether the run's originating message carried an image.
+      - `Migration49To50.kt` - v49 → v50: adds the non-null `samplePrompts` column to `pipelines`, storing the pipeline's starter ("quick action") suggestions shown on the new-chat empty state as a JSON array string.
+      - `Migration50To51.kt` - Adds the `trigger_evaluations` table backing the trigger-evaluation journal — one row per evaluated *(trigger × moment)* recording the verdict (fire / re-arm / typed skip) and, for a fire, the eventual fate of the enqueued run.
+      - `Migration51To52.kt` - v51 → v52: adds the `onboarding_milestone` table holding the write-once markers of the install → first-value path (onboarding opened, scenario chosen, model download started/finished, first value), which turn the "< 10 minutes to first value" metric into a repeatable measurement instead of a stopwatch reading.
+      - `Migration52To53.kt` - v52 → v53: adds the nullable `memoryRetrievalQuery` column to `pipelines` — the long-term-memory search key a pipeline declares for its background (trigger / scheduled / tile) runs, whose authored prompt is too generic to be a useful semantic key.
+      - `Migration53To54.kt` - v53 → v54: adds the `isArchived` column to `chat_sessions` — the chat-archive flag that moves a conversation out of the main thread list without deleting anything it owns.
+      - `Migration54To55.kt` - v54 → v55: adds the nullable `archivedAt` column to `chat_sessions` — the instant the user archived the conversation.
+      - `Migration55To56.kt` - v55 → v56: adds the human-in-the-loop columns to `trigger_evaluations` — how many approval / clarification gates the fired run raised, which kind the latest one was, how it resolved, and whether it had to park on a durable record first.
+      - `Migration56To57.kt` - v56 → v57: creates `usage_pipeline_day`, the `(day, pipeline)` activity set behind the weekly-retention figures of the local usage statistics.
+      - `Migration57To58.kt` - v57 → v58: adds the `external_automation_requests` journal — one row per request a third-party app sent to the external-automation entry point, admitted or refused.
+      - `Migration58To59.kt` - v58 → v59: gives `pipeline_runs` the two spend counters and the typed termination reason the autonomous-run ceilings need.
+      - `Migration59To60.kt` - Five per-node settings the editor could already show and the engine could not read: the INTENT_ROUTER fallback class, the CLARIFICATION quick replies, the TOOL always-confirm switch, the DECOMPOSITION sub-task cap and the QUEUE_PROCESSOR stop-on-error switch.
+      - `Migration60To61.kt` - The ceiling pause: a run that spends a ceiling now stops to ask instead of ending, and both halves of that exchange need somewhere to live.
+      - `Migration61To62.kt` - Approval requests get an identity of their own: `requestId` on `pending_interactions`, the token every surface answers with, so an answer settles the request it was shown for rather than whatever its session is waiting on.
+      - `Migration62To63.kt` - v62 → v63: adds `chat_messages.imported` — whether a row came from a chat file (*Import chat*) rather than being written on this device.
+      - `Migration63To64.kt` - v63 → v64: adds `background_prompts` — the prompts of queued background runs, which used to travel in the background runtime's own unencrypted store as the worker's input.
+      - `Migration64To65.kt` - v64 → v65: adds `chat_messages.relayed` — whether an AGENT row's text was handed on unchanged rather than written by a model.
+      - `Migration65To66.kt` - v65 → v66: adds the model file's SHA-256 to `local_models` — `sha256` and the stamp of the file it was computed from (`sha256FileSize`, `sha256FileModifiedAt`).
+      - `Migration66To67.kt` - v66 → v67: makes a pipeline run checkable.
+      - `Migration67To68.kt` - v67 → v68: adds `model_calls.durationMs` — how long an on-device call's stream took.
+      - `Migration68To69.kt` - v68 → v69: lets a newer statement of a memory fact replace the stored one without losing it.
+      - `Migration9To10.kt` - Migration from version 9 to 10.
     - `models/` - Local DB entity models.
       - `BackgroundPromptEntity.kt` - The prompt of one queued background run, kept in the encrypted database so the background runtime's own store — unencrypted — never holds it.
       - `ChatHistorySummaryEntity.kt` - Compressed-history summary row (`chat_history_summaries`, v38): per-session prose summary + `coveredMessageCount` cursor; FK onto `chat_sessions(id)` ON DELETE CASCADE.

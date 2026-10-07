@@ -106,10 +106,11 @@ style:
     max: 4
   MagicNumber:
     active: true
-    # `AppDatabase.kt` is excluded because every `Migration(from, to)` block has a
-    # unique pair of version numbers — extracting them into constants would yield
-    # one named constant per migration with no semantic benefit and would obscure
-    # the surrounding KDoc that already documents each step.
+    # The Room migrations (`data/local/migrations/`, one file per step) are excluded
+    # because every `Migration(from, to)` block has a unique pair of version numbers —
+    # extracting them into constants would yield one named constant per migration
+    # with no semantic benefit and would obscure the surrounding KDoc that already
+    # documents each step. `AppDatabase.kt` carries the schema version itself.
     excludes:
       - '**/test/**'
       - '**/androidTest/**'
@@ -117,6 +118,7 @@ style:
       - '**/*Test.kt'
       - '**/*Spec.kt'
       - '**/data/local/AppDatabase.kt'
+      - '**/data/local/migrations/**'
     ignoreNumbers: ['-1', '0', '1', '2', '100']
     ignoreHashCodeFunction: true
     ignorePropertyDeclaration: false

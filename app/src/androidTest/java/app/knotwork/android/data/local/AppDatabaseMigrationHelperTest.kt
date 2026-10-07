@@ -4,6 +4,32 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.knotwork.android.data.local.migrations.ALL_MIGRATIONS
+import app.knotwork.android.data.local.migrations.MIGRATION_23_24
+import app.knotwork.android.data.local.migrations.MIGRATION_24_25
+import app.knotwork.android.data.local.migrations.MIGRATION_25_26
+import app.knotwork.android.data.local.migrations.MIGRATION_26_27
+import app.knotwork.android.data.local.migrations.MIGRATION_27_28
+import app.knotwork.android.data.local.migrations.MIGRATION_28_29
+import app.knotwork.android.data.local.migrations.MIGRATION_29_30
+import app.knotwork.android.data.local.migrations.MIGRATION_30_31
+import app.knotwork.android.data.local.migrations.MIGRATION_31_32
+import app.knotwork.android.data.local.migrations.MIGRATION_32_33
+import app.knotwork.android.data.local.migrations.MIGRATION_37_38
+import app.knotwork.android.data.local.migrations.MIGRATION_50_51
+import app.knotwork.android.data.local.migrations.MIGRATION_53_54
+import app.knotwork.android.data.local.migrations.MIGRATION_54_55
+import app.knotwork.android.data.local.migrations.MIGRATION_55_56
+import app.knotwork.android.data.local.migrations.MIGRATION_56_57
+import app.knotwork.android.data.local.migrations.MIGRATION_57_58
+import app.knotwork.android.data.local.migrations.MIGRATION_58_59
+import app.knotwork.android.data.local.migrations.MIGRATION_62_63
+import app.knotwork.android.data.local.migrations.MIGRATION_63_64
+import app.knotwork.android.data.local.migrations.MIGRATION_64_65
+import app.knotwork.android.data.local.migrations.MIGRATION_65_66
+import app.knotwork.android.data.local.migrations.MIGRATION_66_67
+import app.knotwork.android.data.local.migrations.MIGRATION_67_68
+import app.knotwork.android.data.local.migrations.MIGRATION_68_69
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,7 +81,7 @@ class AppDatabaseMigrationHelperTest {
             seedMemoryChunkV23(db)
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 24, true, AppDatabase.MIGRATION_23_24).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 24, true, MIGRATION_23_24).use { db ->
             assertMemoryChunkPreserved(db)
             // The new table must accept a full row round-trip.
             db.execSQL(
@@ -73,7 +99,7 @@ class AppDatabaseMigrationHelperTest {
             seedMemoryChunkV23(db)
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 25, true, AppDatabase.MIGRATION_24_25).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 25, true, MIGRATION_24_25).use { db ->
             assertMemoryChunkPreserved(db)
             db.execSQL(
                 "INSERT INTO prompt_presets" +
@@ -90,7 +116,7 @@ class AppDatabaseMigrationHelperTest {
             seedMemoryChunkV23(db)
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 26, true, AppDatabase.MIGRATION_25_26).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 26, true, MIGRATION_25_26).use { db ->
             assertMemoryChunkPreserved(db)
             assertEquals(
                 "source must back-fill to the Unknown encoding",
@@ -110,7 +136,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 27, true, AppDatabase.MIGRATION_26_27).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 27, true, MIGRATION_26_27).use { db ->
             assertMemoryChunkPreserved(db)
             db.query("SELECT tagsCsv, useCount, lastUsedAt FROM memory_chunks").use { c ->
                 assertTrue(c.moveToFirst())
@@ -132,7 +158,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 28, true, AppDatabase.MIGRATION_27_28).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 28, true, MIGRATION_27_28).use { db ->
             assertMemoryChunkPreserved(db)
             db.query("SELECT needsReembedding FROM memory_chunks").use { c ->
                 assertTrue(c.moveToFirst())
@@ -163,7 +189,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 29, true, AppDatabase.MIGRATION_28_29).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 29, true, MIGRATION_28_29).use { db ->
             db.query(
                 "SELECT text, embedding, timestamp, isPinned, source, tagsCsv, useCount, lastUsedAt, " +
                     "needsReembedding FROM memory_chunks WHERE id = 1",
@@ -210,7 +236,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 31, true, AppDatabase.MIGRATION_30_31).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 31, true, MIGRATION_30_31).use { db ->
             // The legacy row survives the table recreation with NULL run
             // attribution and the documented NODE_IO defaults.
             db.query(
@@ -269,7 +295,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 32, true, AppDatabase.MIGRATION_31_32).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 32, true, MIGRATION_31_32).use { db ->
             // Pre-existing rows survive with the new columns defaulting to
             // NULL — the documented "recorded before checkpoint support"
             // semantics on both tables.
@@ -313,7 +339,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 33, true, AppDatabase.MIGRATION_32_33).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 33, true, MIGRATION_32_33).use { db ->
             // Pre-existing run rows survive untouched.
             db.query("SELECT status FROM pipeline_runs WHERE id = 'run-1'").use { c ->
                 assertTrue(c.moveToFirst())
@@ -348,7 +374,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 38, true, AppDatabase.MIGRATION_37_38).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 38, true, MIGRATION_37_38).use { db ->
             // Pre-existing session row survives untouched.
             assertEquals("Chat", querySingleString(db, "SELECT name FROM chat_sessions WHERE id = '$SESSION_ID'"))
             // The new table accepts a full summary row and reads it back.
@@ -377,7 +403,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 38, true, AppDatabase.MIGRATION_37_38).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 38, true, MIGRATION_37_38).use { db ->
             db.execSQL("PRAGMA foreign_keys = ON")
             db.execSQL(
                 "INSERT INTO chat_history_summaries(sessionId, summary, coveredMessageCount, updatedAt) " +
@@ -401,16 +427,16 @@ class AppDatabaseMigrationHelperTest {
             TEST_DB,
             33,
             true,
-            AppDatabase.MIGRATION_23_24,
-            AppDatabase.MIGRATION_24_25,
-            AppDatabase.MIGRATION_25_26,
-            AppDatabase.MIGRATION_26_27,
-            AppDatabase.MIGRATION_27_28,
-            AppDatabase.MIGRATION_28_29,
-            AppDatabase.MIGRATION_29_30,
-            AppDatabase.MIGRATION_30_31,
-            AppDatabase.MIGRATION_31_32,
-            AppDatabase.MIGRATION_32_33,
+            MIGRATION_23_24,
+            MIGRATION_24_25,
+            MIGRATION_25_26,
+            MIGRATION_26_27,
+            MIGRATION_27_28,
+            MIGRATION_28_29,
+            MIGRATION_29_30,
+            MIGRATION_30_31,
+            MIGRATION_31_32,
+            MIGRATION_32_33,
         ).use { db ->
             // The original v23 row must survive every step with the new
             // columns filled by their documented defaults and the embedding
@@ -445,7 +471,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 51, true, AppDatabase.MIGRATION_50_51).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 51, true, MIGRATION_50_51).use { db ->
             // Pre-existing trigger rows survive untouched.
             db.query("SELECT name FROM triggers WHERE id = '$TRIGGER_ID'").use { c ->
                 assertTrue(c.moveToFirst())
@@ -482,7 +508,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 54, true, AppDatabase.MIGRATION_53_54).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 54, true, MIGRATION_53_54).use { db ->
             db.query(
                 "SELECT name, pipelineId, isStarred, isArchived FROM chat_sessions WHERE id = '$SESSION_ID'",
             ).use { c ->
@@ -500,6 +526,36 @@ class AppDatabaseMigrationHelperTest {
             db.query("SELECT isArchived FROM chat_sessions WHERE id = '$SESSION_ID'").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals(1, c.getInt(0))
+            }
+        }
+    }
+
+    /**
+     * The list the app registers, end to end: a database at the oldest exported
+     * schema is upgraded through [ALL_MIGRATIONS] — not a hand-picked subset — to
+     * the newest version, and the result is validated against that version's
+     * frozen schema. A step that exists but is missing from the list, or a list
+     * that stops short of the schema the build exports, fails here the way it
+     * would fail an upgrade on a device.
+     */
+    @Test
+    fun migrateOldestExportedToCurrent_throughTheRegisteredList() {
+        helper.createDatabase(TEST_DB, OLDEST_EXPORTED_VERSION).use { db ->
+            seedMemoryChunkV23(db)
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            ALL_MIGRATIONS.last().endVersion,
+            true,
+            *ALL_MIGRATIONS.toTypedArray(),
+        ).use { db ->
+            // The embedding is re-encoded on the way (28 → 29); the text and
+            // timestamp are the user's and must arrive unchanged.
+            db.query("SELECT text, timestamp FROM memory_chunks").use { c ->
+                assertTrue("the seeded chunk must survive every step", c.moveToFirst())
+                assertEquals(CHUNK_TEXT, c.getString(0))
+                assertEquals(CHUNK_TS, c.getLong(1))
             }
         }
     }
@@ -540,6 +596,10 @@ class AppDatabaseMigrationHelperTest {
 
     private companion object {
         const val TEST_DB = "migration-helper-test.db"
+
+        /** The oldest schema committed under `app/schemas/`; earlier versions were never exported. */
+        const val OLDEST_EXPORTED_VERSION = 23
+
         const val CHUNK_TEXT = "remember me"
         const val CHUNK_EMBEDDING = "0.1,0.2,0.3"
         const val CHUNK_TS = 1_700_000_000_000L
@@ -556,7 +616,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 55, true, AppDatabase.MIGRATION_54_55).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 55, true, MIGRATION_54_55).use { db ->
             db.query(
                 "SELECT name, isArchived, archivedAt FROM chat_sessions WHERE id = '$SESSION_ID'",
             ).use { c ->
@@ -587,7 +647,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 56, true, AppDatabase.MIGRATION_55_56).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 56, true, MIGRATION_55_56).use { db ->
             db.query(
                 "SELECT verdictKind, outcomeKind, hitlGateCount, hitlLastKind, hitlLastResolution, " +
                     "hitlParked FROM trigger_evaluations WHERE id = 'eval-1'",
@@ -628,7 +688,7 @@ class AppDatabaseMigrationHelperTest {
             db.execSQL("INSERT INTO usage_active_day(day) VALUES('2026-06-25')")
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 57, true, AppDatabase.MIGRATION_56_57).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 57, true, MIGRATION_56_57).use { db ->
             db.query("SELECT count FROM usage_counter WHERE counterKey = 'pipe-1'").use { c ->
                 assertTrue("seeded counter must survive the migration", c.moveToFirst())
                 assertEquals(4, c.getInt(0))
@@ -657,7 +717,7 @@ class AppDatabaseMigrationHelperTest {
             db.execSQL("INSERT INTO usage_active_day(day) VALUES('2026-08-18')")
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 58, true, AppDatabase.MIGRATION_57_58).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 58, true, MIGRATION_57_58).use { db ->
             db.query("SELECT COUNT(*) FROM usage_active_day").use { c ->
                 assertTrue("seeded row must survive the migration", c.moveToFirst())
                 assertEquals(1, c.getInt(0))
@@ -710,7 +770,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 59, true, AppDatabase.MIGRATION_58_59).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 59, true, MIGRATION_58_59).use { db ->
             db.query(
                 "SELECT stepsSpent, tokensSpent, terminationReason FROM pipeline_runs WHERE id = 'run-old'",
             ).use { c ->
@@ -751,7 +811,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 63, true, AppDatabase.MIGRATION_62_63).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 63, true, MIGRATION_62_63).use { db ->
             db.query("SELECT imported FROM chat_messages WHERE content = 'hello'").use { c ->
                 assertTrue("the pre-existing message must survive the migration", c.moveToFirst())
                 assertEquals("a pre-existing message was written on this device", 0, c.getInt(0))
@@ -768,7 +828,7 @@ class AppDatabaseMigrationHelperTest {
     fun migrate63to64_addsAnEmptyWritableBackgroundPromptsTable() {
         helper.createDatabase(TEST_DB, 63).close()
 
-        helper.runMigrationsAndValidate(TEST_DB, 64, true, AppDatabase.MIGRATION_63_64).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 64, true, MIGRATION_63_64).use { db ->
             db.query("SELECT COUNT(*) FROM background_prompts").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals(0, c.getInt(0))
@@ -791,7 +851,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 65, true, AppDatabase.MIGRATION_64_65).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 65, true, MIGRATION_64_65).use { db ->
             db.query("SELECT relayed FROM chat_messages WHERE content = 'an answer'").use { c ->
                 assertTrue("the pre-existing message must survive the migration", c.moveToFirst())
                 assertEquals("a pre-existing message is not marked relayed", 0, c.getInt(0))
@@ -814,7 +874,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 66, true, AppDatabase.MIGRATION_65_66).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 66, true, MIGRATION_65_66).use { db ->
             db.query(
                 "SELECT path, size, isActive, sha256, sha256FileSize, sha256FileModifiedAt " +
                     "FROM local_models WHERE name = 'gemma.litertlm'",
@@ -850,7 +910,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 67, true, AppDatabase.MIGRATION_66_67).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 67, true, MIGRATION_66_67).use { db ->
             db.query("SELECT headerSeed, headerDevice FROM pipeline_runs WHERE id = 'r1'").use { c ->
                 assertTrue("the pre-existing run must survive the migration", c.moveToFirst())
                 assertTrue("a pre-existing run has no header", c.isNull(0) && c.isNull(1))
@@ -885,7 +945,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 68, true, AppDatabase.MIGRATION_67_68).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 68, true, MIGRATION_67_68).use { db ->
             db.query("SELECT durationMs FROM model_calls WHERE runId = 'r1'").use { c ->
                 assertTrue("the pre-existing call must survive the migration", c.moveToFirst())
                 assertTrue("a pre-existing call has no duration", c.isNull(0))
@@ -907,7 +967,7 @@ class AppDatabaseMigrationHelperTest {
             )
         }
 
-        helper.runMigrationsAndValidate(TEST_DB, 69, true, AppDatabase.MIGRATION_68_69).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 69, true, MIGRATION_68_69).use { db ->
             db.query("SELECT text FROM memory_chunks WHERE id = 7").use { c ->
                 assertTrue("the pre-existing chunk must survive the migration", c.moveToFirst())
                 assertEquals("Lives in Berlin", c.getString(0))

@@ -5,6 +5,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import app.knotwork.android.data.local.AppDatabase
+import app.knotwork.android.data.local.migrations.MIGRATION_61_62
 import app.knotwork.android.data.local.models.PendingInteractionEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -101,7 +102,7 @@ class PendingInteractionDaoTest {
                 "('run-ceiling', 's1', 'CEILING', 3)",
         )
 
-        AppDatabase.MIGRATION_61_62.migrate(db)
+        MIGRATION_61_62.migrate(db)
 
         val requestIds = db.query("SELECT runId, requestId FROM pending_interactions").use { cursor ->
             buildMap {
