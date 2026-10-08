@@ -397,8 +397,10 @@ Only Kotlin files appear inside the generated blocks.
     - `SkillJsonSerializerTest.kt` - Round-trip and edge-case contract for `SkillJsonSerializer`.
   - `text/` - Tests for the pure text helpers.
     - `ApprovalRequestTextTest.kt` - `toDisplaySafeExcerpt` — the rule an approval applies to the request it shows next to the call: display-safe like every quoted value, and cut on a word so the excerpt does not end in half of one.
+    - `DeeplyNestedImportTest.kt` - Every import parser answers a deeply nested document with a failure instead of throwing.
     - `ImportedTextTest.kt` - `toDisplaySafe` — the one rule every importer uses to quote a file back into the app's own sentence: every kind of line break, control and bidi character out, whitespace collapsed, length clamped without splitting a character.
     - `ImportMessageSafetyTest.kt` - Every way an importer can refuse a file, fed a value written to take over the error message.
+    - `JsonNestingTest.kt` - Unit tests for `JsonNesting` — the bracket count that runs before an import is parsed.
     - `TitleTextTest.kt` - Unit tests for the shared single-line-title helpers.
   - `triggerio/` - Tests for the trigger export/import gateway.
     - `TriggerConditionCodecTest.kt` - Unit tests for `TriggerConditionCodec` — the single source of truth for the `TriggerCondition` ↔ JSON wire shape persisted in `triggers.conditionJson`.

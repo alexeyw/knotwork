@@ -4,6 +4,7 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
+import app.knotwork.android.domain.text.JsonNesting
 import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
@@ -77,7 +78,8 @@ object PipelineBundleJsonSerializer {
      * the single-import path, which reports its own parse errors).
      */
     fun looksLikeBundle(jsonText: String): Boolean = try {
-        JSONObject(jsonText).has("bundleVersion")
+        // An over-deep document is not a bundle; the single-import path reports it.
+        !JsonNesting.exceeds(jsonText) && JSONObject(jsonText).has("bundleVersion")
     } catch (_: JSONException) {
         false
     }
@@ -135,6 +137,7 @@ object PipelineBundleJsonSerializer {
     // extracting them would scatter the contract without removing a return.
     @Suppress("ReturnCount")
     fun parse(jsonText: String): PipelineBundleImportOutcome {
+        if (JsonNesting.exceeds(jsonText)) return PipelineBundleImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {

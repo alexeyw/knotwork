@@ -667,6 +667,7 @@ Only Kotlin files appear inside the generated blocks.
   - `text/` - Pure-Kotlin text helpers.
     - `ApprovalRequestText.kt` - Ceilings for the request an approval shows next to the tool call: the text a run was asked to do, and the name of the trigger that asked it.
     - `ImportedText.kt` - Ceilings for text the app quotes back from a file the user picked — an import error, a dialog line.
+    - `JsonNesting.kt` - Bounds how deeply an imported JSON document may nest before it reaches the parser.
     - `TitleText.kt` - `String.collapseWhitespace()` + `String.toSingleLineTitle(maxLength, ellipsis)`, shared by chat auto-rename and share-session naming so their single-line-title logic cannot drift.
   - `triggerio/` - JSON serialisation gateway for automation-trigger conditions.
     - `TriggerConditionCodec.kt` - Single source of truth for the `TriggerCondition` ↔ JSON wire shape stored in `triggers.conditionJson` (org.json, discriminator under `type`). Total decode: null/blank/malformed/unknown-type/missing-payload all return `null` (the repository skips such rows).

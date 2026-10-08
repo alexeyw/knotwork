@@ -3,6 +3,7 @@ package app.knotwork.android.domain.skillio
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.Skill
 import app.knotwork.android.domain.models.SkillImportOutcome
+import app.knotwork.android.domain.text.JsonNesting
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -106,6 +107,7 @@ object SkillJsonSerializer {
      */
     @Suppress("ReturnCount")
     fun parse(jsonText: String, isBundled: Boolean): SkillImportOutcome {
+        if (JsonNesting.exceeds(jsonText)) return SkillImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
