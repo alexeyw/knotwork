@@ -49,7 +49,7 @@ class SurfaceBindingReadersTest {
         /** Callers that need the id after its pipeline is gone, and the launchable resolver built on it. */
         val RAW_READERS = sortedSetOf(
             "FindPipelineBindingsUseCase.kt",
-            "OrchestratorViewModel.kt",
+            "OrchestratorLibraryDelegate.kt",
             "ResolveLaunchableSurfacePipelineUseCase.kt",
         )
 
