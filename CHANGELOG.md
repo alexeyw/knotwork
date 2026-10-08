@@ -183,6 +183,12 @@ details.
   screen has its own file. Nothing on screen changes: every screenshot test
   matches its committed image, and the forms no longer need the exemption.
 
+- **Unused pipeline-editor code is removed.** Nine editing actions of the
+  pipeline editor's view model — left from the editor before the current one —
+  had no caller in the app, and the list of saved prompt templates it loaded was
+  never shown. They are gone, together with the three prompt-template use cases
+  only they used. Nothing the editor does changes.
+
 ### Fixed
 
 - **Cloud retries wait as long as the provider asks, and no longer retry what

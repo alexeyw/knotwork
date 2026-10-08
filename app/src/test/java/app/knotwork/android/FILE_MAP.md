@@ -441,7 +441,6 @@ Only Kotlin files appear inside the generated blocks.
     - `GetContextWindowUseCaseTest.kt` - Tests for GetContextWindowUseCase.
     - `GetDiscoverableModelDetailUseCaseTest.kt` - Unit tests for `GetDiscoverableModelDetailUseCase`.
     - `GetModelPerformanceUseCaseTest.kt` - Unit tests for `GetModelPerformanceUseCase`.
-    - `GetPromptTemplatesUseCaseTest.kt` - Unit tests for `GetPromptTemplatesUseCase`.
     - `ImportPipelineBundleUseCaseTest.kt` - Tests for `ImportPipelineBundleUseCase` — the prepare (parse + validate + collision-detect) and persist (id policy + atomic write) steps.
     - `ImportPipelineUseCaseTest.kt` - Tests for `ImportPipelineUseCase`.
     - `InitializeAppUseCaseTest.kt` - Tests for InitializeAppUseCase.
@@ -490,7 +489,6 @@ Only Kotlin files appear inside the generated blocks.
     - `SavePipelineAsPresetUseCaseTest.kt` - Unit tests for `SavePipelineAsPresetUseCase`.
     - `SavePipelineUseCaseTest.kt` - Tests for SavePipelineUseCase.
     - `SavePromptAsPresetUseCaseTest.kt` - Unit tests for `SavePromptAsPresetUseCase`.
-    - `SavePromptTemplateUseCaseTest.kt` - Unit tests for `SavePromptTemplateUseCase`.
     - `SaveTriggerUseCaseTest.kt` - Unit tests for `SaveTriggerUseCase` — the domain owner of a trigger's runtime lifecycle fields (`armed` / `lastFiredAt` / `createdAt`).
     - `ScheduleTaskUseCaseTest.kt` - Tests for ScheduleTaskUseCase.
     - `SearchDiscoverableModelsUseCaseTest.kt` - Unit tests for `SearchDiscoverableModelsUseCase`.
