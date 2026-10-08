@@ -58,7 +58,8 @@
         "conditionPrompt": null,
         "conditionKeywords": null,
         "conditionComplexity": null,
-        "conditionHasImage": null
+        "conditionHasImage": null,
+        "maxSubtasks": 5
       },
       "contextConfig": {
         "chatHistory": false,
@@ -94,7 +95,8 @@
         "conditionPrompt": null,
         "conditionKeywords": null,
         "conditionComplexity": null,
-        "conditionHasImage": null
+        "conditionHasImage": null,
+        "stopOnError": true
       },
       "contextConfig": {
         "chatHistory": false,
@@ -182,7 +184,7 @@
         "type": "SUMMARY",
         "title": "Put it together",
         "format": "PARAGRAPH",
-        "customPrompt": null,
+        "customPrompt": "You are given the results of every subtask of one task. Combine them into a single answer to the original task. Do not list the subtasks.\n\nReply in the user's language ($LANG).",
         "targetLengthChars": 600
       }
     },

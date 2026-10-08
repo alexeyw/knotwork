@@ -12,7 +12,7 @@ prompt:
 run.create golden pipeline=multi_step_research parent=null status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | Compare how solar and wind power grew over the last decade.
-run.running golden pipeline=multi_step_research graphHash=43bab6f239413ed2f6b305d089093e3bdab047358fa994e7eea120a37dd2c68f
+run.running golden pipeline=multi_step_research graphHash=4354938f4dce48d378cf91f7e7715f7c3a03e7b358cd82908675ccae58ef904f
 driver start
 crash.key active_pipeline_id=multi_step_research
 crash.key active_model=Golden Model

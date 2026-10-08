@@ -241,6 +241,14 @@ details.
   answer. The choice is now GPU or CPU; an NPU choice made earlier reads as CPU,
   which is what it ran on. Settings no longer promise a fallback to GPU that
   never existed: a GPU that fails to start falls back to CPU.
+- **Cookbook recipes run with the values they show.** A pipeline node carries its
+  settings twice — once for the run, once for the editors — and two recipes held
+  some only in the editors' copy: the planning cap and the queue's stop-on-error
+  in *decompose-and-queue*, the router's fallback class in *intent-routing*. The run
+  happened to fall back to the same values, but opening the final summary step of
+  *decompose-and-queue* in the browser editor and saving it erased its prompt. Both
+  copies now agree, in the recipes and in two bundled pipelines, and a test holds
+  every recipe and bundled pipeline to it.
 - **A full hash keeps its groups whole.** The run header lays out the model's
   SHA-256 and the run digest in groups of eight, four to a line — sized for a
   360 dp screen. On a slightly narrower layout or a larger font the last group

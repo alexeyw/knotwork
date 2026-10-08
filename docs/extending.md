@@ -1077,7 +1077,12 @@ field-for-field. It is additive: `PipelineJsonSerializer` round-trips it as
 an opaque blob into `NodeModel.configJson`, the runtime engine ignores it
 (it reads only the flat `config` fields), and documents without it import
 fine — the app derives a default rich config from the flat fields on first
-edit. The browser editor emits it automatically on export.
+edit. The browser editor emits it automatically on export. A setting both
+copies carry — `fallbackClass`, `maxSubtasks`, `stopOnError`, a SUMMARY's
+prompt (`systemPrompt` / `customPrompt`) — must hold the same value in each:
+the run reads the flat one, the editors show and save the envelope.
+`BundledPresetEditabilityTest` holds the bundled presets and the cookbook
+recipes to it.
 
 **Bundled presets must carry it on every node** (enforced by
 `PipelinePresetCatalogValidationTest`), because the legacy derivation is
