@@ -21,9 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -49,27 +47,17 @@ class KoogStructuredInferenceClientFactoryTest {
     }
 
     @Test
-    fun `given a model with JSON schema capability when create then supportsNativeJson is true`() = runTest {
-        coEvery { clientFactory.createClient(CloudProvider.OPENAI, any()) } returns
-            FakeStreamingClient(flowOf(StreamFrame.TextDelta("{}")))
+    fun `given a model that advertises JSON when infer then the request carries no response schema`() = runTest {
+        // The gate keeps its repair budget on a cloud engine because nothing in the
+        // request constrains the answer to JSON — whatever the model advertises.
+        val client = FakeStreamingClient(flowOf(StreamFrame.TextDelta("{}")))
+        coEvery { clientFactory.createClient(CloudProvider.OPENAI, any()) } returns client
         coEvery { modelResolver.resolveModel(CloudProvider.OPENAI) } returns
             LLModel(LLMProvider.OpenAI, "gpt", listOf(LLMCapability.Schema.JSON.Standard))
 
-        val result = factory.create(CloudProvider.OPENAI) { }
+        factory.create(CloudProvider.OPENAI) { }!!.infer("prompt", temperature = null)
 
-        assertTrue(result!!.supportsNativeJson)
-    }
-
-    @Test
-    fun `given a model without JSON capability when create then supportsNativeJson is false`() = runTest {
-        coEvery { clientFactory.createClient(CloudProvider.OPENAI, any()) } returns
-            FakeStreamingClient(flowOf(StreamFrame.TextDelta("x")))
-        coEvery { modelResolver.resolveModel(CloudProvider.OPENAI) } returns
-            LLModel(LLMProvider.OpenAI, "gpt", listOf(LLMCapability.Temperature))
-
-        val result = factory.create(CloudProvider.OPENAI) { }
-
-        assertFalse(result!!.supportsNativeJson)
+        assertNull(client.lastPrompt?.params?.schema)
     }
 
     @Test
@@ -81,7 +69,7 @@ class KoogStructuredInferenceClientFactoryTest {
 
         val tokens = mutableListOf<String>()
         val result = factory.create(CloudProvider.OPENAI) { tokens.add(it) }
-        val output = result!!.inference.infer("prompt", temperature = null)
+        val output = result!!.infer("prompt", temperature = null)
 
         assertEquals("Hello", output)
         assertEquals(listOf("Hel", "lo"), tokens)
@@ -96,18 +84,22 @@ class KoogStructuredInferenceClientFactoryTest {
         coEvery { modelResolver.resolveModel(CloudProvider.OPENAI) } returns
             LLModel(LLMProvider.OpenAI, "gpt", emptyList())
 
-        factory.create(CloudProvider.OPENAI) {}!!.inference.infer("prompt", temperature = null)
+        factory.create(CloudProvider.OPENAI) {}!!.infer("prompt", temperature = null)
 
         verify(exactly = 3) { networkTracker.recordOutbound() }
     }
 
-    /** [LLMClient] returning a scripted streaming flow; other members are unused. */
+    /** [LLMClient] returning a scripted streaming flow and keeping the prompt it got; other members are unused. */
     private class FakeStreamingClient(private val frames: Flow<StreamFrame>) : LLMClient() {
+        var lastPrompt: Prompt? = null
+
         override fun llmProvider(): LLMProvider = LLMProvider.OpenAI
         override suspend fun execute(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Message.Assistant =
             error("unused")
-        override fun executeStreaming(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Flow<StreamFrame> =
-            frames
+        override fun executeStreaming(prompt: Prompt, model: LLModel, tools: List<ToolDescriptor>): Flow<StreamFrame> {
+            lastPrompt = prompt
+            return frames
+        }
         override suspend fun moderate(prompt: Prompt, model: LLModel): ModerationResult = error("unused")
         override fun close() = Unit
     }

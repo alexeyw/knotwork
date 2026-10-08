@@ -2,8 +2,8 @@ package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.engine.LlmInferenceEngine
-import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
+import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AppError
@@ -76,10 +76,7 @@ class SystemNodeExecutorTest {
             StructuredOutputGate(),
             settingsRepository,
             CloudStructuredInferenceClientFactory { _, _ ->
-                CloudStructuredClient(
-                    inference = { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) },
-                    supportsNativeJson = true,
-                )
+                StructuredInferenceClient { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) }
             },
         )
         val node = NodeModel("1", NodeType.EVALUATION, 0f, 0f, cloudProvider = "google")
@@ -224,6 +221,30 @@ class SystemNodeExecutorTest {
             flowOf("""Here are the steps: ["buy milk", "walk dog"]""")
 
         val outputs = executor.execute(node, "input", "session-1", "prompt").toList()
+
+        val result = outputs.lastResult()
+        assertNull(result.error)
+        assertEquals("""["buy milk","walk dog"]""", result.outputText)
+    }
+
+    @Test
+    fun `given a cloud DECOMPOSITION when its first reply is malformed then it is repaired`() = runTest {
+        // Nothing in the request switches a provider's JSON mode on, so its first
+        // answer can be prose like any model's: the configured repair budget applies.
+        val answers = ArrayDeque(listOf("Here you go: buy milk, then walk the dog", """["buy milk", "walk dog"]"""))
+        val cloud = SystemNodeExecutor(
+            llmEngine,
+            loadModelUseCase,
+            chatRepository,
+            StructuredOutputGate(),
+            settingsRepository,
+            CloudStructuredInferenceClientFactory { _, _ ->
+                StructuredInferenceClient { _, _ -> answers.removeFirst() }
+            },
+        )
+        val node = NodeModel("1", NodeType.DECOMPOSITION, 0f, 0f, cloudProvider = "openai")
+
+        val outputs = cloud.execute(node, "input", "session-1", "prompt").toList()
 
         val result = outputs.lastResult()
         assertNull(result.error)

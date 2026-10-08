@@ -1,7 +1,6 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.engine.LlmInferenceEngine
-import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.CollectingRepairListener
 import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
@@ -155,10 +154,7 @@ class EvaluateIfConditionUseCaseTest {
         // proving the use case routes to the cloud seam (not the local engine)
         // when the node carries a cloudProvider.
         val cloudFactory = CloudStructuredInferenceClientFactory { _, _ ->
-            CloudStructuredClient(
-                inference = StructuredInferenceClient { _, _ -> "True" },
-                supportsNativeJson = true,
-            )
+            StructuredInferenceClient { _, _ -> "True" }
         }
         val useCase = EvaluateIfConditionUseCase(
             llmInferenceEngine,

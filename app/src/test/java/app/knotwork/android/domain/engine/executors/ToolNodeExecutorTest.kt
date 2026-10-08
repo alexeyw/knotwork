@@ -1,8 +1,8 @@
 package app.knotwork.android.domain.engine.executors
 
 import app.knotwork.android.domain.engine.LlmInferenceEngine
-import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
+import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
 import app.knotwork.android.domain.engine.structured.StructuredOutputGate
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.AgentTool
@@ -120,10 +120,7 @@ class ToolNodeExecutorTest {
                 structuredOutputGate = StructuredOutputGate(),
                 runSettings = settingsRepository,
                 cloudStructuredFactory = CloudStructuredInferenceClientFactory { _, _ ->
-                    CloudStructuredClient(
-                        inference = { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) },
-                        supportsNativeJson = true,
-                    )
+                    StructuredInferenceClient { _, _ -> throw RuntimeException(LEAKING_PROVIDER_ERROR) }
                 },
             )
             val toolName = "MyTool"
@@ -1085,6 +1082,34 @@ class ToolNodeExecutorTest {
         coEvery { toolRepository.executeTool(toolName, "good_args", any()) } returns "Tool Success"
 
         val outputs = executor.execute(node, "Do something", "session-1", "").toList()
+
+        assertEquals("Tool Success", outputs.lastResult().outputText)
+        assertEquals(1, outputs.consoleEvents().count { it.type == ConsoleEventType.StructuredOutputRepair })
+    }
+
+    @Test
+    fun `given a cloud provider when the first tool call is malformed then it is repaired`() = runTest {
+        // Nothing in the request switches a provider's JSON mode on, so its first
+        // answer can be prose like any model's: the configured repair budget applies.
+        val answers = ArrayDeque(
+            listOf("sorry, here is the json", """{"tool": "MyTool", "arguments": "good_args"}"""),
+        )
+        val cloud = ToolNodeExecutor(
+            llmEngine = llmEngine,
+            loadModelUseCase = loadModelUseCase,
+            toolRepository = toolRepository,
+            toolInvocationGate = toolInvocationGate,
+            structuredOutputGate = StructuredOutputGate(),
+            runSettings = settingsRepository,
+            cloudStructuredFactory = CloudStructuredInferenceClientFactory { _, _ ->
+                StructuredInferenceClient { _, _ -> answers.removeFirst() }
+            },
+        )
+        val node = NodeModel("1", NodeType.TOOL, 0f, 0f, toolName = "MyTool", cloudProvider = "openai")
+        coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool("MyTool", "Desc", "Schema"))
+        coEvery { toolRepository.executeTool("MyTool", "good_args", any()) } returns "Tool Success"
+
+        val outputs = cloud.execute(node, "Do something", "session-1", "").toList()
 
         assertEquals("Tool Success", outputs.lastResult().outputText)
         assertEquals(1, outputs.consoleEvents().count { it.type == ConsoleEventType.StructuredOutputRepair })

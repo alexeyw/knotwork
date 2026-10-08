@@ -14,7 +14,6 @@ import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.CloudLlmModelResolver
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.retry.CloudRetryListener
-import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
 import app.knotwork.android.domain.models.AppError
@@ -114,13 +113,10 @@ internal class GoldenModel(
     /** The cloud structured-inference factory a router, evaluator or tool node may use. */
     val structuredFactory: CloudStructuredInferenceClientFactory =
         CloudStructuredInferenceClientFactory { provider, onToken ->
-            CloudStructuredClient(
-                inference = StructuredInferenceClient { prompt, temperature ->
-                    answer("cloud-structured ${provider.id}", prompt, temperature.describe(), imagePath = null)
-                        .also { answer -> chunks(answer).forEach { onToken(it) } }
-                },
-                supportsNativeJson = false,
-            )
+            StructuredInferenceClient { prompt, temperature ->
+                answer("cloud-structured ${provider.id}", prompt, temperature.describe(), imagePath = null)
+                    .also { answer -> chunks(answer).forEach { onToken(it) } }
+            }
         }
 
     private inner class ScriptedCloudClient(private val provider: CloudProvider) : LLMClient() {

@@ -223,6 +223,16 @@ details.
   that finished. A step's error now ends the run only when the run really ends on
   it. The same change fixes a step that failed without an error message: the run
   carried on as if the step had answered, and now stops there.
+- **Tool and Decomposition steps on a cloud model get their second try back.** On
+  OpenAI, Anthropic, Google and DeepSeek the app assumed the provider would answer
+  in valid JSON and skipped the repair attempts — but nothing in the request asked
+  the provider for JSON. A prose answer failed the step at once, or a fixed-tool
+  step ran its tool with that prose as the arguments. These steps now get the same
+  repairs as on the device's own model.
+- **`delegate_task` goes where it says it will.** The tool tells the model that,
+  unless it names a provider, the first one set up on the device answers; a call
+  that named none went to Anthropic instead — and failed for anyone without an
+  Anthropic key. It now goes to that first provider.
 
 ### Security
 

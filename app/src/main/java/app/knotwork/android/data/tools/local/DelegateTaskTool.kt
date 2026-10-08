@@ -61,56 +61,55 @@ class DelegateTaskTool @Inject constructor(
      * the main thread or the agent's Foreground Service.
      *
      * @param taskDescription A detailed explanation of the task to be delegated. This will be used as the prompt for the external LLM.
-     * @param targetModel The [CloudProvider] wire id of the provider to use (aliases such as `"gemini"` included). Defaults to "google".
+     * @param targetModel The [CloudProvider] wire id of the provider to use (aliases such as `"gemini"` included).
      * @return A summary string detailing the outcome of the delegation, including whether it succeeded, timed out, or encountered an error. This summary is returned back to the calling agent.
      */
-    suspend fun executeDelegation(taskDescription: String, targetModel: String = CloudProvider.GOOGLE.id): String =
-        withContext(Dispatchers.IO) {
-            // Tool arguments arrive as raw JSON strings produced by the LLM, so the
-            // provider id is parsed (with legacy aliases) on the way in. Unknown ids
-            // surface as a typed error rather than silently falling through.
-            val provider = CloudProvider.fromId(targetModel)
-                ?: return@withContext "Error: Unsupported target model '$targetModel'." +
-                    " Supported models: ${CloudProvider.entries.joinToString { it.id }}."
+    suspend fun executeDelegation(taskDescription: String, targetModel: String): String = withContext(Dispatchers.IO) {
+        // Tool arguments arrive as raw JSON strings produced by the LLM, so the
+        // provider id is parsed (with legacy aliases) on the way in. Unknown ids
+        // surface as a typed error rather than silently falling through.
+        val provider = CloudProvider.fromId(targetModel)
+            ?: return@withContext "Error: Unsupported target model '$targetModel'." +
+                " Supported models: ${CloudProvider.entries.joinToString { it.id }}."
 
-            val client = cloudLlmClientFactory.createClient(provider) as? LLMClient
+        val client = cloudLlmClientFactory.createClient(provider) as? LLMClient
 
-            if (client == null) {
-                // Name the real cause — a missing key, the "Block network from local model"
-                // restriction, or a refused address — so the model can relay the right remedy.
-                val cause = cloudLlmClientFactory.unavailabilityOf(provider)?.message(provider)
-                    ?: "Check the provider's settings."
-                return@withContext "Error: Client for '${provider.id}' could not be initialized. $cause"
-            }
-
-            return@withContext try {
-                val model = cloudLlmModelResolver.resolveModel(provider) as LLModel
-
-                networkActivityTracker.recordOutbound()
-                // Apply a 60-second timeout for the external API call
-                val result = withTimeoutOrNull(LLM_CALL_TIMEOUT_MS) {
-                    val stream = client.executeStreaming(prompt("default") { user(taskDescription) }, model)
-                    stream
-                        // Told again per frame, so a long answer keeps the indicator "online".
-                        .onEach { networkActivityTracker.recordOutbound() }
-                        .mapNotNull { frame -> (frame as? StreamFrame.TextDelta)?.text }
-                        .toList()
-                        .joinToString("")
-                }
-
-                if (result.isNullOrBlank()) {
-                    "Error: Task delegation to '${provider.id}' timed out or returned empty after 60 seconds."
-                } else {
-                    "Success: Task completed by '${provider.id}'. Response:\n$result"
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // The result becomes the node's output, the console line and the model's
-                // next observation — scrubbed, since a provider error can quote its key.
-                "Error: Task delegation failed due to an exception: ${CloudErrorSanitizer.sanitize(e)}"
-            }
+        if (client == null) {
+            // Name the real cause — a missing key, the "Block network from local model"
+            // restriction, or a refused address — so the model can relay the right remedy.
+            val cause = cloudLlmClientFactory.unavailabilityOf(provider)?.message(provider)
+                ?: "Check the provider's settings."
+            return@withContext "Error: Client for '${provider.id}' could not be initialized. $cause"
         }
+
+        return@withContext try {
+            val model = cloudLlmModelResolver.resolveModel(provider) as LLModel
+
+            networkActivityTracker.recordOutbound()
+            // Apply a 60-second timeout for the external API call
+            val result = withTimeoutOrNull(LLM_CALL_TIMEOUT_MS) {
+                val stream = client.executeStreaming(prompt("default") { user(taskDescription) }, model)
+                stream
+                    // Told again per frame, so a long answer keeps the indicator "online".
+                    .onEach { networkActivityTracker.recordOutbound() }
+                    .mapNotNull { frame -> (frame as? StreamFrame.TextDelta)?.text }
+                    .toList()
+                    .joinToString("")
+            }
+
+            if (result.isNullOrBlank()) {
+                "Error: Task delegation to '${provider.id}' timed out or returned empty after 60 seconds."
+            } else {
+                "Success: Task completed by '${provider.id}'. Response:\n$result"
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The result becomes the node's output, the console line and the model's
+            // next observation — scrubbed, since a provider error can quote its key.
+            "Error: Task delegation failed due to an exception: ${CloudErrorSanitizer.sanitize(e)}"
+        }
+    }
 
     private companion object {
         /** Maximum wall-clock time, in milliseconds, allowed for a single delegated cloud-LLM call. */

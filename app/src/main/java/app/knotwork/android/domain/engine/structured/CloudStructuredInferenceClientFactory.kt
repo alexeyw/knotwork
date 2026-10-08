@@ -25,21 +25,8 @@ fun interface CloudStructuredInferenceClientFactory {
      * @param provider The cloud provider the node selected.
      * @param onToken Invoked with each streamed token so the executor can keep
      *   showing a live "Thinking" state, mirroring the local client's hook.
-     * @return The [CloudStructuredClient], or `null` when the provider has no
-     *   configured credentials (the caller then surfaces an error or falls back).
+     * @return The client, or `null` when the provider has no configured
+     *   credentials (the caller then surfaces an error or falls back).
      */
-    suspend fun create(provider: CloudProvider, onToken: suspend (String) -> Unit): CloudStructuredClient?
+    suspend fun create(provider: CloudProvider, onToken: suspend (String) -> Unit): StructuredInferenceClient?
 }
-
-/**
- * A cloud-backed structured-inference client together with the one fact the
- * gate's caller needs to size its repair budget.
- *
- * @property inference The [StructuredInferenceClient] the gate runs against.
- * @property supportsNativeJson `true` when the resolved cloud model advertises a
- *   JSON-schema capability. The caller then runs the gate with `maxRepairs = 0`
- *   (trust-but-verify: the provider already constrains output to valid JSON, so
- *   one validation pass suffices and repair calls would be wasted); otherwise it
- *   spends the configured repair budget as a fallback.
- */
-data class CloudStructuredClient(val inference: StructuredInferenceClient, val supportsNativeJson: Boolean)
