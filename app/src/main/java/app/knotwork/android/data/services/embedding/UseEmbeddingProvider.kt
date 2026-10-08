@@ -9,7 +9,7 @@ import javax.inject.Singleton
 
 /**
  * On-device [EmbeddingProvider] backed by the MediaPipe Universal Sentence
- * Encoder (`universal_sentence_encoder.tflite`, 512-d).
+ * Encoder (`universal_sentence_encoder.tflite`, 100-d).
  *
  * This is the default provider: it runs fully on-device, needs no network and
  * no API key, and keeps user text private. It delegates the actual inference
@@ -52,7 +52,10 @@ class UseEmbeddingProvider @Inject constructor(private val engine: TextEmbedding
     }
 
     private companion object {
-        /** Universal Sentence Encoder output dimension. */
-        const val DIMENSION = 512
+        /**
+         * Output dimension of the bundled Universal Sentence Encoder file: 100,
+         * recorded from that file. The 512 this once claimed was assumed, not read.
+         */
+        const val DIMENSION = 100
     }
 }

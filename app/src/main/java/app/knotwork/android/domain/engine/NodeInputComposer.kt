@@ -255,7 +255,7 @@ class NodeInputComposer private constructor(
         )
         val hits = scored.map { it.first }
         // Record that these chunks were injected into this run so the
-        // Memory detail sheet can show "Used in N replies". Best-effort:
+        // Memory detail sheet can show "Used in N runs". Best-effort:
         // a failure here must never break the pipeline run.
         try {
             sources.memoryRepository.recordUsage(hits.map { it.id }, System.currentTimeMillis())

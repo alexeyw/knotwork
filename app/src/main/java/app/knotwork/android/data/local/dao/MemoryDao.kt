@@ -106,7 +106,7 @@ interface MemoryDao {
     /**
      * Records that the given chunks were just retrieved into a pipeline run's
      * Long-Term Memory context: increments each chunk's `useCount` and stamps
-     * `lastUsedAt`. Backs the detail sheet's "Used in N replies" line.
+     * `lastUsedAt`. Backs the detail sheet's "Used in N runs" line.
      *
      * @param ids Identifiers of the chunks that were injected.
      * @param atMillis Epoch-millis to stamp as the most-recent use time.

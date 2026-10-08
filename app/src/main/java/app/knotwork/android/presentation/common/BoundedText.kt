@@ -59,9 +59,10 @@ fun InputStream.readTextWithin(maxBytes: Long): BoundedText {
  * ceiling.
  *
  * A memory export cannot have a fixed ceiling that means anything: the app's
- * own export of the default 5 000 chunks at 512 dimensions is about 50 MB, and
- * of the 20 000 the store can be set to keep, about 200 MB (computed from the
- * export format, not measured). What bounds an import is the heap: the text is
+ * own export of the default 5 000 chunks is about 12 MB with the built-in
+ * 100-dimension embedder and about 170 MB with a 1 536-dimension cloud one, and
+ * of the 20 000 the store can be set to keep, about 50 MB and 670 MB (computed
+ * from the export format, not measured). What bounds an import is the heap: the text is
  * held as a string at two bytes per character while the parser builds a tree
  * of about the same size again. A quarter of the heap leaves room for both and
  * for the app around them. The divisor is an estimate, not a measurement.

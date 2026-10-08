@@ -241,6 +241,19 @@ details.
   answer. The choice is now GPU or CPU; an NPU choice made earlier reads as CPU,
   which is what it ran on. Settings no longer promise a fallback to GPU that
   never existed: a GPU that fails to start falls back to CPU.
+- **Compaction no longer deletes facts it cannot check.** A memory is deleted
+  under a summary only when its embedding shows the summary carries it. The
+  built-in embedder is an English model and places unrelated Russian facts almost
+  on top of each other, so any Russian summary looked like it carried every
+  Russian fact in its group — and the originals could be deleted under one that
+  did not. A fact the embedder cannot tell apart from another in its group now
+  stays as it is.
+- **The memory detail counts runs, not replies.** "Used in N replies" counted the
+  runs whose memory block received the entry, whether or not the reply used it,
+  and said "1 replies". It now reads "Used in 1 run" / "N runs".
+- **A failed memory import no longer shows the database's error text.** When the
+  store refuses an import, the app says nothing was saved — which is true: the
+  import is one transaction — and the details go to the log.
 - **Discover shows a download that is already running.** A model whose file was
   still downloading — started from the Models screen, or from Discover before you
   left — opened with an Install button and no progress, and stayed that way even

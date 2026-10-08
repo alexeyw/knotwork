@@ -2,6 +2,7 @@ package app.knotwork.android.data.services.embedding
 
 import app.knotwork.android.domain.engine.TextEmbeddingEngine
 import app.knotwork.android.domain.services.EmbeddingProvider
+import app.knotwork.android.domain.services.MemorySupersedeFixture
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -26,9 +27,11 @@ class UseEmbeddingProviderTest {
     }
 
     @Test
-    fun `exposes the on-device identity and 512 dimension`() {
+    fun `exposes the on-device identity and the dimension the bundled model returns`() {
         assertEquals(EmbeddingProvider.ID_USE, provider.id)
-        assertEquals(512, provider.dimension)
+        // Recorded from the shipped model file (the fixture pins its SHA-256); the
+        // 512 this test once asserted was assumed, not read from the file.
+        assertEquals(MemorySupersedeFixture.dimension, provider.dimension)
         assertTrue(provider.displayName.isNotBlank())
     }
 

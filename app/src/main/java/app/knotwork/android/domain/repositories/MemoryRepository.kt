@@ -218,8 +218,10 @@ interface MemoryRepository {
      * @param needsReembedding When `true`, every inserted chunk is flagged for
      *   background re-embedding because the file was exported under a different
      *   embedding provider.
+     * @return Success once the chunks are stored; a failure when the store refused
+     *   the transaction — which then wrote nothing.
      */
-    suspend fun insertImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean)
+    suspend fun insertImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean): Result<Unit>
 
     /**
      * Atomically replaces the entire memory table with [memories] (the Replace
@@ -232,8 +234,10 @@ interface MemoryRepository {
      *   the caller guards against wiping with nothing to insert).
      * @param needsReembedding When `true`, every loaded chunk is flagged for
      *   background re-embedding.
+     * @return Success once the store holds exactly [memories]; a failure when the
+     *   store refused the transaction — which then left the old store in place.
      */
-    suspend fun replaceImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean)
+    suspend fun replaceImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean): Result<Unit>
 
     /**
      * One-shot count of chunks awaiting re-embedding. Backs the cheap startup

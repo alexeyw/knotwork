@@ -95,18 +95,21 @@ class MemoryImportUseCase @Inject constructor(
      * @param document The parsed document to import.
      * @param strategy How to reconcile with the existing store.
      * @return A [MemoryImportResult] describing how many chunks were imported
-     *   and skipped, and whether a re-embed was scheduled.
+     *   and skipped, and whether a re-embed was scheduled; or a failure when the
+     *   store refused the import — which then changed nothing.
      */
-    suspend fun import(document: MemoryExportDocument, strategy: MemoryImportStrategy): MemoryImportResult {
+    suspend fun import(document: MemoryExportDocument, strategy: MemoryImportStrategy): Result<MemoryImportResult> {
         val needsReembedding = isProviderMismatched(document)
         val toInsert = when (strategy) {
             MemoryImportStrategy.Replace -> {
                 // Guard: never wipe the store when there is nothing to load.
                 if (document.chunks.isEmpty()) {
-                    return MemoryImportResult(imported = 0, skipped = 0, needsReembedding = false)
+                    return Result.success(MemoryImportResult(imported = 0, skipped = 0, needsReembedding = false))
                 }
                 val deduped = document.memories.dedupById()
-                memoryRepository.replaceImportedMemories(deduped, needsReembedding)
+                memoryRepository.replaceImportedMemories(deduped, needsReembedding).onFailure {
+                    return Result.failure(it)
+                }
                 deduped
             }
             MemoryImportStrategy.Merge -> {
@@ -117,7 +120,9 @@ class MemoryImportUseCase @Inject constructor(
                 // within the file, so the count matches what REPLACE-on-conflict
                 // actually persists.
                 val fresh = document.memories.filter { it.chunk.id !in existing }.dedupById()
-                memoryRepository.insertImportedMemories(fresh, needsReembedding)
+                memoryRepository.insertImportedMemories(fresh, needsReembedding).onFailure {
+                    return Result.failure(it)
+                }
                 fresh
             }
         }
@@ -127,10 +132,12 @@ class MemoryImportUseCase @Inject constructor(
         if (scheduledReembed) {
             reembedScheduler.schedule()
         }
-        return MemoryImportResult(
-            imported = toInsert.size,
-            skipped = document.chunks.size - toInsert.size,
-            needsReembedding = scheduledReembed,
+        return Result.success(
+            MemoryImportResult(
+                imported = toInsert.size,
+                skipped = document.chunks.size - toInsert.size,
+                needsReembedding = scheduledReembed,
+            ),
         )
     }
 

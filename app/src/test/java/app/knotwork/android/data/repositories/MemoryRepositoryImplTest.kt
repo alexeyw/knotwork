@@ -323,6 +323,23 @@ class MemoryRepositoryImplTest {
         }
 
     @Test
+    fun `given the store refuses the import transaction when importing then a failure comes back`() =
+        kotlinx.coroutines.test.runTest {
+            val refusal = android.database.sqlite.SQLiteFullException("database or disk is full")
+            io.mockk.coEvery { historyDao.importChunks(any(), any()) } throws refusal
+            val chunk = MemoryChunk(id = 9, text = "imported", embedding = floatArrayOf(0.1f), timestamp = 1L)
+
+            val merged = repository.insertImportedMemories(listOf(MemoryWithHistory(chunk)), needsReembedding = false)
+            val replaced = repository.replaceImportedMemories(
+                listOf(MemoryWithHistory(chunk)),
+                needsReembedding = false,
+            )
+
+            assertEquals(refusal, merged.exceptionOrNull())
+            assertEquals(refusal, replaced.exceptionOrNull())
+        }
+
+    @Test
     fun `insertImportedMemories is a no-op for an empty list`() = kotlinx.coroutines.test.runTest {
         repository.insertImportedMemories(emptyList(), needsReembedding = false)
         io.mockk.coVerify(exactly = 0) { historyDao.importChunks(any(), any()) }

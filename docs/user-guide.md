@@ -2269,7 +2269,8 @@ field or in the file you import.
 Tap a row to open its detail sheet. It shows the full text, an
 approximate token count, the source ("Auto-extracted" / "Saved
 manually" / "Compacted"), which chat it was learned from, when it was
-captured, and how often it has been used in replies. From here you can
+captured, and in how many runs it was recalled into the agent's memory —
+runs, not replies: the model may not have used it. From here you can
 **pin**, **edit** the text and tags, or **delete** the entry. Pinned
 entries float to the top and are never touched by compaction.
 
@@ -2310,16 +2311,19 @@ it.
 
 Tap **Compact** in the stats header to consolidate memory. A dialog
 previews the estimated number of chunks removed, bytes freed, and
-runtime before you confirm. Compaction merges near-duplicate chunks and
-re-summarises the oldest entries; pinned memories are never touched. The
+runtime before you confirm. Compaction merges related chunks into shorter
+summaries, oldest entries first; pinned memories are never touched. The
 "compacted N ago" line in the header reflects the last run.
 
 The preview is an upper bound, and deliberately so. An entry is deleted only
 once the on-device model's summary has been checked to actually represent it,
 so facts a summary skipped stay in memory word-for-word, and a summary that
 turned out not to describe its group is discarded with the whole group left
-intact. A run can therefore free less than it predicted — never more, and never
-at the cost of a fact whose only copy it was about to remove. If a merged
+intact. The check works on the memories' embeddings, so an entry it cannot tell
+apart from another in its group — two facts of the same shape, or text the
+built-in embedder cannot read, such as Russian — is never merged. A run can
+therefore free less than it predicted — never more, and never at the cost of a
+fact whose only copy it was about to remove. If a merged
 summary and the original wording of one of its facts are both in memory (say
 after importing an older backup), the original is what the agent is shown.
 

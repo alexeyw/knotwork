@@ -12,11 +12,9 @@ import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.MemoryReembedScheduler
-import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -44,8 +42,8 @@ class MemoryImportUseCaseTest {
         resolver = mockk()
         scheduler = mockk(relaxed = true)
         useCase = MemoryImportUseCase(repository, resolver, scheduler)
-        coEvery { repository.insertImportedMemories(any(), any()) } just Runs
-        coEvery { repository.replaceImportedMemories(any(), any()) } just Runs
+        coEvery { repository.insertImportedMemories(any(), any()) } returns Result.success(Unit)
+        coEvery { repository.replaceImportedMemories(any(), any()) } returns Result.success(Unit)
         // Default: retrieval resolves to the on-device USE provider.
         resolveActiveProviderTo(EmbeddingProvider.ID_USE)
     }
@@ -58,6 +56,12 @@ class MemoryImportUseCaseTest {
         val provider = mockk<EmbeddingProvider> { every { this@mockk.id } returns id }
         coEvery { resolver.resolve() } returns provider
     }
+
+    /** The import's result, for the cases where the store accepts it. */
+    private suspend fun MemoryImportUseCase.importOrThrow(
+        document: MemoryExportDocument,
+        strategy: MemoryImportStrategy,
+    ) = import(document, strategy).getOrThrow()
 
     private fun chunk(id: Long) = MemoryChunk(id = id, text = "t$id", embedding = floatArrayOf(0.1f), timestamp = id)
 
@@ -75,10 +79,10 @@ class MemoryImportUseCaseTest {
     fun `Merge inserts only chunks whose id is not already present`() = runTest {
         coEvery { repository.getExistingMemoryIds() } returns setOf(1L, 2L)
         val captured = slot<List<MemoryWithHistory>>()
-        coEvery { repository.insertImportedMemories(capture(captured), any()) } just Runs
+        coEvery { repository.insertImportedMemories(capture(captured), any()) } returns Result.success(Unit)
 
         val doc = document("use", listOf(chunk(1), chunk(3)))
-        val result = useCase.import(doc, MemoryImportStrategy.Merge)
+        val result = useCase.importOrThrow(doc, MemoryImportStrategy.Merge)
 
         assertEquals(1, result.imported)
         assertEquals(1, result.skipped)
@@ -91,7 +95,7 @@ class MemoryImportUseCaseTest {
         // Given
         coEvery { repository.getExistingMemoryIds() } returns setOf(1L)
         val captured = slot<List<MemoryWithHistory>>()
-        coEvery { repository.insertImportedMemories(capture(captured), any()) } just Runs
+        coEvery { repository.insertImportedMemories(capture(captured), any()) } returns Result.success(Unit)
         val earlier = MemoryVersion(
             id = 0L,
             chunkId = 0L,
@@ -109,7 +113,7 @@ class MemoryImportUseCaseTest {
         )
 
         // When
-        useCase.import(doc, MemoryImportStrategy.Merge)
+        useCase.importOrThrow(doc, MemoryImportStrategy.Merge)
 
         // Then — the skipped chunk's history is skipped with it.
         assertEquals(listOf(3L), captured.captured.map { it.chunk.id })
@@ -120,12 +124,12 @@ class MemoryImportUseCaseTest {
     fun `Merge always inserts id-less chunks`() = runTest {
         coEvery { repository.getExistingMemoryIds() } returns setOf(1L)
         val captured = slot<List<MemoryWithHistory>>()
-        coEvery { repository.insertImportedMemories(capture(captured), any()) } just Runs
+        coEvery { repository.insertImportedMemories(capture(captured), any()) } returns Result.success(Unit)
 
         // Two id-less (id == 0) chunks must both be inserted (Room auto-assigns
         // fresh keys); dedupById keeps every id-0 chunk rather than collapsing.
         val doc = document("use", listOf(chunk(0), chunk(0)))
-        val result = useCase.import(doc, MemoryImportStrategy.Merge)
+        val result = useCase.importOrThrow(doc, MemoryImportStrategy.Merge)
 
         assertEquals(2, result.imported)
         assertEquals(2, captured.captured.size)
@@ -134,12 +138,12 @@ class MemoryImportUseCaseTest {
     @Test
     fun `Replace dedupes file-internal duplicate ids so the count matches stored rows`() = runTest {
         val captured = slot<List<MemoryWithHistory>>()
-        coEvery { repository.replaceImportedMemories(capture(captured), any()) } just Runs
+        coEvery { repository.replaceImportedMemories(capture(captured), any()) } returns Result.success(Unit)
 
         // Two chunks share id=5; @Insert REPLACE would collapse them to one row,
         // so imported must report 1, not 2.
         val doc = document("use", listOf(chunk(5), chunk(5), chunk(6)))
-        val result = useCase.import(doc, MemoryImportStrategy.Replace)
+        val result = useCase.importOrThrow(doc, MemoryImportStrategy.Replace)
 
         assertEquals(2, result.imported)
         assertEquals(1, result.skipped)
@@ -149,10 +153,10 @@ class MemoryImportUseCaseTest {
     @Test
     fun `Replace transactionally replaces with every chunk`() = runTest {
         val captured = slot<List<MemoryWithHistory>>()
-        coEvery { repository.replaceImportedMemories(capture(captured), any()) } just Runs
+        coEvery { repository.replaceImportedMemories(capture(captured), any()) } returns Result.success(Unit)
 
         val doc = document("use", listOf(chunk(1), chunk(2)))
-        val result = useCase.import(doc, MemoryImportStrategy.Replace)
+        val result = useCase.importOrThrow(doc, MemoryImportStrategy.Replace)
 
         assertEquals(2, result.imported)
         assertEquals(0, result.skipped)
@@ -164,7 +168,7 @@ class MemoryImportUseCaseTest {
     fun `Replace with an empty document leaves the store untouched`() = runTest {
         val doc = document("use", emptyList())
 
-        val result = useCase.import(doc, MemoryImportStrategy.Replace)
+        val result = useCase.importOrThrow(doc, MemoryImportStrategy.Replace)
 
         assertEquals(0, result.imported)
         coVerify(exactly = 0) { repository.replaceImportedMemories(any(), any()) }
@@ -175,9 +179,9 @@ class MemoryImportUseCaseTest {
     @Test
     fun `provider mismatch flags re-embedding and schedules the background pass`() = runTest {
         val needsFlag = slot<Boolean>()
-        coEvery { repository.replaceImportedMemories(any(), capture(needsFlag)) } just Runs
+        coEvery { repository.replaceImportedMemories(any(), capture(needsFlag)) } returns Result.success(Unit)
 
-        val result = useCase.import(
+        val result = useCase.importOrThrow(
             document("openai_3_small", listOf(chunk(1))),
             MemoryImportStrategy.Replace,
         )
@@ -189,9 +193,9 @@ class MemoryImportUseCaseTest {
 
     @Test
     fun `matching provider does not schedule a re-embed`() = runTest {
-        coEvery { repository.replaceImportedMemories(any(), capture(slot())) } just Runs
+        coEvery { repository.replaceImportedMemories(any(), capture(slot())) } returns Result.success(Unit)
 
-        val result = useCase.import(
+        val result = useCase.importOrThrow(
             document("use", listOf(chunk(1))),
             MemoryImportStrategy.Replace,
         )
@@ -206,7 +210,7 @@ class MemoryImportUseCaseTest {
 
         // All incoming chunks are duplicates, so nothing lands and no re-embed
         // is needed despite the provider mismatch.
-        val result = useCase.import(
+        val result = useCase.importOrThrow(
             document("openai_3_small", listOf(chunk(1))),
             MemoryImportStrategy.Merge,
         )
@@ -223,9 +227,9 @@ class MemoryImportUseCaseTest {
         // openai_3_small-stamped file therefore IS a mismatch and must be flagged,
         // even though the raw persisted setting would have "matched" the file.
         resolveActiveProviderTo(EmbeddingProvider.ID_USE)
-        coEvery { repository.replaceImportedMemories(any(), capture(slot())) } just Runs
+        coEvery { repository.replaceImportedMemories(any(), capture(slot())) } returns Result.success(Unit)
 
-        val result = useCase.import(
+        val result = useCase.importOrThrow(
             document(EmbeddingProvider.ID_OPENAI_3_SMALL, listOf(chunk(1))),
             MemoryImportStrategy.Replace,
         )
@@ -239,9 +243,9 @@ class MemoryImportUseCaseTest {
         // Selection resolves to openai_3_small (key configured) and the file was
         // exported under the same provider, so the vectors are already compatible.
         resolveActiveProviderTo(EmbeddingProvider.ID_OPENAI_3_SMALL)
-        coEvery { repository.replaceImportedMemories(any(), capture(slot())) } just Runs
+        coEvery { repository.replaceImportedMemories(any(), capture(slot())) } returns Result.success(Unit)
 
-        val result = useCase.import(
+        val result = useCase.importOrThrow(
             document(EmbeddingProvider.ID_OPENAI_3_SMALL, listOf(chunk(1))),
             MemoryImportStrategy.Replace,
         )
@@ -256,5 +260,32 @@ class MemoryImportUseCaseTest {
 
         assertTrue(useCase.isProviderMismatched(document(EmbeddingProvider.ID_OPENAI_3_SMALL, emptyList())))
         assertFalse(useCase.isProviderMismatched(document(EmbeddingProvider.ID_USE, emptyList())))
+    }
+
+    @Test
+    fun `given the store refuses a merge when importing then a failure comes back and nothing is scheduled`() =
+        runTest {
+            resolveActiveProviderTo("openai")
+            coEvery { repository.getExistingMemoryIds() } returns emptySet()
+            val refusal = IllegalStateException("disk I/O error")
+            coEvery { repository.insertImportedMemories(any(), any()) } returns Result.failure(refusal)
+
+            val result = useCase.import(
+                document(EmbeddingProvider.ID_USE, listOf(chunk(1))),
+                MemoryImportStrategy.Merge,
+            )
+
+            assertEquals(refusal, result.exceptionOrNull())
+            verify(exactly = 0) { scheduler.schedule() }
+        }
+
+    @Test
+    fun `given the store refuses a replace when importing then a failure comes back`() = runTest {
+        val refusal = IllegalStateException("disk I/O error")
+        coEvery { repository.replaceImportedMemories(any(), any()) } returns Result.failure(refusal)
+
+        val result = useCase.import(document(EmbeddingProvider.ID_USE, listOf(chunk(1))), MemoryImportStrategy.Replace)
+
+        assertEquals(refusal, result.exceptionOrNull())
     }
 }

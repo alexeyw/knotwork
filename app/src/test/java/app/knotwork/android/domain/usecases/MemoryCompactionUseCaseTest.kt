@@ -12,6 +12,7 @@ import app.knotwork.android.domain.services.CompactionCoverageVerifier
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
 import app.knotwork.android.domain.services.KMeansClusterer
+import app.knotwork.android.domain.services.MemorySupersedeFixture
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -57,7 +58,8 @@ class MemoryCompactionUseCaseTest {
         return floatArrayOf(cos(radians).toFloat(), sin(radians).toFloat())
     }
 
-    private fun chunk(id: Long, text: String, degrees: Double = 0.0) =
+    /** Chunks 1, 2, 3, 4 sit 15 degrees apart by default: close, yet distinguishable (cos 15 = 0.966 < 0.98). */
+    private fun chunk(id: Long, text: String, degrees: Double = (id - 1) * DEFAULT_SPACING) =
         MemoryChunk(id = id, text = text, embedding = unit(degrees), timestamp = 1L)
 
     @Before
@@ -76,9 +78,9 @@ class MemoryCompactionUseCaseTest {
         coEvery { loadModelUseCase.invoke(any()) } returns Result.Success(Unit)
         coEvery { promptTemplateEngine.render(any(), any()) } answers { firstArg() }
         coEvery { embeddingProviderResolver.resolve() } returns embeddingProvider
-        // The default summary sits exactly where the default cluster does, so
-        // the coverage gate passes unless a test moves one of them.
-        coEvery { embeddingProvider.embed(any<String>()) } returns unit(0.0)
+        // The default summary sits at the centre of the default cluster (0, 15
+        // and 30 degrees), so the coverage gate passes unless a test moves it.
+        coEvery { embeddingProvider.embed(any<String>()) } returns unit(DEFAULT_SPACING)
         coEvery { memoryRepository.saveMemory(any(), any(), any(), any()) } returns 99L
         coEvery { memoryRepository.replaceWithConsolidated(any(), any(), any()) } returns 99L
         coEvery { memoryRepository.deleteMemory(any()) } returns Unit
@@ -137,7 +139,7 @@ class MemoryCompactionUseCaseTest {
 
     @Test
     fun `given a summary covering only part of a cluster when invoke then the rest survives verbatim`() = runTest {
-        // Chunk 3 sits 90 degrees away: the summary written at 0 degrees cannot
+        // Chunk 3 sits 90 degrees away: the summary written at 15 degrees cannot
         // be shown to represent it, so it must not be deleted.
         val candidates = listOf(chunk(1, "a"), chunk(2, "b"), chunk(3, "c", degrees = 90.0))
         coEvery { memoryRepository.getCompactionCandidates(any()) } returns candidates
@@ -151,6 +153,29 @@ class MemoryCompactionUseCaseTest {
         coVerify(exactly = 1) {
             memoryRepository.replaceWithConsolidated("Merged fact", any(), listOf(1L, 2L))
         }
+    }
+
+    @Test
+    fun `given a cluster of unrelated Russian facts when invoke then nothing is deleted`() = runTest {
+        // Recorded vectors of the bundled encoder: it cannot tell these facts apart,
+        // so it cannot vouch that a summary carries each of them.
+        val texts = listOf("Живёт в Берлине", "Аллергия на арахис", "Работает программистом")
+        val candidates = texts.mapIndexed { index, text ->
+            MemoryChunk(
+                id = index + 1L,
+                text = text,
+                embedding = MemorySupersedeFixture.vector(text),
+                timestamp = 1L,
+            )
+        }
+        coEvery { memoryRepository.getCompactionCandidates(any()) } returns candidates
+        every { kMeansClusterer.cluster(any()) } returns listOf(listOf(0, 1, 2))
+        coEvery { embeddingProvider.embed(any<String>()) } returns MemorySupersedeFixture.vector("Кошку зовут Мурка")
+
+        val outcome = useCase(now)
+
+        assertEquals(1, outcome.clustersRejected)
+        coVerify(exactly = 0) { memoryRepository.replaceWithConsolidated(any(), any(), any()) }
     }
 
     @Test
@@ -269,5 +294,10 @@ class MemoryCompactionUseCaseTest {
 
         val expectedCutoff = now - 30L * TimeAndIdConstants.MS_PER_DAY
         coVerify(exactly = 1) { memoryRepository.getCompactionCandidates(expectedCutoff) }
+    }
+
+    private companion object {
+        /** Degrees between neighbouring default chunks. */
+        const val DEFAULT_SPACING = 15.0
     }
 }

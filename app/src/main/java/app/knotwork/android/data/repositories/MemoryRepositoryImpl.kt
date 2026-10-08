@@ -14,6 +14,7 @@ import app.knotwork.android.domain.models.MemorySummary
 import app.knotwork.android.domain.models.MemoryWithHistory
 import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.services.MemoryVectorSimilarity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -174,17 +175,40 @@ class MemoryRepositoryImpl @Inject constructor(
         memoryDao.getAllIds().toSet()
     }
 
-    override suspend fun insertImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean) {
-        if (memories.isEmpty()) return
-        withContext(Dispatchers.IO) {
-            historyDao.importChunks(memories.toImportEntities(needsReembedding), replaceAll = false)
-        }
+    override suspend fun insertImportedMemories(
+        memories: List<MemoryWithHistory>,
+        needsReembedding: Boolean,
+    ): Result<Unit> {
+        if (memories.isEmpty()) return Result.success(Unit)
+        return storeImport(memories, needsReembedding, replaceAll = false)
     }
 
-    override suspend fun replaceImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean) =
-        withContext(Dispatchers.IO) {
-            historyDao.importChunks(memories.toImportEntities(needsReembedding), replaceAll = true)
+    override suspend fun replaceImportedMemories(
+        memories: List<MemoryWithHistory>,
+        needsReembedding: Boolean,
+    ): Result<Unit> = storeImport(memories, needsReembedding, replaceAll = true)
+
+    /**
+     * Runs one import transaction and reports its outcome instead of throwing: a
+     * full disk or a corrupt database is the store's answer, and it belongs in the
+     * log, not on the screen. The transaction is all-or-nothing, so a failure has
+     * written nothing.
+     */
+    private suspend fun storeImport(
+        memories: List<MemoryWithHistory>,
+        needsReembedding: Boolean,
+        replaceAll: Boolean,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            historyDao.importChunks(memories.toImportEntities(needsReembedding), replaceAll = replaceAll)
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "Memory import transaction failed")
+            Result.failure(e)
         }
+    }
 
     override suspend fun countMemoriesNeedingReembedding(): Int = withContext(Dispatchers.IO) {
         memoryDao.countNeedingReembedding()

@@ -354,7 +354,7 @@ internal object MemoryPreview {
         tags = listOf("knowledge", "on-device"),
         learnedFromLabel = "Chat \"Pixel 9 NPU setup\"",
         capturedLabel = "2026-05-27 · 14:02",
-        usedInLabel = "6 replies · last 2 h ago",
+        usedInLabel = "6 runs · last 2 h ago",
         isPinned = false,
     )
 
@@ -465,7 +465,7 @@ internal object MemoryPreview {
         tags = listOf("preference", "style"),
         learnedFromLabel = "Chat \"Weekend plans\"",
         capturedLabel = "2026-10-02 · 18:40",
-        usedInLabel = "4 replies · last 1 h ago",
+        usedInLabel = "4 runs · last 1 h ago",
         isPinned = false,
         history = languageVersions(),
     )
@@ -481,7 +481,7 @@ internal object MemoryPreview {
             tags = listOf("personal", "place"),
             learnedFromLabel = null,
             capturedLabel = "2026-05-12 · 09:15",
-            usedInLabel = "9 replies · last 3 h ago",
+            usedInLabel = "9 runs · last 3 h ago",
             isPinned = true,
             pair = MemoryPairView(
                 role = MemoryPairRole.PinnedWithUpdate,

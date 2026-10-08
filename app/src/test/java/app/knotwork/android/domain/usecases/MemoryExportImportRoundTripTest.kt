@@ -93,7 +93,7 @@ class MemoryExportImportRoundTripTest {
         val result = importUseCase.import(
             (outcome as MemoryImportOutcome.Success).document,
             MemoryImportStrategy.Replace,
-        )
+        ).getOrThrow()
 
         assertEquals(2, result.imported)
         // Deliberately not a byte-for-byte round-trip: an import cannot pin, even
@@ -123,7 +123,7 @@ class MemoryExportImportRoundTripTest {
         val importUseCase = MemoryImportUseCase(store, resolver, scheduler)
         val document = MemoryExportDocument(EmbeddingProvider.ID_USE, 0L, incoming)
 
-        val result = importUseCase.import(document, MemoryImportStrategy.Merge)
+        val result = importUseCase.import(document, MemoryImportStrategy.Merge).getOrThrow()
 
         assertEquals(1, result.imported)
         assertEquals(1, result.skipped)
@@ -197,14 +197,22 @@ private class InMemoryMemoryStore :
 
     override suspend fun getExistingMemoryIds(): Set<Long> = rows.map { it.id }.toSet()
 
-    override suspend fun insertImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean) {
+    override suspend fun insertImportedMemories(
+        memories: List<MemoryWithHistory>,
+        needsReembedding: Boolean,
+    ): Result<Unit> {
         load(memories)
+        return Result.success(Unit)
     }
 
-    override suspend fun replaceImportedMemories(memories: List<MemoryWithHistory>, needsReembedding: Boolean) {
+    override suspend fun replaceImportedMemories(
+        memories: List<MemoryWithHistory>,
+        needsReembedding: Boolean,
+    ): Result<Unit> {
         rows.clear()
         histories.clear()
         load(memories)
+        return Result.success(Unit)
     }
 
     override suspend fun deleteAllMemories() {

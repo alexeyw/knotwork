@@ -99,7 +99,7 @@ interface EmbeddingProvider {
      * fallback, and `SettingsDefaults` all reference these.
      */
     companion object {
-        /** On-device MediaPipe Universal Sentence Encoder (512-d). The default. */
+        /** On-device MediaPipe Universal Sentence Encoder (100-d). The default. */
         const val ID_USE: String = "use"
 
         /** OpenAI `text-embedding-3-small` via Koog (1536-d). Requires an OpenAI key. */

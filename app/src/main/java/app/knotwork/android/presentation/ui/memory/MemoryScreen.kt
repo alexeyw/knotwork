@@ -398,9 +398,12 @@ private fun MemoryChunk.toDetail(
     val learnedFrom = (source as? MemorySource.ChatSession)?.sessionId?.let { id ->
         sessionNames[id]?.let { "Chat \"$it\"" }
     }
+    // The counter goes up once per run whose memory block received the chunk —
+    // runs, not replies: the model may not have used it.
     val usedIn = if (useCount > 0) {
         val last = lastUsedAt?.let { " · last ${relativeShort(nowMillis - it)} ago" }.orEmpty()
-        "$useCount replies$last"
+        val runs = if (useCount == 1) "run" else "runs"
+        "$useCount $runs$last"
     } else {
         null
     }
