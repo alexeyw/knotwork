@@ -114,15 +114,13 @@ class ToolNodeExecutor @Inject constructor(
 
         emit(NodeOutput.State(AgentOrchestratorState.Thinking("Analyzing task for tool execution...")))
 
-        val configuredMaxRepairs = runSettings.structuredOutputMaxRepairs.first()
+        val maxRepairs = runSettings.structuredOutputMaxRepairs.first()
         // Engine selection mirrors the SKILL node: a node carrying a cloud
         // provider resolves its tool call against that provider; otherwise the
-        // local LiteRT engine backs it. Tool selection / arguments are JSON
-        // objects, so a provider with native JSON support drops the repair
-        // budget to zero (trust-but-verify).
-        val resolution = resolveInference(node, scope.inference) ?: return@flow
-        val inference = resolution.first
-        val maxRepairs = if (resolution.second) 0 else configuredMaxRepairs
+        // local LiteRT engine backs it. Either way the configured repair budget
+        // applies: the request switches no provider JSON mode on, so a cloud
+        // answer can be prose like a local one.
+        val inference = resolveInference(node, scope.inference) ?: return@flow
 
         val resolved: Pair<String, String> = try {
             resolveToolCall(isAutoSelect, toolNameConfig, node, inputText, maxRepairs, inference)
@@ -170,19 +168,19 @@ class ToolNodeExecutor @Inject constructor(
      * local-only mode / unknown id) emits a console note and degrades to the
      * local engine.
      *
-     * @return The `(client, supportsNativeJson)` pair, or `null` when even the
-     *   local fallback could not load its model (a terminal error was emitted).
+     * @return The client, or `null` when even the local fallback could not load
+     *   its model (a terminal error was emitted).
      */
     private suspend fun FlowCollector<NodeOutput>.resolveInference(
         node: NodeModel,
         nodeInference: NodeInference,
-    ): Pair<StructuredInferenceClient, Boolean>? {
+    ): StructuredInferenceClient? {
         val providerId = node.cloudProvider?.takeIf { it.isNotBlank() }
         if (providerId != null) {
             val provider = CloudProvider.fromId(providerId)
             val cloud = provider?.let { cloudStructuredFactory.create(it) { } }
             if (provider != null && cloud != null) {
-                return CloudCallNotingClient(provider.id, nodeInference, cloud.inference) to cloud.supportsNativeJson
+                return CloudCallNotingClient(provider.id, nodeInference, cloud)
             }
             emit(
                 NodeOutput.Console(
@@ -198,7 +196,7 @@ class ToolNodeExecutor @Inject constructor(
             emit(NodeOutput.Result(NodeExecutionResult(error = errorMsg)))
             return null
         }
-        return EngineStructuredInferenceClient(llmEngine, nodeInference) to false
+        return EngineStructuredInferenceClient(llmEngine, nodeInference)
     }
 
     /**

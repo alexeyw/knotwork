@@ -1435,12 +1435,11 @@ validate-and-repair gate against a cloud provider instead of the on-device
 model. The node carries the choice in its `cloudProvider` field, exposed as
 an **Engine** selector (On-device by default) in both the in-app and browser
 pipeline editors. The data-layer `KoogStructuredInferenceClientFactory`
-backs the `CloudStructuredInferenceClientFactory` seam: when the chosen
-provider natively constrains output to JSON
-(`LLMCapability.Schema.JSON`), the gate trusts it and validates once
-(`maxRepairs = 0`) **for JSON-payload nodes only** (`DECOMPOSITION` array,
-`TOOL` arguments); token-output nodes keep their configured repair budget,
-since a JSON-mode provider could still wrap a bare token. If a cloud
+backs the `CloudStructuredInferenceClientFactory` seam. The request carries
+no response schema and switches no JSON mode on — the gate asks for a JSON
+object, a top-level JSON array or a bare token, and no one schema fits all
+three — so a cloud answer can be prose like a local one, and the gate keeps
+its configured repair budget on either engine. If a cloud
 provider is selected but unavailable, the node notes it on the console and
 falls back to the on-device model. The gate remains the single source of
 structural validation regardless of which engine produced the output.

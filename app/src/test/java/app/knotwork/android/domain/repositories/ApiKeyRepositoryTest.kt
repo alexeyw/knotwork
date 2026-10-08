@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -49,5 +50,19 @@ class ApiKeyRepositoryTest {
     @Test
     fun `given Ollama when only its address is saved then it is configured, its model having a default`() = runTest {
         assertTrue(repository(address = "http://10.0.0.2:11434").isConfigured(CloudProvider.OLLAMA))
+    }
+
+    @Test
+    fun `given Google and OpenAI set up when configuredProviders then both come back in enum order`() = runTest {
+        val repository = mockk<ApiKeyRepository> {
+            every { getApiKey(any()) } returns flowOf(null)
+            every { getApiKey(CloudProvider.GOOGLE) } returns flowOf("g")
+            every { getApiKey(CloudProvider.OPENAI) } returns flowOf("sk")
+            every { getBaseUrl(any()) } returns flowOf(null)
+            every { getModel(any()) } returns flowOf(null)
+        }
+
+        assertEquals(listOf(CloudProvider.OPENAI, CloudProvider.GOOGLE), repository.configuredProviders())
+        assertEquals(emptyList<CloudProvider>(), repository().configuredProviders())
     }
 }

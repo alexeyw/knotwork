@@ -226,7 +226,7 @@ class EvaluateIfConditionUseCase @Inject constructor(
         val provider = providerId?.let { CloudProvider.fromId(it) }
         val cloud = provider?.let { cloudStructuredFactory.create(it) { } }
         return if (provider != null && cloud != null) {
-            CloudCallNotingClient(provider.id, nodeInference, cloud.inference) to null
+            CloudCallNotingClient(provider.id, nodeInference, cloud) to null
         } else {
             EngineStructuredInferenceClient(llmInferenceEngine, nodeInference) to providerId
         }

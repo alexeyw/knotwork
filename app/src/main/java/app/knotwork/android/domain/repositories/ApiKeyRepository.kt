@@ -116,3 +116,16 @@ fun ApiKeyRepository.requiredCredential(provider: CloudProvider): Flow<String?> 
 suspend fun ApiKeyRepository.isConfigured(provider: CloudProvider): Boolean =
     !requiredCredential(provider).firstOrNull().isNullOrBlank() &&
         (!provider.requiresModel || !getModel(provider).firstOrNull().isNullOrBlank())
+
+/**
+ * Every provider set up on this device ([isConfigured]), in [CloudProvider] order.
+ *
+ * `delegate_task` lists its choices in this order and takes its default from the first: the
+ * tool's schema tells the model so, and the tool falls back to the same provider when the
+ * model names none — one rule, read in both places, so the default the model is told is the
+ * one it gets.
+ *
+ * @return The configured providers; empty when none is set up.
+ */
+suspend fun ApiKeyRepository.configuredProviders(): List<CloudProvider> =
+    CloudProvider.entries.filter { isConfigured(it) }

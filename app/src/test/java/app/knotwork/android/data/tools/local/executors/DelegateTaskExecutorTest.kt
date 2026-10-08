@@ -2,9 +2,12 @@ package app.knotwork.android.data.tools.local.executors
 
 import app.knotwork.android.data.tools.local.DelegateTaskTool
 import app.knotwork.android.domain.models.CloudProvider
+import app.knotwork.android.domain.repositories.ApiKeyRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONException
 import org.junit.Assert.assertEquals
@@ -23,12 +26,19 @@ import org.junit.Test
 class DelegateTaskExecutorTest {
 
     private lateinit var delegateTaskTool: DelegateTaskTool
+    private lateinit var apiKeyRepository: ApiKeyRepository
     private lateinit var executor: DelegateTaskExecutor
 
     @Before
     fun setup() {
         delegateTaskTool = mockk()
-        executor = DelegateTaskExecutor(delegateTaskTool)
+        // Nothing set up unless a test says otherwise.
+        apiKeyRepository = mockk {
+            every { getApiKey(any()) } returns flowOf(null)
+            every { getBaseUrl(any()) } returns flowOf(null)
+            every { getModel(any()) } returns flowOf(null)
+        }
+        executor = DelegateTaskExecutor(delegateTaskTool, apiKeyRepository)
     }
 
     @Test
@@ -58,19 +68,45 @@ class DelegateTaskExecutorTest {
         }
 
     @Test
-    fun `given JSON with only taskDescription when execute then defaults targetModel to anthropic`() = runTest {
-        // Given
-        val arguments = """{"taskDescription":"Plan migration"}"""
-        coEvery { delegateTaskTool.executeDelegation("Plan migration", CloudProvider.ANTHROPIC.id) } returns
+    fun `given only OpenAI is set up when targetModel is omitted then the task goes to OpenAI`() = runTest {
+        // Given — the schema tells the model "Default is openai" in exactly this state.
+        every { apiKeyRepository.getApiKey(CloudProvider.OPENAI) } returns flowOf("sk-test")
+        coEvery { delegateTaskTool.executeDelegation("Plan migration", CloudProvider.OPENAI.id) } returns
             "Success: Task completed"
 
         // When
-        val result = executor.execute(arguments)
+        val result = executor.execute("""{"taskDescription":"Plan migration"}""")
 
         // Then
         assertEquals("Success: Task completed", result)
-        coVerify(exactly = 1) { delegateTaskTool.executeDelegation("Plan migration", CloudProvider.ANTHROPIC.id) }
+        coVerify(exactly = 1) { delegateTaskTool.executeDelegation("Plan migration", CloudProvider.OPENAI.id) }
     }
+
+    @Test
+    fun `given several providers are set up when targetModel is null then the first in order is used`() = runTest {
+        // Given
+        every { apiKeyRepository.getApiKey(CloudProvider.GOOGLE) } returns flowOf("g-test")
+        every { apiKeyRepository.getApiKey(CloudProvider.ANTHROPIC) } returns flowOf("a-test")
+        val first = CloudProvider.entries.first { it == CloudProvider.ANTHROPIC || it == CloudProvider.GOOGLE }
+        coEvery { delegateTaskTool.executeDelegation("Task", first.id) } returns "Success"
+
+        // When
+        val result = executor.execute("""{"taskDescription":"Task","targetModel":null}""")
+
+        // Then
+        assertEquals("Success", result)
+    }
+
+    @Test
+    fun `given no provider is set up and no targetModel when execute then it says there is nowhere to delegate`() =
+        runTest {
+            // When
+            val result = executor.execute("""{"taskDescription":"Task"}""")
+
+            // Then
+            assertEquals(DelegateTaskExecutor.NO_PROVIDER, result)
+            coVerify(exactly = 0) { delegateTaskTool.executeDelegation(any(), any()) }
+        }
 
     @Test
     fun `given underlying tool returns error string when execute then returns same error string`() = runTest {

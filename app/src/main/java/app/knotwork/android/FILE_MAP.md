@@ -23,7 +23,7 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogCloudLlmModelResolver.kt` - Data-layer impl of `domain/engine/CloudLlmModelResolver`; owns per-provider default model ids and Ollama context-window lookup.
     - `KoogModelMapper.kt` - Maps string identifiers to Koog LLModel constants.
     - `KoogProviderConnectionChecker.kt` - `ProviderConnectionChecker` on the Koog clients a run uses: the model list of each provider, asked once, with the values in the form.
-    - `KoogStructuredInferenceClientFactory.kt` - Data-layer impl of `domain/engine/structured/CloudStructuredInferenceClientFactory`; builds a retry-wrapped Koog client, detects native JSON via `LLModel.capabilities`, and exposes a `StructuredInferenceClient` that collapses the streamed response for the gate.
+    - `KoogStructuredInferenceClientFactory.kt` - Data-layer impl of `domain/engine/structured/CloudStructuredInferenceClientFactory`; builds a retry-wrapped Koog client and exposes a `StructuredInferenceClient` that collapses the streamed response for the gate; no JSON mode is switched on.
     - `KoogTransportFactory.kt` - The transport every Koog model client the app builds runs on: Koog's own Ktor client, extended to check every hop (first request and each redirect) against `ModelHopRule` and to record the `Retry-After` of each error answer for the retry policy.
     - `LiteRTLlmEngine.kt` - LiteRT LLM engine implementation.
     - `MediaPipeTextEmbeddingEngine.kt` - MediaPipe text embedding engine.
@@ -305,7 +305,7 @@ Only Kotlin files appear inside the generated blocks.
       - `DelegateTaskTool.kt` - Task delegation tool; builds its client and model through `CloudLlmClientFactory` and `CloudLlmModelResolver`, like a Cloud node.
       - `executors/` - `LocalToolExecutor` implementations registered via Hilt multibinding.
         - `AppendFileExecutor.kt` - `LocalToolExecutor` for the SENSITIVE `append_file` tool; adds UTF-8 content to the END of a workspace file via `AgentWorkspace.appendText` (creating it on first call, no overwrite flag), for accumulating entries in a log/report; maps every `WorkspaceError` to a readable observation.
-        - `DelegateTaskExecutor.kt` - `LocalToolExecutor` bridging the `delegate_task` tool to `DelegateTaskTool`.
+        - `DelegateTaskExecutor.kt` - `LocalToolExecutor` bridging the `delegate_task` tool to `DelegateTaskTool`; with no `targetModel` it picks the first configured provider, the default the schema names.
         - `DeleteFileExecutor.kt` - `LocalToolExecutor` for the DESTRUCTIVE `delete_file` tool; removes a single workspace file via `AgentWorkspace.delete` (always behind the typed-confirm HITL gate by its risk classification).
         - `EditFileExecutor.kt` - `LocalToolExecutor` for the SENSITIVE `edit_file` tool; replaces a uniquely-matching `oldText` anchor with `newText` via `AgentWorkspace.editText` (empty `oldText` rejected before I/O), surfacing the occurrence count when the anchor is ambiguous.
         - `FindFilesExecutor.kt` - `LocalToolExecutor` for the READ_ONLY `find_files` tool; filters the workspace listing by a `WorkspaceGlob` pattern and renders matches via `WorkspaceListingFormat`.
@@ -408,7 +408,7 @@ Only Kotlin files appear inside the generated blocks.
     - `StreamInferenceMeter.kt` - Per-generation instrumentation shared by `LiteRtNodeExecutor` and `RunBenchmarkUseCase`: stamps the TTFT baseline at construction, counts tokens + first-token time + drives `PeakHeapSampler` via `onToken`, and folds into a `ModelPerformanceSample` via `toSample`. Keeps the *measurement* (not just the `fromTimings` arithmetic) identical between real runs and the benchmark.
     - `structured/` - Structured-output validate-and-repair layer for LLM-driven nodes.
       - `CloudCallNotingClient.kt` - A cloud-backed `StructuredInferenceClient` that notes each call with the node's `NodeInference` before making it.
-      - `CloudStructuredInferenceClientFactory.kt` - `fun interface` building a cloud-backed `StructuredInferenceClient` for the gate (data-layer impl: `KoogStructuredInferenceClientFactory`); returns `CloudStructuredClient(inference, supportsNativeJson)` so a consumer can drop the repair budget to 0 when the provider natively constrains JSON. Structured nodes pick this path via `NodeModel.cloudProvider`.
+      - `CloudStructuredInferenceClientFactory.kt` - `fun interface` building a cloud-backed `StructuredInferenceClient` for the gate (data-layer impl: `KoogStructuredInferenceClientFactory`); returns the client, which switches no provider JSON mode on, so the gate keeps its configured repair budget on either engine. Structured nodes pick this path via `NodeModel.cloudProvider`.
       - `CollectingRepairListener.kt` - `RepairListener` that buffers each repair attempt (the gate reports them via a non-suspend callback) so an executor can drain them afterwards and `emit` one `NodeOutput.Console` per attempt; carries the per-attempt console message.
       - `EngineStructuredInferenceClient.kt` - `StructuredInferenceClient` backed by the local `LlmInferenceEngine`: collapses the token stream into one string, runs every attempt through the node's `NodeInference` (the run's sampler and a derived seed, or the fixed repair sampling for a repair), and exposes an optional `onToken` hook so a streaming consumer can keep emitting `Thinking` while the gate runs.
       - `GateResult.kt` - Sealed gate outcome: `Success(value, repairs)` / `Failed(lastRaw, lastError, repairs)`.
@@ -573,7 +573,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ContentReport.kt` - `ContentReportReason` (harmful / sexual / hate / misleading / other) plus the value carrier holding the user's note, the reported text and the build facts. Never persisted, never transmitted on its own.
     - `ContentReportComposer.kt` - Pure renderer: subject line plus a Markdown body (note, category, block-quoted model output capped at `MAX_QUOTED_CHARS` with the omission stated, build metadata). Framework-free so "what exactly is in a report" is unit-testable.
   - `repositories/` - Repository interfaces.
-    - `ApiKeyRepository.kt` - Provider credentials keyed by `CloudProvider` — API key, chosen model, server address — plus `requiredCredential`, the one definition of "is this provider set up".
+    - `ApiKeyRepository.kt` - Provider credentials keyed by `CloudProvider` — API key, chosen model, server address — plus `requiredCredential`, the one definition of "is this provider set up", and `configuredProviders` in enum order.
     - `AppStateSettings.kt` - State the app keeps between starts that is not a preference: the first-launch and onboarding flags, the chat that is open, and the console tab last chosen.
     - `BackgroundPromptRepository.kt` - The prompts of background runs waiting in the scheduler, kept in the encrypted database rather than handed to the background runtime.
     - `BundledDocumentationRepository.kt` - Access to the documentation that ships inside the APK.

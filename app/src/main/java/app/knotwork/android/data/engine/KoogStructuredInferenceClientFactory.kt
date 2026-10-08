@@ -1,13 +1,11 @@
 package app.knotwork.android.data.engine
 
 import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.streaming.StreamFrame
 import app.knotwork.android.domain.engine.CloudLlmClientFactory
 import app.knotwork.android.domain.engine.CloudLlmModelResolver
-import app.knotwork.android.domain.engine.structured.CloudStructuredClient
 import app.knotwork.android.domain.engine.structured.CloudStructuredInferenceClientFactory
 import app.knotwork.android.domain.engine.structured.StructuredInferenceClient
 import app.knotwork.android.domain.models.CloudProvider
@@ -30,16 +28,13 @@ import ai.koog.prompt.dsl.prompt as buildPrompt
  * [app.knotwork.android.domain.engine.structured.StructuredOutputGate] to
  * validate.
  *
- * **Native JSON mode.** Whether the provider natively constrains output to JSON
- * is reported through [CloudStructuredClient.supportsNativeJson] (derived from
- * the resolved model's [LLMCapability.Schema.JSON] capability) so the gate's
- * caller can drop its repair budget to zero. The factory does **not** inject a
- * per-call JSON schema into the request: the gate is invoked with three
+ * **No JSON mode.** The request carries no response schema and switches no
+ * JSON mode on, whatever the model advertises: the gate is invoked with three
  * different output shapes (a JSON object, a top-level JSON array, and a bare
- * constrained token), and no single response schema fits all three — so the
- * gate remains the single source of structural validation ("trust but verify"),
- * and the lowered temperature on repair attempts is forwarded through
- * [LLMParams].
+ * constrained token), and no single response schema fits all three. A cloud
+ * answer can therefore be prose like a local one, and the gate validates and
+ * repairs it with the same configured budget. The lowered temperature on repair
+ * attempts is forwarded through [LLMParams].
  *
  * @property cloudLlmClientFactory Builds the retry-wrapped Koog client.
  * @property cloudLlmModelResolver Resolves the configured model per provider.
@@ -53,14 +48,13 @@ class KoogStructuredInferenceClientFactory @Inject constructor(
     private val networkActivityTracker: NetworkActivityTracker,
 ) : CloudStructuredInferenceClientFactory {
 
-    override suspend fun create(provider: CloudProvider, onToken: suspend (String) -> Unit): CloudStructuredClient? {
+    override suspend fun create(
+        provider: CloudProvider,
+        onToken: suspend (String) -> Unit,
+    ): StructuredInferenceClient? {
         val client = cloudLlmClientFactory.createClient(provider) as? LLMClient ?: return null
         val model = cloudLlmModelResolver.resolveModel(provider) as LLModel
-        val supportsNativeJson = model.capabilities?.any { it is LLMCapability.Schema.JSON } == true
-        return CloudStructuredClient(
-            inference = KoogStructuredInferenceClient(client, model, networkActivityTracker, onToken),
-            supportsNativeJson = supportsNativeJson,
-        )
+        return KoogStructuredInferenceClient(client, model, networkActivityTracker, onToken)
     }
 }
 
