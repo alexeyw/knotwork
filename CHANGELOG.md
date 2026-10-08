@@ -233,6 +233,11 @@ details.
   unless it names a provider, the first one set up on the device answers; a call
   that named none went to Anthropic instead — and failed for anyone without an
   Anthropic key. It now goes to that first provider.
+- **Discover shows a download that is already running.** A model whose file was
+  still downloading — started from the Models screen, or from Discover before you
+  left — opened with an Install button and no progress, and stayed that way even
+  after the download finished. The file now shows its progress and turns
+  Installed when the download completes.
 
 ### Security
 

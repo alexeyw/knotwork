@@ -8,10 +8,12 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -92,5 +94,28 @@ class InstallDiscoveredModelUseCaseTest {
 
         assertTrue(states.last() is DownloadState.Error)
         coVerify(exactly = 0) { registerDownloadedModel(any(), any(), any()) }
+    }
+
+    @Test
+    fun `given a running download when attached then it is followed and sized, and none is started`() = runTest {
+        every { downloadManager.observeDownload(file.fileName) } returns flowOf(
+            DownloadState.Downloading(70),
+            DownloadState.Success("/data/models/${file.fileName}"),
+        )
+        coEvery { registerDownloadedModel(any(), any(), any()) } returns 1L
+
+        val states = useCase.attach(file).toList()
+
+        assertEquals(DownloadState.Downloading(70), states.first())
+        assertTrue(states.last() is DownloadState.Success)
+        coVerify { registerDownloadedModel(file.fileName, "/data/models/${file.fileName}", file.sizeBytes) }
+        coVerify(exactly = 0) { downloadManager.downloadModel(any(), any(), any()) }
+    }
+
+    @Test
+    fun `given nothing running when attached then the stream is empty`() = runTest {
+        every { downloadManager.observeDownload(file.fileName) } returns emptyFlow()
+
+        assertEquals(emptyList<DownloadState>(), useCase.attach(file).toList())
     }
 }

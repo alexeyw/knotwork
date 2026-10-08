@@ -8,6 +8,7 @@ import app.knotwork.android.domain.repositories.ModelDownloadManager
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.GetDiscoverableModelDetailUseCase
 import app.knotwork.android.domain.usecases.InstallDiscoveredModelUseCase
+import app.knotwork.android.domain.usecases.RegisterDownloadedModelUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -65,6 +67,8 @@ class DiscoverDetailViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { settings.huggingFaceAuthToken } returns flowOf(null)
+        // Nothing running in the background unless a test says otherwise.
+        every { installModel.attach(any()) } returns emptyFlow()
     }
 
     @After
@@ -251,6 +255,86 @@ class DiscoverDetailViewModelTest {
         vm.onCancelInstall("gemma.litertlm")
 
         verify(exactly = 1) { downloadManager.cancelDownload("gemma.litertlm") }
+    }
+
+    // ─── A download already running when the screen opens ───────────────────
+
+    private val registerDownloadedModel = mockk<RegisterDownloadedModelUseCase>(relaxed = true)
+
+    /**
+     * A view model over the real install use case and the mocked downloader, so a
+     * test scripts what the background work reports rather than what a use case
+     * mock returns. Bound by the caller, after it has started listening.
+     */
+    private fun overTheDownloader() = DiscoverDetailViewModel(
+        getDetail,
+        InstallDiscoveredModelUseCase(downloadManager, registerDownloadedModel, settings),
+        settings,
+        downloadManager,
+    )
+
+    @Test
+    fun `given a download already running for a shown file when the detail loads then its progress shows`() = runTest {
+        // Started from Models, or from this screen before the user left it: the work
+        // outlives the view model that started it.
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        every { downloadManager.observeDownload("gemma.litertlm") } returns
+            flowOf(DownloadState.Downloading(40))
+        val vm = overTheDownloader()
+
+        vm.bind("litert-community/gemma")
+        advanceUntilIdle()
+
+        assertEquals(mapOf("gemma.litertlm" to 40), vm.uiState.value.progress)
+        verify(exactly = 0) { downloadManager.downloadModel(any(), any(), any()) }
+    }
+
+    @Test
+    fun `given a running download that finishes while the screen is open then the file shows installed`() = runTest {
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        every { downloadManager.observeDownload("gemma.litertlm") } returns
+            flowOf(DownloadState.Downloading(90), DownloadState.Success("/data/gemma.litertlm"))
+        val vm = overTheDownloader()
+        val announced = async { vm.installEvents.first() }
+
+        vm.bind("litert-community/gemma")
+        advanceUntilIdle()
+
+        assertTrue("gemma.litertlm" in vm.uiState.value.installed)
+        assertEquals(emptyMap<String, Int>(), vm.uiState.value.progress)
+        assertEquals(DiscoverInstallEvent.Success("gemma.litertlm"), announced.await())
+        // The row the worker wrote is refreshed with the size the Hub reported, as
+        // for a download this screen started.
+        coVerify { registerDownloadedModel("gemma.litertlm", "/data/gemma.litertlm", 2_048L) }
+    }
+
+    @Test
+    fun `given a running download it follows when cancelled then the transfer stops and stays stopped`() = runTest {
+        coEvery { getDetail(any()) } returns Result.success(detail())
+        val work = MutableSharedFlow<DownloadState>(replay = 1)
+        work.emit(DownloadState.Downloading(40))
+        every { downloadManager.observeDownload("gemma.litertlm") } returns work
+        val vm = overTheDownloader()
+        vm.bind("litert-community/gemma")
+        advanceUntilIdle()
+
+        vm.onCancelInstall("gemma.litertlm")
+        work.emit(DownloadState.Downloading(41))
+        advanceUntilIdle()
+
+        verify(exactly = 1) { downloadManager.cancelDownload("gemma.litertlm") }
+        assertEquals(emptyMap<String, Int>(), vm.uiState.value.progress)
+    }
+
+    @Test
+    fun `given an installed file when the detail loads then no download is looked for`() = runTest {
+        coEvery { getDetail(any()) } returns Result.success(detail(listOf(file.copy(isInstalled = true))))
+        val vm = overTheDownloader()
+
+        vm.bind("litert-community/gemma")
+        advanceUntilIdle()
+
+        verify(exactly = 0) { downloadManager.observeDownload(any()) }
     }
 
     @Test
