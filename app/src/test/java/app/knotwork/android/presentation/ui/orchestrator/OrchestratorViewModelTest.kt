@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
+import app.knotwork.android.domain.engine.DefaultPipelineFactory
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
@@ -15,6 +16,7 @@ import app.knotwork.android.domain.models.PipelineValidationException
 import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
+import app.knotwork.android.domain.pipelineio.PipelineJsonSerializer
 import app.knotwork.android.domain.prompt.PromptSegment
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
@@ -32,7 +34,6 @@ import app.knotwork.android.domain.usecases.DeletePipelineUseCase
 import app.knotwork.android.domain.usecases.DuplicatePipelineUseCase
 import app.knotwork.android.domain.usecases.ExportPipelineBundleUseCase
 import app.knotwork.android.domain.usecases.FindPipelineBindingsUseCase
-import app.knotwork.android.domain.usecases.GetPromptTemplatesUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineBundleUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineUseCase
 import app.knotwork.android.domain.usecases.LoadPipelineFromPresetUseCase
@@ -42,7 +43,6 @@ import app.knotwork.android.domain.usecases.ResolveSurfacePipelineUseCase
 import app.knotwork.android.domain.usecases.SavePipelineAsPresetUseCase
 import app.knotwork.android.domain.usecases.SavePipelineUseCase
 import app.knotwork.android.domain.usecases.SavePromptAsPresetUseCase
-import app.knotwork.android.domain.usecases.SavePromptTemplateUseCase
 import app.knotwork.android.domain.usecases.SetSurfacePipelineUseCase
 import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.coEvery
@@ -82,8 +82,6 @@ class OrchestratorViewModelTest {
     private lateinit var duplicatePipelineUseCase: DuplicatePipelineUseCase
     private lateinit var deletePipelineUseCase: DeletePipelineUseCase
     private lateinit var createPipelineUseCase: CreatePipelineUseCase
-    private lateinit var getPromptTemplatesUseCase: GetPromptTemplatesUseCase
-    private lateinit var savePromptTemplateUseCase: SavePromptTemplateUseCase
     private lateinit var savePipelineAsPresetUseCase: SavePipelineAsPresetUseCase
     private lateinit var savePromptAsPresetUseCase: SavePromptAsPresetUseCase
     private lateinit var toolRepository: ToolRepository
@@ -133,8 +131,6 @@ class OrchestratorViewModelTest {
         duplicatePipelineUseCase = mockk()
         deletePipelineUseCase = mockk()
         createPipelineUseCase = mockk()
-        getPromptTemplatesUseCase = mockk()
-        savePromptTemplateUseCase = mockk()
         savePipelineAsPresetUseCase = mockk()
         savePromptAsPresetUseCase = mockk()
         promptPresetRepository = mockk(relaxed = true) {
@@ -152,7 +148,6 @@ class OrchestratorViewModelTest {
         }
 
         every { loadPipelineUseCase.observeAllPipelines() } returns flowOf(emptyList())
-        every { getPromptTemplatesUseCase() } returns flowOf(emptyList())
         every { localModelRepository.getAllModels() } returns flowOf(emptyList())
 
         coEvery { toolRepository.getAvailableTools() } returns listOf(AgentTool("Tool1", "Desc", "{}"))
@@ -188,8 +183,6 @@ class OrchestratorViewModelTest {
         createPipelineUseCase,
         mockk<ResolveSurfacePipelineUseCase>(relaxed = true),
         mockk<SetSurfacePipelineUseCase>(relaxed = true),
-        getPromptTemplatesUseCase,
-        savePromptTemplateUseCase,
         savePipelineAsPresetUseCase,
         savePromptAsPresetUseCase,
         toolRepository,
@@ -202,6 +195,17 @@ class OrchestratorViewModelTest {
         skillRepository,
         apiKeyRepository,
     )
+
+    /** Fills the open pipeline with the default graph, keeping its id and name. */
+    private fun loadBasePreset() {
+        val current = viewModel.uiState.value.currentPipeline
+        val preset = DefaultPipelineFactory.create(current.name)
+        viewModel.replaceCurrentPipeline(current.copy(nodes = preset.nodes, connections = preset.connections))
+    }
+
+    /** The open pipeline as the single-pipeline JSON document an export writes. */
+    private fun currentPipelineJson(): String =
+        PipelineJsonSerializer.serialize(viewModel.uiState.value.currentPipeline)
 
     @After
     fun tearDown() {
@@ -316,25 +320,6 @@ class OrchestratorViewModelTest {
     }
 
     @Test
-    fun `updateConnectionLabel updates the label of a connection`() {
-        // Arrange
-        viewModel.addNode(NodeType.INPUT, 0f, 0f)
-        viewModel.addNode(NodeType.OUTPUT, 100f, 100f)
-        val nodes = viewModel.uiState.value.currentPipeline.nodes
-        val n1 = nodes[0].id
-        val n2 = nodes[1].id
-        val connectionId = viewModel.addConnection(n1, n2)
-
-        // Act
-        viewModel.updateConnectionLabel(connectionId!!, "NewLabel")
-
-        // Assert
-        val connections = viewModel.uiState.value.currentPipeline.connections
-        assertEquals(1, connections.size)
-        assertEquals("NewLabel", connections[0].label)
-    }
-
-    @Test
     fun `removeConnection removes connection by ID`() {
         // Arrange
         viewModel.addNode(NodeType.INPUT, 0f, 0f)
@@ -368,16 +353,6 @@ class OrchestratorViewModelTest {
         // Assert
         val state = viewModel.uiState.value
         assertEquals(1, state.currentPipeline.nodes.size)
-        assertEquals(0, state.currentPipeline.connections.size)
-    }
-
-    @Test
-    fun `clearPipeline empties nodes and connections`() {
-        viewModel.addNode(NodeType.INPUT, 0f, 0f)
-        viewModel.clearPipeline()
-
-        val state = viewModel.uiState.value
-        assertEquals(0, state.currentPipeline.nodes.size)
         assertEquals(0, state.currentPipeline.connections.size)
     }
 
@@ -524,60 +499,14 @@ class OrchestratorViewModelTest {
     }
 
     @Test
-    fun `updateNodeTool updates the tool assigned to a specific node`() {
-        viewModel.addNode(NodeType.TOOL, 0f, 0f)
-        val nodeId = viewModel.uiState.value.currentPipeline.nodes.first().id
-
-        viewModel.updateNodeTool(nodeId, "CalendarTool")
-
-        val updatedNode = viewModel.uiState.value.currentPipeline.nodes.first()
-        assertEquals("CalendarTool", updatedNode.toolName)
-        assertEquals("CalendarTool", updatedNode.label)
-    }
-
-    @Test
-    fun `applyBasePreset replaces current pipeline nodes and connections in place`() {
-        val originalId = viewModel.uiState.value.currentPipeline.id
-        val originalName = viewModel.uiState.value.currentPipeline.name
-
-        viewModel.applyBasePreset()
-
-        val state = viewModel.uiState.value
-        val nodes = state.currentPipeline.nodes
-        val connections = state.currentPipeline.connections
-
-        assertEquals(10, nodes.size)
-        assertEquals(NodeType.INPUT, nodes.find { it.type == NodeType.INPUT }?.type)
-        assertEquals(NodeType.INTENT_ROUTER, nodes.find { it.type == NodeType.INTENT_ROUTER }?.type)
-        assertEquals(NodeType.DECOMPOSITION, nodes.find { it.type == NodeType.DECOMPOSITION }?.type)
-        assertEquals(NodeType.OUTPUT, nodes.find { it.type == NodeType.OUTPUT }?.type)
-
-        assertEquals(12, connections.size)
-        // The preset is applied IN PLACE — the pipeline's identity (id and
-        // user-given name) is preserved so saving updates the existing
-        // pipeline rather than spawning a "Base Preset" twin.
-        assertEquals(originalId, state.currentPipeline.id)
-        assertEquals(originalName, state.currentPipeline.name)
-    }
-
-    @Test
-    fun `exportPipelineToJson returns valid json string`() {
-        viewModel.applyBasePreset()
-
-        val json = viewModel.exportPipelineToJson()
-
-        assertTrue(json.contains("INPUT"))
-        assertTrue(json.contains("LITE_RT"))
-        assertTrue(json.contains("OUTPUT"))
-    }
-
-    @Test
     fun `importPipelineFromJson updates current pipeline from json`() = runTest {
-        viewModel.applyBasePreset()
+        loadBasePreset()
         val originalName = viewModel.uiState.value.currentPipeline.name
-        val json = viewModel.exportPipelineToJson()
+        val json = currentPipelineJson()
 
-        viewModel.clearPipeline()
+        viewModel.replaceCurrentPipeline(
+            viewModel.uiState.value.currentPipeline.copy(nodes = emptyList(), connections = emptyList()),
+        )
         assertEquals(0, viewModel.uiState.value.currentPipeline.nodes.size)
 
         viewModel.importPipelineFromJson(json)
@@ -599,8 +528,8 @@ class OrchestratorViewModelTest {
             // over another pipeline's row under REPLACE.
             val saved = slot<PipelineGraph>()
             coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
-            viewModel.applyBasePreset()
-            val json = viewModel.exportPipelineToJson()
+            loadBasePreset()
+            val json = currentPipelineJson()
 
             viewModel.importPipelineFromJson(json)
             testDispatcher.scheduler.advanceUntilIdle()
@@ -615,8 +544,8 @@ class OrchestratorViewModelTest {
     fun `given a colliding import resolved by Replace then the editor holds the graph as saved`() = runTest {
         val saved = slot<PipelineGraph>()
         coEvery { savePipelineUseCase(capture(saved)) } returns Result.success(Unit)
-        viewModel.applyBasePreset()
-        val json = viewModel.exportPipelineToJson()
+        loadBasePreset()
+        val json = currentPipelineJson()
         val id = viewModel.uiState.value.currentPipeline.id
         coEvery { pipelineRepository.getPipelineById(id) } returns PipelineGraph(id = id, name = "Existing")
 
@@ -639,8 +568,8 @@ class OrchestratorViewModelTest {
                 PipelineGraph(id = "subtask_act", name = "Act on the task")
             coEvery { findPipelineBindings.of("subtask_act") } returns
                 PipelineBindings(callerNames = listOf("Full agent"))
-            viewModel.applyBasePreset()
-            val json = JSONObject(viewModel.exportPipelineToJson())
+            loadBasePreset()
+            val json = JSONObject(currentPipelineJson())
                 .put("id", "subtask_act")
                 .put("name", "Daily digest")
                 .toString()
@@ -657,7 +586,7 @@ class OrchestratorViewModelTest {
     @Test
     fun `given a bundle colliding with the library when imported then nothing is written until the user decides`() =
         runTest {
-            viewModel.applyBasePreset()
+            loadBasePreset()
             val graph = viewModel.uiState.value.currentPipeline
             every { pipelineRepository.observePipelineNames() } returns flowOf(mapOf(graph.id to "In the library"))
             coEvery { compositionValidator.validate(any(), any()) } returns emptyList()
@@ -801,31 +730,6 @@ class OrchestratorViewModelTest {
         assertEquals(true, node.contextConfig.originalTask)
         assertEquals(true, node.contextConfig.nodeInput)
         assertEquals(false, node.contextConfig.chatHistory)
-    }
-
-    @Test
-    fun `updateNodeClarificationTimeout updates only the target node`() {
-        viewModel.addNode(NodeType.CLARIFICATION, 0f, 0f)
-        val nodeId = viewModel.uiState.value.currentPipeline.nodes[0].id
-
-        viewModel.updateNodeClarificationTimeout(nodeId, 30_000L)
-
-        val updated = viewModel.uiState.value.currentPipeline.nodes
-            .single { it.id == nodeId }
-        assertEquals(30_000L, updated.clarificationTimeoutMs)
-    }
-
-    @Test
-    fun `updateNodeClarificationTimeout clears timeout when null is passed`() {
-        viewModel.addNode(NodeType.CLARIFICATION, 0f, 0f)
-        val nodeId = viewModel.uiState.value.currentPipeline.nodes[0].id
-        viewModel.updateNodeClarificationTimeout(nodeId, 30_000L)
-
-        viewModel.updateNodeClarificationTimeout(nodeId, null)
-
-        val updated = viewModel.uiState.value.currentPipeline.nodes
-            .single { it.id == nodeId }
-        assertEquals(null, updated.clarificationTimeoutMs)
     }
 
     @Test

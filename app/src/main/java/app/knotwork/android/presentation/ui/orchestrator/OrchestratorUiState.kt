@@ -9,7 +9,6 @@ import app.knotwork.android.domain.models.PipelineCollision
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
 import app.knotwork.android.domain.models.PipelineValidationError
-import app.knotwork.android.domain.models.PromptTemplate
 import app.knotwork.android.domain.prompt.PromptSegment
 import app.knotwork.android.presentation.ui.common.UiText
 
@@ -25,7 +24,6 @@ import app.knotwork.android.presentation.ui.common.UiText
  * @property isLoading Whether a loading operation is currently in progress.
  * @property errorMessage An error message if an operation fails.
  * @property availableTools List of all available tools in the system.
- * @property promptTemplates List of saved prompt templates.
  * @property availableVariables Tokens (`$KEY`) of every prompt variable currently
  * registered in the DI graph. Drives the chip row in the prompt editor.
  * @property previewState Current state of the prompt-preview bottom sheet.
@@ -74,7 +72,6 @@ data class OrchestratorUiState(
     val errorMessage: UiText? = null,
     val availableTools: List<AgentTool> = emptyList(),
     val availableLocalModels: List<LocalModel> = emptyList(),
-    val promptTemplates: List<PromptTemplate> = emptyList(),
     val availableVariables: List<String> = emptyList(),
     val previewState: PromptPreviewState = PromptPreviewState.Hidden,
     val pendingImport: PipelineImportOutcome.SchemaMismatch? = null,

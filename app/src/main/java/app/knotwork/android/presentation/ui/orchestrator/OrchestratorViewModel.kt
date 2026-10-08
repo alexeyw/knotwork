@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
 import app.knotwork.android.domain.engine.AutoProvider
-import app.knotwork.android.domain.engine.DefaultPipelineFactory
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.EntrySurface
@@ -19,10 +18,8 @@ import app.knotwork.android.domain.models.PipelineValidationError
 import app.knotwork.android.domain.models.PipelineValidationException
 import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.models.PromptPreset
-import app.knotwork.android.domain.models.PromptTemplate
 import app.knotwork.android.domain.models.Skill
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
-import app.knotwork.android.domain.pipelineio.PipelineJsonSerializer
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.ApiKeyRepository
@@ -41,7 +38,6 @@ import app.knotwork.android.domain.usecases.CreatePipelineUseCase
 import app.knotwork.android.domain.usecases.DeletePipelineUseCase
 import app.knotwork.android.domain.usecases.DuplicatePipelineUseCase
 import app.knotwork.android.domain.usecases.ExportPipelineBundleUseCase
-import app.knotwork.android.domain.usecases.GetPromptTemplatesUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineBundleUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineUseCase
 import app.knotwork.android.domain.usecases.LoadPipelineFromPresetUseCase
@@ -52,7 +48,6 @@ import app.knotwork.android.domain.usecases.ResolveSurfacePipelineUseCase
 import app.knotwork.android.domain.usecases.SavePipelineAsPresetUseCase
 import app.knotwork.android.domain.usecases.SavePipelineUseCase
 import app.knotwork.android.domain.usecases.SavePromptAsPresetUseCase
-import app.knotwork.android.domain.usecases.SavePromptTemplateUseCase
 import app.knotwork.android.domain.usecases.SetSurfacePipelineUseCase
 import app.knotwork.android.presentation.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -109,8 +104,6 @@ constructor(
     private val createPipelineUseCase: CreatePipelineUseCase,
     private val resolveSurfacePipelineUseCase: ResolveSurfacePipelineUseCase,
     private val setSurfacePipelineUseCase: SetSurfacePipelineUseCase,
-    private val getPromptTemplatesUseCase: GetPromptTemplatesUseCase,
-    private val savePromptTemplateUseCase: SavePromptTemplateUseCase,
     private val savePipelineAsPresetUseCase: SavePipelineAsPresetUseCase,
     private val savePromptAsPresetUseCase: SavePromptAsPresetUseCase,
     private val toolRepository: ToolRepository,
@@ -146,7 +139,6 @@ constructor(
         observeSavedPipelines()
         loadAvailableTools()
         observeLocalModels()
-        observePromptTemplates()
         observeDefaultPipelineId()
         observeSurfaceBindingIds()
     }
@@ -248,41 +240,6 @@ constructor(
         EntrySurface.QUICK_TILE -> R.string.orchestrator_feedback_tile_pipeline_bound
         // Bound from its own settings surface, which owns its wording.
         EntrySurface.EXTERNAL_AUTOMATION -> null
-    }
-
-    private fun observePromptTemplates() {
-        viewModelScope.launch {
-            getPromptTemplatesUseCase()
-                .catch { e ->
-                    _uiState.update { it.copy(errorMessage = throwableAsUiText(e)) }
-                }
-                .collect { templates ->
-                    _uiState.update { state ->
-                        state.copy(promptTemplates = templates)
-                    }
-                }
-        }
-    }
-
-    /**
-     * Saves a new prompt template.
-     *
-     * @param name The name of the prompt.
-     * @param text The prompt content.
-     * @param category The category corresponding to NodeType.
-     */
-    fun savePromptTemplate(name: String, text: String, category: String) {
-        viewModelScope.launch {
-            try {
-                savePromptTemplateUseCase(
-                    PromptTemplate(name = name, text = text, category = category),
-                )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = throwableAsUiText(e)) }
-            }
-        }
     }
 
     private fun observeSavedPipelines() {
@@ -426,23 +383,6 @@ constructor(
     }
 
     /**
-     * Updates the label of an existing connection.
-     *
-     * @param connectionId The unique identifier of the connection.
-     * @param label The new label for the connection, or null to remove it.
-     */
-    fun updateConnectionLabel(connectionId: String, label: String?) {
-        _uiState.update { state ->
-            val updatedConnections = state.currentPipeline.connections.map {
-                if (it.id == connectionId) it.copy(label = label) else it
-            }
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(connections = updatedConnections),
-            )
-        }
-    }
-
-    /**
      * Removes an existing connection.
      *
      * @param connectionId The unique identifier of the connection to remove.
@@ -454,41 +394,6 @@ constructor(
             }
             state.copy(
                 currentPipeline = state.currentPipeline.copy(connections = updatedConnections),
-            )
-        }
-    }
-
-    /**
-     * Updates the condition configuration of an IF_CONDITION node and the system prompt for any node.
-     *
-     * @param nodeId The unique identifier of the node.
-     * @param complexity Threshold for task complexity.
-     * @param keywords Comma-separated keywords.
-     * @param prompt Free-form prompt.
-     * @param systemPrompt The system prompt configuring the behavior of the node.
-     */
-    fun updateNodeConfiguration(
-        nodeId: String,
-        complexity: Int?,
-        keywords: String?,
-        prompt: String?,
-        systemPrompt: String?,
-    ) {
-        _uiState.update { state ->
-            val updatedNodes = state.currentPipeline.nodes.map {
-                if (it.id == nodeId) {
-                    it.copy(
-                        conditionComplexity = complexity,
-                        conditionKeywords = keywords,
-                        conditionPrompt = prompt,
-                        systemPrompt = systemPrompt,
-                    )
-                } else {
-                    it
-                }
-            }
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(nodes = updatedNodes),
             )
         }
     }
@@ -509,40 +414,6 @@ constructor(
                     nodes = updatedNodes,
                     connections = updatedConnections,
                 ),
-            )
-        }
-    }
-
-    /**
-     * Updates the tool assigned to a specific node.
-     *
-     * @param nodeId The unique identifier of the node.
-     * @param toolName The name of the tool to assign.
-     */
-    fun updateNodeTool(nodeId: String, toolName: String) {
-        _uiState.update { state ->
-            val updatedNodes = state.currentPipeline.nodes.map {
-                if (it.id == nodeId) it.copy(toolName = toolName, label = toolName) else it
-            }
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(nodes = updatedNodes),
-            )
-        }
-    }
-
-    /**
-     * Updates the reply timeout for a CLARIFICATION node.
-     *
-     * @param nodeId The unique identifier of the node.
-     * @param timeoutMs The timeout in milliseconds, or `null` to fall back to the engine default.
-     */
-    fun updateNodeClarificationTimeout(nodeId: String, timeoutMs: Long?) {
-        _uiState.update { state ->
-            val updatedNodes = state.currentPipeline.nodes.map {
-                if (it.id == nodeId) it.copy(clarificationTimeoutMs = timeoutMs) else it
-            }
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(nodes = updatedNodes),
             )
         }
     }
@@ -586,57 +457,6 @@ constructor(
     }
 
     /**
-     * Updates the cloud provider for a CLOUD node.
-     *
-     * @param nodeId The unique identifier of the node.
-     * @param provider The name of the provider.
-     */
-    fun updateNodeCloudProvider(nodeId: String, provider: String) {
-        _uiState.update { state ->
-            val updatedNodes = state.currentPipeline.nodes.map {
-                if (it.id == nodeId) it.copy(cloudProvider = provider) else it
-            }
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(nodes = updatedNodes),
-            )
-        }
-    }
-
-    /**
-     * Clears the current pipeline.
-     */
-    fun clearPipeline() {
-        _uiState.update { state ->
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(
-                    nodes = emptyList(),
-                    connections = emptyList(),
-                ),
-            )
-        }
-    }
-
-    /**
-     * Replaces the nodes and connections of the pipeline currently being
-     * edited with the default complex task-routing preset. Preserves the
-     * pipeline's `id`, `name`, and `updatedAt` (refreshed to "now") so the
-     * preset is *applied to* the current pipeline rather than spawning a
-     * new "Base Preset" pipeline alongside it.
-     */
-    fun applyBasePreset() {
-        _uiState.update { state ->
-            val preset = DefaultPipelineFactory.create(state.currentPipeline.name)
-            state.copy(
-                currentPipeline = state.currentPipeline.copy(
-                    nodes = preset.nodes,
-                    connections = preset.connections,
-                    updatedAt = System.currentTimeMillis(),
-                ),
-            )
-        }
-    }
-
-    /**
      * Fills the pipeline currently being edited with the graph of the preset
      * identified by [presetId], regenerating node / connection ids so the
      * template is never mutated. Unlike the library's `+ From preset` flow
@@ -672,12 +492,6 @@ constructor(
             }
         }
     }
-
-    /**
-     * Exports the current pipeline to a JSON string in the schema-versioned
-     * format consumed by the browser-side editor (`pipeline-editor.html`).
-     */
-    fun exportPipelineToJson(): String = PipelineJsonSerializer.serialize(_uiState.value.currentPipeline)
 
     /**
      * Entry point for the shared "Import JSON" affordance. Detects whether
