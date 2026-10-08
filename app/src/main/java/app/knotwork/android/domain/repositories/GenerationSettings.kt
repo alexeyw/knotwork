@@ -100,6 +100,8 @@ interface GenerationSettings {
      * A [Flow] emitting the wire key of the selected local-model backend
      * ([app.knotwork.android.domain.models.LocalBackend.key]). Stored as a raw string for
      * backward compatibility with DataStore values written before the typed enum existed.
+     * A stored backend the app no longer offers (an NPU choice made before it was
+     * withdrawn) reads as CPU — what it runs on — so no screen shows it.
      */
     val localModelBackend: Flow<String>
 
@@ -107,7 +109,7 @@ interface GenerationSettings {
      * The **raw** stored backend preference: the persisted wire key, or `null`
      * when the user (and the app) has never written one.
      *
-     * [localModelBackend] folds the absent case into
+     * [localModelBackend] folds the absent case (and a withdrawn backend) into
      * [app.knotwork.android.domain.models.LocalBackend.CPU], which is exactly
      * what every inference call site wants — but it makes "never chosen"
      * indistinguishable from "deliberately CPU". The one-shot onboarding
