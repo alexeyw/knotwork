@@ -12,7 +12,7 @@ prompt:
 run.create golden pipeline=showcase_full_agent parent=null status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | What is the tallest mountain on Earth?
-run.running golden pipeline=showcase_full_agent graphHash=9a81ecec5af3f94e609ad55fddb08c4d1c7e3aac65a72481b2b09ecd2d984e3a
+run.running golden pipeline=showcase_full_agent graphHash=52a2e0af1bf3022a487ee72170a5e9c90c73c635e1a4ef6d0868c37af11875c5
 driver start
 crash.key active_pipeline_id=showcase_full_agent
 crash.key active_model=Golden Model

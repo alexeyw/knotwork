@@ -12,7 +12,7 @@ prompt:
 run.create golden pipeline=recipe-intent-routing parent=null status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | What is the tallest mountain on Earth?
-run.running golden pipeline=recipe-intent-routing graphHash=2dd0f9fe0556dbe9275f04607da49514e28783e67195cf17478eb7ff593999b5
+run.running golden pipeline=recipe-intent-routing graphHash=740db174aaafcad5e6e9e4d3cb3805cca85d4f73dfba83d59f0f6620de37aba0
 driver start
 crash.key active_pipeline_id=recipe-intent-routing
 crash.key active_model=Golden Model

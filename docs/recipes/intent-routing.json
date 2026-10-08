@@ -58,7 +58,8 @@
         "conditionPrompt": null,
         "conditionKeywords": null,
         "conditionComplexity": null,
-        "conditionHasImage": null
+        "conditionHasImage": null,
+        "fallbackClass": "Answer"
       },
       "contextConfig": {
         "chatHistory": true,

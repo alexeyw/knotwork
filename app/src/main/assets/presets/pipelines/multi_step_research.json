@@ -114,7 +114,8 @@
         "conditionPrompt": null,
         "conditionKeywords": null,
         "conditionComplexity": null,
-        "conditionHasImage": null
+        "conditionHasImage": null,
+        "stopOnError": true
       },
       "contextConfig": {
         "chatHistory": false,

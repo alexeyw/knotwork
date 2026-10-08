@@ -12,7 +12,7 @@ prompt:
 run.create golden pipeline=recipe-decompose-and-queue parent=null status=QUEUED origin=CHAT hadImage=false
     userPrompt:
       | Compare how solar and wind power grew over the last decade.
-run.running golden pipeline=recipe-decompose-and-queue graphHash=ca2a5a1e09a148154ebd56b7c842754a3ca6fac48c998210af7adb3e1bf9e74c
+run.running golden pipeline=recipe-decompose-and-queue graphHash=af15328ec98bde46ac0adace749ae59e7d322c025fa46211a5a5eeef008ca27a
 driver start
 crash.key active_pipeline_id=recipe-decompose-and-queue
 crash.key active_model=Golden Model
