@@ -4,7 +4,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -54,9 +54,10 @@ private val HashChipGlyph = 11.dp
 internal val RunTouchTarget = 48.dp
 
 /**
- * A full SHA-256 in groups of eight, four groups a line (two at large font
- * scales) — never ellipsised, never scrolled sideways. The gaps are spacing, not
- * characters, so what is copied is the 64 characters alone.
+ * A full SHA-256 in groups of eight, at most four groups a line (two at large font
+ * scales) — never ellipsised, never scrolled sideways, and never a group broken
+ * across lines: where four do not fit, fewer go on the line. The gaps are spacing,
+ * not characters, so what is copied is the 64 characters alone.
  *
  * TalkBack never reads the hash out: it hears what the hash is, its length and
  * its first eight characters in pairs.
@@ -74,11 +75,13 @@ internal fun FullHash(sha256: String, what: String, color: Color, modifier: Modi
         HASH_GROUPS_PER_LINE
     }
     val description = stringResource(R.string.knotwork_run_hash_full_a11y, what, pairs(sha256.take(SHORT_HASH_LENGTH)))
-    Column(modifier = modifier.clearAndSetSemantics { contentDescription = description }) {
-        sha256.chunked(HASH_GROUP_LENGTH).chunked(perLine).forEach { line ->
-            Row(horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2)) {
-                line.forEach { group -> Text(text = group, style = KnotworkTextStyles.MonoSm, color = color) }
-            }
+    FlowRow(
+        modifier = modifier.clearAndSetSemantics { contentDescription = description },
+        horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+        maxItemsInEachRow = perLine,
+    ) {
+        sha256.chunked(HASH_GROUP_LENGTH).forEach { group ->
+            Text(text = group, style = KnotworkTextStyles.MonoSm, color = color, softWrap = false)
         }
     }
 }
