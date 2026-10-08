@@ -20,7 +20,7 @@
     <string name="settings_help_system_prompt_prefix">Goes in front of every Local LLM, Cloud and Skill step, wherever it runs — chats, triggers, background. Other node types skip it.</string>
     <string name="settings_help_max_context_length">The working window of the on-device model. Larger holds more at once and runs slower; cloud models use their own window.</string>
     <string name="settings_help_audio_max_duration_sec">Recording stops on its own at this point and sends what it has.</string>
-    <string name="settings_help_local_model_backend">Which chip runs the on-device model. NPU is fastest where it works; the app falls back on its own if it does not.</string>
+    <string name="settings_help_local_model_backend">Which chip runs the on-device model. GPU is faster where it works; if it fails to start, the app runs on CPU.</string>
     <string name="settings_help_auto_extract_enabled">On, durable facts from your chats — names, preferences, project details — are saved and reused later.</string>
     <string name="settings_help_memory_compaction_enabled">Old memories get merged into shorter summaries once there are many. Frees room; loses the exact wording.</string>
     <string name="settings_help_chat_history_compression_enabled">Long threads are summarised past the live window, so the agent keeps the gist instead of forgetting the start.</string>

@@ -236,7 +236,11 @@ class GenerationSettingsStore @Inject constructor(
 
     override val localModelBackend: Flow<String> = dataStore.preferencesOrEmpty()
         .map { preferences ->
-            preferences[Keys.LOCAL_MODEL_BACKEND] ?: LocalBackend.CPU.key
+            // A withdrawn backend reads as CPU — what it runs on — so no screen shows
+            // a choice the app no longer offers. An unknown key passes through as before.
+            preferences[Keys.LOCAL_MODEL_BACKEND]
+                ?.takeUnless { LocalBackend.fromKey(it)?.offered == false }
+                ?: LocalBackend.CPU.key
         }
 
     override val localModelBackendPreference: Flow<String?> = dataStore.preferencesOrEmpty()

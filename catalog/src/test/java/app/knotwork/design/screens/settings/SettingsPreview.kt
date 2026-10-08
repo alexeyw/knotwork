@@ -21,9 +21,9 @@ internal object SettingsPreview {
         approveSensitiveLabel = "Sensitive",
         approveNeverLabel = "Never",
         blockDestructive = true,
-        backendLabel = "NPU (QNN) · auto-fallback to GPU then CPU.",
-        selectedBackend = "NPU · auto",
-        backendOptions = listOf("NPU · auto", "GPU", "CPU"),
+        backendLabel = "GPU · falls back to CPU if it fails to start.",
+        selectedBackend = "GPU",
+        backendOptions = listOf("CPU", "GPU"),
         crashReportingEnabled = false,
     )
 
@@ -464,9 +464,9 @@ internal object SettingsPreview {
     private fun localModel(): LocalModelCardState = LocalModelCardState(
         modelName = "gemma-2b-it-q4",
         metaLine = "1.4 GB · 2 048 ctx · Q4_K_M · downloaded 12 May",
-        backendLabel = "NPU (QNN) · auto-fallback to GPU then CPU.",
-        backendOptions = listOf("NPU · auto", "GPU", "CPU"),
-        selectedBackend = "NPU · auto",
+        backendLabel = "GPU · falls back to CPU if it fails to start.",
+        backendOptions = listOf("CPU", "GPU"),
+        selectedBackend = "GPU",
         testProbeText = "Last probe · 248 tok in 1.42 s · 174 tok/s",
         testProbeIsError = false,
     )

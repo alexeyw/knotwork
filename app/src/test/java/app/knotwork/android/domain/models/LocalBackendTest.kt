@@ -32,4 +32,19 @@ class LocalBackendTest {
         // LocalBackend.key (always uppercase) so any other casing means a corrupt write.
         assertNull(LocalBackend.fromKey("cpu"))
     }
+
+    @Test
+    fun `given the settings list when read then CPU and GPU are offered and NPU is not`() {
+        assertEquals(listOf(LocalBackend.CPU, LocalBackend.GPU), LocalBackend.selectable)
+    }
+
+    @Test
+    fun `given a stored key when the runnable backend is resolved then only an offered one runs as itself`() {
+        assertEquals(LocalBackend.GPU, LocalBackend.runnableFromKey("GPU"))
+        assertEquals(LocalBackend.CPU, LocalBackend.runnableFromKey("CPU"))
+        // Withdrawn, unknown and absent all run on CPU.
+        assertEquals(LocalBackend.CPU, LocalBackend.runnableFromKey("NPU"))
+        assertEquals(LocalBackend.CPU, LocalBackend.runnableFromKey("TPU"))
+        assertEquals(LocalBackend.CPU, LocalBackend.runnableFromKey(null))
+    }
 }

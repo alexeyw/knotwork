@@ -49,11 +49,14 @@ model fails:
 
 ## Inference is very slow
 
-Without an NPU or a usable GPU, the local model runs on CPU only,
-which is noticeably slower (especially for the first few tokens):
+Without a usable GPU, the local model runs on CPU only, which is
+noticeably slower (especially for the first few tokens):
 
-- Open **Settings → Models** and tap **Test backend** to confirm
-  which backend the model is actually using.
+- While a reply is being written, the agent status names the backend
+  the model is actually running on. If it says CPU with **GPU**
+  selected, the GPU failed to start and this session fell back.
+- **Test backend** in **Settings → Models** measures how fast the
+  selected backend generates.
 - Try a smaller model from the **Models** screen — even a 1B-2B
   parameter model can be substantially faster than a 7B+ one on
   CPU.

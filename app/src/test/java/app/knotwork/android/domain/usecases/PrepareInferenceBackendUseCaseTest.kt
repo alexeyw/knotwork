@@ -73,6 +73,16 @@ class PrepareInferenceBackendUseCaseTest {
     }
 
     @Test
+    fun `given an NPU choice stored by an earlier version when preparing then it warms up on CPU`() = runTest {
+        every { settingsRepository.localModelBackendPreference } returns flowOf(LocalBackend.NPU.key)
+
+        val outcome = useCase(modelPath)
+
+        assertEquals(PrepareInferenceBackendUseCase.Outcome.Warmed(LocalBackend.CPU), outcome)
+        verify(exactly = 0) { accelerationProbe.isGpuAvailable() }
+    }
+
+    @Test
     fun `given an unreadable stored key when preparing then it is treated as an explicit choice`() = runTest {
         every { settingsRepository.localModelBackendPreference } returns flowOf("QPU")
 

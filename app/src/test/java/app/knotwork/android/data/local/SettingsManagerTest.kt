@@ -243,6 +243,21 @@ class SettingsManagerTest {
     }
 
     @Test
+    fun `given an NPU choice stored by an earlier version when the backend is read then it is CPU`() = runTest {
+        val (manager, scope) = freshManagerWithRealDataStore()
+        try {
+            manager.setLocalModelBackend("NPU")
+
+            // What every reader runs and shows; the raw preference still says a
+            // choice was made, so onboarding does not probe over it.
+            assertEquals(LocalBackend.CPU.key, manager.localModelBackend.first())
+            assertEquals("NPU", manager.localModelBackendPreference.first())
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
     fun `localModelBackendPreference distinguishes never-chosen from an explicit CPU choice`() = runTest {
         val (manager, scope) = freshManagerWithRealDataStore()
         try {

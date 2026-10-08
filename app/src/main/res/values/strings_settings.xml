@@ -39,7 +39,7 @@
 
     <!-- Local model card -->
     <string name="settings_local_model_meta">%1$s · %2$s ctx · %3$s · downloaded %4$s</string>
-    <string name="settings_row_inference_backend_subtitle">%1$s · auto-fallback to GPU then CPU.</string>
+    <string name="settings_row_inference_backend_subtitle">%1$s · falls back to CPU if it fails to start.</string>
     <string name="settings_row_test_backend_idle">Tap Run to verify reachability.</string>
     <string name="settings_row_test_backend_success" tools:ignore="PluralsCandidate">Last probe · %1$d tok in %2$s · %3$s tok/s</string>
     <string name="settings_row_test_backend_failed">Last probe failed · %1$s</string>

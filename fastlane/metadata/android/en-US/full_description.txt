@@ -2,7 +2,7 @@ Knotwork is an AI agent that runs its model on the phone. Instead of a prompt bo
 
 WHAT IT DOES
 
-- Runs on your device. On-device inference through LiteRT-LM, with optional NPU/GPU acceleration; CPU-only works, just slower. Cloud providers (OpenAI, Anthropic, Google Gemini, DeepSeek, Ollama) are optional, opt-in and bring-your-own-key.
+- Runs on your device. On-device inference through LiteRT-LM, with optional GPU acceleration; CPU-only works, just slower. Cloud providers (OpenAI, Anthropic, Google Gemini, DeepSeek, Ollama) are optional, opt-in and bring-your-own-key.
 - You build the behaviour. A drag-and-drop editor with pan and pinch-zoom, snap-to-grid, auto-layout, inline validation and a run-trace overlay, across 14 node types. Prompt variables such as $DATE, $TIME, $TOOLS, $MODEL and $MEMORY_SUMMARY render fresh on every run.
 - Tools, gated by you. Local actions through AppFunctions and external servers through the Model Context Protocol (MCP). Every sensitive or destructive call stops for explicit confirmation, enforced where the tool executes, not merely suggested to the model.
 - Reaches you from outside the app. A share target, launcher shortcuts and a Quick Settings tile run your chosen pipeline over shared text or images. Triggers (time, charging, Wi-Fi, network) fire a pipeline on their own and report back. Every entry surface stays inert until you bind a pipeline to it.

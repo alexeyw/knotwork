@@ -26,7 +26,7 @@ enum class ModelsVisualState {
  * top "ACTIVE" card.
  *
  * @property displayName monospace model filename or human-readable label.
- * @property meta "1.4 GB · NPU · QNN backend"-style mono description.
+ * @property meta "1.4 GB · GPU · LiteRT"-style mono description.
  * @property visionSupported whether the user has marked this model as able to
  *   read image attachments. Drives the "Image support" toggle on the active
  *   card; defaults to `false` (text-only).
