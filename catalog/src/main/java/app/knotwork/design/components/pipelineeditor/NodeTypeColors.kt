@@ -47,11 +47,17 @@ fun NodeType.headerTint(): Color {
  * the given header [strip] tint. Implements the L-band rule from
  * NodeCard tints:
  *
- *  - `L < 0.5` → `Color.White` (hue is dark enough that white reads cleanly).
- *  - `L ≥ 0.7` → `MaterialTheme.colorScheme.onSurface` (hue is light enough
- *    that a near-black tone gives AA contrast).
+ *  - `L < 0.5` → `Color.White`.
+ *  - `L ≥ 0.7` → `MaterialTheme.colorScheme.onSurface`.
  *  - Middle band (`0.5..0.7`) → `MaterialTheme.colorScheme.onPrimary`, the
  *    canonical Knotwork inverse foreground.
+ *
+ * The bands are the palette's look, not a contrast guarantee. Every node hue sits
+ * below L 0.5 and gets white, which measures 6.7–7.2:1 on OUTPUT and PIPELINE but
+ * 2.3–4.4:1 on the others (TOOL 2.34, SKILL in the dark theme 2.03) — under the
+ * 4.5:1 WCAG AA asks of the 11 sp label. Choosing the higher-contrast of white and
+ * a dark ink would reach it on all but LITE_RT; it was tried and the white labels
+ * were kept as a design choice.
  *
  * Returning a single foreground avoids the otherwise tempting per-hue lookup
  * table — every node hue is run through the same band check so adding a

@@ -241,6 +241,11 @@ details.
   answer. The choice is now GPU or CPU; an NPU choice made earlier reads as CPU,
   which is what it ran on. Settings no longer promise a fallback to GPU that
   never existed: a GPU that fails to start falls back to CPU.
+- **A full hash keeps its groups whole.** The run header lays out the model's
+  SHA-256 and the run digest in groups of eight, four to a line — sized for a
+  360 dp screen. On a slightly narrower layout or a larger font the last group
+  broke, leaving a character on a line of its own. Fewer groups now go on a line
+  when four do not fit, and no group is split.
 - **A file nested thousands of levels deep no longer crashes an import.** Android's
   JSON parser recurses once per level, so a pipeline, bundle or memory file of
   `[[[[…` some ten thousand levels deep — about 20 KB — ran it out of stack, an
