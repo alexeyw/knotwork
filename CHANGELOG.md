@@ -241,6 +241,9 @@ details.
   answer. The choice is now GPU or CPU; an NPU choice made earlier reads as CPU,
   which is what it ran on. Settings no longer promise a fallback to GPU that
   never existed: a GPU that fails to start falls back to CPU.
+- **The privacy and security notes cover debug builds too.** MediaPipe's usage
+  reporter is removed from release builds, which is what the documents said; a
+  debug build made from the source keeps it, which they did not.
 - **Cookbook recipes run with the values they show.** A pipeline node carries its
   settings twice — once for the run, once for the editors — and two recipes held
   some only in the editors' copy: the planning cap and the queue's stop-on-error

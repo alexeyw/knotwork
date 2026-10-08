@@ -310,7 +310,8 @@ anything: both run on the device.
   memory embeddings (MediaPipe) comes with a usage logger that would report to
   Google how it is used, together with your phone's model, build, country and
   carrier. Release builds remove that call, and each release build is checked
-  for it before it ships.
+  for it before it ships. A debug build — one a developer makes from the source,
+  never published — keeps it.
 - **Your keys and credentials.** API keys, the Hugging Face token, and MCP
   credentials are used only to authenticate to the service you entered them
   for. They are never sent anywhere else, and a saved provider key found in an
