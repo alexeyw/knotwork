@@ -300,6 +300,7 @@ object PipelineJsonSerializer {
      * [PipelineImportOutcome.Failure] with a human-readable message so the
      * caller (UI / use case) can surface it without try/catch boilerplate.
      */
+    @Suppress("ReturnCount") // One early return per refusal; collapsing them would hide which check fired.
     fun parse(jsonText: String): PipelineImportOutcome {
         if (JsonNesting.exceeds(jsonText)) return PipelineImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root = try {
