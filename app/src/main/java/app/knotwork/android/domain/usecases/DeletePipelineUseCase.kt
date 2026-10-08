@@ -16,7 +16,7 @@ import javax.inject.Inject
  * restart it was simply the most recently modified one, the library is never on
  * screen while that pipeline is being edited, and the refusal arrived only after
  * the user had confirmed an irreversible delete. Keeping the editor consistent with a deletion
- * is the caller's job — see `OrchestratorViewModel.deletePipeline`.
+ * is the caller's job — see `OrchestratorLibraryDelegate.deletePipeline`.
  *
  * Triggers bound to the deleted pipeline are switched off in the same step —
  * see [disableBoundTriggers].

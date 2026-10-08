@@ -238,7 +238,7 @@ fun AppNavGraph(
                 val orchestratorViewModel: OrchestratorViewModel = hiltViewModel(parentEntry)
                 val pipelineId = entry.arguments?.getString(NavRoutes.PIPELINE_EDIT_ID_ARG)
                 LaunchedEffect(pipelineId) {
-                    if (!pipelineId.isNullOrBlank()) orchestratorViewModel.loadPipeline(pipelineId)
+                    if (!pipelineId.isNullOrBlank()) orchestratorViewModel.library.loadPipeline(pipelineId)
                 }
                 PipelineEditorScreen(
                     viewModel = orchestratorViewModel,

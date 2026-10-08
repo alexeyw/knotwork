@@ -64,14 +64,14 @@ class SettingsCompositeConsumersTest {
          * 87 when the sections were introduced. What remains spans every section (the composite, its
          * Hilt module, the settings screen's view model, the end-to-end test entry point) or hands it
          * to several sections' delegates through a constructor already over the parameter limit
-         * (the chat home and orchestrator view models), until those view models are split up.
+         * (the chat home view model). The orchestrator view model left the list when its delegates
+         * took their sections through injected holders.
          */
         val LISTED_CONSUMERS = sortedSetOf(
             "main/data/local/SettingsManager.kt",
             "main/data/testing/AppFunctionsE2ETestEntryPoint.kt",
             "main/di/SettingsModule.kt",
             "main/presentation/ui/chat/home/ChatHomeViewModel.kt",
-            "main/presentation/ui/orchestrator/OrchestratorViewModel.kt",
             "main/presentation/ui/settings/SettingsViewModel.kt",
         )
     }

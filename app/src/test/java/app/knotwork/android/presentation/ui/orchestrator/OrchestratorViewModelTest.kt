@@ -171,29 +171,39 @@ class OrchestratorViewModelTest {
      * flow) and rebuild the VM before exercising it.
      */
     private fun buildViewModel(): OrchestratorViewModel = OrchestratorViewModel(
-        savePipelineUseCase,
-        loadPipelineUseCase,
-        importPipelineUseCase,
-        importPipelineBundleUseCase,
-        exportPipelineBundleUseCase,
-        loadPipelineFromPresetUseCase,
-        renamePipelineUseCase,
-        duplicatePipelineUseCase,
-        deletePipelineUseCase,
-        createPipelineUseCase,
-        mockk<ResolveSurfacePipelineUseCase>(relaxed = true),
-        mockk<SetSurfacePipelineUseCase>(relaxed = true),
-        savePipelineAsPresetUseCase,
-        savePromptAsPresetUseCase,
-        toolRepository,
-        localModelRepository,
-        settingsRepository,
-        promptTemplateEngine,
-        promptPresetRepository,
-        compositionValidator,
-        setOf(providerDate, providerTime),
-        skillRepository,
-        apiKeyRepository,
+        savePipelineUseCase = savePipelineUseCase,
+        libraryUseCases = OrchestratorLibraryUseCases(
+            loadPipeline = loadPipelineUseCase,
+            renamePipeline = renamePipelineUseCase,
+            duplicatePipeline = duplicatePipelineUseCase,
+            deletePipeline = deletePipelineUseCase,
+            createPipeline = createPipelineUseCase,
+            resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>(relaxed = true),
+            setSurfacePipeline = mockk<SetSurfacePipelineUseCase>(relaxed = true),
+            entryPointSettings = settingsRepository,
+        ),
+        transferUseCases = OrchestratorTransferUseCases(
+            importPipeline = importPipelineUseCase,
+            importPipelineBundle = importPipelineBundleUseCase,
+            exportPipelineBundle = exportPipelineBundleUseCase,
+        ),
+        presetUseCases = OrchestratorPresetUseCases(
+            loadPipelineFromPreset = loadPipelineFromPresetUseCase,
+            savePipelineAsPreset = savePipelineAsPresetUseCase,
+            savePromptAsPreset = savePromptAsPresetUseCase,
+            promptPresetRepository = promptPresetRepository,
+            loadPipeline = loadPipelineUseCase,
+        ),
+        nodeSheetSources = OrchestratorNodeSheetSources(
+            toolRepository = toolRepository,
+            toolSettings = settingsRepository,
+            localModelRepository = localModelRepository,
+            compositionValidator = compositionValidator,
+            skillRepository = skillRepository,
+            apiKeyRepository = apiKeyRepository,
+            promptTemplateEngine = promptTemplateEngine,
+            promptVariableProviders = setOf(providerDate, providerTime),
+        ),
     )
 
     /** Fills the open pipeline with the default graph, keeping its id and name. */
@@ -477,7 +487,7 @@ class OrchestratorViewModelTest {
         val mockPipeline = PipelineGraph(id = "test-1", name = "Test Pipeline")
         coEvery { loadPipelineUseCase.getPipelineById("test-1") } returns mockPipeline
 
-        viewModel.loadPipeline("test-1")
+        viewModel.library.loadPipeline("test-1")
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals("test-1", viewModel.uiState.value.currentPipeline.id)
@@ -509,7 +519,7 @@ class OrchestratorViewModelTest {
         )
         assertEquals(0, viewModel.uiState.value.currentPipeline.nodes.size)
 
-        viewModel.importPipelineFromJson(json)
+        viewModel.transfer.importJson(json)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -531,7 +541,7 @@ class OrchestratorViewModelTest {
             loadBasePreset()
             val json = currentPipelineJson()
 
-            viewModel.importPipelineFromJson(json)
+            viewModel.transfer.importJson(json)
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.value
@@ -549,9 +559,9 @@ class OrchestratorViewModelTest {
         val id = viewModel.uiState.value.currentPipeline.id
         coEvery { pipelineRepository.getPipelineById(id) } returns PipelineGraph(id = id, name = "Existing")
 
-        viewModel.importPipelineFromJson(json)
+        viewModel.transfer.importJson(json)
         testDispatcher.scheduler.advanceUntilIdle()
-        viewModel.resolveCollision(ImportCollisionResolution.REPLACE)
+        viewModel.transfer.resolveCollision(ImportCollisionResolution.REPLACE)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -574,7 +584,7 @@ class OrchestratorViewModelTest {
                 .put("name", "Daily digest")
                 .toString()
 
-            viewModel.importPipelineFromJson(json)
+            viewModel.transfer.importJson(json)
             testDispatcher.scheduler.advanceUntilIdle()
 
             val collision = viewModel.uiState.value.pendingCollision!!
@@ -594,7 +604,7 @@ class OrchestratorViewModelTest {
                 mapOf(graph.id to PipelineBindings(triggerCount = 1))
             val bundle = PipelineBundleJsonSerializer.serialize(listOf(graph), exportedAt = 0L)
 
-            viewModel.importJson(bundle)
+            viewModel.transfer.importJson(bundle)
             testDispatcher.scheduler.advanceUntilIdle()
 
             val collision = viewModel.uiState.value.pendingBundleImport!!.collisions.single()
@@ -602,7 +612,7 @@ class OrchestratorViewModelTest {
             assertEquals(1, collision.bindings.triggerCount)
             coVerify(exactly = 0) { pipelineRepository.savePipelines(any()) }
 
-            viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE)
+            viewModel.transfer.resolveBundleImport(ImportCollisionResolution.REPLACE)
             testDispatcher.scheduler.advanceUntilIdle()
 
             coVerify(exactly = 1) { pipelineRepository.savePipelines(any()) }
@@ -610,7 +620,7 @@ class OrchestratorViewModelTest {
 
     @Test
     fun `importPipelineFromJson sets error on invalid json`() = runTest {
-        viewModel.importPipelineFromJson("{ invalid json }")
+        viewModel.transfer.importJson("{ invalid json }")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val err = viewModel.uiState.value.errorMessage as UiText.Dynamic
@@ -633,7 +643,7 @@ class OrchestratorViewModelTest {
         )
         coEvery { promptTemplateEngine.renderSegments(template, any()) } returns segments
 
-        viewModel.requestPromptPreview(template)
+        viewModel.nodeSheet.requestPromptPreview(template)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val readyState = viewModel.uiState.value.previewState
@@ -889,10 +899,10 @@ class OrchestratorViewModelTest {
     @Test
     fun `dismissPromptPreview resets state to Hidden`() = runTest {
         coEvery { promptTemplateEngine.renderSegments(any(), any()) } returns emptyList()
-        viewModel.requestPromptPreview("anything")
+        viewModel.nodeSheet.requestPromptPreview("anything")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.dismissPromptPreview()
+        viewModel.nodeSheet.dismissPromptPreview()
 
         assertEquals(PromptPreviewState.Hidden, viewModel.uiState.value.previewState)
     }
@@ -902,12 +912,12 @@ class OrchestratorViewModelTest {
         // Arrange — load the pipeline so it becomes the active one.
         val active = PipelineGraph(id = "active", name = "Old Name")
         coEvery { loadPipelineUseCase.getPipelineById("active") } returns active
-        viewModel.loadPipeline("active")
+        viewModel.library.loadPipeline("active")
         testDispatcher.scheduler.advanceUntilIdle()
         coEvery { renamePipelineUseCase("active", "  New Name  ") } returns Result.success(Unit)
 
         // Act
-        viewModel.renamePipeline("active", "  New Name  ")
+        viewModel.library.renamePipeline("active", "  New Name  ")
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert
@@ -930,7 +940,7 @@ class OrchestratorViewModelTest {
             renamePipelineUseCase("p1", "")
         } returns Result.failure(IllegalArgumentException("Pipeline name cannot be empty"))
 
-        viewModel.renamePipeline("p1", "")
+        viewModel.library.renamePipeline("p1", "")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -946,7 +956,7 @@ class OrchestratorViewModelTest {
         val duplicate = PipelineGraph(id = "dup", name = "Source (copy)")
         coEvery { duplicatePipelineUseCase("src") } returns Result.success(duplicate)
 
-        viewModel.duplicatePipeline("src")
+        viewModel.library.duplicatePipeline("src")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -968,7 +978,7 @@ class OrchestratorViewModelTest {
             duplicatePipelineUseCase("missing")
         } returns Result.failure(IllegalStateException("Pipeline not found"))
 
-        viewModel.duplicatePipeline("missing")
+        viewModel.library.duplicatePipeline("missing")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -994,7 +1004,7 @@ class OrchestratorViewModelTest {
             assertEquals("open", vm.uiState.value.currentPipeline.id)
             coEvery { deletePipelineUseCase("open") } returns Result.success(Unit)
 
-            vm.deletePipeline("open")
+            vm.library.deletePipeline("open")
             testDispatcher.scheduler.advanceUntilIdle()
             library.value = listOf(other)
             testDispatcher.scheduler.advanceUntilIdle()
@@ -1018,7 +1028,7 @@ class OrchestratorViewModelTest {
         assertEquals("only", vm.uiState.value.currentPipeline.id)
         coEvery { deletePipelineUseCase("only") } returns Result.success(Unit)
 
-        vm.deletePipeline("only")
+        vm.library.deletePipeline("only")
         testDispatcher.scheduler.advanceUntilIdle()
         library.value = emptyList()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -1034,11 +1044,11 @@ class OrchestratorViewModelTest {
     fun `given another pipeline when deleted then the editor keeps what it holds`() = runTest {
         val open = PipelineGraph(id = "open", name = "Open", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
         coEvery { loadPipelineUseCase.getPipelineById("open") } returns open
-        viewModel.loadPipeline("open")
+        viewModel.library.loadPipeline("open")
         testDispatcher.scheduler.advanceUntilIdle()
         coEvery { deletePipelineUseCase("p2") } returns Result.success(Unit)
 
-        viewModel.deletePipeline("p2")
+        viewModel.library.deletePipeline("p2")
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals("open", viewModel.uiState.value.currentPipeline.id)
@@ -1048,11 +1058,11 @@ class OrchestratorViewModelTest {
     fun `given the delete fails when deleting the open pipeline then the editor keeps it`() = runTest {
         val open = PipelineGraph(id = "open", name = "Open", nodes = listOf(NodeModel("i", NodeType.INPUT, 0f, 0f)))
         coEvery { loadPipelineUseCase.getPipelineById("open") } returns open
-        viewModel.loadPipeline("open")
+        viewModel.library.loadPipeline("open")
         testDispatcher.scheduler.advanceUntilIdle()
         coEvery { deletePipelineUseCase("open") } returns Result.failure(RuntimeException("disk full"))
 
-        viewModel.deletePipeline("open")
+        viewModel.library.deletePipeline("open")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -1065,7 +1075,7 @@ class OrchestratorViewModelTest {
     fun `deletePipeline emits feedback on successful deletion`() = runTest {
         coEvery { deletePipelineUseCase("p2") } returns Result.success(Unit)
 
-        viewModel.deletePipeline("p2")
+        viewModel.library.deletePipeline("p2")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -1093,7 +1103,7 @@ class OrchestratorViewModelTest {
         )
         coEvery { createPipelineUseCase("Brand New") } returns Result.success(seed)
 
-        viewModel.createNewPipeline("Brand New")
+        viewModel.library.createNewPipeline("Brand New")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -1113,7 +1123,7 @@ class OrchestratorViewModelTest {
             createPipelineUseCase("")
         } returns Result.failure(IllegalArgumentException("Pipeline name cannot be empty"))
 
-        viewModel.createNewPipeline("")
+        viewModel.library.createNewPipeline("")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -1127,7 +1137,7 @@ class OrchestratorViewModelTest {
     @Test
     fun `clearFeedback resets feedbackMessage to null`() = runTest {
         coEvery { deletePipelineUseCase("p2") } returns Result.success(Unit)
-        viewModel.deletePipeline("p2")
+        viewModel.library.deletePipeline("p2")
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(
             UiText.Resource(
@@ -1146,7 +1156,7 @@ class OrchestratorViewModelTest {
         val seed = PipelineGraph(id = "new", name = "Brand New")
         coEvery { createPipelineUseCase("Brand New") } returns Result.success(seed)
 
-        viewModel.createNewPipeline("Brand New")
+        viewModel.library.createNewPipeline("Brand New")
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(true, viewModel.uiState.value.pendingEditorNavigation)
@@ -1158,7 +1168,7 @@ class OrchestratorViewModelTest {
             createPipelineUseCase("")
         } returns Result.failure(IllegalArgumentException("Pipeline name cannot be empty"))
 
-        viewModel.createNewPipeline("")
+        viewModel.library.createNewPipeline("")
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(false, viewModel.uiState.value.pendingEditorNavigation)
@@ -1168,7 +1178,7 @@ class OrchestratorViewModelTest {
     fun `consumePendingEditorNavigation resets the flag`() = runTest {
         val seed = PipelineGraph(id = "new", name = "Brand New")
         coEvery { createPipelineUseCase("Brand New") } returns Result.success(seed)
-        viewModel.createNewPipeline("Brand New")
+        viewModel.library.createNewPipeline("Brand New")
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(true, viewModel.uiState.value.pendingEditorNavigation)
 
@@ -1257,7 +1267,7 @@ class OrchestratorViewModelTest {
         viewModel.replaceCurrentPipeline(pipeline)
 
         // When
-        viewModel.saveCurrentAsPreset(
+        viewModel.presets.saveCurrentAsPreset(
             name = "My preset",
             description = "demo",
             category = PresetCategory.LOCAL,
@@ -1284,7 +1294,7 @@ class OrchestratorViewModelTest {
             savePipelineAsPresetUseCase(any(), any(), any(), any(), any())
         } returns Result.failure(IllegalArgumentException("Preset name must not be blank"))
 
-        viewModel.saveCurrentAsPreset(
+        viewModel.presets.saveCurrentAsPreset(
             name = " ",
             description = "",
             category = PresetCategory.OTHER,
@@ -1308,7 +1318,7 @@ class OrchestratorViewModelTest {
         } returns Result.success("preset-9")
 
         // When
-        viewModel.saveAsPresetFromLibrary(
+        viewModel.presets.saveAsPresetFromLibrary(
             pipelineId = "p9",
             name = "From library",
             description = "",
@@ -1333,7 +1343,7 @@ class OrchestratorViewModelTest {
     fun `saveAsPresetFromLibrary surfaces pipeline-not-found error`() = runTest {
         coEvery { loadPipelineUseCase.getPipelineById("missing") } returns null
 
-        viewModel.saveAsPresetFromLibrary(
+        viewModel.presets.saveAsPresetFromLibrary(
             pipelineId = "missing",
             name = "x",
             description = "",
@@ -1361,7 +1371,7 @@ class OrchestratorViewModelTest {
             flowOf(listOf(bundled, user))
 
         val emitted = mutableListOf<List<PromptPreset>>()
-        viewModel.bundledPresetsForType(NodeType.LITE_RT)
+        viewModel.presets.bundledPresetsForType(NodeType.LITE_RT)
             .collect { emitted += it }
 
         assertEquals(1, emitted.last().size)
@@ -1383,7 +1393,7 @@ class OrchestratorViewModelTest {
             flowOf(listOf(bundled, user))
 
         val emitted = mutableListOf<List<PromptPreset>>()
-        viewModel.userPresetsForType(NodeType.CLOUD)
+        viewModel.presets.userPresetsForType(NodeType.CLOUD)
             .collect { emitted += it }
 
         assertEquals(1, emitted.last().size)
@@ -1402,7 +1412,7 @@ class OrchestratorViewModelTest {
             )
         } returns Result.success("preset-1")
 
-        viewModel.saveCurrentPromptAsPreset(
+        viewModel.presets.saveCurrentPromptAsPreset(
             systemPrompt = "You are concise.",
             name = "Concise assistant",
             description = "",
@@ -1437,7 +1447,7 @@ class OrchestratorViewModelTest {
             )
         } returns Result.failure(IllegalArgumentException("Preset name must not be blank"))
 
-        viewModel.saveCurrentPromptAsPreset(
+        viewModel.presets.saveCurrentPromptAsPreset(
             systemPrompt = "ignored",
             name = "",
             description = "",
@@ -1463,7 +1473,7 @@ class OrchestratorViewModelTest {
         )
         coEvery { loadPipelineFromPresetUseCase.materialize("preset1") } returns Result.success(materialized)
 
-        viewModel.applyPresetToCurrentPipeline("preset1")
+        viewModel.presets.applyPresetToCurrentPipeline("preset1")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val current = viewModel.uiState.value.currentPipeline
@@ -1480,7 +1490,7 @@ class OrchestratorViewModelTest {
         coEvery { loadPipelineFromPresetUseCase.materialize("bad") } returns
             Result.failure(IllegalStateException("Preset not found: bad"))
 
-        viewModel.applyPresetToCurrentPipeline("bad")
+        viewModel.presets.applyPresetToCurrentPipeline("bad")
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.errorMessage)
@@ -1502,7 +1512,7 @@ class OrchestratorViewModelTest {
         val vm = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(listOf("a"), vm.dependentsOf("x").map { it.id })
+        assertEquals(listOf("a"), vm.library.dependentsOf("x").map { it.id })
     }
 
     @Test
@@ -1522,7 +1532,7 @@ class OrchestratorViewModelTest {
             ),
         )
 
-        val result = viewModel.classifyPipelineTargets()
+        val result = viewModel.nodeSheet.classifyPipelineTargets()
 
         assertEquals(listOf("ok", "loop"), result.map { it.pipelineId })
         assertEquals(PipelineTargetAvailability.Reason.Cycle("Caller"), result[1].reason)
@@ -1532,7 +1542,7 @@ class OrchestratorViewModelTest {
     fun `classifyPipelineTargets degrades to empty list when the validator throws`() = runTest {
         coEvery { compositionValidator.classifyTargets(any(), any()) } throws IllegalStateException("boom")
 
-        assertEquals(emptyList<PipelineTargetAvailability>(), viewModel.classifyPipelineTargets())
+        assertEquals(emptyList<PipelineTargetAvailability>(), viewModel.nodeSheet.classifyPipelineTargets())
     }
 
     @Test
@@ -1555,7 +1565,7 @@ class OrchestratorViewModelTest {
             }
             val vm = buildViewModel()
 
-            val availability = vm.loadProviderAvailability()
+            val availability = vm.nodeSheet.loadProviderAvailability()
 
             // OpenRouter has a key but no model, and no default: not usable here, so not listed.
             assertEquals(mapOf(CloudProvider.OPENAI to "gpt-4o-mini"), availability.models)

@@ -39,8 +39,8 @@ import javax.inject.Inject
  *
  * `SavePipelineAsPresetUseCase` is **not** invoked from this ViewModel —
  * the Save-as-preset dialog lives on the pipeline library / editor and
- * dispatches through [OrchestratorViewModel.saveCurrentAsPreset] /
- * [OrchestratorViewModel.saveAsPresetFromLibrary] so the dialog stays
+ * dispatches through [OrchestratorPresetsDelegate.saveCurrentAsPreset] /
+ * [OrchestratorPresetsDelegate.saveAsPresetFromLibrary] so the dialog stays
  * close to the graph it is packaging.
  */
 @HiltViewModel

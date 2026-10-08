@@ -21,8 +21,6 @@ app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMa
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeViewModel.kt :: constructor :: LongParameterList
 app/src/main/java/app/knotwork/android/presentation/ui/more/MoreScreen.kt :: fun MoreUiState.toViewState :: LongParameterList
 app/src/main/java/app/knotwork/android/presentation/ui/more/MoreScreen.kt :: fun appSection :: LongParameterList
-app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/OrchestratorViewModel.kt :: class OrchestratorViewModel :: TooManyFunctions
-app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/OrchestratorViewModel.kt :: constructor :: LongParameterList
 app/src/main/java/app/knotwork/android/presentation/ui/pipeline/editor/config/NodeConfigCodec.kt :: (file) :: TooManyFunctions
 app/src/main/java/app/knotwork/android/presentation/ui/pipeline/editor/core/BezierEdge.kt :: fun distanceToPoint :: LongParameterList
 app/src/main/java/app/knotwork/android/presentation/ui/prompts/PromptLibraryViewModel.kt :: class PromptLibraryViewModel :: TooManyFunctions

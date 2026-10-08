@@ -154,6 +154,20 @@ transformers (`restingVisual`, `withPendingCleared`, `isRestingOrCold`,
 `ChatHomeStateReducers.kt` / the console delegate file. The coordinator itself is
 left around the agent-execution core that the delegates orchestrate around.
 
+`OrchestratorViewModel` — the one view model the pipeline library and editor
+share — follows the same pattern with four delegates:
+`OrchestratorLibraryDelegate` (the saved list, the default pipeline and
+entry-surface bindings, open / create / rename / duplicate / delete),
+`OrchestratorTransferDelegate` (importing a file or bundle, exporting a
+bundle), `OrchestratorPresetsDelegate` (pipeline and prompt presets) and
+`OrchestratorNodeSheetDelegate` (what the node settings sheet lists, and the
+prompt preview). It keeps the open pipeline: editing its graph, saving it, and
+the validation wording, which lives in the pure `OrchestratorErrorText` so a
+save, an import and a preset save word the same failure alike. Each delegate
+takes its collaborators as one injected holder (`Orchestrator…UseCases` /
+`…Sources`), so the view model's constructor names five things rather than
+twenty-three.
+
 ---
 
 ## 2. Data flow — life of a user message

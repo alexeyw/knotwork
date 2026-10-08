@@ -49,7 +49,7 @@ private val BAR_MIN_HEIGHT = 36.dp
  * @param errors validation errors from `PipelineGraph.validate()` via the ViewModel.
  * @param errorLabels human-readable copies for each error (resolved by the
  *   caller using the existing
- *   `OrchestratorViewModel.validationErrorAsUiText` so wording stays
+ *   `OrchestratorErrorText.forValidation` so wording stays
  *   single-sourced).
  * @param nodeLookup maps `nodeId → display label` for inline node attribution
  *   on the row.
