@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
 import app.knotwork.android.domain.models.RouteLabels
+import app.knotwork.android.domain.text.JsonNesting
 import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
@@ -300,6 +301,7 @@ object PipelineJsonSerializer {
      * caller (UI / use case) can surface it without try/catch boilerplate.
      */
     fun parse(jsonText: String): PipelineImportOutcome {
+        if (JsonNesting.exceeds(jsonText)) return PipelineImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {

@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.PipelineImportOutcome
 import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PipelinePresetImportOutcome
 import app.knotwork.android.domain.models.PresetCategory
+import app.knotwork.android.domain.text.JsonNesting
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -99,6 +100,7 @@ object PipelinePresetJsonSerializer {
      *   [PipelinePreset].
      */
     fun parse(jsonText: String, isBundled: Boolean): PipelinePresetImportOutcome {
+        if (JsonNesting.exceeds(jsonText)) return PipelinePresetImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {

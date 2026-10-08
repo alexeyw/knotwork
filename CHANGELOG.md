@@ -241,6 +241,11 @@ details.
   answer. The choice is now GPU or CPU; an NPU choice made earlier reads as CPU,
   which is what it ran on. Settings no longer promise a fallback to GPU that
   never existed: a GPU that fails to start falls back to CPU.
+- **A file nested thousands of levels deep no longer crashes an import.** Android's
+  JSON parser recurses once per level, so a pipeline, bundle or memory file of
+  `[[[[…` some ten thousand levels deep — about 20 KB — ran it out of stack, an
+  error the import did not catch. Imports now refuse any document nested deeper
+  than 64 levels (the app's own files nest at most 7) with an ordinary error.
 - **Compaction no longer deletes facts it cannot check.** A memory is deleted
   under a summary only when its embedding shows the summary carries it. The
   built-in embedder is an English model and places unrelated Russian facts almost

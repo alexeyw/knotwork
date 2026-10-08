@@ -4,6 +4,7 @@ import app.knotwork.android.domain.constants.PromptPresetConstants
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.models.PromptPresetImportOutcome
+import app.knotwork.android.domain.text.JsonNesting
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -80,6 +81,7 @@ object PromptPresetJsonSerializer {
      */
     @Suppress("ReturnCount")
     fun parse(jsonText: String, isBundled: Boolean): PromptPresetImportOutcome {
+        if (JsonNesting.exceeds(jsonText)) return PromptPresetImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {

@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryExportDocument
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemoryVersion
+import app.knotwork.android.domain.text.JsonNesting
 import app.knotwork.android.domain.text.toDisplaySafe
 import org.json.JSONArray
 import org.json.JSONException
@@ -165,6 +166,7 @@ object MemoryJsonSerializer {
      */
     @Suppress("ReturnCount")
     fun parse(jsonText: String, nowMillis: Long = System.currentTimeMillis()): MemoryImportOutcome {
+        if (JsonNesting.exceeds(jsonText)) return MemoryImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
