@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.discover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.data.network.AndroidModelDownloadManager.DownloadError
+import app.knotwork.android.domain.models.DiscoverableModelFile
 import app.knotwork.android.domain.models.DownloadState
 import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.ModelDownloadManager
@@ -10,6 +11,7 @@ import app.knotwork.android.domain.usecases.GetDiscoverableModelDetailUseCase
 import app.knotwork.android.domain.usecases.InstallDiscoveredModelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,7 +27,10 @@ import javax.inject.Inject
 /**
  * ViewModel for the model-discovery detail screen. Loads a repository's files
  * and drives the per-file install flow through [InstallDiscoveredModelUseCase],
- * gating each download behind a license confirmation. The shared Hugging Face
+ * gating each download behind a license confirmation. Once the files are known,
+ * it also follows any download already running for one of them — started from
+ * the Models screen, or from here before the user left — so its progress shows
+ * instead of an Install button over work in flight. The shared Hugging Face
  * token (used for access-gated repos) is read/written through
  * [GenerationSettings], matching the Models screen.
  *
@@ -53,7 +58,7 @@ class DiscoverDetailViewModel @Inject constructor(
     /** One-shot install outcomes for the screen's snackbar host. */
     val installEvents: SharedFlow<DiscoverInstallEvent> = _installEvents.asSharedFlow()
 
-    /** Per-file in-flight install jobs, keyed by on-disk file name. */
+    /** Per-file jobs following a download — started here or found running — keyed by on-disk file name. */
     private val installJobs = mutableMapOf<String, Job>()
 
     /** In-flight detail-fetch job; cancelled before a new fetch supersedes it. */
@@ -99,6 +104,7 @@ class DiscoverDetailViewModel @Inject constructor(
                             installed = detail.files.filter { f -> f.isInstalled }.map { f -> f.fileName }.toSet(),
                         )
                     }
+                    followRunningDownloads(detail.files)
                 },
                 onFailure = {
                     _uiState.update { it.copy(status = DiscoverDetailStatus.Error) }
@@ -122,10 +128,23 @@ class DiscoverDetailViewModel @Inject constructor(
         _uiState.update { it.copy(pendingLicenseFileName = null) }
         val file = _uiState.value.detail?.files?.firstOrNull { it.fileName == fileName } ?: return
         if (installJobs[fileName]?.isActive == true) return
-        installJobs[fileName] = installModel(file)
-            .onEach { state -> handleDownloadState(fileName, state) }
-            .launchIn(viewModelScope)
+        installJobs[fileName] = follow(fileName, installModel(file))
     }
+
+    /**
+     * Follows the download already running for each of [files], if any. A file
+     * already installed, or one this screen is following, is skipped; a file with
+     * nothing running gets an empty stream and keeps its Install button.
+     */
+    private fun followRunningDownloads(files: List<DiscoverableModelFile>) {
+        files
+            .filterNot { it.isInstalled || installJobs[it.fileName]?.isActive == true }
+            .forEach { file -> installJobs[file.fileName] = follow(file.fileName, installModel.attach(file)) }
+    }
+
+    /** Folds [states] into this screen for [fileName] — the same handling whoever started the download. */
+    private fun follow(fileName: String, states: Flow<DownloadState>): Job =
+        states.onEach { state -> handleDownloadState(fileName, state) }.launchIn(viewModelScope)
 
     private fun handleDownloadState(fileName: String, state: DownloadState) {
         when (state) {
@@ -157,9 +176,10 @@ class DiscoverDetailViewModel @Inject constructor(
      * has had the two-step form since the download moved to `WorkManager`; this
      * screen was written before that and never caught up.
      *
-     * The cancel is not conditional on a job being present. A download survives
-     * process death and this screen does not re-attach to it, so "no local job"
-     * is precisely the case where the work is running unobserved.
+     * The cancel is not conditional on a job being present. The screen follows a
+     * running download only once the repository detail has loaded, and stopping
+     * work that nothing here follows costs nothing — leaving it running is the
+     * defect this method once had.
      *
      * Bytes already fetched stay on disk, so re-installing the same file resumes.
      *

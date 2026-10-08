@@ -161,7 +161,9 @@ app:
 - **Install.** Tap **Install** next to a file. You'll be asked to
   **review and accept the licence** before the download starts; it then
   streams through the same downloader as the rest of the screen and the
-  model appears in your **Downloaded** list, ready to activate.
+  model appears in your **Downloaded** list, ready to activate. The
+  download keeps going if you leave; open the model again and the file
+  shows its progress — a download started from the Models screen too.
 - **Gated models.** Some repositories require you to accept their
   licence on the Hugging Face website and use a personal access token.
   These show a **Gated** badge and an inline token field — paste your
