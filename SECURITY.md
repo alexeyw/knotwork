@@ -645,7 +645,9 @@ which is why an input method granted by the user is outside this policy's scope.
   send usage counts and the device's model, build fingerprint, country and
   carrier to Google. In release builds that call is removed when the app is
   minified, and every release build checks its packaged code for it; the
-  `foss` build also lacks the component that would upload it.
+  `foss` build also lacks the component that would upload it. A `full` debug
+  build — made from the source for development, never published — is not
+  minified and keeps the call.
 
 ### Prompt injection via tool content (accepted risk)
 

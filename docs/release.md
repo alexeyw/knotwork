@@ -524,7 +524,8 @@ the app was broken:
   mapping nor the class table can show whether the removal happened — only the
   instructions can. It fails too when the call-site class is missing, so it
   cannot pass over nothing. Verified both ways on `fullRelease`: one call site
-  without the rules, none with them.
+  without the rules, none with them. Release variants only: a debug build is not
+  minified, so it keeps the call, and a `full` debug build can send it.
 
 The instantiability check was added after long-term memory turned out to have
 never worked in any released build. R8 in full mode left

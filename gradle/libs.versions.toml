@@ -33,11 +33,11 @@ navigationCompose = "2.10.2"
 hiltNavigationCompose = "1.4.0"
 okhttp = "5.5.0"
 koog = "1.3.0"
-# Google / DeepSeek prompt-executor clients and the MCP client module have
-# not promoted past `1.3.0-beta` on Maven Central yet (the rest of
-# Koog 1.3.0 is stable; checked 25.09.2026). Pin them separately so a single
-# `koog` bump doesn't fail to resolve. Re-collapse onto `koog` once these three
-# artifacts ship their stable release.
+# Google / DeepSeek prompt-executor clients and the MCP client module are on
+# Koog's beta track for good — its VERSIONING.md lists them as beta modules,
+# shipped as `<version>-beta` beside each stable release (no stable build of
+# them exists on Maven Central; checked 08.10.2026). Not a pin waiting to
+# collapse: bump this entry together with `koog`.
 koog-preview = "1.3.0-beta"
 # `appfunctions-service` ended at alpha09: from alpha10 its classes live in
 # `appfunctions` (package `androidx.appfunctions`) and every function is declared in a
