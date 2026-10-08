@@ -1,11 +1,14 @@
 package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ClarificationRequest
+import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.models.RunNoticeCause
+import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.design.components.chat.ComposerVoiceNotice
 import app.knotwork.design.screens.chat.ChatHomeConsoleState
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
@@ -302,3 +305,95 @@ data class ChatHomeModelState(
  *   is actually decoding the tokens.
  */
 data class ChatHomeTokenState(val used: Int = 0, val max: Int = 0, val streaming: Int = 0, val backend: String? = null)
+
+/**
+ * Minimal pipeline summary used by [ChatHomeViewModel] to resolve the
+ * TopAppBar subtitle, the deleted-pipeline fallback, and the active pipeline's
+ * empty-state starter prompts.
+ *
+ * @property id stable identifier of the pipeline.
+ * @property name display name of the pipeline.
+ * @property samplePrompts starter ("quick action") prompts the pipeline
+ *   declares for the new-chat empty state (empty when it declares none).
+ */
+data class PipelineSummary(
+    val id: String,
+    val name: String,
+    val samplePrompts: List<PipelineSamplePrompt> = emptyList(),
+)
+
+/**
+ * Snapshot of the tool the orchestrator is currently paused on, exposed
+ * through [ChatHomePendingState.tool] so the mapper can render the
+ * trailing HITL confirmation card from real data instead of fixtures.
+ *
+ * @property toolName fully-qualified tool id (e.g. `fs.write_file`).
+ * @property arguments raw JSON-encoded argument blob emitted by the agent.
+ * @property risk per-tool risk tier resolved by `ToolRepository.getRisk`.
+ * @property requestId identity of the request this card shows. The card's
+ *   answer names it, so it settles this request or nothing — which is also what
+ *   makes the risk above the right one to decide the typed confirmation by.
+ * @property context what the run was asked to do, shown above the call; `null`
+ *   when there is nothing to show.
+ */
+data class HitlPending(
+    val toolName: String,
+    val arguments: String,
+    val risk: ToolRisk,
+    val requestId: String,
+    val context: ApprovalRequestContext? = null,
+)
+
+/**
+ * Snapshot of the session's interrupted run, exposed through
+ * [ChatHomePendingState.interrupted] so the mapping can render the trailing
+ * interrupted-run status card (Resume / Discard) from real data.
+ *
+ * @property runId id of the interrupted persistent run record — the Discard
+ *   intent settles exactly this record, never "whatever is interrupted now".
+ * @property nodeLabel resolved display label of the node the run stopped at
+ *   (falls back to [ChatHomeReattachDelegate.INTERRUPTED_UNKNOWN_NODE_LABEL]).
+ * @property timestamp pre-formatted time the run was actually interrupted
+ *   (`finishedAt` of the record). Captured once here so the card shows a
+ *   stable, truthful time instead of re-deriving "now" on every
+ *   recomposition.
+ * @property resumable whether the card offers the Resume CTA: `false` when
+ *   the interruption is older than the resume window or the record predates
+ *   prompt persistence — only Discard remains. The use case re-validates on
+ *   tap regardless; this flag just keeps the offered action honest.
+ */
+data class InterruptedRunPending(
+    val runId: String,
+    val nodeLabel: String,
+    val timestamp: String,
+    val resumable: Boolean = true,
+)
+
+/**
+ * Snapshot of a run paused at one of its own ceilings, exposed through
+ * [ChatHomePendingState.ceiling] so the mapping can render the trailing pause
+ * card (Continue / Stop) from real data.
+ *
+ * Carries the breach rather than a rendered sentence: the copy has one owner
+ * ([app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper]), and
+ * a ViewModel holding resolved strings could not be the same words the
+ * notification and the run console use for the same event.
+ *
+ * @property runId Id of the paused run record — the decision settles exactly
+ *   this run, never "whatever is paused now". For a pause raised inside a
+ *   sub-pipeline this is the child run, which is where the record sits; the
+ *   submission path resolves the tree root itself. `null` on the live path,
+ *   where the orchestrator emission carries no id and the decision falls back
+ *   to the session's parked record — which is exactly the record the pause just
+ *   wrote. Naming the session's *active* run instead would be worse than
+ *   naming nothing: for a nested pause the record sits on the child while the
+ *   active run is the parent.
+ * @property breach Which ceiling bound and by how much, exactly as it stood
+ *   when the run stopped. Read off the durable record on reattach, so a pause
+ *   answered after a restart states the same numbers it stated live.
+ * @property timestamp Pre-formatted time the run actually paused, captured once
+ *   here for the reason [InterruptedRunPending.timestamp] is: a pause answered
+ *   the next morning must still say when the run stopped, not what time it is
+ *   now.
+ */
+data class CeilingPausePending(val runId: String?, val breach: HardCeilingBreach, val timestamp: String)

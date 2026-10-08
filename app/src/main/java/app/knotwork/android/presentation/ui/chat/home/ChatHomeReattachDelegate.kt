@@ -368,3 +368,20 @@ class RestoredCardSeams(
     val clarification: (ClarificationRequest) -> Unit,
     val ceilingPause: (CeilingPausePending) -> Unit,
 )
+
+/**
+ * One-shot failure outcomes of a Resume tap on the interrupted-run card,
+ * mapped to snackbar copy by the screen. Modelled as an enum so resource ids
+ * stay out of the ViewModel. A successful resume emits no event — the
+ * surface flips to `Generating` instead.
+ */
+enum class ResumeFeedbackEvent {
+    /** The pipeline graph was edited or deleted; only a full restart can help. */
+    GraphChanged,
+
+    /** The interruption is older than the configured resume window. */
+    Expired,
+
+    /** The run is no longer resumable (raced discard/resume, legacy record). */
+    NotResumable,
+}

@@ -5,25 +5,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
-import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
-import app.knotwork.android.domain.models.HardCeilingBreach
 import app.knotwork.android.domain.models.LocalSampling
 import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.PipelineRunStatus
-import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.Role
-import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.ClarificationRepository
+import app.knotwork.android.domain.repositories.EntryPointSettings
+import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
+import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.repositories.RunTraceRepository
-import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
@@ -50,7 +49,6 @@ import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessageStatus
 import app.knotwork.design.components.chat.ChatMetadata
 import app.knotwork.design.components.chat.ChatRole
-import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -80,8 +78,9 @@ import javax.inject.Inject
  *  - [ChatRepository] for session + message persistence;
  *  - [PipelineRepository] for pipeline-binding observation and the
  *    deleted-pipeline fallback Snackbar;
- *  - [SettingsRepository] for the persisted active session id and the
- *    context-window cap;
+ *  - [AppStateSettings] for the persisted active session id and
+ *    [GenerationSettings] for the context-window cap; the entry-point and run
+ *    sections go to the delegates that read them;
  *  - [LlmInferenceEngine] for the "load a model first" gate;
  *  - [GetContextWindowUseCase] for the rough token-counter TopAppBar
  *    readout (v0.1 — `text.length / 4`).
@@ -118,11 +117,13 @@ import javax.inject.Inject
 class ChatHomeViewModel
 @Inject
 // Reason: the chat surface is one screen whose behaviour is already split into
-// eight delegates, and this constructor is where their collaborators arrive
-// before being handed on. Hilt assembles the list — it is never written out by
-// hand — and the count drops only if the delegates are injected directly rather
-// than constructed here, which is a wiring change with its own blast radius
-// (each delegate would need its own Hilt binding and lifecycle owner).
+// nine delegates, and this constructor is where their collaborators arrive
+// before being handed on — 34 of them. Measured, not assumed: the core alone
+// reads 11 (orchestrator, chat, two settings sections, context window, engine,
+// models, model loading, two after-turn coordinators, session tracker), the
+// delegates share 6 more, and even one injected holder per remaining delegate
+// group leaves 21 — over the limit of 14 without inventing holders whose only
+// job is the count. Hilt assembles the list; it is never written out by hand.
 // Scoped to the constructor so it cannot silence a future finding elsewhere in
 // the class.
 @Suppress("LongParameterList")
@@ -130,7 +131,10 @@ constructor(
     private val agentOrchestratorUseCase: AgentOrchestratorUseCase,
     private val chatRepository: ChatRepository,
     private val pipelineRepository: PipelineRepository,
-    private val settingsRepository: SettingsRepository,
+    private val appStateSettings: AppStateSettings,
+    private val generationSettings: GenerationSettings,
+    private val entryPointSettings: EntryPointSettings,
+    private val runSettings: RunSettings,
     private val getContextWindowUseCase: GetContextWindowUseCase,
     private val llmInferenceEngine: LlmInferenceEngine,
     private val clarificationRepository: ClarificationRepository,
@@ -260,7 +264,7 @@ constructor(
     val console: ChatHomeConsoleDelegate = ChatHomeConsoleDelegate(
         scope = viewModelScope,
         state = _state,
-        appStateSettings = settingsRepository,
+        appStateSettings = appStateSettings,
         runTraceRepository = runTraceRepository,
         pipelineRunRepository = pipelineRunRepository,
         traceProjectionDispatcher = { traceProjectionDispatcher },
@@ -275,7 +279,7 @@ constructor(
         state = _state,
         pipelineRunRepository = pipelineRunRepository,
         useCases = runUseCases,
-        generationSettings = settingsRepository,
+        generationSettings = generationSettings,
         // A finished run started again with its own seed and sampler: the run's
         // message again, on the pipeline it executed, as a new turn in the thread.
         // The console closes so the answer shows as it arrives.
@@ -310,7 +314,7 @@ constructor(
     val voice: ChatHomeVoiceDelegate = ChatHomeVoiceDelegate(
         scope = viewModelScope,
         state = _state,
-        generationSettings = settingsRepository,
+        generationSettings = generationSettings,
         audioRecorder = audioRecorder,
         audioCaptureStore = audioCaptureStore,
         transcribeAudioUseCase = transcribeAudioUseCase,
@@ -353,7 +357,7 @@ constructor(
     val pipelineBinding: ChatHomePipelineBindingDelegate = ChatHomePipelineBindingDelegate(
         scope = viewModelScope,
         state = _state,
-        entryPointSettings = settingsRepository,
+        entryPointSettings = entryPointSettings,
         pipelineRepository = pipelineRepository,
         chatRepository = chatRepository,
         pipelineRunRepository = pipelineRunRepository,
@@ -391,7 +395,7 @@ constructor(
         state = _state,
         pipelineRunRepository = pipelineRunRepository,
         pipelineRepository = pipelineRepository,
-        runSettings = settingsRepository,
+        runSettings = runSettings,
         agentOrchestratorUseCase = agentOrchestratorUseCase,
         clarificationRepository = clarificationRepository,
         pendingInteractionRepository = pendingInteractionRepository,
@@ -946,7 +950,7 @@ constructor(
         reattach.reattachToRun(threadId)
         run.observe(threadId)
         viewModelScope.launch {
-            settingsRepository.setCurrentChatSessionId(threadId)
+            appStateSettings.setCurrentChatSessionId(threadId)
             // The pipelines / sessions flows do not re-emit on a thread
             // switch, so a binding that went stale since their last
             // emission would otherwise reach the task queue silently.
@@ -994,11 +998,11 @@ constructor(
             // OR during the `currentChatSessionId.first()` suspend below, so the
             // guard is re-checked after every suspension point.
             if (_state.value.thread.currentSessionId.isNotBlank()) return@launch
-            val savedSessionId = settingsRepository.currentChatSessionId.first()
+            val savedSessionId = appStateSettings.currentChatSessionId.first()
             if (_state.value.thread.currentSessionId.isNotBlank()) return@launch
             val sessionId = if (savedSessionId.isNullOrBlank()) {
                 val newId = UUID.randomUUID().toString()
-                settingsRepository.setCurrentChatSessionId(newId)
+                appStateSettings.setCurrentChatSessionId(newId)
                 chatRepository.saveSession(
                     ChatSession(
                         id = newId,
@@ -1046,7 +1050,7 @@ constructor(
     /** Observes the configured context-window cap and mirrors it into [ChatHomeTokenState.max]. */
     private fun observeMaxContextSize() {
         viewModelScope.launch {
-            settingsRepository.maxContextLength.collect { value ->
+            generationSettings.maxContextLength.collect { value ->
                 _state.update { it.copy(tokens = it.tokens.copy(max = value)) }
             }
         }
@@ -1383,151 +1387,4 @@ constructor(
             )
         }
     }
-}
-
-/**
- * Minimal pipeline summary used by [ChatHomeViewModel] to resolve the
- * TopAppBar subtitle, the deleted-pipeline fallback, and the active pipeline's
- * empty-state starter prompts.
- *
- * @property id stable identifier of the pipeline.
- * @property name display name of the pipeline.
- * @property samplePrompts starter ("quick action") prompts the pipeline
- *   declares for the new-chat empty state (empty when it declares none).
- */
-data class PipelineSummary(
-    val id: String,
-    val name: String,
-    val samplePrompts: List<PipelineSamplePrompt> = emptyList(),
-)
-
-/**
- * Snapshot of the tool the orchestrator is currently paused on, exposed
- * through [ChatHomePendingState.tool] so the mapper can render the
- * trailing HITL confirmation card from real data instead of fixtures.
- *
- * @property toolName fully-qualified tool id (e.g. `fs.write_file`).
- * @property arguments raw JSON-encoded argument blob emitted by the agent.
- * @property risk per-tool risk tier resolved by `ToolRepository.getRisk`.
- * @property requestId identity of the request this card shows. The card's
- *   answer names it, so it settles this request or nothing — which is also what
- *   makes the risk above the right one to decide the typed confirmation by.
- * @property context what the run was asked to do, shown above the call; `null`
- *   when there is nothing to show.
- */
-data class HitlPending(
-    val toolName: String,
-    val arguments: String,
-    val risk: ToolRisk,
-    val requestId: String,
-    val context: ApprovalRequestContext? = null,
-)
-
-/**
- * Snapshot of the session's interrupted run, exposed through
- * [ChatHomePendingState.interrupted] so the mapping can render the trailing
- * interrupted-run status card (Resume / Discard) from real data.
- *
- * @property runId id of the interrupted persistent run record — the Discard
- *   intent settles exactly this record, never "whatever is interrupted now".
- * @property nodeLabel resolved display label of the node the run stopped at
- *   (falls back to [ChatHomeReattachDelegate.INTERRUPTED_UNKNOWN_NODE_LABEL]).
- * @property timestamp pre-formatted time the run was actually interrupted
- *   (`finishedAt` of the record). Captured once here so the card shows a
- *   stable, truthful time instead of re-deriving "now" on every
- *   recomposition.
- * @property resumable whether the card offers the Resume CTA: `false` when
- *   the interruption is older than the resume window or the record predates
- *   prompt persistence — only Discard remains. The use case re-validates on
- *   tap regardless; this flag just keeps the offered action honest.
- */
-data class InterruptedRunPending(
-    val runId: String,
-    val nodeLabel: String,
-    val timestamp: String,
-    val resumable: Boolean = true,
-)
-
-/**
- * Snapshot of a run paused at one of its own ceilings, exposed through
- * [ChatHomePendingState.ceiling] so the mapping can render the trailing pause
- * card (Continue / Stop) from real data.
- *
- * Carries the breach rather than a rendered sentence: the copy has one owner
- * ([app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper]), and
- * a ViewModel holding resolved strings could not be the same words the
- * notification and the run console use for the same event.
- *
- * @property runId Id of the paused run record — the decision settles exactly
- *   this run, never "whatever is paused now". For a pause raised inside a
- *   sub-pipeline this is the child run, which is where the record sits; the
- *   submission path resolves the tree root itself. `null` on the live path,
- *   where the orchestrator emission carries no id and the decision falls back
- *   to the session's parked record — which is exactly the record the pause just
- *   wrote. Naming the session's *active* run instead would be worse than
- *   naming nothing: for a nested pause the record sits on the child while the
- *   active run is the parent.
- * @property breach Which ceiling bound and by how much, exactly as it stood
- *   when the run stopped. Read off the durable record on reattach, so a pause
- *   answered after a restart states the same numbers it stated live.
- * @property timestamp Pre-formatted time the run actually paused, captured once
- *   here for the reason [InterruptedRunPending.timestamp] is: a pause answered
- *   the next morning must still say when the run stopped, not what time it is
- *   now.
- */
-data class CeilingPausePending(val runId: String?, val breach: HardCeilingBreach, val timestamp: String)
-
-/**
- * One-shot failure outcomes of a Resume tap on the interrupted-run card,
- * mapped to snackbar copy by the screen. Modelled as an enum so resource ids
- * stay out of the ViewModel. A successful resume emits no event — the
- * surface flips to `Generating` instead.
- */
-enum class ResumeFeedbackEvent {
-    /** The pipeline graph was edited or deleted; only a full restart can help. */
-    GraphChanged,
-
-    /** The interruption is older than the configured resume window. */
-    Expired,
-
-    /** The run is no longer resumable (raced discard/resume, legacy record). */
-    NotResumable,
-}
-
-/**
- * Maps the domain [ToolRisk] enum onto the catalog [Risk] enum. The two
- * exist in different layers (domain stays free of catalog imports) so a
- * thin adapter at the presentation boundary is the cleanest cut.
- */
-internal fun ToolRisk.toCatalogRisk(): Risk = when (this) {
-    ToolRisk.READ_ONLY -> Risk.Readonly
-    ToolRisk.SENSITIVE -> Risk.Sensitive
-    ToolRisk.DESTRUCTIVE -> Risk.Destructive
-}
-
-/**
- * Discrete one-shot events raised by the console pane and consumed by the
- * screen-level snackbar host. Modelled as an enum so the screen can map
- * each value to the right localised string in one place (no resource id
- * leaks into the VM).
- */
-enum class ConsoleSnackbarEvent {
-    /** A single console line was copied to the system clipboard. */
-    LineCopied,
-
-    /** The full filtered log was copied to the system clipboard. */
-    AllCopied,
-}
-
-/**
- * One-shot outcome of the long-press "Save to memory" action, mapped to a
- * snackbar by the screen. Modelled as an enum so resource ids stay out of
- * the ViewModel.
- */
-enum class MemorySaveEvent {
-    /** The message text was embedded and stored as a manual memory entry. */
-    Saved,
-
-    /** Embedding or persistence failed; surface a retry-able failure copy. */
-    Failed,
 }
