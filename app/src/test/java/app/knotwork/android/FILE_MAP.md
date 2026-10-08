@@ -457,6 +457,7 @@ Only Kotlin files appear inside the generated blocks.
     - `MemoryExportImportRoundTripTest.kt` - End-to-end round-trip coverage for the memory export/import feature Export → wipe → import (Replace) → assert the store is byte-for-byte identical.
     - `MemoryExtractionUseCaseTest.kt` - Unit tests for `MemoryExtractionUseCase`.
     - `MemoryImportUseCaseTest.kt` - Unit tests for `MemoryImportUseCase` — Merge / Replace strategies, the provider-mismatch re-embed scheduling, and the empty-document Replace guard.
+    - `NotifyStaleTriggersUseCaseTest.kt` - Unit tests for `NotifyStaleTriggersUseCase`: an overdue trigger is announced once per silence, a healthy one never, and a new sign of life starts the next silence.
     - `ObserveTriggerHealthInputsUseCaseTest.kt` - Unit tests for `ObserveTriggerHealthInputsUseCase`: it forwards the reactive per-trigger health-inputs stream from the journal repository.
     - `ObserveTriggerJournalUseCaseTest.kt` - Unit tests for `ObserveTriggerJournalUseCase`: it forwards the reactive journal stream for the requested trigger.
     - `ParkedRunResumerTest.kt` - Unit tests for `ParkedRunResumer` — the shared submission tail of the background-HITL decision use cases.
@@ -605,6 +606,7 @@ Only Kotlin files appear inside the generated blocks.
       - `MoreViewModelTest.kt` - Unit tests for `MoreViewModel` — drives the `combine` + `reduceUiState` projection that powers the More tab's live subtitle counters and footer privacy pill.
     - `navigation/` - Tests for the navigation graph, routes and deep links.
       - `BottomNavVisibilityTest.kt` - Table-driven test for `shouldShowBottomNav`.
+      - `DeepLinkRouterTest.kt` - JVM tests for the `knotwork://triggers/{id}` branch of `navigateToDeepLink` — the overdue-trigger notification's tap.
       - `NavRoutesTest.kt` - Unit tests for `NavRoutes` — guards against accidental route collisions, blank routes, and silently broken deep-link / argument contracts.
       - `TabOwnershipTest.kt` - Unit tests for `owningTabRoute` / `isTabRootStack` — the two pure functions that replaced the hand-maintained `route → tab` table.
     - `onboarding/` - Tests for the onboarding flow.
@@ -675,6 +677,7 @@ Only Kotlin files appear inside the generated blocks.
       - `ToolsViewModelTest.kt` - Tests for ToolsViewModel.
     - `triggers/` - Tests for the triggers surface.
       - `TriggerConditionFormatterTest.kt` - Unit tests for `TriggerConditionFormatter` — the pure mapping from a domain `TriggerCondition` to a `TriggerConditionLabel`.
+      - `TriggerSilenceLabelTest.kt` - Unit tests for `TriggerSilenceLabel`: a moment from today is a bare time, one from an earlier day carries its date.
       - `TriggersViewModelTest.kt` - Unit tests for `TriggersViewModel`.
 - `store/` - Tests over the store-listing metadata — the limits Google Play enforces after a release, not before.
   - `StoreMetadataTest.kt` - Guards the store metadata under `fastlane/metadata/android/`, which is the single source both Google Play and F-Droid read.

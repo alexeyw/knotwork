@@ -237,6 +237,8 @@
     <string name="notifications_task_results_channel_name">Scheduled task results</string>
     <string name="notifications_task_results_channel_description">Outcome of scheduled background tasks.</string>
     <string name="notifications_trigger_fired_title">Trigger fired</string>
+    <string name="notifications_trigger_stale_title">Trigger overdue</string>
+    <string name="notifications_trigger_stale_body">“%1$s” has not been checked since %2$s. Some phones pause background work to save battery.</string>
     <string name="notifications_task_completed_title">Task completed</string>
     <string name="notifications_task_failed_title">Task failed</string>
     <string name="scheduled_session_name">Scheduled: %1$s</string>

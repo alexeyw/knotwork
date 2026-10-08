@@ -31,11 +31,20 @@ class TriggerRepositoryImpl @Inject constructor(private val dao: TriggerDao) : T
 
     override suspend fun getTriggerById(id: String): Trigger? = dao.getById(id)?.toDomainOrNull()
 
-    override suspend fun saveTrigger(trigger: Trigger) = dao.upsert(trigger.toEntity())
+    override suspend fun saveTrigger(trigger: Trigger) {
+        val stored = dao.getById(trigger.id)
+        val wasActive = stored != null && stored.enabled && stored.pipelineId != null
+        val activatedAt = if (trigger.isActive && !wasActive) System.currentTimeMillis() else stored?.activatedAt
+        dao.upsert(trigger.toEntity().copy(activatedAt = activatedAt, staleNoticeFor = stored?.staleNoticeFor))
+    }
 
     override suspend fun deleteTrigger(id: String) = dao.deleteById(id)
 
-    override suspend fun setEnabled(id: String, enabled: Boolean) = dao.setEnabled(id, enabled)
+    override suspend fun setEnabled(id: String, enabled: Boolean) {
+        if (enabled) dao.enable(id, System.currentTimeMillis()) else dao.setEnabled(id, enabled = false)
+    }
+
+    override suspend fun markStaleNoticed(id: String, signOfLife: Long) = dao.setStaleNoticeFor(id, signOfLife)
 
     override suspend fun setArmed(id: String, armed: Boolean) = dao.setArmed(id, armed)
 
@@ -55,6 +64,8 @@ class TriggerRepositoryImpl @Inject constructor(private val dao: TriggerDao) : T
         createdAt = createdAt,
         lastFiredAt = lastFiredAt,
         sessionId = sessionId,
+        activatedAt = activatedAt,
+        staleNoticeFor = staleNoticeFor,
     )
 
     /**
@@ -78,6 +89,8 @@ class TriggerRepositoryImpl @Inject constructor(private val dao: TriggerDao) : T
             createdAt = createdAt,
             lastFiredAt = lastFiredAt,
             sessionId = sessionId,
+            activatedAt = activatedAt,
+            staleNoticeFor = staleNoticeFor,
         )
     }
 }

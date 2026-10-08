@@ -30,6 +30,10 @@ import androidx.room.PrimaryKey
  *   in (added v46), or `null` until the first fire. No foreign key: a deleted
  *   session is detected at fire time and a fresh one is bound, so the column may
  *   reference a row that no longer exists.
+ * @property activatedAt Epoch-millis the trigger last became active (enabled and
+ *   bound), added v70; `null` for a row last activated before v70.
+ * @property staleNoticeFor The sign-of-life moment the last "has not checked in"
+ *   notice was about (added v70), or `null` when none was sent.
  */
 @Entity(tableName = "triggers")
 data class TriggerEntity(
@@ -43,4 +47,6 @@ data class TriggerEntity(
     val createdAt: Long,
     val lastFiredAt: Long?,
     val sessionId: String? = null,
+    val activatedAt: Long? = null,
+    val staleNoticeFor: Long? = null,
 )

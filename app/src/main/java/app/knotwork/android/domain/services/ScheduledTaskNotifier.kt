@@ -43,6 +43,19 @@ interface ScheduledTaskNotifier {
     suspend fun notifyTriggerFired(sessionId: String, triggerName: String)
 
     /**
+     * Tells the user a trigger has not been checked for longer than its schedule
+     * allows — the phone is not waking the app — so they do not find out from a
+     * report that never came. Posted on the same channel and behind the same
+     * toggle as the run notifications; its tap opens the trigger.
+     *
+     * @param triggerId The overdue trigger, for the notification's slot and its tap.
+     * @param triggerName Human-readable trigger label, shown in the body.
+     * @param silentSinceMillis The trigger's last sign of life — its latest
+     *   evaluation or activation — which the body names.
+     */
+    suspend fun notifyTriggerStale(triggerId: String, triggerName: String, silentSinceMillis: Long)
+
+    /**
      * Announces a successfully completed scheduled run.
      *
      * @param sessionId Chat session the run landed its result in; the

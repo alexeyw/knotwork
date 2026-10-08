@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.PendingInteraction
 import app.knotwork.android.domain.models.PendingInteractionKind
 import app.knotwork.android.domain.repositories.PendingInteractionRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.usecases.NotifyStaleTriggersUseCase
 import app.knotwork.android.domain.usecases.ParkedRunResumer
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -39,6 +40,7 @@ class PendingInteractionMaintenanceWorkerTest {
     private lateinit var pendingInteractionRepository: PendingInteractionRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var parkedRunResumer: ParkedRunResumer
+    private lateinit var notifyStaleTriggers: NotifyStaleTriggersUseCase
 
     @Before
     fun setup() {
@@ -46,6 +48,8 @@ class PendingInteractionMaintenanceWorkerTest {
         pendingInteractionRepository = mockk()
         settingsRepository = mockk()
         parkedRunResumer = mockk(relaxed = true)
+        notifyStaleTriggers = mockk()
+        coEvery { notifyStaleTriggers.invoke(any()) } returns 0
         every { settingsRepository.backgroundApprovalWindowHours } returns flowOf(24)
     }
 
@@ -60,6 +64,7 @@ class PendingInteractionMaintenanceWorkerTest {
             pendingInteractionRepository,
             settingsRepository,
             parkedRunResumer,
+            notifyStaleTriggers,
         )
     }
 
@@ -128,5 +133,25 @@ class PendingInteractionMaintenanceWorkerTest {
         val result = buildWorker().doWork()
 
         assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `given the pass runs then overdue triggers are checked too`() = runTest {
+        coEvery { pendingInteractionRepository.getRequestedAtOrBefore(any()) } returns emptyList()
+
+        val result = buildWorker().doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        coVerify(exactly = 1) { notifyStaleTriggers.invoke(any()) }
+    }
+
+    @Test
+    fun `given the overdue-trigger check fails then the expiry pass still succeeds`() = runTest {
+        coEvery { pendingInteractionRepository.getRequestedAtOrBefore(any()) } returns emptyList()
+        coEvery { notifyStaleTriggers.invoke(any()) } throws IllegalStateException("journal unreadable")
+
+        val result = buildWorker().doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
     }
 }

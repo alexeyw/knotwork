@@ -205,6 +205,15 @@ details.
 
 ### Fixed
 
+- **An overdue trigger tells you.** A trigger the phone stops checking — a battery
+  saver or deep idle holding the app back — showed only as an *Overdue* badge on
+  the Triggers screen. A check that runs every few hours now sends one **Trigger
+  overdue** notification per silence, under the *Scheduled task results* toggle;
+  its tap opens the trigger. If Android holds back all of the app's background
+  work, that check is held back as well. A trigger switched back on after a long
+  pause no longer reads overdue until its next check: the time is counted from
+  when it was switched on.
+
 - **Cloud retries wait as long as the provider asks, and no longer retry what
   cannot succeed.** A provider that answered a rate limit with a `Retry-After`
   header got its retry about a tenth of a second later, because the header never

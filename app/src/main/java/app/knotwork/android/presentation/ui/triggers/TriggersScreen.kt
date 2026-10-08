@@ -72,7 +72,6 @@ import app.knotwork.design.screens.triggers.TriggersStrings
 import app.knotwork.design.screens.triggers.TriggersViewState
 import app.knotwork.design.screens.triggers.TriggersVisualState
 import kotlinx.coroutines.delay
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -420,16 +419,16 @@ private fun TriggersUiState.toDetailViewState(trigger: Trigger, nowMillis: Long)
     // Build the day formatter from the current config locale so headers follow a
     // runtime language change (a static formatter would freeze the load-time locale).
     val locale = LocalConfiguration.current.locales[0]
-    val dayFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE d MMM", locale) }
+    val dayFormatter = remember(locale) { TriggerSilenceLabel.dayFormatter(locale) }
     val conditionLabel = conditionText(remember(trigger) { TriggerConditionFormatter.toLabel(trigger.condition) })
     val pipelineName = trigger.pipelineId?.let { id -> pipelines.firstOrNull { it.id == id }?.name }
 
     val health = triggerHealthEvaluator.evaluate(trigger, healthInputs[trigger.id], nowMillis)
     val stale = health == TriggerHealthStatus.STALE
-    // Name the last-checked moment; qualify it with the date when it is not today
-    // so a multi-day-overdue trigger doesn't read as if it was checked this morning.
-    val staleSince = healthInputs[trigger.id]?.latestEvaluatedAt
-        ?.let { staleSinceLabel(it, nowMillis, zone, dayFormatter) }
+    // Name the moment the overdue time is counted from — the latest check or the
+    // switch-on, whichever is later — as the overdue notification does.
+    val staleSince = triggerHealthEvaluator.lastSignOfLife(trigger, healthInputs[trigger.id])
+        ?.let { TriggerSilenceLabel.format(it, nowMillis, zone, dayFormatter) }
 
     val journal = detailJournal
     val journalState = when {
@@ -570,19 +569,6 @@ private fun JournalTimestamp.label(labels: JournalLabels): String = when (this) 
 
 /** Formats a [ClockTime] as a 24-hour `HH:mm` label. */
 private fun clockLabel(time: ClockTime): String = "%02d:%02d".format(time.hour, time.minute)
-
-/**
- * Formats the stale banner's "last checked" moment. A same-day moment reads as a
- * bare `HH:mm` ("07:15"); an earlier day is qualified with its date
- * ("Mon 14 Jul, 07:15") so a multi-day-overdue trigger isn't misread as checked
- * earlier today.
- */
-private fun staleSinceLabel(epochMillis: Long, nowMillis: Long, zone: ZoneId, dayFormatter: DateTimeFormatter): String {
-    val moment = Instant.ofEpochMilli(epochMillis).atZone(zone)
-    val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
-    val time = "%02d:%02d".format(moment.hour, moment.minute)
-    return if (moment.toLocalDate() == today) time else "${moment.toLocalDate().format(dayFormatter)}, $time"
-}
 
 @Composable
 private fun triggerDetailStrings(): TriggerDetailStrings = TriggerDetailStrings(
