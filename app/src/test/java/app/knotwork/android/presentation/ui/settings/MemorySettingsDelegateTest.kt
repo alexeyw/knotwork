@@ -81,4 +81,17 @@ class MemorySettingsDelegateTest {
 
         assertEquals("Import failed — nothing was saved.", state.value.snackbarMessage)
     }
+
+    @Test
+    fun `given the import runs out of memory then the failure is reported, not thrown`() = runTest {
+        // A large file's transaction can exhaust the heap; that is a failed import,
+        // not a reason to take the app down.
+        coEvery { memoryImport.import(any(), any()) } throws OutOfMemoryError("Java heap space")
+        val delegate = delegate()
+
+        delegate.confirmImport(MemoryImportStrategy.Replace)
+        advanceUntilIdle()
+
+        assertEquals("Import failed.", state.value.snackbarMessage)
+    }
 }

@@ -423,7 +423,9 @@ class MemorySettingsDelegate(
                 )
             } catch (e: CancellationException) {
                 throw e
-            } catch (error: Exception) {
+            } catch (error: Throwable) {
+                // Throwable, not Exception: a large file's transaction can exhaust the heap,
+                // and that is a failed import, not a reason to take the app down.
                 Timber.w(error, "Memory import failed")
                 emitSnackbar(appContext.getString(R.string.settings_memory_import_failed_generic))
             }
