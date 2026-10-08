@@ -1798,7 +1798,7 @@ idle. Three components coordinate that lifecycle:
 | `AgentWorker` (WorkManager)| Executes deferred / scheduled tasks (driven by `ScheduleTaskUseCase`).                        |
 | `AgentIdleManager`         | Watches device idle / Doze state and signals when the agent can safely unload the model.     |
 | `AgentPowerManager`        | Watches charging and battery state; throttles or defers work on low battery.                  |
-| `ScheduledTaskNotifier`    | Announces scheduled / trigger runs: the "Trigger fired" start notice and the "Task completed" / "Task failed" outcomes, each deep-linking into the session. |
+| `ScheduledTaskNotifier`    | Announces scheduled / trigger runs: the "Trigger fired" start notice and the "Task completed" / "Task failed" outcomes, each deep-linking into the session; and the "Trigger overdue" notice, deep-linking into the trigger (`knotwork://triggers/{id}`). |
 | `TriggerWatchWorker`       | Periodic (~15 min) poll that evaluates due triggers through `FireTriggerUseCase` (the always-on path for time and network triggers, and the backstop for charging). |
 | `ChargingTriggerSweepWorker` | Charging-constrained one-shot (`setRequiresCharging`) that the OS wakes the instant the device is plugged in, firing charging triggers without waiting for the poll. |
 | `WorkManagerTriggerScheduler` | `TriggerScheduler` impl: registers / cancels the per-condition watches as triggers are created, edited, enabled or deleted, so changes take effect immediately. |

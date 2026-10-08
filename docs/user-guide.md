@@ -819,6 +819,7 @@ setting once by hand.
 | *Approval required* | A sensitive/destructive tool call awaits your decision | **Approve** / **Deny** (destructive, or arguments too long to show: **Deny** / **Review in chat**) |
 | *Agent needs your input* | A clarification question is waiting | Deep-links into the chat |
 | *Task completed* / *Task failed* | A scheduled task finished | Opens the conversation the result landed in |
+| *Trigger overdue* | A trigger has not been checked for longer than its schedule allows — once per silence | Opens that trigger |
 | *Still running* (optional ping) | A long backgrounded run is still going | Opens the app |
 
 Approval and clarification requests survive process death: the staged

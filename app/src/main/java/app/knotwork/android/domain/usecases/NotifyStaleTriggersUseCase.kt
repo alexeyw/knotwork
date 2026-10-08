@@ -11,9 +11,9 @@ import javax.inject.Inject
  *
  * A trigger reads [overdue][TriggerHealthStatus.STALE] when the background runtime
  * has not evaluated it for more than twice its expected cadence — the mark of a
- * battery saver or deep idle holding the app back. Until now that showed only as a
- * badge on the Triggers screen, which nobody opens while waiting for a report that
- * never comes. This pass is run by a periodic background job separate from the
+ * battery saver or deep idle holding the app back. Without this pass that shows only
+ * as a badge on the Triggers screen, which nobody opens while waiting for a report
+ * that never comes. This pass is run by a periodic background job separate from the
  * triggers' own polling, so it can speak when they cannot — though if the system
  * holds back every background job of the app, this one is held back too.
  *

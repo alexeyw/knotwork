@@ -30,6 +30,7 @@ import app.knotwork.android.data.local.migrations.MIGRATION_65_66
 import app.knotwork.android.data.local.migrations.MIGRATION_66_67
 import app.knotwork.android.data.local.migrations.MIGRATION_67_68
 import app.knotwork.android.data.local.migrations.MIGRATION_68_69
+import app.knotwork.android.data.local.migrations.MIGRATION_69_70
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -985,6 +986,30 @@ class AppDatabaseMigrationHelperTest {
             db.query("SELECT COUNT(*) FROM memory_chunk_history").use { c ->
                 assertTrue(c.moveToFirst())
                 assertEquals("a chunk's history goes with it", 0, c.getInt(0))
+            }
+        }
+    }
+
+    /**
+     * v69 → v70 adds `triggers.activatedAt` and `triggers.staleNoticeFor`. A trigger stored
+     * before the migration keeps its row with both empty — measured from its evaluations as
+     * before, no overdue notice recorded. The schema must match the exported `70.json`.
+     */
+    @Test
+    fun migrate69to70_leavesExistingTriggersUnstamped() {
+        helper.createDatabase(TEST_DB, 69).use { db ->
+            db.execSQL(
+                "INSERT INTO triggers(id, name, pipelineId, prompt, conditionJson, enabled, armed, createdAt) " +
+                    "VALUES('t1', 'Morning brief', 'p1', '', '{}', 1, 0, 1)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 70, true, MIGRATION_69_70).use { db ->
+            db.query("SELECT name, activatedAt, staleNoticeFor FROM triggers WHERE id = 't1'").use { c ->
+                assertTrue("the pre-existing trigger must survive the migration", c.moveToFirst())
+                assertEquals("Morning brief", c.getString(0))
+                assertTrue("a pre-existing trigger has no recorded activation", c.isNull(1))
+                assertTrue("no overdue notice is recorded as sent", c.isNull(2))
             }
         }
     }
