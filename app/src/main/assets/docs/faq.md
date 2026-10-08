@@ -33,7 +33,7 @@ useful, that is [the five-step answer below](#im-installed-now-what-do-i-actuall
 ### What do I need to run this?
 
 Android 14 or newer and roughly 2 GB of free RAM for the model. Memory is the
-real constraint, not the CPU — a phone without an NPU or usable GPU still works,
+real constraint, not the CPU — a phone without a usable GPU still works,
 just slower. Full list in [README § Requirements](../README.md#requirements).
 
 ### Do I have to download a model at all?

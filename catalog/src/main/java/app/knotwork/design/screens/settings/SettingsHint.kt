@@ -136,7 +136,7 @@ fun KnotworkHelpEntry(settingName: String, expanded: Boolean, onToggle: () -> Un
  *
  * Body-size, full-ink text on a tinted surface — deliberately **not** a
  * caption. Small muted type under a label is the slot this app uses for machine
- * state (`NPU · auto`, `v0.9.2`), and a reader learns the slot before reading
+ * state (`GPU`, `v0.9.2`), and a reader learns the slot before reading
  * the sentence; putting meaning there is why the explanations shipped so far
  * went unread.
  *

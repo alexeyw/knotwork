@@ -176,7 +176,7 @@ class PlanRunVerificationUseCase @Inject constructor(
                 }
             }
         }
-        val backend = LocalBackend.fromKey(generationSettings.localModelBackend.first()) ?: LocalBackend.CPU
+        val backend = LocalBackend.runnableFromKey(generationSettings.localModelBackend.first())
         val window = generationSettings.maxContextLength.first()
         return calls.firstNotNullOfOrNull { settingsMismatch(it, backend, window) }
     }

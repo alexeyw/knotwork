@@ -75,7 +75,7 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
 ## Highlights
 
 - **Runs on your device.** On-device LLM inference through LiteRT-LM, with
-  optional NPU/GPU acceleration; CPU-only works too, just slower. Cloud
+  optional GPU acceleration; CPU-only works too, just slower. Cloud
   providers (OpenAI, Anthropic, Google Gemini, DeepSeek, OpenRouter, Groq) and
   a server you run (Ollama, or any OpenAI-compatible one — vLLM, LM Studio,
   llama.cpp) are optional, opt-in, and bring-your-own-key — nothing leaves the
@@ -221,8 +221,10 @@ browser's `prefers-color-scheme`.
   apps only, so an ordinary install cannot do it. Publishing them, which this
   app does, is open to any app.)
 - Approximately **2 GB of free RAM** available for the LLM at runtime.
-- Optional: hardware acceleration via **NPU or GPU** for noticeably faster
-  inference. CPU-only operation works but is slower.
+- Optional: **GPU** acceleration for noticeably faster inference. CPU-only
+  operation works but is slower. The NPU is not used: LiteRT-LM needs a
+  vendor dispatch library and a model compiled for the chip, and the app
+  ships neither.
 - Optional: **location permission**, requested only if you scope a Wi-Fi
   trigger to specific network names (Android ties the Wi-Fi name to location).
   Nothing else uses it, and the name never leaves the device.

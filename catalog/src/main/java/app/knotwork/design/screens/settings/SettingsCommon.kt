@@ -265,7 +265,7 @@ internal fun AdvancedDisclosure(initiallyExpanded: Boolean = false, content: @Co
 /**
  * Icon + title + state + trailing Material Switch; the whole row toggles.
  *
- * @param state What the row is set to **now** — `NPU · auto`, `412 memories`.
+ * @param state What the row is set to **now** — `GPU`, `412 memories`.
  *   Never a sentence about what the row means: that is what [hintAnchor]
  *   summons. The two were one slot until the closed test showed that muted text
  *   under a label reads as machine state and goes unread.

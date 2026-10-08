@@ -284,7 +284,7 @@ class LiteRTLlmEngine @Inject constructor(
 
         val maxTokens = generationSettings.maxContextLength.first()
         val configuredKey = generationSettings.localModelBackend.first()
-        val configured = LocalBackend.fromKey(configuredKey) ?: LocalBackend.CPU
+        val configured = LocalBackend.runnableFromKey(configuredKey)
 
         // Crash-recovery: if the previous attempt died mid-init with this exact
         // backend (sentinel still set), run this session on CPU. The native
@@ -742,8 +742,9 @@ class LiteRTLlmEngine @Inject constructor(
      */
     private fun newBackend(backend: LocalBackend): Backend = when (backend) {
         LocalBackend.GPU -> Backend.GPU()
-        LocalBackend.NPU -> Backend.NPU()
-        LocalBackend.CPU -> Backend.CPU()
+        // Never resolved — `runnableFromKey` reads a withdrawn NPU choice as CPU — and
+        // a CPU engine is what LiteRT built for it anyway on this app's builds.
+        LocalBackend.NPU, LocalBackend.CPU -> Backend.CPU()
     }
 
     /**

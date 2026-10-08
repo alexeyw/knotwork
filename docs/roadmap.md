@@ -132,7 +132,7 @@ while this is being scoped.
 
 `./gradlew check` is JVM-only by design, and the instrumented suite now runs
 beside it on an emulator matrix (above). What that still does not reach is
-real hardware: native inference on an actual NPU or GPU, a background run
+real hardware: native inference on an actual GPU, a background run
 under a real vendor's battery management, and the AppFunctions runtime —
 whose only end-to-end test is device-only and therefore runs on no emulator
 leg at all. Those are verified by a manual smoke test today (see

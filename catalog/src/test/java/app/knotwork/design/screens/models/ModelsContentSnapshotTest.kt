@@ -84,7 +84,7 @@ internal object ModelsPreview {
     private fun active(): ActiveModelRow = ActiveModelRow(
         id = 1L,
         displayName = "gemma-4-E2B-it.litertlm",
-        meta = "1.4 GB · NPU · QNN backend",
+        meta = "1.4 GB · GPU · LiteRT",
     )
 
     private fun presets(): List<PresetRow> = listOf(
@@ -102,13 +102,13 @@ internal object ModelsPreview {
             name = "Gemma-4-E2B-it",
             source = "huggingface.co/litert-community/gemma-4-E2B-it…",
             // Active variant — exercises the inline ACTIVE badge.
-            status = PresetStatus.Active(sizeMeta = "1.4 GB · NPU · LiteRT"),
+            status = PresetStatus.Active(sizeMeta = "1.4 GB · GPU · LiteRT"),
         ),
         PresetRow(
             id = "phi_3_mini",
             name = "Phi-3-mini-4k-it",
             source = "huggingface.co/litert-community/Phi-3-mini-4k…",
-            status = PresetStatus.Idle(sizeMeta = "2.1 GB · NPU · QNN · 4 K ctx"),
+            status = PresetStatus.Idle(sizeMeta = "2.1 GB · GPU · LiteRT · 4 K ctx"),
         ),
     )
 
@@ -124,7 +124,7 @@ internal object ModelsPreview {
                 id = "custom-llama.litertlm",
                 name = "custom-llama.litertlm",
                 source = "downloads",
-                status = PresetStatus.OnDisk(sizeMeta = "2.6 GB · NPU · LiteRT"),
+                status = PresetStatus.OnDisk(sizeMeta = "2.6 GB · GPU · LiteRT"),
             ),
         ),
         subtitle = "1 active · 3 on disk · 5.9 GB",

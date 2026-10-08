@@ -233,6 +233,14 @@ details.
   unless it names a provider, the first one set up on the device answers; a call
   that named none went to Anthropic instead — and failed for anyone without an
   Anthropic key. It now goes to that first provider.
+- **The NPU is no longer offered as an inference backend.** LiteRT-LM needs a
+  vendor dispatch library and a model compiled for the chip to use the NPU; the
+  app ships neither, so choosing NPU ran the model on CPU — about three times
+  slower than choosing CPU, with Settings and each run's header still saying
+  NPU — and the larger Gemma model was killed for lack of memory on its first
+  answer. The choice is now GPU or CPU; an NPU choice made earlier reads as CPU,
+  which is what it ran on. Settings no longer promise a fallback to GPU that
+  never existed: a GPU that fails to start falls back to CPU.
 - **Discover shows a download that is already running.** A model whose file was
   still downloading — started from the Models screen, or from Discover before you
   left — opened with an Install button and no progress, and stayed that way even

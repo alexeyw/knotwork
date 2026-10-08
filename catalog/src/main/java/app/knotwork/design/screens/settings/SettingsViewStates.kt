@@ -94,8 +94,8 @@ const val SLIDER_PRIVACY_RETENTION_AGE: String = "privacy_retention_age"
  * @property approveAllLabel / [approveSensitiveLabel] / [approveNeverLabel]
  *   Localised segmented labels.
  * @property blockDestructive "Block destructive tools" toggle value.
- * @property backendLabel Backend description line (e.g. "NPU (QNN) · auto…").
- * @property selectedBackend Short trailing backend value (e.g. "NPU · auto").
+ * @property backendLabel Backend description line (e.g. "GPU · falls back to CPU…").
+ * @property selectedBackend Short trailing backend value (e.g. "GPU").
  * @property backendOptions Available backend dropdown options.
  * @property crashReportingEnabled "Crash reporting" toggle value.
  * @property restartRequiredMessage Banner copy; `null` hides the restart banner.

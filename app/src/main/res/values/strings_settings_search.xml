@@ -27,7 +27,7 @@
 
     <!-- Models -->
     <string name="settings_search_name_local_model_backend">Local model backend</string>
-    <string name="settings_search_desc_local_model_backend">On-device inference backend (NPU/GPU/CPU).</string>
+    <string name="settings_search_desc_local_model_backend">On-device inference backend (GPU/CPU).</string>
     <string name="settings_search_name_link_provider_list">External providers</string>
     <string name="settings_search_desc_link_provider_list">Cloud API keys &amp; retry stay on Provider detail.</string>
     <string name="settings_search_name_default_pipeline_id">Default pipeline</string>

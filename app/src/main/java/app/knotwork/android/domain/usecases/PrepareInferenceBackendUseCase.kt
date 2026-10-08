@@ -116,7 +116,7 @@ class PrepareInferenceBackendUseCase @Inject constructor(
     private suspend fun resolveAndWarmUp(modelPath: String, onAccelerationCheckStarted: () -> Unit): Outcome {
         val stored = generationSettings.localModelBackendPreference.first()
         if (stored != null) {
-            return warmUp(modelPath, LocalBackend.fromKey(stored) ?: LocalBackend.CPU)
+            return warmUp(modelPath, LocalBackend.runnableFromKey(stored))
         }
 
         if (!accelerationProbe.isGpuAvailable()) {

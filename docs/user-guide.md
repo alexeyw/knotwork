@@ -2477,7 +2477,7 @@ repeated here.
 
 | Setting | What it means |
 |---|---|
-| **Local model backend** | Which chip runs the on-device model. NPU is fastest where it works; the app falls back on its own if it does not. |
+| **Local model backend** | Which chip runs the on-device model. GPU is faster where it works; if it fails to start, the app runs on CPU. |
 | **External providers** | *(no explanation — opens a screen that explains itself)* |
 | **Default pipeline** | *(no explanation — opens a screen that explains itself)* |
 
@@ -2583,14 +2583,17 @@ The active on-device model, its backend, and external cloud providers.
 
 - **Active-model card** — name, file size, context window, quantization and
   download date, with an **Active** badge.
-- **Inference backend** *(Basic)* — drop-down picking the engine (NPU preferred,
-  falling back to GPU then CPU). Changing it surfaces a restart banner — tap
-  **Restart** to apply immediately. On a fresh install the app picks this for
-  you once, during setup: if the device looks capable of GPU inference it briefly
-  shows **Checking acceleration…** while verifying that the GPU really runs the
-  model, and quietly settles on CPU if it does not. The result is written into
-  this row, so you can always see — and override — what was chosen. Once you pick
-  a backend yourself, the app never changes it again.
+- **Inference backend** *(Basic)* — drop-down picking the engine: GPU or CPU. If
+  starting on the GPU stops the app, the next session runs on CPU, and after two
+  such starts in a row the choice becomes CPU. The NPU is not offered — the app
+  ships no NPU dispatch library, so an NPU choice ran on CPU anyway; one made in
+  an earlier version now reads as CPU. Changing it surfaces a restart banner —
+  tap **Restart** to apply immediately. On a fresh install the app picks this
+  for you once, during setup: if the device looks capable of GPU inference it
+  briefly shows **Checking acceleration…** while verifying that the GPU really
+  runs the model, and quietly settles on CPU if it does not. The result is
+  written into this row, so you can always see — and override — what was chosen.
+  Once you pick a backend yourself, setup never changes it again.
 - **Test backend** — runs a fixed prompt-probe and persists the measurement
   (`Last probe · N tok in T s · K tok/s`) so the row keeps the metric across
   navigation.

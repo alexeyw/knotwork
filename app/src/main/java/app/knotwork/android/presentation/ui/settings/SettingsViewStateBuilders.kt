@@ -73,7 +73,7 @@ internal fun buildHubViewState(uiState: SettingsUiState): SettingsHubViewState =
     blockDestructive = uiState.blockDestructiveTools,
     backendLabel = stringResource(R.string.settings_row_inference_backend_subtitle, uiState.localModelBackend),
     selectedBackend = uiState.localModelBackend,
-    backendOptions = LocalBackend.entries.map { it.key },
+    backendOptions = LocalBackend.selectable.map { it.key },
     crashReportingEnabled = uiState.crashReportingEnabled,
     restartRequiredMessage = stringResource(R.string.settings_restart_required_message)
         .takeIf { uiState.restartRequired },
@@ -428,7 +428,7 @@ private fun buildLocalModelCard(uiState: SettingsUiState, context: Context): Loc
         modelName = activeMeta?.name,
         metaLine = activeMeta?.let { formatActiveModelMeta(it, context) },
         backendLabel = stringResource(R.string.settings_row_inference_backend_subtitle, uiState.localModelBackend),
-        backendOptions = LocalBackend.entries.map { it.key },
+        backendOptions = LocalBackend.selectable.map { it.key },
         selectedBackend = uiState.localModelBackend,
         testProbeText = formatTestProbe(uiState, context),
         testProbeIsError = uiState.lastTestProbeResult?.success == false,

@@ -370,6 +370,23 @@ class LiteRTLlmEngineTest {
     }
 
     @Test
+    fun `given an NPU choice stored by an earlier version when initialising then it runs on CPU and says so`() =
+        runTest {
+            val tempFile = File.createTempFile("model", ".tflite")
+            tempFile.deleteOnExit()
+            every { settingsRepository.localModelBackend } returns flowOf("NPU")
+            every { settingsRepository.lastInitBackendAttempt } returns flowOf(null)
+            every { settingsRepository.localBackendFailureStreak } returns flowOf(0)
+
+            engine.initialize(tempFile.absolutePath)
+
+            // The build ships no NPU dispatch library: LiteRT ran an "NPU" engine on
+            // CPU, three times slower, and its init ran the E4B model out of memory.
+            assertEquals(LocalBackend.CPU, engine.activeBackend)
+            coVerify(exactly = 0) { settingsRepository.setLastInitBackendAttempt("NPU") }
+        }
+
+    @Test
     fun `given no model loaded when asked for the backend then none is reported`() = runTest {
         // Better no hint in the status line than a guessed one.
         assertEquals(null, engine.activeBackend)
