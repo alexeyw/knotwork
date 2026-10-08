@@ -25,11 +25,13 @@ import timber.log.Timber
  * tree's ledger, and announces a soft ceiling crossing.
  *
  * What the executor emits is forwarded into the run's flow as it arrives: its
- * states (mirrored into the run record, an error's text redacted), its console
- * lines (stamped by the run's console), and its result. An executor that parks
- * its run in the background ends the walk with no terminal state; one that
- * throws ends it with an error. Either way the walk returns, and this class has
- * already emitted everything the run's observers need.
+ * states (mirrored into the run record), its console lines (stamped by the run's
+ * console), and its result. An error state is the exception: it becomes the
+ * node's error and is not forwarded, because whether it ends the run is the
+ * walk's decision — a queue item's error does not. An executor that parks its run
+ * in the background ends the walk with no terminal state; one that throws ends it
+ * with an error. Either way the walk returns, and this class has already emitted
+ * everything the run's observers need.
  *
  * One instance per engine invocation.
  *
@@ -143,9 +145,9 @@ class LiveNodeStep(
                 "PipelineDebug",
             ).d(
                 "[NODE_OUT] type=${node.type.name} id=${node.id} " +
-                    "output=${collected.result?.outputText?.take(PipelineExecutionDefaults.NODE_IO_LOG_CHAR_LIMIT)}",
+                    "output=${collected.settled()?.outputText?.take(PipelineExecutionDefaults.NODE_IO_LOG_CHAR_LIMIT)}",
             )
-            collected.result
+            collected.settled()
         } catch (e: kotlinx.coroutines.CancellationException) {
             // Node executors suspend; collapsing a cancelled run into an `Error`
             // emission would both surface a false error and keep the flow alive
@@ -186,21 +188,33 @@ class LiveNodeStep(
         }
     }
 
-    /** Forwards what the executor emits and keeps its result and whether it parked. */
+    /**
+     * Forwards what the executor emits and keeps its result, the error it
+     * reported and whether it parked.
+     */
     private suspend fun collect(outputs: Flow<NodeOutput>, executedNode: NodeModel): Collected {
         val collected = Collected()
         outputs.collect { output ->
             when (output) {
-                is NodeOutput.State -> {
-                    if (output.state is AgentOrchestratorState.SuspendedInBackground) {
-                        // Not mirrored: while the record is WAITING_*, mirroring
-                        // any other state flips it back to RUNNING, and a parked
-                        // run must keep its WAITING_* status.
-                        collected.parked = true
-                    } else {
-                        records.mirror(output.state)
+                // Not forwarded. An `Error` in the flow is the end of the run to
+                // everything that watches it — the queue manager settles the run
+                // record on the first one and writes it once — while this node's
+                // failure may not end the run at all: a queue whose author turned
+                // `stopOnError` off goes on to its next item. The walk emits the
+                // run's error itself, once, when the failure does end the run.
+                is NodeOutput.State -> when (val state = output.state) {
+                    is AgentOrchestratorState.Error -> collected.reportedError = state.message
+                    else -> {
+                        if (state is AgentOrchestratorState.SuspendedInBackground) {
+                            // Not mirrored: while the record is WAITING_*, mirroring
+                            // any other state flips it back to RUNNING, and a parked
+                            // run must keep its WAITING_* status.
+                            collected.parked = true
+                        } else {
+                            records.mirror(state)
+                        }
+                        collector.emit(state)
                     }
-                    collector.emit(output.state.withRedactedError())
                 }
                 is NodeOutput.Result -> collected.result = output.result
                 is NodeOutput.Console -> {
@@ -274,22 +288,29 @@ class LiveNodeStep(
         tree.contextNotes.add(SOFT_CEILING_CONTEXT_NOTE)
     }
 
-    /**
-     * Returns this state with a credential quoted in its error message masked, and
-     * any other state unchanged.
-     *
-     * An executor forwards its own `Error` straight to the engine's collector, and
-     * from there it becomes the run record's message — the one the chat export and
-     * the trigger-journal export share. Redacting here covers the executors that
-     * scrub their provider errors and the ones that do not.
-     */
-    private fun AgentOrchestratorState.withRedactedError(): AgentOrchestratorState =
-        if (this is AgentOrchestratorState.Error) copy(message = CloudErrorSanitizer.redactSecrets(message)) else this
-
     /** What one executor run left behind. */
     private class Collected {
         var result: NodeExecutionResult? = null
         var parked: Boolean = false
+
+        /** The message of the last error state the executor reported, held back from the flow. */
+        var reportedError: String? = null
+
+        /**
+         * The node's result with the reported error folded in. A result that names
+         * its own error keeps it. One that names none — or no result at all — fails
+         * with the reported text: an executor that catches an exception without a
+         * message reports a placeholder in the state and `null` in the result, and
+         * the walk would otherwise carry on as if the node had answered.
+         *
+         * @return The result the walk acts on, or `null` when the executor reported
+         *   neither a result nor an error.
+         */
+        fun settled(): NodeExecutionResult? {
+            val reported = reportedError ?: return result
+            val current = result ?: return NodeExecutionResult(error = reported)
+            return if (current.error == null) current.copy(error = reported) else current
+        }
     }
 
     /** The advice injected when the run crosses a soft ceiling. */

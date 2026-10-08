@@ -216,6 +216,13 @@ details.
   whose body mentioned "500" was retried; the status the provider answered with
   now decides. The user guide no longer claims timeouts are retried — a provider
   that falls silent is reported once.
+- **A queue that carries on past a failed item is recorded as completed.** With
+  *Stop on error* off, a failing item becomes that item's result and the queue
+  moves on — but the run's record was marked failed the moment the item failed,
+  so the trigger journal, the notification and the chat said "failed" for a run
+  that finished. A step's error now ends the run only when the run really ends on
+  it. The same change fixes a step that failed without an error message: the run
+  carried on as if the step had answered, and now stops there.
 
 ### Security
 

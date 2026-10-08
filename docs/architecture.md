@@ -241,7 +241,10 @@ Step-by-step notes:
    multibinding) runs the node. Long-running nodes (`LITE_RT`, `CLOUD`)
    emit token-streaming and progress events as `NodeOutput.State`
    values; the terminal `NodeOutput.Result` carries the node's textual
-   output to the engine.
+   output to the engine. A node that fails reports it in that result; the
+   engine ends the run with a single `AgentOrchestratorState.Error`, or —
+   inside a queue whose `stopOnError` is off — makes the error that item's
+   result and goes on.
 6. While the graph executes, the engine emits
    `AgentOrchestratorState.ConsoleLog` events. The view-model folds
    them into the `consoleLines` flow exposed by `ChatHomeViewModel`,

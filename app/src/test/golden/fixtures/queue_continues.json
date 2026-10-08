@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-queue-continues",
+  "name": "Fixture — a queue that survives a failing item",
+  "description": "Test-only. No shipped pipeline turns stopOnError off; here the queue's middle item fails and the run goes on to the next.",
+  "updatedAt": 1759881600000,
+  "nodes": [
+    {
+      "id": "input",
+      "type": "INPUT",
+      "position": {
+        "x": 80,
+        "y": 200
+      },
+      "label": "Input",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "plan",
+      "type": "DECOMPOSITION",
+      "position": {
+        "x": 300,
+        "y": 200
+      },
+      "label": "Split into steps",
+      "config": {
+        "systemPrompt": "Break the request into short independent steps. Output STRICTLY a JSON array of plain-text strings.",
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null,
+        "maxSubtasks": 3
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "queue",
+      "type": "QUEUE_PROCESSOR",
+      "position": {
+        "x": 520,
+        "y": 200
+      },
+      "label": "Each step",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null,
+        "stopOnError": false
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "item",
+      "type": "TOOL",
+      "position": {
+        "x": 740,
+        "y": 200
+      },
+      "label": "Do the step",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": false,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "position": {
+        "x": 960,
+        "y": 200
+      },
+      "label": "Reply",
+      "config": {
+        "systemPrompt": null,
+        "cloudProvider": null,
+        "modelPath": null,
+        "toolName": null,
+        "targetPipelineId": null,
+        "skillId": null
+      },
+      "contextConfig": {
+        "chatHistory": false,
+        "originalTask": true,
+        "nodeInput": true,
+        "longTermMemory": false,
+        "toolResults": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "fromNodeId": "input",
+      "toNodeId": "plan",
+      "label": null
+    },
+    {
+      "id": "c2",
+      "fromNodeId": "plan",
+      "toNodeId": "queue",
+      "label": null
+    },
+    {
+      "id": "c3",
+      "fromNodeId": "queue",
+      "toNodeId": "item",
+      "label": "Item"
+    },
+    {
+      "id": "c4",
+      "fromNodeId": "item",
+      "toNodeId": "queue",
+      "label": null
+    },
+    {
+      "id": "c5",
+      "fromNodeId": "queue",
+      "toNodeId": "output",
+      "label": "Done"
+    }
+  ]
+}

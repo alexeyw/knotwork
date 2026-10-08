@@ -80,25 +80,17 @@ model local node=node-2 call=1 seed=2036147 t=0.55 k=17 p=0.85 image=none
 chat.save SYSTEM final=false model=null
     content:
       | Destructive tools are blocked by Settings — delete_file was not executed.
-end Error reason=null
-    message:
-      | Destructive tools are blocked by Settings — delete_file was not executed.
 trace.model.local seq=3 run=golden node-2 TOOL visit=0 call=0 depth=0 seed=2036147 t=0.55 k=17 p=0.85 model=/models/golden-model.litertlm sha=90d3e1c1a5b4 backend=CPU window=4096 image=false prompt=37be15490364 output=3d07228bdad8
 metrics.node TOOL tokens=null
 run.spend golden steps=2 tokens=0
 trace.console seq=4 run=golden depth=0 Error
     message:
       | TOOL: Destructive tools are blocked by Settings — delete_file was not executed.
-after the terminal state:
 state ConsoleLog run=golden events=4 (= trace.console run=golden seq=4)
-after the terminal state:
 end Error reason=null
     message:
       | Destructive tools are blocked by Settings — delete_file was not executed.
 trace.flush
 run.finish golden FAILED reason=null
-    error:
-      | Destructive tools are blocked by Settings — delete_file was not executed.
-run.finish golden FAILED reason=null (ignored: terminal or unknown run)
     error:
       | Destructive tools are blocked by Settings — delete_file was not executed.

@@ -165,19 +165,41 @@ class LiveNodeStepTest {
     }
 
     @Test
-    fun `given an executor's own error state then its text is redacted before it reaches the flow`() = runTest {
-        executor.outputs = flowOf(NodeOutput.State(AgentOrchestratorState.Error("call to x?api_key=abc failed")))
-
-        step().run(node(NodeType.CLOUD), "in", false, 0)
-
-        assertEquals(
-            "call to x?api_key=*** failed",
-            (
-                emitted.last {
-                    it is AgentOrchestratorState.Error
-                } as AgentOrchestratorState.Error
-                ).message,
+    fun `given an executor's own error state then it is not forwarded and becomes the node's error`() = runTest {
+        executor.outputs = flowOf(
+            NodeOutput.State(AgentOrchestratorState.Error("model failed")),
+            NodeOutput.Result(NodeExecutionResult(error = null)),
         )
+
+        val outcome = step().run(node(NodeType.CLOUD), "in", false, 0)
+
+        // The walk ends the run on the node's error, and only the walk: a second
+        // `Error` ahead of it settled the run record before the walk decided.
+        assertEquals("model failed", (outcome as LiveOutcome.Ran).result?.error)
+        assertFalse(emitted.any { it is AgentOrchestratorState.Error })
+    }
+
+    @Test
+    fun `given an executor's error state and a result with its own error then the result's text stands`() = runTest {
+        executor.outputs = flowOf(
+            NodeOutput.State(AgentOrchestratorState.Error("Unknown error")),
+            NodeOutput.Result(NodeExecutionResult(error = "timed out after 60 s", tokenCount = 3)),
+        )
+
+        val outcome = step().run(node(NodeType.CLOUD), "in", false, 0)
+
+        val result = (outcome as LiveOutcome.Ran).result
+        assertEquals("timed out after 60 s", result?.error)
+        assertEquals(3, result?.tokenCount)
+    }
+
+    @Test
+    fun `given an executor's error state and no result then the node still fails with it`() = runTest {
+        executor.outputs = flowOf(NodeOutput.State(AgentOrchestratorState.Error("model failed")))
+
+        val outcome = step().run(node(NodeType.CLOUD), "in", false, 0)
+
+        assertEquals("model failed", (outcome as LiveOutcome.Ran).result?.error)
     }
 
     @Test

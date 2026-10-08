@@ -374,6 +374,24 @@ internal object GoldenScenarios {
                 on("report", "{\"tool\": \"delete_file\", \"arguments\": {\"path\": \"reports/old.md\"}}")
             }
         },
+        fixture(
+            "queue_continues",
+            "middle-item-fails",
+            "With stopOnError off, the middle of three items fails, the last still runs, and the run completes.",
+            NOTE,
+        ) {
+            // A blocked destructive pick is an item failure the harness can script.
+            settings = GoldenSettings(blockDestructiveTools = true)
+            answers {
+                on("plan", "[\"Look up boiler servicing\", \"Delete the old notes\", \"Look up the service log\"]")
+                on(
+                    "item",
+                    "{\"tool\": \"search_tool\", \"arguments\": {\"query\": \"boiler servicing\"}}",
+                    "{\"tool\": \"delete_file\", \"arguments\": {\"path\": \"notes/old.md\"}}",
+                    "{\"tool\": \"search_tool\", \"arguments\": {\"query\": \"boiler service log\"}}",
+                )
+            }
+        },
     )
 
     private const val MOUNTAIN = "What is the tallest mountain on Earth?"
