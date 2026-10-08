@@ -23,7 +23,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * This provider never silently falls back to another backend: doing so would
  * break its [dimension] contract (a caller sizing buffers on `dimension = 1536`
- * must not receive a 512-d on-device vector). When no key is configured
+ * must not receive a 100-d on-device vector). When no key is configured
  * [isAvailable] reports `false` so `EmbeddingProviderResolver` substitutes the
  * on-device default *before* this provider is ever returned; if [embed] is
  * nonetheless called without a key it fails loudly with an [EmbeddingException].

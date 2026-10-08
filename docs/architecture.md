@@ -418,10 +418,12 @@ Key invariants:
    (`CompactionCoverageVerifier`: at least as close to each member as the
    cluster's own centroid, within a small margin), and writes the summary plus
    those deletions in a single transaction. Members the summary failed to cover
-   stay stored verbatim; a summary covering fewer than two members is discarded
-   entirely. On the read side the same contract holds in reverse — a summary is
-   dropped from the results whenever the source it was distilled from, or a
-   verbatim restatement of it, is retrievable.
+   stay stored verbatim, and so does a member the embedder cannot tell apart
+   from another member (`INDISTINGUISHABLE_SIMILARITY`, 0.98 — the built-in
+   encoder folds Russian text into one direction); a summary covering fewer than
+   two members is discarded entirely. On the read side the same contract holds
+   in reverse — a summary is dropped from the results whenever the source it was
+   distilled from, or a verbatim restatement of it, is retrievable.
 6. **One similarity metric.** Search, extraction dedup, retrieval-side
    near-duplicate collapse and compaction clustering all go through
    `MemoryVectorSimilarity`, which also owns the near-duplicate threshold —

@@ -641,6 +641,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PromptLibraryViewModelTest.kt` - Unit tests for `PromptLibraryViewModel`.
     - `settings/` - Tests for the settings screens and their catalogues.
       - `ExternalAutomationRowSummaryTest.kt` - Unit tests for the pure half of the external-automation Background rows.
+      - `MemorySettingsDelegateTest.kt` - Unit tests for `MemorySettingsDelegate` — the memory import's last step, where a failure meets the user.
       - `ModelsSettingsDelegateTest.kt` - The provider rows of Settings → Models, as `ModelsSettingsDelegate` summarises them: one per provider in the order every provider surface uses, and the one state no row had before — a key saved with no model, for a provider that has no default.
       - `PendingMemoryImportTest.kt` - Unit tests for `PendingMemoryImport.warnings` — which notices the memory-import dialog raises about a staged file, and in what order.
       - `provider/` - Tests for the cloud-provider editor.

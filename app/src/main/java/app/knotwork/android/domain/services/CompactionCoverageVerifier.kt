@@ -28,9 +28,20 @@ import javax.inject.Inject
  * consolidation claims to have done, and the summary of a cluster whose model
  * reply wandered off-topic lands far below it.
  *
+ * **A member the embedder cannot tell apart from another is never covered.**
+ * When two members of the cluster sit at [INDISTINGUISHABLE_SIMILARITY] or
+ * closer, a summary near one is just as near the other, so the vectors cannot
+ * say which of the two it carries — and both stay. This is what an embedder
+ * that folds a language into one direction looks like: the bundled on-device
+ * encoder scores unrelated Russian facts at 0.99 and above, so every Russian
+ * member of a cluster would otherwise count as covered by any Russian summary.
+ * The cost: two stored copies of one fact no longer merge. After the write-time
+ * judge, stored near-twins are mostly facts of the same shape that differ
+ * (allergic to cats / allergic to peanuts), which must not be merged blindly anyway.
+ *
  * **Why the yardstick is relative, not an absolute similarity floor.**
- * Embedding backends differ in how they distribute similarity (an on-device
- * 384-dim model and a cloud provider do not agree on what `0.75` means), and
+ * Embedding backends differ in how they distribute similarity (the on-device
+ * 100-dimension encoder and a cloud provider do not agree on what `0.75` means), and
  * clusters differ in tightness. A hard-coded floor would therefore reject
  * honest summaries under one provider and wave through nonsense under another.
  * Judging the summary against the cluster's own centroid makes the gate
@@ -60,24 +71,31 @@ class CompactionCoverageVerifier @Inject constructor() {
      *   the comparison is meaningless (cross-space vectors score `0f` and every
      *   member ends up uncovered, which fails safe: nothing is deleted).
      * @return The covered / uncovered split. A member whose embedding cannot be
-     *   compared at all (empty vector, or a dimension from another provider) is
-     *   always reported uncovered: absence of evidence must never authorise a
-     *   deletion.
+     *   compared at all (empty vector, or a dimension from another provider), or
+     *   one the embedder cannot tell apart from another member, is always
+     *   reported uncovered: absence of evidence must never authorise a deletion.
      */
     fun verify(members: List<MemoryChunk>, summaryEmbedding: FloatArray): CoverageVerdict {
         val centroid = MemoryVectorSimilarity.centroid(members.map { it.embedding })
-        val (covered, uncovered) = members.partition { member ->
+        val (covered, uncovered) = members.withIndex().partition { (index, member) ->
             val centroidSimilarity = MemoryVectorSimilarity.cosine(centroid, member.embedding)
             // A member that is not even comparable to its own cluster centroid
             // carries no usable vector, so there is nothing to verify against.
-            if (centroidSimilarity <= 0f) {
+            if (centroidSimilarity <= 0f || hasTwin(index, members)) {
                 false
             } else {
                 MemoryVectorSimilarity.cosine(summaryEmbedding, member.embedding) >=
                     centroidSimilarity - COVERAGE_MARGIN
             }
         }
-        return CoverageVerdict(covered = covered, uncovered = uncovered)
+        return CoverageVerdict(covered = covered.map { it.value }, uncovered = uncovered.map { it.value })
+    }
+
+    /** Whether another member sits at [INDISTINGUISHABLE_SIMILARITY] or closer to the one at [index]. */
+    private fun hasTwin(index: Int, members: List<MemoryChunk>): Boolean = members.indices.any { other ->
+        other != index &&
+            MemoryVectorSimilarity.cosine(members[index].embedding, members[other].embedding) >=
+            INDISTINGUISHABLE_SIMILARITY
     }
 
     /** Shared constants for [CompactionCoverageVerifier]. */
@@ -96,6 +114,16 @@ class CompactionCoverageVerifier @Inject constructor() {
          * nobody has the data to set would make the feature worse, not better.
          */
         const val COVERAGE_MARGIN: Float = 0.05f
+
+        /**
+         * The similarity at which two members count as indistinguishable to the
+         * embedder. Measured on the bundled encoder's recorded vectors
+         * (`supersede_pairs.json`): every pair of the fixture's Russian facts sits
+         * at 0.990 or above, unrelated English facts at 0.961 or below, and the
+         * English pairs at 0.98 or above (10 of 1 128) are all rewordings,
+         * corrections or facts of the same shape.
+         */
+        const val INDISTINGUISHABLE_SIMILARITY: Float = 0.98f
     }
 
     /**

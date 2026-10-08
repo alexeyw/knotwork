@@ -411,14 +411,23 @@ class MemorySettingsDelegate(
         val pending = state.value.pendingImport ?: return
         state.update { it.copy(pendingImport = null) }
         scope.launch {
+            // Neither failure is worded from the exception: what a database says
+            // belongs in the log, not on the screen.
             try {
-                val result = memoryImportUseCase.import(pending.document, strategy)
-                emitSnackbar(importResultMessage(result))
+                memoryImportUseCase.import(pending.document, strategy).fold(
+                    onSuccess = { result -> emitSnackbar(importResultMessage(result)) },
+                    onFailure = { error ->
+                        Timber.w(error, "Memory import was not stored")
+                        emitSnackbar(appContext.getString(R.string.settings_memory_import_not_saved))
+                    },
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (error: Throwable) {
+                // Throwable, not Exception: a large file's transaction can exhaust the heap,
+                // and that is a failed import, not a reason to take the app down.
                 Timber.w(error, "Memory import failed")
-                emitSnackbar(appContext.getString(R.string.settings_memory_import_failed, error.message.orEmpty()))
+                emitSnackbar(appContext.getString(R.string.settings_memory_import_failed_generic))
             }
         }
     }

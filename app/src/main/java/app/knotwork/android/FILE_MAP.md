@@ -278,7 +278,7 @@ Only Kotlin files appear inside the generated blocks.
       - `CloudEmbeddingProvider.kt` - OpenAI `text-embedding-3-small` provider (1536-d) via Koog; on-device fallback when no key.
       - `KoogEmbedderFactory.kt` - Factory (+ default impl) building Koog OpenAI/Ollama embedding clients; `List<Double> → FloatArray` helper.
       - `OllamaEmbeddingProvider.kt` - Ollama `nomic-embed-text` provider (768-d) via Koog; on-device fallback when no base URL.
-      - `UseEmbeddingProvider.kt` - On-device USE provider (512-d) wrapping `TextEmbeddingEngine`, mutex-guarded.
+      - `UseEmbeddingProvider.kt` - On-device USE provider (100-d) wrapping `TextEmbeddingEngine`, mutex-guarded.
     - `ExternalAutomationCallbackSender.kt` - Outbound half of the external-automation contract: sends the status callback as a **package-directed** broadcast (`setPackage`, never a `ComponentName` — the app cannot know the caller's receiver class, and automation apps register theirs at runtime). Needs no `<queries>` entry: broadcast delivery resolves receivers under the system identity. Absorbs delivery failures — a courtesy to a third-party app must not fail the run it reports on.
     - `MemoryCompactionScheduler.kt` - Owns the WorkManager scheduling of `MemoryCompactionWorker`: a daily periodic job (charging + device-idle) plus an out-of-schedule `startHardLimitWatch` that fires an immediate relaxed-constraint pass when the chunk count crosses `maxMemoryChunks`. Wired from `MainActivity.onCreate`.
     - `MemoryCompactionWorker.kt` - `@HiltWorker` that runs one long-term memory compaction pass. Gates on `MemorySettings.memoryCompactionEnabled` and delegates clustering/consolidation to `MemoryCompactionUseCase`.

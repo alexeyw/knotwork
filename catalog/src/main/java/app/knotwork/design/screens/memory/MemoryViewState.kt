@@ -189,7 +189,7 @@ data class MemorySection(val title: String, val count: Int, val rows: List<Memor
  * @property tags Current tags (editable in edit mode).
  * @property learnedFromLabel "Learned from" line, or `null` when unknown.
  * @property capturedLabel Captured timestamp line.
- * @property usedInLabel "Used in N replies …" line, or `null` when never used.
+ * @property usedInLabel "Used in N runs …" line, or `null` when never used.
  * @property isPinned Whether the entry is pinned.
  * @property history Earlier versions, the most recently replaced first.
  * @property pair The other half of the entry's pair, or `null` when it is in none.

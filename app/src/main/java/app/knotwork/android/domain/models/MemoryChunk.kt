@@ -16,8 +16,8 @@ package app.knotwork.android.domain.models
  *   auto-extraction fact type `fact` / `preference` / `project`, or
  *   user-added tags). Lower-case, kebab-case by convention; may be empty.
  * @property useCount Number of times this chunk has been injected into a
- *   pipeline run's Long-Term Memory context block. Drives the detail sheet's
- *   "Used in N replies" line; `0` for chunks never retrieved.
+ *   pipeline run's Long-Term Memory context block — runs, not replies. Drives
+ *   the detail sheet's "Used in N runs" line; `0` for chunks never retrieved.
  * @property lastUsedAt Epoch-millis of the most recent retrieval, or `null`
  *   if the chunk has never been used.
  */

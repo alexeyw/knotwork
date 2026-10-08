@@ -138,8 +138,17 @@ class MemoryScreenMappingTest {
         assertEquals(MemoryVisualState.EntryExpanded, state.toViewState(now).visualState)
         assertEquals("2 tok", detail.tokenLabel) // 8 chars / 4
         assertEquals("Chat \"Pixel 9 NPU setup\"", detail.learnedFromLabel)
-        assertTrue(detail.usedInLabel!!.startsWith("6 replies"))
+        assertTrue(detail.usedInLabel!!.startsWith("6 runs"))
         assertEquals(listOf("knowledge"), detail.tags)
+    }
+
+    @Test
+    fun `given a chunk recalled into one run when expanded then the used-in line counts one run`() {
+        // The counter goes up once per run whose memory block received the chunk —
+        // not per reply, and the model may not have used it at all.
+        val state = MemoryUiState(memories = listOf(chunk(1, useCount = 1)), expandedId = 1L)
+
+        assertEquals("1 run", state.toViewState(now).expandedEntry!!.usedInLabel)
     }
 
     @Test
