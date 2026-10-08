@@ -130,7 +130,7 @@ fun PipelineLibraryScreen(
                     snackbarHostState.showSnackbar(message = importUnreadableMessage)
                 // Detects a bundle envelope vs a single-pipeline document and
                 // routes to the matching flow — one affordance, two shapes.
-                else -> viewModel.importJson(read.text)
+                else -> viewModel.transfer.importJson(read.text)
             }
         }
     }
@@ -191,7 +191,7 @@ fun PipelineLibraryScreen(
         pendingExportContent = export.content
         pendingExportFileName = export.fileName
         // Consume before launching so the picker fires exactly once per payload.
-        viewModel.consumeBundleExport()
+        viewModel.transfer.consumeBundleExport()
         exportLauncher.launch(export.fileName)
     }
 
@@ -276,24 +276,24 @@ fun PipelineLibraryScreen(
     val callbacks = PipelineLibraryCallbacks(
         onFilterChange = { activeFilter = it },
         onPipelineClick = { id ->
-            viewModel.loadPipeline(pipelineId = id)
+            viewModel.library.loadPipeline(pipelineId = id)
             onOpenEditor()
         },
         onPipelineOverflow = { id -> openOverflowRowId = id },
         onOverflowDismiss = { openOverflowRowId = null },
         onLoadInEditor = { id ->
-            viewModel.loadPipeline(pipelineId = id)
+            viewModel.library.loadPipeline(pipelineId = id)
             onOpenEditor()
         },
-        onSetAsDefault = { id -> viewModel.setDefaultPipeline(pipelineId = id) },
-        onUseForSharing = { id -> viewModel.bindPipelineToSurface(EntrySurface.SHARE, pipelineId = id) },
-        onUseForTile = { id -> viewModel.bindPipelineToSurface(EntrySurface.QUICK_TILE, pipelineId = id) },
+        onSetAsDefault = { id -> viewModel.library.setDefaultPipeline(pipelineId = id) },
+        onUseForSharing = { id -> viewModel.library.bindPipelineToSurface(EntrySurface.SHARE, pipelineId = id) },
+        onUseForTile = { id -> viewModel.library.bindPipelineToSurface(EntrySurface.QUICK_TILE, pipelineId = id) },
         onRename = { id ->
             uiState.savedPipelines.firstOrNull { it.id == id }?.let { renameTarget = it }
         },
-        onDuplicate = { id -> viewModel.duplicatePipeline(pipelineId = id) },
+        onDuplicate = { id -> viewModel.library.duplicatePipeline(pipelineId = id) },
         onExportBundle = { id ->
-            viewModel.exportBundle(pipelineId = id, fileName = "knotwork-bundle-${LocalDate.now()}.json")
+            viewModel.transfer.exportBundle(pipelineId = id, fileName = "knotwork-bundle-${LocalDate.now()}.json")
         },
         onImportJson = { importLauncher.launch(arrayOf("application/json", "text/*")) },
         onDelete = { id ->
@@ -342,7 +342,7 @@ fun PipelineLibraryScreen(
     LaunchedEffect(presetsState.pendingPipelineIdFromPreset) {
         presetsState.pendingPipelineIdFromPreset?.let { newPipelineId ->
             presetsViewModel.consumePendingPipelineNavigation()
-            viewModel.loadPipeline(newPipelineId)
+            viewModel.library.loadPipeline(newPipelineId)
             onOpenEditor()
         }
     }
@@ -367,7 +367,7 @@ fun PipelineLibraryScreen(
             initialName = target.name,
             onDismiss = { saveAsPresetTarget = null },
             onConfirm = { result ->
-                viewModel.saveAsPresetFromLibrary(
+                viewModel.presets.saveAsPresetFromLibrary(
                     pipelineId = target.id,
                     name = result.name,
                     description = result.description,
@@ -386,7 +386,7 @@ fun PipelineLibraryScreen(
             initialName = "",
             onDismiss = { showCreateDialog = false },
             onConfirm = { name ->
-                viewModel.createNewPipeline(name = name)
+                viewModel.library.createNewPipeline(name = name)
                 showCreateDialog = false
             },
         )
@@ -398,7 +398,7 @@ fun PipelineLibraryScreen(
             initialName = target.name,
             onDismiss = { renameTarget = null },
             onConfirm = { name ->
-                viewModel.renamePipeline(pipelineId = target.id, newName = name)
+                viewModel.library.renamePipeline(pipelineId = target.id, newName = name)
                 renameTarget = null
             },
         )
@@ -409,7 +409,7 @@ fun PipelineLibraryScreen(
         // warning (and, on confirm, as a normal deep-linkable validation error;
         // there is no silent cascade delete).
         val dependents = remember(target.id, uiState.savedPipelines) {
-            viewModel.dependentsOf(pipelineId = target.id)
+            viewModel.library.dependentsOf(pipelineId = target.id)
         }
         val hasDependents = dependents.isNotEmpty()
         AlertDialog(
@@ -447,7 +447,7 @@ fun PipelineLibraryScreen(
                 TextButton(
                     modifier = Modifier.testTag(tag = DELETE_CONFIRM_TEST_TAG),
                     onClick = {
-                        viewModel.deletePipeline(pipelineId = target.id)
+                        viewModel.library.deletePipeline(pipelineId = target.id)
                         deleteTarget = null
                     },
                 ) {
@@ -504,44 +504,46 @@ fun PipelineLibraryScreen(
             ),
             confirm = OutcomeAction(
                 label = stringResource(R.string.orchestrator_library_import_anyway),
-                onClick = viewModel::confirmPendingImport,
+                onClick = viewModel.transfer::confirmPendingImport,
             ),
             dismiss = OutcomeAction(
                 label = stringResource(R.string.common_cancel),
-                onClick = viewModel::cancelPendingImport,
+                onClick = viewModel.transfer::cancelPendingImport,
             ),
-            onDismissRequest = viewModel::cancelPendingImport,
+            onDismissRequest = viewModel.transfer::cancelPendingImport,
         )
     }
     uiState.pendingCollision?.let { collision ->
         PipelineCollisionDialog(
             collision = collision,
-            onReplace = { viewModel.resolveCollision(ImportCollisionResolution.REPLACE) },
-            onImportAsCopy = { viewModel.resolveCollision(ImportCollisionResolution.IMPORT_AS_COPY) },
-            onDismiss = viewModel::cancelCollision,
+            onReplace = { viewModel.transfer.resolveCollision(ImportCollisionResolution.REPLACE) },
+            onImportAsCopy = { viewModel.transfer.resolveCollision(ImportCollisionResolution.IMPORT_AS_COPY) },
+            onDismiss = viewModel.transfer::cancelCollision,
         )
     }
     uiState.pendingBundleImport?.let { pending ->
         if (pending.collisions.isNotEmpty()) {
             BundleCollisionDialog(
                 pending = pending,
-                onReplace = { viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE) },
-                onImportAsCopies = { viewModel.resolveBundleImport(ImportCollisionResolution.IMPORT_AS_COPY) },
-                onDismiss = viewModel::cancelBundleImport,
+                onReplace = { viewModel.transfer.resolveBundleImport(ImportCollisionResolution.REPLACE) },
+                onImportAsCopies = { viewModel.transfer.resolveBundleImport(ImportCollisionResolution.IMPORT_AS_COPY) },
+                onDismiss = viewModel.transfer::cancelBundleImport,
             )
         } else {
             // Nothing collides; only a schema-version note needs the user's nod.
             AlertDialog(
-                onDismissRequest = viewModel::cancelBundleImport,
+                onDismissRequest = viewModel.transfer::cancelBundleImport,
                 title = { Text(stringResource(R.string.orchestrator_library_import_bundle_title)) },
                 text = { Text(stringResource(R.string.orchestrator_library_import_bundle_schema_body)) },
                 confirmButton = {
-                    TextButton(onClick = { viewModel.resolveBundleImport(ImportCollisionResolution.REPLACE) }) {
+                    TextButton(
+                        onClick = { viewModel.transfer.resolveBundleImport(ImportCollisionResolution.REPLACE) },
+                    ) {
                         Text(stringResource(R.string.orchestrator_library_import_anyway))
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = viewModel::cancelBundleImport) {
+                    TextButton(onClick = viewModel.transfer::cancelBundleImport) {
                         Text(stringResource(R.string.common_cancel))
                     }
                 },

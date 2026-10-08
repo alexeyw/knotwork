@@ -634,7 +634,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 val isPipelineNode = node.type == NodeType.PIPELINE
                 LaunchedEffect(node.id, isPipelineNode) {
                     pipelineTargets = if (isPipelineNode) {
-                        viewModel.classifyPipelineTargets().map { it.toCatalogOption() }
+                        viewModel.nodeSheet.classifyPipelineTargets().map { it.toCatalogOption() }
                     } else {
                         emptyList()
                     }
@@ -645,13 +645,13 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 var skillsForNode by remember(node.id) { mutableStateOf(emptyList<Skill>()) }
                 val isSkillNode = node.type == NodeType.SKILL
                 LaunchedEffect(node.id, isSkillNode) {
-                    skillsForNode = if (isSkillNode) viewModel.loadSkills() else emptyList()
+                    skillsForNode = if (isSkillNode) viewModel.nodeSheet.loadSkills() else emptyList()
                 }
                 val skillOptions = rememberSkillOptions(skillsForNode)
                 // Which providers are set up here, for the Provider / Engine fields: read when
                 // the sheet opens — it changes only in Settings.
                 var providerAvailability by remember(node.id) { mutableStateOf(ProviderAvailability()) }
-                LaunchedEffect(node.id) { providerAvailability = viewModel.loadProviderAvailability() }
+                LaunchedEffect(node.id) { providerAvailability = viewModel.nodeSheet.loadProviderAvailability() }
                 val defaultModel = stringResource(R.string.node_provider_default_model)
                 val providerChoices = remember(providerAvailability, uiState.availableLocalModels, defaultModel) {
                     providerAvailability.toProviderChoices(
@@ -783,10 +783,10 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
 
         val libraryRequest = pendingLibrary
         if (libraryRequest != null) {
-            val bundled by viewModel
+            val bundled by viewModel.presets
                 .bundledPresetsForType(libraryRequest.nodeType)
                 .collectAsState(initial = emptyList())
-            val mine by viewModel
+            val mine by viewModel.presets
                 .userPresetsForType(libraryRequest.nodeType)
                 .collectAsState(initial = emptyList())
             PromptPresetPickerDialog(
@@ -798,7 +798,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                     libraryRequest.apply(picked)
                     pendingLibrary = null
                 },
-                onPreview = { prompt -> viewModel.requestPromptPreview(prompt) },
+                onPreview = { prompt -> viewModel.nodeSheet.requestPromptPreview(prompt) },
                 onDismiss = { pendingLibrary = null },
             )
         }
@@ -809,7 +809,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 nodeType = savePresetRequest.nodeType,
                 systemPromptPreview = savePresetRequest.systemPrompt,
                 onConfirm = { result ->
-                    viewModel.saveCurrentPromptAsPreset(
+                    viewModel.presets.saveCurrentPromptAsPreset(
                         systemPrompt = savePresetRequest.systemPrompt,
                         name = result.name,
                         description = result.description,
@@ -830,7 +830,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
         if (previewState !is PromptPreviewState.Hidden) {
             PromptPreviewBottomSheet(
                 segments = (previewState as? PromptPreviewState.Ready)?.segments,
-                onDismiss = { viewModel.dismissPromptPreview() },
+                onDismiss = { viewModel.nodeSheet.dismissPromptPreview() },
             )
         }
 
@@ -868,7 +868,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                 initialName = pipeline.name,
                 onDismiss = { saveAsPresetOpen = false },
                 onConfirm = { result ->
-                    viewModel.saveCurrentAsPreset(
+                    viewModel.presets.saveCurrentAsPreset(
                         name = result.name,
                         description = result.description,
                         category = result.category,
@@ -903,7 +903,7 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
                     // freshly loaded preset.
                     editor.undoRedo.reset()
                     editor.clearTransient()
-                    viewModel.applyPresetToCurrentPipeline(presetId)
+                    viewModel.presets.applyPresetToCurrentPipeline(presetId)
                     // The template lands in the same pipeline id, which the canvas has
                     // already framed while it was empty — ask for a frame once it arrives.
                     editor.requestFit()
