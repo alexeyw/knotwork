@@ -142,8 +142,9 @@ class and the ViewModel becomes a thin coordinator:
   seam, and the reattach delegate restores suspension cards through seams into
   the HITL delegate.
 
-`ChatHomeViewModel` is decomposed into eight delegates — `ChatHomeConsoleDelegate`
-(console pane), `ChatHomeVoiceDelegate` (voice input), `ChatHomeAttachmentDelegate`
+`ChatHomeViewModel` is decomposed into nine delegates — `ChatHomeConsoleDelegate`
+(console pane), `ChatHomeRunDelegate` (the run strip: settings, check, run
+again, trace export), `ChatHomeVoiceDelegate` (voice input), `ChatHomeAttachmentDelegate`
 (image attachments), `ChatHomeTransferDelegate` (import / export / save-to-memory),
 `ChatHomePipelineBindingDelegate` (pipeline subtitle + fallback),
 `ChatHomeThreadsDelegate` (sessions + drawer + CRUD), `ChatHomeHitlDelegate`

@@ -197,6 +197,12 @@ details.
   of their own beside the editing core, and the exemptions are gone. Nothing
   the library or the editor does changes.
 
+- **The chat screen's view model asks only for the settings it reads.** It
+  took every setting at once and handed four parts of them to its helpers; it
+  now takes those four sections, and the state and event types it declared for
+  its helpers sit with the code that uses them. Only the settings screen and
+  the settings plumbing itself still see every setting.
+
 ### Fixed
 
 - **Cloud retries wait as long as the provider asks, and no longer retry what

@@ -499,3 +499,17 @@ internal fun ChatHomeScreenState.withConsoleProjectionsCleared(): ChatHomeScreen
         traces = emptyList(),
     ),
 )
+
+/**
+ * Discrete one-shot events raised by the console pane and consumed by the
+ * screen-level snackbar host. Modelled as an enum so the screen can map
+ * each value to the right localised string in one place (no resource id
+ * leaks into the VM).
+ */
+enum class ConsoleSnackbarEvent {
+    /** A single console line was copied to the system clipboard. */
+    LineCopied,
+
+    /** The full filtered log was copied to the system clipboard. */
+    AllCopied,
+}

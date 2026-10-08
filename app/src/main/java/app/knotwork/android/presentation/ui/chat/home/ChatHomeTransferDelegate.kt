@@ -181,3 +181,16 @@ class ChatHomeTransferDelegate(
         const val IMPORT_GENERIC_FAILURE_MESSAGE: String = "the file could not be read"
     }
 }
+
+/**
+ * One-shot outcome of the long-press "Save to memory" action, mapped to a
+ * snackbar by the screen. Modelled as an enum so resource ids stay out of
+ * the ViewModel.
+ */
+enum class MemorySaveEvent {
+    /** The message text was embedded and stored as a manual memory entry. */
+    Saved,
+
+    /** Embedding or persistence failed; surface a retry-able failure copy. */
+    Failed,
+}
