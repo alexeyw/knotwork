@@ -1376,7 +1376,7 @@ class GraphExecutionEngineTest {
     }
 
     @Test
-    fun `given a queue with stopOnError off when an item fails then the run continues to the next`() = runTest {
+    fun `given stopOnError off when a queue item fails then the run continues and emits no Error`() = runTest {
         every { settingsRepository.pipelineMaxSteps } returns flowOf(20)
 
         val inputNode = NodeModel("input", NodeType.INPUT, 0f, 0f)
@@ -1413,6 +1413,10 @@ class GraphExecutionEngineTest {
             "Expected Completed despite one failing item, got: ${states.last()}",
             states.last() is AgentOrchestratorState.Completed,
         )
+        // An `Error` is the end of a run to everything that watches the flow: the
+        // queue manager settles the run record on the first one it sees, and the
+        // record is written once. The item's error belongs to the item.
+        assertEquals(emptyList<AgentOrchestratorState>(), states.filterIsInstance<AgentOrchestratorState.Error>())
     }
 
     @Test
@@ -3171,6 +3175,39 @@ class GraphExecutionEngineTest {
         val states = engine(sessionId, "prompt", singleSkillGraph(), "run-leak").toList()
 
         assertNothingCarriesTheKey(states, appended)
+    }
+
+    @Test
+    fun `given a node that reports its error then the run ends on exactly one Error`() = runTest {
+        every { skillNodeExecutor.execute(any(), any(), any(), any(), any(), any()) } returns flowOf(
+            NodeOutput.State(AgentOrchestratorState.Error("skill failed")),
+            NodeOutput.Result(NodeExecutionResult(error = "skill failed")),
+        )
+
+        val states = engine(sessionId, "prompt", singleSkillGraph()).toList()
+
+        // One terminal state, last: the node's own report and the run's end used
+        // to arrive as two, and the queue manager settled the record on the first.
+        assertEquals(
+            listOf(AgentOrchestratorState.Error("skill failed")),
+            states.filterIsInstance<AgentOrchestratorState.Error>(),
+        )
+        assertEquals(AgentOrchestratorState.Error("skill failed"), states.last())
+    }
+
+    @Test
+    fun `given a node that reports an error with a result that has none then the run still ends on it`() = runTest {
+        // An executor that catches an exception with no message reports the error
+        // state's text and a result whose error is null.
+        every { skillNodeExecutor.execute(any(), any(), any(), any(), any(), any()) } returns flowOf(
+            NodeOutput.State(AgentOrchestratorState.Error("Unknown error")),
+            NodeOutput.Result(NodeExecutionResult(error = null)),
+        )
+
+        val states = engine(sessionId, "prompt", singleSkillGraph()).toList()
+
+        assertEquals(AgentOrchestratorState.Error("Unknown error"), states.last())
+        assertFalse(states.any { it is AgentOrchestratorState.Completed })
     }
 
     private fun singleSkillGraph(): PipelineGraph = PipelineGraph(

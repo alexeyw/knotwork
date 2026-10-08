@@ -81,6 +81,11 @@ Contract reminders:
 - The flow must terminate with **exactly one** `NodeOutput.Result`
   carrying a `NodeExecutionResult`. `NodeOutput.State` events in
   between are forwarded to the inline mini-console.
+- Report a failure in the result's `error`. An `AgentOrchestratorState.Error`
+  your executor emits is not forwarded: it becomes the node's error, and the
+  engine decides whether the run ends on it — inside a queue whose
+  `stopOnError` is off it becomes that item's result instead. The engine
+  emits the run's one `Error` itself.
 - If your executor calls into the LLM, run the assembled prompt
   through `PromptTemplateEngine.render(...)` first so `$DATE`,
   `$TOOLS` and friends get substituted.
