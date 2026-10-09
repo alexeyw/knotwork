@@ -209,6 +209,9 @@ screen's search), work down this list:
   duplicate does not spend a second slot. The surviving copy is the
   pinned one if there is one, otherwise the best-ranked — and at about equal
   relevance and age, one you saved by hand ranks above an extracted one.
+  With the on-device embedding model this also catches unrelated entries
+  written in Russian, which it cannot tell apart — see [Known
+  limitations](faq.md#known-limitations).
 - **The entry is queued for re-embedding.** A chunk imported under a
   different embedding provider can't be matched until the background
   re-embed finishes (it scores ~0 in the meantime). Give it a moment, or

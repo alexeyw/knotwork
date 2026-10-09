@@ -55,6 +55,24 @@ end-to-end:
   distribution flavours at the current API level and the whole suite again at
   the `minSdk` floor, on every pull request into `main` and nightly (see
   [testing.md](testing.md#the-instrumented-gate)).
+- Runs you can check: each run records its seed, sampler and the SHA-256 of
+  every model file it used, and a finished run can be verified, repeated with
+  the same seed, or exported as one JSON trace. What is promised, and on which
+  backend, is in the
+  [user guide](user-guide.md#the-run-header-seed-verify-run-again-export).
+- A connection test on a provider's screen and on the MCP server form, which
+  checks the address and the key without sending a prompt.
+- An approval card that shows the request you made next to the tool call it
+  asks about.
+- Memory that takes corrections: a fact that corrects a saved one replaces it,
+  and the old wording stays in the entry's history.
+- A readable list of node types in the editor, grouped, with one line on what
+  each type does.
+- A notification when the phone stops checking a trigger, sent once per
+  silence.
+- Every bundled pipeline replayed through the real engine in the test suite
+  and compared with a recorded trace, so a change that alters what a run does
+  fails the build until someone records it on purpose.
 
 See [README.md](../README.md) for the full feature list and
 [architecture.md](architecture.md) for how the pieces fit together.
@@ -76,12 +94,13 @@ That settles the first half of this item: a store listing exists, and so
 does a data-safety declaration matching the privacy model the app
 actually implements. What is left is the second channel.
 
-- **F-Droid.** Submitted, waiting for review. It is set up as a
-  reproducible build: F-Droid builds the `foss` APK from source and
+- **F-Droid.** Submitted. Their static review found nothing blocking, and
+  the submission is waiting for a reviewer to test it on a device. It is set
+  up as a reproducible build: F-Droid builds the `foss` APK from source and
   publishes it only if it matches the one on GitHub Releases, so both carry
   the same signature and you can switch between them without reinstalling.
-  The open question is the reviewers': the on-device inference engine ships
-  as a prebuilt native library.
+  The review lists the prebuilt native libraries of the inference engine for
+  F-Droid's maintainers, and asks nothing of this project.
 
 Note the one-time migration cost described in the *Pre-release notice* of
 [README.md](../README.md): `0.7.0` is the first release-signed build, so
@@ -109,10 +128,11 @@ that stops reaching the run grows its row back.
 
 ### Whatever the first users run into
 
-The product has not yet met an audience. The first reports from people
-who did not write it will reshape this list, and that is the point of
-publishing it. Bug reports with reproduction steps and "I tried to build
-X and got stuck at Y" are both useful; see
+The first reports from people who did not write the app have already
+changed this list: a server you run as a provider, Groq, the connection
+test and the request shown on an approval card all came from them. More
+of the same is why the list is public. Bug reports with reproduction
+steps and "I tried to build X and got stuck at Y" are both useful; see
 [How to get involved](#how-to-get-involved).
 
 ## Mid term

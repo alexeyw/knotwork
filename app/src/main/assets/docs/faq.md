@@ -282,10 +282,10 @@ stored encrypted, per server. **OAuth is not supported.** See
 
 ### Is there a "test connection" button?
 
-No. What you get instead is the server row itself: after you add a server it
-shows a health state and a tool count, and a server that cannot be reached says
-so there. See [What the common MCP
-errors mean](user-guide.md#what-the-common-mcp-errors-mean).
+Yes. **Test connection** on the server form connects with the values you
+typed, lists the server's tools and disconnects, before anything is saved. It
+answers with the number of tools or with what went wrong. See [Adding an MCP
+server](user-guide.md#adding-an-mcp-server).
 
 ### My server publishes 16 tools but the app shows 13.
 
@@ -439,8 +439,6 @@ would change it.
 - **No OAuth anywhere.** Not for MCP servers, not for model downloads. Bearer,
   Basic and API-key headers are what exist. Revisited with the first external
   report of a real server that cannot be reached any other way.
-- **No connection test for an MCP server.** You add it and read the resulting
-  health row. Revisited alongside the MCP screen's next rework.
 - **A built-in tool's risk level cannot be changed.** MCP tools and tools
   discovered on the device now have a **Risk level** control on their detail
   page; a tool written into the app does not, because its level is resolved from
@@ -458,9 +456,14 @@ would change it.
 - **Tools from other apps are not picked up.** Publishing AppFunctions is open
   to any app; calling one needs a permission Android reserves for privileged
   system apps, and nothing on the roadmap changes that for an ordinary install.
-- **The node picker in the visual editor is hard to read** at the current number
-  of node types, where labels overlap. Replacing it is accepted as needed, with
-  no date attached; the browser editor is the workaround in the meantime.
+- **Memory search works in English.** The on-device embedding model sees
+  unrelated facts written in Russian as near-copies of each other, so a memory
+  search keeps one of them per run and drops the rest as duplicates. Pinned
+  facts are never dropped this way. Other languages have not been measured.
+  OpenAI as the **Embedding model** is multilingual by its maker's account —
+  not measured here — and sends the text of your memories to OpenAI. Changing
+  the on-device model means shipping a multilingual one, which has not been
+  decided.
 - **Pipeline files are not a compatibility contract before 1.0.** The version
   stamp is a marker, not a promise, and no import-time migration exists. See
   [README § Pre-release notice](../README.md#pre-release-notice).
