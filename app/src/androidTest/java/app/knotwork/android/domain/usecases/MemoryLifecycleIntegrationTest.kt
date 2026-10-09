@@ -41,6 +41,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * End-to-end integration coverage for the **whole long-term memory lifecycle**,
@@ -61,8 +63,11 @@ import org.junit.runner.RunWith
  *
  * The faked vectors are chosen so the retrieval query lands on the same vector
  * as the extracted preference fact (cosine `1.0`), while the filler chunks live
- * in an orthogonal direction (cosine `0.0`): close enough to drive a real
- * retrieval hit, far enough that compaction clusters only the filler set.
+ * in an orthogonal plane (cosine `0.0`): close enough to drive a real retrieval
+ * hit, far enough that compaction clusters only the filler set. Within that plane
+ * the fillers sit 15 degrees apart — close, yet distinguishable (cos 15° = 0.966):
+ * identical copies are never merged, because the coverage gate cannot tell which
+ * of two twins a summary carries ([CompactionCoverageVerifier]).
  */
 @RunWith(AndroidJUnit4::class)
 class MemoryLifecycleIntegrationTest {
@@ -94,17 +99,18 @@ class MemoryLifecycleIntegrationTest {
 
     /**
      * Deterministic embedding fake. Texts that should match the retrieval query
-     * map to [DARK_VEC]; the compaction filler set maps to the orthogonal
-     * [FILLER_VEC]; anything else gets [OTHER_VEC] so an unexpected string can
+     * map to [DARK_VEC]; the compaction fillers map into the orthogonal filler
+     * plane ([filler]) at 0, 15 and 30 degrees, and their summary to the cluster's
+     * centre at 15; anything else gets [OTHER_VEC] so an unexpected string can
      * never accidentally score a hit.
      */
     private val vectorByText = mapOf(
         "Prefers dark mode" to DARK_VEC,
         nextSessionQuery to DARK_VEC,
-        "Stale fact one" to FILLER_VEC,
-        "Stale fact two" to FILLER_VEC,
-        "Stale fact three" to FILLER_VEC,
-        "Consolidated stale facts" to FILLER_VEC,
+        "Stale fact one" to filler(degrees = 0.0),
+        "Stale fact two" to filler(degrees = 15.0),
+        "Stale fact three" to filler(degrees = 30.0),
+        "Consolidated stale facts" to filler(degrees = 15.0),
     )
 
     private val fakeEmbeddingProvider = object : EmbeddingProvider {
@@ -262,10 +268,10 @@ class MemoryLifecycleIntegrationTest {
         val pinnedId = repository.getAllMemories().single().id
         repository.setMemoryPinned(pinnedId, pinned = true)
 
-        // Seed three stale, near-identical filler chunks (one cluster).
-        repository.saveMemory("Stale fact one", FILLER_VEC, MemorySource.Manual)
-        repository.saveMemory("Stale fact two", FILLER_VEC, MemorySource.Manual)
-        repository.saveMemory("Stale fact three", FILLER_VEC, MemorySource.Manual)
+        // Seed three stale filler chunks, close but distinguishable (one cluster).
+        for (text in listOf("Stale fact one", "Stale fact two", "Stale fact three")) {
+            repository.saveMemory(text, vectorByText.getValue(text), MemorySource.Manual)
+        }
         assertEquals(4, repository.getAllMemories().size)
 
         // Run compaction "100 days later" so the cutoff lands past the fillers.
@@ -287,13 +293,16 @@ class MemoryLifecycleIntegrationTest {
 
     private companion object {
         /** Direction shared by the stored preference and the retrieval query. */
-        val DARK_VEC = floatArrayOf(1f, 0f, 0f)
+        val DARK_VEC = floatArrayOf(1f, 0f, 0f, 0f)
 
-        /** Orthogonal direction for the compaction filler set. */
-        val FILLER_VEC = floatArrayOf(0f, 1f, 0f)
+        /** Catch-all for any unmapped text — orthogonal to the preference and the filler plane. */
+        val OTHER_VEC = floatArrayOf(0f, 0f, 0f, 1f)
 
-        /** Catch-all for any unmapped text — orthogonal to both of the above. */
-        val OTHER_VEC = floatArrayOf(0f, 0f, 1f)
+        /** A unit vector at [degrees] in the filler plane, orthogonal to [DARK_VEC] and [OTHER_VEC]. */
+        fun filler(degrees: Double): FloatArray {
+            val radians = Math.toRadians(degrees)
+            return floatArrayOf(0f, cos(radians).toFloat(), sin(radians).toFloat(), 0f)
+        }
 
         const val TOP_K = 5
         const val THRESHOLD = 0.55f
