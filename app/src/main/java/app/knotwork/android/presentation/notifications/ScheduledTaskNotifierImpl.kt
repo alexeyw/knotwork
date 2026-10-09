@@ -20,8 +20,11 @@ import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
 import app.knotwork.android.presentation.ui.common.RunTerminationTone
 import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.android.presentation.ui.navigation.ChatDeepLink
+import app.knotwork.android.presentation.ui.navigation.TriggerDeepLink
+import app.knotwork.android.presentation.ui.triggers.TriggerSilenceLabel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.firstOrNull
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -63,6 +66,38 @@ class ScheduledTaskNotifierImpl @Inject constructor(
             body = triggerName,
             icon = R.drawable.ic_stat_agent,
         )
+    }
+
+    @SuppressLint("MissingPermission") // hasPostNotificationsPermission() gates the call below.
+    override suspend fun notifyTriggerStale(triggerId: String, triggerName: String, silentSinceMillis: Long) {
+        val enabled = runSettings.scheduledTaskNotificationsEnabled.firstOrNull() ?: false
+        if (!enabled) return
+        if (!hasPostNotificationsPermission()) return
+        val title = context.getString(R.string.notifications_trigger_stale_title)
+        // The moment the trigger's detail banner names, written the same way: the tap opens that screen.
+        val since = TriggerSilenceLabel.format(
+            epochMillis = silentSinceMillis,
+            nowMillis = System.currentTimeMillis(),
+            zone = ZoneId.systemDefault(),
+            dayFormatter = TriggerSilenceLabel.dayFormatter(context.resources.configuration.locales[0]),
+        )
+        val body = context.getString(R.string.notifications_trigger_stale_body, triggerName, since)
+        val id = NotificationIds.Family.TRIGGER_STALE.idFor(triggerId)
+        val notification = NotificationCompat.Builder(context, NotificationChannels.TASK_RESULTS)
+            .setSmallIcon(R.drawable.ic_stat_agent)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(
+                TriggerDeepLink.backStack(context, triggerId)
+                    .getPendingIntent(id, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE),
+            )
+            .setAutoCancel(true)
+            // The body names the trigger.
+            .lockScreenVersion(context, NotificationChannels.TASK_RESULTS, R.drawable.ic_stat_agent, title)
+            .build()
+        NotificationManagerCompat.from(context).notify(id, notification)
     }
 
     override suspend fun notifyCompleted(sessionId: String, resultPreview: String) {

@@ -40,6 +40,16 @@ package app.knotwork.android.domain.models
  *   reconfiguring a trigger keeps its result log); recreated on the next fire
  *   if the user has deleted the bound session. Like [armed] / [lastFiredAt]
  *   this is runtime-derived lifecycle state, never set by the editor UI.
+ * @property activatedAt Epoch-millis the trigger last became [active][isActive] —
+ *   enabled and bound — or `null` for a trigger last activated before this was
+ *   recorded. The background runtime has nothing to show for a trigger before
+ *   that moment, so its health is measured from whichever is later: this or its
+ *   latest evaluation. Written by the repository on the transition; never by
+ *   the editor.
+ * @property staleNoticeFor The moment of the last sign of life (evaluation or
+ *   activation) the user was last told the trigger has been silent since, or
+ *   `null` when no such notice was sent. One notice per silence: a new sign of
+ *   life starts the next. Written by the repository; never by the editor.
  */
 data class Trigger(
     val id: String,
@@ -52,6 +62,8 @@ data class Trigger(
     val createdAt: Long,
     val lastFiredAt: Long? = null,
     val sessionId: String? = null,
+    val activatedAt: Long? = null,
+    val staleNoticeFor: Long? = null,
 ) {
     /**
      * Whether the trigger is eligible to be registered with the background

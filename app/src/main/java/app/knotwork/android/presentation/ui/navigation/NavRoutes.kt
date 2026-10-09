@@ -237,8 +237,25 @@ object NavRoutes {
     /** Skill library (under More). */
     const val SKILLS: String = "skills"
 
-    /** Triggers management (under More). */
+    /** Triggers management (under More); navigating here opens the list. */
     const val TRIGGERS: String = "triggers"
+
+    /** Argument name carrying the id of a trigger to open, empty when none. */
+    const val TRIGGERS_OPEN_ARG: String = "open"
+
+    /** The triggers destination's route pattern; [TRIGGERS] matches it with no trigger open. */
+    const val TRIGGERS_ROUTE: String = "triggers?$TRIGGERS_OPEN_ARG={$TRIGGERS_OPEN_ARG}"
+
+    /**
+     * Builds the route to the triggers screen with one trigger's detail open.
+     *
+     * @param triggerId The trigger to open.
+     * @return The route.
+     */
+    fun triggersRoute(triggerId: String): String = "triggers?$TRIGGERS_OPEN_ARG=${android.net.Uri.encode(triggerId)}"
+
+    /** Deep-link pattern opening one trigger: `knotwork://triggers/{id}`. */
+    const val TRIGGER_DEEP_LINK_PREFIX: String = "$DEEP_LINK_SCHEME://triggers/"
 
     /**
      * Archived chats. Reachable from the More tab (always) and from the chat

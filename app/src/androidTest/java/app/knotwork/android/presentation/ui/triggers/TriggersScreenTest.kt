@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.platform.app.InstrumentationRegistry
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.PipelineGraph
@@ -73,6 +74,7 @@ class TriggersScreenTest {
             ObserveTriggerHealthInputsUseCase(journalRepository),
             ObserveTriggerJournalUseCase(journalRepository),
             ExportTriggerJournalUseCase(journalRepository, BuildTriggerJournalExportUseCase()),
+            SavedStateHandle(),
         )
 
         composeTestRule.setContent {

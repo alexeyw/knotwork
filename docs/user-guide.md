@@ -819,6 +819,7 @@ setting once by hand.
 | *Approval required* | A sensitive/destructive tool call awaits your decision | **Approve** / **Deny** (destructive, or arguments too long to show: **Deny** / **Review in chat**) |
 | *Agent needs your input* | A clarification question is waiting | Deep-links into the chat |
 | *Task completed* / *Task failed* | A scheduled task finished | Opens the conversation the result landed in |
+| *Trigger overdue* | A trigger has not been checked for longer than its schedule allows — once per silence | Opens that trigger |
 | *Still running* (optional ping) | A long backgrounded run is still going | Opens the app |
 
 Approval and clarification requests survive process death: the staged
@@ -1066,7 +1067,12 @@ all on the **"Scheduled task results"** channel and gated by the same
 - **Task completed** — with a preview of the final answer.
 - **Task failed** — with the reason.
 
-Tapping any of them deep-links straight into the trigger's chat. If a run
+Tapping any of them deep-links straight into the trigger's chat. A fourth
+notification, **Trigger overdue**, comes when a trigger has gone **Overdue**
+(below) — once per silence, and its tap opens that trigger. It comes from a
+separate check that runs every few hours; if Android holds back all of the
+app's background work, that check is held back too, and the badge on the
+Triggers screen is what remains. If a run
 pauses for approval of a sensitive or destructive tool, you get the usual
 **approval notification** with **Approve / Deny** actions, so you can let a
 background trigger run proceed (or stop it) without opening the app. A
@@ -1088,7 +1094,11 @@ surfaces make it legible.
 - **Overdue** — the phone has not checked this trigger for noticeably longer
   than its own schedule implies (more than twice the cadence it should be
   checked at). This is the tell-tale of an aggressive battery saver or a deep
-  idle state — the trigger is fine, the phone simply isn't waking the app.
+  idle state — the trigger is fine, the phone simply isn't waking the app. The
+  time is counted from the trigger's last check or from when you switched it
+  on, whichever is later, so turning a trigger back on after a pause does not
+  make it overdue. You also get one **Trigger overdue** notification per
+  silence (see above).
 - **Last run failed** — the most recent run this trigger started ended as
   anything other than a clean success: a failure, a run the system killed, a
   run you stopped, or one that timed out waiting for your approval. The
@@ -2950,7 +2960,7 @@ Basic:
 - **Scheduled task results** — when on, finishing a scheduled background task
   posts a **Task completed** notification with the first line of the answer (or
   **Task failed** with the reason); tapping it opens the conversation the result
-  landed in. On by default.
+  landed in. The same toggle covers **Trigger overdue**. On by default.
 
 Advanced:
 

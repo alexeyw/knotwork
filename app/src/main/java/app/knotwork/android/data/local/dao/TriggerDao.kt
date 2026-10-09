@@ -67,6 +67,25 @@ interface TriggerDao {
     suspend fun setEnabled(id: String, enabled: Boolean)
 
     /**
+     * Enables a disabled trigger and records the moment it was enabled. A trigger
+     * that is already enabled is left as it is, so the moment stays the first one.
+     *
+     * @param id The trigger id.
+     * @param activatedAt Epoch-millis of the enabling.
+     */
+    @Query("UPDATE triggers SET enabled = 1, activatedAt = :activatedAt WHERE id = :id AND enabled = 0")
+    suspend fun enable(id: String, activatedAt: Long)
+
+    /**
+     * Records which silence the user was last told about.
+     *
+     * @param id The trigger id.
+     * @param signOfLife The last-sign-of-life moment the notice was about.
+     */
+    @Query("UPDATE triggers SET staleNoticeFor = :signOfLife WHERE id = :id")
+    suspend fun setStaleNoticeFor(id: String, signOfLife: Long)
+
+    /**
      * Updates a trigger's armed edge latch.
      *
      * @param id The trigger id.

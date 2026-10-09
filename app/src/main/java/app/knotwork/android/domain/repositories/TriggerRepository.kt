@@ -43,6 +43,11 @@ interface TriggerRepository {
     /**
      * Inserts or replaces a trigger (upsert by [Trigger.id]).
      *
+     * [Trigger.activatedAt] and [Trigger.staleNoticeFor] are the repository's, not
+     * the caller's: a save that makes the trigger [active][Trigger.isActive] —
+     * a new bound trigger, or binding or enabling an inactive one — records now as
+     * its activation; any other save keeps the stored values.
+     *
      * @param trigger The trigger to persist.
      */
     suspend fun saveTrigger(trigger: Trigger)
@@ -55,12 +60,21 @@ interface TriggerRepository {
     suspend fun deleteTrigger(id: String)
 
     /**
-     * Flips a trigger's [enabled][Trigger.enabled] flag.
+     * Flips a trigger's [enabled][Trigger.enabled] flag. Enabling a disabled
+     * trigger records now as its [activation][Trigger.activatedAt].
      *
      * @param id The trigger id.
      * @param enabled The new enabled state.
      */
     suspend fun setEnabled(id: String, enabled: Boolean)
+
+    /**
+     * Records that the user was told the trigger has been silent since [signOfLife].
+     *
+     * @param id The trigger id.
+     * @param signOfLife The last evaluation or activation the notice was about.
+     */
+    suspend fun markStaleNoticed(id: String, signOfLife: Long)
 
     /**
      * Sets a trigger's [armed][Trigger.armed] edge latch (event conditions).

@@ -54,6 +54,9 @@ object NotificationIds {
 
         /** Parked run-ceiling pause, keyed by session. */
         CEILING(base = 40_000),
+
+        /** An overdue trigger, keyed by trigger. */
+        TRIGGER_STALE(base = 45_000),
         ;
 
         /** Every id this family can produce. */

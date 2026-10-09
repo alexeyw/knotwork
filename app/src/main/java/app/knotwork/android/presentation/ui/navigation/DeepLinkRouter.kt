@@ -17,7 +17,9 @@ import app.knotwork.android.presentation.state.ChatEntryRequestRelay
  *  - `knotwork://chat/{threadId}` → chat home switched to that session;
  *  - `knotwork://chat`            → chat home on the current session;
  *  - `knotwork://new-chat`        → chat home with a fresh empty session;
- *  - `knotwork://pipelines`       → the pipeline library ([NavRoutes.PIPELINE_LIBRARY]).
+ *  - `knotwork://pipelines`       → the pipeline library ([NavRoutes.PIPELINE_LIBRARY]);
+ *  - `knotwork://triggers/{id}`   → the triggers screen, under the More tab, with that
+ *    trigger open (an overdue trigger's notification).
  *
  * Used for both the cold launch intent (applied once the splash reaches home)
  * and warm intents delivered to the single-task instance via `onNewIntent`.
@@ -49,6 +51,14 @@ internal fun NavHostController.navigateToDeepLink(intent: Intent, chatEntryRelay
         // way the nav bar does keeps `restoreState`'s key identical, so a
         // shortcut launch restores the same saved subtree a tab tap would.
         "pipelines" -> navigateToTab(NavRoutes.PIPELINES_GRAPH)
+        // Through the More tab, as a tap there would arrive: Back returns to More,
+        // and the tab stays highlighted. Straight above More, never above whatever
+        // the tab switch restored there (a triggers list left open would stack twice).
+        "triggers" -> {
+            navigateToTab(NavRoutes.MORE)
+            val id = uri.pathSegments.firstOrNull()?.takeIf { it.isNotBlank() }
+            navigate(id?.let(NavRoutes::triggersRoute) ?: NavRoutes.TRIGGERS) { popUpTo(NavRoutes.MORE) }
+        }
         else -> return false
     }
     return true

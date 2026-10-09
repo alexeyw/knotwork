@@ -50,33 +50,34 @@ class TriggerHealthEvaluator @Inject constructor() {
         // background runtime, so they are never evaluated and have no health to show.
         if (!trigger.isActive) return null
 
-        // No journal history: staleness is deliberately NOT inferred here. A trigger
-        // reaches this state both when it was just made active (freshly bound or
-        // re-enabled, its first evaluation still pending — [Trigger.createdAt] is
-        // NOT the activation moment, so it cannot tell the two apart) and when it
-        // has genuinely never been polled. A false "Overdue" the instant a trigger
-        // goes active is the more damaging error — it erodes the badge's meaning —
-        // so a trigger with no evaluations reads HEALTHY; the detail screen's empty
-        // journal ("not checked yet") carries the never-evaluated state instead.
-        // Real staleness applies as soon as the first evaluation lands.
-        //
-        // Known limitation: a trigger re-enabled after a long disable keeps an old
-        // [TriggerHealthInputs.latestEvaluatedAt] and so may read STALE until its
-        // next scheduled poll writes a fresh row (bounded by the trigger's own
-        // interval — at most ~15 min for event/short-interval triggers). Closing
-        // that fully needs a persisted activation timestamp (a schema change).
-        if (inputs == null) return TriggerHealthStatus.HEALTHY
+        // Silence is measured from the last sign of life: the latest evaluation, or
+        // the moment the trigger was switched on, whichever is later. A trigger
+        // re-enabled after a long pause is not overdue on account of the pause, and
+        // one switched on and never polled since becomes overdue after the same
+        // grace as any other. With neither (an evaluation-less trigger last switched
+        // on before activation was recorded) there is nothing to measure from, and a
+        // false "Overdue" erodes the badge more than a missed one: it reads HEALTHY,
+        // and the detail screen's empty journal ("not checked yet") says the rest.
+        val signOfLife = lastSignOfLife(trigger, inputs) ?: return TriggerHealthStatus.HEALTHY
+        if (nowMillis - signOfLife > staleThresholdMillis(trigger.condition)) return TriggerHealthStatus.STALE
 
-        val staleAfterMillis = staleThresholdMillis(trigger.condition)
-        val sinceLastEvaluation = nowMillis - inputs.latestEvaluatedAt
-        if (sinceLastEvaluation > staleAfterMillis) return TriggerHealthStatus.STALE
-
-        return if (inputs.latestFiredOutcome.isError()) {
+        return if (inputs?.latestFiredOutcome.isError()) {
             TriggerHealthStatus.ERRORED
         } else {
             TriggerHealthStatus.HEALTHY
         }
     }
+
+    /**
+     * The latest moment [trigger] is known to have been alive: its latest
+     * evaluation or its [activation][Trigger.activatedAt], whichever is later.
+     *
+     * @param trigger The trigger.
+     * @param inputs Its journal facts, or `null` when it has no journal rows.
+     * @return The moment, or `null` when neither is known.
+     */
+    fun lastSignOfLife(trigger: Trigger, inputs: TriggerHealthInputs?): Long? =
+        listOfNotNull(inputs?.latestEvaluatedAt, trigger.activatedAt).maxOrNull()
 
     /**
      * The maximum silence, in millis, tolerated before a trigger is considered

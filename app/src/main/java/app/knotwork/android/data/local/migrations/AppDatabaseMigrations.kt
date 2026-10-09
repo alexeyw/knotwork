@@ -73,4 +73,5 @@ val ALL_MIGRATIONS: List<Migration> = listOf(
     MIGRATION_66_67,
     MIGRATION_67_68,
     MIGRATION_68_69,
+    MIGRATION_69_70,
 )

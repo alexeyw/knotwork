@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.triggers
 
+import androidx.lifecycle.SavedStateHandle
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.Trigger
 import app.knotwork.android.domain.models.TriggerCondition
@@ -18,6 +19,7 @@ import app.knotwork.android.domain.usecases.ObserveTriggerJournalUseCase
 import app.knotwork.android.domain.usecases.SaveTriggerUseCase
 import app.knotwork.android.domain.usecases.SyncTriggersUseCase
 import app.knotwork.android.presentation.ui.common.JournalExportEvent
+import app.knotwork.android.presentation.ui.navigation.NavRoutes
 import app.knotwork.design.screens.triggers.TriggerConditionType
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -112,7 +114,7 @@ class TriggersViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = TriggersViewModel(
+    private fun viewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()) = TriggersViewModel(
         triggerRepository,
         pipelineRepository,
         saveTrigger,
@@ -120,7 +122,21 @@ class TriggersViewModelTest {
         observeHealthInputs,
         observeJournal,
         exportTriggerJournal,
+        savedStateHandle,
     )
+
+    @Test
+    fun `given a trigger id in the route when opened then its detail opens once`() = runTest(testDispatcher) {
+        // An overdue trigger's notification opens the screen on that trigger.
+        val handle = SavedStateHandle(mapOf(NavRoutes.TRIGGERS_OPEN_ARG to "morning"))
+
+        val vm = viewModel(handle)
+        advanceUntilIdle()
+
+        assertEquals("morning", vm.uiState.value.detailTriggerId)
+        // Consumed: a screen restored after the user closed the detail stays closed.
+        assertEquals("", handle.get<String>(NavRoutes.TRIGGERS_OPEN_ARG))
+    }
 
     @Test
     fun `given repositories when initialised then loads triggers and pipelines`() = runTest(testDispatcher) {

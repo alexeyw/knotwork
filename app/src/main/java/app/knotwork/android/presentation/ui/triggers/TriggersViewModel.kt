@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.triggers
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
@@ -15,6 +16,7 @@ import app.knotwork.android.presentation.ui.common.JournalExportDelegate
 import app.knotwork.android.presentation.ui.common.JournalExportEvent
 import app.knotwork.android.presentation.ui.common.TRIGGER_JOURNAL_EXPORT_STEM
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.navigation.NavRoutes
 import app.knotwork.design.screens.triggers.TriggerConditionType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -41,6 +43,9 @@ import javax.inject.Inject
  * after every mutation so a trigger created / edited / enabled / deleted while
  * the app is running takes effect immediately rather than on the next cold
  * start (see [SyncTriggersUseCase]).
+ *
+ * Opened with a trigger id in its route ([NavRoutes.TRIGGERS_OPEN_ARG]) — an
+ * overdue trigger's notification — it opens that trigger's detail once.
  */
 @HiltViewModel
 @Suppress("TooManyFunctions") // List + detail + editor combine many discrete callbacks; collapsing hides intent.
@@ -52,6 +57,7 @@ class TriggersViewModel @Inject constructor(
     private val observeTriggerHealthInputs: ObserveTriggerHealthInputsUseCase,
     private val observeTriggerJournal: ObserveTriggerJournalUseCase,
     exportTriggerJournal: ExportTriggerJournalUseCase,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TriggersUiState())
@@ -83,6 +89,11 @@ class TriggersViewModel @Inject constructor(
     init {
         observe()
         observeDetailJournal()
+        savedStateHandle.get<String>(NavRoutes.TRIGGERS_OPEN_ARG)?.takeIf { it.isNotBlank() }?.let { id ->
+            openDetail(id)
+            // Once: a restored screen the user has since closed the detail on stays closed.
+            savedStateHandle[NavRoutes.TRIGGERS_OPEN_ARG] = ""
+        }
     }
 
     private fun observe() {

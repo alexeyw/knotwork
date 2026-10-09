@@ -473,7 +473,15 @@ fun AppNavGraph(
                 },
             )
         }
-        composable(NavRoutes.TRIGGERS) {
+        composable(
+            route = NavRoutes.TRIGGERS_ROUTE,
+            arguments = listOf(
+                navArgument(NavRoutes.TRIGGERS_OPEN_ARG) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+        ) {
             TriggersScreen(
                 modifier = Modifier.fillMaxSize(),
                 onBack = { navController.popBackStack() },

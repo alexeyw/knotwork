@@ -36,6 +36,7 @@ import app.knotwork.android.data.local.migrations.MIGRATION_65_66
 import app.knotwork.android.data.local.migrations.MIGRATION_66_67
 import app.knotwork.android.data.local.migrations.MIGRATION_67_68
 import app.knotwork.android.data.local.migrations.MIGRATION_68_69
+import app.knotwork.android.data.local.migrations.MIGRATION_69_70
 import app.knotwork.android.domain.models.NodeContextConfig
 import io.mockk.mockk
 import io.mockk.slot
@@ -1303,5 +1304,31 @@ class AppDatabaseMigrationTest {
         assertTrue(statements[3].startsWith("CREATE UNIQUE INDEX"))
         // The upgrade adds two empty tables; no stored memory is rewritten.
         assertTrue(statements.none { it.contains("ALTER TABLE `memory_chunks`") || it.contains("INSERT") })
+    }
+
+    @Test
+    fun `MIGRATION_69_70 targets versions 69 to 70`() {
+        val migration = MIGRATION_69_70
+
+        assertEquals(69, migration.startVersion)
+        assertEquals(70, migration.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_69_70 adds the activation time and the announced silence as nullable columns`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+        val statements = mutableListOf<String>()
+
+        MIGRATION_69_70.migrate(db)
+
+        verify { db.execSQL(capture(statements)) }
+        // Both start empty: an existing trigger is measured as before until it is next switched on.
+        assertEquals(
+            listOf(
+                "ALTER TABLE `triggers` ADD COLUMN `activatedAt` INTEGER",
+                "ALTER TABLE `triggers` ADD COLUMN `staleNoticeFor` INTEGER",
+            ),
+            statements,
+        )
     }
 }

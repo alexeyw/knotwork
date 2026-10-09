@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -135,5 +136,69 @@ class TriggerRepositoryImplTest {
         coVerify(exactly = 1) { dao.setArmed("t1", true) }
         coVerify(exactly = 1) { dao.markFired("t1", 999L) }
         coVerify(exactly = 1) { dao.setSessionId("t1", "sess-2") }
+    }
+
+    // ── Activation and the overdue notice ────────────────────────────────────
+
+    private fun domain(enabled: Boolean = true, pipelineId: String? = "pipe-1") = Trigger(
+        id = "t1",
+        name = "Morning brief",
+        condition = TriggerCondition.DailySchedule(hour = 8, minute = 0),
+        pipelineId = pipelineId,
+        prompt = "brief me",
+        enabled = enabled,
+        createdAt = 100L,
+    )
+
+    @Test
+    fun `given a new bound trigger when saved then now is recorded as its activation`() = runTest {
+        coEvery { dao.getById("t1") } returns null
+        val saved = slot<TriggerEntity>()
+        coEvery { dao.upsert(capture(saved)) } returns Unit
+        val before = System.currentTimeMillis()
+
+        repository.saveTrigger(domain())
+
+        assertTrue(saved.captured.activatedAt!! >= before)
+    }
+
+    @Test
+    fun `given an active trigger when edited and saved then its activation and notice are kept`() = runTest {
+        coEvery { dao.getById("t1") } returns goodEntity.copy(activatedAt = 500L, staleNoticeFor = 400L)
+        val saved = slot<TriggerEntity>()
+        coEvery { dao.upsert(capture(saved)) } returns Unit
+
+        repository.saveTrigger(domain().copy(name = "Renamed"))
+
+        assertEquals(500L, saved.captured.activatedAt)
+        assertEquals(400L, saved.captured.staleNoticeFor)
+    }
+
+    @Test
+    fun `given an unbound trigger when bound by a save then now is recorded as its activation`() = runTest {
+        coEvery { dao.getById("t1") } returns goodEntity.copy(pipelineId = null, activatedAt = 500L)
+        val saved = slot<TriggerEntity>()
+        coEvery { dao.upsert(capture(saved)) } returns Unit
+
+        repository.saveTrigger(domain())
+
+        assertTrue(saved.captured.activatedAt!! > 500L)
+    }
+
+    @Test
+    fun `given a trigger when enabled then the enabling records its moment, and disabling does not`() = runTest {
+        repository.setEnabled("t1", enabled = true)
+        repository.setEnabled("t1", enabled = false)
+
+        coVerify(exactly = 1) { dao.enable("t1", any()) }
+        coVerify(exactly = 1) { dao.setEnabled("t1", false) }
+        coVerify(exactly = 0) { dao.setEnabled("t1", true) }
+    }
+
+    @Test
+    fun `given a notice when recorded then the silence it was about is stored`() = runTest {
+        repository.markStaleNoticed("t1", signOfLife = 700L)
+
+        coVerify(exactly = 1) { dao.setStaleNoticeFor("t1", 700L) }
     }
 }

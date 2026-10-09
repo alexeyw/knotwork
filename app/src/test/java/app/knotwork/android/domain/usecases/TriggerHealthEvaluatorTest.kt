@@ -27,6 +27,7 @@ class TriggerHealthEvaluatorTest {
         pipelineId: String? = "pipeline-1",
         enabled: Boolean = true,
         createdAt: Long = now - 10L * 24 * 60 * minute,
+        activatedAt: Long? = null,
     ): Trigger = Trigger(
         id = "trig-1",
         name = "Inbox triage",
@@ -35,6 +36,7 @@ class TriggerHealthEvaluatorTest {
         prompt = "",
         enabled = enabled,
         createdAt = createdAt,
+        activatedAt = activatedAt,
     )
 
     // ── Inactive short-circuits ──────────────────────────────────────────────
@@ -194,5 +196,41 @@ class TriggerHealthEvaluatorTest {
         val past = TriggerHealthInputs(latestEvaluatedAt = now - (49L * 60) * minute)
         assertEquals(TriggerHealthStatus.HEALTHY, evaluator.evaluate(t, within, now))
         assertEquals(TriggerHealthStatus.STALE, evaluator.evaluate(t, past, now))
+    }
+
+    // ── Activation as a sign of life ─────────────────────────────────────────
+
+    @Test
+    fun `given a trigger re-enabled after a long pause when evaluated then the pause does not make it overdue`() {
+        // Last polled a week ago, switched back on ten minutes ago: the 30-minute
+        // interval's grace (60 minutes) is measured from the switch, not the poll.
+        val inputs = TriggerHealthInputs(latestEvaluatedAt = now - 7L * 24 * 60 * minute)
+
+        val result = evaluator.evaluate(trigger(activatedAt = now - 10 * minute), inputs, now)
+
+        assertEquals(TriggerHealthStatus.HEALTHY, result)
+    }
+
+    @Test
+    fun `given a trigger switched on and never polled past its grace when evaluated then stale`() {
+        val result = evaluator.evaluate(trigger(activatedAt = now - 61 * minute), null, now)
+
+        assertEquals(TriggerHealthStatus.STALE, result)
+    }
+
+    @Test
+    fun `given a trigger switched on and never polled within its grace when evaluated then healthy`() {
+        val result = evaluator.evaluate(trigger(activatedAt = now - 59 * minute), null, now)
+
+        assertEquals(TriggerHealthStatus.HEALTHY, result)
+    }
+
+    @Test
+    fun `given an evaluation and an activation when the last sign of life is asked then the later one is it`() {
+        val inputs = TriggerHealthInputs(latestEvaluatedAt = now - 5 * minute)
+
+        assertEquals(now - 5 * minute, evaluator.lastSignOfLife(trigger(activatedAt = now - 9 * minute), inputs))
+        assertEquals(now - 2 * minute, evaluator.lastSignOfLife(trigger(activatedAt = now - 2 * minute), inputs))
+        assertEquals(null, evaluator.lastSignOfLife(trigger(), null))
     }
 }
