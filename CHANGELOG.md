@@ -253,6 +253,11 @@ details.
 - **The privacy and security notes cover debug builds too.** MediaPipe's usage
   reporter is removed from release builds, which is what the documents said; a
   debug build made from the source keeps it, which they did not.
+- **The FAQ matches the app again.** It still said an MCP server has no
+  connection test and that the node picker was hard to read; both were fixed in
+  this release. Its list of known limitations now says that memory search on the
+  on-device embedding model cannot tell facts written in Russian apart. The
+  roadmap lists what this release added and where the F-Droid submission stands.
 - **Cookbook recipes run with the values they show.** A pipeline node carries its
   settings twice — once for the run, once for the editors — and two recipes held
   some only in the editors' copy: the planning cap and the queue's stop-on-error
