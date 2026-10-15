@@ -503,6 +503,7 @@ flag them with spurious, environment-dependent violations.
 | `RunRateCeilingTest` (census)      | Every `RunOrigin` is bounded by its own `RunRateCeiling` or exempt for a written reason, and the two origins another app can start without a permission (`SHARE`, `EXTERNAL`) have a ceiling. A new origin does not compile until someone decides. |
 | `TabRootEntryGuardTest`            | A bottom-nav tab root is entered as a tab switch, never pushed onto another subtree's back stack. |
 | `ComposeTestRuleV2GuardTest`       | No instrumented test builds its Compose rule with a deprecated v1 factory (`junit4.createComposeRule` and the rest); the v2 ones run the composition's coroutines on a `StandardTestDispatcher`, as `runTest` does. A twin in `:catalog` holds its screenshot tests to the same rule. |
+| `InstrumentedAssertGuardTest`      | No instrumented test calls Kotlin's `assert`. On Android the app's process runs with assertions disabled, so the call evaluates its condition and returns, and the test passes whatever it found: thirteen such checks in seven tests never ran until they moved to JUnit's `assertEquals`. Unit tests may keep it — Gradle runs them with assertions enabled. |
 | `InstrumentedTestExclusionGuardTest` | The roster of device-only instrumented tests, and the annotation the emulator workflow excludes by, stay in step. |
 
 **Why these rules and not more.** Konsist analyses *declarations*, not the

@@ -510,6 +510,13 @@ details.
   failed — a full disk, a lock — returned as if it had run. The test suite now
   refuses that call in the app's code.
 
+- **Thirteen checks in the emulator tests now check.** Kotlin's `assert` does
+  nothing on Android, where the app runs with assertions switched off, so
+  thirteen lines in seven emulator tests passed whatever they found: a button's
+  callback, the clipboard after *Copy line*, the message box after *Send*. They
+  now use JUnit's assertions, which fail on a device too, and a guard refuses
+  the next `assert` written in an emulator test.
+
 ## [0.11.1] - 2026-10-02
 
 ### Changed

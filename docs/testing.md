@@ -235,6 +235,14 @@ every `:catalog` test is on v2. `ComposeTestRuleV2GuardTest` — one in `:app` o
 `src/androidTest`, one in `:catalog` over its tests — fails a v1 factory,
 imported or written out.
 
+Check a value with JUnit's assertions (`org.junit.Assert.assertEquals`,
+`assertTrue`), never with Kotlin's `assert`. An app's process on Android runs
+with assertions disabled, so `assert(condition) { message }` evaluates the
+condition and returns: thirteen such checks in seven tests passed for as long
+as they existed, whatever they found. `InstrumentedAssertGuardTest` fails one
+in `src/androidTest`. Unit tests are not affected — Gradle runs them with
+assertions enabled.
+
 ### Naming
 
 `<ScreenName>ScreenTest.kt` under the `androidTest` source set.
