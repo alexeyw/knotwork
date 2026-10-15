@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.knotwork.design.components.chat.ImageViewer
 import app.knotwork.design.theme.KnotworkTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -44,8 +45,8 @@ class ImageViewerInstrumentedTest {
         composeTestRule.onNodeWithContentDescription(SHARE_LABEL).performClick()
         composeTestRule.onNodeWithContentDescription(CLOSE_LABEL).performClick()
 
-        assert(shareCount == 1) { "Share callback should fire once, got $shareCount" }
-        assert(dismissCount == 1) { "Dismiss callback should fire once, got $dismissCount" }
+        assertEquals("Share callback should fire once", 1, shareCount)
+        assertEquals("Dismiss callback should fire once", 1, dismissCount)
     }
 
     @Test

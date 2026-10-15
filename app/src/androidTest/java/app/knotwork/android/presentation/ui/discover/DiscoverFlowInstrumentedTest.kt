@@ -15,6 +15,7 @@ import app.knotwork.design.screens.discover.DiscoverFileStatus
 import app.knotwork.design.screens.discover.DiscoverViewState
 import app.knotwork.design.screens.discover.DiscoverVisualState
 import app.knotwork.design.theme.KnotworkTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -48,7 +49,7 @@ class DiscoverFlowInstrumentedTest {
         composeTestRule.onNodeWithText(ERROR_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(RETRY).performClick()
 
-        assert(retryCount == 1) { "Retry callback should fire once, got $retryCount" }
+        assertEquals("Retry callback should fire once", 1, retryCount)
     }
 
     @Test
@@ -78,7 +79,7 @@ class DiscoverFlowInstrumentedTest {
 
         composeTestRule.onNodeWithText(INSTALL).performClick()
 
-        assert(installedFile == FILE_NAME) { "Install should fire for '$FILE_NAME', got '$installedFile'" }
+        assertEquals("Install should fire for the listed file", FILE_NAME, installedFile)
     }
 
     @Test
@@ -96,7 +97,7 @@ class DiscoverFlowInstrumentedTest {
         composeTestRule.onNodeWithText(LICENSE_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(LICENSE_ACCEPT).performClick()
 
-        assert(confirmedFile == FILE_NAME) { "Licence confirm should fire for '$FILE_NAME', got '$confirmedFile'" }
+        assertEquals("Licence confirm should fire for the pending file", FILE_NAME, confirmedFile)
     }
 
     private fun loadedDetail(): DiscoverDetailViewState = DiscoverDetailViewState(

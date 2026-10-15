@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
 import io.mockk.verify
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import app.knotwork.design.R as KnotworkR
@@ -52,9 +53,7 @@ class ChatHomeSendFlowTest {
         // UI side; the VM clears it after persistence. We sanity-check the
         // flow is still readable after a click so the test fails loudly if a
         // future refactor moves clearing into the screen.
-        assert(handles.composerValue == "Hello there") {
-            "Composer value should still be readable post-Send; was ${handles.composerValue}"
-        }
+        assertEquals("Composer value should still be readable post-Send", "Hello there", handles.composerValue)
     }
 
     @Test

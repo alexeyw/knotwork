@@ -22,6 +22,7 @@ import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleSource
 import app.knotwork.design.components.console.ConsoleTab
 import io.mockk.verify
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import app.knotwork.design.R as KnotworkR
@@ -286,9 +287,7 @@ class ChatHomeConsolePaneTest {
         // literal here would duplicate that format in a source set `check` does not
         // even compile, which is how this test came to reference a method that no
         // longer exists.
-        assert(clipboard.lastText?.text == ConsoleCopyPayloads.line(line)) {
-            "Clipboard payload mismatch — got: ${clipboard.lastText?.text}"
-        }
+        assertEquals("Clipboard payload mismatch", ConsoleCopyPayloads.line(line), clipboard.lastText?.text)
         verify(exactly = 1) { handles.console.signalConsoleLineCopied() }
     }
 

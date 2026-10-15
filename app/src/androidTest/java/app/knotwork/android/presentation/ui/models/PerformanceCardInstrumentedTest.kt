@@ -9,6 +9,7 @@ import app.knotwork.design.screens.models.PerformanceCallbacks
 import app.knotwork.design.screens.models.PerformanceCard
 import app.knotwork.design.screens.models.PerformanceCardState
 import app.knotwork.design.theme.KnotworkTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -39,7 +40,7 @@ class PerformanceCardInstrumentedTest {
         composeTestRule.onNodeWithText(EMPTY_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(RUN_BENCHMARK).performClick()
 
-        assert(runCount == 1) { "Run-benchmark callback should fire once, got $runCount" }
+        assertEquals("Run-benchmark callback should fire once", 1, runCount)
     }
 
     @Test

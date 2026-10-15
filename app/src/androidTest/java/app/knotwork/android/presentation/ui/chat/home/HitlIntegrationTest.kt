@@ -16,6 +16,7 @@ import app.knotwork.design.screens.chat.ChatHomeContent
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
 import app.knotwork.design.screens.chat.ChatHomeViewState
 import app.knotwork.design.screens.chat.ChatHomeVisualState
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -51,8 +52,8 @@ class HitlIntegrationTest {
         composeTestRule.onNodeWithText(ALLOW_LABEL).performClick()
         composeTestRule.onNodeWithText(REJECT_LABEL).performClick()
 
-        assert(approveCount == 1) { "Approve callback should fire once, got $approveCount" }
-        assert(rejectCount == 1) { "Reject callback should fire once, got $rejectCount" }
+        assertEquals("Approve callback should fire once", 1, approveCount)
+        assertEquals("Reject callback should fire once", 1, rejectCount)
     }
 
     @Test

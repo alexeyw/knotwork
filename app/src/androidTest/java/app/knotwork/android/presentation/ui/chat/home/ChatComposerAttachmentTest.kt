@@ -10,6 +10,7 @@ import app.knotwork.design.components.chat.ComposerAttachment
 import app.knotwork.design.components.chat.ComposerState
 import app.knotwork.design.components.chat.ComposerVoiceNotice
 import app.knotwork.design.theme.KnotworkTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -45,7 +46,7 @@ class ChatComposerAttachmentTest {
         composeTestRule.onNodeWithText(ATTACHMENT_DETAIL).assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(REMOVE_LABEL).performClick()
 
-        assert(removeCount == 1) { "Remove callback should fire once, got $removeCount" }
+        assertEquals("Remove callback should fire once", 1, removeCount)
     }
 
     @Test
@@ -86,7 +87,7 @@ class ChatComposerAttachmentTest {
         composeTestRule.onNodeWithText(PERMISSION_DENIED_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(OPEN_SETTINGS_ACTION).performClick()
 
-        assert(openSettingsCount == 1) { "Open-settings action should fire once, got $openSettingsCount" }
+        assertEquals("Open-settings action should fire once", 1, openSettingsCount)
     }
 
     @Test
@@ -109,7 +110,7 @@ class ChatComposerAttachmentTest {
         composeTestRule.onNodeWithText(NO_AUDIO_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(CHANGE_MODEL_ACTION).performClick()
 
-        assert(changeModelCount == 1) { "Change-model action should fire once, got $changeModelCount" }
+        assertEquals("Change-model action should fire once", 1, changeModelCount)
     }
 
     private companion object {
