@@ -24,8 +24,8 @@ details.
   Android 14 or 15 phone does not publish; the built-in tools run either way.
   Two limitations are new on it: the interface is in English only, and on some
   phones the screen freezes while the model answers on the GPU. The reliability
-  figure from July, measured on 0.6.0, and the paragraph comparing the app with
-  Gemini are gone. English and Russian alike.
+  figure, measured in July 2026 on 0.6.0, and the paragraph comparing the app
+  with Gemini are gone. English and Russian alike.
 
 ## [0.12.1] - 2026-10-24
 
