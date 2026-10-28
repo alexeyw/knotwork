@@ -13,6 +13,20 @@ details.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The store listing describes the current release.** It named five cloud
+  providers, Ollama among them, and left out OpenRouter, Groq and an
+  OpenAI-compatible server you run; it now lists them as the README does. It
+  said every sensitive or destructive call stops for confirmation, which is the
+  default rather than a rule — *Approve tool calls → Never* lets a sensitive
+  call through — and it said local actions run through AppFunctions, which an
+  Android 14 or 15 phone does not publish; the built-in tools run either way.
+  Two limitations are new on it: the interface is in English only, and on some
+  phones the screen freezes while the model answers on the GPU. The reliability
+  figure, measured in July 2026 on 0.6.0, and the paragraph comparing the app
+  with Gemini are gone. English and Russian alike.
+
 ## [0.12.1] - 2026-10-24
 
 ### Added

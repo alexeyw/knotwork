@@ -2,17 +2,15 @@ Knotwork is an AI agent that runs its model on the phone. Instead of a prompt bo
 
 WHAT IT DOES
 
-- Runs on your device. On-device inference through LiteRT-LM, with optional GPU acceleration; CPU-only works, just slower. Cloud providers (OpenAI, Anthropic, Google Gemini, DeepSeek, Ollama) are optional, opt-in and bring-your-own-key.
+- Runs on your device. On-device inference through LiteRT-LM, with optional GPU acceleration; CPU-only works, just slower. Cloud providers (OpenAI, Anthropic, Google Gemini, DeepSeek, OpenRouter, Groq) and a server you run (Ollama or any OpenAI-compatible one) are optional and use your own key.
 - You build the behaviour. A drag-and-drop editor with pan and pinch-zoom, snap-to-grid, auto-layout, inline validation and a run-trace overlay, across 14 node types. Prompt variables such as $DATE, $TIME, $TOOLS, $MODEL and $MEMORY_SUMMARY render fresh on every run.
-- Tools, gated by you. Local actions through AppFunctions and external servers through the Model Context Protocol (MCP). Every sensitive or destructive call stops for explicit confirmation, enforced where the tool executes, not merely suggested to the model.
+- Tools, gated by you. Built-in tools and external servers through the Model Context Protocol (MCP). By default every sensitive or destructive call stops for explicit confirmation, enforced where the tool executes, not merely suggested to the model.
 - Reaches you from outside the app. A share target, launcher shortcuts and a Quick Settings tile run your chosen pipeline over shared text or images. Triggers (time, charging, Wi-Fi, network) fire a pipeline on their own and report back. Every entry surface stays inert until you bind a pipeline to it.
 - Remembers what matters. Long-term memory with semantic retrieval over past conversations, automatic fact extraction, search and export.
 
 WHO IT IS FOR
 
 It is for the person who already runs Tasker, Obsidian, Home Assistant or a local model on their own hardware, and who wants to know exactly what their agent does with their data.
-
-It is deliberately not a mass-market "ask a question, get an answer" assistant - Gemini is free and built into the OS, and competing there is a losing bet.
 
 PRIVACY
 
@@ -22,9 +20,10 @@ KNOWN LIMITATIONS
 
 This is a pre-release. The public surface, the settings layout and the on-device storage formats can still change between versions.
 
+- English interface only.
 - Android 14+ and about 2 GB of free RAM - the memory is the real constraint.
-- Shared pipeline files are not a compatibility contract yet: exports carry a version stamp, but before 1.0 that stamp is a marker, not a promise. Keep the original.
-- The reliability numbers come from one device and one operator: a scheduled pipeline ran 7.14 days without the app being opened and completed 55 of 55 firings with no unexplained misses. That is a real measurement, and it is not external validation.
+- On some phones the screen freezes while the model runs on the GPU; switch it to CPU.
+- Shared pipeline files are not a compatibility contract before 1.0. Keep the original.
 - Background runs need the battery setting on Unrestricted. Without it Android reclaims the process in about ten seconds - the platform's rule, not a bug, but until you grant it background pipelines will not run.
 - Cloud failure behaviour differs by provider: detection of a stream that dies mid-answer is enabled only where it was measured.
 - Other apps' AppFunctions are out of reach - Android keeps the permission to call one for system apps. The local catalogue is what ships, plus whatever you connect over MCP.
