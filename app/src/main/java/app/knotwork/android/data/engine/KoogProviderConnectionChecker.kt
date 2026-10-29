@@ -33,18 +33,22 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * [ProviderConnectionChecker] on the Koog clients a run uses: the model list of each provider,
+ * [ProviderConnectionChecker] on the transport a run uses: the model list of each provider,
  * asked once, with the values in the form.
  *
- * - **The same path as a run.** The client is the one [KoogClientFactory] builds, on a
- *   [KoogTransportFactory] holding the rule of [ModelNetworkGate.hopRule] — so every hop,
- *   redirects included, is judged as a run's would be — with [CloudClientTimeouts.CONFIG]. What
- *   differs is deliberate: no retry policy (a check is one attempt) and no model requirement (the
- *   check is how a model is chosen).
+ * - **The same path as a run.** Every request goes out on a [KoogTransportFactory] holding the
+ *   rule of [ModelNetworkGate.hopRule] — so every hop, redirects included, is judged as a run's
+ *   would be — with [CloudClientTimeouts.CONFIG]; for OpenAI, Anthropic, Google and DeepSeek it is
+ *   sent by the client [KoogClientFactory] builds. What differs is deliberate: no retry policy (a
+ *   check is one attempt) and no model requirement (the check is how a model is chosen).
  * - **No prompt, no tokens.** A provider is asked for its model list; Ollama for `/api/tags`,
  *   which is one request where Koog's own listing asks once more per model. OpenRouter answers its
  *   model list without looking at the key (measured: 200 with an invalid key, and with none), so
  *   its key is first checked at `/api/v1/key`, which answers 401 to a key it does not know.
+ * - **Only the ids of an OpenAI-API list.** OpenRouter, Groq and a server the user runs are asked
+ *   at the address and path of their [OpenAiCompatibleClients] client, with its `Authorization`
+ *   header (none without a key), and the answer is read here ([openAiModelIds]): Koog's own decoder
+ *   refuses a list without `created` on every entry, which is how LM Studio sends it.
  * - **Nothing sent, nothing shown.** A check refused by [ConnectionPreconditions] — or by "Block
  *   network from local model" for a hosted provider — returns before the privacy indicator hears
  *   of it; a check that sends records the request first.
@@ -129,16 +133,26 @@ class KoogProviderConnectionChecker @Inject constructor(
             CloudProvider.OLLAMA -> ollamaModels()
             CloudProvider.OPENROUTER -> {
                 openRouterKey()
-                models(provider)
+                openAiApiModels(provider)
             }
-            else -> models(provider)
+            CloudProvider.GROQ, CloudProvider.OPENAI_COMPATIBLE -> openAiApiModels(provider)
+            else -> koogModels(provider)
         }
 
-        private suspend fun models(provider: CloudProvider): List<String> {
+        private suspend fun koogModels(provider: CloudProvider): List<String> {
             url = checkNotNull(listingUrl(provider, baseUrl)) { "a listing address for ${provider.id}" }
             return clientFactory.checkClient(provider, apiKey, baseUrl, transport).use { client ->
                 client.models().map(LLModel::id)
             }
+        }
+
+        /** The address, path and `Authorization` header of the client a run uses; the answer read here. */
+        private suspend fun openAiApiModels(provider: CloudProvider): List<String> {
+            val settings = OpenAiCompatibleClients.settings(provider, baseUrl, CloudClientTimeouts.CONFIG)
+            url = join(settings.baseUrl, settings.modelsPath)
+            val headers = apiKey?.let { mapOf(AUTHORIZATION to "Bearer $it") }.orEmpty()
+            val body = http(settings.baseUrl, headers).use { it.get<String>(settings.modelsPath) }
+            return openAiModelIds(body)
         }
 
         private suspend fun ollamaModels(): List<String> {
@@ -203,10 +217,26 @@ class KoogProviderConnectionChecker @Inject constructor(
          * @throws NotTheListException when the answer is JSON of another shape.
          * @throws SerializationException when it is not JSON.
          */
-        fun ollamaNames(body: String): List<String> {
-            val models = (Json.parseToJsonElement(body) as? JsonObject)?.get("models") as? JsonArray
-                ?: throw NotTheListException("an Ollama model list")
-            return models.mapNotNull { ((it as? JsonObject)?.get("name") as? JsonPrimitive)?.contentOrNull }
+        fun ollamaNames(body: String): List<String> =
+            fieldOfEach(body, list = "models", field = "name", what = "an Ollama model list")
+
+        /**
+         * The model ids in an OpenAI-API model list (`{"data":[{"id":…}]}`).
+         *
+         * Only the ids are read. Koog's own decoder also requires `object`, `created` and `owned_by`
+         * on every entry, and LM Studio sends no `created`, so its list failed as not being one.
+         *
+         * @throws NotTheListException when the answer is JSON of another shape.
+         * @throws SerializationException when it is not JSON.
+         */
+        fun openAiModelIds(body: String): List<String> =
+            fieldOfEach(body, list = "data", field = "id", what = "an OpenAI model list")
+
+        /** The string [field] of each object in the array [list] of [body]; [what] names the shape expected. */
+        private fun fieldOfEach(body: String, list: String, field: String, what: String): List<String> {
+            val items = (Json.parseToJsonElement(body) as? JsonObject)?.get(list) as? JsonArray
+                ?: throw NotTheListException(what)
+            return items.mapNotNull { ((it as? JsonObject)?.get(field) as? JsonPrimitive)?.contentOrNull }
         }
 
         /** [base] and [path] joined by one slash — how the clients resolve a path against an address. */

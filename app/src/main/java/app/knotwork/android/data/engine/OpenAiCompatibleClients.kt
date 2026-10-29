@@ -96,8 +96,9 @@ internal object OpenAiCompatibleClients {
      * and the deadlines of [settings] included — minus the `Authorization` header.
      *
      * Built through Koog's `createConfiguredHttpClient` rather than restated, because the client
-     * decodes the model list with that private JSON configuration (unknown keys ignored,
-     * snake_case names); a default one would fail on the first field it does not know.
+     * decodes its answers with that private JSON configuration (unknown keys ignored, snake_case
+     * names); a default one would fail on the first field it does not know. A connection check
+     * reads the model list itself — see [KoogProviderConnectionChecker.openAiModelIds].
      */
     private fun unauthenticated(settings: OpenAIClientSettings, http: KoogHttpClient.Factory): KoogHttpClient =
         AbstractOpenAILLMClient.createConfiguredHttpClient(

@@ -1365,11 +1365,14 @@ had refused.
 **Connection checks.** *Test connection* on a provider screen and in the MCP
 server form runs one check against the values in the form
 (`domain/connection/ProviderConnectionChecker`, `McpConnectionChecker`). A
-provider check builds the client `KoogClientFactory` builds, on the same
-transport and deadlines, and asks for the model list once — no retry policy, no
-prompt (OpenRouter's key is checked first, because its model list answers any
-key). An MCP check connects a throwaway `KoogMcpClient`, lists the tools and
-disconnects, outside `McpConnectionPool`. What stops a check before it sends is
+provider check asks for the model list once, on the transport and deadlines a
+run uses — no retry policy, no prompt (OpenRouter's key is checked first, because
+its model list answers any key). OpenAI, Anthropic, Google and DeepSeek are asked
+by the client `KoogClientFactory` builds; Ollama, and the providers reached
+through the OpenAI API, by a request the check sends itself, reading only the
+model names — Koog's own decoder refuses an OpenAI-API list without `created`,
+as LM Studio sends it. An MCP check connects a throwaway `KoogMcpClient`, lists
+the tools and disconnects, outside `McpConnectionPool`. What stops a check before it sends is
 `ConnectionPreconditions`, which the form also reads to disable the button with a
 reason; a failed check is named by `data/network/ConnectionFailureClassifier`
 (rejected key, wrong path, rate limit, server error, unknown host, refused port,
