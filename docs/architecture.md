@@ -1371,8 +1371,8 @@ its model list answers any key). OpenAI, Anthropic, Google and DeepSeek are aske
 by the client `KoogClientFactory` builds; Ollama, and the providers reached
 through the OpenAI API, by a request the check sends itself, reading only the
 model names — Koog's own decoder refuses an OpenAI-API list without `created`,
-as LM Studio sends it. An MCP check connects a throwaway `KoogMcpClient`, lists the tools and
-disconnects, outside `McpConnectionPool`. What stops a check before it sends is
+as LM Studio sends it. An MCP check connects a throwaway `KoogMcpClient`, lists
+the tools and disconnects, outside `McpConnectionPool`. What stops a check before it sends is
 `ConnectionPreconditions`, which the form also reads to disable the button with a
 reason; a failed check is named by `data/network/ConnectionFailureClassifier`
 (rejected key, wrong path, rate limit, server error, unknown host, refused port,

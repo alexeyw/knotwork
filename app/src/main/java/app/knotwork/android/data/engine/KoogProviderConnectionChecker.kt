@@ -33,7 +33,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * [ProviderConnectionChecker] on the Koog clients a run uses: the model list of each provider,
+ * [ProviderConnectionChecker] on the transport a run uses: the model list of each provider,
  * asked once, with the values in the form.
  *
  * - **The same path as a run.** Every request goes out on a [KoogTransportFactory] holding the
