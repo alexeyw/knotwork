@@ -201,8 +201,8 @@ android {
         applicationId = "app.knotwork.android"
         minSdk = 34
         targetSdk = 37
-        versionCode = 18
-        versionName = "0.12.1"
+        versionCode = 19
+        versionName = "0.12.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

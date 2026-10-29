@@ -1,0 +1,3 @@
+Test connection работает с LM Studio.
+
+Сервер с OpenAI API на LM Studio не проходил Test connection — приложение отвечало «not a model list», хотя список приходил: LM Studio не присылает поле, которое приложение требовало. Теперь проверка читает только имена моделей, у OpenRouter и Groq тоже.

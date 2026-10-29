@@ -5,7 +5,7 @@ agent for Android: what data the app handles, how it is protected, what is sent
 off-device when the user opts in to crash reporting, and how to report a
 vulnerability you discover.
 
-The project is currently a **pre-release (0.12.1)** and is published primarily
+The project is currently a **pre-release (0.12.2)** and is published primarily
 for review and experimentation. There are no stability guarantees for storage
 formats, APIs, or persisted data across versions.
 
@@ -20,7 +20,7 @@ the current `0.12.x` line and on the latest commit on `main`.
 | Version            | Supported          |
 |--------------------|--------------------|
 | `0.12.x` (latest)  | :white_check_mark: |
-| `< 0.12.1`         | :x:                |
+| `< 0.12.2`         | :x:                |
 
 ---
 

@@ -13,6 +13,8 @@ details.
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-10-28
+
 ### Fixed
 
 - **Test connection reads LM Studio's model list.** For an OpenAI-compatible
@@ -7002,7 +7004,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/alexeyw/knotwork/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/alexeyw/knotwork/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/alexeyw/knotwork/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/alexeyw/knotwork/compare/v0.11.0...v0.11.1
