@@ -1,0 +1,3 @@
+Test connection works with LM Studio.
+
+An OpenAI-compatible server on LM Studio failed Test connection with "not a model list", although it sent one: LM Studio leaves out a field the app required. The check now reads only the model names, for OpenRouter and Groq too.
