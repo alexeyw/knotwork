@@ -369,10 +369,17 @@ class TriggerBackgroundRunIntegrationTest {
             // holder before writing the durable record, so waiting for all
             // three is waiting for one consistent state — asserting only the
             // record would race that ordering.
-            awaitUntil("run parked WAITING_APPROVAL with the live gate retired") {
+            // All three hold before the park has finished, though: the status is
+            // written in the live phase, and the record is saved before the
+            // persistent notification is sent. The journal's `parked` mark is
+            // recorded after that notification, so waiting for it is waiting
+            // for the whole park — without it, `awaitUntil` can return while the
+            // notification is still queued, and the check below fails.
+            awaitUntil("run parked WAITING_APPROVAL with the live gate retired and the park journaled") {
                 process.runRepository.getRun(runId)?.status == PipelineRunStatus.WAITING_APPROVAL &&
                     process.pendingRepository.getForRun(runId) != null &&
-                    process.taskQueueManager.pendingApproval(SESSION_ID) == null
+                    process.taskQueueManager.pendingApproval(SESSION_ID) == null &&
+                    process.triggerJournal.observeByTrigger(TRIGGER_ID).first().singleOrNull()?.hitl?.parked == true
             }
             // Both notifications name the trigger and show the prompt the run
             // was fired with — read back through the real journal and run store.
