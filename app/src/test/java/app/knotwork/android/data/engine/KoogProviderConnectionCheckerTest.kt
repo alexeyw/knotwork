@@ -141,6 +141,16 @@ class KoogProviderConnectionCheckerTest {
         """{"object":"list","data":[{"id":"qwen2.5-7b-instruct","object":"model","created":1,"owned_by":"vllm"},""" +
             """{"id":"llama-3.1-8b","object":"model","created":1,"owned_by":"vllm"}]}"""
 
+    /** LM Studio's list, shaped as its server log shows it: no `created` on any entry. */
+    private val lmStudioList =
+        """{"data":[{"id":"qwen2.5-coder-7b-instruct","object":"model","owned_by":"organization_owner"},""" +
+            """{"id":"google/gemma-3-4b","object":"model","owned_by":"organization_owner"},""" +
+            """{"id":"text-embedding-nomic-embed-text-v1.5","object":"model","owned_by":"organization_owner"}],""" +
+            """"object":"list"}"""
+
+    /** The least a list can carry and still name its models. */
+    private val idOnlyList = """{"data":[{"id":"m"}]}"""
+
     private suspend fun checkOwn(key: String? = null): ConnectionCheckResult {
         approved.value = setOf(origin)
         return withTimeout(15.seconds) {
@@ -169,6 +179,49 @@ class KoogProviderConnectionCheckerTest {
         checkOwn(key = " sk-own ")
 
         assertEquals("Bearer sk-own", server.taken().headers["Authorization"])
+    }
+
+    @Test
+    fun `given LM Studio's list without created when checked then every model is listed`() = bounded {
+        server.enqueue(json(lmStudioList))
+
+        val result = checkOwn()
+
+        assertEquals(
+            ConnectionCheckResult.Reachable(
+                listOf("qwen2.5-coder-7b-instruct", "google/gemma-3-4b", "text-embedding-nomic-embed-text-v1.5"),
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun `given entries that carry only an id when each OpenAI-API provider is checked then the ids are listed`() =
+        bounded {
+            approved.value = setOf(origin)
+            server.enqueue(json(idOnlyList))
+            server.enqueue(json(idOnlyList))
+            server.enqueue(json("""{"data":{"label":"sk-or-v1-abc","usage":0}}"""))
+            server.enqueue(json(idOnlyList))
+
+            val own = checkOwn()
+            val groq = checker(routeHosted = true).check(CloudProvider.GROQ, ProviderConnectionDraft("gsk-x", null))
+            val openRouter = checker(
+                routeHosted = true,
+            ).check(CloudProvider.OPENROUTER, ProviderConnectionDraft("sk-or-x", null))
+
+            val listed = ConnectionCheckResult.Reachable(listOf("m"))
+            assertEquals(listOf(listed, listed, listed), listOf(own, groq, openRouter))
+        }
+
+    @Test
+    fun `given JSON without a data array when a server the user runs is checked then it is no model list`() = bounded {
+        server.enqueue(json("""{"object":"list"}"""))
+        server.enqueue(json("""{"data":{"id":"m"}}"""))
+
+        val failures = List(2) { (checkOwn() as ConnectionCheckResult.Failed).failure }
+
+        assertEquals(listOf(ConnectionFailure.NoModelList, ConnectionFailure.NoModelList), failures)
     }
 
     @Test

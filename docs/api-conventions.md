@@ -218,10 +218,14 @@ interface Tool {
   the user runs at the address they enter (with `/v1`; paths relative to it) and
   with no `Authorization` header when it has no key. No further Koog module.
 - **A connection check is a run's request without the run.**
-  `KoogProviderConnectionChecker` builds the client `KoogClientFactory` builds, on
-  the same transport and deadlines, and asks for the model list once — no retry
-  policy, no prompt. OpenRouter's key is checked first at `/api/v1/key`: its model
-  list answers any key, or none. What stops a check before it sends is
+  `KoogProviderConnectionChecker` asks for the model list once, on the transport
+  and deadlines a run uses — no retry policy, no prompt. OpenAI, Anthropic, Google
+  and DeepSeek are asked by the client `KoogClientFactory` builds. A provider
+  reached through the OpenAI API is asked at its client's address, path and
+  `Authorization` header, and only `data[].id` of the answer is read: Koog's own
+  decoder refuses a list without `created`, as LM Studio sends it. OpenRouter's key
+  is checked first at `/api/v1/key`: its model list answers any key, or none. What
+  stops a check before it sends is
   `ConnectionPreconditions` (domain), which the settings form reads too, so a Test
   button never promises what the check refuses.
 - **The gate also owns one tool.** `search_tool` asks

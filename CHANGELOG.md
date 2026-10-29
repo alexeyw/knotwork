@@ -15,6 +15,11 @@ details.
 
 ### Fixed
 
+- **Test connection reads LM Studio's model list.** For an OpenAI-compatible
+  server it said "the server answered, but not with a model list" although the
+  server sent one: LM Studio leaves out the `created` field, which the client
+  library required on every model. The check now reads only the model ids, for
+  OpenRouter and Groq too.
 - **The store listing describes the current release.** It named five cloud
   providers, Ollama among them, and left out OpenRouter, Groq and an
   OpenAI-compatible server you run; it now lists them as the README does. It
