@@ -59,8 +59,12 @@ private inline fun <T> piecesAt(cuts: List<Int>, length: Int, piece: (Int, Int) 
     return bounds.zipWithNext { start, end -> piece(start, end) }
 }
 
+/** Below this code point there is no Han, Hiragana or Katakana; the script lookup is skipped there. */
+private const val FIRST_CJK_CODE_POINT = 0x2E80
+
 /** Whether [codePoint] ends an unbroken run: whitespace other than a non-breaking space, or a CJK ideograph or kana. */
 private fun breaksRun(codePoint: Int): Boolean = Character.isWhitespace(codePoint) ||
+    codePoint >= FIRST_CJK_CODE_POINT &&
     when (Character.UnicodeScript.of(codePoint)) {
         Character.UnicodeScript.HAN, Character.UnicodeScript.HIRAGANA, Character.UnicodeScript.KATAKANA -> true
         else -> false

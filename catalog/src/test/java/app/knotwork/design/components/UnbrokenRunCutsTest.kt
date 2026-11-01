@@ -63,6 +63,27 @@ class UnbrokenRunCutsTest {
     }
 
     @Test
+    fun `given ideographs beyond the basic plane or halfwidth kana when cut then they still end a run`() {
+        // U+20000 is a Han ideograph in a surrogate pair; U+FF71 is halfwidth Katakana. Both lie far
+        // above the first CJK code point, so the script lookup must still see them.
+        val extensionB = ("a".repeat(1_500) + "\uD840\uDC00").repeat(20)
+        val halfwidth = ("b".repeat(1_500) + "\uFF71").repeat(20)
+
+        assertTrue(unbrokenRunCuts(extensionB).isEmpty())
+        assertTrue(unbrokenRunCuts(halfwidth).isEmpty())
+    }
+
+    @Test
+    fun `given every code point below U+2E80 when its script is read then none is Han, Hiragana or Katakana`() {
+        // The cutter skips the script lookup below U+2E80; this proves the skip loses nothing.
+        val cjk = setOf(Character.UnicodeScript.HAN, Character.UnicodeScript.HIRAGANA, Character.UnicodeScript.KATAKANA)
+
+        val found = (0 until 0x2E80).filter { Character.UnicodeScript.of(it) in cjk }
+
+        assertTrue("CJK code points below U+2E80: $found", found.isEmpty())
+    }
+
+    @Test
     fun `given a run of characters outside the basic plane when cut then no cut splits a surrogate pair`() {
         val emoji = "😀".repeat(1_500)
 
