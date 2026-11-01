@@ -237,6 +237,25 @@
     </plurals>
     <!-- Vars row, TalkBack: said after the key of a row whose value is empty ("reason, empty"). -->
     <string name="knotwork_console_value_a11y_empty">empty</string>
+    <!-- Vars row whose preview was cut: first item of its long-press menu, and what TalkBack says a tap does ("Double-tap to open value"). -->
+    <string name="knotwork_console_value_menu_open">Open value</string>
+    <!-- Value viewer: content description of the Close button. -->
+    <string name="knotwork_console_value_close">Close</string>
+    <!-- Value viewer, meta line of a JSON value laid out one key per line. %1$s is the size ("48,213 characters"). -->
+    <string name="knotwork_console_value_meta_json">JSON, formatted · %1$s</string>
+    <!-- Value viewer, meta line of a text value. %1$s is the size, %2$s the line count ("64 lines"). -->
+    <string name="knotwork_console_value_meta_text">Text · %1$s · %2$s</string>
+    <!-- Value viewer, meta line of a value that starts like JSON but does not parse — often a body cut at the HTTP tool's budget. -->
+    <string name="knotwork_console_value_meta_bad_json">Text, not valid JSON · %1$s · %2$s</string>
+    <!-- Value viewer, meta line: how many lines a text value has. %1$s is the count, grouped for the locale. -->
+    <plurals name="knotwork_console_value_n_lines">
+        <item quantity="one">%1$s line</item>
+        <item quantity="other">%1$s lines</item>
+    </plurals>
+    <!-- Value viewer: shown when formatting a long value takes over 300 ms. -->
+    <string name="knotwork_console_value_loading">Formatting…</string>
+    <!-- Value viewer: Copy did nothing because the value is larger than the clipboard takes. -->
+    <string name="knotwork_console_value_copy_too_long">Too long for the clipboard. Nothing was copied.</string>
     <!-- Long-press menu on a Traces row. -->
     <string name="knotwork_console_span_copy">Copy span</string>
     <!-- Dropdown menu item label: enable only this source in the source filter. -->

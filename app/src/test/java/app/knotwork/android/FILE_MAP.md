@@ -621,6 +621,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ChatHomeViewModelTest.kt` - Unit-tests for `ChatHomeViewModel`.
         - `ConsoleClipboardTest.kt` - What `setConsoleText` reports for each way the clipboard write ends.
         - `ConsoleCopyPayloadsTest.kt` - Unit tests for `ConsoleCopyPayloads`.
+        - `ConsoleValueFormatterTest.kt` - How `ConsoleValueFormatter` reads and lays out a Vars value for the value viewer.
         - `ContentReportIssueUrlTest.kt` - Unit tests for `contentReportIssueUrl`.
         - `RunDisplayTest.kt` - The run strip's projection of a run: numbers written for reading, the line and fields per case, the promise's wording, the actions' reasons, and when a check asks first.
         - `VerificationProgressTest.kt` - `VerificationProgress`: the check's sheet frame by frame — the first repeated visit checking, calls advancing within a visit, a settled visit handing over to the next, the time left shrinking, and each ending leaving the visits it never reached as "not checked".

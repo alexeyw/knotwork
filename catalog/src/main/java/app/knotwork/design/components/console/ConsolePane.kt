@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,6 +69,12 @@ private const val SOURCE_CHIP_OFF_ALPHA = 0.10f
 
 /** Height of one trace bar — thin sub-row beneath the row text. */
 private val TraceBarHeight = 4.dp
+
+/** Vertical padding of a Vars row that opens the value viewer. */
+private val CUT_ROW_VERTICAL_PADDING = 6.dp
+
+/** Least height of a Vars row that opens the value viewer: a full touch target. */
+private val CUT_ROW_MIN_HEIGHT = 48.dp
 
 /**
  * Leading indent applied per pipeline-nesting level across the Logs, Vars and
@@ -142,6 +149,9 @@ private val ConsoleNestingIndent = 14.dp
  * single-source set.
  * @param onCopyHash invoked when the user taps a node's input or output hash chip
  *   on the Vars or Traces tab; the host copies the full hash.
+ * @param onOpenVar opens the value viewer on a Vars row cut to a preview — on a tap
+ *   and from the row's menu; `null` when the host has no viewer, and cut rows then
+ *   neither respond to a tap nor offer the item.
  * @param runHeader the run strip ([RunHeaderStrip]) drawn between the handle and
  *   the tabs, or `null` when the console has no run to describe.
  * @param modifier optional layout modifier applied to the pane root.
@@ -166,6 +176,7 @@ fun ConsolePane(
     onCopySpan: (ConsoleTraceSpan) -> Unit = {},
     onFilterByLineSource: (ConsoleSource) -> Unit = {},
     onCopyHash: (ConsoleHashCopy) -> Unit = {},
+    onOpenVar: ((ConsoleVarRow) -> Unit)? = null,
     runHeader: (@Composable () -> Unit)? = null,
 ) {
     // Stateless content — the surrounding `ModalBottomSheet` owns the
@@ -195,7 +206,12 @@ fun ConsolePane(
                 onCopyLine = onCopyLine,
                 onFilterByLineSource = onFilterByLineSource,
             )
-            ConsoleTab.Vars -> ConsoleVarsBody(rows = vars, onCopyVar = onCopyVar, onCopyHash = onCopyHash)
+            ConsoleTab.Vars -> ConsoleVarsBody(
+                rows = vars,
+                onCopyVar = onCopyVar,
+                onOpenVar = onOpenVar,
+                onCopyHash = onCopyHash,
+            )
             ConsoleTab.Traces -> ConsoleTracesBody(spans = traces, onCopySpan = onCopySpan, onCopyHash = onCopyHash)
         }
     }
@@ -563,25 +579,35 @@ private fun ConsoleLineRow(line: ConsoleLine, onCopyLine: () -> Unit, onFilterBy
 /**
  * Wraps [content] in the console's long-press menu affordance.
  *
- * One gesture for all three tabs: long-press opens an anchored [DropdownMenu],
- * a short tap does nothing — so a row cannot fire an action while the user is
- * scrolling past it. Every tab's rows go through here, which is what keeps the
- * gesture from being three near-copies that drift.
+ * One gesture for all three tabs: long-press opens an anchored [DropdownMenu].
+ * A short tap does nothing, except on a Vars row cut to a preview, where it opens
+ * the value viewer — and that row's menu offers the same as its first item, so
+ * everything a row does is in its menu and the tap is a shortcut. Every tab's rows
+ * go through here, which is what keeps the gesture from being three near-copies
+ * that drift.
  *
  * @param menu The menu body, handed a `dismiss` callback to close the menu
  *   before running its action. The catalog never performs the action itself.
+ * @param onClick what a tap does; `null` for nothing.
+ * @param onClickLabel what TalkBack says a tap does, with [onClick].
  * @param content The row to make actionable.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ConsoleRowWithMenu(menu: @Composable (dismiss: () -> Unit) -> Unit, content: @Composable () -> Unit) {
+private fun ConsoleRowWithMenu(
+    menu: @Composable (dismiss: () -> Unit) -> Unit,
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
+    content: @Composable () -> Unit,
+) {
     var menuExpanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
-                    onClick = { /* No short-tap action on console rows. */ },
+                    onClick = onClick ?: { /* No short-tap action on this row. */ },
+                    onClickLabel = onClickLabel,
                     onLongClick = { menuExpanded = true },
                 ),
         ) {
@@ -622,12 +648,14 @@ private fun levelAccent(level: ConsoleLevel): Color = when (level) {
  *
  * A row shows its value as a preview ([ConsoleVarValue]). Each row carries the
  * same long-press menu as a log row; its Copy value is how the whole value
- * leaves the tab.
+ * leaves the tab. A cut row also opens the value viewer — on a tap, and from the
+ * first item of its menu — when the host handles [onOpenVar].
  */
 @Composable
 private fun ConsoleVarsBody(
     rows: List<ConsoleVarRow>,
     onCopyVar: (ConsoleVarRow) -> Unit,
+    onOpenVar: ((ConsoleVarRow) -> Unit)?,
     onCopyHash: (ConsoleHashCopy) -> Unit,
 ) {
     val groups = rows.groupBy { it.node }
@@ -667,8 +695,18 @@ private fun ConsoleVarsBody(
                 }
             }
             items(items = entries) { row ->
+                var overflows by remember(row.value) { mutableStateOf(false) }
+                val cut = consoleVarIsCut(row.value, overflows)
+                val open = onOpenVar?.takeIf { cut }?.let { { it(row) } }
+                val openLabel = stringResource(R.string.knotwork_console_value_menu_open)
                 ConsoleRowWithMenu(
                     menu = { dismiss ->
+                        if (open != null) {
+                            ConsoleMenuItem(label = openLabel, icon = AppIcons.ArrowR) {
+                                dismiss()
+                                open()
+                            }
+                        }
                         ConsoleMenuItem(
                             label = stringResource(R.string.knotwork_console_var_copy),
                             icon = AppIcons.Copy,
@@ -677,19 +715,26 @@ private fun ConsoleVarsBody(
                             onCopyVar(row)
                         }
                     },
+                    onClick = open,
+                    onClickLabel = openLabel.takeIf { open != null },
                 ) {
                     // Key above value, the value a preview: a node's I/O can be a
                     // megabyte of tool output, and the whole of it in one Text
-                    // froze the app. The menu's Copy value carries all of it.
+                    // froze the app. A row that opens is a full touch target.
+                    val vertical = if (open != null) CUT_ROW_VERTICAL_PADDING else KnotworkTheme.spacing.sp1
                     ConsoleVarValue(
                         row = row,
+                        cut = cut,
+                        opens = open != null,
+                        onOverflowChange = { overflows = it },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(min = if (open != null) CUT_ROW_MIN_HEIGHT else 0.dp)
                             .padding(
                                 start = KnotworkTheme.spacing.sp4 + groupIndent,
                                 end = KnotworkTheme.spacing.sp4,
-                                top = KnotworkTheme.spacing.sp1,
-                                bottom = KnotworkTheme.spacing.sp1,
+                                top = vertical,
+                                bottom = vertical,
                             ),
                     )
                 }

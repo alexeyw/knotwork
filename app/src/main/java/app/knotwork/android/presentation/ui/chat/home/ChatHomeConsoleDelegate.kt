@@ -12,9 +12,12 @@ import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleSource
 import app.knotwork.design.components.console.ConsoleTab
 import app.knotwork.design.components.console.ConsoleTraceSpan
+import app.knotwork.design.components.console.ConsoleValueBody
+import app.knotwork.design.components.console.ConsoleValueViewerState
 import app.knotwork.design.components.console.ConsoleVarRow
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -69,6 +72,9 @@ class ChatHomeConsoleDelegate(
 
     private val _consoleSnackbarEvents: MutableSharedFlow<ConsoleSnackbarEvent> =
         MutableSharedFlow(extraBufferCapacity = 1)
+
+    /** The value viewer's formatting while it runs. */
+    private var valueFormatting: Job? = null
 
     /**
      * One-shot stream of snackbar events raised by the console pane (a copy
@@ -168,9 +174,46 @@ class ChatHomeConsoleDelegate(
         }
     }
 
-    /** Dismisses the console pane without touching the underlying chat state. */
+    /**
+     * Dismisses the console pane without touching the underlying chat state. The value
+     * viewer goes with it: it is opened from the pane, and reopening the console should
+     * not bring it back.
+     */
     fun closeConsole() {
+        closeConsoleValue()
         state.update { it.copy(console = it.console.copy(snap = null)) }
+    }
+
+    /**
+     * Opens the value viewer on [row] as it is now, and formats its value on
+     * [traceProjectionDispatcher] — a value can be a megabyte. The viewer shows its header
+     * at once and its body when the formatting lands; opening another value, or closing,
+     * drops a formatting still running.
+     *
+     * @param row the Vars row whose whole value to show.
+     */
+    fun openConsoleValue(row: ConsoleVarRow) {
+        valueFormatting?.cancel()
+        val formatting = ConsoleValueViewerState(row, ConsoleValueBody.Formatting)
+        state.update { it.copy(console = it.console.copy(valueViewer = formatting)) }
+        valueFormatting = scope.launch {
+            val body = withContext(traceProjectionDispatcher()) { ConsoleValueFormatter.format(row.value) }
+            state.update { current ->
+                val open = current.console.valueViewer
+                if (open?.row === row) {
+                    current.copy(console = current.console.copy(valueViewer = open.copy(body = body)))
+                } else {
+                    current
+                }
+            }
+        }
+    }
+
+    /** Closes the value viewer and drops its formatting if it is still running. */
+    fun closeConsoleValue() {
+        valueFormatting?.cancel()
+        valueFormatting = null
+        state.update { it.copy(console = it.console.copy(valueViewer = null)) }
     }
 
     /** Toggles the console inline-search field. Cycles `null → "" → null`. */

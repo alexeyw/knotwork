@@ -589,9 +589,15 @@ Three actions are available at the pane footer:
 
 - **Copy line** — long-press a single console row. On **Vars**, a row shows
   the first three lines of a value, with a line break as ↵; a longer value
-  gets its size under it. Long-press it and pick **Copy value** to get the
-  whole value, exactly as the node had it. A copy too large for the clipboard
-  says so and copies nothing.
+  gets its size and an arrow under it. Long-press it and pick **Copy value** to
+  get the whole value, exactly as the node had it. A copy too large for the
+  clipboard says so and copies nothing.
+- **Open value** — tap a Vars row that shows its size, or pick **Open value**
+  from its long-press menu, to read the whole value full screen. JSON is laid
+  out one key per line and coloured; text keeps its own lines; a value that
+  starts like JSON but does not parse is shown as text and says so. **Copy**
+  at the top copies the value as it was; back or **Close** returns to the
+  console where you left it.
 - **Copy all** — copies the full plain-text dump of the active tab to
   the clipboard, regardless of which filter chip is active.
 - **Clear console** — wipes the on-screen log baseline for the current
