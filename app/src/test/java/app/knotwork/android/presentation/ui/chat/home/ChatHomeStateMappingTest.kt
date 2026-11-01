@@ -444,7 +444,7 @@ class ChatHomeStateMappingTest {
                 text = "▶ LITE_RT",
             ),
         )
-        val vars = listOf(ConsoleVarRow(node = "LITE_RT#a", key = "input", valueJson = "\"x\""))
+        val vars = listOf(ConsoleVarRow(node = "LITE_RT#a", key = "input", value = "x"))
         val traces = listOf(
             ConsoleTraceSpan(name = "LITE_RT", durationMs = 10L, startedAt = "09:14:00.000", status = SpanStatus.Ok),
         )

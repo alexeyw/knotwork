@@ -109,8 +109,9 @@ data class ConsoleLine(
  *
  * @property node id of the producing node (rendered as a section header).
  * @property key variable name.
- * @property valueJson already-serialised value (the catalog never parses
- * JSON; the screen passes a rendered fragment).
+ * @property value the value as the node had it — line breaks, quotes and all,
+ * with no quoting or escaping added. The row shows a preview of it; the
+ * catalog never parses it.
  * @property depth pipeline-nesting level of the run that produced the row
  * (`0` top-level, `1` a direct sub-pipeline, …). The Vars tab indents the node
  * group by this level so a sub-pipeline's nodes nest under the spawning node.
@@ -122,7 +123,7 @@ data class ConsoleLine(
 data class ConsoleVarRow(
     val node: String,
     val key: String,
-    val valueJson: String,
+    val value: String,
     val depth: Int = 0,
     val inputSha256: String? = null,
     val outputSha256: String? = null,

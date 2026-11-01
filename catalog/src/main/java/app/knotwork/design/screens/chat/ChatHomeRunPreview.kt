@@ -175,16 +175,16 @@ internal object ChatHomeRunPreview {
 
     /** Vars with each node's two hash chips under its section header. */
     fun hashedVars(): List<ConsoleVarRow> = listOf(
-        varRow("INTENT_ROUTER#route", "output", "\"day_overview\"", 0, "0a77f3d1", "c90b2e14"),
-        varRow("LITE_RT#summar", "output", "\"Design review 11:00, vendor call 15:30\"", 1, "e2c94f10", "7afd06b4"),
-        varRow("LITE_RT#answer", "output", "\"Two meetings: design review at 11:00…\"", 0, "b38f6d21", "f5e017c9"),
+        varRow("INTENT_ROUTER#route", "output", "day_overview", 0, "0a77f3d1", "c90b2e14"),
+        varRow("LITE_RT#summar", "output", "Design review 11:00, vendor call 15:30", 1, "e2c94f10", "7afd06b4"),
+        varRow("LITE_RT#answer", "output", "Two meetings: design review at 11:00…", 0, "b38f6d21", "f5e017c9"),
     )
 
     private fun varRow(node: String, key: String, value: String, depth: Int, input: String, output: String) =
         ConsoleVarRow(
             node = node,
             key = key,
-            valueJson = value,
+            value = value,
             depth = depth,
             inputSha256 = input.padEnd(64, '0'),
             outputSha256 = output.padEnd(64, '0'),

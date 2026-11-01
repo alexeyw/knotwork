@@ -52,8 +52,8 @@
     <string name="chat_snackbar_copied">Copied</string>
     <string name="chat_snackbar_saved_to_memory">Saved to memory</string>
     <string name="chat_snackbar_save_to_memory_failed">Couldn\'t save to memory</string>
-    <string name="chat_snackbar_console_copied">Console log copied</string>
-    <string name="chat_snackbar_console_line_copied">Line copied</string>
+    <!-- A console copy (a line, a value, a span or a whole tab) was larger than the clipboard takes. -->
+    <string name="chat_snackbar_console_copy_too_large">Too long for the clipboard. Nothing was copied.</string>
     <!-- Shown when a picked/captured image could not be attached (decode/read failed). -->
     <string name="chat_snackbar_attachment_failed">Couldn\'t attach that image. Try a different one.</string>
     <string name="chat_snackbar_attachment_replaced">Replaced the previous image — one at a time.</string>

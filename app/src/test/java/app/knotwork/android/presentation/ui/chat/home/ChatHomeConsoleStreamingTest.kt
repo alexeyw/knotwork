@@ -303,8 +303,8 @@ class ChatHomeConsoleStreamingTest {
         advanceUntilIdle()
         val rewritten = viewModel.state.value.console.vars
         assertEquals(2, rewritten.size)
-        assertEquals("\"in2\"", rewritten[0].valueJson)
-        assertEquals("\"out2\"", rewritten[1].valueJson)
+        assertEquals("in2", rewritten[0].value)
+        assertEquals("out2", rewritten[1].value)
 
         // Distinct nodeId appends another pair.
         orchestratorStateFlow.emit(
@@ -451,8 +451,8 @@ class ChatHomeConsoleStreamingTest {
             val console = viewModel.state.value.console
             assertEquals(listOf("▶ INPUT", "✓ LITE_RT in 100ms"), console.logs.map { it.text })
             assertEquals(2, console.vars.size)
-            assertEquals("\"in\"", console.vars[0].valueJson)
-            assertEquals("\"out\"", console.vars[1].valueJson)
+            assertEquals("in", console.vars[0].value)
+            assertEquals("out", console.vars[1].value)
             assertEquals(1, console.traces.size)
             assertEquals("LITE_RT", console.traces.single().name)
             assertEquals(100L, console.traces.single().durationMs)

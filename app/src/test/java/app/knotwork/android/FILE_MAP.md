@@ -619,6 +619,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ChatHomeRunDelegateTest.kt` - `ChatHomeRunDelegate`: the strip follows the console's run, a long check asks first and a short one starts, the check's events fill the sheet, a start-again asks then hands the recorded seed to the send path, and the export renders before its sheet opens.
         - `ChatHomeStateMappingTest.kt` - Pure-Kotlin unit tests for `ChatHomeScreenState.toViewState` — the boundary mapper between the aggregated screen state owned by `:app` and the `app.knotwork.design.screens.chat.ChatHomeViewState` consumed by the stateless `ChatHomeContent` in `:catalog`.
         - `ChatHomeViewModelTest.kt` - Unit-tests for `ChatHomeViewModel`.
+        - `ConsoleClipboardTest.kt` - What `setConsoleText` reports for each way the clipboard write ends.
         - `ConsoleCopyPayloadsTest.kt` - Unit tests for `ConsoleCopyPayloads`.
         - `ContentReportIssueUrlTest.kt` - Unit tests for `contentReportIssueUrl`.
         - `RunDisplayTest.kt` - The run strip's projection of a run: numbers written for reading, the line and fields per case, the promise's wording, the actions' reasons, and when a check asks first.

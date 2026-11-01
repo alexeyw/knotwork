@@ -69,18 +69,6 @@ private const val SOURCE_CHIP_OFF_ALPHA = 0.10f
 /** Height of one trace bar — thin sub-row beneath the row text. */
 private val TraceBarHeight = 4.dp
 
-/** Lines of a Vars value its row shows; the row's menu copies the whole value. */
-private const val VAR_PREVIEW_MAX_LINES = 3
-
-/**
- * Characters of a Vars value handed to its row's `Text`. Laying out a string costs time in
- * its whole length however few lines are drawn — quadratic when it has no spaces, so a
- * 200 000-character value held the main thread for seconds — and [VAR_PREVIEW_MAX_LINES]
- * alone bounds nothing. 400 still fills more than three lines at the console's widest:
- * the sheet stops at Material's 640 dp.
- */
-private const val VAR_PREVIEW_MAX_CHARS = 400
-
 /**
  * Leading indent applied per pipeline-nesting level across the Logs, Vars and
  * Traces tabs, so a sub-pipeline's rows read as nested under the row that
@@ -632,9 +620,9 @@ private fun levelAccent(level: ConsoleLevel): Color = when (level) {
 /**
  * Vars-tab body — section headers per node, then key/value rows.
  *
- * A row shows its value as a preview of [VAR_PREVIEW_MAX_LINES] lines. Each row
- * carries the same long-press menu as a log row; its Copy value is how the whole
- * value leaves the tab.
+ * A row shows its value as a preview ([ConsoleVarValue]). Each row carries the
+ * same long-press menu as a log row; its Copy value is how the whole value
+ * leaves the tab.
  */
 @Composable
 private fun ConsoleVarsBody(
@@ -693,7 +681,8 @@ private fun ConsoleVarsBody(
                     // Key above value, the value a preview: a node's I/O can be a
                     // megabyte of tool output, and the whole of it in one Text
                     // froze the app. The menu's Copy value carries all of it.
-                    Column(
+                    ConsoleVarValue(
+                        row = row,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(
@@ -702,20 +691,7 @@ private fun ConsoleVarsBody(
                                 top = KnotworkTheme.spacing.sp1,
                                 bottom = KnotworkTheme.spacing.sp1,
                             ),
-                    ) {
-                        Text(
-                            text = row.key,
-                            style = KnotworkTextStyles.MonoBase,
-                            color = KnotworkPalette.Accent400,
-                        )
-                        Text(
-                            text = row.valueJson.take(VAR_PREVIEW_MAX_CHARS),
-                            style = KnotworkTextStyles.MonoBase,
-                            color = KnotworkTheme.extended.consoleFg,
-                            maxLines = VAR_PREVIEW_MAX_LINES,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    )
                 }
             }
         }

@@ -588,8 +588,10 @@ A few events are worth recognising while you read the **Console log**:
 Three actions are available at the pane footer:
 
 - **Copy line** — long-press a single console row. On **Vars**, a row shows
-  the first three lines of a value; long-press it and pick **Copy value** to
-  get all of it.
+  the first three lines of a value, with a line break as ↵; a longer value
+  gets its size under it. Long-press it and pick **Copy value** to get the
+  whole value, exactly as the node had it. A copy too large for the clipboard
+  says so and copies nothing.
 - **Copy all** — copies the full plain-text dump of the active tab to
   the clipboard, regardless of which filter chip is active.
 - **Clear console** — wipes the on-screen log baseline for the current

@@ -230,6 +230,13 @@
     <string name="knotwork_console_line_copy">Copy line</string>
     <!-- Long-press menu on a Vars row. Copies the whole value, not a preview. -->
     <string name="knotwork_console_var_copy">Copy value</string>
+    <!-- Vars row: the size of a value whose preview was cut, drawn under the preview. %1$s is the count, grouped for the locale. -->
+    <plurals name="knotwork_console_value_n_chars">
+        <item quantity="one">%1$s character</item>
+        <item quantity="other">%1$s characters</item>
+    </plurals>
+    <!-- Vars row, TalkBack: said after the key of a row whose value is empty ("reason, empty"). -->
+    <string name="knotwork_console_value_a11y_empty">empty</string>
     <!-- Long-press menu on a Traces row. -->
     <string name="knotwork_console_span_copy">Copy span</string>
     <!-- Dropdown menu item label: enable only this source in the source filter. -->

@@ -52,10 +52,17 @@ private val DemoLogs = listOf(
 
 /** Demo var rows used by [ConsoleCatalogContent] previews and snapshots. */
 private val DemoVars = listOf(
-    ConsoleVarRow(node = "intent_router_1", key = "predicted", valueJson = "\"summarise\""),
-    ConsoleVarRow(node = "intent_router_1", key = "confidence", valueJson = "0.92"),
-    ConsoleVarRow(node = "lite_rt_1", key = "tokens", valueJson = "1834"),
-    ConsoleVarRow(node = "lite_rt_1", key = "duration_ms", valueJson = "812"),
+    ConsoleVarRow(node = "intent_router_1", key = "predicted", value = "summarise"),
+    ConsoleVarRow(node = "intent_router_1", key = "confidence", value = "0.92"),
+    // Line breaks drawn as marks, and more than three lines' worth: a cut row with its size.
+    ConsoleVarRow(
+        node = "lite_rt_1",
+        key = "input",
+        value = "You are summarising today's calendar for one person.\n\nRules:\n" +
+            "- One sentence per event, in time order.\n- Give the start time first.\n" +
+            "- Leave out events that were declined.",
+    ),
+    ConsoleVarRow(node = "lite_rt_1", key = "reason", value = ""),
 )
 
 /** Demo trace spans used by [ConsoleCatalogContent] previews and snapshots. */

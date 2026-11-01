@@ -1,66 +1,127 @@
 package app.knotwork.design.components.console
 
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.SpanStyle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.theme.KnotworkTheme
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
- * A Vars row with a long value shows a preview, and its menu still copies the whole value.
+ * A Vars row shows a preview of its value, and its menu still copies the whole value.
  *
  * Laying out one string costs time in its whole length, quadratic when the string has no
- * spaces, however few lines are drawn: a value like this one held the main thread for
- * seconds when the row handed all of it to one `Text`. The length of the text the row
- * hands over is what is asserted, because no line cap bounds that cost.
+ * spaces, however few lines are drawn: a 200 000-character value held the main thread for
+ * seconds when the row handed all of it to one `Text`. The bound on what the row hands over
+ * is pinned on [consoleVarPreview], which builds that string; the rows here pin what a
+ * reader and TalkBack get. Native graphics, so a preview's lines are the real font's.
  */
 @RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [36], qualifiers = "w360dp-h760dp-xhdpi")
 class ConsoleVarPreviewTest {
 
     @get:Rule
     val rule = createComposeRule()
 
-    // A tool answer the size of the HTTP tool's budget would be larger still; what matters
-    // is a value with no spaces, quoted the way the host quotes it.
-    private val longValue = "\"" + "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIz".repeat(5_000) + "\""
+    private val mark = SpanStyle(color = Color.Red)
 
-    private val row = ConsoleVarRow(node = "TOOL#9c41d2", key = "output", valueJson = longValue)
+    // A tool answer the size of the HTTP tool's budget would be larger still; what matters
+    // is a value with no spaces.
+    private val longValue = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIz".repeat(5_000)
 
     @Test
-    fun `given a value without spaces of 200 000 characters when the Vars tab renders then its row holds a preview`() {
-        render(onCopyVar = {})
+    fun `given a value without spaces of 200 000 characters when previewed then the preview keeps its first 400`() {
+        val preview = consoleVarPreview(longValue, mark)
 
-        val longest = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .flatMap { node -> node.config[SemanticsProperties.Text] }
-            .maxOf { it.length }
-        assertTrue("the longest text on the tab has $longest characters", longest <= 400)
-        rule.onNodeWithText(longValue.take(400)).assertExists()
+        assertEquals(longValue.take(VAR_PREVIEW_MAX_CHARS), preview.text)
+    }
+
+    @Test
+    fun `given line breaks of every kind and a tab when previewed then each break is one mark and the tab one space`() {
+        val preview = consoleVarPreview("a\nb\r\nc\rd\te", mark)
+
+        assertEquals("a ↵ b ↵ c ↵ d e", preview.text)
+        assertEquals(3, preview.spanStyles.count { it.item == mark })
+    }
+
+    @Test
+    fun `given a value that is nothing but line breaks when previewed then the preview stays bounded`() {
+        val preview = consoleVarPreview("\n".repeat(100_000), mark)
+
+        assertEquals(" ↵ ".repeat(VAR_PREVIEW_MAX_CHARS), preview.text)
+    }
+
+    @Test
+    fun `given a CRLF split by the cut when previewed then it still makes one mark`() {
+        val value = "x".repeat(VAR_PREVIEW_MAX_CHARS - 1) + "\r\n" + "tail"
+
+        assertEquals("x".repeat(VAR_PREVIEW_MAX_CHARS - 1) + " ↵ ", consoleVarPreview(value, mark).text)
+    }
+
+    @Test
+    fun `given a surrogate pair across the cut when previewed then the preview does not end on half of it`() {
+        val value = "x".repeat(VAR_PREVIEW_MAX_CHARS - 1) + "😀" + "tail"
+
+        assertEquals("x".repeat(VAR_PREVIEW_MAX_CHARS - 1), consoleVarPreview(value, mark).text)
+    }
+
+    @Test
+    fun `given a long value when the row renders then TalkBack hears the key and the size, not the preview`() {
+        render(ConsoleVarRow(node = "TOOL#9c41d2", key = "output", value = longValue))
+
+        rule.onNodeWithContentDescription("output, 200,000 characters").assertExists()
+        rule.onAllNodesWithContentDescription(longValue.take(40), substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun `given a short value that overflows three lines when the row renders then it counts as cut`() {
+        // 300 characters without spaces wrap to about eight lines at 360 dp.
+        render(ConsoleVarRow(node = "TOOL#9c41d2", key = "output", value = "Q".repeat(300)))
+
+        rule.onNodeWithContentDescription("output, 300 characters").assertExists()
+    }
+
+    @Test
+    fun `given a short value when the row renders then it reads as before, with no size`() {
+        render(ConsoleVarRow(node = "LITE_RT#501fab", key = "output", value = "Design review at 11:00"))
+
+        rule.onNodeWithText("Design review at 11:00").assertExists()
+        rule.onAllNodesWithContentDescription("characters", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun `given an empty value when the row renders then it shows a pair of quotes and TalkBack says empty`() {
+        render(ConsoleVarRow(node = "TOOL#9c41d2", key = "reason", value = ""))
+
+        rule.onNodeWithContentDescription("reason, empty").assertExists()
     }
 
     @Test
     fun `given a previewed value when Copy value is picked then the whole row is reported`() {
+        val row = ConsoleVarRow(node = "TOOL#9c41d2", key = "output", value = longValue)
         var copied: ConsoleVarRow? = null
-        render(onCopyVar = { copied = it })
+        render(row, onCopyVar = { copied = it })
 
-        rule.onNodeWithText(longValue.take(400)).performTouchInput { longClick() }
+        rule.onNodeWithContentDescription("output, 200,000 characters").performTouchInput { longClick() }
         rule.onNodeWithText("Copy value").performClick()
 
         assertEquals(row, copied)
     }
 
-    private fun render(onCopyVar: (ConsoleVarRow) -> Unit) {
+    private fun render(row: ConsoleVarRow, onCopyVar: (ConsoleVarRow) -> Unit = {}) {
         rule.setContent {
             KnotworkTheme {
                 ConsolePane(

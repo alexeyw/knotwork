@@ -39,7 +39,7 @@ class ConsoleSearchAffordanceTest {
     )
 
     private val vars = listOf(
-        ConsoleVarRow(node = "LITE_RT#501fab", key = "input", valueJson = "the assembled prompt"),
+        ConsoleVarRow(node = "LITE_RT#501fab", key = "input", value = "the assembled prompt"),
     )
 
     private val traces = listOf(

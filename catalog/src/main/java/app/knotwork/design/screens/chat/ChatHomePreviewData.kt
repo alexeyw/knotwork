@@ -143,12 +143,12 @@ internal object ChatHomePreview {
         app.knotwork.design.components.console.ConsoleVarRow(
             node = "lite_rt#1",
             key = "temperature",
-            valueJson = "0.7",
+            value = "0.7",
         ),
         app.knotwork.design.components.console.ConsoleVarRow(
             node = "lite_rt#1",
             key = "topP",
-            valueJson = "0.9",
+            value = "0.9",
         ),
     )
 
