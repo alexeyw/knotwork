@@ -597,7 +597,10 @@ Three actions are available at the pane footer:
   out one key per line and coloured; text keeps its own lines; a value that
   starts like JSON but does not parse is shown as text and says so. **Copy**
   at the top copies the value as it was; back or **Close** returns to the
-  console where you left it.
+  console where you left it. A value more than five screens long gets a
+  thumb at the right edge while it scrolls: drag it to move through the
+  value, and it names the line at the top as you go. Swiping back previews
+  the console behind the viewer before you let go.
 - **Copy all** — copies the full plain-text dump of the active tab to
   the clipboard, regardless of which filter chip is active.
 - **Clear console** — wipes the on-screen log baseline for the current

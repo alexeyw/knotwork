@@ -82,6 +82,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ConsolePane.kt` - bottom-sheet container with sticky header, three tabs, source-filter chips, and per-tab body.
     - `ConsoleValueBody.kt` - What the console's value viewer shows under its header: nothing yet while the host formats the value off the main thread, then the formatted lines.
     - `ConsoleValuePieces.kt` - The value viewer's lines cut into pieces of at most `VALUE_PIECE_MAX_CHARS` characters, one lazy item each, so the viewer never lays out more than one piece at a time.
+    - `ConsoleValueScrollThumb.kt` - The value viewer's scroll thumb, over the right edge of its list.
     - `ConsoleValueViewer.kt` - The whole of one Vars value, full screen over the console, on the console's tokens.
     - `ConsoleVarValue.kt` - The key and value of one Vars row: the key, then a preview of the value in at most `VAR_PREVIEW_MAX_LINES` lines.
     - `HashChip.kt` - A copyable short-hash chip: the shared shape of the console chips and the recorded / replayed hashes of a diverged visit.
@@ -470,6 +471,7 @@ matters.
     - `ConsoleSearchAffordanceTest.kt` - Pins the console's Search action to the Logs tab.
     - `ConsoleSnapTest.kt` - Documents the discrete `ConsoleSnap` heights as preview-only fixtures.
     - `ConsoleValuePiecesTest.kt` - How `ConsoleValuePieces` cuts the value viewer's lines into lazy items.
+    - `ConsoleValueScrollThumbTest.kt` - When the value viewer's scroll thumb shows, where it sits, and what dragging it does.
     - `ConsoleValueViewerSnapshotTest.kt` - Roborazzi baselines of the console's value viewer: a JSON value laid out and coloured, a text value with its own lines, a value that starts like JSON but does not parse, one long line without spaces cut into pieces, the formatting notice, and JSON at 200 %.
     - `ConsoleValueViewerTest.kt` - What the console's value viewer shows and does.
     - `ConsoleVarPreviewTest.kt` - A Vars row with a long value shows a preview, and its menu still copies the whole value.

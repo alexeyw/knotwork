@@ -23,6 +23,12 @@ details.
   says so. A line over 2 000 characters is drawn a piece at a time, so no
   single text has to be laid out whole. *Copy* in the viewer copies the value
   as it was.
+- **A value more than five screens long gets a scroll thumb in its viewer.**
+  It shows while the value scrolls and fades 1.5 s after; drag it to move
+  through the value, with *Line N of M* beside it. For text that wraps at
+  words the thumb's place is an estimate. The back gesture now previews the
+  console behind: the viewer shrinks and rounds its corners as you swipe,
+  and comes back if you let go.
 
 ### Changed
 
