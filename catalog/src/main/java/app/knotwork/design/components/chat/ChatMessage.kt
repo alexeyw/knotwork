@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
+import app.knotwork.design.components.splitAtUnbrokenRuns
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -427,8 +428,17 @@ private fun ImageBubble(role: ChatRole, content: ChatContent.Image, onContextAct
 @Composable
 private fun TextBubble(role: ChatRole, text: String, onContextAction: ((ChatContextAction) -> Unit)?) {
     val textColor = chatBubbleTextColor(role)
+    // A run without whitespace lays out in time that grows with its square, so a long
+    // one is drawn as consecutive texts (see `unbrokenRunCuts`); other text stays whole.
+    val pieces = remember(text) { text.splitAtUnbrokenRuns() }
     ChatBubbleChrome(role = role, onContextAction = onContextAction) {
-        Text(text = text, style = KnotworkTextStyles.BodyBase, color = textColor)
+        if (pieces.size == 1) {
+            Text(text = text, style = KnotworkTextStyles.BodyBase, color = textColor)
+        } else {
+            Column {
+                for (piece in pieces) Text(text = piece, style = KnotworkTextStyles.BodyBase, color = textColor)
+            }
+        }
     }
 }
 

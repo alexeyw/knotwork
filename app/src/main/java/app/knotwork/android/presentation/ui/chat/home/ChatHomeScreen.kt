@@ -83,6 +83,7 @@ import app.knotwork.design.components.controls.KnotworkTextField
 import app.knotwork.design.components.dialogs.ConfirmDialog
 import app.knotwork.design.components.dialogs.ConfirmDialogUi
 import app.knotwork.design.components.knotworkMarkdownColor
+import app.knotwork.design.components.knotworkMarkdownComponents
 import app.knotwork.design.components.knotworkMarkdownTypography
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chat.ChatHomeCallbacks
@@ -606,6 +607,7 @@ fun ChatHomeScreen(
         // surrounding chat surface tokens.
         val markdownTypography = knotworkMarkdownTypography()
         val markdownColors = knotworkMarkdownColor()
+        val markdownComponents = remember { knotworkMarkdownComponents() }
         ChatHomeContent(
             state = viewState,
             callbacks = callbacks,
@@ -618,6 +620,9 @@ fun ChatHomeScreen(
                     content = source,
                     typography = markdownTypography,
                     colors = markdownColors,
+                    // Cuts a long run without whitespace into several texts: laid out
+                    // whole, one froze the chat for seconds.
+                    components = markdownComponents,
                 )
             },
             messageListState = chatListState,
