@@ -25,7 +25,9 @@ class ConsoleValueFormatterTest {
 
     @Test
     fun `given escapes and spelled-out numbers when formatted then every token is copied as written`() {
-        // org.json would rewrite "\/" as "/" on parse and 1.50 as 1.5; the viewer shows what arrived.
+        // org.json reads numbers into Long or Double and writes them back (JSONTokener.readLiteral,
+        // JSONObject.numberToString): 1.50 would come out as 1.5 and 1E+3 as 1000. The viewer shows
+        // what arrived.
         val body = ConsoleValueFormatter.format("""{"url":"https:\/\/x.org\/a","n":1.50,"e":1E+3,"u":"\u00e9"}""")
 
         assertEquals(
