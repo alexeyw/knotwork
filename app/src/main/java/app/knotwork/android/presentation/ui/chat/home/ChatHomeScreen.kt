@@ -470,6 +470,9 @@ fun ChatHomeScreen(
             copyConsoleText(payload)
         },
         onConsoleClear = viewModel.console::requestConsoleClear,
+        onConsoleOpenValue = viewModel.console::openConsoleValue,
+        onConsoleCloseValue = viewModel.console::closeConsoleValue,
+        onConsoleCopyValue = { row -> clipboardManager.setConsoleText(ConsoleCopyPayloads.variable(row)) },
         onCloseConsole = viewModel.console::closeConsole,
         run = ChatHomeRunCallbacks(
             onToggleHeader = viewModel.run::toggleHeader,

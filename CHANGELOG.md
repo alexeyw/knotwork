@@ -13,6 +13,17 @@ details.
 
 ## [Unreleased]
 
+### Added
+
+- **A long value in the console's Vars tab opens whole.** Tap a row cut to a
+  preview — it carries its size and an arrow — or pick *Open value* from its
+  long-press menu. The value fills the screen on the console's colours: JSON
+  laid out one key per line and coloured, with every token as it arrived;
+  text with its own lines; a body that starts like JSON but does not parse
+  says so. A line over 2 000 characters is drawn a piece at a time, so no
+  single text has to be laid out whole. *Copy* in the viewer copies the value
+  as it was.
+
 ### Changed
 
 - **The console's Vars tab shows values as the node had them.** No quotes are

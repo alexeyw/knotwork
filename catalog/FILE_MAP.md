@@ -80,6 +80,9 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ConsoleEntryStrip.kt` - the console's own entry point: `console │ [NODE] idle · ready ⌃`. One element in two positions — above the composer when closed, the console sheet's own header when open. It carries the literal word because `Role.Button` plus a content description was not enough to make it findable by eye.
     - `ConsoleModels.kt` - `ConsoleSnap`, `ConsoleTab`, `ConsoleSource`, `ConsoleLevel`, `ConsoleFilter`, `ConsoleLine`, `ConsoleVarRow`, `ConsoleTraceSpan`, `SpanStatus`.
     - `ConsolePane.kt` - bottom-sheet container with sticky header, three tabs, source-filter chips, and per-tab body.
+    - `ConsoleValueBody.kt` - What the console's value viewer shows under its header: nothing yet while the host formats the value off the main thread, then the formatted lines.
+    - `ConsoleValuePieces.kt` - The value viewer's lines cut into pieces of at most `VALUE_PIECE_MAX_CHARS` characters, one lazy item each, so the viewer never lays out more than one piece at a time.
+    - `ConsoleValueViewer.kt` - The whole of one Vars value, full screen over the console, on the console's tokens.
     - `ConsoleVarValue.kt` - The key and value of one Vars row: the key, then a preview of the value in at most `VAR_PREVIEW_MAX_LINES` lines.
     - `HashChip.kt` - A copyable short-hash chip: the shared shape of the console chips and the recorded / replayed hashes of a diverged visit.
     - `RunAgainConfirmDialog.kt` - The confirmation before starting a run again with its seed.
@@ -466,6 +469,9 @@ matters.
     - `ConsoleFilterTest.kt` - Pure-JVM tests for `ConsoleFilter` — the predicate used by `ConsolePane`'s Logs tab to drop filtered-out sources.
     - `ConsoleSearchAffordanceTest.kt` - Pins the console's Search action to the Logs tab.
     - `ConsoleSnapTest.kt` - Documents the discrete `ConsoleSnap` heights as preview-only fixtures.
+    - `ConsoleValuePiecesTest.kt` - How `ConsoleValuePieces` cuts the value viewer's lines into lazy items.
+    - `ConsoleValueViewerSnapshotTest.kt` - Roborazzi baselines of the console's value viewer: a JSON value laid out and coloured, a text value with its own lines, a value that starts like JSON but does not parse, one long line without spaces cut into pieces, the formatting notice, and JSON at 200 %.
+    - `ConsoleValueViewerTest.kt` - What the console's value viewer shows and does.
     - `ConsoleVarPreviewTest.kt` - A Vars row with a long value shows a preview, and its menu still copies the whole value.
     - `ConsoleVarRowSnapshotTest.kt` - Roborazzi baselines of the Vars tab's rows, one of each kind: short values as they are, a value with line breaks drawn as marks, values cut to a preview with their size under them, an empty value, and a nested node.
     - `FullHashLayoutTest.kt` - `FullHash` keeps every group of eight whole: when four groups do not fit on a line, fewer go on it, and no group breaks across lines character by character.

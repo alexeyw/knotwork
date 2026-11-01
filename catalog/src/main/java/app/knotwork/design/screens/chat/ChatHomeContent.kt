@@ -81,6 +81,7 @@ import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleEntryStrip
 import app.knotwork.design.components.console.ConsolePane
 import app.knotwork.design.components.console.ConsoleSnap
+import app.knotwork.design.components.console.ConsoleValueViewer
 import app.knotwork.design.components.console.RunHeaderStrip
 import app.knotwork.design.components.misc.KnotworkLoader
 import app.knotwork.design.icons.AppIcons
@@ -1052,6 +1053,7 @@ private fun ChatHomeConsoleOverlay(state: ChatHomeViewState, callbacks: ChatHome
             onCopySpan = callbacks.onConsoleCopySpan,
             onFilterByLineSource = callbacks.onConsoleFilterByLineSource,
             onCopyHash = callbacks.run.onCopyHash,
+            onOpenVar = callbacks.onConsoleOpenValue,
             runHeader = state.console.runHeader?.let { header ->
                 {
                     RunHeaderStrip(
@@ -1069,6 +1071,14 @@ private fun ChatHomeConsoleOverlay(state: ChatHomeViewState, callbacks: ChatHome
                 }
             },
         )
+        // Opened from the sheet, so closing it leaves the console at the same snap and scroll.
+        state.console.valueViewer?.let { viewer ->
+            ConsoleValueViewer(
+                state = viewer,
+                onClose = callbacks.onConsoleCloseValue,
+                onCopy = callbacks.onConsoleCopyValue,
+            )
+        }
     }
 }
 

@@ -15,6 +15,7 @@ import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleSource
 import app.knotwork.design.components.console.ConsoleTab
 import app.knotwork.design.components.console.ConsoleTraceSpan
+import app.knotwork.design.components.console.ConsoleValueViewerState
 import app.knotwork.design.components.console.ConsoleVarRow
 import app.knotwork.design.components.console.RunAgainConfirmUi
 import app.knotwork.design.components.console.RunExportUi
@@ -161,6 +162,7 @@ data class ChatHomeSamplePromptCard(val id: String, val title: String, val tools
  * @property runHeader the run strip of the run the console shows, or `null` when
  *   there is none (a chat with no run yet).
  * @property runHeaderExpanded whether the run strip is open.
+ * @property valueViewer the value viewer open over the console, or `null` when it is closed.
  */
 data class ChatHomeConsoleState(
     /**
@@ -188,6 +190,7 @@ data class ChatHomeConsoleState(
     val searchQuery: String? = null,
     val runHeader: RunHeaderUi? = null,
     val runHeaderExpanded: Boolean = false,
+    val valueViewer: ConsoleValueViewerState? = null,
 )
 
 /**
@@ -439,6 +442,12 @@ class ChatHomeCallbacks(
     val onConsoleFilterByLineSource: (ConsoleSource) -> Unit = {},
     val onConsoleCopyAll: () -> Unit = {},
     val onConsoleClear: () -> Unit = {},
+    /** Opens the value viewer on a Vars row cut to a preview. */
+    val onConsoleOpenValue: (ConsoleVarRow) -> Unit = {},
+    /** Closes the value viewer, once its closing motion has ended. */
+    val onConsoleCloseValue: () -> Unit = {},
+    /** Copies a row's whole value from the viewer; `false` when it was too large for the clipboard. */
+    val onConsoleCopyValue: (ConsoleVarRow) -> Boolean = { true },
     val onCloseConsole: () -> Unit = {},
     /** The run strip and its surfaces. */
     val run: ChatHomeRunCallbacks = ChatHomeRunCallbacks(),

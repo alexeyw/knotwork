@@ -16,17 +16,24 @@ import app.knotwork.design.components.console.ConsoleLine
 import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleSource
 import app.knotwork.design.components.console.ConsoleTab
+import app.knotwork.design.components.console.ConsoleValueBody
+import app.knotwork.design.components.console.ConsoleValueFormat
+import app.knotwork.design.components.console.ConsoleValueViewerState
+import app.knotwork.design.components.console.ConsoleVarRow
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -60,7 +67,7 @@ class ChatHomeConsoleDelegateTest {
     private val state = MutableStateFlow(ChatHomeScreenState())
 
     /** Builds the delegate riding the test scope so launched work stays on the test scheduler. */
-    private fun CoroutineScope.delegate(): ChatHomeConsoleDelegate {
+    private fun CoroutineScope.delegate(formatting: CoroutineDispatcher = testDispatcher): ChatHomeConsoleDelegate {
         coEvery { runTraceRepository.getTraceForRun(any()) } returns emptyList()
         coEvery { pipelineRunRepository.getDescendantRuns(any()) } returns emptyList()
         return ChatHomeConsoleDelegate(
@@ -69,8 +76,60 @@ class ChatHomeConsoleDelegateTest {
             appStateSettings = settingsRepository,
             runTraceRepository = runTraceRepository,
             pipelineRunRepository = pipelineRunRepository,
-            traceProjectionDispatcher = { testDispatcher },
+            traceProjectionDispatcher = { formatting },
         )
+    }
+
+    @Test
+    fun `given a cut row when its value is opened then the viewer shows formatting, then the formatted value`() =
+        runTest(testDispatcher) {
+            val delegate = backgroundScope.delegate(formatting = StandardTestDispatcher(testScheduler))
+            val row = ConsoleVarRow(node = "TOOL#1", key = "body", value = """{"a":1}""")
+
+            delegate.openConsoleValue(row)
+            assertEquals(ConsoleValueViewerState(row, ConsoleValueBody.Formatting), state.value.console.valueViewer)
+
+            runCurrent()
+            val body = state.value.console.valueViewer?.body as ConsoleValueBody.Ready
+            assertEquals(ConsoleValueFormat.Json, body.format)
+            assertEquals(listOf("{", "\"a\": 1", "}"), body.lines.map { it.text })
+        }
+
+    @Test
+    fun `given a value still formatting when the viewer is closed then it stays closed`() = runTest(testDispatcher) {
+        val delegate = backgroundScope.delegate(formatting = StandardTestDispatcher(testScheduler))
+
+        delegate.openConsoleValue(ConsoleVarRow(node = "TOOL#1", key = "body", value = "text"))
+        delegate.closeConsoleValue()
+        runCurrent()
+
+        assertNull(state.value.console.valueViewer)
+    }
+
+    @Test
+    fun `given a second value opened mid-format then it is the one shown`() = runTest(testDispatcher) {
+        val delegate = backgroundScope.delegate(formatting = StandardTestDispatcher(testScheduler))
+        val second = ConsoleVarRow(node = "TOOL#1", key = "output", value = "second")
+
+        delegate.openConsoleValue(ConsoleVarRow(node = "TOOL#1", key = "input", value = "first"))
+        delegate.openConsoleValue(second)
+        runCurrent()
+
+        assertEquals(second, state.value.console.valueViewer?.row)
+        val body = state.value.console.valueViewer?.body as ConsoleValueBody.Ready
+        assertEquals(listOf("second"), body.lines.map { it.text })
+    }
+
+    @Test
+    fun `given an open viewer when the console is closed then the viewer closes with it`() = runTest(testDispatcher) {
+        val delegate = backgroundScope.delegate()
+        state.value = state.value.copy(console = state.value.console.copy(snap = ConsoleSnap.Full))
+
+        delegate.openConsoleValue(ConsoleVarRow(node = "TOOL#1", key = "body", value = "text"))
+        delegate.closeConsole()
+
+        assertNull(state.value.console.valueViewer)
+        assertNull(state.value.console.snap)
     }
 
     // ──────────────────────────── Pane intents ───────────────────────────

@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -121,7 +122,52 @@ class ConsoleVarPreviewTest {
         assertEquals(row, copied)
     }
 
-    private fun render(row: ConsoleVarRow, onCopyVar: (ConsoleVarRow) -> Unit = {}) {
+    @Test
+    fun `given a cut row and a host with a viewer when it is tapped then the viewer opens on it`() {
+        val row = ConsoleVarRow(node = "TOOL#9c41d2", key = "output", value = longValue)
+        var opened: ConsoleVarRow? = null
+        render(row, onOpenVar = { opened = it })
+
+        rule.onNodeWithContentDescription("output, 200,000 characters").performClick()
+
+        assertEquals(row, opened)
+    }
+
+    @Test
+    fun `given a cut row when it is long-pressed then Open value comes first in its menu and opens it`() {
+        val row = ConsoleVarRow(node = "TOOL#9c41d2", key = "output", value = longValue)
+        var opened: ConsoleVarRow? = null
+        render(row, onOpenVar = { opened = it })
+
+        rule.onNodeWithContentDescription("output, 200,000 characters").performTouchInput { longClick() }
+        val open = rule.onNodeWithText("Open value").fetchSemanticsNode().boundsInRoot
+        val copy = rule.onNodeWithText("Copy value").fetchSemanticsNode().boundsInRoot
+        rule.onNodeWithText("Open value").performClick()
+
+        assertEquals(true, open.top < copy.top)
+        assertEquals(row, opened)
+    }
+
+    @Test
+    fun `given a short row when it is tapped then nothing opens and its menu offers no Open value`() {
+        var opened: ConsoleVarRow? = null
+        render(ConsoleVarRow(node = "LITE_RT#501fab", key = "output", value = "Design review at 11:00"), onOpenVar = {
+            opened =
+                it
+        })
+
+        rule.onNodeWithText("Design review at 11:00").performClick()
+        rule.onNodeWithText("Design review at 11:00").performTouchInput { longClick() }
+
+        assertEquals(null, opened)
+        rule.onAllNodesWithText("Open value").assertCountEquals(0)
+    }
+
+    private fun render(
+        row: ConsoleVarRow,
+        onCopyVar: (ConsoleVarRow) -> Unit = {},
+        onOpenVar: ((ConsoleVarRow) -> Unit)? = null,
+    ) {
         rule.setContent {
             KnotworkTheme {
                 ConsolePane(
@@ -136,6 +182,7 @@ class ConsoleVarPreviewTest {
                     onCopyAll = {},
                     onClear = {},
                     onCopyVar = onCopyVar,
+                    onOpenVar = onOpenVar,
                 )
             }
         }

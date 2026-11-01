@@ -84,6 +84,8 @@ class ConsoleVarRowSnapshotTest {
                         onSearch = {},
                         onCopyAll = {},
                         onClear = {},
+                        // As the app wires it: cut rows open the value viewer, so they carry a chevron.
+                        onOpenVar = {},
                     )
                 }
             }
