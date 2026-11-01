@@ -108,6 +108,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `SingleChoiceDialog.kt` - A dialog that picks exactly one option from a radio list.
     - `SingleFieldDialog.kt` - A dialog that asks for exactly one non-blank string.
     - `TypedConfirmDialog.kt` - canonical destructive typed-confirm dialog (`TypedConfirmDialogState` payload + `typedConfirmMatches` keyword rule). Shared by the Settings destructive actions and the splash data-recovery wipe so the confirmation contract cannot drift.
+  - `KnotworkMarkdownComponents.kt` - The library's Material 3 components, with paragraphs and code blocks that never hand a single text more than `UNBROKEN_RUN_MAX` characters of one unbroken run.
   - `lists/` - `PipelineListRow` / `ToolListRow` / `MemoryEntryRow` / `KnotworkNavListRow` (leading-icon + title + chevron routing row) + previews.
     - `KnotworkListsPreview.kt` - Harness rendering every list-row variant, including a pipeline row in the swipe-revealed state, shared by the preview pane and the Roborazzi baseline.
     - `KnotworkNavListRow.kt` - Compact navigation list row used by surfaces that primarily route the user to other screens (e.g. the `More` tab).
@@ -158,6 +159,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
   - `topbar/` - top-app-bar chrome.
     - `JournalExportActions.kt` - The pair of top-bar actions that hands a journal to the user: **share it** and **save it to a file**.
     - `KnotworkTopAppBarShell.kt` - wraps a `TopAppBar` in a column with an attached hairline divider so it never bleeds into scrolled content.
+  - `UnbrokenRunCuts.kt` - Where to cut `text` so that no piece holds more than `max` characters of one unbroken run.
 - `foundations/` - catalog pages.
   - `FoundationsCatalogPage.kt` - palette + type scale + spacing surface, used for design review and the snapshot baseline.
   - `FoundationsCatalogPagePreview.kt` - Android Studio `@Preview` for the page in both themes.
@@ -449,6 +451,7 @@ matters.
     - `ChatCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the long-press scale + composer morph behave deterministically.
     - `ChatComposerTapTest.kt` - A tap anywhere on the composer belongs to the composer.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
+    - `ChatMessageLongTextTest.kt` - A chat bubble never hands one text a run without whitespace longer than `UNBROKEN_RUN_MAX`: laid out whole, 200 000 characters of minified JSON froze the chat for seconds in one frame.
     - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
     - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
@@ -508,6 +511,7 @@ matters.
     - `PromptPreviewSheetSnapshotTest.kt` - Roborazzi baselines for the prompt-preview sheet.
   - `topbar/` - top-bar actions whose behaviour outruns their appearance.
     - `JournalExportActionsBehaviourTest.kt` - Behaviour of the journal-export actions on both journal surfaces — the parts a Roborazzi baseline cannot show.
+  - `UnbrokenRunCutsTest.kt` - Where `unbrokenRunCuts` cuts a text, and what the pieces keep.
 - `ComposeTestRuleV2GuardTest.kt` - Keeps the design system's tests on the v2 Compose test APIs.
 - `foundations/` - the foundations catalog page — the surface that renders the tokens themselves.
   - `FoundationsCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for the `FoundationsCatalogPage` in both Knotwork themes.

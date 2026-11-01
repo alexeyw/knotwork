@@ -52,6 +52,13 @@ details.
   spaces — a tool's answer, say — held the screen for seconds. A row now shows
   the first three lines; *Copy value* in its long-press menu still copies all
   of it.
+- **A long answer without spaces no longer freezes the chat.** A message that
+  is one long string — minified JSON or base64 from a tool — held the screen
+  for seconds while it was laid out. Such a string is now drawn in pieces of
+  2 000 characters, in answers, code blocks and your own messages alike;
+  where a piece ends inside it, a line can end early. Text with spaces and
+  Chinese or Japanese text draw as before, and *Copy* still copies the message
+  as it was.
 - **A console copy too large for the clipboard says so.** The system refuses
   a clip over its transfer limit (about 1 MB), and that refusal went
   unhandled; a node's output can be that large. The copy now shows *Too long
