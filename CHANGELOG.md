@@ -20,8 +20,9 @@ details.
   long-press menu. The value fills the screen on the console's colours: JSON
   laid out one key per line and coloured, with every token as it arrived;
   text with its own lines; a body that starts like JSON but does not parse
-  says so. A long line is drawn a piece at a time, so a megabyte stays
-  scrollable. *Copy* in the viewer copies the value as it was.
+  says so. A line over 2 000 characters is drawn a piece at a time, so no
+  single text has to be laid out whole. *Copy* in the viewer copies the value
+  as it was.
 
 ### Changed
 
