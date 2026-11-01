@@ -49,11 +49,10 @@
          the user to confirm a tool execution. -->
 
     <!-- Snackbar feedback -->
-    <string name="chat_snackbar_copied">Copied</string>
     <string name="chat_snackbar_saved_to_memory">Saved to memory</string>
     <string name="chat_snackbar_save_to_memory_failed">Couldn\'t save to memory</string>
-    <!-- A console copy (a line, a value, a span or a whole tab) was larger than the clipboard takes. -->
-    <string name="chat_snackbar_console_copy_too_large">Too long for the clipboard. Nothing was copied.</string>
+    <!-- A copy — a chat message, or a console line, value, span or whole tab — was larger than the clipboard takes. -->
+    <string name="chat_snackbar_copy_too_large">Too long for the clipboard. Nothing was copied.</string>
     <!-- Shown when a picked/captured image could not be attached (decode/read failed). -->
     <string name="chat_snackbar_attachment_failed">Couldn\'t attach that image. Try a different one.</string>
     <string name="chat_snackbar_attachment_replaced">Replaced the previous image — one at a time.</string>

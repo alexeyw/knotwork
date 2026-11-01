@@ -37,8 +37,9 @@ details.
   blank lines, and a value cut to a preview shows its size under it.
   *Copy value* now copies the value alone, exactly as it was — no `node key`
   line, no quotes; *Copy all* on the tab is unchanged.
-- **Console copies no longer show the app's own "copied" message.** Android 14
-  and later shows the system's preview of what was copied.
+- **Copies no longer show the app's own "copied" message,** in the console or
+  from a chat message's menu. Android 14 and later shows the system's preview
+  of what was copied.
 
 ### Fixed
 
@@ -59,10 +60,11 @@ details.
   where a piece ends inside it, a line can end early. Text with spaces and
   Chinese or Japanese text draw as before, and *Copy* still copies the message
   as it was.
-- **A console copy too large for the clipboard says so.** The system refuses
-  a clip over its transfer limit (about 1 MB), and that refusal went
-  unhandled; a node's output can be that large. The copy now shows *Too long
-  for the clipboard. Nothing was copied.*
+- **A copy too large for the clipboard says so.** The system refuses a clip
+  over its transfer limit (about 1 MB), and that refusal went unhandled; a
+  node's output, and a chat message that carries it, can be that large. A copy
+  from the console or from a message's menu now shows *Too long for the
+  clipboard. Nothing was copied.*
 
 ## [0.12.2] - 2026-10-29
 
