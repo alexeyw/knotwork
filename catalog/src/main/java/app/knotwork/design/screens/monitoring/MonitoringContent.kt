@@ -159,7 +159,7 @@ private fun Body(padding: PaddingValues, state: MonitoringViewState, strings: Mo
         }
         if (state.logs.isNotEmpty()) {
             item(key = "logs-header") { SectionHeader(label = strings.logsHeader) }
-            items(items = state.logs, key = { it.timestamp + it.message.hashCode() }) { line ->
+            items(items = state.logs, key = { "log-${it.id}" }) { line ->
                 LogLine(line = line)
             }
         } else {

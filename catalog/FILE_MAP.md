@@ -539,6 +539,7 @@ matters.
     - `PerformanceCardSnapshotTest.kt` - Roborazzi baseline for `PerformanceCard`.
   - `monitoring/` - the local telemetry surface.
     - `MonitoringContentSnapshotTest.kt` - Roborazzi baseline for `MonitoringContent` across its documented states in both themes.
+    - `MonitoringContentTest.kt` - Behaviour of `MonitoringContent`'s recent-logs list.
   - `more/` - the More tab and the structure of its sections.
     - `MoreContentSnapshotTest.kt` - Fixture for the More tab.
     - `MoreSectionsTest.kt` - Pins the structure of the More tab.

@@ -647,6 +647,7 @@ Only Kotlin files appear inside the generated blocks.
       - `ModelsViewModelTest.kt` - Tests for ModelsViewModel.
       - `PerformanceFormattingTest.kt` - Unit tests for the performance-figure formatting helpers.
     - `monitoring/` - Tests for the observability surface.
+      - `MonitoringScreenMappingTest.kt` - Verifies the pure `MonitoringUiState.toViewState()` projection used by `MonitoringScreen`.
       - `MonitoringViewModelTest.kt` - Tests for MonitoringViewModel.
     - `more/` - Tests for the More tab.
       - `MoreFormattersTest.kt` - Unit tests for the pure-Kotlin formatter helpers feeding the More tab subtitle counters and footer pill.

@@ -76,8 +76,8 @@ internal object MonitoringPreview {
             NodeBreakdownRow(nodeType = "OUTPUT", totalLabel = "188 ms"),
         ),
         logs = listOf(
-            MonitoringLogLine(timestamp = "12:04:01", message = "Pipeline 'Travel planner' started"),
-            MonitoringLogLine(timestamp = "12:04:11", message = "Tool 'flight_search' completed"),
+            MonitoringLogLine(id = "row:1", timestamp = "12:04:01", message = "Pipeline 'Travel planner' started"),
+            MonitoringLogLine(id = "row:2", timestamp = "12:04:11", message = "Tool 'flight_search' completed"),
         ),
     )
 

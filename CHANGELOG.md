@@ -13,6 +13,14 @@ details.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Monitoring screen no longer closes the app over a repeated log line.**
+  When the same message was logged twice within one second — a blocked tool
+  the model called twice in a row, say — or at the same time of day on another
+  day, two lines of *Recent logs* got the same list key and the app crashed on
+  opening the screen. Each line is now keyed by its own record.
+
 ## [0.12.2] - 2026-10-29
 
 ### Fixed

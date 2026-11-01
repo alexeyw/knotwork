@@ -51,8 +51,11 @@ internal fun MonitoringUiState.toViewState(strings: MonitoringStrings): Monitori
         .map { (nodeType, durationMs) ->
             NodeBreakdownRow(nodeType = nodeType.name, totalLabel = "$durationMs ms")
         }
-    val logs = recentLogs.map { message ->
+    val logs = recentLogs.mapIndexed { index, message ->
         MonitoringLogLine(
+            // A stored row always has its database id; the position stands in only for a
+            // message that was never saved, and the prefixes keep the two apart.
+            id = message.id?.let { "row:$it" } ?: "pos:$index",
             timestamp = LOG_TIME_FORMATTER.format(Date(message.timestamp)),
             message = message.content,
         )
