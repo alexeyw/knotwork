@@ -14,8 +14,16 @@ data class MonitoringStat(val label: String, val value: String)
 /** One row of the "Time per node type" breakdown. */
 data class NodeBreakdownRow(val nodeType: String, val totalLabel: String)
 
-/** Pre-formatted system log line surfaced on the recent-logs list. */
-data class MonitoringLogLine(val timestamp: String, val message: String)
+/**
+ * Pre-formatted system log line surfaced on the recent-logs list.
+ *
+ * @property id key of the line in the list, unique among the lines shown. Never built
+ *   from [timestamp] and [message]: the same message recorded twice within a second
+ *   shares both, and a repeated key crashes the list.
+ * @property timestamp time of day the line was recorded (e.g. `"12:04:01"`).
+ * @property message the logged text.
+ */
+data class MonitoringLogLine(val id: String, val timestamp: String, val message: String)
 
 /**
  * Top-level immutable input to `MonitoringContent`.
