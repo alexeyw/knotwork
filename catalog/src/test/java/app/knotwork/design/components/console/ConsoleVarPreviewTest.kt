@@ -45,8 +45,8 @@ class ConsoleVarPreviewTest {
             .fetchSemanticsNodes()
             .flatMap { node -> node.config[SemanticsProperties.Text] }
             .maxOf { it.length }
-        assertTrue("the longest text on the tab has $longest characters", longest <= 500)
-        rule.onNodeWithText(longValue.take(500)).assertExists()
+        assertTrue("the longest text on the tab has $longest characters", longest <= 400)
+        rule.onNodeWithText(longValue.take(400)).assertExists()
     }
 
     @Test
@@ -54,7 +54,7 @@ class ConsoleVarPreviewTest {
         var copied: ConsoleVarRow? = null
         render(onCopyVar = { copied = it })
 
-        rule.onNodeWithText(longValue.take(500)).performTouchInput { longClick() }
+        rule.onNodeWithText(longValue.take(400)).performTouchInput { longClick() }
         rule.onNodeWithText("Copy value").performClick()
 
         assertEquals(row, copied)

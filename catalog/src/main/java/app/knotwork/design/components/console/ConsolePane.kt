@@ -76,10 +76,10 @@ private const val VAR_PREVIEW_MAX_LINES = 3
  * Characters of a Vars value handed to its row's `Text`. Laying out a string costs time in
  * its whole length however few lines are drawn — quadratic when it has no spaces, so a
  * 200 000-character value held the main thread for seconds — and [VAR_PREVIEW_MAX_LINES]
- * alone bounds nothing. 500 still fills more than three lines at the console's widest:
+ * alone bounds nothing. 400 still fills more than three lines at the console's widest:
  * the sheet stops at Material's 640 dp.
  */
-private const val VAR_PREVIEW_MAX_CHARS = 500
+private const val VAR_PREVIEW_MAX_CHARS = 400
 
 /**
  * Leading indent applied per pipeline-nesting level across the Logs, Vars and
