@@ -465,6 +465,7 @@ matters.
     - `ConsoleFilterTest.kt` - Pure-JVM tests for `ConsoleFilter` — the predicate used by `ConsolePane`'s Logs tab to drop filtered-out sources.
     - `ConsoleSearchAffordanceTest.kt` - Pins the console's Search action to the Logs tab.
     - `ConsoleSnapTest.kt` - Documents the discrete `ConsoleSnap` heights as preview-only fixtures.
+    - `ConsoleVarPreviewTest.kt` - A Vars row with a long value shows a preview, and its menu still copies the whole value.
     - `FullHashLayoutTest.kt` - `FullHash` keeps every group of eight whole: when four groups do not fit on a line, fewer go on it, and no group breaks across lines character by character.
     - `RunHeaderAffordanceTest.kt` - What the run strip, the hash chips and the check's sheet do when used: the line toggles, each copy button hands over the whole value, a disabled action does nothing yet stays readable, and a mismatch's button names where it is fixed.
   - `controls/` - Behaviour tests for the input controls.

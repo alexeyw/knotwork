@@ -69,6 +69,18 @@ private const val SOURCE_CHIP_OFF_ALPHA = 0.10f
 /** Height of one trace bar — thin sub-row beneath the row text. */
 private val TraceBarHeight = 4.dp
 
+/** Lines of a Vars value its row shows; the row's menu copies the whole value. */
+private const val VAR_PREVIEW_MAX_LINES = 3
+
+/**
+ * Characters of a Vars value handed to its row's `Text`. Laying out a string costs time in
+ * its whole length however few lines are drawn — quadratic when it has no spaces, so a
+ * 200 000-character value held the main thread for seconds — and [VAR_PREVIEW_MAX_LINES]
+ * alone bounds nothing. 500 still fills more than three lines at the console's widest:
+ * the sheet stops at Material's 640 dp.
+ */
+private const val VAR_PREVIEW_MAX_CHARS = 500
+
 /**
  * Leading indent applied per pipeline-nesting level across the Logs, Vars and
  * Traces tabs, so a sub-pipeline's rows read as nested under the row that
@@ -131,9 +143,8 @@ private val ConsoleNestingIndent = 14.dp
  * @param onSearchQueryChange invoked when the user edits the search query;
  * the host owns the value so it can persist across rotations and tabs.
  * @param onCopyVar invoked when the user picks `Copy value` from a Vars row's
- *   long-press menu. The Vars tab is where full node I/O is inspected, so the
- *   payload the host builds is the whole value — the alternative for anyone
- *   reporting a problem is a screenshot of a screenful of text.
+ *   long-press menu. A row shows only a preview of its value, so the payload the
+ *   host builds is the whole value — the one way to get all of it out of the tab.
  * @param onCopySpan invoked when the user picks `Copy span` from a Traces row's
  *   long-press menu.
  * @param onCopyLine invoked when the user picks `Copy line` from the
@@ -621,9 +632,9 @@ private fun levelAccent(level: ConsoleLevel): Color = when (level) {
 /**
  * Vars-tab body — section headers per node, then key/value rows.
  *
- * Each row carries the same long-press menu as a log row, for the same reason:
- * this tab renders full node input and output, and the only way to get a value
- * out of it used to be a screenshot.
+ * A row shows its value as a preview of [VAR_PREVIEW_MAX_LINES] lines. Each row
+ * carries the same long-press menu as a log row; its Copy value is how the whole
+ * value leaves the tab.
  */
 @Composable
 private fun ConsoleVarsBody(
@@ -679,12 +690,9 @@ private fun ConsoleVarsBody(
                         }
                     },
                 ) {
-                    // Key + value laid out as a Column so the value text wraps
-                    // across as many lines as it needs. The Vars tab is the
-                    // debugging surface for full node I/O — truncating with
-                    // ellipsis discards the very data the user opened the
-                    // pane to inspect. The outer LazyColumn already gives us
-                    // vertical scrolling for free.
+                    // Key above value, the value a preview: a node's I/O can be a
+                    // megabyte of tool output, and the whole of it in one Text
+                    // froze the app. The menu's Copy value carries all of it.
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -701,9 +709,11 @@ private fun ConsoleVarsBody(
                             color = KnotworkPalette.Accent400,
                         )
                         Text(
-                            text = row.valueJson,
+                            text = row.valueJson.take(VAR_PREVIEW_MAX_CHARS),
                             style = KnotworkTextStyles.MonoBase,
                             color = KnotworkTheme.extended.consoleFg,
+                            maxLines = VAR_PREVIEW_MAX_LINES,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
