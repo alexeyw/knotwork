@@ -199,8 +199,11 @@ class ConsoleValueViewerTest {
         rule.runOnUiThread {
             dispatcher().dispatchOnBackStarted(backEvent(0f))
             dispatcher().dispatchOnBackProgressed(backEvent(0.6f))
-            dispatcher().dispatchOnBackCancelled()
         }
+        rule.waitForIdle()
+        assertTrue("the preview moved before the cancel", closeBounds().left > before.left)
+
+        rule.runOnUiThread { dispatcher().dispatchOnBackCancelled() }
         rule.waitForIdle()
 
         assertEquals(before, closeBounds())
