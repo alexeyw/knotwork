@@ -80,6 +80,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ConsoleEntryStrip.kt` - the console's own entry point: `console │ [NODE] idle · ready ⌃`. One element in two positions — above the composer when closed, the console sheet's own header when open. It carries the literal word because `Role.Button` plus a content description was not enough to make it findable by eye.
     - `ConsoleModels.kt` - `ConsoleSnap`, `ConsoleTab`, `ConsoleSource`, `ConsoleLevel`, `ConsoleFilter`, `ConsoleLine`, `ConsoleVarRow`, `ConsoleTraceSpan`, `SpanStatus`.
     - `ConsolePane.kt` - bottom-sheet container with sticky header, three tabs, source-filter chips, and per-tab body.
+    - `ConsoleVarValue.kt` - The key and value of one Vars row: the key, then a preview of the value in at most `VAR_PREVIEW_MAX_LINES` lines.
     - `HashChip.kt` - A copyable short-hash chip: the shared shape of the console chips and the recorded / replayed hashes of a diverged visit.
     - `RunAgainConfirmDialog.kt` - The confirmation before starting a run again with its seed.
     - `RunExportSheet.kt` - The trace export: the file's name and size in mono, what the file holds — every prompt the model read, memory excerpts and chat history inside them — the not-signed sentence, then Share and Save to file, as the journals offer them.
@@ -466,6 +467,7 @@ matters.
     - `ConsoleSearchAffordanceTest.kt` - Pins the console's Search action to the Logs tab.
     - `ConsoleSnapTest.kt` - Documents the discrete `ConsoleSnap` heights as preview-only fixtures.
     - `ConsoleVarPreviewTest.kt` - A Vars row with a long value shows a preview, and its menu still copies the whole value.
+    - `ConsoleVarRowSnapshotTest.kt` - Roborazzi baselines of the Vars tab's rows, one of each kind: short values as they are, a value with line breaks drawn as marks, values cut to a preview with their size under them, an empty value, and a nested node.
     - `FullHashLayoutTest.kt` - `FullHash` keeps every group of eight whole: when four groups do not fit on a line, fewer go on it, and no group breaks across lines character by character.
     - `RunHeaderAffordanceTest.kt` - What the run strip, the hash chips and the check's sheet do when used: the line toggles, each copy button hands over the whole value, a disabled action does nothing yet stays readable, and a mismatch's button names where it is fixed.
   - `controls/` - Behaviour tests for the input controls.

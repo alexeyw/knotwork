@@ -35,8 +35,8 @@ class ConsoleCopyAffordanceTest {
     val composeTestRule = createComposeRule()
 
     private val vars = listOf(
-        ConsoleVarRow(node = "LITE_RT#501fab", key = "input", valueJson = "the assembled prompt"),
-        ConsoleVarRow(node = "LITE_RT#501fab", key = "output", valueJson = "the model answer"),
+        ConsoleVarRow(node = "LITE_RT#501fab", key = "input", value = "the assembled prompt"),
+        ConsoleVarRow(node = "LITE_RT#501fab", key = "output", value = "the model answer"),
     )
 
     private val logs = listOf(

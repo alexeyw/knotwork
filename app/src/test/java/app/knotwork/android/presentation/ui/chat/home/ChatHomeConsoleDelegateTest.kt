@@ -227,20 +227,16 @@ class ChatHomeConsoleDelegateTest {
         }
 
     @Test
-    fun `when signalConsoleLineCopied then a LineCopied event is emitted`() = runTest(testDispatcher) {
+    fun `when signalConsoleCopyTooLarge then a CopyTooLarge event is emitted`() = runTest(testDispatcher) {
         val delegate = backgroundScope.delegate()
         val received = mutableListOf<ConsoleSnackbarEvent>()
         backgroundScope.launch { delegate.consoleSnackbarEvents.toList(received) }
         advanceUntilIdle()
 
-        delegate.signalConsoleLineCopied()
-        delegate.signalConsoleAllCopied()
+        delegate.signalConsoleCopyTooLarge()
         advanceUntilIdle()
 
-        assertEquals(
-            listOf(ConsoleSnackbarEvent.LineCopied, ConsoleSnackbarEvent.AllCopied),
-            received,
-        )
+        assertEquals(listOf(ConsoleSnackbarEvent.CopyTooLarge), received)
     }
 
     // ──────────────────────────── Stream handlers ────────────────────────
@@ -273,7 +269,7 @@ class ChatHomeConsoleDelegateTest {
             delegate.onNodeIo(AgentOrchestratorState.NodeIO("n1", "LITE_RT", "in2", "out2"))
             val rewritten = state.value.console.vars
             assertEquals(2, rewritten.size)
-            assertEquals("\"in2\"", rewritten[0].valueJson)
+            assertEquals("in2", rewritten[0].value)
 
             delegate.onNodeIo(AgentOrchestratorState.NodeIO("n2", "TOOL", "x", "y"))
             assertEquals(4, state.value.console.vars.size)
@@ -305,7 +301,7 @@ class ChatHomeConsoleDelegateTest {
         val console = state.value.console
         assertEquals(listOf("▶ INPUT", "✓ LITE_RT in 100ms"), console.logs.map { it.text })
         assertEquals(2, console.vars.size)
-        assertEquals("\"in\"", console.vars[0].valueJson)
+        assertEquals("in", console.vars[0].value)
         assertEquals(1, console.traces.size)
         assertEquals("LITE_RT", console.traces.single().name)
     }

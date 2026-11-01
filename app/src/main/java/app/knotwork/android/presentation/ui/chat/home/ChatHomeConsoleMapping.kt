@@ -11,7 +11,6 @@ import app.knotwork.design.components.console.ConsoleSource
 import app.knotwork.design.components.console.ConsoleTraceSpan
 import app.knotwork.design.components.console.ConsoleVarRow
 import app.knotwork.design.components.console.SpanStatus
-import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -22,9 +21,8 @@ import java.time.format.DateTimeFormatter
  * `:app` because the catalog layer cannot reach `app.knotwork.android.*` types
  * (Clean Architecture).
  *
- * All public functions are deterministic and free of Android dependencies
- * beyond `org.json.JSONObject` (already used elsewhere in the chat-home
- * presentation layer), so they remain trivially unit-testable.
+ * All public functions are deterministic and free of Android dependencies,
+ * so they remain trivially unit-testable.
  */
 
 /** Pre-formatted clock pattern used in [ConsoleLine.timestamp]. */
@@ -130,9 +128,9 @@ fun traceStepToConsoleSpan(trace: AgentOrchestratorState.TraceStep, startedAtMs:
  * catalog `ConsoleVarsBody` can collate input/output pairs of the same
  * node into a single section.
  *
- * The raw values are escaped through [JSONObject.quote] so multi-line and
- * special-character payloads render as a single safe JSON string without
- * breaking the row layout.
+ * The values go through as the node had them, line breaks included: the row
+ * draws its own preview of a value, and Copy value hands over exactly what
+ * the node received or produced.
  *
  * @param io Per-node I/O snapshot.
  * @return Ordered `[input, output]` row pair.
@@ -143,7 +141,7 @@ fun nodeIoToVarRows(io: AgentOrchestratorState.NodeIO): List<ConsoleVarRow> {
         ConsoleVarRow(
             node = node,
             key = CONSOLE_VAR_KEY_INPUT,
-            valueJson = JSONObject.quote(io.input),
+            value = io.input,
             depth = io.depth,
             inputSha256 = io.inputSha256,
             outputSha256 = io.outputSha256,
@@ -151,7 +149,7 @@ fun nodeIoToVarRows(io: AgentOrchestratorState.NodeIO): List<ConsoleVarRow> {
         ConsoleVarRow(
             node = node,
             key = CONSOLE_VAR_KEY_OUTPUT,
-            valueJson = JSONObject.quote(io.output),
+            value = io.output,
             depth = io.depth,
             inputSha256 = io.inputSha256,
             outputSha256 = io.outputSha256,

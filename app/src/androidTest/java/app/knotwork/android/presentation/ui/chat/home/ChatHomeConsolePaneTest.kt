@@ -289,7 +289,9 @@ class ChatHomeConsolePaneTest {
         assert(clipboard.lastText?.text == ConsoleCopyPayloads.line(line)) {
             "Clipboard payload mismatch — got: ${clipboard.lastText?.text}"
         }
-        verify(exactly = 1) { handles.console.signalConsoleLineCopied() }
+        // A copy that fits raises nothing of the app's own: Android 14+ shows the
+        // system's preview of what was copied.
+        verify(exactly = 0) { handles.console.signalConsoleCopyTooLarge() }
     }
 
     private fun sampleLine(text: String): ConsoleLine = ConsoleLine(

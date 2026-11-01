@@ -13,6 +13,16 @@ details.
 
 ## [Unreleased]
 
+### Changed
+
+- **The console's Vars tab shows values as the node had them.** No quotes are
+  added, a line break shows as a dim ↵ so three lines hold text rather than
+  blank lines, and a value cut to a preview shows its size under it.
+  *Copy value* now copies the value alone, exactly as it was — no `node key`
+  line, no quotes; *Copy all* on the tab is unchanged.
+- **Console copies no longer show the app's own "copied" message.** Android 14
+  and later shows the system's preview of what was copied.
+
 ### Fixed
 
 - **The Monitoring screen no longer closes the app over a repeated log line.**
@@ -25,6 +35,10 @@ details.
   spaces — a tool's answer, say — held the screen for seconds. A row now shows
   the first three lines; *Copy value* in its long-press menu still copies all
   of it.
+- **A console copy too large for the clipboard says so.** The system refuses
+  a clip over its transfer limit (about 1 MB), and that refusal went
+  unhandled; a node's output can be that large. The copy now shows *Too long
+  for the clipboard. Nothing was copied.*
 
 ## [0.12.2] - 2026-10-29
 

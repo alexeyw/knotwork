@@ -106,7 +106,7 @@ class ChatHomeConsoleMappingTest {
     }
 
     @Test
-    fun `given node IO when mapping then returns ordered input output rows with quoted values`() {
+    fun `given node IO when mapping then returns ordered input output rows with the values as they are`() {
         val io = AgentOrchestratorState.NodeIO(
             nodeId = "lite_rt_abcdef",
             nodeType = "LITE_RT",
@@ -118,14 +118,14 @@ class ChatHomeConsoleMappingTest {
 
         assertEquals(2, rows.size)
         assertEquals(CONSOLE_VAR_KEY_INPUT, rows[0].key)
-        assertEquals("\"user prompt\"", rows[0].valueJson)
+        assertEquals("user prompt", rows[0].value)
         assertEquals("LITE_RT#lite_r", rows[0].node)
         assertEquals(CONSOLE_VAR_KEY_OUTPUT, rows[1].key)
-        assertEquals("\"model reply\"", rows[1].valueJson)
+        assertEquals("model reply", rows[1].value)
     }
 
     @Test
-    fun `given node IO with special chars when mapping then values are JSON-escaped`() {
+    fun `given node IO with line breaks and quotes when mapping then the values keep them unescaped`() {
         val io = AgentOrchestratorState.NodeIO(
             nodeId = "x",
             nodeType = "T",
@@ -135,8 +135,8 @@ class ChatHomeConsoleMappingTest {
 
         val rows = nodeIoToVarRows(io)
 
-        assertEquals("\"line1\\nline2\"", rows[0].valueJson)
-        assertEquals("\"with \\\"quote\\\"\"", rows[1].valueJson)
+        assertEquals("line1\nline2", rows[0].value)
+        assertEquals("with \"quote\"", rows[1].value)
     }
 
     @Test

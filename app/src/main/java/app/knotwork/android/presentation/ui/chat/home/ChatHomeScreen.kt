@@ -222,8 +222,7 @@ fun ChatHomeScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val pipelineFallbackMessage = stringResource(R.string.errors_chat_pipeline_removed)
-    val consoleLineCopiedMessage = stringResource(R.string.chat_snackbar_console_line_copied)
-    val consoleAllCopiedMessage = stringResource(R.string.chat_snackbar_console_copied)
+    val consoleCopyTooLargeMessage = stringResource(R.string.chat_snackbar_console_copy_too_large)
     val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val importFailedTemplate = stringResource(R.string.chat_import_failed)
     val importUnreadableMessage = stringResource(R.string.chat_import_unreadable)
@@ -291,8 +290,7 @@ fun ChatHomeScreen(
     LaunchedEffect(viewModel) {
         viewModel.console.consoleSnackbarEvents.collect { event ->
             val message = when (event) {
-                ConsoleSnackbarEvent.LineCopied -> consoleLineCopiedMessage
-                ConsoleSnackbarEvent.AllCopied -> consoleAllCopiedMessage
+                ConsoleSnackbarEvent.CopyTooLarge -> consoleCopyTooLargeMessage
             }
             snackbarHostState.showSnackbar(message = message)
         }
@@ -416,6 +414,12 @@ fun ChatHomeScreen(
 
     val viewState = screenState.toViewState(fixtures = fixtures) { context.resolve(it) }
 
+    // A console copy that does not fit the clipboard says so; one that does is
+    // confirmed by the system's own preview.
+    val copyConsoleText: (String) -> Unit = { text ->
+        if (!clipboardManager.setConsoleText(text)) viewModel.console.signalConsoleCopyTooLarge()
+    }
+
     val callbacks = ChatHomeCallbacks(
         onComposerValueChange = viewModel::onComposerValueChange,
         onSend = viewModel::sendMessage,
@@ -445,18 +449,9 @@ fun ChatHomeScreen(
         onConsoleFilterChange = viewModel.console::onConsoleFilterChange,
         onConsoleSearch = viewModel.console::toggleConsoleSearch,
         onConsoleSearchQueryChange = viewModel.console::onConsoleSearchQueryChange,
-        onConsoleCopyLine = { line ->
-            clipboardManager.setText(AnnotatedString(ConsoleCopyPayloads.line(line)))
-            viewModel.console.signalConsoleLineCopied()
-        },
-        onConsoleCopyVar = { row ->
-            clipboardManager.setText(AnnotatedString(ConsoleCopyPayloads.variable(row)))
-            viewModel.console.signalConsoleLineCopied()
-        },
-        onConsoleCopySpan = { span ->
-            clipboardManager.setText(AnnotatedString(ConsoleCopyPayloads.span(span)))
-            viewModel.console.signalConsoleLineCopied()
-        },
+        onConsoleCopyLine = { line -> copyConsoleText(ConsoleCopyPayloads.line(line)) },
+        onConsoleCopyVar = { row -> copyConsoleText(ConsoleCopyPayloads.variable(row)) },
+        onConsoleCopySpan = { span -> copyConsoleText(ConsoleCopyPayloads.span(span)) },
         onConsoleFilterByLineSource = viewModel.console::filterConsoleByLineSource,
         // `Copy all` copies the tab the user is looking at. It used to copy log
         // lines whatever tab was open, so on Vars and Traces the button silently
@@ -472,8 +467,7 @@ fun ChatHomeScreen(
                 vars = console.vars,
                 traces = console.traces,
             )
-            clipboardManager.setText(AnnotatedString(payload))
-            viewModel.console.signalConsoleAllCopied()
+            copyConsoleText(payload)
         },
         onConsoleClear = viewModel.console::requestConsoleClear,
         onCloseConsole = viewModel.console::closeConsole,

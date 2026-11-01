@@ -5,6 +5,7 @@ import app.knotwork.design.components.console.ConsoleLine
 import app.knotwork.design.components.console.ConsoleTab
 import app.knotwork.design.components.console.ConsoleTraceSpan
 import app.knotwork.design.components.console.ConsoleVarRow
+import org.json.JSONObject
 
 /**
  * Plain-text clipboard payloads for the agent console.
@@ -37,17 +38,23 @@ object ConsoleCopyPayloads {
     fun allLines(lines: List<ConsoleLine>): String = lines.joinToString(separator = "\n") { line(it) }
 
     /**
-     * Renders one [ConsoleVarRow] as the clipboard payload inserted by
-     * the chat screen's `onConsoleCopyVar`. Format: `node key` on the first line, then the value
-     * verbatim.
+     * The clipboard payload of the chat screen's `onConsoleCopyVar`: the value
+     * alone, exactly as the node had it — no `node key` header, no quotes, its
+     * own line breaks.
      *
-     * The value is copied **whole**. This tab renders full node input and
-     * output — a run's assembled prompt is routinely thousands of characters —
-     * and the reason the action exists at all is that the alternative was a
-     * screenshot of a screenful of text. A payload that truncated would
-     * reproduce the problem it was added to solve.
+     * The value is copied **whole**. A row shows only a preview of it, and a
+     * run's assembled prompt is routinely thousands of characters; Copy value
+     * is how all of it leaves the tab, so it is data to paste, not a label.
      */
-    fun variable(row: ConsoleVarRow): String = "${row.node} ${row.key}\n${row.valueJson}"
+    fun variable(row: ConsoleVarRow): String = row.value
+
+    /**
+     * One [ConsoleVarRow] as a block of the Vars tab's `Copy all`: `node key`
+     * on the first line, then the value as one quoted JSON string. The quoting
+     * keeps one value to one line, so blocks stay apart however many line
+     * breaks a value has.
+     */
+    private fun variableBlock(row: ConsoleVarRow): String = "${row.node} ${row.key}\n${JSONObject.quote(row.value)}"
 
     /**
      * Renders one [ConsoleTraceSpan] as the clipboard payload inserted by
@@ -80,7 +87,7 @@ object ConsoleCopyPayloads {
         traces: List<ConsoleTraceSpan>,
     ): String = when (tab) {
         ConsoleTab.Logs -> allLines(visibleLogs)
-        ConsoleTab.Vars -> vars.joinToString(separator = "\n\n") { variable(it) }
+        ConsoleTab.Vars -> vars.joinToString(separator = "\n\n") { variableBlock(it) }
         ConsoleTab.Traces -> traces.joinToString(separator = "\n") { span(it) }
     }
 }

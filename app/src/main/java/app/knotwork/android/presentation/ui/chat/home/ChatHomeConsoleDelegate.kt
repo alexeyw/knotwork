@@ -71,8 +71,8 @@ class ChatHomeConsoleDelegate(
         MutableSharedFlow(extraBufferCapacity = 1)
 
     /**
-     * One-shot stream of snackbar events raised by the console pane (line
-     * copied, full log copied). The screen mirrors each emission into the
+     * One-shot stream of snackbar events raised by the console pane (a copy
+     * too large for the clipboard). The screen mirrors each emission into the
      * shared `SnackbarHostState`; the clipboard write itself is performed
      * by the Composable (which owns `LocalClipboardManager`).
      */
@@ -239,18 +239,13 @@ class ChatHomeConsoleDelegate(
     }
 
     /**
-     * Emits a one-shot snackbar event after the screen has placed the
-     * single-line clipboard payload on the system clipboard. The
-     * `ClipboardManager` interaction itself happens inside the Composable
-     * layer (which has access to `LocalClipboardManager`).
+     * Emits a one-shot snackbar event after a console copy did not fit the
+     * clipboard and nothing was copied. The clipboard write itself happens in
+     * the Composable layer (which has access to `LocalClipboardManager`); a copy
+     * that did fit raises nothing, since the system shows its own preview.
      */
-    fun signalConsoleLineCopied() {
-        _consoleSnackbarEvents.tryEmit(ConsoleSnackbarEvent.LineCopied)
-    }
-
-    /** One-shot snackbar event raised after the full filtered log is copied. */
-    fun signalConsoleAllCopied() {
-        _consoleSnackbarEvents.tryEmit(ConsoleSnackbarEvent.AllCopied)
+    fun signalConsoleCopyTooLarge() {
+        _consoleSnackbarEvents.tryEmit(ConsoleSnackbarEvent.CopyTooLarge)
     }
 
     /**
@@ -510,9 +505,6 @@ internal fun ChatHomeScreenState.withConsoleProjectionsCleared(): ChatHomeScreen
  * leaks into the VM).
  */
 enum class ConsoleSnackbarEvent {
-    /** A single console line was copied to the system clipboard. */
-    LineCopied,
-
-    /** The full filtered log was copied to the system clipboard. */
-    AllCopied,
+    /** A console copy was too large for the clipboard; nothing was copied. */
+    CopyTooLarge,
 }

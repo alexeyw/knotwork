@@ -27,8 +27,8 @@ class ConsoleCopyPayloadsTest {
     )
 
     private val vars = listOf(
-        ConsoleVarRow(node = "LITE_RT#1", key = "input", valueJson = "prompt text"),
-        ConsoleVarRow(node = "LITE_RT#1", key = "output", valueJson = "answer text"),
+        ConsoleVarRow(node = "LITE_RT#1", key = "input", value = "prompt text"),
+        ConsoleVarRow(node = "LITE_RT#1", key = "output", value = "answer text"),
     )
 
     private val traces = listOf(
@@ -51,14 +51,24 @@ class ConsoleCopyPayloadsTest {
     }
 
     @Test
-    fun `given a variable when formatting then the whole value follows a node and key header`() {
-        // A node's assembled prompt is routinely thousands of characters — that
-        // length is the reason the action exists, so the payload must not
-        // abbreviate it.
-        val longValue = "--- Original Task ---\n" + "x".repeat(4_000)
-        val row = ConsoleVarRow(node = "LITE_RT#501fab", key = "input", valueJson = longValue)
+    fun `given a variable when formatting then the payload is the whole value and nothing else`() {
+        // A node's assembled prompt is routinely thousands of characters and the
+        // row shows a preview, so the payload must not abbreviate it — and it is
+        // data to paste, so no header, no quotes, its own line breaks.
+        val longValue = "--- Original Task ---\n\"quoted\"\n" + "x".repeat(4_000)
+        val row = ConsoleVarRow(node = "LITE_RT#501fab", key = "input", value = longValue)
 
-        assertEquals("LITE_RT#501fab input\n$longValue", ConsoleCopyPayloads.variable(row))
+        assertEquals(longValue, ConsoleCopyPayloads.variable(row))
+    }
+
+    @Test
+    fun `given a value with line breaks when copying the Vars tab then each value stays on one quoted line`() {
+        val rows = listOf(ConsoleVarRow(node = "LITE_RT#1", key = "input", value = "one\ntwo"))
+
+        assertEquals(
+            "LITE_RT#1 input\n\"one\\ntwo\"",
+            ConsoleCopyPayloads.forTab(ConsoleTab.Vars, logs, rows, traces),
+        )
     }
 
     @Test
@@ -82,7 +92,7 @@ class ConsoleCopyPayloadsTest {
             ConsoleCopyPayloads.forTab(ConsoleTab.Logs, logs, vars, traces),
         )
         assertEquals(
-            "LITE_RT#1 input\nprompt text\n\nLITE_RT#1 output\nanswer text",
+            "LITE_RT#1 input\n\"prompt text\"\n\nLITE_RT#1 output\n\"answer text\"",
             ConsoleCopyPayloads.forTab(ConsoleTab.Vars, logs, vars, traces),
         )
         assertEquals(
