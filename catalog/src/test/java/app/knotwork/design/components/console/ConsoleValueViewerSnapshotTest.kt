@@ -1,8 +1,15 @@
 package app.knotwork.design.components.console
 
+import androidx.activity.BackEventCompat
+import androidx.activity.ComponentDialog
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
@@ -14,12 +21,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowDialog
 
 /**
  * Roborazzi baselines of the console's value viewer: a JSON value laid out and coloured,
  * a text value with its own lines, a value that starts like JSON but does not parse, one
- * long line without spaces cut into pieces, the formatting notice, and JSON at 200 %.
- * Reduced motion, so the opening is a short fade that the clock finishes.
+ * long line without spaces cut into pieces, the formatting notice, and JSON at 200 %; a
+ * long log with its scroll thumb at rest and dragged, and a back gesture's preview.
+ * Reduced motion, so the opening is a short fade that the clock finishes — except for the
+ * preview, which reduced motion turns off.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -88,9 +98,69 @@ class ConsoleValueViewerSnapshotTest {
             ),
         )
         rule.mainClock.advanceTimeBy(500)
-        rule.onNode(isDialog()).captureRoboImage(
-            roborazziOptions = KnotworkRoborazziOptions,
-            filePath = "src/test/snapshots/console_value_viewer_formatting.png",
+        capture("console_value_viewer_formatting")
+    }
+
+    @Test
+    fun console_value_viewer_thumb() {
+        render(logState())
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
+        rule.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp(startY = centerY, endY = centerY - 300f) }
+        rule.mainClock.advanceTimeBy(400)
+        capture("console_value_viewer_thumb")
+    }
+
+    @Test
+    fun console_value_viewer_thumb_drag() = dragSnapshot("console_value_viewer_thumb_drag")
+
+    @Test
+    @Config(fontScale = 2f)
+    fun console_value_viewer_thumb_drag_fs20() = dragSnapshot("console_value_viewer_thumb_drag_fs20")
+
+    @Test
+    fun console_value_viewer_back_preview() {
+        render(jsonState(), reducedMotion = false)
+        rule.waitForIdle()
+        val dispatcher = (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher
+        rule.runOnUiThread {
+            dispatcher.dispatchOnBackStarted(BackEventCompat(0f, 600f, 0f, BackEventCompat.EDGE_LEFT))
+            dispatcher.dispatchOnBackProgressed(BackEventCompat(120f, 600f, 0.6f, BackEventCompat.EDGE_LEFT))
+        }
+        rule.waitForIdle()
+        capture("console_value_viewer_back_preview")
+    }
+
+    /** The log scrolled by a finger, then its thumb held 40 % of the way down. */
+    private fun dragSnapshot(name: String) {
+        render(logState())
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
+        rule.onNode(hasScrollToIndexAction()).performTouchInput { swipeUp(startY = centerY, endY = centerY - 300f) }
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithTag(CONSOLE_VALUE_THUMB_TAG).performTouchInput {
+            down(center)
+            moveBy(Offset(0f, 520f))
+        }
+        rule.mainClock.advanceTimeBy(100)
+        capture(name)
+        rule.onNodeWithTag(CONSOLE_VALUE_THUMB_TAG).performTouchInput { up() }
+    }
+
+    /** 2 000 lines of a request log: well over five screens, so the thumb shows. */
+    private fun logState(): ConsoleValueViewerState {
+        val lines = (0 until 2_000).map { i ->
+            "09:%02d:%02d.%03d GET /v1/forecast?latitude=52.37 %d %d ms".format(
+                i / 60 % 60,
+                i % 60,
+                i * 37 % 1_000,
+                if (i % 41 == 0) 503 else 200,
+                20 + i * 13 % 90,
+            )
+        }
+        return ConsoleValueViewerState(
+            row = ConsoleVarRow(node = "TOOL#9d3e01", key = "body", value = lines.joinToString("\n")),
+            body = ConsoleValueBody.Ready(ConsoleValueFormat.Text, lines.map { ConsoleValueLine(0, it) }),
         )
     }
 
@@ -161,16 +231,20 @@ class ConsoleValueViewerSnapshotTest {
     private fun snapshot(name: String, state: ConsoleValueViewerState) {
         render(state)
         rule.waitForIdle()
+        capture(name)
+    }
+
+    private fun capture(name: String) {
         rule.onNode(isDialog()).captureRoboImage(
             roborazziOptions = KnotworkRoborazziOptions,
             filePath = "src/test/snapshots/$name.png",
         )
     }
 
-    private fun render(state: ConsoleValueViewerState) {
+    private fun render(state: ConsoleValueViewerState, reducedMotion: Boolean = true) {
         rule.setContent {
             KnotworkTheme(darkTheme = true) {
-                CompositionLocalProvider(LocalKnotworkA11y provides FixedKnotworkA11y(reducedMotion = true)) {
+                CompositionLocalProvider(LocalKnotworkA11y provides FixedKnotworkA11y(reducedMotion = reducedMotion)) {
                     ConsoleValueViewer(state = state, onClose = {}, onCopy = { true })
                 }
             }

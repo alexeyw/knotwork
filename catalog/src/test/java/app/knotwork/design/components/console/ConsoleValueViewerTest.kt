@@ -1,5 +1,12 @@
 package app.knotwork.design.components.console
 
+import androidx.activity.BackEventCompat
+import androidx.activity.ComponentDialog
+import androidx.activity.OnBackPressedDispatcher
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
@@ -9,6 +16,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.a11y.FixedKnotworkA11y
+import app.knotwork.design.a11y.LocalKnotworkA11y
 import app.knotwork.design.theme.KnotworkTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,8 +25,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 
-/** What the console's value viewer shows and does. */
+/** What the console's value viewer shows and does, its predictive back preview included. */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [36], qualifiers = "w360dp-h760dp-xhdpi")
 class ConsoleValueViewerTest {
@@ -41,13 +51,30 @@ class ConsoleValueViewerTest {
         viewed: ConsoleVarRow = row,
         onClose: () -> Unit = {},
         onCopy: (ConsoleVarRow) -> Boolean = { true },
+        reducedMotion: Boolean = false,
     ) {
         rule.setContent {
             KnotworkTheme {
-                ConsoleValueViewer(state = ConsoleValueViewerState(viewed, body), onClose = onClose, onCopy = onCopy)
+                CompositionLocalProvider(LocalKnotworkA11y provides FixedKnotworkA11y(reducedMotion = reducedMotion)) {
+                    ConsoleValueViewer(
+                        state = ConsoleValueViewerState(viewed, body),
+                        onClose = onClose,
+                        onCopy = onCopy,
+                    )
+                }
             }
         }
+        rule.waitForIdle()
     }
+
+    /** The back dispatcher of the viewer's window — the dialog's own, not the activity's. */
+    private fun dispatcher(): OnBackPressedDispatcher =
+        (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher
+
+    private fun backEvent(progress: Float) =
+        BackEventCompat(touchX = 0f, touchY = 600f, progress = progress, swipeEdge = BackEventCompat.EDGE_LEFT)
+
+    private fun closeBounds(): Rect = rule.onNodeWithContentDescription("Close").fetchSemanticsNode().boundsInRoot
 
     @Test
     fun `given a formatted JSON value when shown then the key, node, meta line and lines are there`() {
@@ -136,5 +163,80 @@ class ConsoleValueViewerTest {
             .flatMap { node -> node.config[SemanticsProperties.Text] }
             .maxOf { it.length }
         assertTrue("the longest text in the viewer has $longest characters", longest <= VALUE_PIECE_MAX_CHARS)
+    }
+
+    @Test
+    fun `given a gesture's progress when the preview is worked out then it eases, clamps, and is 0 if reduced`() {
+        assertEquals(0.5f, consoleValueBackPreview(progress = 0.5f, reduced = false, easing = LinearEasing), 0f)
+        assertEquals(1f, consoleValueBackPreview(progress = 1.5f, reduced = false, easing = LinearEasing), 0f)
+        assertEquals(0f, consoleValueBackPreview(progress = 0.5f, reduced = true, easing = LinearEasing), 0f)
+        val decelerate = CubicBezierEasing(0f, 0f, 0f, 1f)
+        assertTrue(consoleValueBackPreview(progress = 0.5f, reduced = false, easing = decelerate) > 0.5f)
+    }
+
+    @Test
+    fun `given a back gesture in progress when it reaches its end then the viewer scales towards 0_92`() {
+        show(json)
+        val before = closeBounds()
+
+        rule.runOnUiThread {
+            dispatcher().dispatchOnBackStarted(backEvent(0f))
+            dispatcher().dispatchOnBackProgressed(backEvent(1f))
+        }
+        rule.waitForIdle()
+
+        val during = closeBounds()
+        assertEquals(before.width * BACK_PREVIEW_SCALE, during.width, 0.5f)
+        assertTrue("the scaled viewer draws Close nearer the middle", during.left > before.left)
+    }
+
+    @Test
+    fun `given a back gesture when it is cancelled then the viewer returns and stays open`() {
+        var closed = 0
+        show(json, onClose = { closed++ })
+        val before = closeBounds()
+
+        rule.runOnUiThread {
+            dispatcher().dispatchOnBackStarted(backEvent(0f))
+            dispatcher().dispatchOnBackProgressed(backEvent(0.6f))
+            dispatcher().dispatchOnBackCancelled()
+        }
+        rule.waitForIdle()
+
+        assertEquals(before, closeBounds())
+        assertEquals(0, closed)
+    }
+
+    @Test
+    fun `given a back gesture when it is committed then the host hears it once the closing motion ends`() {
+        var closed = 0
+        show(json, onClose = { closed++ })
+
+        rule.runOnUiThread {
+            dispatcher().dispatchOnBackStarted(backEvent(0f))
+            dispatcher().dispatchOnBackProgressed(backEvent(0.7f))
+            dispatcher().onBackPressed()
+        }
+        rule.waitForIdle()
+
+        assertEquals(1, closed)
+    }
+
+    @Test
+    fun `given reduced motion when a back gesture runs then the viewer does not move, and back still closes it`() {
+        var closed = 0
+        show(json, onClose = { closed++ }, reducedMotion = true)
+        val before = closeBounds()
+
+        rule.runOnUiThread {
+            dispatcher().dispatchOnBackStarted(backEvent(0f))
+            dispatcher().dispatchOnBackProgressed(backEvent(1f))
+        }
+        rule.waitForIdle()
+        assertEquals(before, closeBounds())
+
+        rule.runOnUiThread { dispatcher().onBackPressed() }
+        rule.waitForIdle()
+        assertEquals(1, closed)
     }
 }

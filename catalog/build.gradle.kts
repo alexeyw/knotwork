@@ -146,6 +146,11 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui.tooling.preview)
 
+    // `PredictiveBackHandler` for the console value viewer's back preview. Declared so
+    // the catalog resolves the app's version; without it the catalog sees 1.8.2,
+    // pulled in through `coil-compose`.
+    implementation(libs.androidx.activity.compose)
+
     // Markdown renderer for catalog-side themed `Markdown(...)` factories
     // (`MarkdownTheme.kt`). `api` so consumers using the themed
     // typography / color factories don't have to redeclare the dep.

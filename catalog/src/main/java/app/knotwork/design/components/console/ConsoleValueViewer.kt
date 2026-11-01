@@ -1,8 +1,12 @@
 package app.knotwork.design.components.console
 
 import android.view.WindowInsetsController
+import androidx.activity.BackEventCompat
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -23,6 +27,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
@@ -66,6 +75,7 @@ import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette
 import app.knotwork.design.tokens.KnotworkTextStyles
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
@@ -99,6 +109,13 @@ private const val INDENT_CAP_FONT_SCALE = 1.5f
 /** Characters of indent per level, as `JSON.stringify(value, null, 2)` writes it. */
 private const val INDENT_CHARS_PER_LEVEL = 2
 
+/** The body's padding above its first line and below its last. */
+private val ListTopPadding = 12.dp
+private val ListBottomPadding = 24.dp
+
+/** The viewer's scale at the end of a back gesture's preview. */
+internal const val BACK_PREVIEW_SCALE = 0.92f
+
 /**
  * The whole of one Vars value, full screen over the console, on the console's tokens.
  *
@@ -107,7 +124,13 @@ private const val INDENT_CHARS_PER_LEVEL = 2
  * long line ([ConsoleValuePieces]). The body comes formatted from the host; while it
  * is not ready the header is already there, and after [LOADER_DELAY_MS] the body says
  * it is formatting. The viewer shows the row as it was when opened, rises in on open
- * and drops out on close — a plain fade under reduced motion. Back closes it.
+ * and drops out on close — a plain fade under reduced motion. A value more than five
+ * screens tall gets a scroll thumb ([ConsoleValueScrollThumb]).
+ *
+ * Back closes it. During a predictive back gesture the viewer follows the gesture: it
+ * scales towards [BACK_PREVIEW_SCALE] and rounds its corners to `shapes.xl`, showing the
+ * console behind; a cancelled gesture returns it, a committed one runs the closing
+ * motion from where the preview left it. Under reduced motion there is no preview.
  *
  * Copy hands the row to [onCopy]; when the host reports that the value did not fit
  * the clipboard, the viewer says so in its own snackbar.
@@ -132,6 +155,8 @@ fun ConsoleValueViewer(state: ConsoleValueViewerState, onClose: () -> Unit, onCo
         val reduced = KnotworkTheme.a11y.reducedMotion()
         val motion = KnotworkTheme.motion
         val rise = with(LocalDensity.current) { OPEN_RISE_DP.dp.roundToPx() }
+        val preview = rememberBackPreview(enabled = visible.targetState, reduced = reduced, onBack = close)
+        val corner = KnotworkTheme.shapes.xl
         AnimatedVisibility(
             visibleState = visible,
             enter = if (reduced) {
@@ -147,8 +172,64 @@ fun ConsoleValueViewer(state: ConsoleValueViewerState, onClose: () -> Unit, onCo
                     slideOutVertically(tween(CLOSE_MS, easing = motion.easeAccel)) { rise }
             },
         ) {
-            ViewerSurface(state = state, onClose = close, onCopy = onCopy)
+            ViewerSurface(
+                state = state,
+                onClose = close,
+                onCopy = onCopy,
+                modifier = Modifier.backPreview(preview, corner),
+            )
         }
+    }
+}
+
+/**
+ * How far a predictive back gesture has drawn the viewer into its preview, from 0 to 1:
+ * the gesture's progress through the decelerate curve, as the platform asks of an
+ * in-app preview; always 0 under reduced motion.
+ *
+ * @param progress the gesture's progress, from 0 to 1.
+ * @param reduced whether reduced motion is on.
+ * @param easing the curve the progress goes through.
+ */
+internal fun consoleValueBackPreview(progress: Float, reduced: Boolean, easing: Easing): Float =
+    if (reduced) 0f else easing.transform(progress.coerceIn(0f, 1f))
+
+/**
+ * Follows a predictive back gesture while [enabled]: the returned state is the preview's
+ * share ([consoleValueBackPreview]). A committed gesture — or a back press with no
+ * gesture — calls [onBack] and leaves the preview where it was, so the closing motion
+ * starts from it; a cancelled one returns the preview to 0.
+ */
+@Composable
+private fun rememberBackPreview(enabled: Boolean, reduced: Boolean, onBack: () -> Unit): State<Float> {
+    val preview = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val motion = KnotworkTheme.motion
+    PredictiveBackHandler(enabled = enabled) { events: Flow<BackEventCompat> ->
+        var committed = false
+        try {
+            events.collect { event ->
+                preview.snapTo(consoleValueBackPreview(event.progress, reduced, motion.easeDecel))
+            }
+            committed = true
+            onBack()
+        } finally {
+            // A cancelled gesture cancels this block; the return runs on its own.
+            if (!committed) scope.launch { preview.animateTo(0f, tween(motion.dur2, easing = motion.easeStd)) }
+        }
+    }
+    return preview.asState()
+}
+
+/** Scales the viewer and rounds its corners by the back preview's share. */
+private fun Modifier.backPreview(preview: State<Float>, corner: CornerBasedShape): Modifier = graphicsLayer {
+    val share = preview.value
+    val scale = 1f - (1f - BACK_PREVIEW_SCALE) * share
+    scaleX = scale
+    scaleY = scale
+    if (share > 0f) {
+        shape = RoundedCornerShape(corner.topStart.toPx(size, this) * share)
+        clip = true
     }
 }
 
@@ -167,13 +248,18 @@ private fun LightIconsOnSystemBars() {
 
 /** The viewer's opaque surface: bar, meta line and body, with the snackbar host over its foot. */
 @Composable
-private fun ViewerSurface(state: ConsoleValueViewerState, onClose: () -> Unit, onCopy: (ConsoleVarRow) -> Boolean) {
+private fun ViewerSurface(
+    state: ConsoleValueViewerState,
+    onClose: () -> Unit,
+    onCopy: (ConsoleVarRow) -> Boolean,
+    modifier: Modifier = Modifier,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val tooLong = stringResource(R.string.knotwork_console_value_copy_too_long)
     val paneTitle = "${state.row.key}, ${state.row.node}"
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(KnotworkTheme.extended.consoleBg)
             .semantics { this.paneTitle = paneTitle },
@@ -314,8 +400,15 @@ private fun ValueLines(lines: List<ConsoleValueLine>) {
         val pieces = remember(lines, widthPx, charPx, indentCap) {
             ConsoleValuePieces(lines) { line -> (widthPx - indentChars(line, indentCap) * charPx) / charPx }
         }
+        val listState = rememberLazyListState()
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+            state = listState,
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = ListTopPadding,
+                bottom = ListBottomPadding,
+            ),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(count = pieces.count) { index ->
@@ -329,6 +422,14 @@ private fun ValueLines(lines: List<ConsoleValueLine>) {
                 )
             }
         }
+        ConsoleValueScrollThumb(
+            listState = listState,
+            pieces = pieces,
+            lineCount = lines.size,
+            rowPx = with(density) { style.lineHeight.toPx() },
+            viewportPx = constraints.maxHeight,
+            paddingPx = with(density) { (ListTopPadding + ListBottomPadding).roundToPx() },
+        )
     }
 }
 
