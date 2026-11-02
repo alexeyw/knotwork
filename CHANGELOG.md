@@ -13,6 +13,8 @@ details.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-02
+
 ### Added
 
 - **A long value in the console's Vars tab opens whole.** Tap a row cut to a
@@ -7070,7 +7072,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/alexeyw/knotwork/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/alexeyw/knotwork/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/alexeyw/knotwork/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/alexeyw/knotwork/compare/v0.11.1...v0.12.0
