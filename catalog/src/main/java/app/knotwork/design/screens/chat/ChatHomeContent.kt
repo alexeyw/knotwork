@@ -730,6 +730,7 @@ private fun ChatHomeMessageList(
                 onErrorRetry = callbacks.onErrorRetry,
                 onContextAction = { action -> callbacks.onMessageContextAction(row.id, action) },
                 markdownRenderer = markdownRenderer,
+                onReadWholeMessage = { callbacks.onReadWholeMessage(row.id) },
             )
         }
         if (state.visualState == ChatHomeVisualState.Generating) {

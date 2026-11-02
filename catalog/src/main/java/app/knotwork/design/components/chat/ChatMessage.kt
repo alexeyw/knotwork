@@ -119,6 +119,10 @@ private const val LONG_PRESS_SCALE_DURATION_MS = 60
  * limit it reached.
  * @param onRunStop invoked when the user taps the stop CTA on a
  * [ChatContent.RunCeilingPause] card.
+ * @param markdownRenderer draws a [ChatContent.Markdown] body; `null` draws its source
+ * as plain text.
+ * @param onReadWholeMessage invoked when the user taps *Read whole message* under the
+ * [ChatMessagePreview] of a long [ChatContent.Text] or [ChatContent.Markdown] body.
  */
 @Composable
 fun ChatMessage(
@@ -140,6 +144,7 @@ fun ChatMessage(
     onRunContinue: () -> Unit = {},
     onRunStop: () -> Unit = {},
     markdownRenderer: (@Composable (String) -> Unit)? = null,
+    onReadWholeMessage: () -> Unit = {},
 ) {
     when (role) {
         ChatRole.System -> SystemMessage(content = content, metadata = metadata, modifier = modifier)
@@ -161,6 +166,7 @@ fun ChatMessage(
             onRunContinue = onRunContinue,
             onRunStop = onRunStop,
             markdownRenderer = markdownRenderer,
+            onReadWholeMessage = onReadWholeMessage,
             modifier = modifier,
         )
         ChatRole.Assistant, ChatRole.Tool -> BubbleMessage(
@@ -181,6 +187,7 @@ fun ChatMessage(
             onRunContinue = onRunContinue,
             onRunStop = onRunStop,
             markdownRenderer = markdownRenderer,
+            onReadWholeMessage = onReadWholeMessage,
             modifier = modifier,
         )
     }
@@ -206,6 +213,7 @@ private fun BubbleMessage(
     onRunContinue: () -> Unit,
     onRunStop: () -> Unit,
     markdownRenderer: (@Composable (String) -> Unit)?,
+    onReadWholeMessage: () -> Unit,
     modifier: Modifier,
 ) {
     val containerSize = LocalWindowInfo.current.containerSize
@@ -241,6 +249,7 @@ private fun BubbleMessage(
                 onRunContinue = onRunContinue,
                 onRunStop = onRunStop,
                 markdownRenderer = markdownRenderer,
+                onReadWholeMessage = onReadWholeMessage,
             )
             // Clarification / HITL confirmation cards are self-contained
             // panels with their own internal status indicators; rendering
@@ -346,17 +355,22 @@ private fun BubbleBody(
     onRunContinue: () -> Unit,
     onRunStop: () -> Unit,
     markdownRenderer: (@Composable (String) -> Unit)?,
+    onReadWholeMessage: () -> Unit,
 ) {
     when (content) {
         is ChatContent.Text -> TextBubble(
             role = role,
             text = content.text,
+            preview = content.preview,
+            onReadWhole = onReadWholeMessage,
             onContextAction = onContextAction,
         )
         is ChatContent.Markdown -> MarkdownBubble(
             role = role,
             source = content.source,
+            preview = content.preview,
             renderer = markdownRenderer,
+            onReadWhole = onReadWholeMessage,
             onContextAction = onContextAction,
         )
         is ChatContent.Error -> ErrorTile(
@@ -424,20 +438,41 @@ private fun ImageBubble(role: ChatRole, content: ChatContent.Image, onContextAct
     }
 }
 
-/** Text bubble + long-press context menu — the bread-and-butter chat-message variant. */
+/**
+ * Text bubble + long-press context menu — the bread-and-butter chat-message variant. A
+ * long message shows its [preview] instead ([LongMessagePreview]).
+ */
 @Composable
-private fun TextBubble(role: ChatRole, text: String, onContextAction: ((ChatContextAction) -> Unit)?) {
+private fun TextBubble(
+    role: ChatRole,
+    text: String,
+    onContextAction: ((ChatContextAction) -> Unit)?,
+    preview: ChatMessagePreview? = null,
+    onReadWhole: () -> Unit = {},
+) {
+    ChatBubbleChrome(role = role, onContextAction = onContextAction) {
+        if (preview == null) {
+            BubbleText(role = role, text = text)
+        } else {
+            LongMessagePreview(role = role, preview = preview, onReadWhole = onReadWhole) {
+                BubbleText(role = role, text = preview.text)
+            }
+        }
+    }
+}
+
+/** A plain-text body in the bubble's text colour. */
+@Composable
+private fun BubbleText(role: ChatRole, text: String) {
     val textColor = chatBubbleTextColor(role)
     // A run without whitespace lays out in time that grows with its square, so a long
     // one is drawn as consecutive texts (see `unbrokenRunCuts`); other text stays whole.
     val pieces = remember(text) { text.splitAtUnbrokenRuns() }
-    ChatBubbleChrome(role = role, onContextAction = onContextAction) {
-        if (pieces.size == 1) {
-            Text(text = text, style = KnotworkTextStyles.BodyBase, color = textColor)
-        } else {
-            Column {
-                for (piece in pieces) Text(text = piece, style = KnotworkTextStyles.BodyBase, color = textColor)
-            }
+    if (pieces.size == 1) {
+        Text(text = text, style = KnotworkTextStyles.BodyBase, color = textColor)
+    } else {
+        Column {
+            for (piece in pieces) Text(text = piece, style = KnotworkTextStyles.BodyBase, color = textColor)
         }
     }
 }
@@ -452,16 +487,36 @@ private fun TextBubble(role: ChatRole, text: String, onContextAction: ((ChatCont
 private fun MarkdownBubble(
     role: ChatRole,
     source: String,
+    preview: ChatMessagePreview?,
     renderer: (@Composable (String) -> Unit)?,
+    onReadWhole: () -> Unit,
     onContextAction: ((ChatContextAction) -> Unit)?,
 ) {
     if (renderer == null) {
-        TextBubble(role = role, text = source, onContextAction = onContextAction)
+        TextBubble(
+            role = role,
+            text = source,
+            onContextAction = onContextAction,
+            preview = preview,
+            onReadWhole = onReadWhole,
+        )
         return
     }
     ChatBubbleChrome(role = role, onContextAction = onContextAction) {
-        renderer(source)
+        if (preview == null) {
+            renderer(source)
+        } else {
+            LongMessagePreview(role = role, preview = preview, onReadWhole = onReadWhole) { renderer(preview.text) }
+        }
     }
+}
+
+/** The bubble's background for [role]: the chrome's fill, and the colour a preview's fade runs into. */
+@Composable
+internal fun chatBubbleBackground(role: ChatRole): Color = when (role) {
+    ChatRole.User -> KnotworkTheme.extended.chatUserBg
+    ChatRole.Tool -> KnotworkTheme.extended.chatToolBg
+    else -> KnotworkTheme.extended.chatAgentBg
 }
 
 /** Resolves the per-role text colour used by [TextBubble] — paired with the
@@ -486,11 +541,8 @@ private fun ChatBubbleChrome(
     onContextAction: ((ChatContextAction) -> Unit)?,
     body: @Composable () -> Unit,
 ) {
-    val (bubbleColor, shape) = when (role) {
-        ChatRole.User -> KnotworkTheme.extended.chatUserBg to ChatBubbleShapes.User
-        ChatRole.Tool -> KnotworkTheme.extended.chatToolBg to ChatBubbleShapes.Assistant
-        else -> KnotworkTheme.extended.chatAgentBg to ChatBubbleShapes.Assistant
-    }
+    val bubbleColor = chatBubbleBackground(role)
+    val shape = if (role == ChatRole.User) ChatBubbleShapes.User else ChatBubbleShapes.Assistant
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     var menuExpanded by remember { mutableStateOf(false) }

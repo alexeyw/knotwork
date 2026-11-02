@@ -375,6 +375,25 @@ history is portable to any app that handles JSON or plain text.
   available chat is auto-selected, or a fresh unbound chat is created
   if none remain.
 
+### Reading a long message
+
+A message over 6 000 characters — an agent's answer or one you pasted —
+shows only its beginning in the chat: its first whole paragraphs, list
+items, code lines or table rows, up to 4 000 characters. The last lines fade
+out above **Read whole message**, which says how much of the message is
+shown (*35% shown*; *Less than 1% shown* for a very long one).
+
+Tap it to read the whole message full screen. The bar shows who wrote it,
+when, and — for an answer — the model, with **Copy** for the whole message;
+back closes it and leaves the chat where it was. The beginning shows at
+once and the rest is prepared behind it: if you scroll to the end before
+it is ready, the list says *Preparing the rest…* until it arrives. A long
+code block reads as one block, though each stretch of 40 lines scrolls
+sideways on its own.
+
+The long-press menu works on the whole message, not on what the bubble
+shows.
+
 ### Copying a message
 
 Long-press any message bubble to open its context menu. From there you

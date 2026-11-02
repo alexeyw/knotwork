@@ -74,9 +74,11 @@ import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
 import app.knotwork.design.components.chat.ChatContent
+import app.knotwork.design.components.chat.ChatMessagePreview
 import app.knotwork.design.components.chat.ChatMessageStatus
 import app.knotwork.design.components.chat.ChatRole
 import app.knotwork.design.components.chat.ComposerVoiceNotice
+import app.knotwork.design.components.chat.chatMessagePreview
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleSnap
 import io.mockk.coEvery
@@ -324,6 +326,8 @@ class ChatHomeViewModelTest {
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.
         vm.traceProjectionDispatcher = testDispatcher
+        // And the cut of a long message's preview.
+        vm.messagePreviewDispatcher = testDispatcher
     }
 
     @Test
@@ -381,6 +385,28 @@ class ChatHomeViewModelTest {
         assertEquals("hello", (rows[1].content as ChatContent.Markdown).source)
         assertEquals(ChatHomeUiState.Idle, viewModel.state.value.visual)
     }
+
+    @Test
+    fun `given a long answer when the display flow emits then its row carries a preview and Copy takes it whole`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            val answer = (1..40).joinToString("\n\n") { "Paragraph $it. " + "Words to read slowly. ".repeat(13) }
+
+            messagesFlow.value = listOf(
+                ChatMessage(id = 1, sessionId = sessionId, role = Role.USER, content = "hi", timestamp = 0),
+                ChatMessage(id = 2, sessionId = sessionId, role = Role.AGENT, content = answer, timestamp = 0),
+            )
+            advanceUntilIdle()
+
+            val rows = viewModel.state.value.messages
+            assertNull((rows[0].content as ChatContent.Text).preview)
+            val content = rows[1].content as ChatContent.Markdown
+            assertEquals(answer, content.source)
+            assertEquals(chatMessagePreview(answer, markdown = true), content.preview)
+            assertEquals(answer, viewModel.transfer.textForRow(rows[1].id))
+        }
 
     @Test
     fun `saveMessageToMemory persists the row text and emits a Saved event`() = runTest(testDispatcher) {
@@ -2399,6 +2425,27 @@ class ChatHomeViewModelTest {
         val row = ChatHomeViewModel.chatMessageToRow(msg, "Gemma 2B")
         assertEquals(ChatRole.Assistant, row.role)
         assertNull(row.metadata.model)
+    }
+
+    @Test
+    fun `chatMessageToRow puts a preview on text and Markdown content and none on an image`() {
+        val preview = ChatMessagePreview(text = "the beginning", shownPercent = 35)
+        val user = ChatMessage(id = 1L, sessionId = "s", role = Role.USER, content = "long", timestamp = 0)
+        val agent = user.copy(id = 2L, role = Role.AGENT)
+        val image = user.copy(
+            id = 3L,
+            attachment = MessageAttachment(path = "a.jpg", mimeType = "image/jpeg", width = 4, height = 3),
+        )
+
+        assertEquals(
+            preview,
+            (ChatHomeViewModel.chatMessageToRow(user, "M", preview = preview).content as ChatContent.Text).preview,
+        )
+        assertEquals(
+            preview,
+            (ChatHomeViewModel.chatMessageToRow(agent, "M", preview = preview).content as ChatContent.Markdown).preview,
+        )
+        assertTrue(ChatHomeViewModel.chatMessageToRow(image, "M", preview = preview).content is ChatContent.Image)
     }
 
     @Test

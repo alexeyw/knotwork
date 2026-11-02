@@ -47,6 +47,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ChatHomeDrawerTest.kt` - Covers the drawer surface plus structural composer presence in the secondary states.
         - `ChatHomeHitlScreenFlowTest.kt` - Covers the full HITL approval flow through `ChatHomeScreen`.
         - `ChatHomeMessageCopyTest.kt` - The chat's *Copy* puts the whole message on the clipboard through `setClipboardText`: no snackbar of the app's own when it fits — Android 14+ shows the system's preview — and *Too long for the clipboard* when the system refuses it.
+        - `ChatHomeMessageReaderTest.kt` - A long message's *Read whole message* opens the whole message in the reader over the chat, and Back closes it.
         - `ChatHomeOverflowMenuTest.kt` - Tests for the chat home overflow menu.
         - `ChatHomeSendFlowTest.kt` - Covers the user-prompted send flow on the chat home surface: composer value propagation, the Send icon tap firing `sendMessage()`, and the `Idle → Generating → Idle` UI transitions that follow.
         - `ChatHomeViewModelMockFactory.kt` - Mocked `ChatHomeViewModel` for screen tests: a mutable mirror of its state flow that a scenario drives through phases without re-stubbing the mock.

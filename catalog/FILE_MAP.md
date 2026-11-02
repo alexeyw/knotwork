@@ -43,6 +43,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ChatContent.kt` - sealed `ChatContent` body (`Text`, `Markdown`, `Confirmation`, `Clarification`, `Error`, `ToolCall`) + `ToolCallStatus` enum.
     - `ChatContextAction.kt` - `Copy | Rerun | Rate` enum surfaced by the long-press menu.
     - `ChatMessage.kt` - root chat-message renderer with long-press context menu and per-content dispatch.
+    - `ChatMessagePreview.kt` - The beginning of a long message, which its bubble shows instead of the whole, with a way into the full-screen reader (`ChatMessageReader`).
     - `ChatMessageReader.kt` - The whole of one long chat message, full screen over the chat, in the app's theme.
     - `ChatMetadata.kt` - `ChatMetadata` data class + `ChatMessageStatus` enum driving the trailing footer glyph.
     - `ChatReaderItem.kt` - One item of the message reader's list.
@@ -58,6 +59,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ImageViewer.kt` - full-screen viewer opened from a thumbnail: full-bleed image on an always-dark scrim (photo viewing reads the same in both themes), file name + dimensions in the top bar, an optional share action; no pinch-zoom.
     - `InterruptedRunCard.kt` - inline status card shown in the chat stream when the session's last run died with the process (Doze, OOM kill, swipe from recents) instead of finishing: `surface1` tile with a muted outline, so it reads as system status rather than an agent message, a question, or a permission gate.
     - `InterruptedRunCardModel.kt` - immutable payload of the interrupted-run status card (already-resolved node label — mapping a node id to a display name is a presentation concern).
+    - `LongMessagePreview.kt` - A long message's `ChatMessagePreview` inside its bubble: the preview's text, a fade over its last lines into the bubble's own colour, then *Read whole message · N% shown* →, which calls `onReadWhole`.
     - `RunCeilingPauseCard.kt` - Knotwork run-ceiling pause card — the chat-stream status surface asking whether a run that spent one of its limits may carry on. Shares `RunStatusTile` chrome with the interrupted-run card; Continue names the size of the portion it buys.
     - `RunCeilingPauseCardModel.kt` - Immutable payload of a `RunCeilingPauseCard` — the status card surfaced in the chat stream when a run has spent one of the limits the user set for it and is waiting to be told whether it may carry on.
     - `RunStatusTile.kt` - Shared chrome of the chat stream's **run-status tiles** — the cards that report on the run itself rather than on anything the agent said.
@@ -455,6 +457,7 @@ matters.
     - `ChatComposerTapTest.kt` - A tap anywhere on the composer belongs to the composer.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
     - `ChatMessageLongTextTest.kt` - A chat bubble never hands one text a run without whitespace longer than `UNBROKEN_RUN_MAX`: laid out whole, 200 000 characters of minified JSON froze the chat for seconds in one frame.
+    - `ChatMessagePreviewTest.kt` - Where a long message's bubble preview ends, by the design's cut rule.
     - `ChatMessageReaderSnapshotTest.kt` - Roborazzi baselines of the chat's message reader: an agent's Markdown answer in both themes and at 200 %, the user's own message as plain text, the seam between two chunks of a long code block, and the end of the list while the rest of a long message is being prepared.
     - `ChatMessageReaderTest.kt` - What the chat's message reader shows and does while a message is prepared and once it is.
     - `ChatReaderItemTest.kt` - How the message reader cuts a message into list items, and which keys the items carry.
@@ -465,6 +468,8 @@ matters.
     - `HitlRequestContextTest.kt` - `label` — the one place that names whose words a request is.
     - `ImageAttachmentCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ImageAttachmentCatalogContent` in both themes plus a reduced-motion variant.
     - `InterruptedRunCardTest.kt` - Behavioural coverage for `InterruptedRunCard` — the status card the chat stream pins when the session's most recent pipeline run died with its process.
+    - `LongMessagePreviewSnapshotTest.kt` - Roborazzi baselines of a long message's bubble, scrolled to the end of its preview: the fade into the bubble's colour, *Read whole message* with the share shown, and the footer under the bubble.
+    - `LongMessagePreviewTest.kt` - A long message's bubble: its preview, the fade, and *Read whole message*, which opens the reader.
   - `chips/` - chips and pills. The behavioural tests here exist for one reason: colour is never the only signal, so every variant must announce its state.
     - `KnotworkChipsSnapshotTest.kt` - Roborazzi snapshot baseline for `KnotworkChipsCatalogContent` in both themes.
     - `KnotworkChipTest.kt` - Behavioural tests for `KnotworkChip`.
