@@ -32,6 +32,12 @@
          menu, and the message reader. -->
     <string name="knotwork_copy_too_long">Too long for the clipboard. Nothing was copied.</string>
 
+    <!-- Under the preview of a long message in its bubble: opens the whole message in the reader. -->
+    <string name="knotwork_chat_long_read_whole">Read whole message</string>
+    <!-- After "Read whole message": how much of the message the preview shows. %1$s is a percent in the locale's format, rounded down, e.g. "35%". -->
+    <string name="knotwork_chat_long_shown">%1$s shown</string>
+    <!-- After "Read whole message", instead of the share, when the preview shows under 1 % of the message. %1$s is "1%" in the locale's format. -->
+    <string name="knotwork_chat_long_shown_less">Less than %1$s shown</string>
     <!-- Message reader, the full-screen view of one long message: its title for the agent's or a pipeline's message. -->
     <string name="knotwork_chat_long_reader_agent">Agent’s message</string>
     <!-- Message reader: its title for the user's own message. -->

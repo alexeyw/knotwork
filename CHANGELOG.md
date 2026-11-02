@@ -29,6 +29,14 @@ details.
   words the thumb's place is an estimate. The back gesture now previews the
   console behind: the viewer shrinks and rounds its corners as you swipe,
   and comes back if you let go.
+- **A long chat message shows its beginning, and opens whole.** A message
+  over 6 000 characters — the agent's or your own — shows its first whole
+  blocks, up to 4 000 characters, fading out above *Read whole message* and
+  how much of it is shown. That opens the whole message full screen, in the
+  app's colours, with its time and model, a *Copy* button, and back to close.
+  Its beginning is drawn at once and the rest follows; a very long message
+  says *Preparing the rest…* if you reach the end first. The long-press menu
+  still acts on the whole message.
 
 ### Changed
 

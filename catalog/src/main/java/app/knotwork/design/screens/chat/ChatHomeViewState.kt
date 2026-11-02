@@ -525,6 +525,12 @@ class ChatHomeCallbacks(
      * is non-null.
      */
     val onMessageContextAction: (rowId: String, action: ChatContextAction) -> Unit = { _, _ -> },
+    /**
+     * Fired when the user taps *Read whole message* under the preview of a
+     * long message. The argument is the `ChatHomeMessageRow.id` of its row;
+     * the host opens the whole message in the reader.
+     */
+    val onReadWholeMessage: (rowId: String) -> Unit = {},
 )
 
 /** Convenience factory returning a callbacks bundle that ignores every event. */

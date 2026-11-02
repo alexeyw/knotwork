@@ -30,9 +30,11 @@ sealed interface ChatContent {
     /**
      * Plain-text body. Rendered with `KnotworkTextStyles.BodyBase`.
      *
-     * @property text user-visible text.
+     * @property text user-visible text: the whole message, which Copy and the reader take.
+     * @property preview what the bubble shows instead of a message longer than
+     *   [CHAT_PREVIEW_THRESHOLD] characters, or `null` to show [text] whole.
      */
-    data class Text(val text: String) : ChatContent
+    data class Text(val text: String, val preview: ChatMessagePreview? = null) : ChatContent
 
     /**
      * Markdown body. Rendered as plain text in catalog v0 (no markdown
@@ -40,9 +42,11 @@ sealed interface ChatContent {
      * upgrades this to a real renderer; the catalog API is forward-compatible
      * because callers already pass the raw source.
      *
-     * @property source raw markdown source.
+     * @property source raw markdown source: the whole message, which Copy and the reader take.
+     * @property preview what the bubble shows instead of a message longer than
+     *   [CHAT_PREVIEW_THRESHOLD] characters, or `null` to show [source] whole.
      */
-    data class Markdown(val source: String) : ChatContent
+    data class Markdown(val source: String, val preview: ChatMessagePreview? = null) : ChatContent
 
     /**
      * HITL confirmation prompt — `HitlConfirmationCard` rendered inside the

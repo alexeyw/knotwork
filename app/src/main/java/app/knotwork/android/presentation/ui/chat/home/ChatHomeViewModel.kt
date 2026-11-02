@@ -46,6 +46,7 @@ import app.knotwork.android.domain.usecases.TranscribeAudioUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import app.knotwork.design.components.chat.ChatContent
+import app.knotwork.design.components.chat.ChatMessagePreview
 import app.knotwork.design.components.chat.ChatMessageStatus
 import app.knotwork.design.components.chat.ChatMetadata
 import app.knotwork.design.components.chat.ChatRole
@@ -253,6 +254,14 @@ constructor(
      */
     @VisibleForTesting
     internal var traceProjectionDispatcher: CoroutineDispatcher = Dispatchers.Default
+
+    /**
+     * Dispatcher carrying the cut of a long message's bubble preview
+     * ([ChatMessagePreviews]): a Markdown message's beginning is parsed to find its
+     * blocks. Off-main by default; swapped for the test dispatcher in unit tests.
+     */
+    @VisibleForTesting
+    internal var messagePreviewDispatcher: CoroutineDispatcher = Dispatchers.Default
 
     /**
      * Console-pane delegate (live `ConsoleLog` / `PipelineTrace` / `NodeIO`
@@ -691,17 +700,20 @@ constructor(
         attachment: MessageAttachment?,
     ): SendingUserTurn {
         val sentAt = System.currentTimeMillis()
+        val message = ChatMessage(
+            sessionId = sessionId,
+            role = Role.USER,
+            content = content,
+            timestamp = sentAt,
+            attachment = attachment,
+        )
         val row = chatMessageToRow(
-            message = ChatMessage(
-                sessionId = sessionId,
-                role = Role.USER,
-                content = content,
-                timestamp = sentAt,
-                attachment = attachment,
-            ),
+            message = message,
             activeModelName = _state.value.model.name,
             attachmentModel = attachment?.let { attachmentStore.absolutePathFor(it.path) },
             onImageTap = attachment?.let { { attachments.openImageViewer(it) } },
+            // The user's text is plain: its cut reads no further than the preview.
+            preview = ChatMessagePreviews.previewOf(message),
         )
         return SendingUserTurn(
             row = row.copy(metadata = row.metadata.copy(status = ChatMessageStatus.Pending)),
@@ -1076,8 +1088,12 @@ constructor(
             rebalanceRestingState()
             return
         }
+        // The thread's previews, each cut once; a new thread starts with none.
+        val previews = ChatMessagePreviews { messagePreviewDispatcher }
         messagesJob = viewModelScope.launch {
             chatRepository.getDisplayMessagesForSession(sessionId).collect { incoming ->
+                // Off the main thread only when a long message has not been cut yet.
+                val previewById = previews.of(incoming)
                 _state.update { current ->
                     current.copy(
                         // The stored row has arrived: it takes the bubble's place in
@@ -1096,6 +1112,7 @@ constructor(
                                 // the missing state if the file is gone.
                                 attachmentModel = attachment?.let { attachmentStore.absolutePathFor(it.path) },
                                 onImageTap = attachment?.let { { attachments.openImageViewer(it) } },
+                                preview = message.id?.let(previewById::get),
                             )
                         },
                     )
@@ -1324,12 +1341,16 @@ constructor(
          * Projects a domain [ChatMessage] onto the design-system row
          * model. Kept on the companion so the mapping can be unit-tested
          * without spinning up the VM.
+         *
+         * @param preview what the bubble shows instead of a long text or Markdown
+         *   message ([ChatMessagePreviews]); `null` shows the message whole.
          */
         fun chatMessageToRow(
             message: ChatMessage,
             activeModelName: String,
             attachmentModel: Any? = null,
             onImageTap: (() -> Unit)? = null,
+            preview: ChatMessagePreview? = null,
         ): ChatHomeMessageRow {
             val role = when (message.role) {
                 Role.USER -> ChatRole.User
@@ -1376,8 +1397,8 @@ constructor(
                     },
                     onTap = onImageTap,
                 )
-                role == ChatRole.Assistant || role == ChatRole.Tool -> ChatContent.Markdown(message.content)
-                else -> ChatContent.Text(message.content)
+                role == ChatRole.Assistant || role == ChatRole.Tool -> ChatContent.Markdown(message.content, preview)
+                else -> ChatContent.Text(message.content, preview)
             }
             return ChatHomeMessageRow(
                 id = rowId,

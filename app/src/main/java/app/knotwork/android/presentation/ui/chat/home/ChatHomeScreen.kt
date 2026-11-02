@@ -74,6 +74,7 @@ import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chat.AudioSourceChooserSheet
 import app.knotwork.design.components.chat.ChatContextAction
+import app.knotwork.design.components.chat.ChatMessageReader
 import app.knotwork.design.components.chat.ImageViewer
 import app.knotwork.design.components.chat.SourceChooserSheet
 import app.knotwork.design.components.console.HashKind
@@ -215,6 +216,9 @@ fun ChatHomeScreen(
     var reportTargetRowId by remember { mutableStateOf<String?>(null) }
     var reportReason by remember { mutableStateOf(ContentReportReason.HARMFUL_OR_UNSAFE) }
     var reportNote by remember { mutableStateOf("") }
+    // The row whose whole message is open in the reader. Saved, so the reader
+    // is still open after a configuration change.
+    var readerRowId by rememberSaveable { mutableStateOf<String?>(null) }
     // The in-flight archive-undo snackbar, so a second archive supersedes it.
     var archiveSnackbarJob by remember { mutableStateOf<Job?>(null) }
 
@@ -559,6 +563,7 @@ fun ChatHomeScreen(
         // Tapping the agent-status pill above the composer opens the
         // console pane at the Partial snap — a one-tap drill-in affordance.
         onAgentStatusClick = { viewModel.console.openConsole() },
+        onReadWholeMessage = { rowId -> readerRowId = rowId },
         onMessageContextAction = { rowId, action ->
             when (action) {
                 ChatContextAction.Copy -> {
@@ -842,6 +847,20 @@ fun ChatHomeScreen(
                 isMissing = viewer.isMissing,
                 onDismiss = viewModel.attachments::dismissImageViewer,
             )
+        }
+        readerRowId?.let { rowId ->
+            val reader = viewState.messages.firstOrNull { it.id == rowId }?.let(::messageReaderState)
+            if (reader == null) {
+                // The thread no longer shows the row: forget it, so it cannot open later.
+                LaunchedEffect(rowId) { readerRowId = null }
+            } else {
+                ChatMessageReader(
+                    state = reader,
+                    onClose = { readerRowId = null },
+                    // The whole message, as the menu's Copy takes it.
+                    onCopy = { clipboardManager.setClipboardText(reader.text) },
+                )
+            }
         }
     }
 }

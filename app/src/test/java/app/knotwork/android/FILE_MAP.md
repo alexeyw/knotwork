@@ -619,10 +619,12 @@ Only Kotlin files appear inside the generated blocks.
         - `ChatHomeRunDelegateTest.kt` - `ChatHomeRunDelegate`: the strip follows the console's run, a long check asks first and a short one starts, the check's events fill the sheet, a start-again asks then hands the recorded seed to the send path, and the export renders before its sheet opens.
         - `ChatHomeStateMappingTest.kt` - Pure-Kotlin unit tests for `ChatHomeScreenState.toViewState` — the boundary mapper between the aggregated screen state owned by `:app` and the `app.knotwork.design.screens.chat.ChatHomeViewState` consumed by the stateless `ChatHomeContent` in `:catalog`.
         - `ChatHomeViewModelTest.kt` - Unit-tests for `ChatHomeViewModel`.
+        - `ChatMessagePreviewsTest.kt` - Which messages of a thread get a bubble preview, and that each is cut once, off the caller's thread.
         - `ClipboardTextTest.kt` - What `setClipboardText` reports for each way the clipboard write ends.
         - `ConsoleCopyPayloadsTest.kt` - Unit tests for `ConsoleCopyPayloads`.
         - `ConsoleValueFormatterTest.kt` - How `ConsoleValueFormatter` reads and lays out a Vars value for the value viewer.
         - `ContentReportIssueUrlTest.kt` - Unit tests for `contentReportIssueUrl`.
+        - `MessageReaderStateTest.kt` - What the message reader shows for a chat row.
         - `RunDisplayTest.kt` - The run strip's projection of a run: numbers written for reading, the line and fields per case, the promise's wording, the actions' reasons, and when a check asks first.
         - `VerificationProgressTest.kt` - `VerificationProgress`: the check's sheet frame by frame — the first repeated visit checking, calls advancing within a visit, a settled visit handing over to the next, the time left shrinking, and each ending leaving the visits it never reached as "not checked".
     - `common/` - Tests for the shared presentation helpers.
