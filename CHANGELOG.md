@@ -81,6 +81,12 @@ details.
   node's output, and a chat message that carries it, can be that large. A copy
   from the console or from a message's menu now shows *Too long for the
   clipboard. Nothing was copied.*
+- **All of a long agent message answers a touch.** More than 8 192 pixels
+  below the top of an agent's message — a few screens down on a phone — a
+  tap, a long press or a link did nothing: the bubble's corners, which differ
+  on the agent's side, were checked for touches in a way that fails that far
+  down. On a long answer that is where *Read whole message* sits, so it did
+  not open. Your own messages, with even corners, were not affected.
 
 ## [0.12.2] - 2026-10-29
 

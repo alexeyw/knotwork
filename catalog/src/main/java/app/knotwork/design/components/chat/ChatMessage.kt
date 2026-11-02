@@ -35,7 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -529,6 +534,26 @@ private fun chatBubbleTextColor(role: ChatRole): androidx.compose.ui.graphics.Co
 }
 
 /**
+ * Clips what this node and its children draw to [shape], without a clipping layer.
+ *
+ * `Modifier.clip` makes a layer that hit-tests touches against the shape's outline,
+ * and an outline whose corners differ — the agent's bubble — is tested as a path:
+ * Compose UI 1.12.1 intersects it with a 0.01 px square around the touch, and that
+ * intersection comes back empty more than 8 192 px below the outline's top (measured
+ * on an API 36 emulator and with Robolectric's native graphics). Nothing in the lower
+ * part of a taller bubble could be touched: *Read whole message*, a link, the
+ * long-press menu. Clipping only the drawing keeps the bubble's look and leaves
+ * touches to its bounds.
+ *
+ * @param shape the shape the drawing is clipped to.
+ * @return this modifier, clipping its drawing to [shape].
+ */
+private fun Modifier.clipDrawing(shape: Shape): Modifier = drawWithCache {
+    val path = Path().apply { addOutline(shape.createOutline(size, layoutDirection, this@drawWithCache)) }
+    onDrawWithContent { clipPath(path) { this@onDrawWithContent.drawContent() } }
+}
+
+/**
  * Bubble chrome shared by [TextBubble] and [MarkdownBubble] — handles the
  * role-keyed background / shape, the long-press press-scale animation,
  * and the context-action [DropdownMenu]. The bubble body is supplied as a
@@ -578,7 +603,7 @@ private fun ChatBubbleChrome(
                     scaleX = scale
                     scaleY = scale
                 }
-                .clip(shape)
+                .clipDrawing(shape)
                 .background(color = bubbleColor)
                 .then(clickableModifier)
                 .padding(horizontal = KnotworkTheme.spacing.sp3, vertical = KnotworkTheme.spacing.sp2),
