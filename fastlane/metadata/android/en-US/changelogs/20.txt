@@ -1,0 +1,5 @@
+Long messages open whole.
+
+A chat message over 6,000 characters shows its beginning and a Read whole message button that opens it full screen, with a scroll thumb that names the section you are in. A long value in the console's Vars tab opens the same way.
+
+A long answer without spaces no longer freezes the chat, the Live metrics screen no longer crashes over a repeated log line, and a copy too large for the clipboard says so.
