@@ -107,8 +107,8 @@ fun knotworkMarkdownComponents(): MarkdownComponents = markdownComponents(
 /**
  * A table's header row as the library draws it, except that its cells wrap. The library
  * draws each cell on one line ending in an ellipsis, which cut every cell longer than its
- * column, so the text could not be read anywhere. The cells sit at the top of the row, so
- * a row's texts start level whatever their lengths.
+ * column, so the rest of it could be read only in a copy. The cells sit at the top of the
+ * row, so a row's texts start level whatever their lengths.
  *
  * The chat's bubbles draw their tables with it, and so does the message reader.
  *
