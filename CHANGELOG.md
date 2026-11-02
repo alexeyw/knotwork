@@ -58,11 +58,12 @@ details.
 
 ### Fixed
 
-- **The Monitoring screen no longer closes the app over a repeated log line.**
-  When the same message was logged twice within one second — a blocked tool
-  the model called twice in a row, say — or at the same time of day on another
-  day, two lines of *Recent logs* got the same list key and the app crashed
-  while showing the screen. Each line is now keyed by its own record.
+- **The Live metrics screen no longer closes the app over a repeated log
+  line.** When the same message was logged twice within one second — a
+  blocked tool the model called twice in a row, say — or at the same time of
+  day on another day, two lines of *System Actions & Logs* got the same list
+  key and the app crashed while showing the screen. Each line is now keyed by
+  its own record.
 - **A long value in the console's Vars tab no longer freezes the app.** A row
   drew a node's whole input or output, and laying out a long value without
   spaces — a tool's answer, say — held the screen for seconds. A row now shows
