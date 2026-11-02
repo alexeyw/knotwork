@@ -8,10 +8,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.annotator.AnnotatorSettings
 import com.mikepenz.markdown.annotator.annotatorSettings
@@ -22,10 +25,14 @@ import com.mikepenz.markdown.compose.LocalMarkdownPadding
 import com.mikepenz.markdown.compose.components.MarkdownComponentModel
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.LocalTableRowIndex
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBackground
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
 import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.compose.elements.MarkdownParagraph
+import com.mikepenz.markdown.compose.elements.MarkdownTable
+import com.mikepenz.markdown.compose.elements.MarkdownTableHeader
+import com.mikepenz.markdown.compose.elements.MarkdownTableRow
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.material.MarkdownBasicText
 import com.mikepenz.markdown.m3.elements.MarkdownCheckBox
@@ -52,6 +59,9 @@ private val CodeBlockVerticalPadding = 8.dp
  *
  * What a message copies is its source, not what is drawn, so the cuts never reach the
  * clipboard.
+ *
+ * A **table**'s cells wrap ([KnotworkTableHeader], [KnotworkTableRow]) instead of ending
+ * in an ellipsis on one line.
  *
  * Usage: `Markdown(content, typography = …, colors = …, components = knotworkMarkdownComponents())`.
  *
@@ -81,7 +91,74 @@ fun knotworkMarkdownComponents(): MarkdownComponents = markdownComponents(
             MarkdownCodeBlock(model.content, model.node, style = model.typography.code)
         }
     },
+    table = { model ->
+        MarkdownTable(
+            content = model.content,
+            node = model.node,
+            style = model.typography.table,
+            headerBlock = { content, header, tableWidth, style ->
+                KnotworkTableHeader(content, header, tableWidth, style)
+            },
+            rowBlock = { content, row, tableWidth, style -> KnotworkTableRow(content, row, tableWidth, style) },
+        )
+    },
 )
+
+/**
+ * A table's header row as the library draws it, except that its cells wrap. The library
+ * draws each cell on one line ending in an ellipsis, which cut every cell longer than its
+ * column, so the rest of it could be read only in a copy. The cells sit at the top of the
+ * row, so a row's texts start level whatever their lengths.
+ *
+ * The chat's bubbles draw their tables with it, and so does the message reader.
+ *
+ * @param content the Markdown source the header's node indexes into.
+ * @param header the table's header node.
+ * @param tableWidth the table's width: its column count times the cell width.
+ * @param style the table's text style; the header sets it bold.
+ */
+@Composable
+internal fun KnotworkTableHeader(content: String, header: ASTNode, tableWidth: Dp, style: TextStyle) {
+    MarkdownTableHeader(
+        content = content,
+        header = header,
+        tableWidth = tableWidth,
+        style = style,
+        verticalAlignment = Alignment.Top,
+        maxLines = Int.MAX_VALUE,
+        overflow = TextOverflow.Clip,
+    )
+}
+
+/**
+ * A table's body row as the library draws it, except that its cells wrap and sit at the
+ * top of the row, as in [KnotworkTableHeader].
+ *
+ * @param content the Markdown source the row's node indexes into.
+ * @param row the row's node.
+ * @param tableWidth the table's width: its column count times the cell width.
+ * @param style the table's text style.
+ * @param rowIndex the row's index for TalkBack, the header being row 0.
+ */
+@Composable
+internal fun KnotworkTableRow(
+    content: String,
+    row: ASTNode,
+    tableWidth: Dp,
+    style: TextStyle,
+    rowIndex: Int = LocalTableRowIndex.current,
+) {
+    MarkdownTableRow(
+        content = content,
+        header = row,
+        tableWidth = tableWidth,
+        style = style,
+        rowIndex = rowIndex,
+        verticalAlignment = Alignment.Top,
+        maxLines = Int.MAX_VALUE,
+        overflow = TextOverflow.Clip,
+    )
+}
 
 /**
  * Whether the element's source holds a run longer than [UNBROKEN_RUN_MAX]. Markup is

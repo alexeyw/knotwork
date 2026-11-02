@@ -157,6 +157,22 @@ class ChatMessageReaderSnapshotTest {
         capture("chat_message_reader_table_chunks")
     }
 
+    @Test
+    fun chat_message_reader_table_long_cells() {
+        val message = """
+            |What to back up, and how:
+            |
+            || What | Where | Tool |
+            ||---|---|---|
+            || Container data | Docker volumes and the compose files that start them | `tar` of each volume |
+            || Web server | Configuration files and virtual hosts, with their certificates | `tar` |
+            || Scheduled jobs | The crontab of root and of every service user | `crontab -l` |
+            || SSH | Host keys and `authorized_keys` of each account | `tar` + `gpg` |
+            || Mail | Mailboxes of every domain the server receives mail for | `rsync` |
+        """.trimMargin()
+        snapshot("chat_message_reader_table_long_cells", agent(message))
+    }
+
     private fun agent(text: String) = ChatMessageReaderState(ChatRole.Assistant, "09:14 · gemma-3n-E4B", text, true)
 
     private fun snapshot(name: String, state: ChatMessageReaderState, dark: Boolean = false) {

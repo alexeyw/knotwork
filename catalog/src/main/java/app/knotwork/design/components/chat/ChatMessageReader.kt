@@ -68,6 +68,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.KnotworkFullScreenDialog
+import app.knotwork.design.components.KnotworkTableHeader
+import app.knotwork.design.components.KnotworkTableRow
 import app.knotwork.design.components.buttons.KnotworkIconButton
 import app.knotwork.design.components.knotworkMarkdownColor
 import app.knotwork.design.components.knotworkMarkdownComponents
@@ -87,8 +89,6 @@ import com.mikepenz.markdown.compose.LocalMarkdownTypography
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownDivider
-import com.mikepenz.markdown.compose.elements.MarkdownTableHeader
-import com.mikepenz.markdown.compose.elements.MarkdownTableRow
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.material.MarkdownBasicText
 import com.mikepenz.markdown.m3.Markdown
@@ -562,13 +562,13 @@ private fun ReaderTableChunk(chunk: ChatReaderItem.TableChunk, content: String, 
                 },
             ) {
                 if (chunk.first && header != null) {
-                    MarkdownTableHeader(content = content, header = header, tableWidth = tableWidth, style = style)
+                    KnotworkTableHeader(content = content, header = header, tableWidth = tableWidth, style = style)
                     MarkdownDivider()
                 }
                 chunk.rows.forEachIndexed { i, row ->
-                    MarkdownTableRow(
+                    KnotworkTableRow(
                         content = content,
-                        header = row,
+                        row = row,
                         tableWidth = tableWidth,
                         style = style,
                         rowIndex = chunk.firstRow + i,
