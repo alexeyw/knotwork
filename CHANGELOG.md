@@ -13,6 +13,14 @@ details.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Table cells show all their text.** A cell longer than its column was cut
+  to one line ending in an ellipsis — in a chat message and in the message
+  reader alike — so the rest of it could be read only in a copy. A cell now
+  wraps onto as many lines as it needs, and the cells of a row start level at
+  its top.
+
 ## [0.13.0] - 2026-11-02
 
 ### Added

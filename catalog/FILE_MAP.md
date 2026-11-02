@@ -503,6 +503,7 @@ matters.
     - `OutcomeDialogSnapshotTest.kt` - Roborazzi baselines for the `OutcomeDialog` family — the four import outcomes and the re-import question, in one shape.
     - `SingleFieldDialogSnapshotTest.kt` - Roborazzi baselines for the shared single-field dialog.
     - `SingleFieldDialogTest.kt` - Behaviour of the shared single-field dialog — the part a baseline cannot show.
+  - `KnotworkMarkdownTableTest.kt` - A table cell longer than its column wraps onto more lines instead of ending in an ellipsis — in a chat bubble, which draws tables with `knotworkMarkdownComponents`, and in the message reader, whole and cut into chunks.
   - `lists/` - list rows and their status mapping.
     - `ConnectionStatusTest.kt` - Pure-JVM mapping test for `ConnectionStatus.toStatus`.
     - `KnotworkListsSnapshotTest.kt` - Roborazzi snapshot baseline for `KnotworkListsCatalogContent` in both themes.
