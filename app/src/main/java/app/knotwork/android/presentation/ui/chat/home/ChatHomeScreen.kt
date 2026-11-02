@@ -223,7 +223,8 @@ fun ChatHomeScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val pipelineFallbackMessage = stringResource(R.string.errors_chat_pipeline_removed)
-    val copyTooLargeMessage = stringResource(R.string.chat_snackbar_copy_too_large)
+    // The catalog's string, which the console's value viewer and the message reader say too.
+    val copyTooLargeMessage = stringResource(app.knotwork.design.R.string.knotwork_copy_too_long)
     val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val importFailedTemplate = stringResource(R.string.chat_import_failed)
     val importUnreadableMessage = stringResource(R.string.chat_import_unreadable)

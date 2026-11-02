@@ -13,6 +13,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
+import com.mikepenz.markdown.annotator.AnnotatorSettings
 import com.mikepenz.markdown.annotator.annotatorSettings
 import com.mikepenz.markdown.annotator.buildMarkdownAnnotatedString
 import com.mikepenz.markdown.compose.LocalMarkdownColors
@@ -28,6 +29,7 @@ import com.mikepenz.markdown.compose.elements.MarkdownParagraph
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.material.MarkdownBasicText
 import com.mikepenz.markdown.m3.elements.MarkdownCheckBox
+import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.ast.getTextInNode
 
 /** Vertical space around a code block, as the library's own code block draws it. */
@@ -92,18 +94,34 @@ private fun MarkdownComponentModel.hasLongRun(): Boolean = unbrokenRunCuts(node.
 @Composable
 private fun PiecedParagraph(model: MarkdownComponentModel) {
     val style = model.typography.paragraph
-    val settings = annotatorSettings()
-    val styled = buildAnnotatedString {
-        pushStyle(style.toSpanStyle())
-        buildMarkdownAnnotatedString(content = model.content, node = model.node, annotatorSettings = settings)
-        pop()
-    }
+    val styled = markdownParagraphText(model.content, model.node, style, annotatorSettings())
     val pieces = remember(styled) { styled.splitAtUnbrokenRuns() }
     Column {
         for (piece in pieces) {
             MarkdownText(content = piece, node = model.node, style = style, sourceContent = model.content)
         }
     }
+}
+
+/**
+ * A paragraph's text, styled and linked as the library's `MarkdownParagraph` builds it.
+ * Builds no composition state, so it can run off the main thread.
+ *
+ * @param content the Markdown source the paragraph's node indexes into.
+ * @param node the paragraph's node.
+ * @param style the paragraph's text style.
+ * @param settings link and inline-code styles, read in composition beforehand.
+ * @return the paragraph's whole text.
+ */
+internal fun markdownParagraphText(
+    content: String,
+    node: ASTNode,
+    style: TextStyle,
+    settings: AnnotatorSettings,
+): AnnotatedString = buildAnnotatedString {
+    pushStyle(style.toSpanStyle())
+    buildMarkdownAnnotatedString(content = content, node = node, annotatorSettings = settings)
+    pop()
 }
 
 /**

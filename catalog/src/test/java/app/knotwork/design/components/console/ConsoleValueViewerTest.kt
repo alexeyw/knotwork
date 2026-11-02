@@ -18,6 +18,8 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
+import app.knotwork.design.components.BACK_PREVIEW_SCALE
+import app.knotwork.design.components.backPreviewShare
 import app.knotwork.design.theme.KnotworkTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -167,11 +169,11 @@ class ConsoleValueViewerTest {
 
     @Test
     fun `given a gesture's progress when the preview is worked out then it eases, clamps, and is 0 if reduced`() {
-        assertEquals(0.5f, consoleValueBackPreview(progress = 0.5f, reduced = false, easing = LinearEasing), 0f)
-        assertEquals(1f, consoleValueBackPreview(progress = 1.5f, reduced = false, easing = LinearEasing), 0f)
-        assertEquals(0f, consoleValueBackPreview(progress = 0.5f, reduced = true, easing = LinearEasing), 0f)
+        assertEquals(0.5f, backPreviewShare(progress = 0.5f, reduced = false, easing = LinearEasing), 0f)
+        assertEquals(1f, backPreviewShare(progress = 1.5f, reduced = false, easing = LinearEasing), 0f)
+        assertEquals(0f, backPreviewShare(progress = 0.5f, reduced = true, easing = LinearEasing), 0f)
         val decelerate = CubicBezierEasing(0f, 0f, 0f, 1f)
-        assertTrue(consoleValueBackPreview(progress = 0.5f, reduced = false, easing = decelerate) > 0.5f)
+        assertTrue(backPreviewShare(progress = 0.5f, reduced = false, easing = decelerate) > 0.5f)
     }
 
     @Test

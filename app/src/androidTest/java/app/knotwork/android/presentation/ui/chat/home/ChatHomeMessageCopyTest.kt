@@ -14,7 +14,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.platform.app.InstrumentationRegistry
-import app.knotwork.android.R
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMetadata
 import app.knotwork.design.components.chat.ChatRole
@@ -105,5 +104,5 @@ class ChatHomeMessageCopyTest {
     }
 
     private fun tooLong(): String =
-        InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.chat_snackbar_copy_too_large)
+        InstrumentationRegistry.getInstrumentation().targetContext.getString(KnotworkR.string.knotwork_copy_too_long)
 }
