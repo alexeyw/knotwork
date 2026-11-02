@@ -13,7 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * What [setConsoleText] reports for each way the clipboard write ends.
+ * What [setClipboardText] reports for each way the clipboard write ends.
  *
  * The platform's `ClipboardManager.setPrimaryClip` rethrows a failed Binder
  * transaction as a `RuntimeException` around the `TransactionTooLargeException`
@@ -21,13 +21,13 @@ import org.robolectric.RobolectricTestRunner
  * real oversized clip was not sent through a device here.
  */
 @RunWith(RobolectricTestRunner::class)
-class ConsoleClipboardTest {
+class ClipboardTextTest {
 
     @Test
     fun `given a clip that fits when copying then it is on the clipboard and the copy reports success`() {
         val clipboard = FakeClipboard()
 
-        val copied = clipboard.setConsoleText("value")
+        val copied = clipboard.setClipboardText("value")
 
         assertTrue(copied)
         assertEquals("value", clipboard.copied?.text)
@@ -37,7 +37,7 @@ class ConsoleClipboardTest {
     fun `given a clip too large for the transaction when copying then the copy reports failure instead of throwing`() {
         val clipboard = FakeClipboard(failure = RuntimeException(TransactionTooLargeException("data parcel size")))
 
-        val copied = clipboard.setConsoleText("x".repeat(1_048_576))
+        val copied = clipboard.setClipboardText("x".repeat(1_048_576))
 
         assertFalse(copied)
         assertNull(clipboard.copied)
@@ -48,7 +48,7 @@ class ConsoleClipboardTest {
         val failure = RuntimeException(IllegalStateException("something else"))
         val clipboard = FakeClipboard(failure = failure)
 
-        val thrown = runCatching { clipboard.setConsoleText("value") }.exceptionOrNull()
+        val thrown = runCatching { clipboard.setClipboardText("value") }.exceptionOrNull()
 
         assertSame(failure, thrown)
     }

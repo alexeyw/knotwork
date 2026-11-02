@@ -15,6 +15,7 @@ import app.knotwork.design.components.console.ConsoleTab
 import app.knotwork.design.components.console.ConsoleTraceSpan
 import app.knotwork.design.components.console.ConsoleVarRow
 import app.knotwork.design.screens.chat.ChatHomeConsoleState
+import app.knotwork.design.screens.chat.ChatHomeMessageRow
 import app.knotwork.design.screens.chat.ChatHomeThreadRow
 import io.mockk.every
 import io.mockk.mockk
@@ -123,10 +124,12 @@ internal fun mockChatHomeViewModel(
     initialAvailablePipelines: List<PipelineSummary> = emptyList(),
     initialInstalledModels: List<LocalModel> = emptyList(),
     initialPipelineName: String? = "default",
+    initialMessages: List<ChatHomeMessageRow> = emptyList(),
 ): Pair<ChatHomeViewModel, ChatHomeMockHandles> {
     val stateFlow = MutableStateFlow(
         ChatHomeScreenState(
             visual = initialState,
+            messages = initialMessages,
             composer = ChatHomeComposerState(
                 value = initialComposerValue,
                 typedConfirm = initialPendingTypedConfirm,

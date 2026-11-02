@@ -378,7 +378,9 @@ history is portable to any app that handles JSON or plain text.
 ### Copying a message
 
 Long-press any message bubble to open its context menu. From there you
-can **Copy** the text to the clipboard, **Re-run** it (drop the text back
+can **Copy** the text to the clipboard — Android shows its own preview of
+what was copied; a message too long for the clipboard says so and copies
+nothing — **Re-run** it (drop the text back
 into the composer), or **Save to memory** — which stores the message
 verbatim in long-term memory as a manual entry and confirms with a
 *Saved to memory* snackbar. Saved entries show up under

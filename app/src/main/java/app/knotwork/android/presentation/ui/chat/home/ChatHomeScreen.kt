@@ -223,11 +223,10 @@ fun ChatHomeScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val pipelineFallbackMessage = stringResource(R.string.errors_chat_pipeline_removed)
-    val consoleCopyTooLargeMessage = stringResource(R.string.chat_snackbar_console_copy_too_large)
+    val copyTooLargeMessage = stringResource(R.string.chat_snackbar_copy_too_large)
     val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val importFailedTemplate = stringResource(R.string.chat_import_failed)
     val importUnreadableMessage = stringResource(R.string.chat_import_unreadable)
-    val messageCopiedMessage = stringResource(R.string.chat_snackbar_copied)
     val reportCopiedMessage = stringResource(R.string.chat_report_snackbar_copied)
     val reportNoBrowserMessage = stringResource(R.string.chat_report_snackbar_no_browser)
     val savedToMemoryMessage = stringResource(R.string.chat_snackbar_saved_to_memory)
@@ -291,7 +290,7 @@ fun ChatHomeScreen(
     LaunchedEffect(viewModel) {
         viewModel.console.consoleSnackbarEvents.collect { event ->
             val message = when (event) {
-                ConsoleSnackbarEvent.CopyTooLarge -> consoleCopyTooLargeMessage
+                ConsoleSnackbarEvent.CopyTooLarge -> copyTooLargeMessage
             }
             snackbarHostState.showSnackbar(message = message)
         }
@@ -418,7 +417,7 @@ fun ChatHomeScreen(
     // A console copy that does not fit the clipboard says so; one that does is
     // confirmed by the system's own preview.
     val copyConsoleText: (String) -> Unit = { text ->
-        if (!clipboardManager.setConsoleText(text)) viewModel.console.signalConsoleCopyTooLarge()
+        if (!clipboardManager.setClipboardText(text)) viewModel.console.signalConsoleCopyTooLarge()
     }
 
     val callbacks = ChatHomeCallbacks(
@@ -473,7 +472,7 @@ fun ChatHomeScreen(
         onConsoleClear = viewModel.console::requestConsoleClear,
         onConsoleOpenValue = viewModel.console::openConsoleValue,
         onConsoleCloseValue = viewModel.console::closeConsoleValue,
-        onConsoleCopyValue = { row -> clipboardManager.setConsoleText(ConsoleCopyPayloads.variable(row)) },
+        onConsoleCopyValue = { row -> clipboardManager.setClipboardText(ConsoleCopyPayloads.variable(row)) },
         onCloseConsole = viewModel.console::closeConsole,
         run = ChatHomeRunCallbacks(
             onToggleHeader = viewModel.run::toggleHeader,
@@ -562,12 +561,11 @@ fun ChatHomeScreen(
         onMessageContextAction = { rowId, action ->
             when (action) {
                 ChatContextAction.Copy -> {
+                    // The whole message, not what the bubble shows. A copy that fits raises
+                    // nothing of the app's own: Android 14+ shows the system's preview of it.
                     val text = viewModel.transfer.textForRow(rowId)
-                    if (!text.isNullOrEmpty()) {
-                        clipboardManager.setText(AnnotatedString(text))
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar(message = messageCopiedMessage)
-                        }
+                    if (!text.isNullOrEmpty() && !clipboardManager.setClipboardText(text)) {
+                        coroutineScope.launch { snackbarHostState.showSnackbar(message = copyTooLargeMessage) }
                     }
                 }
                 ChatContextAction.Rerun -> {
