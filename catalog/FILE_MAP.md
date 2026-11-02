@@ -455,6 +455,7 @@ matters.
     - `KnotworkButtonsSnapshotTest.kt` - Roborazzi snapshot baseline for the `KnotworkButtonsCatalogContent` harness in both themes — covers every primary / secondary / text / icon button state in two snapshots (`buttons_light.png`, `buttons_dark.png`).
   - `chat/` - the chat home, including the README hero shots.
     - `ChatBubbleShapesTest.kt` - Verifies the asymmetric corner radii on `ChatBubbleShapes`.
+    - `ChatBubbleTallTapTest.kt` - A touch reaches the lower part of a chat bubble taller than 8 192 px.
     - `ChatCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `ChatCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the long-press scale + composer morph behave deterministically.
     - `ChatComposerTapTest.kt` - A tap anywhere on the composer belongs to the composer.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
