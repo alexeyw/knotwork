@@ -13,9 +13,13 @@ import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.ast.getTextInNode
+import org.intellij.markdown.flavours.gfm.GFMElementTypes
 
 /** Most lines of code one item of the reader holds; a longer code block is drawn as several items. */
 internal const val READER_CODE_CHUNK_LINES = 40
+
+/** Most rows of a table one item of the reader holds; a longer table is drawn as several items. */
+internal const val READER_TABLE_CHUNK_ROWS = 20
 
 /**
  * Characters of a message the reader parses first, so that its beginning is drawn
@@ -26,9 +30,9 @@ internal const val READER_HEAD_CHARS = 8_000
 
 /**
  * One item of the message reader's list. No item hands one text more than
- * [UNBROKEN_RUN_MAX] characters without whitespace, and no code item more than
- * [READER_CODE_CHUNK_LINES] lines, so drawing one item costs a bounded time whatever
- * the message's length.
+ * [UNBROKEN_RUN_MAX] characters without whitespace, no code item more than
+ * [READER_CODE_CHUNK_LINES] lines and no table item more than [READER_TABLE_CHUNK_ROWS]
+ * rows, so drawing one item costs a bounded time whatever the message's length.
  *
  * Every key is a position in the message's source. The reader first lays out the
  * items of the message's head, then those of the whole; an item at the same place
@@ -90,6 +94,32 @@ internal sealed interface ChatReaderItem {
     }
 
     /**
+     * Up to [READER_TABLE_CHUNK_ROWS] body rows of a table longer than that. The first
+     * chunk also draws the header and its rule. The chunks of one table share one
+     * surface — only the first has top corners, only the last bottom ones — and one
+     * sideways scroll, so their columns stay in line.
+     *
+     * @property table the table's node.
+     * @property index the chunk's place in the table, from 0.
+     * @property rows the chunk's body rows.
+     * @property firstRow the first row's place in the table, the header being row 0.
+     * @property last whether this is the table's last chunk.
+     */
+    data class TableChunk(
+        val table: ASTNode,
+        val index: Int,
+        val rows: List<ASTNode>,
+        val firstRow: Int,
+        val last: Boolean,
+    ) : ChatReaderItem {
+        /** Whether this is the table's first chunk, which draws its header. */
+        val first: Boolean get() = index == 0
+
+        override val key: String get() = "g${table.startOffset}:$index"
+        override val contentType: Any get() = TableChunk::class
+    }
+
+    /**
      * One line of a plain-text message, or a piece of a line with a run longer than
      * [UNBROKEN_RUN_MAX].
      *
@@ -101,6 +131,14 @@ internal sealed interface ChatReaderItem {
         override val contentType: Any get() = PlainText::class
     }
 }
+
+/**
+ * Whether this item is the gap the renderer draws for a blank line between blocks: a
+ * spacer, not content, and many of them — the reader's thumb leaves them out when it
+ * estimates the message's height.
+ */
+internal val ChatReaderItem.isGap: Boolean
+    get() = this is ChatReaderItem.Block && node.type == MarkdownTokenTypes.EOL
 
 /**
  * The head of [source] the reader parses first: its first [READER_HEAD_CHARS]
@@ -145,10 +183,12 @@ internal fun plainReaderItems(text: String): List<ChatReaderItem> {
  *   as `MarkdownParagraph` builds its text and cut as the chat bubble cuts it;
  * - a code block of more than [READER_CODE_CHUNK_LINES] lines — counting each piece
  *   of a line with a long run as a line, as the bubble draws them — becomes chunks of
- *   that many lines.
+ *   that many lines;
+ * - a table of more than [READER_TABLE_CHUNK_ROWS] body rows becomes chunks of that
+ *   many rows.
  *
- * Every other block — a list, a quote, a table, and a short paragraph or code block —
- * is one item, drawn by the renderer as the bubble draws it. Linear in the message's
+ * Every other block — a list, a quote, and a short paragraph, code block or table — is
+ * one item, drawn by the renderer as the bubble draws it. Linear in the message's
  * length; meant to run off the main thread.
  *
  * The parse of a message's [readerHead] leaves out its last block when the cut runs
@@ -174,6 +214,7 @@ internal fun markdownReaderItems(
         when (node.type) {
             MarkdownElementTypes.PARAGRAPH -> items += paragraphItems(node, content, settings, paragraphStyle)
             MarkdownElementTypes.CODE_FENCE, MarkdownElementTypes.CODE_BLOCK -> items += codeItems(node, content)
+            GFMElementTypes.TABLE -> items += tableItems(node)
             else -> items += ChatReaderItem.Block(node)
         }
     }
@@ -222,6 +263,63 @@ private fun codeItems(node: ASTNode, content: String): List<ChatReaderItem> {
         )
     }
 }
+
+/** A table as one block, or as chunks of [READER_TABLE_CHUNK_ROWS] body rows when it is longer. */
+private fun tableItems(node: ASTNode): List<ChatReaderItem> {
+    val rows = node.children.filter { it.type == GFMElementTypes.ROW }
+    if (rows.size <= READER_TABLE_CHUNK_ROWS) return listOf(ChatReaderItem.Block(node))
+    val chunks = rows.chunked(READER_TABLE_CHUNK_ROWS)
+    return chunks.mapIndexed { index, chunk ->
+        ChatReaderItem.TableChunk(
+            table = node,
+            index = index,
+            rows = chunk,
+            // The header is row 0; body rows count from 1.
+            firstRow = 1 + index * READER_TABLE_CHUNK_ROWS,
+            last = index == chunks.lastIndex,
+        )
+    }
+}
+
+/**
+ * The heading each item stands under: the text of the nearest heading at or before it,
+ * `null` for an item before the message's first heading. The reader's scroll thumb names
+ * it while dragged.
+ *
+ * @param items the message's items, as [markdownReaderItems] cut them.
+ * @param content the source their nodes index into.
+ * @return one entry per item, in order.
+ */
+internal fun readerHeadings(items: List<ChatReaderItem>, content: String): List<String?> {
+    var current: String? = null
+    return items.map { item ->
+        val node = (item as? ChatReaderItem.Block)?.node
+        val text = node?.let { headingText(it, content) }
+        if (text != null) current = text
+        current
+    }
+}
+
+/** A heading node's text without its markers; `null` for a node that is not a heading. */
+private fun headingText(node: ASTNode, content: String): String? {
+    val text = when (node.type) {
+        in ATX_HEADINGS -> node.findChildOfType(MarkdownTokenTypes.ATX_CONTENT)
+        MarkdownElementTypes.SETEXT_1, MarkdownElementTypes.SETEXT_2 ->
+            node.findChildOfType(MarkdownTokenTypes.SETEXT_CONTENT)
+        else -> return null
+    }?.getTextInNode(content)?.toString()?.trim()
+    return text?.takeIf { it.isNotEmpty() }
+}
+
+/** The six ATX heading types, `#` to `######`. */
+private val ATX_HEADINGS = setOf(
+    MarkdownElementTypes.ATX_1,
+    MarkdownElementTypes.ATX_2,
+    MarkdownElementTypes.ATX_3,
+    MarkdownElementTypes.ATX_4,
+    MarkdownElementTypes.ATX_5,
+    MarkdownElementTypes.ATX_6,
+)
 
 /**
  * The code of a fenced or indented block, taken as the renderer's own code block takes

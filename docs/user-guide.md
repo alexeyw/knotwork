@@ -389,7 +389,12 @@ back closes it and leaves the chat where it was. The beginning shows at
 once and the rest is prepared behind it: if you scroll to the end before
 it is ready, the list says *Preparing the rest…* until it arrives. A long
 code block reads as one block, though each stretch of 40 lines scrolls
-sideways on its own.
+sideways on its own; a long table scrolls sideways as one.
+
+A message more than five screens long gets a scroll thumb at the right
+edge while you scroll. Drag it to jump through the message: beside it you
+see the heading of the section you are in, or — when the message has no
+headings — how far down you are, such as *42%*.
 
 The long-press menu works on the whole message, not on what the bubble
 shows.

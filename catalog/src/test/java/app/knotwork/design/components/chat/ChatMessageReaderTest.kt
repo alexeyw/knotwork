@@ -1,17 +1,22 @@
 package app.knotwork.design.components.chat
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeDown
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.a11y.FixedKnotworkA11y
 import app.knotwork.design.a11y.LocalKnotworkA11y
@@ -242,6 +247,60 @@ class ChatMessageReaderTest {
         assertEquals(before, after)
         rule.onNodeWithTag(CHAT_MESSAGE_READER_LIST_TAG).performScrollToKey(last)
         rule.onNode(hasText("Paragraph 400.", substring = true), useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `given a message more than five screens tall when it is ready then the reader has a scroll thumb`() {
+        show(longMessage, work = Dispatchers.Default)
+        rule.waitUntil(timeoutMillis = 5_000) { indexOfKey("b${longMessage.indexOf("Paragraph 400.")}") >= 0 }
+
+        rule.onNodeWithTag(CHAT_READER_THUMB_TAG).assertExists()
+    }
+
+    @Test
+    fun `given a short message when it is ready then the reader has no scroll thumb`() {
+        show("A short answer.\n\nWith two paragraphs.")
+        waitForText("With two paragraphs.")
+
+        rule.onAllNodesWithTag(CHAT_READER_THUMB_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun `given a long message whose rest is not ready when shown then the reader has no scroll thumb yet`() {
+        show(longMessage, work = HeldSteps(2))
+        waitForText("Paragraph 1.", substring = true)
+
+        rule.onAllNodesWithTag(CHAT_READER_THUMB_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun `given a wide table of 30 rows when its first chunk is scrolled sideways then its second chunk follows`() {
+        val header = "| " + (1..6).joinToString(" | ") { "Column $it" } + " |\n|" + "---|".repeat(6) + "\n"
+        val rows = (1..30).joinToString("\n") { r -> "| " + (1..6).joinToString(" | ") { c -> "R${r}C$c" } + " |" }
+        show(header + rows)
+        // A cell's text keeps the space before its closing pipe.
+        waitForText("R1C1", substring = true)
+        // The seam between the chunks on screen: the second chunk at the top, pulled down.
+        val list = rule.onNodeWithTag(CHAT_MESSAGE_READER_LIST_TAG)
+        list.performScrollToKey("g0:1")
+        list.performTouchInput { swipeDown(startY = centerY, endY = centerY + 400f, durationMillis = 2_000) }
+        rule.waitForIdle()
+        fun leftOf(text: String) =
+            rule.onNode(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.left
+        val first = leftOf("R20C1")
+        val second = leftOf("R21C1")
+
+        // Across the list at the row's height: the test's text is too narrow to swipe on.
+        val rowY = rule.onNode(hasText("R20C1", substring = true), useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot.center.y - list.fetchSemanticsNode().boundsInRoot.top
+        list.performTouchInput {
+            swipe(start = Offset(right - 40f, rowY), end = Offset(left + 40f, rowY), durationMillis = 500)
+        }
+        rule.waitForIdle()
+
+        val moved = first - leftOf("R20C1")
+        assertTrue("the first chunk scrolled by $moved px", moved > 0f)
+        assertEquals(moved, second - leftOf("R21C1"), 0.5f)
     }
 
     /** Where the reader's list holds the item with [key]; -1 while it holds none. */

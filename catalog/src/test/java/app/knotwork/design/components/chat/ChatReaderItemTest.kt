@@ -131,6 +131,44 @@ class ChatReaderItemTest {
         assertEquals("line 1", chunks.first().code.lines().first())
     }
 
+    private fun table(rows: Int): String = "| Station | Bikes | Docks |\n|---|---|---|\n" +
+        (1..rows).joinToString("\n") { "| Station $it | ${it * 3} | ${it * 7} |" }
+
+    @Test
+    fun `given a table of 50 rows when cut then it is chunks of 20, 20 and 10 rows numbered from 1`() {
+        val chunks = items("Before.\n\n" + table(50)).filterIsInstance<ChatReaderItem.TableChunk>()
+
+        assertEquals(listOf(20, 20, 10), chunks.map { it.rows.size })
+        assertEquals(listOf(1, 21, 41), chunks.map { it.firstRow })
+        assertEquals(listOf(true, false, false), chunks.map { it.first })
+        assertEquals(listOf(false, false, true), chunks.map { it.last })
+        assertEquals(3, chunks.map { it.key }.toSet().size)
+        assertTrue(chunks.all { it.table === chunks.first().table })
+    }
+
+    @Test
+    fun `given a table of exactly 20 rows when cut then the renderer draws it as one block`() {
+        assertTrue(items(table(20)).single() is ChatReaderItem.Block)
+    }
+
+    @Test
+    fun `given headings when the items' headings are read then each item stands under the last one before it`() {
+        val markdown = "Intro.\n\n# First part\n\nText one.\n\nSecond part\n---\n\nText two."
+        val parsed = parseMarkdown(markdown) as State.Success
+        val cut = markdownReaderItems(parsed, settings, TextStyle())
+
+        val headings = readerHeadings(cut, markdown)
+
+        val byText = cut.zip(headings).associate { (item, heading) ->
+            (item as ChatReaderItem.Block).node.let { markdown.substring(it.startOffset, it.endOffset).trim() } to
+                heading
+        }
+        assertEquals(null, byText["Intro."])
+        assertEquals("First part", byText["# First part"])
+        assertEquals("First part", byText["Text one."])
+        assertEquals("Second part", byText["Text two."])
+    }
+
     @Test
     fun `given a message longer than the head when the head and the whole are cut then the head's keys stay`() {
         val markdown = (1..60).joinToString("\n\n") { "Paragraph $it: " + "words to read ".repeat(20) }

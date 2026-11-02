@@ -1,12 +1,14 @@
 package app.knotwork.design.components.chat
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.knotwork.design.KnotworkRoborazziOptions
 import app.knotwork.design.a11y.FixedKnotworkA11y
@@ -119,6 +121,40 @@ class ChatMessageReaderSnapshotTest {
         rule.mainClock.advanceTimeBy(400)
         rule.mainClock.autoAdvance = false
         capture("chat_message_reader_preparing")
+    }
+
+    @Test
+    fun chat_message_reader_thumb_drag() {
+        val sections = (1..30).joinToString("\n\n") { n ->
+            "## Section $n: restore the database\n\n" + "Stop the service, restore the dump, start it again. ".repeat(6)
+        }
+        render(agent(sections))
+        rule.waitForIdle()
+        val list = rule.onNodeWithTag(CHAT_MESSAGE_READER_LIST_TAG)
+        rule.mainClock.autoAdvance = false
+        list.performTouchInput { swipeUp(startY = centerY, endY = centerY - 300f) }
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithTag(CHAT_READER_THUMB_TAG).performTouchInput {
+            down(center)
+            moveBy(Offset(0f, 520f))
+        }
+        rule.mainClock.advanceTimeBy(100)
+        capture("chat_message_reader_thumb_drag")
+        rule.onNodeWithTag(CHAT_READER_THUMB_TAG).performTouchInput { up() }
+    }
+
+    @Test
+    fun chat_message_reader_table_chunks() {
+        val rows = (1..30).joinToString("\n") { n -> "| Station $n | ${n * 3} | ${n * 7 % 40} |" }
+        val message = "Bike stations near you:\n\n| Station | Bikes | Docks |\n|---|---|---|\n$rows"
+        render(agent(message))
+        rule.waitForIdle()
+        // The seam between the first two chunks, pulled into view.
+        val list = rule.onNodeWithTag(CHAT_MESSAGE_READER_LIST_TAG)
+        list.performScrollToKey("g${message.indexOf("| Station |")}:1")
+        list.performTouchInput { swipeDown(startY = centerY, endY = centerY + 400f, durationMillis = 2_000) }
+        rule.waitForIdle()
+        capture("chat_message_reader_table_chunks")
     }
 
     private fun agent(text: String) = ChatMessageReaderState(ChatRole.Assistant, "09:14 · gemma-3n-E4B", text, true)
