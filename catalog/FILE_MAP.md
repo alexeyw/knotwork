@@ -47,6 +47,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ChatMessageReader.kt` - The whole of one long chat message, full screen over the chat, in the app's theme.
     - `ChatMetadata.kt` - `ChatMetadata` data class + `ChatMessageStatus` enum driving the trailing footer glyph.
     - `ChatReaderItem.kt` - One item of the message reader's list.
+    - `ChatReaderScrollThumb.kt` - The reader's scroll thumb (`KnotworkScrollThumb`), in the app's colours, once the whole message is ready and it is more than `THUMB_MIN_SCREENS` screens tall.
     - `ChatRole.kt` - `User | Assistant | System | Tool` enum.
     - `ClarificationCard.kt` - clarification UI with quick-reply chips and free-form field; collapses to a one-line summary when answered.
     - `ClarificationCardModel.kt` - immutable payload for `ChatContent.Clarification`.
@@ -114,6 +115,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `TypedConfirmDialog.kt` - canonical destructive typed-confirm dialog (`TypedConfirmDialogState` payload + `typedConfirmMatches` keyword rule). Shared by the Settings destructive actions and the splash data-recovery wipe so the confirmation contract cannot drift.
   - `KnotworkFullScreenDialog.kt` - A full-screen dialog over the screen that opened it, which keeps its own state — a list keeps its scroll — underneath.
   - `KnotworkMarkdownComponents.kt` - The library's Material 3 components, with paragraphs and code blocks that never hand a single text more than `UNBROKEN_RUN_MAX` characters of one unbroken run.
+  - `KnotworkScrollThumb.kt` - A scroll thumb over the right edge of a lazy list, for a list the caller has found tall enough.
   - `lists/` - `PipelineListRow` / `ToolListRow` / `MemoryEntryRow` / `KnotworkNavListRow` (leading-icon + title + chevron routing row) + previews.
     - `KnotworkListsPreview.kt` - Harness rendering every list-row variant, including a pipeline row in the swipe-revealed state, shared by the preview pane and the Roborazzi baseline.
     - `KnotworkNavListRow.kt` - Compact navigation list row used by surfaces that primarily route the user to other screens (e.g. the `More` tab).
@@ -461,6 +463,7 @@ matters.
     - `ChatMessageReaderSnapshotTest.kt` - Roborazzi baselines of the chat's message reader: an agent's Markdown answer in both themes and at 200 %, the user's own message as plain text, the seam between two chunks of a long code block, and the end of the list while the rest of a long message is being prepared.
     - `ChatMessageReaderTest.kt` - What the chat's message reader shows and does while a message is prepared and once it is.
     - `ChatReaderItemTest.kt` - How the message reader cuts a message into list items, and which keys the items carry.
+    - `ChatReaderScrollThumbTest.kt` - How the reader's scroll thumb maps onto its items, and when it shows.
     - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
     - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.

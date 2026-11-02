@@ -1,9 +1,11 @@
 package app.knotwork.design.components.chat
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,7 +21,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -48,8 +52,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
@@ -58,6 +64,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.KnotworkFullScreenDialog
@@ -79,6 +86,9 @@ import com.mikepenz.markdown.compose.LocalMarkdownPadding
 import com.mikepenz.markdown.compose.LocalMarkdownTypography
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponents
+import com.mikepenz.markdown.compose.elements.MarkdownDivider
+import com.mikepenz.markdown.compose.elements.MarkdownTableHeader
+import com.mikepenz.markdown.compose.elements.MarkdownTableRow
 import com.mikepenz.markdown.compose.elements.MarkdownText
 import com.mikepenz.markdown.compose.elements.material.MarkdownBasicText
 import com.mikepenz.markdown.m3.Markdown
@@ -90,6 +100,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.intellij.markdown.ast.findChildOfType
+import org.intellij.markdown.flavours.gfm.GFMElementTypes
+import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 
 /**
  * How long the reader may take to prepare the rest of a message before the end of the
@@ -134,7 +147,10 @@ data class ChatMessageReaderState(val role: ChatRole, val subtitle: String, val 
  * per block, at the chat bubble's typography. No item holds more than a bounded amount
  * of text ([ChatReaderItem]): a paragraph with a long run without whitespace is drawn
  * as its pieces, a long code block as chunks of [READER_CODE_CHUNK_LINES] lines on one
- * continuous surface, a plain-text message one item per line.
+ * continuous surface, a long table as chunks of [READER_TABLE_CHUNK_ROWS] rows that
+ * scroll sideways together, a plain-text message one item per line. Once the whole
+ * message is ready, one more than five screens tall gets a scroll thumb
+ * ([ChatReaderScrollThumb]) that names the section it is dragged to.
  *
  * The message is parsed and cut into items off the main thread. A message longer than
  * [READER_HEAD_CHARS] is prepared in two steps — its head, then the whole — so its
@@ -308,8 +324,10 @@ private fun MarkdownItems(
     val paragraphStyle = LocalMarkdownTypography.current.paragraph
     val work = LocalChatReaderWork.current
     val cut by produceState<ReaderCut?>(initialValue = null, parsed) {
-        val items = withContext(work) { markdownReaderItems(parsed, settings, paragraphStyle, head = !whole) }
-        value = ReaderCut(parsed, items)
+        value = withContext(work) {
+            val items = markdownReaderItems(parsed, settings, paragraphStyle, head = !whole)
+            ReaderCut(parsed, items, readerHeadings(items, parsed.content))
+        }
     }
     val current = cut
     ReaderList(
@@ -318,6 +336,7 @@ private fun MarkdownItems(
         complete = whole && current?.parsed === parsed,
         content = current?.parsed?.content.orEmpty(),
         components = components,
+        headings = current?.headings.orEmpty(),
     )
 }
 
@@ -326,8 +345,9 @@ private fun MarkdownItems(
  *
  * @property parsed the parse they were cut from; their nodes index into its content.
  * @property items the items.
+ * @property headings the heading each item stands under, for the scroll thumb.
  */
-private class ReaderCut(val parsed: State.Success, val items: List<ChatReaderItem>)
+private class ReaderCut(val parsed: State.Success, val items: List<ChatReaderItem>, val headings: List<String?>)
 
 /** A plain-text message: cut into lines off the main thread. */
 @Composable
@@ -336,7 +356,14 @@ private fun PlainBody(text: String) {
     val items by produceState<List<ChatReaderItem>?>(initialValue = null, text) {
         value = withContext(work) { plainReaderItems(text) }
     }
-    ReaderList(listState = rememberLazyListState(), items = items.orEmpty(), complete = items != null)
+    val ready = items
+    ReaderList(
+        listState = rememberLazyListState(),
+        items = ready.orEmpty(),
+        complete = ready != null,
+        // Plain text has no headings: its thumb names the share.
+        headings = remember(ready) { ready?.let { List(it.size) { null } }.orEmpty() },
+    )
 }
 
 /**
@@ -348,6 +375,8 @@ private fun PlainBody(text: String) {
  * @param complete whether [items] are the whole message.
  * @param content the source a [ChatReaderItem.Block]'s node indexes into.
  * @param components the renderer's components, for blocks; unused by a plain message.
+ * @param headings the heading each item stands under, for the scroll thumb, which shows
+ *   once [complete].
  */
 @Composable
 private fun ReaderList(
@@ -356,8 +385,44 @@ private fun ReaderList(
     complete: Boolean,
     content: String = "",
     components: MarkdownComponents? = null,
+    headings: List<String?> = emptyList(),
 ) {
     val navigationBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // One sideways scroll per long table, shared by its chunks: they are the same width,
+    // so their columns stay in line however far it is scrolled.
+    val tableScrolls = remember { HashMap<Int, ScrollState>() }
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        ReaderLazyList(
+            listState = listState,
+            items = items,
+            complete = complete,
+            content = content,
+            components = components,
+            navigationBar = navigationBar,
+            tableScrolls = tableScrolls,
+        )
+        if (complete && headings.size == items.size) {
+            ChatReaderScrollThumb(
+                listState = listState,
+                items = items,
+                headings = headings,
+                viewportPx = constraints.maxHeight,
+            )
+        }
+    }
+}
+
+/** The lazy list itself: the items, then — while the rest is being prepared — the row that says so. */
+@Composable
+private fun ReaderLazyList(
+    listState: LazyListState,
+    items: List<ChatReaderItem>,
+    complete: Boolean,
+    content: String,
+    components: MarkdownComponents?,
+    navigationBar: Dp,
+    tableScrolls: HashMap<Int, ScrollState>,
+) {
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(
@@ -373,6 +438,11 @@ private fun ReaderList(
                 is ChatReaderItem.Block -> MarkdownElement(item.node, checkNotNull(components), content)
                 is ChatReaderItem.ParagraphPiece -> ReaderParagraphPiece(item, content)
                 is ChatReaderItem.CodeChunk -> ReaderCodeChunk(item)
+                is ChatReaderItem.TableChunk -> ReaderTableChunk(
+                    chunk = item,
+                    content = content,
+                    scroll = tableScrolls.getOrPut(item.table.startOffset) { ScrollState(0) },
+                )
                 is ChatReaderItem.PlainText -> Text(
                     text = item.text,
                     style = KnotworkTextStyles.BodyBase,
@@ -450,6 +520,61 @@ private fun ReaderCodeChunk(chunk: ChatReaderItem.CodeChunk) {
                         bottom = if (chunk.last) inner.calculateBottomPadding() else 0.dp,
                     ),
             )
+        }
+    }
+}
+
+/**
+ * One chunk of a long table, drawn as the renderer draws a table — its background, the
+ * header with its rule on the first chunk, rows of equal-width columns that scroll
+ * sideways together when the table is wider than the screen — with corners only where
+ * the table begins or ends, so its chunks read as one table.
+ *
+ * @param chunk the chunk.
+ * @param content the source the table's node indexes into.
+ * @param scroll the table's sideways scroll, shared by all its chunks.
+ */
+@Composable
+private fun ReaderTableChunk(chunk: ChatReaderItem.TableChunk, content: String, scroll: ScrollState) {
+    val dimens = LocalMarkdownDimens.current
+    val top = if (chunk.first) dimens.tableCornerSize else 0.dp
+    val bottom = if (chunk.last) dimens.tableCornerSize else 0.dp
+    val shape = RoundedCornerShape(topStart = top, topEnd = top, bottomEnd = bottom, bottomStart = bottom)
+    val header = remember(chunk.table) { chunk.table.findChildOfType(GFMElementTypes.HEADER) }
+    val columns = remember(header) { header?.children?.count { it.type == GFMTokenTypes.CELL } ?: 0 }
+    val rowCount = remember(chunk.table) { chunk.table.children.count { it.type == GFMElementTypes.ROW } + 1 }
+    val tableWidth = dimens.tableCellWidth * columns
+    val style = LocalMarkdownTypography.current.table
+    Column {
+        if (chunk.first) Spacer(Modifier.height(LocalMarkdownPadding.current.block))
+        BoxWithConstraints(
+            modifier = Modifier
+                .background(LocalMarkdownColors.current.tableBackground, shape)
+                .widthIn(max = dimens.tableMaxWidth)
+                .semantics { collectionInfo = CollectionInfo(rowCount = rowCount, columnCount = columns) },
+        ) {
+            val scrollable = maxWidth <= tableWidth
+            Column(
+                modifier = if (scrollable) {
+                    Modifier.horizontalScroll(scroll).requiredWidth(tableWidth)
+                } else {
+                    Modifier.fillMaxWidth()
+                },
+            ) {
+                if (chunk.first && header != null) {
+                    MarkdownTableHeader(content = content, header = header, tableWidth = tableWidth, style = style)
+                    MarkdownDivider()
+                }
+                chunk.rows.forEachIndexed { i, row ->
+                    MarkdownTableRow(
+                        content = content,
+                        header = row,
+                        tableWidth = tableWidth,
+                        style = style,
+                        rowIndex = chunk.firstRow + i,
+                    )
+                }
+            }
         }
     }
 }

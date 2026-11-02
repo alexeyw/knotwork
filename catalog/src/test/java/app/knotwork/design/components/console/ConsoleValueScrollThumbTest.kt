@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.knotwork.design.components.THUMB_HIDE_DELAY_MS
 import app.knotwork.design.theme.KnotworkTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

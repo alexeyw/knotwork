@@ -37,6 +37,11 @@ details.
   Its beginning is drawn at once and the rest follows; a very long message
   says *Preparing the rest…* if you reach the end first. The long-press menu
   still acts on the whole message.
+- **A message more than five screens long gets a scroll thumb in the reader.**
+  Drag it to move through the message; beside it, the heading of the section
+  you are in, or how far down you are when the message has no headings. A
+  long table is drawn twenty rows at a time and still scrolls sideways as
+  one.
 
 ### Changed
 
