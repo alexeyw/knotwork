@@ -33,7 +33,7 @@ import org.robolectric.annotation.GraphicsMode
  * The bubble used to clip itself with a clipping layer, which tests a touch against the
  * clip's outline. An outline with unequal corners — the agent's bubble — is tested as a
  * path, by intersecting it with a tiny square around the touch, and that intersection
- * comes back empty 8 192 px and more below the top: *Read whole message* under a long
+ * comes back empty more than 8 192 px below the top: *Read whole message* under a long
  * answer, its links and its long-press menu did nothing on the phone.
  *
  * Native graphics, because the intersection is Skia's; and each bubble's body is

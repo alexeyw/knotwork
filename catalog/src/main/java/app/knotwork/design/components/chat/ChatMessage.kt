@@ -538,11 +538,12 @@ private fun chatBubbleTextColor(role: ChatRole): androidx.compose.ui.graphics.Co
  *
  * `Modifier.clip` makes a layer that hit-tests touches against the shape's outline,
  * and an outline whose corners differ — the agent's bubble — is tested as a path:
- * Compose UI 1.12.1 intersects it with a 0.01 px square around the touch, and on the
- * device that intersection comes back empty 8 192 px and more below the outline's
- * top. Nothing in the lower part of a taller bubble could be touched: *Read whole
- * message*, a link, the long-press menu. Clipping only the drawing keeps the bubble's
- * look and leaves touches to its bounds.
+ * Compose UI 1.12.1 intersects it with a 0.01 px square around the touch, and that
+ * intersection comes back empty more than 8 192 px below the outline's top (measured
+ * on an API 36 emulator and with Robolectric's native graphics). Nothing in the lower
+ * part of a taller bubble could be touched: *Read whole message*, a link, the
+ * long-press menu. Clipping only the drawing keeps the bubble's look and leaves
+ * touches to its bounds.
  *
  * @param shape the shape the drawing is clipped to.
  * @return this modifier, clipping its drawing to [shape].

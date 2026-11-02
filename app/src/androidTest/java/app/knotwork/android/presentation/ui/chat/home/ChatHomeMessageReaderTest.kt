@@ -20,6 +20,7 @@ import app.knotwork.design.components.chat.ChatMetadata
 import app.knotwork.design.components.chat.ChatRole
 import app.knotwork.design.components.chat.chatMessagePreview
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -64,12 +65,16 @@ class ChatHomeMessageReaderTest {
      */
     private fun scrollChatToEnd() {
         val list = composeTestRule.onAllNodes(hasScrollToIndexAction())[0]
-        repeat(MAX_SWIPES) {
+        fun atEnd(): Boolean {
             val range = list.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
-            if (range.value() >= range.maxValue()) return
+            return range.value() >= range.maxValue()
+        }
+        repeat(MAX_SWIPES) {
+            if (atEnd()) return
             list.performTouchInput { swipeUp(startY = height * SWIPE_START, endY = top) }
             composeTestRule.waitForIdle()
         }
+        assertTrue("the chat did not reach its end in $MAX_SWIPES swipes", atEnd())
     }
 
     @Test
@@ -81,6 +86,7 @@ class ChatHomeMessageReaderTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.onAllNodesWithText("Section 1", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
+        composeTestRule.waitForIdle()
         scrollChatToEnd()
 
         composeTestRule.onNodeWithTag(CHAT_READ_WHOLE_TAG).performClick()
