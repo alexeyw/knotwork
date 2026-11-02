@@ -43,7 +43,9 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `ChatContent.kt` - sealed `ChatContent` body (`Text`, `Markdown`, `Confirmation`, `Clarification`, `Error`, `ToolCall`) + `ToolCallStatus` enum.
     - `ChatContextAction.kt` - `Copy | Rerun | Rate` enum surfaced by the long-press menu.
     - `ChatMessage.kt` - root chat-message renderer with long-press context menu and per-content dispatch.
+    - `ChatMessageReader.kt` - The whole of one long chat message, full screen over the chat, in the app's theme.
     - `ChatMetadata.kt` - `ChatMetadata` data class + `ChatMessageStatus` enum driving the trailing footer glyph.
+    - `ChatReaderItem.kt` - One item of the message reader's list.
     - `ChatRole.kt` - `User | Assistant | System | Tool` enum.
     - `ClarificationCard.kt` - clarification UI with quick-reply chips and free-form field; collapses to a one-line summary when answered.
     - `ClarificationCardModel.kt` - immutable payload for `ChatContent.Clarification`.
@@ -108,6 +110,7 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
     - `SingleChoiceDialog.kt` - A dialog that picks exactly one option from a radio list.
     - `SingleFieldDialog.kt` - A dialog that asks for exactly one non-blank string.
     - `TypedConfirmDialog.kt` - canonical destructive typed-confirm dialog (`TypedConfirmDialogState` payload + `typedConfirmMatches` keyword rule). Shared by the Settings destructive actions and the splash data-recovery wipe so the confirmation contract cannot drift.
+  - `KnotworkFullScreenDialog.kt` - A full-screen dialog over the screen that opened it, which keeps its own state — a list keeps its scroll — underneath.
   - `KnotworkMarkdownComponents.kt` - The library's Material 3 components, with paragraphs and code blocks that never hand a single text more than `UNBROKEN_RUN_MAX` characters of one unbroken run.
   - `lists/` - `PipelineListRow` / `ToolListRow` / `MemoryEntryRow` / `KnotworkNavListRow` (leading-icon + title + chevron routing row) + previews.
     - `KnotworkListsPreview.kt` - Harness rendering every list-row variant, including a pipeline row in the swipe-revealed state, shared by the preview pane and the Roborazzi baseline.
@@ -452,6 +455,9 @@ matters.
     - `ChatComposerTapTest.kt` - A tap anywhere on the composer belongs to the composer.
     - `ChatMessageContextMenuTest.kt` - Pins the roster of the long-press message context menu.
     - `ChatMessageLongTextTest.kt` - A chat bubble never hands one text a run without whitespace longer than `UNBROKEN_RUN_MAX`: laid out whole, 200 000 characters of minified JSON froze the chat for seconds in one frame.
+    - `ChatMessageReaderSnapshotTest.kt` - Roborazzi baselines of the chat's message reader: an agent's Markdown answer in both themes and at 200 %, the user's own message as plain text, the seam between two chunks of a long code block, and the end of the list while the rest of a long message is being prepared.
+    - `ChatMessageReaderTest.kt` - What the chat's message reader shows and does while a message is prepared and once it is.
+    - `ChatReaderItemTest.kt` - How the message reader cuts a message into list items, and which keys the items carry.
     - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
     - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.

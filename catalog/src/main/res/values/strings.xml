@@ -27,6 +27,18 @@
     <string name="knotwork_chat_message_action_save_to_memory">Save to memory</string>
     <string name="knotwork_chat_message_action_report">Report response</string>
 
+    <!-- Snackbar: a Copy did nothing because the text is larger than the clipboard takes. Said by
+         every copy that can be too long: a console line, value, span or whole tab, a chat message's
+         menu, and the message reader. -->
+    <string name="knotwork_copy_too_long">Too long for the clipboard. Nothing was copied.</string>
+
+    <!-- Message reader, the full-screen view of one long message: its title for the agent's or a pipeline's message. -->
+    <string name="knotwork_chat_long_reader_agent">Agent’s message</string>
+    <!-- Message reader: its title for the user's own message. -->
+    <string name="knotwork_chat_long_reader_user">Your message</string>
+    <!-- Message reader: shown at the end of the list when the reader gets there before the rest of the message is ready. -->
+    <string name="knotwork_chat_long_preparing">Preparing the rest…</string>
+
     <!-- Retry button on the inline ChatContent.Error tile. -->
     <string name="knotwork_chat_message_error_retry">Retry</string>
 
@@ -254,8 +266,6 @@
     </plurals>
     <!-- Value viewer: shown when formatting a long value takes over 300 ms. -->
     <string name="knotwork_console_value_loading">Formatting…</string>
-    <!-- Value viewer: Copy did nothing because the value is larger than the clipboard takes. -->
-    <string name="knotwork_console_value_copy_too_long">Too long for the clipboard. Nothing was copied.</string>
     <!-- Value viewer, beside the scroll thumb while it is dragged. %1$s is the line at the top, %2$s the value's line count; both grouped for the locale. -->
     <string name="knotwork_console_value_scroll_pos">Line %1$s of %2$s</string>
     <!-- Long-press menu on a Traces row. -->
