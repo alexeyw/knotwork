@@ -715,8 +715,8 @@ byte for byte on this device with the same model file, seed, sampler and input;
 on **GPU** the context window must also be the same. Nothing is promised on the
 NPU, for a run that read an image, for a cloud model's answer, on another
 device, or after an update brings another version of the on-device engine
-(LiteRT-LM). Under each node in **Traces** and **Vars**, two chips show the first 8
-characters of its input and output hash; a tap copies all 64.
+(LiteRT-LM). Under each node in **Traces** and **Vars**, two chips show the
+first 8 characters of its input and output hash; a tap copies all 64.
 
 Three actions follow:
 
