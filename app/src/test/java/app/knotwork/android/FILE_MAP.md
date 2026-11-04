@@ -166,6 +166,7 @@ Only Kotlin files appear inside the generated blocks.
     - `KoogMcpClientTest.kt` - Tests for KoogMcpClient.
     - `KoogMcpConnectionCheckerTest.kt` - `KoogMcpConnectionChecker` against a stub MCP server, through the real `KoogMcpClient`: what a check of a form finds, that it leaves no session behind, and that a refused check opens nothing.
     - `McpConnectionPoolTest.kt` - Unit tests for `McpConnectionPool` — the single owner of live MCP connections.
+    - `McpServerClosedSessionTest.kt` - An MCP server may close a Streamable-HTTP session at any time, and MCP Kotlin SDK 0.16.0 servers do after 30 minutes without requests.
   - `network/` - Tests for the OkHttp guards, the download path and the Hugging Face client.
     - `AndroidModelDownloadManagerTest.kt` - Tests for AndroidModelDownloadManager.
     - `ConnectionFailureClassifierTest.kt` - Unit tests for `ConnectionFailureClassifier`.

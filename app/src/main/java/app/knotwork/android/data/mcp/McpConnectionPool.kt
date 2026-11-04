@@ -93,6 +93,68 @@ class McpConnectionPool @Inject constructor(
          * the entry is dropped either way.
          */
         suspend fun invalidate()
+
+        /**
+         * Runs [call] on [client] and recovers once from a session the server has
+         * closed — [McpConnectionPool.withSessionRecovery] for a caller already holding
+         * this server's lock. The rule is the same; see there.
+         *
+         * @param client the pooled client to run [call] on.
+         * @param call the request; it runs at most twice, the second time on a new session.
+         * @return what [call] returned.
+         */
+        suspend fun <T> recovering(client: McpClient, call: suspend (McpClient) -> T): T
+    }
+
+    /**
+     * Runs [call] on [client] — the pooled client for [serverUrl] the caller routed with —
+     * and recovers once from a session the server has closed.
+     *
+     * When [call] fails with [McpSessionExpiredException], the server has refused the
+     * request without running it (MCP 2025-11-25, *Session Management*), and the
+     * specification asks the client to start a new session. So the pooled connection is
+     * replaced — under this server's lock, and only while it is still [client]: a caller
+     * that got there first has already replaced it, and its new client is used instead of
+     * connecting twice — and [call] runs once more, outside the lock, on the new client.
+     *
+     * What is never done:
+     * - a second recovery: a closed session on the new connection, or a failed reconnect,
+     *   fails the call;
+     * - a retry for any other failure: a call that timed out or broke mid-way may have
+     *   run on the server, and repeating it silently could repeat its side effect;
+     * - reviving a connection the pool no longer holds (the server was removed, or another
+     *   caller's reconnect failed): the call fails with the closed-session error.
+     *
+     * The retry goes to the same server under the same configuration — the server the
+     * caller's routing and the user's approval were for.
+     *
+     * @param serverUrl pool key of the server [client] belongs to.
+     * @param client the pooled client to run [call] on.
+     * @param call the request; it runs at most twice, the second time on a new session.
+     * @return what [call] returned.
+     */
+    suspend fun <T> withSessionRecovery(serverUrl: String, client: McpClient, call: suspend (McpClient) -> T): T =
+        recoverOnce(client, call) { withUrlSession(serverUrl) { replaceClosed(client) } }
+
+    /**
+     * The one-retry rule behind [withSessionRecovery] and [Session.recovering], written
+     * once: run [call] on [client]; on a closed session ask [replace] for a client on a
+     * new session and run [call] on it, or fail with the original error when there is none.
+     */
+    private suspend fun <T> recoverOnce(
+        client: McpClient,
+        call: suspend (McpClient) -> T,
+        replace: suspend () -> McpClient?,
+    ): T {
+        try {
+            return call(client)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: McpSessionExpiredException) {
+            Timber.i("MCP server closed the session; opening a new one and repeating the request once")
+            val fresh = replace() ?: throw e
+            return call(fresh)
+        }
     }
 
     /**
@@ -108,7 +170,10 @@ class McpConnectionPool @Inject constructor(
      * @param block work to run under the lock.
      * @return whatever [block] returns.
      */
-    suspend fun <T> withServer(serverUrl: String, block: suspend Session.() -> T): T {
+    suspend fun <T> withServer(serverUrl: String, block: suspend Session.() -> T): T = withUrlSession(serverUrl, block)
+
+    /** [withServer] with the lock-held capabilities this class keeps to itself. */
+    private suspend fun <T> withUrlSession(serverUrl: String, block: suspend UrlSession.() -> T): T {
         val mutex = mutexes.getOrPut(serverUrl) { Mutex() }
         return mutex.withLock { UrlSession(serverUrl).block() }
     }
@@ -189,6 +254,32 @@ class McpConnectionPool @Inject constructor(
         override suspend fun invalidate() {
             val pooled = clients.remove(serverUrl) ?: return
             disconnectQuietly(pooled.client, "invalidate")
+        }
+
+        override suspend fun <T> recovering(client: McpClient, call: suspend (McpClient) -> T): T =
+            recoverOnce(client, call) { replaceClosed(client) }
+
+        /**
+         * A client on a new session in place of [closed], whose session the server has
+         * closed: when [closed] is still the pooled entry, it is dropped and the server is
+         * connected again with the entry's own config; when another client is pooled, a
+         * caller got there first and that client is returned; when nothing is pooled,
+         * `null` — the pool dropped the server, and it is not revived here.
+         *
+         * Connecting can fail; the failure propagates, with the entry already dropped, so
+         * the next caller connects afresh.
+         *
+         * @param closed the client whose request was refused for a closed session.
+         * @return a client on a new session, or `null`.
+         */
+        suspend fun replaceClosed(closed: McpClient): McpClient? {
+            val pooled = clients[serverUrl] ?: return null
+            if (pooled.client !== closed) return pooled.client
+            clients.remove(serverUrl)
+            // The server answers this DELETE with 404 — the session is already gone — but
+            // it also closes the local transport and its HTTP client.
+            disconnectQuietly(closed, "closed by the server")
+            return client(pooled.config)
         }
 
         private suspend fun disconnectQuietly(client: McpClient, reason: String) {

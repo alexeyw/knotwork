@@ -45,6 +45,20 @@ details.
   reader alike — so the rest of it could be read only in a copy. A cell now
   wraps onto as many lines as it needs, and the cells of a row start level at
   its top.
+- **A tool call to an MCP server that closed its session now goes through.**
+  A Streamable HTTP server may end a session at any time — servers built on
+  the MCP Kotlin SDK 0.16 do after 30 minutes without requests — and every
+  later call to it failed until the app was restarted. The app now opens a new
+  session and repeats the call once: the server refused the first attempt
+  without running it, so nothing runs twice. Any other failure is still not
+  repeated.
+- **Refreshing a server on the Tools screen asks the server.** It used to
+  repeat the tool list from the moment the app connected, so the row could
+  read *Connected* while the agent's calls failed. A refresh — or opening the
+  screen once the list is five minutes old — now asks the server for its
+  tools over the live connection, picks up tools it added or removed, and a
+  list cached from a connection the app has since replaced or dropped is
+  asked again.
 
 ## [0.13.0] - 2026-11-02
 

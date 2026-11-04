@@ -1,6 +1,7 @@
 package app.knotwork.android.data.repositories
 
 import androidx.annotation.VisibleForTesting
+import app.knotwork.android.data.mcp.McpClient
 import app.knotwork.android.data.mcp.McpConnectionPool
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpConnectionStatus
@@ -62,14 +63,21 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
                 // or headers) does not answer for this one: the edit's own refetch may
                 // have been cancelled, and serving the old list would show "Connected"
                 // without ever trying the new config.
+                //
+                // Nor does a list from a connection the pool no longer holds: the agent's
+                // path replaces a connection whose session the server closed, and drops
+                // one it could not replace. Serving that list would show "Connected" for
+                // a connection that is gone — the screen saying one thing while the
+                // agent sees another.
                 if (cached != null &&
                     cached.config == config &&
+                    cached.connection != null &&
+                    cached.connection === pool.peek(serverUrl) &&
                     now - cached.fetchedAtMs <= McpServerRepository.TOOL_LIST_TTL_MS
                 ) {
-                    // A previously-failed refresh may have left the status flow in `Error`.
-                    // Serving cached tools while still telling the UI we're broken would
-                    // surface a stale red pill on a perfectly usable server — so reconcile
-                    // the status to `Connected` whenever we successfully return cached data.
+                    // The status flow may still read `Error` from a fetch cancelled
+                    // before it settled. This list is an answer from the connection the
+                    // pool holds now, so the status that goes with it is `Connected`.
                     flow.value = McpConnectionStatus.Connected
                     return@withServer Result.success(cached.tools)
                 }
@@ -92,9 +100,34 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
             // Refresh by hand.
             var settled = false
             try {
+                val pooled = pool.peek(serverUrl)
                 val client = client(config)
-                val tools = client.getTools().map { agentTool -> agentTool.toMcpTool(serverUrl) }
-                caches[serverUrl] = CachedToolList(config = config, tools = tools, fetchedAtMs = clockMs())
+                val listed = if (client === pooled) {
+                    // A connection that was already open is asked again: that request is
+                    // what tells a live session from one the server has closed, and how a
+                    // tool the server added since reaches the app. A closed session is
+                    // replaced once, as for the agent's calls — and the new connection
+                    // listed its tools while connecting, so it is not asked twice.
+                    recovering(client) { current ->
+                        if (current ===
+                            client
+                        ) {
+                            current.refreshTools()
+                        } else {
+                            current.getTools()
+                        }
+                    }
+                } else {
+                    // Connected just now: the handshake listed the tools.
+                    client.getTools()
+                }
+                val tools = listed.map { agentTool -> agentTool.toMcpTool(serverUrl) }
+                caches[serverUrl] = CachedToolList(
+                    config = config,
+                    tools = tools,
+                    fetchedAtMs = clockMs(),
+                    connection = pool.peek(serverUrl),
+                )
                 flow.value = McpConnectionStatus.Connected
                 settled = true
                 Result.success(tools)
@@ -105,7 +138,9 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
                 // Drop the pooled entry so the next attempt reconnects instead of
                 // reusing a connection that has already proven unusable. Because
                 // the pool is shared, this also stops the agent's next tool call
-                // from being routed onto the same dead session.
+                // from being routed onto the same dead session. A tool call still
+                // running on that connection ends with a failure; it is not repeated —
+                // it may have run on the server.
                 //
                 // `NonCancellable` because this cleanup suspends (the transport's
                 // `disconnect`) inside a catch clause: if the caller's scope is
@@ -125,9 +160,11 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
                 // connected, try again" rather than a spinner that never stops.
                 // Assignment does not suspend, so this is safe while cancelling.
                 if (!settled) {
+                    val cached = caches[serverUrl]
                     flow.value = when {
                         statusBeforeFetch != McpConnectionStatus.Connecting -> statusBeforeFetch
-                        caches[serverUrl] != null -> McpConnectionStatus.Connected
+                        cached?.connection != null && cached.connection === pool.peek(serverUrl) ->
+                            McpConnectionStatus.Connected
                         else -> McpConnectionStatus.Error(reason = INTERRUPTED_REASON)
                     }
                 }
@@ -180,8 +217,15 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
      * @property config The config the list was fetched with; the list answers only a fetch with it.
      * @property tools The tools the server published.
      * @property fetchedAtMs When the fetch finished, by [clockMs].
+     * @property connection The pooled client the list came from; the list answers only while
+     *   the pool still holds that same client. Compared by identity.
      */
-    private data class CachedToolList(val config: McpServerConfig, val tools: List<McpTool>, val fetchedAtMs: Long)
+    private class CachedToolList(
+        val config: McpServerConfig,
+        val tools: List<McpTool>,
+        val fetchedAtMs: Long,
+        val connection: McpClient?,
+    )
 
     /** Stable id builder + format constants shared with `ToolDetailScreen`. */
     companion object {

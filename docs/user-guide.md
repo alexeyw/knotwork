@@ -2040,6 +2040,23 @@ so an unreachable server does not crash the chat. If a tool that
 relied on an MCP server stops responding, you will see an error
 event in the console rather than a silent failure.
 
+#### When a server ends the session
+
+A server on the Streamable HTTP transport may end the session the app opened
+with it, and many do after a while without requests — servers built on the
+MCP Kotlin SDK 0.16, for example, after 30 minutes. The app then opens a new
+session and makes the call once more. It does that only for this answer: the
+server turned the first attempt away without running it, so nothing runs
+twice. A call that fails for any other reason is not repeated, because it may
+already have run.
+
+The server row's refresh button asks the server for its tools over the
+connection the agent uses, and so does opening the Tools screen once the list
+is more than five minutes old. What the row shows is therefore that
+connection's state: *Connected* when the server answered, an error when it did
+not. Tools the server added or removed since the app connected appear after a
+refresh.
+
 #### What the tool count on a server row means
 
 A connected server shows something like `13 tools · ok`. That number is
@@ -2101,6 +2118,7 @@ queue behind it.
 | *MCP tool … did not respond within 60s* | The call hit the deadline above. The server may still be working on it; nothing was cancelled on its side. |
 | *Tool … not found across active providers* | No connected server publishes a tool by that name. Read the tool-count note above before concluding the server is broken. |
 | *MCP client is not connected; cannot execute …* | The connection dropped between planning the call and making it. This is deliberately worded differently from *not found*, because the tool does exist — trying again normally reconnects. |
+| *The MCP server closed the session (HTTP 404 for its session id). The request was not run.* | The server ended the session, the app opened a new one, and the server ended that one too before the call got through. Nothing ran on the server. Try again; if it keeps happening, the server is ending sessions as soon as they open. |
 | *Tool … is disabled* | The tool exists but its switch is off on the Tools screen — on every server that offers it. |
 | *MCP tool … now resolves to risk level …, not the … its approval check used* | Between the approval check and the call, a server came back and took the tool's name over (see *When two tools share a name*), or the tool's risk level was changed on the Tools screen. The call was not made. Run it again: the check is repeated for the server that serves it now. |
 

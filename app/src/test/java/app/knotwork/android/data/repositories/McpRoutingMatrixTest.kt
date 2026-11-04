@@ -61,6 +61,8 @@ class McpRoutingMatrixTest {
 
         override suspend fun getTools(): List<AgentTool> = server?.tools.orEmpty()
 
+        override suspend fun refreshTools(): List<AgentTool> = checkNotNull(server) { "not connected" }.tools
+
         override suspend fun executeTool(name: String, arguments: String): String {
             val target = checkNotNull(server) { "not connected" }
             target.calls += name
