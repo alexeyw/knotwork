@@ -50,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -84,6 +83,7 @@ import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleValueViewer
 import app.knotwork.design.components.console.RunHeaderStrip
 import app.knotwork.design.components.misc.KnotworkLoader
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles

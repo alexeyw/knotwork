@@ -23,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -47,6 +46,7 @@ import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.misc.KnotworkTestProbeRow
 import app.knotwork.design.components.misc.KnotworkWarningBanner
 import app.knotwork.design.components.misc.TestProbeUi
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.screens.settings.KnotworkHelpEntry
 import app.knotwork.design.screens.settings.KnotworkHintPanel

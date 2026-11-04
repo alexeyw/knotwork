@@ -17,7 +17,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -40,6 +39,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.theme.KnotworkTheme
 
 /**
@@ -189,7 +190,9 @@ private fun PreviewBody(segments: List<PromptPreviewSegmentUi>, tooltip: String,
         )
     }
 
-    Text(
+    // The preview is where a prompt is checked before it runs: every character of it, with
+    // each variable's value as substituted, however long ($MEMORY_SUMMARY holds whole entries).
+    WholeText(
         text = buildPreviewAnnotatedString(segments, resolvedBg, resolvedFg),
         style = textStyle,
         inlineContent = inlineContent,

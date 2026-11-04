@@ -163,6 +163,9 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
   - `prompt/` - prompt-facing components: the preview sheet that shows a rendered prompt with its placeholders resolved, and its unresolved ones marked as errors.
     - `PromptPreviewPreview.kt` - Preview fixtures for the prompt-preview sheet.
     - `PromptPreviewSheet.kt` - Bottom sheet displaying a prompt with its `$VARIABLES` already substituted.
+  - `text/` - The app's bounded text: `Text` and `WholeText`, and the rules for what one text lays out.
+    - `ShownText.kt` - What one text lays out (`shownText`): a line-limited text cut to what its lines hold, a run over 2 000 characters in pieces, at most 10 000 characters of an unlimited text and the count of the rest.
+    - `Text.kt` - The app's text: Material 3's `Text`, with the same parameters, that never lays out more than the main thread can afford however long the string it is given.
   - `topbar/` - top-app-bar chrome.
     - `JournalExportActions.kt` - The pair of top-bar actions that hands a journal to the user: **share it** and **save it to a file**.
     - `KnotworkTopAppBarShell.kt` - wraps a `TopAppBar` in a column with an attached hairline divider so it never bleeds into scrolled content.
@@ -525,6 +528,11 @@ matters.
     - `PipelineEditorCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `PipelineEditorCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the NodeCard running pulse renders deterministically.
   - `prompt/` - baselines for the prompt-facing components.
     - `PromptPreviewSheetSnapshotTest.kt` - Roborazzi baselines for the prompt-preview sheet.
+  - `text/` - Tests of the bounded text: its rules, its look, and the screens it bounds.
+    - `LongTextSurfacesTest.kt` - The screens that showed a model's, a tool's or a user's text of any length in one text, drawn with such a text: the ones that may cut keep each text node to what its lines can hold or to the cap, and the ones that must show the text whole show every character of it, with no text node holding a run without whitespace longer than 2 000 characters.
+    - `ShownTextTest.kt` - What `shownText` hands a text to lay out, for each of its three rules.
+    - `TextSnapshotTest.kt` - Roborazzi baselines of the end of a text longer than a text shows: its last lines and the *… N more characters* line under them, at 100 % and 200 % font scale.
+    - `TextTest.kt` - The app's `Text` and `WholeText` as drawn: ordinary text exactly as Material draws it, and a long text bounded by the rule `shownText` picks.
   - `topbar/` - top-bar actions whose behaviour outruns their appearance.
     - `JournalExportActionsBehaviourTest.kt` - Behaviour of the journal-export actions on both journal surfaces — the parts a Roborazzi baseline cannot show.
   - `UnbrokenRunCutsTest.kt` - Where `unbrokenRunCuts` cuts a text, and what the pieces keep.

@@ -33,7 +33,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +75,8 @@ import app.knotwork.design.components.knotworkMarkdownComponents
 import app.knotwork.design.components.knotworkMarkdownTypography
 import app.knotwork.design.components.misc.KnotworkLoader
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.components.topbar.KnotworkTopAppBarShell
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -443,7 +444,8 @@ private fun ReaderLazyList(
                     content = content,
                     scroll = tableScrolls.getOrPut(item.table.startOffset) { ScrollState(0) },
                 )
-                is ChatReaderItem.PlainText -> Text(
+                // The reader shows a message whole: a plain-text line holds any length of prose.
+                is ChatReaderItem.PlainText -> WholeText(
                     text = item.text,
                     style = KnotworkTextStyles.BodyBase,
                     color = MaterialTheme.colorScheme.onSurface,

@@ -21,7 +21,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +50,7 @@ import app.knotwork.design.R
 import app.knotwork.design.components.KnotworkFullScreenDialog
 import app.knotwork.design.components.misc.KnotworkLoader
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette

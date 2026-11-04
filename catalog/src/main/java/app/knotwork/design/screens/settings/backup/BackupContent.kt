@@ -21,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -29,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.components.topbar.KnotworkTopAppBarShell
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme

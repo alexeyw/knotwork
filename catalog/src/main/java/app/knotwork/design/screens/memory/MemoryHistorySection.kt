@@ -27,7 +27,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 
@@ -195,7 +196,8 @@ internal fun MemoryPairBlock(entryId: String, pair: MemoryPairView, callbacks: M
             )
         }
         Column(modifier = Modifier.semantics(mergeDescendants = true) {}) {
-            Text(
+            // The other entry of the pair is read here, all of it.
+            WholeText(
                 text = pair.otherText,
                 style = MemoryType.detailBody.copy(textDirection = TextDirection.Content),
                 color = MaterialTheme.colorScheme.onSurface,
@@ -393,14 +395,23 @@ private fun MemoryVersionItem(version: MemoryVersionView, position: Int, total: 
                 .clickable(enabled = clamped || expanded) { expanded = !expanded }
                 .padding(start = 14.dp, top = 10.dp, bottom = 10.dp),
         ) {
-            Text(
-                text = version.text,
-                style = MemoryType.detailBody.copy(textDirection = TextDirection.Content),
-                color = KnotworkTheme.extended.onSurface2,
-                maxLines = if (expanded) Int.MAX_VALUE else VERSION_MAX_LINES,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { layout -> if (!expanded) clamped = layout.hasVisualOverflow },
-            )
+            if (expanded) {
+                // An expanded version shows every character, however long.
+                WholeText(
+                    text = version.text,
+                    style = MemoryType.detailBody.copy(textDirection = TextDirection.Content),
+                    color = KnotworkTheme.extended.onSurface2,
+                )
+            } else {
+                Text(
+                    text = version.text,
+                    style = MemoryType.detailBody.copy(textDirection = TextDirection.Content),
+                    color = KnotworkTheme.extended.onSurface2,
+                    maxLines = VERSION_MAX_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { layout -> clamped = layout.hasVisualOverflow },
+                )
+            }
             Text(
                 text = "$sourceLine\n$datesLine",
                 style = MemoryType.timestamp,

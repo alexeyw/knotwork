@@ -4,12 +4,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.BuildConfig
 import app.knotwork.android.R
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 
 /**

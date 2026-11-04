@@ -5,7 +5,6 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +26,7 @@ import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.screens.onboarding.OnboardingCallbacks
 import app.knotwork.design.screens.onboarding.OnboardingContent
 import app.knotwork.design.screens.onboarding.OnboardingStep

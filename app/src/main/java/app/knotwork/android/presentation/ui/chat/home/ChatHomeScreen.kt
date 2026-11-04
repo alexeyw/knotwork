@@ -37,7 +37,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,6 +86,7 @@ import app.knotwork.design.components.knotworkMarkdownColor
 import app.knotwork.design.components.knotworkMarkdownComponents
 import app.knotwork.design.components.knotworkMarkdownTypography
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.screens.chat.ChatHomeCallbacks
 import app.knotwork.design.screens.chat.ChatHomeContent
 import app.knotwork.design.screens.chat.ChatHomeRunCallbacks

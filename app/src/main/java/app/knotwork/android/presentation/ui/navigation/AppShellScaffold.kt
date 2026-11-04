@@ -27,7 +27,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +44,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.get
 import app.knotwork.android.presentation.state.TransientMessageRelay
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkIconSizes
 import app.knotwork.design.tokens.KnotworkTextStyles
