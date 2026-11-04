@@ -13,6 +13,13 @@ details.
 
 ## [Unreleased]
 
+### Changed
+
+- **The on-device inference engine is LiteRT-LM 0.19.0** (was 0.17.1). On
+  the GPU it now draws tokens from the same random sequence as on the CPU for
+  a given seed, so the same run can give a different answer on the GPU than
+  it did before the update.
+
 ### Fixed
 
 - **Very long text without spaces no longer freezes the screen.** A tool's

@@ -23,7 +23,7 @@ timber = "5.0.1"
 room = "2.8.5"
 datastore = "1.2.1"
 mockk = "1.14.11"
-litertlm = "0.17.1"
+litertlm = "0.19.0"
 mediapipe = "1.0.0"
 # Not a direct dependency: a floor under MediaPipe's own protobuf-javalite (4.26.1
 # in tasks-core 1.0.0), which sits inside CVE-2024-7254. Applied as a constraint in

@@ -342,7 +342,7 @@ android {
             signingConfig = releaseSigningConfig
             // Strip non-arm64 ABIs from the release APK. The reason is the
             // inference engine, not the API floor: `litertlm-android` ships
-            // `jni/arm64-v8a` and `jni/x86` only — it has no `armeabi-v7a`
+            // `jni/arm64-v8a` and `jni/x86_64` only — it has no `armeabi-v7a`
             // binary at all — so a 32-bit ARM device cannot run this app at any
             // `minSdk`. Shipping `armeabi-v7a` + `x86` + `x86_64` would inflate
             // the artefact by ~65 MB for zero benefit. (The earlier wording
