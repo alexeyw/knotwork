@@ -1,12 +1,12 @@
 package app.knotwork.design.components.console
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.knotwork.design.R
 import app.knotwork.design.components.dialogs.ConfirmDialog
 import app.knotwork.design.components.dialogs.ConfirmDialogUi
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 

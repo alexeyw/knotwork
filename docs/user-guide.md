@@ -399,6 +399,21 @@ headings — how far down you are, such as *42%*.
 The long-press menu works on the whole message, not on what the bubble
 shows.
 
+### Very long text elsewhere in the app
+
+A tool's output, an error or a memory entry can run to hundreds of
+thousands of characters. Wherever the app shows such a text in a row or a
+line — Monitoring, the console's logs, the memory list, an error message —
+it shows its first 10 000 characters and then *… 40,000 more characters*
+(the count of the rest), or, in a row of a few lines, as much as fits
+before the ellipsis. In the console, **Copy line** still copies the whole
+line.
+
+A few places show every character, however long: the arguments of a tool
+call waiting for your approval once you expand them (you approve exactly
+what will run), a question the agent asks you, a memory entry you open, a
+file preview in Files, the prompt preview, and the message reader.
+
 ### Copying a message
 
 Long-press any message bubble to open its context menu. From there you

@@ -16,6 +16,7 @@ Only Kotlin files appear inside the generated blocks.
   - `ArchitectureGuardsDocumentedTest.kt` - Holds the Konsist table of `docs/static-analysis.md` to the suite it describes.
   - `ArchitectureScope.kt` - Shared Konsist scope for the architecture guard suite.
   - `BackedUpSecretsGuardTest.kt` - Every owner of entries in a Keystore-backed store tells the backup what it holds.
+  - `BoundedTextGuardTest.kt` - Census of how production code draws text: every text goes through the design system's bounded `Text`; the screens that show a text whole, and every input field, are named here with the reason.
   - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
   - `CloudStreamEndCallersGuardTest.kt` - Census of the code that turns a cloud model's stream into an answer — every caller of `executeStreaming` — and the rule that each asks `CloudStreamEnd` whether the stream was cut off.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
@@ -693,6 +694,7 @@ Only Kotlin files appear inside the generated blocks.
           - `MiniMapGeometryTest.kt` - Pure-Kotlin tests for `MiniMapGeometry`.
           - `ShippedPipelineLayoutTest.kt` - Guards the layout of every pipeline the project ships as a file: the bundled presets under `src/main/assets/presets/pipelines/` and the cookbook recipes under `docs/recipes/`.
           - `ValidationAutoFixTest.kt` - Pure-Kotlin tests for `ValidationAutoFix` recipes.
+        - `SkillInstructionPreviewTest.kt` - What the SKILL node sheet's read-only instruction field is given (`asInstructionPreview`).
     - `prompts/` - Tests for the prompt library.
       - `PromptLibraryViewModelTest.kt` - Unit tests for `PromptLibraryViewModel`.
     - `settings/` - Tests for the settings screens and their catalogues.

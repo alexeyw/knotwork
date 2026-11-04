@@ -13,7 +13,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -76,6 +75,7 @@ import app.knotwork.design.components.pipelineeditor.PipelineTargetDisabledReaso
 import app.knotwork.design.components.pipelineeditor.PipelineTargetOption
 import app.knotwork.design.components.pipelineeditor.SkillConfig
 import app.knotwork.design.components.pipelineeditor.SkillOption
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import kotlinx.coroutines.launch
@@ -1074,10 +1074,34 @@ private fun rememberSkillOptions(skills: List<Skill>): List<SkillOption> {
             SkillOption(
                 id = skill.id,
                 name = skill.name,
-                instructionPreview = skill.instruction,
+                instructionPreview = skill.instruction.asInstructionPreview(),
                 toolRestrictionSummary = summary,
             ),
         )
     }
     return options
+}
+
+/**
+ * Characters of a skill's instruction the SKILL node sheet previews. The preview is a
+ * read-only field, and a field lays out its whole value on the main thread, in time that grows
+ * with the square of its longest run without whitespace; the skill editor shows the rest.
+ */
+internal const val SKILL_INSTRUCTION_PREVIEW_MAX_CHARS = 2_000
+
+/**
+ * [this] skill instruction as the SKILL node sheet previews it: whole when it has at most
+ * [SKILL_INSTRUCTION_PREVIEW_MAX_CHARS] characters, otherwise that many followed by `…`. The
+ * cut never ends on the first half of a surrogate pair.
+ *
+ * @return the preview string handed to the sheet's read-only field.
+ */
+internal fun String.asInstructionPreview(): String {
+    if (length <= SKILL_INSTRUCTION_PREVIEW_MAX_CHARS) return this
+    val end = if (this[SKILL_INSTRUCTION_PREVIEW_MAX_CHARS - 1].isHighSurrogate()) {
+        SKILL_INSTRUCTION_PREVIEW_MAX_CHARS - 1
+    } else {
+        SKILL_INSTRUCTION_PREVIEW_MAX_CHARS
+    }
+    return substring(0, end) + "…"
 }

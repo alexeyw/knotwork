@@ -22,7 +22,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +47,8 @@ import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.chips.RiskPill
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette
@@ -377,14 +378,25 @@ private fun JsonArgsBlock(arguments: Map<String, String>) {
             .padding(KnotworkTheme.spacing.sp3),
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            Text(
-                text = rendered,
-                style = KnotworkTextStyles.MonoSm,
-                color = KnotworkTheme.extended.onSurface2,
-                maxLines = if (expanded) Int.MAX_VALUE else JSON_COLLAPSED_MAX_LINES,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            if (expanded) {
+                // What the user approves is what runs (`api-conventions.md` § AppFunctions):
+                // the expanded block shows every character, however long.
+                WholeText(
+                    text = rendered,
+                    style = KnotworkTextStyles.MonoSm,
+                    color = KnotworkTheme.extended.onSurface2,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Text(
+                    text = rendered,
+                    style = KnotworkTextStyles.MonoSm,
+                    color = KnotworkTheme.extended.onSurface2,
+                    maxLines = JSON_COLLAPSED_MAX_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             Icon(
                 imageVector = if (expanded) AppIcons.ArrowUp else AppIcons.ArrowDown,
                 contentDescription = stringResource(

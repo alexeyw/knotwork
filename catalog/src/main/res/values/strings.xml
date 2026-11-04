@@ -253,6 +253,11 @@
         <item quantity="one">%1$s character</item>
         <item quantity="other">%1$s characters</item>
     </plurals>
+    <!-- Any text without a line limit longer than 10,000 characters: the line under its first 10,000 saying how many were not drawn. %1$s is the count, grouped for the locale. -->
+    <plurals name="knotwork_text_n_more_chars">
+        <item quantity="one">… %1$s more character</item>
+        <item quantity="other">… %1$s more characters</item>
+    </plurals>
     <!-- Vars row, TalkBack: said after the key of a row whose value is empty ("reason, empty"). -->
     <string name="knotwork_console_value_a11y_empty">empty</string>
     <!-- Vars row whose preview was cut: first item of its long-press menu, and what TalkBack says a tap does ("Double-tap to open value"). -->

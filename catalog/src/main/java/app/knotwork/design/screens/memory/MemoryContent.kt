@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -67,6 +66,8 @@ import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chips.KnotworkFilterChip
 import app.knotwork.design.components.misc.EmptyState
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -800,7 +801,8 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
                         )
                         if (detail.history.isNotEmpty()) MemoryEditHistoryNote()
                     } else {
-                        Text(
+                        // The detail is where an entry is read: all of it, however long.
+                        WholeText(
                             text = detail.body,
                             style = MemoryType.detailBody,
                             color = KnotworkTheme.extended.onSurface2,

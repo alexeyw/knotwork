@@ -178,7 +178,7 @@ class TopBarInsetGuardTest {
 
     private fun calledProjectComposables(sources: Map<String, String>, text: String): List<String> =
         CAPITALISED_CALL.findAll(text).map { it.groupValues[1] }.distinct()
-            .filter { definitionsOf(sources, it).isNotEmpty() }
+            .filter { it !in TEXT_LEAVES && definitionsOf(sources, it).isNotEmpty() }
             .toList()
 
     private fun definitionsOf(
@@ -243,6 +243,13 @@ class TopBarInsetGuardTest {
             "EditorToolbar" to "presentation/ui/pipeline/editor/PipelineEditorScreen.kt",
             "MultiSelectToolbar" to "presentation/ui/pipeline/editor/PipelineEditorScreen.kt",
         )
+
+        /**
+         * The design system's text composables. Every text in the app is drawn through them
+         * (`BoundedTextGuardTest`), so a bar's title calls one inside the slot; they draw
+         * characters, never a bar at the screen's edge, and are not bars to check.
+         */
+        val TEXT_LEAVES = setOf("Text", "WholeText")
 
         val INSET_EVIDENCE = Regex(
             """\b(?:CenterAligned|Medium|Large)?TopAppBar\s*\(|""" +

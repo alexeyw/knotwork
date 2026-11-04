@@ -63,6 +63,13 @@ For the broader layering rationale, see
   clear of the system bars. A `SnackbarHostState` a screen shows messages
   into is rendered by a host in the same file. `SnackbarHostGuardTest` fails
   a raw Material3 host, an unrendered state and an unplaced host.
+- Text is drawn through the design system's `Text`
+  (`app.knotwork.design.components.text.Text`), never Material's: laying out
+  one text costs time in the square of its longest run without whitespace,
+  whatever its line limit, and that `Text` bounds what any text lays out. A
+  screen whose point is to show a long text whole uses `WholeText` and is
+  named, with the reason, in `BoundedTextGuardTest` — as is every file that
+  composes an input field, which can be neither cut nor drawn in pieces.
 
 ## Coroutines & Flow
 

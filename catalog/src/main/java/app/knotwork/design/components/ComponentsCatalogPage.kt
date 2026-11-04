@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import app.knotwork.design.components.buttons.KnotworkButtonsCatalogContent
@@ -16,6 +15,7 @@ import app.knotwork.design.components.console.ConsoleCatalogContent
 import app.knotwork.design.components.lists.KnotworkListsCatalogContent
 import app.knotwork.design.components.misc.KnotworkMiscCatalogContent
 import app.knotwork.design.components.pipelineeditor.PipelineEditorCatalogContent
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 

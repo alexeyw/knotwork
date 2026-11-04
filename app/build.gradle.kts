@@ -1924,7 +1924,7 @@ tasks.withType<Test>().configureEach {
     inputs.dir(rootProject.file("fastlane/metadata"))
         .withPropertyName("storeMetadata")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-    // `TopBarInsetGuardTest` and `SnackbarHostGuardTest` read the design system's
+    // `TopBarInsetGuardTest`, `SnackbarHostGuardTest` and `BoundedTextGuardTest` read the design system's
     // sources as text. A `:catalog` edit usually re-runs this task through the
     // compiled classpath anyway, but an edit that leaves the bytecode as it was (a
     // modifier reordered into the same calls) would not — declared, not assumed.

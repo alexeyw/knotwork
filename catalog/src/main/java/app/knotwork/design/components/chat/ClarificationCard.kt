@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.chips.ChipStyle
 import app.knotwork.design.components.chips.KnotworkChip
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette
@@ -99,7 +100,9 @@ fun ClarificationCard(model: ClarificationCardModel, onReply: (String) -> Unit, 
             .padding(CardPadding),
     ) {
         HeaderRow()
-        Text(
+        // The user answers this question, so all of it shows: when the model's reply does not
+        // parse, the question is that whole reply.
+        WholeText(
             text = model.question,
             style = KnotworkTextStyles.BodyBase,
             color = ClarificationCardForeground,

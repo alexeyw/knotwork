@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -47,9 +46,11 @@ import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chips.RiskPill
 import app.knotwork.design.components.controls.KnotworkSegmentedControl
 import app.knotwork.design.components.controls.LabeledSwitchRow
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
+import androidx.compose.material3.Text as MaterialText
 
 /** Side length of the identity tile on the editor header strip. */
 private val EditorTile = 44.dp
@@ -597,8 +598,11 @@ private fun InstructionField(
         )
         // Highlight pass overlays the same text region; kept invisible behind
         // the editable field for placeholder-empty so we don't double-render.
+        // Material's own text, not the app's: the highlights must lie exactly over the
+        // field's characters, and the app's text would cut a long run onto a new line
+        // where the field does not (`BoundedTextGuardTest` names this exception).
         if (value.isNotEmpty()) {
-            Text(
+            MaterialText(
                 text = highlightVariables(text = value, variables = variables),
                 style = KnotworkTextStyles.MonoSm,
                 color = Color.Transparent,

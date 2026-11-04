@@ -28,7 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -48,6 +47,7 @@ import app.knotwork.design.components.chips.KnotworkChipSize
 import app.knotwork.design.components.chips.KnotworkFilterChip
 import app.knotwork.design.components.dialogs.SingleFieldDialog
 import app.knotwork.design.components.dialogs.SingleFieldDialogUi
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.components.topbar.KnotworkTopAppBarShell
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
