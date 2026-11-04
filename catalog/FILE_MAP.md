@@ -470,6 +470,7 @@ matters.
     - `ChatReaderScrollThumbTest.kt` - How the reader's scroll thumb maps onto its items, and when it shows.
     - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
     - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
+    - `HitlConfirmationCardStripTest.kt` - The approval card's risk strip runs along its start edge — the left in a left-to-right layout, the right in a right-to-left one.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
     - `HitlConfirmationStateTest.kt` - Pure-JVM tests for `HitlConfirmationState` — the gating logic behind `HitlConfirmationCard`'s Allow CTA, Always-Allow visibility, and destructive typed-confirm row.
     - `HitlRequestContextTest.kt` - `label` — the one place that names whose words a request is.
@@ -506,6 +507,7 @@ matters.
     - `OutcomeDialogSnapshotTest.kt` - Roborazzi baselines for the `OutcomeDialog` family — the four import outcomes and the re-import question, in one shape.
     - `SingleFieldDialogSnapshotTest.kt` - Roborazzi baselines for the shared single-field dialog.
     - `SingleFieldDialogTest.kt` - Behaviour of the shared single-field dialog — the part a baseline cannot show.
+  - `KnotworkMarkdownLongRunTest.kt` - Every Markdown element the chat draws, holding a run without whitespace longer than `UNBROKEN_RUN_MAX`, is drawn by `knotworkMarkdownComponents` without one text holding more of the run than that — the renderer draws headings and table cells with its own text, which the app's bounded text never sees.
   - `KnotworkMarkdownTableTest.kt` - A table cell longer than its column wraps onto more lines instead of ending in an ellipsis — in a chat bubble, which draws tables with `knotworkMarkdownComponents`, and in the message reader, whole and cut into chunks.
   - `lists/` - list rows and their status mapping.
     - `ConnectionStatusTest.kt` - Pure-JVM mapping test for `ConnectionStatus.toStatus`.
@@ -528,6 +530,7 @@ matters.
     - `PipelineEditorCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `PipelineEditorCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the NodeCard running pulse renders deterministically.
   - `prompt/` - baselines for the prompt-facing components.
     - `PromptPreviewSheetSnapshotTest.kt` - Roborazzi baselines for the prompt-preview sheet.
+  - `TallTextLayoutTest.kt` - A text taller than a layout constraint can hold — about 262 000 px — is drawn, not thrown.
   - `text/` - Tests of the bounded text: its rules, its look, and the screens it bounds.
     - `LongTextSurfacesTest.kt` - The screens that showed a model's, a tool's or a user's text of any length in one text, drawn with such a text: the ones that may cut keep each text node to what its lines can hold or to the cap, and the ones that must show the text whole show every character of it, with no text node holding a run without whitespace longer than 2 000 characters.
     - `ShownTextTest.kt` - What `shownText` hands a text to lay out, for each of its three rules.
