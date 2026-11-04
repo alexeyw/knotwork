@@ -30,7 +30,8 @@ import java.io.File
  * comments removed. It sees imports, wildcard imports and fully qualified calls of
  * Material's, the foundation's and Material 2's text; a text reached through some other
  * library (the Markdown renderer's own) is not seen — the chat's Markdown components bound
- * theirs (`KnotworkMarkdownComponents.kt`). A field reached through the catalog's
+ * theirs (`KnotworkMarkdownComponents.kt`), and `KnotworkMarkdownLongRunTest` draws every
+ * element the chat's Markdown can hold with a long run. A field reached through the catalog's
  * `KnotworkTextField` / `KnotworkTextArea` is named once, at that component.
  */
 class BoundedTextGuardTest {
