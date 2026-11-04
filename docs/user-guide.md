@@ -2017,8 +2017,9 @@ tools off** while any of the server's tools is on, and **Turn all tools on**
 while any is off. To use one tool from a server that publishes many, turn them
 all off, then switch that one back on — the list opens for it. This covers the
 tools the row lists and does exactly what switching each by hand would: their
-risk levels stay as you set them, and a name one of them shared with a server
-further down passes to that server (see *When two tools share a name*).
+risk levels stay as you set them, and while a tool is off, its name passes to
+the next server down that has it switched on (see *When two tools share a
+name*).
 
 **Unencrypted addresses need your approval.** If the URL starts with
 `http://` rather than `https://` and points at a machine on your own
