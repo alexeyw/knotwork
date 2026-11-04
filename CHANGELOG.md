@@ -54,11 +54,11 @@ details.
   repeated.
 - **Refreshing a server on the Tools screen asks the server.** It used to
   repeat the tool list from the moment the app connected, so the row could
-  read *Connected* while the agent's calls failed. A refresh — or opening the
-  screen once the list is five minutes old — now asks the server for its
-  tools over the live connection, picks up tools it added or removed, and a
-  list cached from a connection the app has since replaced or dropped is
-  asked again.
+  read *Connected* while the agent's calls failed. A refresh — and the
+  screen's own reload of a list more than five minutes old — now asks the
+  server for its tools over the live connection and picks up tools it added
+  or removed. A list kept from a connection the app has since replaced or
+  dropped is not shown as current: the server is asked again.
 
 ## [0.13.0] - 2026-11-02
 

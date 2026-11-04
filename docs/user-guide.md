@@ -2044,15 +2044,16 @@ event in the console rather than a silent failure.
 
 A server on the Streamable HTTP transport may end the session the app opened
 with it, and many do after a while without requests — servers built on the
-MCP Kotlin SDK 0.16, for example, after 30 minutes. The app then opens a new
+MCP Kotlin SDK 0.16 and later, for example, after 30 minutes. The app then opens a new
 session and makes the call once more. It does that only for this answer: the
 server turned the first attempt away without running it, so nothing runs
 twice. A call that fails for any other reason is not repeated, because it may
 already have run.
 
 The server row's refresh button asks the server for its tools over the
-connection the agent uses, and so does opening the Tools screen once the list
-is more than five minutes old. What the row shows is therefore that
+connection the agent uses. So does the Tools screen when it loads a server's
+list and the copy it holds is more than five minutes old, or comes from a
+connection the app has since replaced. What the row shows is therefore that
 connection's state: *Connected* when the server answered, an error when it did
 not. Tools the server added or removed since the app connected appear after a
 refresh.

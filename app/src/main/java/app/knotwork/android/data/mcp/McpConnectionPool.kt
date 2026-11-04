@@ -276,8 +276,8 @@ class McpConnectionPool @Inject constructor(
             val pooled = clients[serverUrl] ?: return null
             if (pooled.client !== closed) return pooled.client
             clients.remove(serverUrl)
-            // The server answers this DELETE with 404 — the session is already gone — but
-            // it also closes the local transport and its HTTP client.
+            // Disconnecting sends a DELETE the server answers with 404 (the session is
+            // already gone), and closes the local transport and its HTTP client.
             disconnectQuietly(closed, "closed by the server")
             return client(pooled.config)
         }
