@@ -358,7 +358,7 @@ private fun <T : CharSequence> ShownTexts(
                 PieceSpec(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = if (index == 0) minLines else 1,
-                    reportsLayout = index == shown.pieces.lastIndex && shown.omitted == 0,
+                    reportsLayout = index == shown.pieces.lastIndex,
                     style = looks.style.stackedStyle(index, count),
                 ),
             )

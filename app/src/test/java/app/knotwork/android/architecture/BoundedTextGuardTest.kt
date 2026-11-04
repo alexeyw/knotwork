@@ -12,8 +12,8 @@ import java.io.File
  *
  * **Why.** Laying out one text costs time in its length and in the square of its longest
  * run without whitespace, whatever its line limit: a tool's or a model's 200 000-character
- * string without spaces held the main thread for 5 to 10 s in a single text, and five Play
- * reports were the main thread stuck in text layout. The text could come from anywhere — a
+ * string without spaces held the main thread for 5 to 10 s in a single text, and four Play
+ * reports caught the main thread stuck in text layout. The text could come from anywhere — a
  * tool observation in Monitoring, an exception in the console, a memory entry in a two-line
  * row — so fixing the screens found one by one would leave the next one open. The
  * catalog's `Text` (`components/text/Text.kt`) bounds what any text lays out; this guard
@@ -198,7 +198,7 @@ class BoundedTextGuardTest {
             "$CATALOG/screens/memory/MemoryContent.kt" to
                 "Memory search and tags (typed), a new entry (typed), and editing an entry, which opens with " +
                 "the whole entry.",
-            "$CATALOG/screens/models/ModelsContent.kt" to "A model's address: typed or pasted, one line.",
+            "$CATALOG/screens/models/ModelsContent.kt" to "A model's address and the access token: typed or pasted.",
             "$CATALOG/screens/onboarding/OnboardingContent.kt" to "A custom server address: typed, one line.",
             "$CATALOG/screens/prompts/PromptLibraryContent.kt" to
                 "A prompt's name and body: typed, or from an imported prompt pack.",

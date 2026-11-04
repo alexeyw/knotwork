@@ -122,4 +122,15 @@ class TextTest {
 
         assertEquals(drawnTexts().last(), checkNotNull(layout).layoutInput.text.text)
     }
+
+    @Test
+    fun `given a capped text when laid out then its last piece of text, not the count, reports its layout`() {
+        val text = prose(50_000)
+        var layout: TextLayoutResult? = null
+
+        show { Text(text = text, style = KnotworkTextStyles.BodyBase, onTextLayout = { layout = it }) }
+
+        val drawn = drawnTexts()
+        assertEquals(drawn[drawn.lastIndex - 1], checkNotNull(layout).layoutInput.text.text)
+    }
 }
