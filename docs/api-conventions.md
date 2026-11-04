@@ -150,6 +150,21 @@ interface Tool {
   server being edited with one built from unsaved values.
 - Connections are lazy: they open on first use and close when the agent
   session ends.
+- **A session the server closed is replaced in the pool, once.** A
+  Streamable-HTTP server answers a closed session's id with `404` (MCP
+  2025-11-25, *Session Management*), and neither the SDK's client nor Koog opens
+  a new one. `KoogMcpClient` turns that answer into `McpSessionExpiredException`
+  — by the status code of the SDK's transport error, never by message text, and
+  only when the request carried a session id. `McpConnectionPool` then replaces
+  the connection while it is still the one that failed and repeats the request
+  once (`withSessionRecovery`, or `Session.recovering` under the lock). The
+  server refused the request unrun, so the repeat cannot double a side effect.
+  No other failure is repeated, nothing is retried a second time, and a
+  connection the pool dropped is not revived.
+- **The Tools screen asks the connection the agent uses.** A cache miss or a
+  refresh sends `tools/list` over the live connection (`McpClient.refreshTools`),
+  through the same recovery, and a cached list answers only while the pool still
+  holds the connection it came from.
 - Every MCP call is wrapped in `try`/`catch` that **re-throws
   `CancellationException` from a dedicated first catch clause** and maps all
   other failures to `ToolResult.Error`. `runCatching` is never used around
