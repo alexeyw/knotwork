@@ -105,6 +105,7 @@ class RunVerificationGoldenTest {
                 every { localModelBackend } returns flowOf("CPU")
                 every { maxContextLength } returns flowOf(GoldenModel.CONTEXT_WINDOW)
             },
+            GoldenTraceHarness.ENVIRONMENT,
         ).invoke(ROOT_RUN)
         return (availability as VerifyAvailability.Available).plan
     }

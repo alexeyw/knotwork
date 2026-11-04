@@ -713,8 +713,9 @@ hashes have a copy button; copying always takes the full value.
 Below the fields, one sentence says what is promised: a run on **CPU** repeats
 byte for byte on this device with the same model file, seed, sampler and input;
 on **GPU** the context window must also be the same. Nothing is promised on the
-NPU, for a run that read an image, for a cloud model's answer, or on another
-device. Under each node in **Traces** and **Vars**, two chips show the first 8
+NPU, for a run that read an image, for a cloud model's answer, on another
+device, or after an update brings another version of the on-device engine
+(LiteRT-LM). Under each node in **Traces** and **Vars**, two chips show the first 8
 characters of its input and output hash; a tap copies all 64.
 
 Three actions follow:
@@ -724,7 +725,9 @@ Three actions follow:
   Tools are never run again — their recorded output stands — and cloud calls are
   skipped. A check with more than 3 calls, or 30 s or more of model time, asks
   first. If the backend, the GPU window or the model file differs from the run,
-  Verify stays off and says what to change, and where.
+  Verify stays off and says what to change, and where. A run recorded on
+  another LiteRT-LM version is not verified at all: Verify stays off and names
+  both versions, since no setting brings the old engine back.
 - **Run again with this seed** starts a new run of the same message on the same
   pipeline with the recorded seed and sampler. Memory, chat history and tool
   results are read again and tools run with the usual approvals, so the answer

@@ -195,6 +195,15 @@ sealed interface RunVerifyActionUi {
 sealed interface RunMismatchUi {
 
     /**
+     * The app runs another version of the on-device engine than the run did.
+     * Nothing in Settings changes it, so the row offers no button.
+     *
+     * @property recorded The run's engine and version, e.g. `LiteRT-LM 0.17.1`.
+     * @property now The engine and version the app runs now.
+     */
+    data class Runtime(val recorded: String, val now: String) : RunMismatchUi
+
+    /**
      * The backend differs.
      *
      * @property recorded The run's backend.

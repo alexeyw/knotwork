@@ -944,6 +944,7 @@ flowchart LR
     Tree --> Plan["PlanRunVerificationUseCase<br/>record only"]
     Plan -- "Available(plan)" --> Verify["VerifyRunUseCase<br/>repeat each call"]
     Plan -. reads .-> Registry[("local_models<br/>checksum + stamp")]
+    Plan -. "engine version" .-> Env["RunEnvironment<br/>LiteRT-LM of this build"]
     Verify --> Load["LoadModelUseCase"]
     Verify --> Engine["LlmInferenceEngine<br/>recorded prompt · sampler · seed"]
     Tree --> Digest["RunDigest<br/>SHA-256 chain"]
@@ -960,11 +961,14 @@ failed and wrote no record included. The check, the digest and the export all wa
 it, so they cannot disagree about the shape of a run.
 
 1. **Plan.** `PlanRunVerificationUseCase` reads the run tree, its traces, the model
-   registry and the generation settings, and loads nothing. It refuses a run that
-   is still going (`Busy`), one recorded before seeds (`PreVersion`), one with no
-   on-device call (`NoLocalCalls`), and — naming both values — a model file that
-   is gone, unhashed or replaced, or a backend or GPU window that differs from what
-   the next load would use (`Mismatch`). Otherwise it lists every node visit in
+   registry, the generation settings and the engine version of this build
+   (`RunEnvironment`), and loads nothing. It refuses a run that is still going
+   (`Busy`), one recorded before seeds (`PreVersion`), one with no on-device call
+   (`NoLocalCalls`), and — naming both values — one whose header holds another
+   LiteRT-LM version (equal answers are measured only within one version; checked
+   first, since no setting changes it), a model file that is gone, unhashed or
+   replaced, or a backend or GPU window that differs from what the next load would
+   use (`Mismatch`). Otherwise it lists every node visit in
    run order, sub-pipelines in place, each either repeated or not with its reason
    (`RunReproducibilityPolicy`: tool, cloud, no model call, NPU, image, model not
    recorded).

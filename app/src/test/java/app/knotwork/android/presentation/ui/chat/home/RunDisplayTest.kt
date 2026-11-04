@@ -31,6 +31,7 @@ import app.knotwork.design.components.console.RunVerifyActionUi
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -190,6 +191,20 @@ class RunDisplayTest {
         assertEquals("CPU", (ui.detail as RunDetailUi.Recorded).models.single().nowTag)
         assertEquals(RunMismatchUi.Window("4 096", "2 048"), VerifyMismatch.Window(4096, 2048).toUi())
         assertEquals(RunMismatchUi.HashPending, VerifyMismatch.HashPending("Gemma").toUi())
+    }
+
+    @Test
+    fun `given another engine version when projected then the reason names both and no model row is tagged`() {
+        val ui = description(
+            models = listOf(cpu),
+            verify = VerifyAvailability.Mismatch(VerifyMismatch.Runtime("LiteRT-LM 0.17.1", "LiteRT-LM 0.19.0")),
+        ).toRunHeaderUi()
+
+        assertEquals(
+            RunVerifyActionUi.Mismatch(RunMismatchUi.Runtime("LiteRT-LM 0.17.1", "LiteRT-LM 0.19.0")),
+            ui.actions.verify,
+        )
+        assertNull((ui.detail as RunDetailUi.Recorded).models.single().nowTag)
     }
 
     @Test

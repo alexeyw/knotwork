@@ -664,11 +664,7 @@ internal class GoldenTraceHarness(
             RunHeaders(
                 generationSettings = settings,
                 seedSource = { RUN_SEED },
-                environment = object : RunEnvironment {
-                    override val appVersion = "golden (1)"
-                    override val runtimeVersion = "LiteRT-LM golden"
-                    override val device = "Golden Reference Phone · Android 16"
-                },
+                environment = ENVIRONMENT,
             ),
         )
         return engine
@@ -975,6 +971,16 @@ internal class GoldenTraceHarness(
 
         /** Run id of every scenario's root run. */
         const val ROOT_RUN_ID: String = "golden"
+
+        /**
+         * The versions and device every golden run's header records — also what a
+         * check of a golden run compares the header's engine version with.
+         */
+        val ENVIRONMENT: RunEnvironment = object : RunEnvironment {
+            override val appVersion = "golden (1)"
+            override val runtimeVersion = "LiteRT-LM golden"
+            override val device = "Golden Reference Phone · Android 16"
+        }
 
         /** The statuses a parked run's record holds. */
         private val WAITING_STATUSES = setOf(
