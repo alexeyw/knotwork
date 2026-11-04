@@ -214,21 +214,62 @@ class ToolsViewModel @Inject constructor(
         fetchToolsAndUpdate(config = config, forceRefresh = true)
     }
 
-    /** Toggles the enabled/disabled state of a local AppFunction. */
+    /**
+     * Switches one local tool (built-in or discovered AppFunction) on or off.
+     *
+     * Only this tool's entry changes, and the store applies the change to the
+     * set it holds: the copy in [uiState] can be a write behind, and writing
+     * that copy back would undo a switch flipped just before.
+     *
+     * @param toolName The tool's name, as `disabledAppFunctions` keys it.
+     * @param isEnabled The switch's new position.
+     */
     fun toggleLocalTool(toolName: String, isEnabled: Boolean) {
         viewModelScope.launch {
-            val current = _uiState.value.disabledAppFunctions.toMutableSet()
-            if (isEnabled) current.remove(toolName) else current.add(toolName)
-            toolSettings.setDisabledAppFunctions(functions = current)
+            toolSettings.setAppFunctionsEnabled(functions = setOf(toolName), enabled = isEnabled)
         }
     }
 
-    /** Toggles the enabled/disabled state of an MCP tool (`McpTool.id`). */
+    /**
+     * Switches one MCP tool on or off. Only this tool's entry changes; see
+     * [toggleLocalTool] for why the change is not computed from [uiState].
+     *
+     * @param toolId The tool's `McpTool.id`.
+     * @param isEnabled The switch's new position.
+     */
     fun toggleMcpTool(toolId: String, isEnabled: Boolean) {
         viewModelScope.launch {
-            val current = _uiState.value.disabledMcpTools.toMutableSet()
-            if (isEnabled) current.remove(toolId) else current.add(toolId)
-            toolSettings.setDisabledMcpTools(toolIds = current)
+            toolSettings.setMcpToolsEnabled(toolIds = setOf(toolId), enabled = isEnabled)
+        }
+    }
+
+    /**
+     * Switches every tool [serverUrl]'s row lists on or off, in one write.
+     *
+     * "Every tool" is the list the row shows — the server's last `tools/list`
+     * answer. Ids remembered for tools the server no longer lists keep their
+     * state, as they do when tools are switched one by one. The result is the
+     * same set those single switches would leave, so the agent's catalogue and
+     * the name routing treat it the same way: a tool switched off here is out
+     * of the catalogue, and a name it shared falls to the next server that has
+     * it on.
+     *
+     * The row is expanded as well, so the switches show the result and the one
+     * tool wanted from a server is a tap away. A server that lists no tools
+     * changes nothing.
+     *
+     * @param serverUrl The server's URL, the row's identity.
+     * @param enabled `true` to switch its tools on, `false` to switch them off.
+     */
+    fun setServerToolsEnabled(serverUrl: String, enabled: Boolean) {
+        val toolIds = _uiState.value.mcpServers.firstOrNull { it.url == serverUrl }
+            ?.tools
+            ?.mapTo(mutableSetOf()) { it.id }
+            .orEmpty()
+        if (toolIds.isEmpty()) return
+        _uiState.update { it.copy(expandedServerUrls = it.expandedServerUrls + serverUrl) }
+        viewModelScope.launch {
+            toolSettings.setMcpToolsEnabled(toolIds = toolIds, enabled = enabled)
         }
     }
 

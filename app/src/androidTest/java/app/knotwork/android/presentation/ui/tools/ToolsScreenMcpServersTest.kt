@@ -17,7 +17,7 @@ import app.knotwork.design.R as KnotworkR
  * Covers the MCP server section of the Tools screen:
  * connection-status subtitle flips from `connecting…` to `ok`, the expand
  * chevron toggles the nested tool list, and the overflow menu's Refresh
- * action invokes the ViewModel.
+ * and "Turn all tools off" actions invoke the ViewModel.
  */
 class ToolsScreenMcpServersTest {
 
@@ -118,5 +118,35 @@ class ToolsScreenMcpServersTest {
         composeTestRule.onNodeWithText(text = refreshLabel).performClick()
 
         verify(exactly = 1) { vm.refreshServer(serverUrl = "https://mcp.example.com") }
+    }
+
+    @Test
+    fun overflowTurnAllToolsOff_invokesSetServerToolsEnabled() {
+        val (vm, _) = mockToolsViewModel(
+            initialUiState = ToolsUiState(
+                mcpServers = listOf(
+                    sampleServerSnapshot(
+                        url = "https://mcp.example.com",
+                        displayName = "Example MCP",
+                        status = McpConnectionStatus.Connected,
+                        // The bulk switch is offered only while a listed tool is on.
+                        tools = listOf(sampleMcpTool(id = "mcp:abcd1234:remote_tool", name = "remote_tool")),
+                    ),
+                ),
+            ),
+        )
+
+        composeTestRule.setContent {
+            MaterialTheme { ToolsScreen(viewModel = vm) }
+        }
+
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val overflowCd = ctx.getString(KnotworkR.string.knotwork_tools_row_overflow_cd)
+        val turnAllOff = ctx.getString(KnotworkR.string.knotwork_tools_row_action_disable_all)
+
+        composeTestRule.onNodeWithContentDescription(label = overflowCd).performClick()
+        composeTestRule.onNodeWithText(text = turnAllOff).performClick()
+
+        verify(exactly = 1) { vm.setServerToolsEnabled(serverUrl = "https://mcp.example.com", enabled = false) }
     }
 }

@@ -724,6 +724,39 @@ private fun ServerRowOverflowMenu(server: McpServerRow, callbacks: ToolsCallback
             )
         }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            // Each bulk switch is offered only while it would change something,
+            // so the menu itself says which way the server's tools stand. A
+            // server that lists no tools offers neither.
+            if (server.tools.any { !it.enabled }) {
+                DropdownMenuItem(
+                    text = { Text(text = stringResource(R.string.knotwork_tools_row_action_enable_all)) },
+                    onClick = {
+                        menuOpen = false
+                        callbacks.onServerToolsToggle(server.id, true)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Check,
+                            contentDescription = null,
+                        )
+                    },
+                )
+            }
+            if (server.tools.any { it.enabled }) {
+                DropdownMenuItem(
+                    text = { Text(text = stringResource(R.string.knotwork_tools_row_action_disable_all)) },
+                    onClick = {
+                        menuOpen = false
+                        callbacks.onServerToolsToggle(server.id, false)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Block,
+                            contentDescription = null,
+                        )
+                    },
+                )
+            }
             DropdownMenuItem(
                 text = { Text(text = stringResource(R.string.knotwork_tools_row_action_refresh)) },
                 onClick = {
