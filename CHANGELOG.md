@@ -18,14 +18,18 @@ details.
 - **Very long text without spaces no longer freezes the screen.** A tool's
   output, an error or a memory entry of hundreds of thousands of characters
   without a space — base64, minified JSON — held the app for seconds in
-  Monitoring, the console's logs, the memory list, the approval card and
-  elsewhere, because laying out such a line grows with the square of its
-  length. Every text now lays out only what it can show: a row of a few lines
+  Monitoring, the console's logs, the memory list, the approval card, a
+  heading or table cell of the agent's answer and elsewhere, because laying
+  out such a line grows with the square of its length. Every text now lays out only what it can show: a row of a few lines
   takes what fits before its ellipsis, and a longer text shows its first
   10,000 characters and how many more there are. The approval card's
   expanded arguments, a question the agent asks, an opened memory entry, a
   file preview, the prompt preview and the message reader still show every
   character.
+- **A very tall text no longer closes the app.** A table header cell of a
+  few hundred thousand characters, or a tool argument that long expanded on
+  the approval card, was taller than a layout can size and threw while being
+  drawn. Both now draw in full.
 - **Table cells show all their text.** A cell longer than its column was cut
   to one line ending in an ellipsis — in a chat message and in the message
   reader alike — so the rest of it could be read only in a copy. A cell now
