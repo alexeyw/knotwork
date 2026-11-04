@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.RunTraceRecord
 import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.services.RunEnvironment
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -16,23 +17,28 @@ import javax.inject.Inject
  * Decides whether a finished run can be checked on this device now, and what the
  * check will do.
  *
- * Reads only the record: the run tree's runs, their traces, the model registry
- * and the generation settings. Nothing is loaded and nothing runs — the answer
- * is what the surface shows before the user starts the check, and what the check
- * then executes ([VerifyRunUseCase]). The order of the refusals is the order a
- * person would fix them in: a run still going, a run recorded before seeds, a
- * run with nothing on-device, then the model file, then the settings.
+ * Reads only the record: the run tree's runs, their traces, the model registry,
+ * the generation settings and the engine version this build runs. Nothing is
+ * loaded and nothing runs — the answer is what the surface shows before the user
+ * starts the check, and what the check then executes ([VerifyRunUseCase]). The
+ * order of the refusals is the order a person would fix them in: a run still
+ * going, a run recorded before seeds, a run with nothing on-device, a run
+ * recorded on another engine version (nothing to fix — named first so no
+ * settings change is suggested in vain), then the model file, then the settings.
  *
  * @property readRecordedRunTree The run tree and its traces.
  * @property localModelRepository The model registry, for the file checksums.
  * @property pipelineRepository The pipelines, for the node labels.
  * @property generationSettings The backend and window the next load would use.
+ * @property runEnvironment The engine version this build runs, compared with the
+ *   one the run's header holds.
  */
 class PlanRunVerificationUseCase @Inject constructor(
     private val readRecordedRunTree: ReadRecordedRunTreeUseCase,
     private val localModelRepository: LocalModelRepository,
     private val pipelineRepository: PipelineRepository,
     private val generationSettings: GenerationSettings,
+    private val runEnvironment: RunEnvironment,
 ) {
 
     /**
@@ -64,6 +70,10 @@ class PlanRunVerificationUseCase @Inject constructor(
     private suspend fun availabilityOf(tree: RecordedRunTree, header: RunHeader): VerifyAvailability {
         val records = tree.records
         if (records.none { it is RunTraceRecord.LocalModelCall }) return VerifyAvailability.NoLocalCalls
+        val runtime = runEnvironment.runtimeVersion
+        if (header.runtimeVersion != runtime) {
+            return VerifyAvailability.Mismatch(VerifyMismatch.Runtime(header.runtimeVersion, runtime))
+        }
 
         val visits = visitsOf(tree, tree.root, depth = 0)
         val repeated = visits.flatMap { it.calls }

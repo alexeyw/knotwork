@@ -86,6 +86,25 @@ class RunHeaderAffordanceTest {
     }
 
     @Test
+    fun `given another engine version when the header is open then both versions show and no button`() {
+        val header = ChatHomeRunPreview.header(ChatHomeRunPreview.Header.LOCAL_CPU)
+        val mismatch = RunVerifyActionUi.Mismatch(RunMismatchUi.Runtime("LiteRT-LM 0.17.1", "LiteRT-LM 0.19.0"))
+        strip(header.copy(actions = header.actions.copy(verify = mismatch)))
+
+        composeTestRule.onNodeWithContentDescription("Verify, dimmed", substring = true)
+            .assertIsNotEnabled()
+            .performClick()
+        composeTestRule.onNodeWithText(
+            "Recorded with LiteRT-LM 0.17.1; the app now runs LiteRT-LM 0.19.0. " +
+                "A run is verified only on the engine version that recorded it.",
+            useUnmergedTree = true,
+        ).assertExists()
+        composeTestRule.onNodeWithText("Settings").assertDoesNotExist()
+
+        assertEquals(emptyList<String>(), taps)
+    }
+
+    @Test
     fun `given a run still going when the header is open then no action fires`() {
         strip(ChatHomeRunPreview.header(ChatHomeRunPreview.Header.ACTIVE))
 

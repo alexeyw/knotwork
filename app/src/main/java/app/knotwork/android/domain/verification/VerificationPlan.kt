@@ -129,6 +129,18 @@ sealed interface VerifyAvailability {
 sealed interface VerifyMismatch {
 
     /**
+     * The app now runs another version of the on-device engine than the one that
+     * recorded the run. Equal answers were measured only within one version
+     * (`decisions.md §70.6`, `§108`): an update can change the answer for a seed
+     * — the 0.19.0 release notes say GPU sampling now matches the CPU's — so the
+     * check is not offered.
+     *
+     * @property recorded The run's engine and version, as its header holds it.
+     * @property current The engine and version the app runs now.
+     */
+    data class Runtime(val recorded: String, val current: String) : VerifyMismatch
+
+    /**
      * The app now runs on another backend.
      *
      * @property recorded The backend the run used.

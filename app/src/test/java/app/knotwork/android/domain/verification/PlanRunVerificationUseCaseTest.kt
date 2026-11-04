@@ -14,6 +14,7 @@ import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
+import app.knotwork.android.domain.services.RunEnvironment
 import app.knotwork.android.domain.verification.VerificationFixtures.HEADER
 import app.knotwork.android.domain.verification.VerificationFixtures.MODEL_PATH
 import app.knotwork.android.domain.verification.VerificationFixtures.MODEL_SHA
@@ -66,8 +67,14 @@ class PlanRunVerificationUseCaseTest {
         every { localModelBackend } answers { flowOf(backend) }
         every { maxContextLength } answers { flowOf(window) }
     }
+    private var runtime = HEADER.runtimeVersion
+    private val environment = object : RunEnvironment {
+        override val appVersion = HEADER.appVersion
+        override val runtimeVersion get() = runtime
+        override val device = HEADER.device
+    }
     private val planner =
-        PlanRunVerificationUseCase(ReadRecordedRunTreeUseCase(runs, trace), models, pipelines, settings)
+        PlanRunVerificationUseCase(ReadRecordedRunTreeUseCase(runs, trace), models, pipelines, settings, environment)
 
     private fun givenRun(vararg records: RunTraceRecord, status: PipelineRunStatus = PipelineRunStatus.COMPLETED) {
         coEvery { runs.getRun(ROOT) } returns run(status = status)
@@ -184,6 +191,42 @@ class PlanRunVerificationUseCaseTest {
         assertEquals(VisitKind.SubPipeline, plan.visits[1].kind)
         assertEquals(2, plan.calls)
     }
+
+    @Test
+    fun `given a run recorded on another engine version when planned then the check names both versions`() = runTest {
+        givenRun(localCall(0, "llm"))
+        runtime = "LiteRT-LM 0.19.0"
+
+        assertEquals(
+            VerifyAvailability.Mismatch(VerifyMismatch.Runtime(HEADER.runtimeVersion, "LiteRT-LM 0.19.0")),
+            planner(ROOT),
+        )
+    }
+
+    @Test
+    fun `given another engine version and other settings and model file when planned then the version is named`() =
+        runTest {
+            // Nothing in Settings brings back the engine a run was recorded on, so a
+            // backend or file hint before it would send the user to fix in vain.
+            givenRun(localCall(0, "llm", backend = LocalBackend.GPU, window = 4096))
+            runtime = "LiteRT-LM 0.19.0"
+            backend = "CPU"
+            fileStatus = ModelFileStatus.Hashed("another")
+
+            assertEquals(
+                VerifyAvailability.Mismatch(VerifyMismatch.Runtime(HEADER.runtimeVersion, "LiteRT-LM 0.19.0")),
+                planner(ROOT),
+            )
+        }
+
+    @Test
+    fun `given another engine version and only cloud answers when planned then there is nothing local to repeat`() =
+        runTest {
+            givenRun(cloudCall(0, "cloud"), nodeIo(1, "cloud", "CLOUD"))
+            runtime = "LiteRT-LM 0.19.0"
+
+            assertEquals(VerifyAvailability.NoLocalCalls, planner(ROOT))
+        }
 
     @Test
     fun `given the model file gone, unhashed or replaced when planned then the check names the model`() = runTest {

@@ -662,6 +662,8 @@ private fun verifyLine(verify: RunVerifyActionUi): String = when (verify) {
  */
 @Composable
 internal fun mismatchText(reason: RunMismatchUi): String = when (reason) {
+    is RunMismatchUi.Runtime ->
+        stringResource(R.string.knotwork_run_verify_mismatch_runtime, reason.recorded, reason.now)
     is RunMismatchUi.Backend ->
         stringResource(R.string.knotwork_run_verify_mismatch_backend, reason.recorded, reason.now)
     is RunMismatchUi.Window ->

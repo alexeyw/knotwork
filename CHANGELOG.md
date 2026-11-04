@@ -13,6 +13,16 @@ details.
 
 ## [Unreleased]
 
+### Changed
+
+- **The on-device inference engine is LiteRT-LM 0.19.0** (was 0.17.1). Its
+  GPU sampling for a given seed now matches the CPU's, so a run on the GPU can
+  give a different answer than it did before the update.
+- **Verify checks a run only on the engine version that recorded it.** Equal
+  answers were measured within one LiteRT-LM version, and an update can change
+  them, so for a run recorded before the update Verify stays off and names both
+  versions. The run's promise now says so as well.
+
 ### Fixed
 
 - **Very long text without spaces no longer freezes the screen.** A tool's
