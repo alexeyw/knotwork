@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    FileProvider path map: three narrow handoff directories under the app cache,
+    FileProvider path map: four narrow handoff directories under the app cache,
     never the cache or files root, so the agent workspace and the attachment
     store are unreachable through the provider by construction.
 
@@ -25,4 +25,10 @@
     <cache-path
         name="journal"
         path="journal/" />
+    <!-- Chat exports staged for the share sheet; each export replaces the
+         last. Its own directory, so a chat share never removes a journal
+         another app may still be reading. -->
+    <cache-path
+        name="chat"
+        path="chat/" />
 </paths>

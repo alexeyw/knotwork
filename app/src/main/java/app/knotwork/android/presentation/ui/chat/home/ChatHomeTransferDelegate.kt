@@ -2,10 +2,10 @@ package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.models.ChatImportException
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.SaveMessageToMemoryUseCase
 import app.knotwork.android.domain.usecases.SaveToMemoryOutcome
+import app.knotwork.android.presentation.ui.chat.ChatExportDelegate
 import app.knotwork.design.components.chat.ChatContent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -14,18 +14,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /**
  * Chat import / export / save-to-memory delegate of [ChatHomeViewModel].
  *
  * Groups the three isolated transfer actions that move chat content in or out of
- * the app: importing a chat from JSON, exporting the active session as a
- * share-sheet payload, and saving a single message's text into long-term
- * memory. None of them owns a render slice of [ChatHomeScreenState] — they read
- * the current messages / active session and communicate through one-shot
- * [SharedFlow] channels ([exportEvents] / [importErrorEvents] /
- * [memorySaveEvents]) consumed by the screen.
+ * the app: importing a chat from JSON, exporting the active session (to the
+ * share sheet or to a file — [export]), and saving a single message's text into
+ * long-term memory. None of them owns a render slice of [ChatHomeScreenState] —
+ * they read the current messages / active session and communicate through
+ * one-shot [SharedFlow] channels ([ChatExportDelegate.events] /
+ * [importErrorEvents] / [memorySaveEvents]) consumed by the screen.
  *
  * Shares the ViewModel's [scope] and single [state] reducer (see
  * `docs/architecture.md` §1.2).
@@ -48,17 +47,14 @@ class ChatHomeTransferDelegate(
     private val selectThread: (String) -> Unit,
 ) {
 
-    private val _exportEvents: MutableSharedFlow<ChatExportDocument> = MutableSharedFlow(extraBufferCapacity = 1)
     private val _importErrorEvents: MutableSharedFlow<String> = MutableSharedFlow(extraBufferCapacity = 1)
     private val _memorySaveEvents: MutableSharedFlow<MemorySaveEvent> = MutableSharedFlow(extraBufferCapacity = 1)
 
     /**
-     * One-shot stream raised when the user picks `Export chat` from either
-     * overflow menu (the chat top bar, or an archive row). The screen consumes
-     * each document via a `LaunchedEffect` and dispatches a system share-sheet
-     * (`Intent.ACTION_SEND`).
+     * Shares or saves the open chat — the same delegate, and so the same file, as
+     * the archive's. The screen renders its events through `ChatExportEffects`.
      */
-    val exportEvents: SharedFlow<ChatExportDocument> = _exportEvents.asSharedFlow()
+    val export: ChatExportDelegate = ChatExportDelegate(scope = scope, exportChat = exportChatUseCase)
 
     /**
      * One-shot stream of import-failure messages. Surfaced via the shared
@@ -142,34 +138,21 @@ class ChatHomeTransferDelegate(
     }
 
     /**
-     * Serialises the currently active session and emits the resulting
-     * [ChatExportDocument] via [exportEvents]. The screen consumes the document
-     * and dispatches a system share-sheet (`Intent.ACTION_SEND`) — kept in the
-     * screen because Hilt-ViewModels stay free of `Context`.
+     * Hands the active session to the share sheet (the top bar's `Export chat`).
+     * The screen stages the file and opens the chooser — kept there because
+     * Hilt-ViewModels stay free of `Context`.
      */
     fun exportCurrentSession() {
-        exportSession(state.value.thread.currentSessionId)
+        export.share(state.value.thread.currentSessionId)
     }
 
     /**
-     * Serialises an arbitrary session by id and emits its [ChatExportDocument].
-     *
-     * Kept independent of the active thread so the archive surface can export a
-     * chat it is not currently showing: archiving must not put a conversation
-     * out of reach of the history-transfer path, and an archived session is
-     * exactly the one a user is most likely to want to hand off elsewhere.
-     *
-     * @param sessionId Session to serialise. Blank ids are ignored.
+     * Saves the active session to a file the user picks (the top bar's
+     * `Save to file`): renders it, then asks the screen to open the document
+     * picker with the file's name.
      */
-    fun exportSession(sessionId: String) {
-        if (sessionId.isBlank()) return
-        scope.launch {
-            exportChatUseCase(sessionId)
-                .onSuccess { document -> _exportEvents.tryEmit(document) }
-                // Mirrors the previous silent-failure contract: an export that
-                // cannot be serialised simply emits nothing.
-                .onFailure { e -> Timber.w(e, "Chat export failed") }
-        }
+    fun saveCurrentSession() {
+        export.save(state.value.thread.currentSessionId)
     }
 
     companion object {

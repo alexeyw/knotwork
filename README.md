@@ -111,8 +111,8 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   request naming any other pipeline is refused. Every request, accepted or
   refused, lands in a journal you can export.
 - The database is encrypted with SQLCipher, and API keys are sealed with AES-GCM
-  under an Android Keystore key. Usage statistics and journal exports have no
-  network path, and a build check keeps it that way. Images you attach never go
+  under an Android Keystore key. Usage statistics, journal and chat exports have
+  no network path, and a build check keeps it that way. Images you attach never go
   to a cloud model, and voice input is transcribed on the phone. The **FOSS
   build** has no proprietary dependencies.
 - Structured steps check the model's output and ask it to fix a malformed
@@ -130,8 +130,10 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   by meaning when a step reads memory, with a manager for search, provenance,
   compaction and JSON export and import. Memory search works in English — see
   [Known limitations](docs/faq.md#known-limitations).
-- Archiving a chat takes it out of the drawer without deleting it. It stays
-  readable and exportable on its own screen until you restore it.
+- A chat exports as one JSON file, to the share sheet or saved straight to a
+  folder you pick, and imports back as a new chat. Archiving a chat takes it out
+  of the drawer without deleting it. It stays readable and exportable on its own
+  screen until you restore it.
 - **Back up and restore** what you made — chats, memory, pipelines, run history,
   triggers, settings and files — as one file locked with a password you choose,
   saved wherever you pick; restore it on this phone or a new one. API keys go in

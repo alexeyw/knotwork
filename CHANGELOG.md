@@ -20,6 +20,9 @@ details.
   tools on*. To use one tool from a server that publishes many, turn them all
   off and switch that one back on, instead of switching the rest off one by
   one.
+- **Save a chat straight to a file.** The chat's `⋮` menu and an archived
+  chat's row menu now have *Save to file*: the system file picker opens and the
+  chat is written where you choose, as the same JSON file *Export chat* shares.
 
 ### Changed
 
@@ -33,6 +36,11 @@ details.
 
 ### Fixed
 
+- **Exporting a long chat no longer closes the app.** *Export chat* handed the
+  whole chat to the share sheet as text, and a chat over about 350 000
+  characters is more than Android lets an app pass that way. It now shares the
+  chat as a JSON file, of any length; a receiving app gets an attachment where
+  it used to get message text.
 - **The approval card shows the arguments exactly as the call receives
   them.** On Android it showed every `/` in an argument as `\/` and
   rewrote numbers — `1.50` as `1.5`, a long integer rounded — so the text you

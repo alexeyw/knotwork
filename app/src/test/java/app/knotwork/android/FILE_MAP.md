@@ -18,6 +18,7 @@ Only Kotlin files appear inside the generated blocks.
   - `BackedUpSecretsGuardTest.kt` - Every owner of entries in a Keystore-backed store tells the backup what it holds.
   - `BoundedTextGuardTest.kt` - Census of how production code draws text: every text goes through the design system's bounded `Text`; the screens that show a text whole, and every input field, are named here with the reason.
   - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
+  - `ChatExportNoNetworkKonsistTest.kt` - Konsist guard on the chat export: **a chat leaves the device only in the user's own hands, and only as the one file.**
   - `CloudStreamEndCallersGuardTest.kt` - Census of the code that turns a cloud model's stream into an answer — every caller of `executeStreaming` — and the rule that each asks `CloudStreamEnd` whether the stream was cut off.
   - `ComposableUseCaseKonsistTest.kt` - Konsist guard for the presentation rule "Composables observe a ViewModel / UiState, never the use-case layer directly".
   - `ComposeTestRuleV2GuardTest.kt` - Keeps the instrumented tests on the v2 Compose test APIs.
@@ -617,6 +618,9 @@ Only Kotlin files appear inside the generated blocks.
       - `archive/` - Tests for the chat archive.
         - `ArchivedAtLabelTest.kt` - Unit tests for the archived-at bucket ladder.
         - `ChatArchiveViewModelTest.kt` - Unit tests for `ChatArchiveViewModel` and the state → view-state projection.
+      - `ChatExportDelegateTest.kt` - The export half shared by the chat screen and the archive.
+      - `ChatExportFileTest.kt` - The name a chat export gets — the one the share sheet's receiver sees and the document picker suggests.
+      - `ChatExportHandOffTest.kt` - **The chat file is the same bytes whichever way it leaves.** The guard of the export's two hand-offs: the file staged for the share sheet and the file written into the document the user picked.
       - `home/` - Tests for the chat home screen and its console pane.
         - `ApprovalPolicyDocumentsTest.kt` - Pins the sentences that describe the approval gate's mechanics to the code that implements them.
         - `ChatHomeConsoleDelegateTest.kt` - Isolated unit tests for `ChatHomeConsoleDelegate` — the console-pane responsibility extracted from `ChatHomeViewModel`.

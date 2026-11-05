@@ -63,7 +63,7 @@ import app.knotwork.android.domain.report.ContentReport
 import app.knotwork.android.domain.report.ContentReportComposer
 import app.knotwork.android.domain.report.ContentReportReason
 import app.knotwork.android.presentation.ui.chat.CHAT_EXPORT_MIME_JSON
-import app.knotwork.android.presentation.ui.chat.toShareChooser
+import app.knotwork.android.presentation.ui.chat.ChatExportEffects
 import app.knotwork.android.presentation.ui.common.JournalExportCopy
 import app.knotwork.android.presentation.ui.common.RunTerminationAction
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
@@ -229,7 +229,6 @@ fun ChatHomeScreen(
     val pipelineFallbackMessage = stringResource(R.string.errors_chat_pipeline_removed)
     // The catalog's string, which the console's value viewer and the message reader say too.
     val copyTooLargeMessage = stringResource(app.knotwork.design.R.string.knotwork_copy_too_long)
-    val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val importFailedTemplate = stringResource(R.string.chat_import_failed)
     val importUnreadableMessage = stringResource(R.string.chat_import_unreadable)
     val reportCopiedMessage = stringResource(R.string.chat_report_snackbar_copied)
@@ -300,11 +299,8 @@ fun ChatHomeScreen(
             snackbarHostState.showSnackbar(message = message)
         }
     }
-    LaunchedEffect(viewModel) {
-        viewModel.transfer.exportEvents.collect { document ->
-            context.startActivity(document.toShareChooser(exportChooserTitle))
-        }
-    }
+    // Export chat / Save to file: the share sheet, the document picker and their snackbars.
+    ChatExportEffects(delegate = viewModel.transfer.export, snackbarHostState = snackbarHostState)
     LaunchedEffect(viewModel) {
         viewModel.transfer.importErrorEvents.collect { reason ->
             snackbarHostState.showSnackbar(message = importFailedTemplate.format(reason))
@@ -661,6 +657,13 @@ fun ChatHomeScreen(
                     onClick = {
                         overflowExpanded = false
                         viewModel.transfer.exportCurrentSession()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.chat_overflow_save_to_file)) },
+                    onClick = {
+                        overflowExpanded = false
+                        viewModel.transfer.saveCurrentSession()
                     },
                 )
                 DropdownMenuItem(

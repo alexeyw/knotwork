@@ -18,7 +18,7 @@ package app.knotwork.android.domain.constants
  * new handoff directory cannot be added without being swept.
  *
  * @property dirName The directory's name under the cache directory; for the
- *   three the `FileProvider` serves, also its `<cache-path>` `path`.
+ *   four the `FileProvider` serves, also its `<cache-path>` `path`.
  */
 enum class TransientCacheDirectory(val dirName: String) {
     /**
@@ -36,6 +36,13 @@ enum class TransientCacheDirectory(val dirName: String) {
 
     /** Journal exports staged for the share sheet; each export replaces the last. */
     JOURNAL_EXPORT("journal"),
+
+    /**
+     * Chat exports staged for the share sheet; each export replaces the last. Its
+     * own directory, so sharing a chat never deletes a journal a receiving app may
+     * still be reading, and the other way round.
+     */
+    CHAT_EXPORT("chat"),
 
     /** Voice-input clips, recorded or picked, waiting to be transcribed. */
     VOICE_CLIP("audio"),

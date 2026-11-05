@@ -88,6 +88,8 @@ data class ChatArchiveViewState(
  *   and the swipe strip.
  * @property export overflow item that hands the archived chat to the share
  *   sheet (the history-transfer path).
+ * @property saveToFile overflow item that saves the archived chat to a file the
+ *   user picks — the same document the share sheet gets.
  * @property deleteForever destructive overflow item.
  * @property rowMenuCd content description of a row's overflow button.
  * @property ranAfterArchiving note shown on a row whose run settled after it
@@ -111,6 +113,7 @@ data class ChatArchiveStrings(
     val back: String = "Back",
     val restore: String = "Restore",
     val export: String = "Export chat",
+    val saveToFile: String = "Save to file",
     val deleteForever: String = "Delete forever",
     val rowMenuCd: String = "More actions",
     val ranAfterArchiving: String = "Run finished after archiving",
@@ -137,6 +140,8 @@ class ChatArchiveCallbacks(
     val onRowMenuDismiss: () -> Unit = {},
     val onRestore: (String) -> Unit = {},
     val onExport: (String) -> Unit = {},
+    /** Saves the chat to a file the user picks in the system's document picker. */
+    val onSaveToFile: (String) -> Unit = {},
     val onDeleteRequest: (String) -> Unit = {},
     val onDeleteConfirm: (String) -> Unit = {},
     val onDeleteDismiss: () -> Unit = {},
