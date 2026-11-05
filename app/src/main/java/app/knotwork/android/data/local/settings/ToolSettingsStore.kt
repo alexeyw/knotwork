@@ -645,9 +645,11 @@ class ToolSettingsStore @Inject constructor(
             preferences[Keys.DISABLED_APP_FUNCTIONS] ?: emptySet()
         }
 
-    override suspend fun setDisabledAppFunctions(functions: Set<String>) {
+    override suspend fun setAppFunctionsEnabled(functions: Set<String>, enabled: Boolean) {
+        if (functions.isEmpty()) return
         dataStore.edit { preferences ->
-            preferences[Keys.DISABLED_APP_FUNCTIONS] = functions
+            val current = preferences[Keys.DISABLED_APP_FUNCTIONS] ?: emptySet()
+            preferences[Keys.DISABLED_APP_FUNCTIONS] = if (enabled) current - functions else current + functions
         }
     }
 
@@ -656,9 +658,11 @@ class ToolSettingsStore @Inject constructor(
             preferences[Keys.DISABLED_MCP_TOOLS] ?: emptySet()
         }
 
-    override suspend fun setDisabledMcpTools(toolIds: Set<String>) {
+    override suspend fun setMcpToolsEnabled(toolIds: Set<String>, enabled: Boolean) {
+        if (toolIds.isEmpty()) return
         dataStore.edit { preferences ->
-            preferences[Keys.DISABLED_MCP_TOOLS] = toolIds
+            val current = preferences[Keys.DISABLED_MCP_TOOLS] ?: emptySet()
+            preferences[Keys.DISABLED_MCP_TOOLS] = if (enabled) current - toolIds else current + toolIds
         }
     }
 

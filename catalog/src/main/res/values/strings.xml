@@ -439,6 +439,10 @@
     <string name="knotwork_tools_expand_server_cd">Toggle MCP tool list</string>
     <!-- ContentDescription for the overflow menu trigger on an MCP server row. -->
     <string name="knotwork_tools_row_overflow_cd">MCP server actions</string>
+    <!-- MCP server row overflow menu item: switch on every tool the row lists. Shown while at least one is off. -->
+    <string name="knotwork_tools_row_action_enable_all">Turn all tools on</string>
+    <!-- MCP server row overflow menu item: switch off every tool the row lists. Shown while at least one is on. -->
+    <string name="knotwork_tools_row_action_disable_all">Turn all tools off</string>
     <!-- MCP server row overflow menu item: refresh the tool list. -->
     <string name="knotwork_tools_row_action_refresh">Refresh</string>
     <!-- MCP server row overflow menu item: edit the server configuration. -->

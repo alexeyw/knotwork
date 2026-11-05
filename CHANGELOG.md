@@ -13,6 +13,14 @@ details.
 
 ## [Unreleased]
 
+### Added
+
+- **Turn all of an MCP server's tools on or off at once.** The `⋮` menu on a
+  server's row on the Tools screen now has *Turn all tools off* and *Turn all
+  tools on*. To use one tool from a server that publishes many, turn them all
+  off and switch that one back on, instead of switching the rest off one by
+  one.
+
 ### Changed
 
 - **The on-device inference engine is LiteRT-LM 0.19.0** (was 0.17.1). Its
@@ -59,6 +67,10 @@ details.
   server for its tools over the live connection and picks up tools it added
   or removed. A list kept from a connection the app has since replaced or
   dropped is not shown as current: the server is asked again.
+- **Two tool switches flipped in quick succession both stay.** On the Tools
+  screen, a switch flipped before the previous one had been saved could undo
+  it, because each saved the whole list of switched-off tools as the screen
+  last saw it. Each switch now changes only its own tool.
 
 ## [0.13.0] - 2026-11-02
 

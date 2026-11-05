@@ -628,6 +628,7 @@ matters.
     - `ToolsContentSnapshotTest.kt` - Roborazzi baseline for `ToolsContent` across its documented states in both themes.
     - `ToolsGroupAffordanceTest.kt` - Pins the three rules the Tools surface gained from the closed test.
     - `ToolsGroupsSnapshotTest.kt` - Roborazzi baseline for the collapsible tool groups.
+    - `ToolsServerMenuTest.kt` - The bulk switches in an MCP server row's menu.
   - `triggers/` - the trigger list, editor and delete dialog.
     - `TriggersContentSnapshotTest.kt` - Roborazzi snapshot baselines for the Triggers surfaces — the list (`TriggersContent`), the full-screen editor (`TriggerEditorContent`) and the delete dialog (`TriggerDeleteDialogContent`) across their documented states in both themes.
 - `SnapshotComparisonOptionsGuardTest.kt` - Fails a screenshot captured without `KnotworkRoborazziOptions`.

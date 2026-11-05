@@ -147,6 +147,7 @@ Only Kotlin files appear inside the generated blocks.
     - `settings/` - Tests of the settings section stores' shared read helper.
       - `PreferencesOrEmptyTest.kt` - `preferencesOrEmpty`: readable preferences pass through, an `IOException` becomes empty preferences, any other failure propagates.
       - `ToolSettingsStoreTest.kt` - `ToolSettingsStore`'s MCP server list as an observer sees it while a server changes, on a real file-backed DataStore.
+      - `ToolSettingsStoreToolSwitchesTest.kt` - The tool switches of `ToolSettingsStore` — `setMcpToolsEnabled` and `setAppFunctionsEnabled` — on a real file-backed DataStore.
     - `SettingsManagerTest.kt` - Tests for SettingsManager.
     - `StreamingModelFileHasherTest.kt` - `StreamingModelFileHasher` against real files: the digest must be the plain SHA-256 of the bytes whatever the chunking, and a file that cannot be read or changes mid-read must yield no hash at all.
     - `TagsCsvTest.kt` - Unit tests for the shared `TagsCsv` codec.

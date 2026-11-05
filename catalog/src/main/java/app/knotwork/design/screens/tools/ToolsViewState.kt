@@ -233,6 +233,11 @@ class ToolsCallbacks(
     val onServerExpandToggle: (serverId: String) -> Unit = {},
     val onServerRefresh: (serverId: String) -> Unit = {},
     val onMcpToolToggle: (toolId: String, enabled: Boolean) -> Unit = { _, _ -> },
+    /**
+     * Invoked by the server row's menu to switch every tool the row lists on
+     * (`enabled = true`) or off at once. The host writes them as one change.
+     */
+    val onServerToolsToggle: (serverId: String, enabled: Boolean) -> Unit = { _, _ -> },
     val onMcpToolClick: (toolId: String) -> Unit = {},
     val onAddServerOpen: () -> Unit = {},
     val onOpenAllowedDomains: () -> Unit = {},

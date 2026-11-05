@@ -60,9 +60,18 @@ interface ToolSettings {
     val disabledAppFunctions: Flow<Set<String>>
 
     /**
-     * Updates the set of disabled local app functions.
+     * Switches the local tools named in [functions] on or off, leaving every
+     * other entry of [disabledAppFunctions] as stored.
+     *
+     * The change is applied to the stored set in one transaction, never to a
+     * copy the caller read earlier: two switches flipped before the first write
+     * came back would otherwise each write their own copy, and the second would
+     * erase the first.
+     *
+     * @param functions Tool names to change; empty changes nothing.
+     * @param enabled `true` removes them from the disabled set, `false` adds them.
      */
-    suspend fun setDisabledAppFunctions(functions: Set<String>)
+    suspend fun setAppFunctionsEnabled(functions: Set<String>, enabled: Boolean)
 
     /**
      * A [Flow] of disabled MCP tool ids. Entries match the
@@ -75,9 +84,20 @@ interface ToolSettings {
     val disabledMcpTools: Flow<Set<String>>
 
     /**
-     * Updates the set of disabled MCP tools.
+     * Switches the MCP tools whose ids are in [toolIds] on or off, leaving
+     * every other entry of [disabledMcpTools] as stored.
+     *
+     * One call is one write, however many ids it carries — switching all of a
+     * server's tools at once is one call, not one per tool. The change is
+     * applied to the stored set in one transaction, never to a copy the caller
+     * read earlier, so a bulk change and a single switch flipped right after it
+     * both survive.
+     *
+     * @param toolIds `mcp:<sha8(serverUrl)>:<toolName>` ids to change; empty
+     * changes nothing.
+     * @param enabled `true` removes them from the disabled set, `false` adds them.
      */
-    suspend fun setDisabledMcpTools(toolIds: Set<String>)
+    suspend fun setMcpToolsEnabled(toolIds: Set<String>, enabled: Boolean)
 
     /**
      * A [Flow] of per-tool risk overrides. The map is the user's authoritative

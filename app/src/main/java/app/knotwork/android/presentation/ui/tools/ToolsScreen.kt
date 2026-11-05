@@ -109,6 +109,9 @@ fun ToolsScreen(
         onServerExpandToggle = { serverId -> viewModel.toggleServerExpanded(serverUrl = serverId) },
         onServerRefresh = { serverId -> viewModel.refreshServer(serverUrl = serverId) },
         onMcpToolToggle = { id, enabled -> viewModel.toggleMcpTool(toolId = id, isEnabled = enabled) },
+        onServerToolsToggle = { serverId, enabled ->
+            viewModel.setServerToolsEnabled(serverUrl = serverId, enabled = enabled)
+        },
         onMcpToolClick = onOpenToolDetail,
         onAddServerOpen = onAddMcpServer,
         onOpenAllowedDomains = onOpenAllowedDomains,
