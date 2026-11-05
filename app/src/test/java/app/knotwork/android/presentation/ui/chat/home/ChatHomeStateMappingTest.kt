@@ -333,7 +333,7 @@ class ChatHomeStateMappingTest {
     }
 
     @Test
-    fun `a live pending confirmation carries the decoded arguments and the real risk`() {
+    fun `a live pending confirmation carries the laid-out arguments and the real risk`() {
         val row = liveHitlRow(
             modelName = model,
             pending = HitlPending(

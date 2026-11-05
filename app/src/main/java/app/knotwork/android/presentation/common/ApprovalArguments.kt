@@ -3,7 +3,7 @@ package app.knotwork.android.presentation.common
 /**
  * The arguments of a tool call waiting for approval, as each approval surface shows them.
  *
- * What the user approves is what runs (`§76`, `api-conventions.md` § AppFunctions): both
+ * What the user approves is what runs (`decisions.md §76`, `api-conventions.md` § AppFunctions): both
  * surfaces lay the argument string out with [JsonLayout], which changes whitespace and
  * nothing the call receives, and show text that is not valid JSON exactly as it came. The
  * one liberty is at the edges: whitespace around the string is dropped, and an empty

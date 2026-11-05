@@ -14,7 +14,7 @@ import java.io.File
  * numbers into `Long` or `Double`, so `1.50` comes back as `1.5` and a big integer loses its
  * digits. The approval card once rebuilt a tool call's arguments that way and showed a
  * different text from the one an MCP server received — while the user approves what runs
- * (`§76`). [JsonLayout] copies every token as written; this guard keeps a new screen from
+ * (`decisions.md §76`). [JsonLayout] copies every token as written; this guard keeps a new screen from
  * showing JSON through `org.json` again. `JsonLayoutLosslessTest` holds the layout itself.
  *
  * **What it reads.** The production sources of `:app`'s presentation layer and of

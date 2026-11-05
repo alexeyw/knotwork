@@ -12,7 +12,7 @@ import kotlin.random.Random
  * it came.
  *
  * **Why.** The approval card and the notification show a tool call's arguments before the
- * user approves it, and the user approves what runs (`§76`). The card used to rebuild each
+ * user approves it, and the user approves what runs (`decisions.md §76`). The card used to rebuild each
  * argument with `org.json`, which on Android writes `/` as `\/` and rewrites numbers
  * (`1.50` → `1.5`, a big integer → a `Double`), so it showed a different text from the one
  * an MCP server received. Every JSON surface now goes through [JsonLayout]; this test holds
