@@ -14,8 +14,8 @@ import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitCeilingDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitClarificationAnswerUseCase
 import app.knotwork.android.presentation.ui.common.UiText
-import app.knotwork.design.components.chat.HitlConfirmationState
 import app.knotwork.design.components.chips.Risk
+import app.knotwork.design.components.dialogs.typedConfirmMatches
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -404,7 +404,7 @@ class ChatHomeHitlDelegate(
 
     /** Whether the current typed-confirm input is [confirmWord], the destructive HITL gate. */
     private fun isTypedConfirmValid(confirmWord: String): Boolean =
-        HitlConfirmationState.matchesConfirmWord(state.value.composer.typedConfirm, confirmWord)
+        typedConfirmMatches(input = state.value.composer.typedConfirm, keyword = confirmWord)
 
     companion object {
         /** Template of the SYSTEM chat row persisted when the user rejects a tool call. `%s` is the tool name. */

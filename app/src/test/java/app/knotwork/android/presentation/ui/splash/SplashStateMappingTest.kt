@@ -143,18 +143,17 @@ class SplashStateMappingTest {
 
     @Test
     fun `given every stage when labelled then each reads its own resource`() {
-        val stages = listOf(
-            InitStage.Initializing,
-            InitStage.FindingModels,
-            InitStage.LoadingPipelines,
-            InitStage.LoadingChats,
-            InitStage.LoadingMemory,
-            InitStage.Done,
+        // Pairs, not distinctness: two stages with their labels swapped are distinct too.
+        val expected = mapOf(
+            InitStage.Initializing to R.string.splash_stage_preparing,
+            InitStage.FindingModels to R.string.splash_stage_models,
+            InitStage.LoadingPipelines to R.string.splash_stage_pipelines,
+            InitStage.LoadingChats to R.string.splash_stage_chats,
+            InitStage.LoadingMemory to R.string.splash_stage_memory,
+            InitStage.Done to R.string.splash_stage_ready,
         )
 
-        val labels = stages.map(::stageLabel)
-
-        assertEquals(stages.size, labels.toSet().size)
+        expected.forEach { (stage, label) -> assertEquals(stage.toString(), label, stageLabel(stage)) }
         assertEquals(R.string.splash_stage_pipelines, stageLabel(InitStage.Failed("x", InitStage.LoadingPipelines)))
     }
 }

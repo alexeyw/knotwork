@@ -581,14 +581,20 @@ private fun ToolApprovalPolicy.toApproveOption(): ApproveToolCallsOption = when 
  * Resolves the destructive-dialog payload for [forKind] when that action is the
  * one currently staged; `null` otherwise. Keeps each category screen rendering
  * only its own destructive dialog (Clear-memory on Memory, Reset on About).
+ *
+ * @param uiState The settings state.
+ * @param context Resource resolution, in the interface language.
+ * @param forKind The action this screen's dialog is for.
+ * @return The dialog's texts, or `null` when another action is staged.
  */
-private fun destructiveActionFor(
+internal fun destructiveActionFor(
     uiState: SettingsUiState,
     context: Context,
     forKind: PendingDestructiveAction,
 ): DestructiveActionState? {
     if (uiState.pendingDestructive != forKind) return null
     val isClearMemory = forKind == PendingDestructiveAction.ClearMemory
+    val keyword = context.getString(DesignR.string.knotwork_typed_confirm_word)
     return DestructiveActionState(
         title = context.getString(
             if (isClearMemory) {
@@ -604,8 +610,10 @@ private fun destructiveActionFor(
                 R.string.settings_destructive_reset_body
             },
         ),
-        keyword = if (isClearMemory) context.getString(DesignR.string.knotwork_typed_confirm_word) else "",
-        hint = if (isClearMemory) context.getString(R.string.settings_destructive_typed_hint) else "",
+        keyword = if (isClearMemory) keyword else "",
+        // The hint names the word the gate takes, in the interface language — a hint
+        // with the English word in it left a Russian dialog unconfirmable.
+        hint = if (isClearMemory) context.getString(R.string.settings_destructive_typed_hint, keyword) else "",
         pendingInput = if (isClearMemory) uiState.destructiveTypedInput else "",
         kind = if (isClearMemory) DestructiveActionKind.ClearMemory else DestructiveActionKind.ResetSettings,
     )

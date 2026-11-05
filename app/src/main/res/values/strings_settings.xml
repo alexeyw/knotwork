@@ -226,7 +226,8 @@
     <string name="settings_destructive_clear_memory_body">This deletes every memory chunk on this device — including pinned entries. The action cannot be undone.</string>
     <string name="settings_destructive_reset_title">Reset settings?</string>
     <string name="settings_destructive_reset_body">This restores all tunable settings to their recommended defaults. Your chats, long-term memory, pipelines, presets, skills, connections, custom prompts and API keys are left untouched.</string>
-    <string name="settings_destructive_typed_hint">Type yes to confirm</string>
+    <!-- "%1$s" is the confirmation word, knotwork_typed_confirm_word. -->
+    <string name="settings_destructive_typed_hint">Type %1$s to confirm</string>
     <string name="settings_reset_button">Settings reset to defaults.</string>
 
     <!-- Notification channel copy -->

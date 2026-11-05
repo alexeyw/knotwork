@@ -153,6 +153,7 @@ Only Kotlin files appear inside the generated blocks.
       - `MigrationStepGuardTest.kt` - Runs every step of `ALL_MIGRATIONS` on real SQLite and validates the schema it leaves against the schema Room exported for the step's target version — one test case per step, in `check`.
     - `PathContainmentTest.kt` - Verifies `PathContainment` on a real filesystem: `..`, a sibling sharing the root's name as a prefix, and a symlink out are all refused — the three ways a prefix test on the string as written lets a path escape.
     - `settings/` - Tests of the settings section stores' shared read helper.
+      - `GenerationSettingsStoreProbeTest.kt` - The last backend probe as `GenerationSettingsStore` keeps it, on a real file-backed DataStore: the typed failure the settings row words survives a write and a read, and a record an earlier release stored — the engine's text only — reads as it did.
       - `PreferencesOrEmptyTest.kt` - `preferencesOrEmpty`: readable preferences pass through, an `IOException` becomes empty preferences, any other failure propagates.
       - `ToolSettingsStoreTest.kt` - `ToolSettingsStore`'s MCP server list as an observer sees it while a server changes, on a real file-backed DataStore.
       - `ToolSettingsStoreToolSwitchesTest.kt` - The tool switches of `ToolSettingsStore` — `setMcpToolsEnabled` and `setAppFunctionsEnabled` — on a real file-backed DataStore.
@@ -743,6 +744,7 @@ Only Kotlin files appear inside the generated blocks.
       - `SettingsSearchAnchorSyncTest.kt` - Drift guard tying the deep-link highlight anchors back to the settings registry.
       - `SettingsSearchCatalogTest.kt` - Drift guard for the settings-search index bridge.
       - `SettingsViewModelTest.kt` - Tests for SettingsViewModel.
+      - `SettingsViewStateBuildersTest.kt` - The clear-memory dialog tells the user the word its gate takes.
       - `ToolCeilingUnitsTest.kt` - Round-trip guard for the tool / workspace ceiling unit conversions.
       - `usage/` - Tests for the on-device usage-statistics surface.
         - `UsageTelemetryViewModelTest.kt` - Verifies the `UsageTelemetryViewModel` state aggregation, opt-in, export and reset wiring.

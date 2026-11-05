@@ -1,6 +1,7 @@
 package app.knotwork.design.components.chat
 
 import app.knotwork.design.components.chips.Risk
+import app.knotwork.design.components.dialogs.typedConfirmMatches
 
 /**
  * Pure-Kotlin state helpers backing [HitlConfirmationCard]. Extracted from the
@@ -15,8 +16,8 @@ object HitlConfirmationState {
      *  - `Readonly` is auto-approved upstream; the CTA is never shown — return
      *    `true` defensively so a misuse renders a tappable button.
      *  - `Sensitive` is always allow-able; the user just taps Allow.
-     *  - `Destructive` requires the user to type [confirmWord] (see
-     *    [matchesConfirmWord]).
+     *  - `Destructive` requires the user to type [confirmWord] — the rule every
+     *    typed confirmation applies, [typedConfirmMatches].
      *
      * @param risk risk tier of the prompt.
      * @param pendingTypedConfirm raw value of the destructive type-confirm
@@ -27,19 +28,8 @@ object HitlConfirmationState {
      */
     fun isAllowOnceEnabled(risk: Risk, pendingTypedConfirm: String, confirmWord: String): Boolean = when (risk) {
         Risk.Readonly, Risk.Sensitive -> true
-        Risk.Destructive -> matchesConfirmWord(pendingTypedConfirm, confirmWord)
+        Risk.Destructive -> typedConfirmMatches(input = pendingTypedConfirm, keyword = confirmWord)
     }
-
-    /**
-     * Whether a typed confirmation is the word: letter case and surrounding
-     * whitespace do not matter, so "Yes " confirms as "yes" does.
-     *
-     * @param typed what the user typed.
-     * @param confirmWord the word to type, in the interface language.
-     * @return `true` when [typed] is [confirmWord].
-     */
-    fun matchesConfirmWord(typed: String, confirmWord: String): Boolean =
-        typed.trim().equals(confirmWord.trim(), ignoreCase = true)
 
     /**
      * Whether the "Always allow" affordance should be visible for the prompt.

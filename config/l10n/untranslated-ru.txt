@@ -775,7 +775,6 @@ app:string/settings_destructive_clear_memory_body
 app:string/settings_destructive_clear_memory_title
 app:string/settings_destructive_reset_body
 app:string/settings_destructive_reset_title
-app:string/settings_destructive_typed_hint
 app:string/settings_external_journal_moment_dated
 app:string/settings_external_journal_none
 app:string/settings_external_journal_summary

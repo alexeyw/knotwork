@@ -18,13 +18,19 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  * Single source of truth for the typed-confirm matching rule: the destructive
  * confirm button arms only when the typed [input] equals [keyword] after
  * trimming, case-insensitively. Exposed so ViewModels re-validating a confirm
- * action apply exactly the same rule as the dialog's enabled-state gate.
+ * action apply exactly the same rule as the dialog's enabled-state gate — and
+ * the approval card of a destructive tool call applies it too.
+ *
+ * The keyword is a string resource in the interface language, so a blank one
+ * (a translation left empty) never arms anything: an empty field must not
+ * approve what cannot be undone.
  *
  * @param input Live text of the typed-confirm field.
  * @param keyword Token the user must type.
  * @return `true` when the input arms the destructive action.
  */
-fun typedConfirmMatches(input: String, keyword: String): Boolean = input.trim().equals(keyword, ignoreCase = true)
+fun typedConfirmMatches(input: String, keyword: String): Boolean =
+    keyword.isNotBlank() && input.trim().equals(keyword.trim(), ignoreCase = true)
 
 /**
  * Payload of a destructive typed-confirm dialog: the user must type [keyword]

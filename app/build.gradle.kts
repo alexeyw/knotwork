@@ -420,7 +420,7 @@ android {
     // /guide/app-bundle/configure-base). Without this, Russian chosen in
     // Settings → About → Language on a phone set to English finds no Russian
     // resources in a Play install and stays English. The cost is the translations
-    // of two languages in every APK; `LanguageSplitGuardTest` holds the line.
+    // of two languages in every APK; `TranslationCoverageTest` holds the line.
     bundle {
         language {
             enableSplit = false
