@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -425,9 +426,14 @@ private fun PipelineLibraryListRow(
         }
         // Centre column: title + DEFAULT pill + node-shape subtitle + status line.
         Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            // The title keeps the width it needs; badges that no longer fit beside it
+            // move to the next line. In a Row the badges were measured first and the
+            // title got what was left — with all three badges that was 32 dp in
+            // English and nothing in Russian.
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+                verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = row.title,
@@ -437,7 +443,6 @@ private fun PipelineLibraryListRow(
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
                 )
                 if (row.isDefault) DefaultBadge()
                 if (row.isShareTarget) {
