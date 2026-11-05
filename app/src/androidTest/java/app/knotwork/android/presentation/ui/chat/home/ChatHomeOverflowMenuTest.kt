@@ -74,6 +74,7 @@ class ChatHomeOverflowMenuTest {
 
         // The surviving rows.
         composeTestRule.onNodeWithText(ctx.getString(R.string.chat_overflow_export)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(ctx.getString(R.string.chat_overflow_save_to_file)).assertIsDisplayed()
         composeTestRule.onNodeWithText(ctx.getString(R.string.chat_overflow_delete)).assertIsDisplayed()
         // Clearing the console is reachable only from the console itself.
         composeTestRule.onNodeWithText("Clear console").assertDoesNotExist()

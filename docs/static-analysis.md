@@ -482,6 +482,7 @@ flag them with spurious, environment-dependent violations.
 | `PromptPackNoNetworkKonsistTest`   | No file on the prompt-pack path imports a network client — a pack is imported from a file the user picked, never fetched (see below). |
 | `JournalExportNoNetworkKonsistTest` | No file on the journal-export path imports a network client — the trigger and external-request journals leave the device only through the share sheet or a file the user picked (see below). |
 | `RunTraceExportNoNetworkKonsistTest` | No file on the run-trace-export path imports a network client — a run's trace (every prompt the on-device model read, with its answers and hashes) leaves the device only through the share sheet or a file the user picked. Same three instruments as the journal-export rule (see below). |
+| `ChatExportNoNetworkKonsistTest` | No file on the chat-export path imports a network client — a chat leaves the device only through the share sheet or a file the user picked. Same three instruments as the journal-export rule, and a fourth test: the chat document's text is read only where it is passed to the shared hand-off (`ExportDocumentHandOff.kt`), so a shared file and a saved file cannot be encoded two ways (`ChatExportHandOffTest` holds them byte for byte). |
 | `VerificationToolIsolationKonsistTest` | The check of a finished run cannot run a tool. Every class of `domain/verification/` takes only types on an allowlist — the run record and its trace, the model registry and the pipelines, the generation settings, the model loader, the on-device engine and the package's own use cases — and no file there names a tool, the approval gate, a node executor, the graph engine, the task queue, the MCP connection pool, the AppFunctions manager or the cloud client factory. A tool's recorded output stands, and the tool is never run again. |
 | `LocalInferenceSeamKonsistTest`    | Inside a pipeline run, a node reaches the on-device model only through its `NodeInference`, which runs the call on the run's sampler with a seed derived from the run seed and records it. The direct callers of `generateResponseStream` are an exact list — the two `NodeInference` implementations; chat-history compression, memory compaction, the backend test in Settings and the benchmark on the Models screen; `search_tool`, whose model use is part of the tool's recorded output; and the check of a finished run — and no node executor is on it. A listed caller that disappears fails too. |
 | `HitlDispatchKonsistTest`          | Nothing reaches a tool around the approval gate. Across every production source set the call sites are an exact list: `executeTool` — the gate, and the tool repository's dispatch to an MCP server; `invokeByName`, which runs an AppFunction — the repository; `resumeWithApproval` — only the chain that starts at `SubmitApprovalDecisionUseCase`, which settles only the request an answer names. A built-in tool executor is named only by its own file, the module that binds it and the repository, and a cross-check against Konsist keeps that list of executors complete. A new call site fails, and so does one that disappeared. |
@@ -536,10 +537,10 @@ catch: reintroducing a `domain -> data` import (or an `android.*` import in
 `domain`) turns both `LayerDependencyKonsistTest` and
 `DomainPurityKonsistTest` red — verified during the suite's introduction.
 
-**The four no-network rules, and the trap they share.**
+**The five no-network rules, and the trap they share.**
 `UsageTelemetryNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest`,
-`JournalExportNoNetworkKonsistTest` and `RunTraceExportNoNetworkKonsistTest`
-select their files by name and path, and a filter of that shape goes stale in
+`JournalExportNoNetworkKonsistTest`, `RunTraceExportNoNetworkKonsistTest` and
+`ChatExportNoNetworkKonsistTest` select their files by name and path, and a filter of that shape goes stale in
 silence: a new file on the same logical path, named something the filter does
 not match, is simply unguarded and nothing says so. The prompt-pack rule closes
 that with a **second instrument** — it also treats a file as in-scope when it
@@ -557,7 +558,12 @@ them carries the export token in its own name. The filter now also matches on
 *imports* containing that token, and a third test pins the token to the real
 declarations' names — so a rename fails loudly instead of quietly emptying the
 guarded set. The run-trace-export rule was written with all three from its first
-day, keyed off the `RunTraceExport` token.
+day, keyed off the `RunTraceExport` token, and so was the chat-export rule, keyed
+off `ChatExport` (and the renderer `ExportChatUseCase`, whose name has the words
+the other way round — its coverage test caught the chat ViewModel, which only
+injects it). The share-and-write file both the journal and chat exports go
+through, `ExportDocumentHandOff.kt`, carries neither token, so both rules name it
+in, and the chat rule pins what it declares.
 
 **The allow-list rule, and the question the four deny-lists cannot answer.**
 The four rules above each say "this surface must never reach the network".

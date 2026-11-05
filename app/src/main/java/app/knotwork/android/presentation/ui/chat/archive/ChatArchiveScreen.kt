@@ -9,13 +9,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
-import app.knotwork.android.presentation.ui.chat.toShareChooser
+import app.knotwork.android.presentation.ui.chat.ChatExportEffects
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chatarchive.ChatArchiveCallbacks
 import app.knotwork.design.screens.chatarchive.ChatArchiveContent
@@ -27,8 +26,8 @@ import app.knotwork.design.screens.chatarchive.ChatArchiveVisualState
 /**
  * App-side chat-archive surface: folds [ChatArchiveViewModel.uiState] into the
  * catalog [ChatArchiveViewState], localises every string, and owns the two
- * things a Hilt ViewModel cannot — the share-sheet `Intent` and the snackbar
- * host.
+ * things a Hilt ViewModel cannot — the export's platform side
+ * ([ChatExportEffects]: share sheet and document picker) and the snackbar host.
  *
  * Tapping a row **opens** the archived chat (read-only, via [onOpenChat]); it
  * never un-archives it. Archive state changes only on an explicit Restore.
@@ -46,16 +45,11 @@ fun ChatArchiveScreen(
     viewModel: ChatArchiveViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val restoredMessage = stringResource(R.string.chat_snackbar_restored)
 
-    LaunchedEffect(viewModel) {
-        viewModel.exportEvents.collect { document ->
-            context.startActivity(document.toShareChooser(exportChooserTitle))
-        }
-    }
+    // Export chat / Save to file: the share sheet, the document picker and their snackbars.
+    ChatExportEffects(delegate = viewModel.export, snackbarHostState = snackbarHostState)
     LaunchedEffect(viewModel) {
         viewModel.restoreEvents.collect {
             snackbarHostState.showSnackbar(message = restoredMessage)
@@ -82,7 +76,8 @@ fun ChatArchiveScreen(
                 onRowMenuOpen = viewModel::openRowMenu,
                 onRowMenuDismiss = viewModel::dismissRowMenu,
                 onRestore = viewModel::restore,
-                onExport = viewModel::export,
+                onExport = viewModel::shareChat,
+                onSaveToFile = viewModel::saveChat,
                 onDeleteRequest = viewModel::requestDelete,
                 onDeleteConfirm = viewModel::confirmDelete,
                 onDeleteDismiss = viewModel::dismissDelete,
@@ -100,6 +95,7 @@ private fun chatArchiveStrings(): ChatArchiveStrings = ChatArchiveStrings(
     back = stringResource(R.string.chat_archive_back_cd),
     restore = stringResource(R.string.chat_archive_restore),
     export = stringResource(R.string.chat_archive_export),
+    saveToFile = stringResource(R.string.chat_archive_save_to_file),
     deleteForever = stringResource(R.string.chat_archive_delete_forever),
     rowMenuCd = stringResource(R.string.chat_archive_row_menu_cd),
     ranAfterArchiving = stringResource(R.string.chat_archive_ran_after_archiving),

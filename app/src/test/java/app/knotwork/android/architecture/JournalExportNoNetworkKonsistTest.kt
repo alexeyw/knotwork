@@ -96,12 +96,18 @@ class JournalExportNoNetworkKonsistTest {
      * their own names, and a name-only filter left all four unguarded — which is
      * how the coverage test below earned its place on the first run.
      *
+     * The hand-off file is named in: the journals stage and write through it, it
+     * shares it with the chat export, and its name carries neither token
+     * (`ChatExportNoNetworkKonsistTest` pins what it declares).
+     *
      * @return Every production file on the journal-export path.
      */
     private fun guardedFiles() = ArchitectureScope.production
         .files
         .filter { file ->
-            file.name.contains(EXPORT_TOKEN) || file.imports.any { it.name.contains(EXPORT_TOKEN) }
+            file.name == HAND_OFF_FILE ||
+                file.name.contains(EXPORT_TOKEN) ||
+                file.imports.any { it.name.contains(EXPORT_TOKEN) }
         }
 
     private companion object {
@@ -111,6 +117,9 @@ class JournalExportNoNetworkKonsistTest {
          * third test, so a rename fails loudly instead of emptying the guard.
          */
         const val EXPORT_TOKEN = "JournalExport"
+
+        /** The staging-and-writing file the journal and chat exports share. */
+        const val HAND_OFF_FILE = "ExportDocumentHandOff"
 
         /** Text that marks a file as talking about a journal export, for the coverage test. */
         val JOURNAL_EXPORT_MENTIONS = listOf(EXPORT_TOKEN)

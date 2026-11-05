@@ -13,6 +13,11 @@
 
     <!-- Overflow menu -->
     <string name="chat_export_chooser_title">Export chat</string>
+    <!-- Outcomes of exporting a chat, shown in a snackbar. -->
+    <string name="chat_export_saved">Chat saved</string>
+    <string name="chat_export_save_failed">Couldn\'t save the chat</string>
+    <!-- Distinct from the save failure: nothing was produced to save or share. -->
+    <string name="chat_export_render_failed">Couldn\'t read the chat</string>
 
     <!-- Pipeline switch confirmation dialog -->
 
@@ -130,6 +135,7 @@
 
     <!-- Overflow menu -->
     <string name="chat_overflow_export">Export chat</string>
+    <string name="chat_overflow_save_to_file">Save to file</string>
     <string name="chat_overflow_delete">Delete chat</string>
 
     <!-- Delete chat confirmation -->
@@ -188,6 +194,7 @@
     </plurals>
     <string name="chat_archive_restore">Restore</string>
     <string name="chat_archive_export">Export chat</string>
+    <string name="chat_archive_save_to_file">Save to file</string>
     <string name="chat_archive_delete_forever">Delete forever</string>
     <string name="chat_archive_row_menu_cd">More actions</string>
     <string name="chat_archive_ran_after_archiving">Run finished after archiving</string>

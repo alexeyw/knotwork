@@ -391,7 +391,7 @@ private fun ChatArchiveRowText(row: ChatArchiveRowUi, strings: ChatArchiveString
     }
 }
 
-/** Row overflow — Restore · Export chat · ─── · Delete forever. */
+/** Row overflow — Restore · Export chat · Save to file · ─── · Delete forever. */
 @Composable
 private fun ChatArchiveRowMenu(
     row: ChatArchiveRowUi,
@@ -414,6 +414,14 @@ private fun ChatArchiveRowMenu(
             onClick = {
                 callbacks.onRowMenuDismiss()
                 callbacks.onExport(row.id)
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(strings.saveToFile) },
+            leadingIcon = { Icon(imageVector = AppIcons.Save, contentDescription = null) },
+            onClick = {
+                callbacks.onRowMenuDismiss()
+                callbacks.onSaveToFile(row.id)
             },
         )
         // Destructive item set apart by three cues, not colour alone: below a

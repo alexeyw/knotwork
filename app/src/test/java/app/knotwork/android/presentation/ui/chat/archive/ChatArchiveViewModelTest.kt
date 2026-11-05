@@ -5,6 +5,7 @@ import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
+import app.knotwork.android.presentation.ui.chat.ChatExportEvent
 import app.knotwork.design.screens.chatarchive.ChatArchiveVisualState
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -16,7 +17,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -186,36 +186,55 @@ class ChatArchiveViewModelTest {
     }
 
     @Test
-    fun `given export when invoked then the document is raised for the share sheet`() = runTest(testDispatcher) {
+    fun `given share when invoked then the document is raised for the share sheet`() = runTest(testDispatcher) {
         val document = ChatExportDocument(sessionName = "Trip", json = "{}")
         coEvery { exportChatUseCase("session-1") } returns Result.success(document)
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
-        val received = async { viewModel.exportEvents.first() }
+        val received = async { viewModel.export.events.first() }
         runCurrent()
 
-        viewModel.export("session-1")
+        viewModel.shareChat("session-1")
         advanceUntilIdle()
 
-        assertEquals(document, received.await())
+        val share = received.await() as ChatExportEvent.Share
+        assertEquals(document, share.document)
+        assertTrue(share.fileName, share.fileName.startsWith("chat-Trip-"))
     }
 
     @Test
-    fun `given the export fails when invoked then nothing is raised`() = runTest(testDispatcher) {
+    fun `given save when invoked then the picker is asked for with the chat's file name`() = runTest(testDispatcher) {
+        coEvery { exportChatUseCase("session-1") } returns
+            Result.success(ChatExportDocument(sessionName = "Trip", json = "{}"))
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        val received = async { viewModel.export.events.first() }
+        runCurrent()
+
+        viewModel.saveChat("session-1")
+        advanceUntilIdle()
+
+        val pick = received.await() as ChatExportEvent.PickDestination
+        assertTrue(pick.fileName, pick.fileName.startsWith("chat-Trip-"))
+    }
+
+    @Test
+    fun `given the export fails when shared then the failure is reported`() = runTest(testDispatcher) {
         coEvery { exportChatUseCase("session-1") } returns Result.failure(IllegalStateException("nope"))
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
-        val received = mutableListOf<ChatExportDocument>()
-        val job = backgroundScope.launch(testDispatcher) { viewModel.exportEvents.collect { received += it } }
+        val received = async { viewModel.export.events.first() }
+        runCurrent()
+
+        viewModel.shareChat("session-1")
         advanceUntilIdle()
 
-        viewModel.export("session-1")
-        advanceUntilIdle()
-
-        assertTrue("A failed export must raise nothing", received.isEmpty())
-        job.cancel()
+        // Reported, no longer swallowed: an export that silently does nothing
+        // reads as a dead menu item.
+        assertEquals(ChatExportEvent.RenderFailed, received.await())
     }
 
     @Test

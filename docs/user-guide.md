@@ -342,15 +342,24 @@ to API keys, sampling parameters, or appearance toggles.
 ### Exporting and importing chat history
 
 The app uses standard Android share and file-picker intents, so chat
-history is portable to any app that handles JSON or plain text.
+history is portable to any app that accepts a JSON file.
 
 - **Export** — from the chat screen's top-bar overflow menu (`⋮`)
-  choose **Export chat**. The Android **Share Sheet** opens with a
-  JSON payload containing the full message history. Choose any
-  destination that accepts JSON (Files, email, a messenger, a
-  cloud-drive app, and so on). Archived chats export the same way, from
-  their own row menu on the archive screen — putting a chat away never
-  puts it out of reach.
+  choose **Export chat**. The Android **Share Sheet** opens with the
+  chat as one JSON file holding the full message history. Choose any
+  destination that accepts a file (Files, email, a messenger, a
+  cloud-drive app, and so on). The file goes as an attachment, not as
+  message text, so a chat of any length can be shared.
+- **Save to file** — the same menu's **Save to file** skips the Share
+  Sheet: the system file picker opens, you choose a folder, and the chat
+  is written there. The file is the same one **Export chat** shares,
+  byte for byte. Its suggested name is `chat-<chat name>-<date>-<time>.json`;
+  you can change it in the picker. A snackbar says when the file is
+  saved, or that it could not be.
+
+  Archived chats export and save the same way, from their own row menu
+  on the archive screen — putting a chat away never puts it out of
+  reach.
 
   The file also carries an `unfinishedRuns` list: any run of that chat
   that failed, was cancelled or was interrupted, with the error text and
@@ -361,7 +370,7 @@ history is portable to any app that handles JSON or plain text.
   produced is already there.
 - **Import** — open the drawer and tap **Import chat**. The system
   file picker opens, filtered to `application/json`. Selecting a
-  previously exported file creates a new chat session with the
+  previously exported or saved file creates a new chat session with the
   imported messages and switches to it immediately. A chat file can
   come from anyone, so the import keeps only the conversation — your
   turns and the assistant's — and leaves out the app notices and tool

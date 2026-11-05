@@ -72,6 +72,7 @@ import app.knotwork.android.domain.verification.RunAgainRequest
 import app.knotwork.android.domain.verification.RunDescription
 import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.presentation.state.ActiveSessionTracker
+import app.knotwork.android.presentation.ui.chat.ChatExportEvent
 import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessagePreview
@@ -2655,16 +2656,37 @@ class ChatHomeViewModelTest {
         viewModel = createViewModel()
         advanceUntilIdle()
 
-        val payload = async { viewModel.transfer.exportEvents.first() }
+        val payload = async { viewModel.transfer.export.events.first() }
         runCurrent()
         viewModel.transfer.exportCurrentSession()
         advanceUntilIdle()
 
-        val captured = payload.await()
+        val captured = (payload.await() as ChatExportEvent.Share).document
         assertEquals("Trip plan", captured.sessionName)
         assertTrue(captured.json.contains("\"role\""))
         assertTrue(captured.json.contains("\"USER\""))
     }
+
+    @Test
+    fun `saveCurrentSession renders the open chat and asks for a destination named after it`() =
+        runTest(testDispatcher) {
+            val sessionId = "save-id"
+            savedSessionIdFlow.value = sessionId
+            sessionsFlow.value = listOf(ChatSession(id = sessionId, name = "Trip plan", updatedAt = 0))
+            coEvery { chatRepository.getSessionById(sessionId) } returns
+                ChatSession(id = sessionId, name = "Trip plan", updatedAt = 0)
+            coEvery { chatRepository.getMessagesForSession(sessionId) } returns flowOf(emptyList())
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            val event = async { viewModel.transfer.export.events.first() }
+            runCurrent()
+            viewModel.transfer.saveCurrentSession()
+            advanceUntilIdle()
+
+            val fileName = (event.await() as ChatExportEvent.PickDestination).fileName
+            assertTrue(fileName, fileName.startsWith("chat-Trip-plan-") && fileName.endsWith(".json"))
+        }
 
     @Test
     fun `threadRows projects sessions with favorited at the top`() = runTest(testDispatcher) {

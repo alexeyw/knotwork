@@ -132,7 +132,7 @@ the **Tools** screen, or with **Block network from local model**, which
 withholds it along with the cloud paths.
 
 Nothing else has a way out — apart from files you export yourself, such as a
-journal, a run trace or a backup, which go where you send them. See [PRIVACY §
+chat, a journal, a run trace or a backup, which go where you send them. See [PRIVACY §
 What can leave your device](../PRIVACY.md#3-what-can-leave-your-device),
 and [SECURITY § Outbound HTTP and the exfiltration
 chain](../SECURITY.md#outbound-http-and-the-exfiltration-chain) for the layered

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import app.knotwork.android.domain.constants.TransientCacheDirectory
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -61,11 +62,21 @@ class JournalExportShareTest {
         (cache.get(null) as MutableMap<*, *>).clear()
     }
 
+    /** Shares [json] the way the journal screens do. */
+    private suspend fun shareJournal(json: String, fileName: String): Boolean = ExportDocumentHandOff.share(
+        context = context,
+        json = json,
+        fileName = fileName,
+        mimeType = JOURNAL_EXPORT_MIME,
+        stagingDirectory = TransientCacheDirectory.JOURNAL_EXPORT,
+        chooserTitle = "Share journal",
+    )
+
     @Test
     fun `given a document when shared then it is staged and offered as a content uri`() = runTest {
         val fileName = journalExportFileName(TRIGGER_JOURNAL_EXPORT_STEM)
 
-        val shared = shareJournalDocument(context, document, fileName, "Share journal")
+        val shared = shareJournal(document, fileName)
 
         assertTrue("the share sheet should have opened", shared)
         val chooser = shadowOf(context as android.app.Application).nextStartedActivity
@@ -90,7 +101,7 @@ class JournalExportShareTest {
     fun `given a document when shared then the staged file holds it verbatim under the declared path`() = runTest {
         val fileName = journalExportFileName(TRIGGER_JOURNAL_EXPORT_STEM)
 
-        shareJournalDocument(context, document, fileName, "Share journal")
+        shareJournal(document, fileName)
 
         // `cacheDir/journal/`, the path `file_paths.xml` declares — and a sibling
         // of the Files screen's `shared/`, which that screen wipes on every
@@ -103,10 +114,10 @@ class JournalExportShareTest {
     @Test
     fun `given an earlier share when another runs then the stale document is gone`() = runTest {
         val first = journalExportFileName(TRIGGER_JOURNAL_EXPORT_STEM)
-        shareJournalDocument(context, document, first, "Share journal")
+        shareJournal(document, first)
 
         val second = "external-requests-19700101-000000.json"
-        shareJournalDocument(context, """{"schemaVersion": 1}""", second, "Share journal")
+        shareJournal("""{"schemaVersion": 1}""", second)
 
         // A stale journal must never be handed to the next share — the staging
         // directory holds one document at a time by construction.
@@ -121,12 +132,7 @@ class JournalExportShareTest {
         // would.
         shadowOf(context as android.app.Application).checkActivities(true)
 
-        val shared = shareJournalDocument(
-            context,
-            document,
-            journalExportFileName(TRIGGER_JOURNAL_EXPORT_STEM),
-            "Share journal",
-        )
+        val shared = shareJournal(document, journalExportFileName(TRIGGER_JOURNAL_EXPORT_STEM))
 
         // Reported, not swallowed: a share that silently does nothing is
         // indistinguishable from a dead control, and the caller turns this into a
