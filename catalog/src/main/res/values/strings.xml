@@ -670,6 +670,7 @@
     <string name="knotwork_settings_tools_domains_title">Allowed HTTP domains</string>
     <string name="knotwork_settings_tools_domains_subtitle">Hosts the HTTP tool is allowed to reach.</string>
 
+    <string name="knotwork_settings_about_language_title">Language</string>
     <string name="knotwork_settings_about_version_title">App version &amp; licenses</string>
 
     <!-- ============ Memory screen ============ -->

@@ -1628,8 +1628,8 @@ Built-in variables:
 | `$TOOLS`           | The active tools list, one `name — description` per line.|
 | `$MODEL`           | The display name of the currently active local model.    |
 | `$MEMORY_SUMMARY`  | A numbered list of recent long-term memory entries. The default upper bound is configurable from **Settings → Memory → Memory summary default limit** (1–50). |
-| `$LANG`            | The device locale as a BCP-47 language tag (e.g. `en-US`). |
-| `$LOCATION`        | The device's coarse region — the locale country code (e.g. `US`). |
+| `$LANG`            | The language you read the app in, as a BCP-47 language tag (e.g. `en-US`): the language chosen for the app when there is one, otherwise the device's. |
+| `$LOCATION`        | The device's coarse region — the country code of the device's language settings (e.g. `US`), whatever language the app is shown in. |
 | `$USER`            | The display name from your identity card (currently the literal `Anonymous`). |
 | `$DEVICE`          | A short `manufacturer model · Android <version>` descriptor. |
 
@@ -2572,6 +2572,17 @@ See [`docs/images/settings-search.png`](images/settings-search.png)
 (dark variant: [`settings-search-dark.png`](images/settings-search-dark.png))
 for the search results in action.
 
+### Interface language
+
+**About → Language** picks the language of the app's screens: **Device
+language**, the default, follows your phone; any other entry is a language the
+app is translated into, each named in itself. Your phone's per-app language
+setting is the same choice — change either and both change. What a model reads
+is not translated: system prompts, tool descriptions and tool results stay in
+English. The `$LANG` variable carries the language you read the app in, so a
+prompt that asks for an answer "in `$LANG`" follows your choice; `$LOCATION`
+keeps the region of the phone's own language settings.
+
 ### What every setting means
 
 Most rows in Settings carry a small **ⓘ** next to the label. Tapping it opens a
@@ -2697,6 +2708,7 @@ repeated here.
 | Setting | What it means |
 |---|---|
 | **Identity** | *(no explanation — shows a value, decides nothing)* |
+| **Language** | The language of the app's screens. What a model reads stays in English: system prompts, tool descriptions and tool results. |
 | **App version & licenses** | *(no explanation — opens a screen that explains itself)* |
 | **Reset all settings** | *(no explanation — does what its name says)* |
 <!-- /AUTO-GEN:SETTINGS_HELP -->

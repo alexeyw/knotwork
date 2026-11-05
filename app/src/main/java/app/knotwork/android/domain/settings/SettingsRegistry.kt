@@ -3,6 +3,7 @@ package app.knotwork.android.domain.settings
 import app.knotwork.android.domain.settings.SettingControlType.BACKEND
 import app.knotwork.android.domain.settings.SettingControlType.DROPDOWN
 import app.knotwork.android.domain.settings.SettingControlType.IDENTITY
+import app.knotwork.android.domain.settings.SettingControlType.LANGUAGE
 import app.knotwork.android.domain.settings.SettingControlType.LINK
 import app.knotwork.android.domain.settings.SettingControlType.MEMORY_ACTIONS
 import app.knotwork.android.domain.settings.SettingControlType.RESET
@@ -172,6 +173,7 @@ private val PRIVACY_ENTRIES = listOf(
 
 private val ABOUT_ENTRIES = listOf(
     row(BASIC, IDENTITY, syn = listOf("identity", "device")),
+    row(BASIC, LANGUAGE, syn = listOf("language", "locale", "translation", "interface", "english", "russian")),
     link(BASIC, "Licenses", syn = listOf("version", "licenses", "oss")),
     row(ADVANCED, RESET, syn = listOf("reset", "defaults")),
 )

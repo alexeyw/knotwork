@@ -394,6 +394,25 @@ android {
         resValues = true
     }
 
+    androidResources {
+        // The interface languages the app ships, and nothing else. Libraries carry
+        // their own translations into dozens of languages, and Android resolves a
+        // library's strings for the device's language even when the app around them
+        // is English — so a device in one of those languages could show library text
+        // (dialogs, accessibility announcements) in it; not observed in this app, it
+        // follows from resource resolution. The filter keeps the default (English)
+        // resources plus every language listed here, so a language the app is not
+        // translated into falls back to English throughout. A new interface language is added here AND gets its
+        // `values-<lang>` folders in `app` and `catalog`;
+        // `TranslationCoverageTest` reads this list.
+        localeFilters += listOf("en", "ru")
+        // Lists the app's languages in the system's per-app language settings
+        // (Android 13+) and gives the in-app picker its choices, through the
+        // generated `LocaleConfig`. The default locale comes from
+        // `res/resources.properties`; the rest from the `values-<lang>` folders.
+        generateLocaleConfig = true
+    }
+
     // AGP stamps a Google-encrypted blob of the dependency list into every
     // artefact. It is opaque by construction — only Google can read it — which
     // is a poor fit for an APK distributed as the FOSS build and inspected by
@@ -495,6 +514,13 @@ android {
         // this does not depend on the API floor). ChromeOS support is not in
         // scope for v0.1 — disable the lint check that demands an x86 binary.
         disable += "ChromeOsAbiSupport"
+        // Off while the interface translation lands over several changes: until every
+        // string has its translation, each missing one would fail the build. Meanwhile
+        // `TranslationCoverageTest` (`:app`, over both modules) gates the same thing — a
+        // string missing from a language and not on that language's untranslated list
+        // (`config/l10n/`) fails it — and the change that empties the list turns this
+        // check back on.
+        disable += "MissingTranslation"
         // Version-freshness and deadline checks stay ENABLED, but are demoted to
         // INFORMATIONAL so they report instead of gating. Their verdict is a
         // function of an external version index (or of the calendar), not of the
@@ -1990,6 +2016,17 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/extending.md"))
         .withPropertyName("extendingGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `TranslationCoverageTest` reads the design system's string resources and the
+    // interface-text lists (it, `DisplayedLiteralGuardTest` and
+    // `CatalogStringsWiringTest`) — none on a classpath of this module, and an edit
+    // to a list changes no compiled byte. It reads this script's `localeFilters` too,
+    // declared below.
+    inputs.dir(rootProject.file("catalog/src/main/res"))
+        .withPropertyName("catalogResources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(rootProject.file("config/l10n"))
+        .withPropertyName("interfaceTextLists")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     // `ExportedComponentInventoryTest` reads every source set's manifest. A variant's
     // test task sees only its own overlays, so an export added to `src/full` left
     // `testFossDebugUnitTest` UP-TO-DATE and green — measured, with the guard wrong
@@ -2007,7 +2044,7 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/static-analysis.md"))
         .withPropertyName("staticAnalysisGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-    // `FdroidSigningStripGuardTest` reads this very script. Editing it reconfigures
+    // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` read this very script. Editing it reconfigures
     // the project but leaves this task's inputs as they were: measured, the signing
     // assignment put back on two lines left the task UP-TO-DATE and green.
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))

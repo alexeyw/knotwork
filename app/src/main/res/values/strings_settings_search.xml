@@ -127,6 +127,8 @@
     <!-- About -->
     <string name="settings_search_name_identity">Identity</string>
     <string name="settings_search_desc_identity">Anonymous · this device · keys in Keystore.</string>
+    <string name="settings_search_name_language">Language</string>
+    <string name="settings_search_desc_language">Show the app in another language, or in the device\'s.</string>
     <string name="settings_search_name_link_licenses">App version &amp; licenses</string>
     <string name="settings_search_desc_link_licenses">Build info and open-source licenses.</string>
     <string name="settings_search_name_reset">Reset all settings</string>

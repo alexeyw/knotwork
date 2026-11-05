@@ -70,6 +70,7 @@ class SettingsViewModelTest {
     private val localModels = mockk<LocalModelRepository>(relaxed = true)
     private val memory = mockk<MemoryRepository>(relaxed = true)
     private val identity = mockk<IdentityRepository>(relaxed = true)
+    private val appLanguage = FakeAppLanguageRepository()
     private val testBackend = mockk<TestBackendUseCase>(relaxed = true)
     private val resetSampling = mockk<ResetSamplingDefaultsUseCase>(relaxed = true)
     private val resetToRecommended = mockk<ResetToRecommendedDefaultsUseCase>(relaxed = true)
@@ -187,6 +188,38 @@ class SettingsViewModelTest {
         assertEquals("Anonymous · this device", state.identity?.displayName)
         assertEquals(2, state.variableCatalog.size)
         assertEquals("\$DATE", state.variableCatalog.first().placeholder)
+    }
+
+    @Test
+    fun `given translated languages when init then the picker offers them and the app follows the device`() = runTest {
+        advanceUntilIdle()
+
+        assertEquals(listOf("en", "ru"), viewModel.uiState.value.supportedLanguages)
+        assertNull(viewModel.uiState.value.appLanguage)
+    }
+
+    @Test
+    fun `when a language is picked then it goes to the system and the row shows it`() = runTest {
+        advanceUntilIdle()
+
+        viewModel.selectLanguage("ru")
+        advanceUntilIdle()
+
+        assertEquals(listOf<String?>("ru"), appLanguage.picks)
+        assertEquals("ru", viewModel.uiState.value.appLanguage)
+    }
+
+    @Test
+    fun `given a pick on the system page then the row follows and the identity label is resolved again`() = runTest {
+        advanceUntilIdle()
+        coVerify(exactly = 1) { identity.getIdentity(any()) }
+
+        appLanguage.changeFromSystem("ru")
+        advanceUntilIdle()
+
+        assertEquals("ru", viewModel.uiState.value.appLanguage)
+        // The label is a resource; the ViewModel outlives the screen re-created in Russian.
+        coVerify(exactly = 2) { identity.getIdentity(any()) }
     }
 
     @Test
@@ -814,6 +847,7 @@ class SettingsViewModelTest {
         localModelRepository = localModels,
         memoryRepository = memory,
         identityRepository = identity,
+        appLanguageRepository = appLanguage,
         testBackendUseCase = testBackend,
         resetSamplingDefaultsUseCase = resetSampling,
         resetToRecommendedDefaultsUseCase = resetToRecommended,

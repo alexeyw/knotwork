@@ -28,9 +28,9 @@ import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 
 /**
- * About category sub-screen. Basic tier surfaces the read-only identity card and
- * the version/licenses link; the Advanced disclosure holds the destructive
- * "Reset all settings" action.
+ * About category sub-screen. Basic tier surfaces the read-only identity card,
+ * the interface-language picker row and the version/licenses link; the Advanced
+ * disclosure holds the destructive "Reset all settings" action.
  *
  * @param state Immutable About state.
  * @param modifier Layout modifier.
@@ -56,6 +56,14 @@ fun AboutSettingsContent(
     ) {
         SettingsAnchor(anchorKey = SettingsRowAnchors.IDENTITY) {
             IdentityCard(state.identity)
+        }
+        SettingsAnchor(anchorKey = SettingsRowAnchors.LANGUAGE) {
+            NavLinkRow(
+                icon = AppIcons.Globe,
+                title = stringResource(R.string.knotwork_settings_about_language_title),
+                state = state.languageLine,
+                onClick = callbacks.onLanguageClick,
+            )
         }
         SettingsAnchor(anchorKey = SettingsRowAnchors.LINK_LICENSES) {
             NavLinkRow(

@@ -84,8 +84,8 @@ abstract class PromptTemplateModule {
     abstract fun bindMemorySummaryVariableProvider(impl: MemorySummaryVariableProvider): PromptVariableProvider
 
     /**
-     * Contributes [LangVariableProvider] — resolves `$LANG` to the device's
-     * current BCP-47 language tag (e.g. `en-US`).
+     * Contributes [LangVariableProvider] — resolves `$LANG` to the BCP-47 tag
+     * of the language the app is shown in (e.g. `en-US`).
      */
     @Binds
     @IntoSet
@@ -93,7 +93,7 @@ abstract class PromptTemplateModule {
 
     /**
      * Contributes [LocationVariableProvider] — resolves `$LOCATION` to the
-     * device's coarse region (Locale country code, e.g. `US`).
+     * device's coarse region (the country of the device's languages, e.g. `US`).
      */
     @Binds
     @IntoSet

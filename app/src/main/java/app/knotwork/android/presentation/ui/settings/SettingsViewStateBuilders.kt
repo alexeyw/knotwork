@@ -396,6 +396,7 @@ internal fun buildAboutViewState(uiState: SettingsUiState, context: Context): Ab
             BuildConfig.BUILD_TYPE,
             formatBuildDate(BuildConfig.GIT_COMMIT_DATE_EPOCH_MS),
         ).joinToString(" · "),
+        languageLine = AppLanguageLabels.rowValue(uiState.appLanguage, context),
         destructiveAction = destructiveActionFor(uiState, context, PendingDestructiveAction.ResetSettings),
     )
 
