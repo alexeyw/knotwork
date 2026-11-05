@@ -89,7 +89,7 @@
     <string name="triggers_delete_confirm">Удалить</string>
     <string name="triggers_health_healthy">В порядке</string>
     <string name="triggers_health_overdue">Просрочен</string>
-    <string name="triggers_health_last_run_failed">Последний прогон не удался</string>
+    <string name="triggers_health_last_run_failed">Сбой прогона</string>
     <string name="triggers_detail_subtitle">Подробности триггера</string>
     <string name="triggers_detail_when">Когда</string>
     <string name="triggers_detail_runs">Запускает</string>
