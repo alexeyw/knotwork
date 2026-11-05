@@ -41,5 +41,7 @@
     <string name="input_problem_scenario_not_found">Неизвестный сценарий первого запуска: %1$s</string>
     <string name="export_problem_root_not_found">Пайплайн «%1$s» не найден.</string>
     <string name="export_problem_reference_not_found">Вызываемый пайплайн «%1$s» не найден, экспорт невозможен.</string>
-    <string name="export_problem_too_many_pipelines">Вместе с вызываемыми пайплайнами получается больше %1$d.</string>
+    <string name="export_problem_too_many_pipelines">Вместе с вызываемыми пайплайнов больше предела: %1$d.</string>
+    <string name="import_problem_quoted_value">«%1$s»</string>
+    <string name="import_problem_and_more">%1$s и ещё %2$d</string>
 </resources>

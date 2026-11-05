@@ -3,7 +3,6 @@ package app.knotwork.android.presentation.common
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.InputProblem
-import app.knotwork.android.domain.text.ImportedText
 import app.knotwork.android.domain.text.toDisplaySafe
 import app.knotwork.android.domain.usecases.BundleExportProblem
 import app.knotwork.android.presentation.ui.common.UiText
@@ -31,15 +30,17 @@ fun importProblemText(problem: ImportProblem): UiText = when (problem) {
     is ImportProblem.BundleEntryNotObject -> UiText.of(R.string.import_problem_bundle_entry_not_object, problem.index)
     is ImportProblem.BundleEntryInvalid ->
         UiText.of(R.string.import_problem_bundle_entry_invalid, problem.index, importProblemText(problem.problem))
-    is ImportProblem.DuplicatePipelineIds -> UiText.of(
-        R.string.import_problem_duplicate_pipeline_ids,
-        list(problem.ids),
-    )
-    is ImportProblem.MissingPipelines -> UiText.of(R.string.import_problem_missing_pipelines, list(problem.ids))
+    is ImportProblem.DuplicatePipelineIds ->
+        UiText.of(R.string.import_problem_duplicate_pipeline_ids, someOf(problem.ids.map(::quotedValue), problem.more))
+    is ImportProblem.MissingPipelines ->
+        UiText.of(R.string.import_problem_missing_pipelines, someOf(problem.ids.map(::quotedValue), problem.more))
     is ImportProblem.PipelineFailsChecks -> UiText.of(
         R.string.import_problem_pipeline_fails_checks,
         quoted(problem.graph.name),
-        UiText.Joined(problem.errors.map { OrchestratorErrorText.forValidation(it, problem.graph) }),
+        someOf(
+            parts = problem.errors.take(MAX_LISTED).map { OrchestratorErrorText.forValidation(it, problem.graph) },
+            more = (problem.errors.size - MAX_LISTED).coerceAtLeast(0),
+        ),
     )
     is ImportProblem.TooManyMemories ->
         UiText.of(R.string.import_problem_too_many_memories, problem.count, problem.limit)
@@ -132,5 +133,17 @@ private fun notFoundText(problem: InputProblem.NotFound): UiText {
 /** One value quoted from a file, bounded again: one line, at most the quoted-value length. */
 private fun quoted(value: String): String = value.toDisplaySafe()
 
-/** A list of quoted values the parser built, bounded as a whole sentence is. */
-private fun list(values: String): String = values.toDisplaySafe(maxLength = ImportedText.MAX_MESSAGE_LENGTH)
+/** One value from a file in the interface language's quotation marks, bounded. */
+private fun quotedValue(value: String): UiText = UiText.of(R.string.import_problem_quoted_value, quoted(value))
+
+/**
+ * A list of [parts], ending with how many more there are when [more] is above zero — the
+ * parsers and the checks keep a few, so a file decides neither the list's length nor its words.
+ */
+private fun someOf(parts: List<UiText>, more: Int): UiText {
+    val listed = UiText.Joined(parts)
+    return if (more > 0) UiText.of(R.string.import_problem_and_more, listed, more) else listed
+}
+
+/** Most findings a sentence lists before counting the rest. */
+private const val MAX_LISTED = 5

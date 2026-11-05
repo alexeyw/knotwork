@@ -421,12 +421,8 @@ class PromptLibraryViewModel @Inject constructor(
                     _uiState.update { it.copy(editorDraft = null) }
                 },
                 onFailure = { e ->
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = e.message?.let(UiText::Dynamic)
-                                ?: UiText(R.string.errors_generic_unexpected),
-                        )
-                    }
+                    // A refused name or prompt is a typed problem; its words come from resources.
+                    _uiState.update { it.copy(errorMessage = OrchestratorErrorText.forThrowable(e)) }
                 },
             )
         }

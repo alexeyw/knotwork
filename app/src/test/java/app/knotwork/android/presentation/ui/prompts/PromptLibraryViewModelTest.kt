@@ -1,5 +1,8 @@
 package app.knotwork.android.presentation.ui.prompts
 
+import app.knotwork.android.R
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PromptPackCandidate
 import app.knotwork.android.domain.models.PromptPackParseError
@@ -14,6 +17,7 @@ import app.knotwork.android.domain.usecases.promptpack.ExportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.ImportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.PromptPackCollisionChoice
 import app.knotwork.android.domain.usecases.promptpack.ResolvePromptPackCollisionUseCase
+import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -199,6 +203,28 @@ class PromptLibraryViewModelTest {
                 existingId = userA.id,
             )
         }
+    }
+
+    @Test
+    fun `given a name the save refuses when saved then the editor shows the refusal's words`() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        coEvery {
+            savePromptAsPresetUseCase(
+                systemPrompt = any(),
+                name = any(),
+                description = any(),
+                nodeType = any(),
+                tags = any(),
+                existingId = any(),
+            )
+        } returns Result.failure(InvalidInputException(InputProblem.BlankName(InputProblem.Subject.PRESET)))
+
+        viewModel.openEditor(promptId = userA.id)
+        viewModel.saveEditor()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // The words of the resource, not the problem's description.
+        assertEquals(UiText(R.string.input_problem_blank_preset_name), viewModel.uiState.value.errorMessage)
     }
 
     @Test

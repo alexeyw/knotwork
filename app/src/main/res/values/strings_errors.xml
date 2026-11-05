@@ -84,4 +84,6 @@
     <string name="export_problem_root_not_found">Root pipeline \"%1$s\" was not found.</string>
     <string name="export_problem_reference_not_found">Referenced pipeline \"%1$s\" could not be resolved for export.</string>
     <string name="export_problem_too_many_pipelines" tools:ignore="PluralsCandidate">Dependency closure exceeds the limit of %1$d pipelines.</string>
+    <string name="import_problem_quoted_value">\"%1$s\"</string>
+    <string name="import_problem_and_more" tools:ignore="PluralsCandidate">%1$s and %2$d more</string>
 </resources>

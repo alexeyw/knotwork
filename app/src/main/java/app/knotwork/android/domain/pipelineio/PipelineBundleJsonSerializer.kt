@@ -190,14 +190,20 @@ object PipelineBundleJsonSerializer {
         val duplicateIds = graphs.map { it.id }.groupingBy { it }.eachCount()
             .filterValues { it > 1 }.keys
         if (duplicateIds.isNotEmpty()) {
+            val sorted = duplicateIds.sorted()
             return PipelineBundleImportOutcome.Failure(
-                ImportProblem.DuplicatePipelineIds(quoteSome(duplicateIds.sorted())),
+                ImportProblem.DuplicatePipelineIds(ids = someIds(sorted), more = moreThanShown(sorted)),
             )
         }
 
         val danglingReferences = danglingTargets(graphs)
         if (danglingReferences.isNotEmpty()) {
-            return PipelineBundleImportOutcome.Failure(ImportProblem.MissingPipelines(quoteSome(danglingReferences)))
+            return PipelineBundleImportOutcome.Failure(
+                ImportProblem.MissingPipelines(
+                    ids = someIds(danglingReferences),
+                    more = moreThanShown(danglingReferences),
+                ),
+            )
         }
 
         return if (mismatches.isEmpty()) {
@@ -208,16 +214,15 @@ object PipelineBundleJsonSerializer {
     }
 
     /**
-     * Quotes at most [MAX_QUOTED_IDS] file-supplied ids for an error message,
-     * each made display-safe, and says how many more there were. A bundle holds
-     * up to [MAX_BUNDLE_PIPELINES] pipelines, so an unbounded list would let
-     * the file decide how long the error is.
+     * At most [MAX_QUOTED_IDS] file-supplied ids for an error, each made
+     * display-safe; the error counts the rest. A bundle holds up to
+     * [MAX_BUNDLE_PIPELINES] pipelines, so an unbounded list would let the file
+     * decide how long the error is.
      */
-    private fun quoteSome(ids: List<String>): String {
-        val quoted = ids.take(MAX_QUOTED_IDS).joinToString { "\"${it.toDisplaySafe()}\"" }
-        val more = ids.size - MAX_QUOTED_IDS
-        return if (more > 0) "$quoted and $more more" else quoted
-    }
+    private fun someIds(ids: List<String>): List<String> = ids.take(MAX_QUOTED_IDS).map { it.toDisplaySafe() }
+
+    /** How many of [ids] [someIds] leaves out. */
+    private fun moreThanShown(ids: List<String>): Int = (ids.size - MAX_QUOTED_IDS).coerceAtLeast(0)
 
     /** Most ids an error message quotes before summarising the rest. */
     private const val MAX_QUOTED_IDS = 5

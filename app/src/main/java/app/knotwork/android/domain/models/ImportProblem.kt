@@ -170,16 +170,18 @@ sealed interface ImportProblem {
     /**
      * Pipelines in a bundle share ids.
      *
-     * @property ids The repeated ids, quoted and listed, at most a few of them.
+     * @property ids The first few repeated ids, display-safe.
+     * @property more How many more there are beyond [ids].
      */
-    data class DuplicatePipelineIds(val ids: String) : ImportProblem
+    data class DuplicatePipelineIds(val ids: List<String>, val more: Int) : ImportProblem
 
     /**
      * Pipelines in a bundle call pipelines the bundle does not contain.
      *
-     * @property ids The missing ids, quoted and listed, at most a few of them.
+     * @property ids The first few missing ids, display-safe.
+     * @property more How many more there are beyond [ids].
      */
-    data class MissingPipelines(val ids: String) : ImportProblem
+    data class MissingPipelines(val ids: List<String>, val more: Int) : ImportProblem
 
     /**
      * A pipeline in a bundle reads, but would not run: the checks a save applies refuse it.

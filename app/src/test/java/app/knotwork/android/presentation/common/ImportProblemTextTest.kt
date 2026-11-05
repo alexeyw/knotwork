@@ -75,6 +75,29 @@ class ImportProblemTextTest {
     }
 
     @Test
+    fun `given more ids or findings than a sentence lists when worded then the rest are counted in the language`() {
+        val ids = ImportProblem.MissingPipelines(listOf("a", "b"), more = 3)
+        val findings = ImportProblem.PipelineFailsChecks(
+            PipelineGraph(id = "p", name = "Big"),
+            List(8) { PipelineValidationError.MissingInput },
+        )
+
+        assertEquals(
+            "Bundle references pipelines not contained in it: \"a\", \"b\" and 3 more",
+            words(importProblemText(ids)),
+        )
+        assertTrue(words(importProblemText(findings)).endsWith(" and 3 more"))
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `given the app in Russian when ids are listed then they take Russian quotes and count`() {
+        val ids = ImportProblem.MissingPipelines(listOf("a", "b"), more = 3)
+
+        assertEquals("Пакет вызывает пайплайны, которых в нём нет: «a», «b» и ещё 3", words(importProblemText(ids)))
+    }
+
+    @Test
     fun `given a pipeline in a bundle that fails its checks when worded then each finding is named`() {
         val graph = PipelineGraph(id = "p", name = "Daily digest")
         val problem = ImportProblem.PipelineFailsChecks(
@@ -90,13 +113,9 @@ class ImportProblemTextTest {
 
     @Test
     fun `given hostile values that slipped past the parser when worded then every sentence is one bounded line`() {
-        val single = hostileProblems().map { words(importProblemText(it)) to ImportedText.MAX_QUOTED_VALUE_LENGTH }
-        val lists = listOf(
-            ImportProblem.DuplicatePipelineIds(HOSTILE + HOSTILE),
-            ImportProblem.MissingPipelines(HOSTILE + HOSTILE),
-        ).map { words(importProblemText(it)) to ImportedText.MAX_MESSAGE_LENGTH }
+        val bound = ImportedText.MAX_QUOTED_VALUE_LENGTH
 
-        (single + lists).forEach { (sentence, bound) ->
+        hostileProblems().map { words(importProblemText(it)) }.forEach { sentence ->
             assertTrue("line or bidi break in: $sentence", sentence.none { it.isISOControl() || it in LAYOUT_BREAKING })
             assertFalse("a value longer than $bound in: $sentence", sentence.contains("A".repeat(bound + 1)))
         }
@@ -138,6 +157,8 @@ class ImportProblemTextTest {
         ImportProblem.LabelNotABranch(HOSTILE, HOSTILE, HOSTILE, HOSTILE, listOf(HOSTILE)),
         ImportProblem.ContextFlagNotBoolean(HOSTILE, HOSTILE),
         ImportProblem.UnknownCloudProvider(HOSTILE, HOSTILE),
+        ImportProblem.DuplicatePipelineIds(listOf(HOSTILE, HOSTILE), more = 0),
+        ImportProblem.MissingPipelines(listOf(HOSTILE), more = 3),
         ImportProblem.BundleEntryInvalid(0, ImportProblem.UnknownNodeType(HOSTILE, HOSTILE)),
         ImportProblem.PipelineFailsChecks(PipelineGraph(id = "p", name = HOSTILE), emptyList()),
     )
