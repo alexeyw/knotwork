@@ -352,21 +352,13 @@ private val HitlRequestContext.glyph: ImageVector
         }
     }
 
-/** Collapsible mono JSON args block — surface2 background, 1 dp outlineVariant border. */
+/**
+ * Collapsible mono JSON args block — surface2 background, 1 dp outlineVariant border.
+ * Draws [arguments] exactly as the host laid them out; the card never parses them.
+ */
 @Composable
-private fun JsonArgsBlock(arguments: Map<String, String>) {
+private fun JsonArgsBlock(arguments: String) {
     var expanded by remember { mutableStateOf(false) }
-    val rendered = remember(arguments) {
-        if (arguments.isEmpty()) {
-            "{}"
-        } else {
-            arguments.entries.joinToString(
-                separator = ",\n",
-                prefix = "{\n",
-                postfix = "\n}",
-            ) { (k, v) -> "  \"$k\": $v" }
-        }
-    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -387,14 +379,14 @@ private fun JsonArgsBlock(arguments: Map<String, String>) {
                 // What the user approves is what runs (`api-conventions.md` § AppFunctions):
                 // the expanded block shows every character, however long.
                 WholeText(
-                    text = rendered,
+                    text = arguments,
                     style = KnotworkTextStyles.MonoSm,
                     color = KnotworkTheme.extended.onSurface2,
                     modifier = Modifier.weight(1f),
                 )
             } else {
                 Text(
-                    text = rendered,
+                    text = arguments,
                     style = KnotworkTextStyles.MonoSm,
                     color = KnotworkTheme.extended.onSurface2,
                     maxLines = JSON_COLLAPSED_MAX_LINES,

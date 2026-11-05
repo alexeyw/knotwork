@@ -2,6 +2,7 @@ package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.models.ClarificationRequest
 import app.knotwork.android.domain.models.RunNoticeCause
+import app.knotwork.android.presentation.common.ApprovalArguments
 import app.knotwork.android.presentation.common.toHitlRequestContext
 import app.knotwork.android.presentation.ui.common.RunTerminationCopy
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
@@ -26,9 +27,6 @@ import app.knotwork.design.screens.chat.ChatHomeVisualState
 import app.knotwork.design.screens.chat.ChatRunNoticeUi
 import app.knotwork.design.screens.chat.ChatTerminationUi
 import app.knotwork.design.screens.chat.RunTerminationToneUi
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -455,16 +453,9 @@ internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
         Risk.Destructive -> "Permanently remove /Users/me/old-notes.md (4.2 KB)."
     }
     val arguments = when (risk) {
-        Risk.Readonly -> mapOf("calendar" to "\"work\"", "range" to "\"tomorrow\"")
-        Risk.Sensitive -> mapOf(
-            "title" to "\"Rollout sync\"",
-            "duration" to "30",
-            "calendar" to "\"work\"",
-        )
-        Risk.Destructive -> mapOf(
-            "path" to "\"/Users/me/old-notes.md\"",
-            "recursive" to "false",
-        )
+        Risk.Readonly -> """{"calendar":"work","range":"tomorrow"}"""
+        Risk.Sensitive -> """{"title":"Rollout sync","duration":30,"calendar":"work"}"""
+        Risk.Destructive -> """{"path":"/Users/me/old-notes.md","recursive":false}"""
     }
     return ChatHomeMessageRow(
         id = "a-hitl",
@@ -474,7 +465,7 @@ internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
                 risk = risk,
                 toolName = toolName,
                 summary = summary,
-                arguments = arguments,
+                arguments = ApprovalArguments.forCard(arguments),
                 timestamp = "09:16",
             ),
         ),
@@ -485,7 +476,8 @@ internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
 /**
  * Trailing HITL confirmation row driven by the live [HitlPending]
  * snapshot the orchestrator captured. Renders the real tool name, risk
- * tier, and JSON-decoded argument map.
+ * tier, and the arguments as the call will run with them, laid out once per
+ * request ([HitlPending.cardArguments]).
  *
  * The card's summary line is left **blank**: a pending confirmation carries
  * no agent-written explanation, and there is no second field to fall back
@@ -494,7 +486,6 @@ internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
  * missing explanation. The card omits the line when the summary is blank.
  */
 internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessageRow {
-    val argumentsMap = parseHitlArguments(pending.arguments)
     val timestamp = SimpleDateFormat(HITL_TIMESTAMP_PATTERN, Locale.getDefault())
         .format(Date(System.currentTimeMillis()))
     return ChatHomeMessageRow(
@@ -507,7 +498,7 @@ internal fun liveHitlRow(modelName: String, pending: HitlPending): ChatHomeMessa
                 risk = pending.risk.toCatalogRisk(),
                 toolName = pending.toolName,
                 summary = "",
-                arguments = argumentsMap,
+                arguments = pending.cardArguments,
                 timestamp = timestamp,
                 request = pending.context?.toHitlRequestContext(),
             ),
@@ -538,47 +529,6 @@ internal fun liveClarificationRow(modelName: String, request: ClarificationReque
     )
 }
 
-/**
- * Parses the orchestrator-emitted JSON argument blob into the
- * `Map<String, String>` of rendered JSON fragments the catalog
- * `HitlConfirmationCard` expects. Each value is re-serialised through
- * [JSONObject] so strings keep their surrounding double-quotes, numbers /
- * booleans render bare, and nested objects/arrays stay compact JSON.
- * Falls back to a single `args` entry holding the raw blob when the
- * payload is not a parseable object — defensive against agents emitting
- * non-JSON or array-shaped argument payloads.
- */
-internal fun parseHitlArguments(raw: String): Map<String, String> {
-    val trimmed = raw.trim()
-    if (trimmed.isEmpty()) return emptyMap()
-    return try {
-        val obj = JSONObject(trimmed)
-        val result = linkedMapOf<String, String>()
-        val keys = obj.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            result[key] = renderJsonFragment(obj.get(key))
-        }
-        result
-    } catch (_: JSONException) {
-        mapOf(RAW_ARGS_FALLBACK_KEY to trimmed)
-    }
-}
-
-/**
- * Renders a single JSON value as the fragment string the catalog
- * `HitlConfirmationCard` expects: strings are wrapped in double quotes,
- * numbers and booleans render bare, nested objects/arrays render as
- * compact JSON, and `JSONObject.NULL` becomes `null`.
- */
-private fun renderJsonFragment(value: Any?): String = when (value) {
-    null, JSONObject.NULL -> "null"
-    is String -> JSONObject.quote(value)
-    is JSONObject -> value.toString()
-    is JSONArray -> value.toString()
-    else -> value.toString()
-}
-
 /** Pattern used for the HITL / clarification row timestamp. */
 private const val HITL_TIMESTAMP_PATTERN: String = "HH:mm"
 
@@ -603,9 +553,6 @@ internal fun chatRowTimestamp(epochMs: Long): String =
  * jump between values once a pipeline is created.
  */
 internal const val PIPELINE_NAME_PLACEHOLDER: String = "default"
-
-/** Key used when the orchestrator's argument blob cannot be parsed as a JSON object. */
-internal const val RAW_ARGS_FALLBACK_KEY: String = "args"
 
 /**
  * Trailing interrupted-run status row driven by the live

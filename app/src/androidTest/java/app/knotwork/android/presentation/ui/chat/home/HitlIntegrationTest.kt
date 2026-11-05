@@ -111,7 +111,7 @@ class HitlIntegrationTest {
                     risk = risk,
                     toolName = toolName,
                     summary = "Run $toolName with the given arguments.",
-                    arguments = mapOf("path" to "\"/tmp/x\""),
+                    arguments = "{\n  \"path\": \"/tmp/x\"\n}",
                     timestamp = "09:16",
                 ),
             ),

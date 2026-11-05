@@ -49,7 +49,7 @@ class HitlConfirmationCardStripTest {
                             risk = Risk.Sensitive,
                             toolName = "write_file",
                             summary = "",
-                            arguments = mapOf("path" to "\"inbox/captures.md\""),
+                            arguments = "{\n  \"path\": \"inbox/captures.md\"\n}",
                             timestamp = "15:12",
                         ),
                         pendingTypedConfirm = "",

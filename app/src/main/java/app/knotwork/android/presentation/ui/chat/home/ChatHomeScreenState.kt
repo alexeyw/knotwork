@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.MessageAttachment
 import app.knotwork.android.domain.models.PipelineSamplePrompt
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.presentation.common.ApprovalArguments
 import app.knotwork.design.components.chat.ComposerVoiceNotice
 import app.knotwork.design.screens.chat.ChatHomeConsoleState
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
@@ -342,7 +343,14 @@ data class HitlPending(
     val risk: ToolRisk,
     val requestId: String,
     val context: ApprovalRequestContext? = null,
-)
+) {
+    /**
+     * [arguments] as the chat card draws them ([ApprovalArguments.forCard]), laid out
+     * once per request: the screen maps its state on every recomposition — each key
+     * typed into the destructive confirmation — and an argument can be a megabyte.
+     */
+    val cardArguments: String by lazy { ApprovalArguments.forCard(arguments) }
+}
 
 /**
  * Snapshot of the session's interrupted run, exposed through

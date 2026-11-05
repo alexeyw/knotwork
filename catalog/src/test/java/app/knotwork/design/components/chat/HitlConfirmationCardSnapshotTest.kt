@@ -137,6 +137,27 @@ class HitlConfirmationCardSnapshotTest {
 
     @Test fun no_request_destructive_light() = card("no_request_destructive", request = null, risk = Risk.Destructive)
 
+    // Arguments with nested values, expanded: laid out by the host one key or item per line,
+    // every token as the call sends it (the URL keeps its plain slashes).
+    @Test fun arguments_nested_expanded_light() =
+        card("arguments_nested_expanded", request = null, arguments = NESTED_ARGUMENTS, expandArguments = true)
+
+    @Test fun arguments_nested_expanded_dark() = card(
+        "arguments_nested_expanded",
+        request = null,
+        dark = true,
+        arguments = NESTED_ARGUMENTS,
+        expandArguments = true,
+    )
+
+    @Test fun arguments_nested_expanded_font_scale_2x() = card(
+        "arguments_nested_expanded_font_scale_2x",
+        request = null,
+        scale = 2f,
+        arguments = NESTED_ARGUMENTS,
+        expandArguments = true,
+    )
+
     private fun asked(source: HitlRequestSource, text: String) =
         HitlRequestContext(source = source, request = text, shortened = false, hadImage = false)
 
@@ -148,6 +169,8 @@ class HitlConfirmationCardSnapshotTest {
         scale: Float = 1f,
         typed: String = "",
         expand: Boolean = false,
+        arguments: String? = null,
+        expandArguments: Boolean = false,
     ) {
         composeTestRule.setContent {
             val base = LocalDensity.current
@@ -155,12 +178,15 @@ class HitlConfirmationCardSnapshotTest {
                 CompositionLocalProvider(
                     LocalKnotworkA11y provides FixedKnotworkA11y(reducedMotion = true, fontScale = scale),
                     LocalDensity provides Density(density = base.density, fontScale = scale),
-                ) { Frame { Card(request = request, risk = risk, typed = typed) } }
+                ) { Frame { Card(request = request, risk = risk, typed = typed, arguments = arguments) } }
             }
         }
         if (expand) {
             composeTestRule.onNode(hasClickAction() and hasContentDescription("You asked", substring = true))
                 .performClick()
+        }
+        if (expandArguments) {
+            composeTestRule.onNode(hasClickAction() and hasContentDescription("Expand arguments")).performClick()
         }
         val theme = if (dark) "dark" else "light"
         val file = if (name.endsWith("font_scale_2x")) "hitl_request_$name" else "hitl_request_${name}_$theme"
@@ -176,16 +202,20 @@ class HitlConfirmationCardSnapshotTest {
     }
 
     @Composable
-    private fun Card(request: HitlRequestContext?, risk: Risk, typed: String) {
+    private fun Card(request: HitlRequestContext?, risk: Risk, typed: String, arguments: String?) {
         HitlConfirmationCard(
             model = HitlConfirmationModel(
                 risk = risk,
-                toolName = if (risk == Risk.Destructive) "delete_file" else "schedule_task",
+                toolName = when {
+                    arguments != null -> "calendar.create_event"
+                    risk == Risk.Destructive -> "delete_file"
+                    else -> "schedule_task"
+                },
                 summary = "",
-                arguments = if (risk == Risk.Destructive) {
-                    mapOf("path" to "\"notes/2025-archive.md\"")
+                arguments = arguments ?: if (risk == Risk.Destructive) {
+                    "{\n  \"path\": \"notes/2025-archive.md\"\n}"
                 } else {
-                    mapOf("when" to "\"2026-10-06T16:00\"", "prompt" to "\"Call the dentist\"")
+                    "{\n  \"when\": \"2026-10-06T16:00\",\n  \"prompt\": \"Call the dentist\"\n}"
                 },
                 timestamp = "14:02",
                 request = request,
@@ -221,6 +251,37 @@ class HitlConfirmationCardSnapshotTest {
             shortened = true,
             hadImage = false,
         )
+
+        /**
+         * What the app lays out for
+         * `{"title":"Rollout sync","link":"https://meet.example.org/rollout","when":{"start":"2026-11-06T10:00",`
+         * `"minutes":30},"attendees":[{"name":"Anna","email":"anna@example.org"},{"name":"Ben",`
+         * `"email":"ben@example.org"}],"remind":[10,60]}` (`JsonLayout.indented`).
+         */
+        val NESTED_ARGUMENTS = """
+            {
+              "title": "Rollout sync",
+              "link": "https://meet.example.org/rollout",
+              "when": {
+                "start": "2026-11-06T10:00",
+                "minutes": 30
+              },
+              "attendees": [
+                {
+                  "name": "Anna",
+                  "email": "anna@example.org"
+                },
+                {
+                  "name": "Ben",
+                  "email": "ben@example.org"
+                }
+              ],
+              "remind": [
+                10,
+                60
+              ]
+            }
+        """.trimIndent()
 
         val IMAGE_ONLY = HitlRequestContext(HitlRequestSource.Chat, request = null, shortened = false, hadImage = true)
 

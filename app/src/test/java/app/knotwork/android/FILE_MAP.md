@@ -34,6 +34,7 @@ Only Kotlin files appear inside the generated blocks.
   - `ImageAttachmentEntryCensusTest.kt` - Census of the production files that start runs through `AgentOrchestratorUseCase`, with whether each can attach an image — and, if it can, proof that it asks the multimodal pre-flight (`CheckImageAttachmentUseCase`) first.
   - `InstrumentedTestExclusionGuardTest.kt` - Guard over the **instrumented-test exclusion list** — the set of instrumented tests the automated emulator runs deliberately do not execute.
   - `JournalExportNoNetworkKonsistTest.kt` - Konsist guard on the journal exports: **the journal leaves the device only in the user's own hands.**
+  - `JsonDisplayGuardTest.kt` - Census of the presentation code that reads or writes JSON with `org.json`: every JSON a person reads goes through the shared layout (`presentation/common/JsonLayout.kt`), and the files that use `org.json` for anything else are named here with the reason.
   - `KoogClientTimeoutKonsistTest.kt` - Census of every place production code constructs a Koog model client, requiring each to pass the shared deadlines, `CloudClientTimeouts.CONFIG`.
   - `LayerDependencyKonsistTest.kt` - Konsist architecture guard enforcing the project's Clean Architecture dependency rule: dependencies flow strictly inward, `data` -> `domain` <- `presentation`, and `domain` depends on neither sibling.
   - `LocalInferenceSeamKonsistTest.kt` - Census of the places that call the on-device model directly.
@@ -586,8 +587,11 @@ Only Kotlin files appear inside the generated blocks.
   - `TriggerBackgroundRunIntegrationTest.kt` - End-to-end JVM integration test of the **automation-trigger → background run → notification → result-in-chat** arc — the privacy-sensitive surface automation triggers add on top of the persisted background-run infrastructure.
 - `presentation/` - Tests for the presentation layer.
   - `common/` - Tests for the cross-feature presentation utilities.
+    - `ApprovalArgumentsTest.kt` - The arguments of a call waiting for approval as the card and the notification show them: laid out, never respelled, shown as they came when they are not JSON.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
     - `HitlRequestMappingTest.kt` - `toHitlRequestContext` — the one translation the approval card and the approval notification both read: every source keeps its meaning, a trigger keeps its name (or its lack of one), and the text and flags pass unchanged.
+    - `JsonLayoutLosslessTest.kt` - Guard: laying JSON out never changes what it says, and text that is not JSON is shown as it came.
+    - `JsonLayoutTest.kt` - Cases of the shared JSON layout one by one; `JsonLayoutLosslessTest` holds the rule over generated documents.
   - `notifications/` - Tests for the notification channels and notifiers.
     - `ApprovalNotificationManagerTest.kt` - Robolectric coverage for `ApprovalNotificationManager` — the Human-in-the-loop gate that surfaces tool-approval prompts in the system shade when the user is not actively viewing the requesting chat session.
     - `ClarificationNotificationManagerTest.kt` - Robolectric coverage for `ClarificationNotificationManager`: the parked run's question is the model's, written from the conversation, so where the system hides sensitive content the notification shows its title alone.
@@ -733,6 +737,7 @@ Only Kotlin files appear inside the generated blocks.
       - `AllowedDomainsViewModelTest.kt` - Unit tests for `AllowedDomainsViewModel` — the add-field feedback computation (delegated to `HttpRequestPolicy.normalizeDomain`) and the add / remove persistence gestures.
       - `McpServerConfigSaveFlowTest.kt` - Saving the MCP server form, as the Tools screen beneath it sees it: the real `ToolsViewModel`, `McpServerConfigViewModel` and `McpServerRepositoryImpl` over one connection pool, with only the MCP client and the settings faked.
       - `McpServerConfigViewModelTest.kt` - Unit tests for `McpServerConfigViewModel`.
+      - `ToolDetailSchemaTest.kt` - A tool's parameter schema on the detail screen: laid out one key per line by the layout every JSON surface shares, and the error state for text that is not a JSON object.
       - `ToolRiskResolutionTest.kt` - Guards the one rule the Tools list and the tool-detail screen must agree on: which tools the approval gate resolves from an override, and which it resolves from the code.
       - `ToolsUiStateTest.kt` - The Tools screen's "not offered to the agent" line must tell the story the agent lives in: these cases mirror the ones `ToolRepositoryImplTest` pins for the agent's catalogue.
       - `ToolsViewModelTest.kt` - Tests for ToolsViewModel.

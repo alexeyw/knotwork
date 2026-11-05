@@ -42,7 +42,7 @@ class HitlConfirmationCardRequestTest {
                         risk = risk,
                         toolName = TOOL,
                         summary = "",
-                        arguments = mapOf("prompt" to "\"Call the dentist\""),
+                        arguments = "{\n  \"prompt\": \"Call the dentist\"\n}",
                         timestamp = "14:02",
                         request = request,
                     ),

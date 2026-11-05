@@ -88,11 +88,13 @@ fun ChatCatalogContent() {
                         risk = Risk.Sensitive,
                         toolName = "calendar.create_event",
                         summary = "Add a 30-minute meeting \"Team sync\" to your work calendar tomorrow at 10:00.",
-                        arguments = mapOf(
-                            "title" to "\"Team sync\"",
-                            "duration" to "30",
-                            "calendar" to "\"work\"",
-                        ),
+                        arguments = """
+                            {
+                              "title": "Team sync",
+                              "duration": 30,
+                              "calendar": "work"
+                            }
+                        """.trimIndent(),
                         timestamp = "09:18",
                         request = HitlRequestContext(
                             source = HitlRequestSource.Chat,
@@ -114,10 +116,12 @@ fun ChatCatalogContent() {
                         risk = Risk.Destructive,
                         toolName = "fs.delete_file",
                         summary = "Permanently remove /Users/me/old-notes.md (4.2 KB).",
-                        arguments = mapOf(
-                            "path" to "\"/Users/me/old-notes.md\"",
-                            "recursive" to "false",
-                        ),
+                        arguments = """
+                            {
+                              "path": "/Users/me/old-notes.md",
+                              "recursive": false
+                            }
+                        """.trimIndent(),
                         timestamp = "09:19",
                     ),
                 ),

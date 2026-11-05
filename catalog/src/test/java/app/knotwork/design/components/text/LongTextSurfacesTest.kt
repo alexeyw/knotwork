@@ -177,7 +177,7 @@ class LongTextSurfacesTest {
                 risk = Risk.Sensitive,
                 toolName = "write_file",
                 summary = "",
-                arguments = mapOf("content" to value),
+                arguments = "{\n  \"content\": $value\n}",
                 timestamp = "15:12",
             ),
             pendingTypedConfirm = "",
