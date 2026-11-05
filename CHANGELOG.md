@@ -33,6 +33,18 @@ details.
 
 ### Fixed
 
+- **The approval card shows the arguments exactly as the call receives
+  them.** On Android it showed every `/` in an argument as `\/` and
+  rewrote numbers — `1.50` as `1.5`, a long integer rounded — so the text you
+  approved was not quite the one sent. The arguments are now laid out one per
+  line with nested values indented, the way the console shows a value, and
+  every value appears as written. Arguments that are not JSON are shown as
+  they came instead of under a made-up `args` key, and a character that would
+  not show — a zero-width space, a direction override — appears as its
+  `\uXXXX` code on the card and in the notification, which shows the
+  arguments on one line.
+- **A tool's parameter schema is laid out one key per line** on its detail
+  page; a server's schema used to show as a single line to scroll through.
 - **Very long text without spaces no longer freezes the screen.** A tool's
   output, an error or a memory entry of hundreds of thousands of characters
   without a space — base64, minified JSON — held the app for seconds in

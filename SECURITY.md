@@ -885,7 +885,12 @@ oversight — and it works as follows:
 - The backstop is the **human-in-the-loop gate**: before a `SENSITIVE` or
   `DESTRUCTIVE` tool executes, the chat surfaces a confirmation card showing
   the **tool name and the exact arguments** the model produced, and the run
-  suspends until the user approves or denies. Above the call the card shows
+  suspends until the user approves or denies. The arguments are laid out one
+  per line but otherwise shown as the call receives them — no escape, number
+  or key rewritten, and text that is not JSON shown as it came — and a
+  character that would not show (a direction override, a zero-width space)
+  appears as its `\uXXXX` escape, so an argument cannot reorder or hide part
+  of itself. Above the call the card shows
   the request the run was started with, labelled by where it came from — the
   user's message, shared text, a trigger's prompt, another app's request, or
   an instruction the agent scheduled, which is never labelled as the user's —

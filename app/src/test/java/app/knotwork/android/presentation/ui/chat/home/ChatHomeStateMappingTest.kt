@@ -333,7 +333,7 @@ class ChatHomeStateMappingTest {
     }
 
     @Test
-    fun `a live pending confirmation carries the decoded arguments and the real risk`() {
+    fun `a live pending confirmation carries the laid-out arguments and the real risk`() {
         val row = liveHitlRow(
             modelName = model,
             pending = HitlPending(
@@ -346,7 +346,39 @@ class ChatHomeStateMappingTest {
 
         val confirmation = row.content as ChatContent.Confirmation
         assertEquals(Risk.Destructive, confirmation.model.risk)
-        assertEquals(setOf("path"), confirmation.model.arguments.keys)
+        assertEquals("{\n  \"path\": \"old-notes.md\"\n}", confirmation.model.arguments)
+    }
+
+    @Test
+    fun `a live pending confirmation shows the arguments laid out exactly as the call will run with them`() {
+        // The card used to rebuild each argument with org.json, which on Android writes `/`
+        // as `\/` and reads 1.50 as 1.5 — a different text from the one the tool receives.
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending(
+                toolName = "write_file",
+                arguments = """{"path":"/notes/a.md","n":1.50,"meta":{"tags":["x"]}}""",
+                risk = ToolRisk.SENSITIVE,
+                requestId = "req-1",
+            ),
+        )
+
+        assertEquals(
+            "{\n  \"path\": \"/notes/a.md\",\n  \"n\": 1.50,\n  \"meta\": {\n    \"tags\": [\n      \"x\"\n" +
+                "    ]\n  }\n}",
+            (row.content as ChatContent.Confirmation).model.arguments,
+        )
+    }
+
+    @Test
+    fun `a live pending confirmation shows arguments that are not JSON as they came, under no made-up key`() {
+        // They were once wrapped as {"args": …}: a key the call does not have.
+        val row = liveHitlRow(
+            modelName = model,
+            pending = HitlPending("write_file", "  {path: 'a.md'}  ", ToolRisk.SENSITIVE, requestId = "req-1"),
+        )
+
+        assertEquals("{path: 'a.md'}", (row.content as ChatContent.Confirmation).model.arguments)
     }
 
     @Test

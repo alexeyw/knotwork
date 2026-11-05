@@ -788,6 +788,13 @@ a colour-coded risk pill (`READ` / `SENS` / `DEST`), and **Approve** /
 **Deny** buttons. Destructive tools also require typing **yes** into a
 confirmation field before the **Approve** button is enabled.
 
+The arguments are laid out one per line, with nested values indented, and
+each value is shown exactly as the call will receive it — no character
+escaped differently, no number rounded. Tap them to read every character.
+Arguments that are not valid JSON are shown as they arrived. A character
+that would not show — a zero-width space, a direction override — appears as
+its `\uXXXX` code, so an argument cannot hide or reorder part of itself.
+
 Above the tool call the card shows what the run was asked to do, so you
 can check the call against it — the agent may have understood you
 differently. A label says whose words they are: **You asked** for your
@@ -806,7 +813,8 @@ arrives as a notification. For read-only and sensitive tools it offers
 notification — it offers **Deny** and a **Review in chat** link to the
 regular typed-confirm card. The same goes for a call whose arguments are
 longer than a notification can show: its text is cut with a note, and it is
-approved in the chat, where the card shows every argument. The request the
+approved in the chat, where the card shows every argument. The notification
+puts the arguments on one line, laid out the same way. The request the
 run was asked is the notification's last line, after the call — shortened if
 it is long, and never in the way of the arguments.
 
@@ -1829,6 +1837,10 @@ away never hides a problem inside it: a collapsed **MCP servers** header
 still reports `⚠ 1 disconnected`. The `+` in the top bar adds an MCP
 server from anywhere on the screen; when you have none yet, the empty
 **MCP servers** group carries a labelled **Add server** button instead.
+
+Tap a tool to open its detail page: what it does, whether it is on, its
+risk level (see below) and the JSON Schema of its parameters, laid out one
+key per line — a server sends its schema on a single line.
 
 ### Built-in tools
 

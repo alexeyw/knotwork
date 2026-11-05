@@ -289,12 +289,56 @@ class ApprovalNotificationManagerTest {
 
     @Test
     fun `given arguments within the shade budget when a SENSITIVE request is posted then they are shown whole`() {
-        val args = "{\"q\":\"" + "x".repeat(ApprovalNotificationManager.SHADE_ARGUMENT_BUDGET - 8) + "\"}"
-        manager.sendApprovalRequest("s1", "req-s1", "t", args, ToolRisk.SENSITIVE, null)
+        // Laid out on one line, `{"q": "…"}` is nine characters around the value: exactly the budget.
+        val value = "x".repeat(ApprovalNotificationManager.SHADE_ARGUMENT_BUDGET - 9)
+        manager.sendApprovalRequest("s1", "req-s1", "t", "{\"q\":\"$value\"}", ToolRisk.SENSITIVE, null)
 
         val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
         assertTrue(notification.approvesFromShade())
-        assertTrue(notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains(args))
+        assertTrue(bigText().contains("{\"q\": \"$value\"}"))
+    }
+
+    @Test
+    fun `given arguments one character past the budget once laid out when posted then they are cut`() {
+        // The raw string fits the budget; the space the layout adds after the colon does not.
+        val value = "x".repeat(ApprovalNotificationManager.SHADE_ARGUMENT_BUDGET - 8)
+        manager.sendApprovalRequest("s1", "req-s1", "t", "{\"q\":\"$value\"}", ToolRisk.SENSITIVE, null)
+
+        val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        assertFalse(notification.approvesFromShade())
+        assertTrue(bigText().contains(context.getString(R.string.approval_notification_arguments_cut)))
+    }
+
+    @Test
+    fun `given arguments spread over lines by the model when posted then the shade shows them on one line, whole`() {
+        // The budget measures what the shade shows: the model's own indentation takes no room there.
+        val spread = "{\n" + (1..20).joinToString(",\n") { "                \"k$it\" :   $it" } + "\n}"
+        assertTrue(spread.length > ApprovalNotificationManager.SHADE_ARGUMENT_BUDGET)
+        manager.sendApprovalRequest("s1", "req-s1", "t", spread, ToolRisk.SENSITIVE, null)
+
+        val notification = Shadows.shadowOf(notificationManager()).allNotifications.single()
+        assertTrue(notification.approvesFromShade())
+        val oneLine = "{" + (1..20).joinToString(", ") { "\"k$it\": $it" } + "}"
+        assertEquals(context.getString(R.string.approval_notification_big_text, "t", oneLine), bigText())
+    }
+
+    @Test
+    fun `given arguments that are not JSON when posted then the shade shows them as they came`() {
+        val notJson = "{path: '/var/log',}"
+        manager.sendApprovalRequest("s1", "req-s1", "t", notJson, ToolRisk.SENSITIVE, null)
+
+        assertEquals(context.getString(R.string.approval_notification_big_text, "t", notJson), bigText())
+    }
+
+    @Test
+    fun `given a direction override inside an argument when posted then the shade shows its escape`() {
+        // U+202E would reverse the text after it: "gpj.exe" would read as "exe.jpg".
+        manager.sendApprovalRequest("s1", "req-s1", "t", "{\"f\":\"a\u202Egpj.exe\"}", ToolRisk.SENSITIVE, null)
+
+        assertEquals(
+            context.getString(R.string.approval_notification_big_text, "t", "{\"f\": \"a\\u202Egpj.exe\"}"),
+            bigText(),
+        )
     }
 
     @Test
@@ -417,7 +461,7 @@ class ApprovalNotificationManagerTest {
         val bigText = notification.extras.getCharSequence(NotificationCompat.EXTRA_BIG_TEXT)?.toString()
         assertNotNull("BigTextStyle must be applied", bigText)
         assertEquals(
-            context.getString(R.string.approval_notification_big_text, "delete_file", "{\"path\":\"/var/log\"}"),
+            context.getString(R.string.approval_notification_big_text, "delete_file", "{\"path\": \"/var/log\"}"),
             bigText,
         )
         val contentText = notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT)?.toString()
@@ -524,7 +568,7 @@ class ApprovalNotificationManagerTest {
         val expectedCall = context.getString(
             R.string.approval_notification_big_text,
             "send_email",
-            "{\"to\":\"anna@x\"}",
+            "{\"to\": \"anna@x\"}",
         )
         val posts = mapOf<String, () -> Unit>(
             "live" to {

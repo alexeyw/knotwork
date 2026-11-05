@@ -10,13 +10,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.data.repositories.McpServerRepositoryImpl
 import app.knotwork.android.domain.models.McpConnectionStatus
+import app.knotwork.android.presentation.common.JsonLayout
 import app.knotwork.design.screens.tools.ToolDetailCallbacks
 import app.knotwork.design.screens.tools.ToolDetailContent
 import app.knotwork.design.screens.tools.ToolDetailViewState
 import app.knotwork.design.screens.tools.ToolDetailVisualState
 import app.knotwork.design.screens.tools.ToolRiskUi
-import org.json.JSONException
-import org.json.JSONObject
 
 /**
  * Per-tool detail screen.
@@ -62,7 +61,7 @@ fun ToolDetailScreen(
                 ?: (owningStatus as? McpConnectionStatus.Error)?.let { "Server error: ${it.reason}" }
                 ?: "",
             serverDisplayName = mcpTool?.serverUrl ?: "MCP tool",
-            schemaJson = mcpTool?.inputSchemaJson,
+            schemaJson = remember(mcpTool) { mcpTool?.inputSchemaJson?.let(::laidOutSchema) },
             lastUsed = null,
             enabled = enabled,
             // Keyed per server, exactly as `ToolRepositoryImpl.getRisk` looks it
@@ -82,7 +81,7 @@ fun ToolDetailScreen(
             toolName = tool?.name ?: toolId,
             description = tool?.description.orEmpty(),
             serverDisplayName = "Local tool",
-            schemaJson = tool?.parameters?.takeIf { it.isNotBlank() } ?: "{}",
+            schemaJson = remember(tool) { tool?.parameters?.takeIf { it.isNotBlank() }?.let(::laidOutSchema) ?: "{}" },
             lastUsed = null,
             enabled = enabled,
             // A built-in's risk is resolved from code before any override is
@@ -136,20 +135,30 @@ private fun findOwningServerStatus(state: ToolsUiState, toolId: String): McpConn
 
 /**
  * Decides which [ToolDetailVisualState] applies given a schema string.
- * Blank → `Default` (renders the empty `{}` placeholder); malformed JSON
- * → `SchemaError`; otherwise `Default`. The `Loading` state is reserved
- * for the MCP path while the repository fetch is still in flight.
+ * Blank → `Default` (renders the empty `{}` placeholder); text that is not a
+ * JSON object by the grammar the schema is laid out with ([JsonLayout]) →
+ * `SchemaError`; otherwise `Default`. The `Loading` state is reserved for the
+ * MCP path while the repository fetch is still in flight.
  */
-private fun String.visualStateForSchema(): ToolDetailVisualState {
+internal fun String.visualStateForSchema(): ToolDetailVisualState {
     val trimmed = trim()
-    if (trimmed.isEmpty()) return ToolDetailVisualState.Default
-    return try {
-        JSONObject(trimmed)
-        ToolDetailVisualState.Default
-    } catch (_: JSONException) {
-        ToolDetailVisualState.SchemaError
+    return when {
+        trimmed.isEmpty() -> ToolDetailVisualState.Default
+        trimmed.startsWith('{') && JsonLayout.isValid(trimmed) -> ToolDetailVisualState.Default
+        else -> ToolDetailVisualState.SchemaError
     }
 }
+
+/**
+ * A tool's parameter schema as the detail screen shows it: laid out one key per
+ * line by [JsonLayout.indented], the layout every JSON surface shares. A server's
+ * schema arrives minified on one line; text that is not JSON is returned as it
+ * came, and [visualStateForSchema] shows the error state for it instead.
+ *
+ * @param schema the schema as the tool declares it.
+ * @return the text the schema preview draws.
+ */
+internal fun laidOutSchema(schema: String): String = JsonLayout.indented(schema.trim())
 
 /** TestTag applied to the tool-detail screen root. */
 internal const val TOOL_DETAIL_ROOT_TEST_TAG = "tool_detail_root"

@@ -21,6 +21,8 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -119,6 +121,29 @@ class ToolRepositoryImplTest {
         val appFunctionIndex = result.indexOfFirst { it.name == "get_system_time" }
         assertTrue(builtinIndex < appFunctionIndex)
         coVerify(exactly = 1) { mcpClient.getTools() }
+    }
+
+    @Test
+    fun `given every provider set up when listed then every built-in schema is strict JSON`() = runTest {
+        // The detail screen lays a schema out with a strict grammar and shows the error state for
+        // anything else; org.json, which the executors read arguments with, would forgive a
+        // trailing comma that the screen does not.
+        CloudProvider.entries.forEach { provider ->
+            every { apiKeyRepository.getApiKey(provider) } returns flowOf("key-${provider.id}")
+            every { apiKeyRepository.getBaseUrl(provider) } returns flowOf("http://10.0.0.2:1")
+            every { apiKeyRepository.getModel(provider) } returns flowOf("model-${provider.id}")
+        }
+        coEvery { mcpClient.getTools() } returns emptyList()
+
+        val invalid = repository.getAvailableTools().filter { tool ->
+            try {
+                Json.parseToJsonElement(tool.parameters) !is JsonObject
+            } catch (_: IllegalArgumentException) {
+                true
+            }
+        }
+
+        assertEquals(emptyList<String>(), invalid.map { it.name })
     }
 
     @Test

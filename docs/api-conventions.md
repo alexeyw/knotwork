@@ -117,6 +117,15 @@ interface LiteRtRepository {
   the same risk as the card the user saw. Anything else raises the question
   again, whatever the policy: a quiet policy never settles a question that
   was already asked. A denial applies at any risk.
+- **The arguments the user approves are shown as the call receives them.**
+  Every approval surface lays the argument string out through
+  `ApprovalArguments` (`presentation/common`, on `JsonLayout`): whitespace
+  between tokens changes, nothing else — no escape, number spelling or
+  repeated key — and text that is not JSON is shown as it came. Never
+  re-serialise arguments for display: `org.json` writes `/` as `\/` on
+  Android and reads `1.50` as `1.5`. A character that would not show is
+  written as its `\uXXXX` escape. `JsonLayoutLosslessTest` holds the layout,
+  `JsonDisplayGuardTest` the presentation files that use `org.json`.
 
 ```kotlin
 enum class ToolRisk { READ_ONLY, SENSITIVE, DESTRUCTIVE }
