@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Memory list: breakdown, sections, detail lines. -->
+    <string name="memory_segment_auto">АВТО</string>
+    <string name="memory_segment_compaction">СЖАТО</string>
+    <string name="memory_segment_manual">ВРУЧНУЮ</string>
+    <string name="memory_header_compacted_ago">сжато %1$s назад</string>
+    <string name="memory_header_compacted_just_now">сжато только что</string>
+    <string name="memory_section_pinned">Закреплённые</string>
+    <string name="memory_section_today">Сегодня</string>
+    <string name="memory_section_this_week">На этой неделе</string>
+    <string name="memory_section_earlier">Раньше</string>
+    <string name="memory_detail_learned_from_chat">Чат «%1$s»</string>
+    <string name="memory_detail_last_used_ago">последний раз %1$s назад</string>
+    <string name="memory_detail_last_used_just_now">последний раз только что</string>
+    <string name="memory_source_auto">Извлечено автоматически</string>
+    <string name="memory_source_manual">Сохранено вручную</string>
+    <string name="memory_source_compaction">Сжато</string>
+    <string name="memory_source_unknown">Неизвестно</string>
+    <string name="memory_detail_tokens">%1$d ток.</string>
+    <string name="memory_compact_seconds_approx">~%1$d с</string>
+    <plurals name="memory_used_in_runs">
+        <item quantity="one">%1$d прогон</item>
+        <item quantity="few">%1$d прогона</item>
+        <item quantity="many">%1$d прогонов</item>
+        <item quantity="other">%1$d прогона</item>
+    </plurals>
+</resources>

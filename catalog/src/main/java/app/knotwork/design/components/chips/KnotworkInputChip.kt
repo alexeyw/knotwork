@@ -18,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -53,6 +55,7 @@ fun KnotworkInputChip(
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
 ) {
+    val removeDescription = stringResource(R.string.knotwork_input_chip_remove_cd, label)
     val ext = KnotworkTheme.extended
     Surface(
         shape = KnotworkTheme.shapes.sm,
@@ -82,7 +85,7 @@ fun KnotworkInputChip(
                     .clip(CircleShape)
                     .background(ext.surface3, CircleShape)
                     .clickable(onClick = onRemove)
-                    .semantics { contentDescription = "Remove $label" },
+                    .semantics { contentDescription = removeDescription },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

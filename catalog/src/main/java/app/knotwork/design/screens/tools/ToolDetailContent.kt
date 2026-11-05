@@ -163,7 +163,11 @@ fun ToolDetailContent(
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = if (state.enabled) "Enabled" else "Disabled",
+                    text = if (state.enabled) {
+                        stringResource(R.string.knotwork_tool_detail_enabled)
+                    } else {
+                        stringResource(R.string.knotwork_tool_detail_disabled)
+                    },
                     style = KnotworkTextStyles.TitleMd,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),

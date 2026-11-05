@@ -14,6 +14,7 @@ import app.knotwork.android.presentation.ui.common.ConnectionTestState
 import app.knotwork.design.screens.tools.McpAuthSelector
 import app.knotwork.design.screens.tools.McpHeaderRow
 import app.knotwork.design.screens.tools.McpTransportOption
+import app.knotwork.design.screens.tools.McpUrlProblem
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -273,24 +274,21 @@ class McpServerConfigViewModelTest {
         // Saved is NOT emitted — form must stay open with the inline error.
         assertNull(viewModel.events.value)
         val form = viewModel.form.value
-        assertNotNull(form.urlError)
-        assertTrue(
-            "Collision error must call out the colliding server by name; got: ${form.urlError}",
-            form.urlError!!.contains("Existing"),
-        )
+        // The collision names the colliding server; the form words it in the interface language.
+        assertTrue("got: ${form.urlError}", (form.urlError as McpUrlProblem.Collision).label.contains("Existing"))
         // submitting flag is released so the Save button is interactive again.
         assertEquals(false, form.submitting)
     }
 
     @Test
-    fun `formatCollisionMessage falls back to URL when colliding row has no display name`() {
-        val msg = McpServerConfigViewModel.formatCollisionMessage(
+    fun `given a colliding row without a name when the problem is built then it names the URL`() {
+        val problem = McpServerConfigViewModel.collisionProblem(
             UpdateMcpServerResult.UrlCollision(
                 collidingUrl = "https://anonymous.example/mcp",
                 collidingDisplayName = null,
             ),
         )
-        assertTrue(msg.contains("https://anonymous.example/mcp"))
+        assertEquals(McpUrlProblem.Collision("https://anonymous.example/mcp"), problem)
     }
 
     @Test

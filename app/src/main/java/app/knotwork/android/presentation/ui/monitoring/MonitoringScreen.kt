@@ -5,6 +5,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.R
 import app.knotwork.design.screens.monitoring.MonitoringCallbacks
@@ -27,7 +28,8 @@ import java.util.Locale
 fun MonitoringScreen(viewModel: MonitoringViewModel, modifier: Modifier = Modifier, onBack: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = monitoringStrings()
-    val viewState = remember(uiState) { uiState.toViewState(strings) }
+    val labels = monitoringStatLabels()
+    val viewState = remember(uiState, labels) { uiState.toViewState(strings, labels) }
     MonitoringContent(
         state = viewState,
         modifier = modifier,
@@ -38,18 +40,53 @@ fun MonitoringScreen(viewModel: MonitoringViewModel, modifier: Modifier = Modifi
 
 private val LOG_TIME_FORMATTER = SimpleDateFormat("HH:mm:ss", Locale.US)
 
-internal fun MonitoringUiState.toViewState(strings: MonitoringStrings): MonitoringViewState {
+/**
+ * The words and number style of the monitoring stats, in the interface language.
+ *
+ * @property inferenceTime Label of the last inference's duration.
+ * @property tokensPerSecond Label of the decode throughput.
+ * @property totalTokens Label of the session's token count.
+ * @property milliseconds Format of a duration in ms; `%1$d` is the count.
+ * @property locale Writes the throughput's decimal separator.
+ */
+internal data class MonitoringStatLabels(
+    val inferenceTime: String,
+    val tokensPerSecond: String,
+    val totalTokens: String,
+    val milliseconds: String,
+    val locale: Locale,
+)
+
+@Composable
+private fun monitoringStatLabels(): MonitoringStatLabels = MonitoringStatLabels(
+    inferenceTime = stringResource(R.string.monitoring_stat_inference_time),
+    tokensPerSecond = stringResource(R.string.monitoring_stat_tokens_per_second),
+    totalTokens = stringResource(R.string.monitoring_stat_total_tokens),
+    milliseconds = stringResource(R.string.monitoring_unit_ms),
+    locale = LocalConfiguration.current.locales[0],
+)
+
+internal fun MonitoringUiState.toViewState(
+    strings: MonitoringStrings,
+    labels: MonitoringStatLabels,
+): MonitoringViewState {
     val stats = listOf(
-        MonitoringStat(label = "INFERENCE TIME", value = "${metrics.lastInferenceTimeMs} ms"),
-        MonitoringStat(label = "TOKENS/S", value = String.format(Locale.US, "%.1f", metrics.tokensPerSecond)),
-        MonitoringStat(label = "TOTAL TOKENS", value = metrics.totalTokensProcessed.toString()),
+        MonitoringStat(labels.inferenceTime, labels.milliseconds.format(metrics.lastInferenceTimeMs)),
+        MonitoringStat(labels.tokensPerSecond, String.format(labels.locale, "%.1f", metrics.tokensPerSecond)),
+        MonitoringStat(labels.totalTokens, metrics.totalTokensProcessed.toString()),
     )
-    val totalLine = if (metrics.totalExecutionTimeMs > 0L) "${metrics.totalExecutionTimeMs} ms" else null
+    val totalLine = if (metrics.totalExecutionTimeMs >
+        0L
+    ) {
+        labels.milliseconds.format(metrics.totalExecutionTimeMs)
+    } else {
+        null
+    }
     val breakdown = metrics.timePerNodeType
         .toList()
         .sortedByDescending { it.second }
         .map { (nodeType, durationMs) ->
-            NodeBreakdownRow(nodeType = nodeType.name, totalLabel = "$durationMs ms")
+            NodeBreakdownRow(nodeType = nodeType.name, totalLabel = labels.milliseconds.format(durationMs))
         }
     val logs = recentLogs.mapIndexed { index, message ->
         MonitoringLogLine(

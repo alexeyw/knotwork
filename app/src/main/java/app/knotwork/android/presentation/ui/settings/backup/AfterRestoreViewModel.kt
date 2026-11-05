@@ -14,6 +14,7 @@ import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.ModelDownloadManager
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.screens.settings.backup.AfterRestoreDownloadFailure
 import app.knotwork.design.screens.settings.backup.AfterRestoreModel
 import app.knotwork.design.screens.settings.backup.AfterRestoreState
@@ -219,7 +220,7 @@ class AfterRestoreViewModel internal constructor(
             keysToEnter(loaded) ||
             loaded.scheduledTasksLeftBehind > 0
         if (!leftToDo) {
-            relay.post(appContext.getString(R.string.backup_snack_restored))
+            relay.post(UiText.Dynamic(appContext.getString(R.string.backup_snack_restored)))
             restorer.dismissReport()
             return
         }

@@ -665,6 +665,7 @@ Only Kotlin files appear inside the generated blocks.
     - `memory/` - Tests for the long-term-memory surface.
       - `MemoryScreenMappingTest.kt` - Unit tests for `toViewState` — the pure projection from `MemoryUiState` to the catalog `MemoryViewState` (filtering, grouping, breakdown, detail labels).
       - `MemoryViewModelTest.kt` - Tests for MemoryViewModel.
+      - `RunCounterTest.kt` - The plural counters that screen texts carry compare equal when built twice over the same resources — the Memory screen memoises its O(N) projection on its texts, and a fresh lambda on every recomposition rebuilt it on every keystroke of a search.
     - `models/` - Tests for the local-models surface and its performance formatting.
       - `ModelsStateMappingTest.kt` - Verifies `ModelsUiState.toViewState(...)` — the mapper bridging the data layer projection onto the catalog `ModelsViewState`.
       - `ModelsViewModelTest.kt` - Tests for ModelsViewModel.

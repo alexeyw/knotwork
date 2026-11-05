@@ -8,10 +8,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.R
 import app.knotwork.android.domain.services.ScheduledTaskKind
+import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.design.screens.taskmonitor.TaskFilterKind
 import app.knotwork.design.screens.taskmonitor.TaskMonitorCallbacks
 import app.knotwork.design.screens.taskmonitor.TaskMonitorContent
@@ -41,7 +44,8 @@ fun TaskMonitorScreen(
     // Row copy is resolved once in composable context; the projection below is a
     // plain function, so it cannot call `stringResource` per row.
     val labels = taskMonitorRowLabels()
-    val viewState = remember(uiState, labels) { uiState.toViewState(labels) }
+    val context = LocalContext.current
+    val viewState = remember(uiState, labels, context) { uiState.toViewState(labels) { context.resolve(it) } }
     val callbacks = TaskMonitorCallbacks(
         onBack = onBack,
         onFilterChanged = { viewModel.onFilterChanged(it.toAppFilter()) },
@@ -99,8 +103,8 @@ private fun taskMonitorRowLabels(): TaskRowLabels = TaskRowLabels(
     intervalFormat = stringResource(R.string.taskmonitor_row_scheduled_interval_format),
 )
 
-internal fun TaskMonitorState.toViewState(labels: TaskRowLabels): TaskMonitorViewState {
-    val rows = tasks.map { it.toRow(labels) }
+internal fun TaskMonitorState.toViewState(labels: TaskRowLabels, resolve: (UiText) -> String): TaskMonitorViewState {
+    val rows = tasks.map { it.toRow(labels, resolve) }
     val visualState = when {
         isLoading -> TaskMonitorVisualState.Loading
         rows.isEmpty() -> TaskMonitorVisualState.Empty
@@ -110,8 +114,8 @@ internal fun TaskMonitorState.toViewState(labels: TaskRowLabels): TaskMonitorVie
         tasks.firstOrNull { it.id == id }?.let { task ->
             TaskMonitorDetail(
                 id = task.id,
-                title = task.title,
-                subtitle = task.pipelineStage,
+                title = resolve(task.title),
+                subtitle = task.pipelineStage?.let(resolve),
                 status = task.status.toCatalog(),
                 logs = emptyList(),
                 // Open-chat navigation is only valid for chat-session
@@ -150,12 +154,12 @@ private fun TaskItem.scheduledSubtitle(labels: TaskRowLabels): String? {
     }.joinToString(SUBTITLE_SEPARATOR)
 }
 
-private fun TaskItem.toRow(labels: TaskRowLabels): TaskMonitorRow = TaskMonitorRow(
+private fun TaskItem.toRow(labels: TaskRowLabels, resolve: (UiText) -> String): TaskMonitorRow = TaskMonitorRow(
     id = id,
     // The prompt is the only part that tells two scheduled tasks apart, so it
     // gets the widest line.
-    title = scheduled?.promptPreview?.takeIf { it.isNotBlank() } ?: title,
-    subtitle = scheduledSubtitle(labels) ?: pipelineStage,
+    title = scheduled?.promptPreview?.takeIf { it.isNotBlank() } ?: resolve(title),
+    subtitle = scheduledSubtitle(labels) ?: pipelineStage?.let(resolve),
     status = status.toCatalog(),
     progress = progress?.takeIf { it >= 0f },
     isCancellable = type == TaskType.BACKGROUND_WORK && (status == TaskStatus.RUNNING || status == TaskStatus.QUEUED),

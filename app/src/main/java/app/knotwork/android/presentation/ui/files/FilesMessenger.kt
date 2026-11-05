@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import app.knotwork.android.R
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -39,7 +40,7 @@ class FilesMessenger @Inject constructor(
      * @param message String resource for the sentence the user reads.
      */
     fun failure(@StringRes message: Int) {
-        relay.post(context.getString(message))
+        relay.post(UiText.Dynamic(context.getString(message)))
     }
 
     /**
@@ -59,11 +60,13 @@ class FilesMessenger @Inject constructor(
             staged == requested -> Unit
             staged == 0 -> failure(R.string.files_message_share_failed)
             else -> relay.post(
-                context.resources.getQuantityString(
-                    R.plurals.files_message_share_partial,
-                    requested,
-                    staged,
-                    requested,
+                UiText.Dynamic(
+                    context.resources.getQuantityString(
+                        R.plurals.files_message_share_partial,
+                        requested,
+                        staged,
+                        requested,
+                    ),
                 ),
             )
         }

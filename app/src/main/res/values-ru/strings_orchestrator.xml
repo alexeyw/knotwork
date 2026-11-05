@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Preset export outcome. -->
+    <string name="orchestrator_preset_exported">Пресет экспортирован</string>
+    <string name="orchestrator_preset_export_failed">Не удалось экспортировать</string>
+    <!-- Pipeline rows: node count and empty-graph words. -->
+    <string name="pipeline_flow_empty">пустой граф</string>
+    <string name="pipeline_library_unbound">не привязан</string>
+    <string name="pipeline_library_untitled">без названия</string>
+    <plurals name="pipeline_library_node_count">
+        <item quantity="one">%1$d узел</item>
+        <item quantity="few">%1$d узла</item>
+        <item quantity="many">%1$d узлов</item>
+        <item quantity="other">%1$d узла</item>
+    </plurals>
+</resources>

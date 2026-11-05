@@ -147,7 +147,7 @@ class ModelsSettingsDelegate(
         ) { credential, model ->
             ProviderSummary(
                 id = id,
-                displayName = id.displayName(),
+                displayName = id.displayName(appContext),
                 // Only its presence is read for an address-based provider — the row shows the
                 // address itself through `endpointHint`.
                 keyFingerprint = credential?.takeIf { it.isNotBlank() }?.let { maskKey(it) },

@@ -18,10 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 
@@ -65,6 +67,7 @@ fun KnotworkSecondaryButton(
     destructive: Boolean = false,
     leadingIcon: ImageVector? = null,
 ) {
+    val loadingDescription = stringResource(R.string.knotwork_loading)
     val effectiveEnabled = enabled && !loading
     val accent = if (destructive) {
         KnotworkTheme.extended.riskDestructive
@@ -89,7 +92,7 @@ fun KnotworkSecondaryButton(
             .minimumInteractiveComponentSize()
             .defaultMinSize(minHeight = visualHeight)
             .height(visualHeight)
-            .semantics { if (loading) stateDescription = "Loading" },
+            .semantics { if (loading) stateDescription = loadingDescription },
     ) {
         Box(contentAlignment = Alignment.Center) {
             Row(

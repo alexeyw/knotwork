@@ -19,6 +19,7 @@ import app.knotwork.design.screens.tools.AddMcpServerForm
 import app.knotwork.design.screens.tools.McpAuthSelector
 import app.knotwork.design.screens.tools.McpHeaderRow
 import app.knotwork.design.screens.tools.McpTransportOption
+import app.knotwork.design.screens.tools.McpUrlProblem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -238,7 +239,7 @@ class McpServerConfigViewModel @Inject constructor(
             return
         }
         if (current.cleartextConsentOrigin != null) {
-            _form.update { it.copy(urlError = CLEARTEXT_UNAPPROVED_MESSAGE) }
+            _form.update { it.copy(urlError = McpUrlProblem.CleartextUnapproved) }
             return
         }
         viewModelScope.launch {
@@ -252,7 +253,7 @@ class McpServerConfigViewModel @Inject constructor(
                         _form.update {
                             it.copy(
                                 submitting = false,
-                                urlError = formatCollisionMessage(outcome),
+                                urlError = collisionProblem(outcome),
                             )
                         }
                     }
@@ -278,22 +279,13 @@ class McpServerConfigViewModel @Inject constructor(
         /** Nav-argument key — must match `NavRoutes.MCP_SERVER_CONFIG_URL_ARG`. */
         const val EXTRA_ORIGINAL_URL: String = "originalUrl"
 
-        private const val URL_REQUIRED_MESSAGE = "Enter a server URL."
-        private const val URL_SCHEME_REQUIRED_MESSAGE =
-            "URL must start with http://, https:// or mcp://."
-        private const val URL_HOST_REQUIRED_MESSAGE = "URL needs a host name."
-        private const val CLEARTEXT_UNAPPROVED_MESSAGE =
-            "Approve the unencrypted connection above before saving."
-
         /**
-         * Renders a [UpdateMcpServerResult.UrlCollision] into the inline
-         * error string shown beneath the URL field. Falls back to the
-         * URL itself when the colliding row has no display name set.
+         * Turns a [UpdateMcpServerResult.UrlCollision] into the problem shown
+         * beneath the URL field. Falls back to the URL itself when the colliding
+         * row has no display name set.
          */
-        internal fun formatCollisionMessage(collision: UpdateMcpServerResult.UrlCollision): String {
-            val label = collision.collidingDisplayName ?: collision.collidingUrl
-            return "A server with this URL already exists: \"$label\"."
-        }
+        internal fun collisionProblem(collision: UpdateMcpServerResult.UrlCollision): McpUrlProblem =
+            McpUrlProblem.Collision(label = collision.collidingDisplayName ?: collision.collidingUrl)
 
         /**
          * Validates [input]. When [requireNonEmpty] is `true`, an empty
@@ -301,16 +293,16 @@ class McpServerConfigViewModel @Inject constructor(
          * passes so the user isn't yelled at while typing.
          */
         @Suppress("ReturnCount")
-        internal fun validateUrl(input: String, requireNonEmpty: Boolean): String? {
+        internal fun validateUrl(input: String, requireNonEmpty: Boolean): McpUrlProblem? {
             val trimmed = input.trim()
-            if (trimmed.isEmpty()) return if (requireNonEmpty) URL_REQUIRED_MESSAGE else null
+            if (trimmed.isEmpty()) return if (requireNonEmpty) McpUrlProblem.Required else null
             val lower = trimmed.lowercase()
             val schemes = listOf("http://", "https://", "mcp://")
             val matched = schemes.firstOrNull { lower.startsWith(prefix = it) }
-                ?: return URL_SCHEME_REQUIRED_MESSAGE
+                ?: return McpUrlProblem.MissingScheme
             val afterScheme = trimmed.substring(startIndex = matched.length)
             if (afterScheme.isEmpty() || afterScheme.startsWith(prefix = "/")) {
-                return URL_HOST_REQUIRED_MESSAGE
+                return McpUrlProblem.MissingHost
             }
             return null
         }

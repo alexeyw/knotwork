@@ -102,7 +102,7 @@ class ProviderDetailProjectionTest {
             val state = ProviderDetailUiState(apiKey = "key").toViewState(id, context)
 
             assertEquals("$id hid its key field.", "key", state.apiKey?.value)
-            assertTrue("$id's key field is not named.", state.apiKey!!.label.contains(id.displayName()))
+            assertTrue("$id's key field is not named.", state.apiKey!!.label.contains(id.displayName(context)))
         }
     }
 

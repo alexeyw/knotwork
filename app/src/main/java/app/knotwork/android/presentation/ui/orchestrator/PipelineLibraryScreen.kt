@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.text.format.Formatter
@@ -225,6 +226,7 @@ fun PipelineLibraryScreen(
     }
 
     val rows by remember(
+        context,
         uiState.savedPipelines,
         uiState.defaultPipelineId,
         uiState.shareTargetPipelineId,
@@ -233,6 +235,7 @@ fun PipelineLibraryScreen(
         derivedStateOf {
             uiState.savedPipelines.map { pipeline ->
                 pipeline.toLibraryRow(
+                    context = context,
                     isDefault = pipeline.id == uiState.defaultPipelineId,
                     isShareTarget = pipeline.id == uiState.shareTargetPipelineId,
                     isQuickTile = pipeline.id == uiState.quickSettingsTilePipelineId,
@@ -599,8 +602,11 @@ private fun PipelineNameDialog(
  * hold is screen state, not a property of the pipeline: after a restart it is just
  * the most recently modified one, and a row labelled "Active" read as a setting the
  * user had chosen — while quietly making that row impossible to delete.
+ *
+ * @param context Resolves the row's words in the interface language.
  */
 private fun PipelineGraph.toLibraryRow(
+    context: Context,
     isDefault: Boolean,
     isShareTarget: Boolean,
     isQuickTile: Boolean,
@@ -609,9 +615,14 @@ private fun PipelineGraph.toLibraryRow(
     // than iterating `nodes` in insertion order — otherwise the subtitle reads
     // e.g. "INPUT→OUTPUT→LITE_RT" (storage order) while the editor renders the
     // true execution order "INPUT→LITE_RT→OUTPUT".
-    val flavour = GraphFlowPreview.render(this)
+    val flavour = GraphFlowPreview.render(this) ?: context.getString(R.string.pipeline_flow_empty)
+    val nodeCountText = context.resources.getQuantityString(
+        R.plurals.pipeline_library_node_count,
+        nodes.size,
+        nodes.size,
+    )
     val subtitle = "$nodeCountText · $flavour"
-    val secondaryLine = if (nodes.isEmpty()) "unbound" else null
+    val secondaryLine = if (nodes.isEmpty()) context.getString(R.string.pipeline_library_unbound) else null
     val secondaryKind = if (nodes.isEmpty()) {
         PipelineSecondaryLineKind.Unbound
     } else {
@@ -619,7 +630,7 @@ private fun PipelineGraph.toLibraryRow(
     }
     return PipelineLibraryRow(
         id = id,
-        title = name.ifBlank { "untitled" },
+        title = name.ifBlank { context.getString(R.string.pipeline_library_untitled) },
         subtitle = subtitle,
         secondaryLine = secondaryLine,
         secondaryLineKind = secondaryKind,
@@ -631,10 +642,6 @@ private fun PipelineGraph.toLibraryRow(
         isQuickTile = isQuickTile,
     )
 }
-
-/** Pre-formatted "n nodes" segment used in the row subtitle. */
-private val PipelineGraph.nodeCountText: String
-    get() = if (nodes.size == 1) "1 node" else "${nodes.size} nodes"
 
 /** Number of rows considered "recent" by the Recent filter chip. */
 private const val RECENT_TAKE_COUNT = 3

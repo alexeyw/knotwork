@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Size units; %1$s is the number, already written in the language. -->
+    <string name="unit_size_bytes">%1$s Б</string>
+    <string name="unit_size_kilobytes">%1$s КБ</string>
+    <string name="unit_size_megabytes">%1$s МБ</string>
+    <string name="unit_size_gigabytes">%1$s ГБ</string>
+    <!-- Short ages in lists; %1$d is the count. -->
+    <string name="unit_age_now">сейчас</string>
+    <string name="unit_age_minutes">%1$d мин</string>
+    <string name="unit_age_hours">%1$d ч</string>
+    <string name="unit_age_days">%1$d д</string>
+    <string name="unit_age_weeks">%1$d нед</string>
+</resources>

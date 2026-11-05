@@ -10,7 +10,9 @@ import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.ActiveModelMeta
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.ToolApprovalPolicy
+import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.android.presentation.common.DisplayFormat
+import app.knotwork.android.presentation.common.rememberByteUnits
 import app.knotwork.design.screens.settings.AboutSettingsViewState
 import app.knotwork.design.screens.settings.ApproveToolCallsOption
 import app.knotwork.design.screens.settings.BackgroundSettingsViewState
@@ -113,7 +115,7 @@ internal fun buildGenerationViewState(uiState: SettingsUiState, context: Context
             SettingSliderRow(
                 id = SLIDER_MAX_CONTEXT,
                 title = stringResource(R.string.settings_row_max_context_title),
-                valueLabel = "${uiState.maxContextLength} tok",
+                valueLabel = stringResource(R.string.settings_unit_tokens, uiState.maxContextLength),
                 value = uiState.maxContextLength.toFloat(),
                 valueRange = 512f..8192f,
                 steps = MAX_CONTEXT_STEPS,
@@ -121,7 +123,7 @@ internal fun buildGenerationViewState(uiState: SettingsUiState, context: Context
             SettingSliderRow(
                 id = SLIDER_AUDIO_MAX_DURATION,
                 title = stringResource(R.string.settings_row_voice_length_title),
-                valueLabel = "${uiState.audioMaxDurationSec} s",
+                valueLabel = stringResource(R.string.settings_unit_seconds, uiState.audioMaxDurationSec),
                 value = uiState.audioMaxDurationSec.toFloat(),
                 valueRange = SettingsDefaults.AUDIO_MAX_DURATION_SEC_MIN.toFloat()
                     .rangeTo(SettingsDefaults.AUDIO_MAX_DURATION_SEC_MAX.toFloat()),
@@ -162,7 +164,7 @@ internal fun buildMemoryViewState(uiState: SettingsUiState, context: Context): M
                 label = stringResource(R.string.settings_memory_stat_chunks),
             ),
             MemoryStatCell(
-                value = DisplayFormat.formatBytes(uiState.memoryStats.totalBytes),
+                value = DisplayFormat.formatBytes(uiState.memoryStats.totalBytes, rememberByteUnits()),
                 label = stringResource(R.string.settings_memory_stat_size),
             ),
             MemoryStatCell(
@@ -262,7 +264,7 @@ internal fun buildToolsViewState(uiState: SettingsUiState): ToolsSettingsViewSta
         intSlider(
             SLIDER_TOOL_CALL_TIMEOUT,
             stringResource(R.string.settings_row_tool_call_timeout_title),
-            "${ToolCeilingUnits.toSeconds(uiState.toolCallTimeoutMs)} s",
+            stringResource(R.string.settings_unit_seconds, ToolCeilingUnits.toSeconds(uiState.toolCallTimeoutMs)),
             ToolCeilingUnits.toSeconds(uiState.toolCallTimeoutMs),
             ToolCeilingUnits.toSeconds(SettingsDefaults.TOOL_CALL_TIMEOUT_MS_MIN),
             ToolCeilingUnits.toSeconds(SettingsDefaults.TOOL_CALL_TIMEOUT_MS_MAX),
@@ -270,7 +272,10 @@ internal fun buildToolsViewState(uiState: SettingsUiState): ToolsSettingsViewSta
         intSlider(
             SLIDER_WORKSPACE_MAX_FILE_SIZE,
             stringResource(R.string.settings_row_workspace_max_file_size_title),
-            "${ToolCeilingUnits.toMegabytes(uiState.workspaceMaxFileSizeBytes)} MB",
+            stringResource(
+                R.string.settings_unit_megabytes,
+                ToolCeilingUnits.toMegabytes(uiState.workspaceMaxFileSizeBytes),
+            ),
             ToolCeilingUnits.toMegabytes(uiState.workspaceMaxFileSizeBytes),
             ToolCeilingUnits.toMegabytes(SettingsDefaults.WORKSPACE_MAX_FILE_SIZE_BYTES_MIN),
             ToolCeilingUnits.toMegabytes(SettingsDefaults.WORKSPACE_MAX_FILE_SIZE_BYTES_MAX),
@@ -278,7 +283,10 @@ internal fun buildToolsViewState(uiState: SettingsUiState): ToolsSettingsViewSta
         intSlider(
             SLIDER_WORKSPACE_MAX_TOTAL,
             stringResource(R.string.settings_row_workspace_max_total_title),
-            "${ToolCeilingUnits.toMegabytes(uiState.workspaceMaxTotalBytes)} MB",
+            stringResource(
+                R.string.settings_unit_megabytes,
+                ToolCeilingUnits.toMegabytes(uiState.workspaceMaxTotalBytes),
+            ),
             ToolCeilingUnits.toMegabytes(uiState.workspaceMaxTotalBytes),
             ToolCeilingUnits.toMegabytes(SettingsDefaults.WORKSPACE_MAX_TOTAL_BYTES_MIN),
             ToolCeilingUnits.toMegabytes(SettingsDefaults.WORKSPACE_MAX_TOTAL_BYTES_MAX),
@@ -286,7 +294,7 @@ internal fun buildToolsViewState(uiState: SettingsUiState): ToolsSettingsViewSta
         intSlider(
             SLIDER_WORKSPACE_READ_TOKEN_BUDGET,
             stringResource(R.string.settings_row_workspace_read_budget_title),
-            "${uiState.workspaceReadTokenBudget} tok",
+            stringResource(R.string.settings_unit_tokens, uiState.workspaceReadTokenBudget),
             uiState.workspaceReadTokenBudget,
             SettingsDefaults.WORKSPACE_READ_TOKEN_BUDGET_MIN,
             SettingsDefaults.WORKSPACE_READ_TOKEN_BUDGET_MAX,
@@ -294,7 +302,10 @@ internal fun buildToolsViewState(uiState: SettingsUiState): ToolsSettingsViewSta
         intSlider(
             SLIDER_HTTP_TOOL_MAX_RESPONSE,
             stringResource(R.string.settings_row_http_tool_max_response_title),
-            "${ToolCeilingUnits.toKilobytes(uiState.httpToolMaxResponseBytes)} KB",
+            stringResource(
+                R.string.settings_unit_kilobytes,
+                ToolCeilingUnits.toKilobytes(uiState.httpToolMaxResponseBytes),
+            ),
             ToolCeilingUnits.toKilobytes(uiState.httpToolMaxResponseBytes),
             ToolCeilingUnits.toKilobytes(SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_MIN),
             ToolCeilingUnits.toKilobytes(SettingsDefaults.HTTP_TOOL_MAX_RESPONSE_BYTES_MAX),
@@ -321,14 +332,14 @@ internal fun buildBackgroundViewState(uiState: SettingsUiState): BackgroundSetti
             SettingSliderRow(
                 id = SLIDER_BACKGROUND_RESUME_MAX_AGE,
                 title = stringResource(R.string.settings_row_resume_window_title),
-                valueLabel = "${uiState.resumeMaxAgeHours} h",
+                valueLabel = stringResource(R.string.settings_unit_hours, uiState.resumeMaxAgeHours),
                 value = uiState.resumeMaxAgeHours.toFloat(),
                 valueRange = HOURS_MIN..HOURS_MAX,
             ),
             SettingSliderRow(
                 id = SLIDER_BACKGROUND_APPROVAL_WINDOW,
                 title = stringResource(R.string.settings_row_approval_window_title),
-                valueLabel = "${uiState.backgroundApprovalWindowHours} h",
+                valueLabel = stringResource(R.string.settings_unit_hours, uiState.backgroundApprovalWindowHours),
                 value = uiState.backgroundApprovalWindowHours.toFloat(),
                 valueRange = HOURS_MIN..HOURS_MAX,
             ),
@@ -604,8 +615,8 @@ private fun memoryValidationMessage(error: MemoryValidationError, context: Conte
     )
     MemoryValidationError.SearchThreshold -> context.getString(
         R.string.settings_memory_validation_threshold,
-        String.format(Locale.US, "%.2f", SettingsDefaults.MEMORY_SEARCH_THRESHOLD_MIN),
-        String.format(Locale.US, "%.2f", SettingsDefaults.MEMORY_SEARCH_THRESHOLD_MAX),
+        String.format(context.resources.configuration.locales[0], "%.2f", SettingsDefaults.MEMORY_SEARCH_THRESHOLD_MIN),
+        String.format(context.resources.configuration.locales[0], "%.2f", SettingsDefaults.MEMORY_SEARCH_THRESHOLD_MAX),
     )
     MemoryValidationError.RecencyHalfLife -> context.getString(
         R.string.settings_memory_validation_half_life,
@@ -641,7 +652,7 @@ private fun formatBuildDate(epochMs: Long): String =
     SimpleDateFormat("yyyy.MM.dd", Locale.US).format(java.util.Date(epochMs))
 
 private fun formatActiveModelMeta(meta: ActiveModelMeta, context: Context): String {
-    val size = DisplayFormat.formatBytes(meta.sizeBytes)
+    val size = DisplayFormat.formatBytes(meta.sizeBytes, ByteUnits.of(context.resources))
     val ctx = "${meta.contextWindowTokens}"
     val quant = meta.quantization ?: "-"
     val downloaded = meta.downloadedAtMs?.let {

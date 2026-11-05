@@ -4,6 +4,8 @@ import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryPendingUpdate
 import app.knotwork.android.domain.models.MemorySource
 import app.knotwork.android.domain.models.MemoryVersion
+import app.knotwork.android.presentation.common.AgeUnits
+import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.design.screens.memory.MemoryCategory
 import app.knotwork.design.screens.memory.MemoryDateFilter
 import app.knotwork.design.screens.memory.MemoryPairRole
@@ -14,6 +16,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 /**
  * Unit tests for [toViewState] — the pure projection from [MemoryUiState] to the
@@ -22,6 +25,32 @@ import org.junit.Test
 class MemoryScreenMappingTest {
 
     private val now = 1_000_000_000_000L
+
+    /** The English words the screen gets from its resources, written out for a JVM test. */
+    private val texts = MemoryTexts(
+        segmentAuto = "AUTO",
+        segmentCompaction = "COMPACT",
+        segmentManual = "MANUAL",
+        compactedAgo = "compacted %1\$s ago",
+        compactedJustNow = "compacted just now",
+        sectionPinned = "Pinned",
+        sectionToday = "Today",
+        sectionThisWeek = "This week",
+        sectionEarlier = "Earlier",
+        learnedFromChat = "Chat \"%1\$s\"",
+        usedInRuns = { count -> if (count == 1) "$count run" else "$count runs" },
+        lastUsedAgo = "last %1\$s ago",
+        lastUsedJustNow = "last just now",
+        sourceAuto = "Auto-extracted",
+        sourceManual = "Saved manually",
+        sourceCompaction = "Compacted",
+        sourceUnknown = "Unknown",
+        tokens = "%1\$d tok",
+        secondsApprox = "~%1\$d s",
+        ages = AgeUnits(now = "now", minutes = "%1\$d m", hours = "%1\$d h", days = "%1\$d d", weeks = "%1\$d w"),
+        sizes = ByteUnits.ENGLISH,
+        locale = Locale.US,
+    )
     private val dayMs = 24L * 60 * 60 * 1000
 
     private fun chunk(
@@ -47,7 +76,7 @@ class MemoryScreenMappingTest {
 
     @Test
     fun `empty memories yields Empty visual state`() {
-        val vs = MemoryUiState().toViewState(now)
+        val vs = MemoryUiState().toViewState(now, texts)
         assertEquals(MemoryVisualState.Empty, vs.visualState)
     }
 
@@ -62,7 +91,7 @@ class MemoryScreenMappingTest {
             ),
             totalBytes = 2_100_000L,
         )
-        val vs = state.toViewState(now)
+        val vs = state.toViewState(now, texts)
         assertEquals("4", vs.header.totalLabel)
         assertTrue(vs.header.sizeLabel.endsWith("MB"))
         // Auto 2/4 = 50%, Compact 1/4 = 25%, Manual 1/4 = 25%.
@@ -78,7 +107,7 @@ class MemoryScreenMappingTest {
                 chunk(2, source = MemorySource.ChatSession("s")),
             ),
         )
-        val chips = state.toViewState(now).categoryChips.associate { it.category to it.count }
+        val chips = state.toViewState(now, texts).categoryChips.associate { it.category to it.count }
         assertEquals(2, chips[MemoryCategory.All])
         assertEquals(1, chips[MemoryCategory.Pinned])
         assertEquals(1, chips[MemoryCategory.Auto])
@@ -91,7 +120,7 @@ class MemoryScreenMappingTest {
             memories = listOf(chunk(1, source = MemorySource.Manual), chunk(2, source = MemorySource.ChatSession("s"))),
             selectedCategory = MemoryCategory.Manual,
         )
-        val ids = state.toViewState(now).sections.flatMap { it.rows }.map { it.id }
+        val ids = state.toViewState(now, texts).sections.flatMap { it.rows }.map { it.id }
         assertEquals(listOf("1"), ids)
     }
 
@@ -101,7 +130,7 @@ class MemoryScreenMappingTest {
             memories = listOf(chunk(1, ageDays = 2), chunk(2, ageDays = 10)),
             dateFilter = MemoryDateFilter.Last7Days,
         )
-        val ids = state.toViewState(now).sections.flatMap { it.rows }.map { it.id }
+        val ids = state.toViewState(now, texts).sections.flatMap { it.rows }.map { it.id }
         assertEquals(listOf("1"), ids)
     }
 
@@ -114,7 +143,7 @@ class MemoryScreenMappingTest {
                 chunk(3, ageDays = 3),
             ),
         )
-        val titles = state.toViewState(now).sections.map { it.title }
+        val titles = state.toViewState(now, texts).sections.map { it.title }
         assertEquals(listOf("Pinned", "Today", "This week"), titles)
     }
 
@@ -134,8 +163,8 @@ class MemoryScreenMappingTest {
             sessionNames = mapOf("s1" to "Pixel 9 NPU setup"),
             expandedId = 1L,
         )
-        val detail = state.toViewState(now).expandedEntry!!
-        assertEquals(MemoryVisualState.EntryExpanded, state.toViewState(now).visualState)
+        val detail = state.toViewState(now, texts).expandedEntry!!
+        assertEquals(MemoryVisualState.EntryExpanded, state.toViewState(now, texts).visualState)
         assertEquals("2 tok", detail.tokenLabel) // 8 chars / 4
         assertEquals("Chat \"Pixel 9 NPU setup\"", detail.learnedFromLabel)
         assertTrue(detail.usedInLabel!!.startsWith("6 runs"))
@@ -148,13 +177,13 @@ class MemoryScreenMappingTest {
         // not per reply, and the model may not have used it at all.
         val state = MemoryUiState(memories = listOf(chunk(1, useCount = 1)), expandedId = 1L)
 
-        assertEquals("1 run", state.toViewState(now).expandedEntry!!.usedInLabel)
+        assertEquals("1 run", state.toViewState(now, texts).expandedEntry!!.usedInLabel)
     }
 
     @Test
     fun `never-used chunk has null used-in`() {
         val state = MemoryUiState(memories = listOf(chunk(1, useCount = 0)), expandedId = 1L)
-        assertNull(state.toViewState(now).expandedEntry!!.usedInLabel)
+        assertNull(state.toViewState(now, texts).expandedEntry!!.usedInLabel)
     }
 
     @Test
@@ -165,7 +194,7 @@ class MemoryScreenMappingTest {
             searchQuery = "x",
             searchResults = listOf(chunk(1) to 0.97f),
         )
-        val vs = state.toViewState(now)
+        val vs = state.toViewState(now, texts)
         assertEquals(MemoryVisualState.Searching, vs.visualState)
         assertTrue(vs.searchActive)
         assertEquals("0.97", vs.sections.flatMap { it.rows }.first().relevanceScore)
@@ -180,7 +209,7 @@ class MemoryScreenMappingTest {
             searchQuery = "x",
             searchResults = listOf(chunk(1, ageDays = 30) to 0.97f, chunk(2, ageDays = 0) to 0.40f),
         )
-        val vs = state.toViewState(now)
+        val vs = state.toViewState(now, texts)
         assertEquals(1, vs.sections.size)
         assertEquals("", vs.sections.single().title)
         assertEquals(listOf("1", "2"), vs.sections.single().rows.map { it.id })
@@ -194,7 +223,7 @@ class MemoryScreenMappingTest {
             searchQuery = "zzz",
             searchResults = emptyList(),
         )
-        val vs = state.toViewState(now)
+        val vs = state.toViewState(now, texts)
         assertTrue(vs.searchEmpty)
         assertTrue(vs.sections.isEmpty())
     }
@@ -202,7 +231,7 @@ class MemoryScreenMappingTest {
     @Test
     fun `loadFailed maps to the Error visual state`() {
         val state = MemoryUiState(memories = listOf(chunk(1)), loadFailed = true)
-        assertEquals(MemoryVisualState.Error, state.toViewState(now).visualState)
+        assertEquals(MemoryVisualState.Error, state.toViewState(now, texts).visualState)
     }
 
     // A pinned fact (1, manual, old) with an extracted update waiting (2, fresh), and
@@ -228,7 +257,7 @@ class MemoryScreenMappingTest {
     @Test
     fun `given a pair when listed then the update is drawn under its pinned entry and counted with it`() {
         // When
-        val sections = pairState().toViewState(now).sections
+        val sections = pairState().toViewState(now, texts).sections
 
         // Then — the update leaves Today and follows its pinned entry; the section counts entries, not rows.
         val pinned = sections.single { it.title == "Pinned" }
@@ -243,7 +272,7 @@ class MemoryScreenMappingTest {
     @Test
     fun `given a source filter that shows only the update when listed then it stands alone with its status`() {
         // When — Auto shows the extracted update, not the manual pinned entry.
-        val rows = pairState(MemoryCategory.Auto).toViewState(now).sections.flatMap { it.rows }
+        val rows = pairState(MemoryCategory.Auto).toViewState(now, texts).sections.flatMap { it.rows }
 
         // Then
         val update = rows.single()
@@ -254,7 +283,7 @@ class MemoryScreenMappingTest {
 
     @Test
     fun `given the Pinned filter when listed then the update still follows its pinned entry`() {
-        val sections = pairState(MemoryCategory.Pinned).toViewState(now).sections
+        val sections = pairState(MemoryCategory.Pinned).toViewState(now, texts).sections
 
         assertEquals(listOf("1", "2"), sections.single().rows.map { it.id })
         assertTrue(sections.single().rows[1].pairChild)
@@ -274,12 +303,12 @@ class MemoryScreenMappingTest {
         )
 
         // When
-        val rows = state.toViewState(now).sections.single().rows
+        val rows = state.toViewState(now, texts).sections.single().rows
 
         // Then
         assertEquals(listOf("3", "1", "2"), rows.map { it.id })
         assertTrue(rows.last().pairChild)
-        assertEquals(2, state.toViewState(now).sections.single().count)
+        assertEquals(2, state.toViewState(now, texts).sections.single().count)
     }
 
     @Test
@@ -289,7 +318,7 @@ class MemoryScreenMappingTest {
             .copy(expandedId = 3L)
 
         // When
-        val view = state.toViewState(now)
+        val view = state.toViewState(now, texts)
 
         // Then
         val row = view.sections.flatMap { it.rows }.single { it.id == "3" }
@@ -306,8 +335,8 @@ class MemoryScreenMappingTest {
     @Test
     fun `given either half of a pair when opened then the sheet shows the other half`() {
         // When
-        val fromPinned = pairState().copy(expandedId = 1L).toViewState(now).expandedEntry!!.pair!!
-        val fromUpdate = pairState().copy(expandedId = 2L).toViewState(now).expandedEntry!!.pair!!
+        val fromPinned = pairState().copy(expandedId = 1L).toViewState(now, texts).expandedEntry!!.pair!!
+        val fromUpdate = pairState().copy(expandedId = 2L).toViewState(now, texts).expandedEntry!!.pair!!
 
         // Then
         assertEquals(MemoryPairRole.PinnedWithUpdate, fromPinned.role)
@@ -320,7 +349,7 @@ class MemoryScreenMappingTest {
 
     @Test
     fun `given a pair when chips are counted then Pinned counts pinned entries only`() {
-        val chips = pairState().toViewState(now).categoryChips
+        val chips = pairState().toViewState(now, texts).categoryChips
 
         assertEquals(1, chips.single { it.category == MemoryCategory.Pinned }.count)
     }

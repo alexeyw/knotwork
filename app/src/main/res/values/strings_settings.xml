@@ -407,4 +407,12 @@
     <string name="help_reader_error_body">The file shipped with the app is unreadable. Reinstalling replaces it. The same document is on the web, unchanged.</string>
     <string name="help_reader_error_primary">Open in browser</string>
     <string name="help_reader_error_secondary">Try again</string>
+    <!-- Provider name that describes rather than names. -->
+    <string name="settings_provider_openai_compatible">OpenAI-compatible server</string>
+    <!-- Units of slider values; %1$d is the number. -->
+    <string name="settings_unit_tokens" tools:ignore="PluralsCandidate">%1$d tok</string>
+    <string name="settings_unit_seconds">%1$d s</string>
+    <string name="settings_unit_megabytes">%1$d MB</string>
+    <string name="settings_unit_kilobytes">%1$d KB</string>
+    <string name="settings_unit_hours">%1$d h</string>
 </resources>

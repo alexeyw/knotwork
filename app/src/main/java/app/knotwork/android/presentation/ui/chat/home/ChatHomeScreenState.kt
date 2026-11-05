@@ -73,6 +73,10 @@ import app.knotwork.design.screens.chat.ChatHomeThreadRow
  *   when the viewer is closed.
  * @property run the surfaces of the run the console shows: the check's sheet, the
  *   confirmations and the export sheet.
+ * @property runExportSizeBytes size of the run-trace file the export sheet offers,
+ *   or `null` while no sheet is open. Kept as a number: the sheet's size label is
+ *   written in the interface language at render time ([toViewState]), since the
+ *   ViewModel outlives the screen's re-creation in a new language.
  * @property sendingUserTurn the message the user has just sent, shown as a
  *   pending bubble until its stored row reaches [messages], or `null` when
  *   nothing is in that window. Kept apart from [messages] because the display
@@ -96,6 +100,7 @@ data class ChatHomeScreenState(
     val imageViewer: ImageViewerTarget? = null,
     val sendingUserTurn: SendingUserTurn? = null,
     val run: ChatHomeRunState = ChatHomeRunState(),
+    val runExportSizeBytes: Long? = null,
 )
 
 /**

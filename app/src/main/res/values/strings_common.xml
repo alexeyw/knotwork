@@ -85,4 +85,15 @@
         <item quantity="one">Saved %1$d entry</item>
         <item quantity="other">Saved %1$d entries</item>
     </plurals>
+    <!-- Size units; %1$s is the number, already written in the language. -->
+    <string name="unit_size_bytes">%1$s B</string>
+    <string name="unit_size_kilobytes">%1$s KB</string>
+    <string name="unit_size_megabytes">%1$s MB</string>
+    <string name="unit_size_gigabytes">%1$s GB</string>
+    <!-- Short ages in lists; %1$d is the count. -->
+    <string name="unit_age_now">now</string>
+    <string name="unit_age_minutes">%1$d m</string>
+    <string name="unit_age_hours">%1$d h</string>
+    <string name="unit_age_days">%1$d d</string>
+    <string name="unit_age_weeks">%1$d w</string>
 </resources>

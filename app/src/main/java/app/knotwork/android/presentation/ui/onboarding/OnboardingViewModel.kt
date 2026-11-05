@@ -2,6 +2,7 @@ package app.knotwork.android.presentation.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.knotwork.android.R
 import app.knotwork.android.data.network.AndroidModelDownloadManager
 import app.knotwork.android.domain.constants.OnboardingModelCatalog
 import app.knotwork.android.domain.models.AppError
@@ -16,6 +17,7 @@ import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.usecases.PrepareInferenceBackendUseCase
 import app.knotwork.android.domain.usecases.SetUpScenarioUseCase
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.screens.onboarding.OnboardingDefaultPipelinePreview
 import app.knotwork.design.screens.onboarding.OnboardingLiteRtModel
 import app.knotwork.design.screens.onboarding.OnboardingScenario
@@ -603,10 +605,10 @@ class OnboardingViewModel @Inject constructor(
 
     companion object {
         /** Skip / escape snackbar copy — referenced by tests and `OnboardingScreen`. */
-        const val SKIP_SNACKBAR_MESSAGE: String = "You can install a model from Settings → Models"
+        val SKIP_SNACKBAR_MESSAGE: UiText = UiText(R.string.onboarding_skip_hint)
 
         /** Skip copy while a download is in flight — it keeps running without the screen. */
-        const val DOWNLOAD_CONTINUES_MESSAGE: String = "Download continues in the background"
+        val DOWNLOAD_CONTINUES_MESSAGE: UiText = UiText(R.string.onboarding_skip_download_continues)
 
         /** Fallback copy when an unknown exception breaks the download stream. */
         private const val GENERIC_DOWNLOAD_ERROR: String = "Download failed."

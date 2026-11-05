@@ -226,7 +226,7 @@ class PipelinePresetsViewModel @Inject constructor(
      * @param message The sentence to show.
      */
     fun announce(message: String) {
-        transientMessageRelay.post(message)
+        transientMessageRelay.post(UiText.Dynamic(message))
     }
 
     /** Clears the error channel after the host's Snackbar has shown it. */

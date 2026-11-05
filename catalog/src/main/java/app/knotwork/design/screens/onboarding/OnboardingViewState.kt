@@ -1,23 +1,29 @@
 package app.knotwork.design.screens.onboarding
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import app.knotwork.design.R
+
 /**
  * Four-step scenario onboarding state for the catalog `OnboardingContent`
  * composable. The flow leads with **value** ("choose what the agent will do for
  * you") rather than the machine: the user picks a scenario, the app materialises
  * the matching pipeline and downloads exactly the model that scenario needs.
  */
-enum class OnboardingStep(val pageIndex: Int, val indicatorLabel: String) {
+enum class OnboardingStep(val pageIndex: Int, @StringRes val indicatorLabelRes: Int) {
     /** Welcome / brand pitch. Step 1. */
-    Welcome(pageIndex = 0, indicatorLabel = "Welcome"),
+    Welcome(pageIndex = 0, indicatorLabelRes = R.string.knotwork_onboarding_step_welcome),
 
     /** Value gallery — pick the scenario the agent should do for you. Step 2. */
-    ChooseScenario(pageIndex = 1, indicatorLabel = "Choose a scenario"),
+    ChooseScenario(pageIndex = 1, indicatorLabelRes = R.string.knotwork_onboarding_step_scenario),
 
     /** Motivated download of the model the chosen scenario needs. Step 3. */
-    Download(pageIndex = 2, indicatorLabel = "Download"),
+    Download(pageIndex = 2, indicatorLabelRes = R.string.knotwork_onboarding_step_download),
 
     /** "Ready with your scenario" recap. Step 4. */
-    Ready(pageIndex = 3, indicatorLabel = "Ready"),
+    Ready(pageIndex = 3, indicatorLabelRes = R.string.knotwork_onboarding_step_ready),
 }
 
 /**
@@ -78,17 +84,40 @@ enum class OnboardingScenario(
  * LiteRT model offered on the download step. The id is the stable key the
  * `:app/OnboardingViewModel` persists to settings; the human-facing label and
  * size come from the catalog so the row presentation stays self-contained.
+ *
+ * A model's name is its own and is never translated; the custom row's label and
+ * hint are words, so they come from resources ([title], [sizeText]).
+ *
+ * @property displayName The model's name; empty for [CustomUrl], which has none.
+ * @property sizeGigabytes The download's size in GB, or `null` for [CustomUrl].
  */
-enum class OnboardingLiteRtModel(val id: String, val displayName: String, val sizeLabel: String) {
+enum class OnboardingLiteRtModel(val id: String, val displayName: String, val sizeGigabytes: Double?) {
     /** Gemma 4 E2B — smallest footprint; the lighter/faster alternative. */
-    Gemma4E2B(id = "gemma_4_e2b", displayName = "Gemma 4 E2B", sizeLabel = "2.59 GB"),
+    Gemma4E2B(id = "gemma_4_e2b", displayName = "Gemma 4 E2B", sizeGigabytes = 2.59),
 
     /** Gemma 4 E4B — the model every curated scenario targets. */
-    Gemma4E4B(id = "gemma_4_e4b", displayName = "Gemma 4 E4B", sizeLabel = "3.66 GB"),
+    Gemma4E4B(id = "gemma_4_e4b", displayName = "Gemma 4 E4B", sizeGigabytes = 3.66),
 
     /** User-supplied URL pointing at a `.litertlm` model bundle. */
-    CustomUrl(id = "custom_url", displayName = "Custom URL…", sizeLabel = "paste"),
+    CustomUrl(id = "custom_url", displayName = "", sizeGigabytes = null),
 }
+
+/** The row's label: the model's name, or the custom row's translated label. */
+val OnboardingLiteRtModel.title: String
+    @Composable get() = if (this == OnboardingLiteRtModel.CustomUrl) {
+        stringResource(R.string.knotwork_onboarding_model_custom_url)
+    } else {
+        displayName
+    }
+
+/** The row's size: "2.59 GB" in the interface language, or the custom row's hint. */
+val OnboardingLiteRtModel.sizeText: String
+    @Composable get() = sizeGigabytes?.let { gigabytes ->
+        stringResource(
+            R.string.knotwork_onboarding_model_size_gb,
+            String.format(LocalConfiguration.current.locales[0], "%.2f", gigabytes),
+        )
+    } ?: stringResource(R.string.knotwork_onboarding_model_size_paste)
 
 /**
  * Compact projection of the materialised scenario pipeline rendered on the

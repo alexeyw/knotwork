@@ -47,9 +47,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chips.KnotworkInputChip
 import app.knotwork.design.components.controls.KnotworkSegmentedControl
@@ -75,9 +77,13 @@ private val EditorTileGlyph = 22.dp
 /** Minimum height of the multi-line prompt field. */
 private val PromptMinHeight = 96.dp
 
-/** Renders an interval preset value as a compact chip label ("15m" / "1h"). */
-internal fun intervalPresetLabel(minutes: Long): String =
-    if (minutes % MINUTES_PER_HOUR == 0L) "${minutes / MINUTES_PER_HOUR}h" else "${minutes}m"
+/** Renders an interval preset value as a compact chip label ("15m" / "1h" in English). */
+@Composable
+internal fun intervalPresetLabel(minutes: Long): String = if (minutes % MINUTES_PER_HOUR == 0L) {
+    stringResource(R.string.knotwork_trigger_interval_hours, minutes / MINUTES_PER_HOUR)
+} else {
+    stringResource(R.string.knotwork_trigger_interval_minutes, minutes)
+}
 
 /**
  * Stateless full-screen Trigger editor — create or edit a trigger's name,

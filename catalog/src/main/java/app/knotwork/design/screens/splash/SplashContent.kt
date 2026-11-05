@@ -15,8 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.brand.KnotworkLogo
 import app.knotwork.design.components.brand.KnotworkLogoSize
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
@@ -45,7 +47,7 @@ fun SplashContent(
     appName: String,
     state: SplashViewState,
     modifier: Modifier = Modifier,
-    retryLabel: String = SPLASH_RETRY_LABEL,
+    retryLabel: String = stringResource(R.string.knotwork_splash_retry),
     callbacks: SplashCallbacks = noopSplashCallbacks(),
 ) {
     Box(
@@ -203,9 +205,6 @@ private fun SplashResetConfirmDialog(
         confirmTestTag = SPLASH_RESET_CONFIRM_BUTTON_TEST_TAG,
     )
 }
-
-/** Default Retry button label used by catalog previews / snapshots. */
-private const val SPLASH_RETRY_LABEL = "Retry"
 
 /** Test tag of the Retry button on the data-locked recovery surface. */
 const val SPLASH_DATA_LOCKED_RETRY_TEST_TAG: String = "splash_data_locked_retry"
