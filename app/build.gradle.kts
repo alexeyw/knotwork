@@ -402,9 +402,9 @@ android {
         // (dialogs, accessibility announcements) in it; not observed in this app, it
         // follows from resource resolution. The filter keeps the default (English)
         // resources plus every language listed here, so a language the app is not
-        // translated into falls back to English throughout. A new interface language is added here AND gets its
-        // `values-<lang>` folders in `app` and `catalog`;
-        // `TranslationCoverageTest` reads this list.
+        // translated into falls back to English throughout. A new interface
+        // language is added here AND gets its `values-<lang>` folders in `app` and
+        // `catalog`; `TranslationCoverageTest` reads this list.
         localeFilters += listOf("en", "ru")
         // Lists the app's languages in the system's per-app language settings
         // (Android 13+) and gives the in-app picker its choices, through the
@@ -2044,9 +2044,10 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/static-analysis.md"))
         .withPropertyName("staticAnalysisGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-    // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` read this very script. Editing it reconfigures
-    // the project but leaves this task's inputs as they were: measured, the signing
-    // assignment put back on two lines left the task UP-TO-DATE and green.
+    // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` read this very
+    // script. Editing it reconfigures the project but leaves this task's inputs as
+    // they were: measured, the signing assignment put back on two lines left the
+    // task UP-TO-DATE and green.
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))
         .withPropertyName("appBuildScript")
         .withPathSensitivity(PathSensitivity.RELATIVE)
