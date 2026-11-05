@@ -7,10 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * The choice belongs to the system, not to the app's own settings store: the
  * platform keeps one per-app language, which the system's "App languages" page
- * and the in-app picker both read and write, and which survives a backup like
- * any other system setting. So this surface never persists anything itself — it
- * reads and writes the system's choice, and reports every change, wherever it
- * was made.
+ * and the in-app picker both read and write. So this surface never persists
+ * anything itself — it reads and writes the system's choice, and reports every
+ * change, wherever it was made.
  *
  * Only the interface follows this choice. What a model reads stays as written —
  * system prompts, tool descriptions and tool results are not translated.

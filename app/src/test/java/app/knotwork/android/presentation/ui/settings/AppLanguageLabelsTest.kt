@@ -16,7 +16,7 @@ class AppLanguageLabelsTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
 
     @Test
-    fun `a language is named in itself and capitalised as a list item`() {
+    fun `given a language tag when named then it reads in that language, capitalised`() {
         assertEquals("English", AppLanguageLabels.autonym("en"))
         assertEquals("Русский", AppLanguageLabels.autonym("ru"))
         assertEquals("Español", AppLanguageLabels.autonym("es"))
@@ -24,19 +24,19 @@ class AppLanguageLabelsTest {
 
     @Test
     @Config(qualifiers = "ru")
-    fun `a language keeps its own name while the app is in another language`() {
+    fun `given the app in Russian when English is named then it stays English`() {
         assertEquals("English", AppLanguageLabels.autonym("en"))
     }
 
     @Test
-    fun `the row names the device language while the app follows it`() {
+    fun `given the app follows the device when the row is built then it names the device language`() {
         assertEquals(context.getString(R.string.settings_language_device), AppLanguageLabels.rowValue(null, context))
         assertEquals("Русский", AppLanguageLabels.rowValue("ru", context))
     }
 
     @Test
     @Config(qualifiers = "ru")
-    fun `the device-language row reads in the app's language`() {
+    fun `given the app in Russian when the device-language row is built then it reads in Russian`() {
         assertEquals("Язык устройства", AppLanguageLabels.rowValue(null, context))
     }
 }
