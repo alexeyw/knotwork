@@ -5,3 +5,7 @@
 catalog:string/knotwork_mcp_auth_bearer	# HTTP scheme name
 catalog:string/knotwork_mcp_auth_basic	# HTTP scheme name
 app:string/app_name	# same in Russian
+app:string/external_automation_target_by_id	# "id" and a value, the same in Russian
+catalog:string/knotwork_node_type_lite_rt_name	# engine name
+catalog:string/knotwork_run_sampler_value	# sampler parameter names
+catalog:string/knotwork_run_field_sha	# hash algorithm name
