@@ -62,6 +62,21 @@ class PipelineLibraryContentSnapshotTest {
     }
 
     @Test
+    fun library_badged_light() = snapshot(name = "badged", dark = false) {
+        PipelineLibraryContent(state = PipelineLibraryPreview.badged())
+    }
+
+    /**
+     * Russian badges are almost twice as wide as the English ones: the title must stay
+     * readable and every badge on screen, wrapping to a second line when they do not fit.
+     */
+    @Test
+    @Config(sdk = [36], qualifiers = "ru-w360dp-h760dp-xhdpi")
+    fun library_badged_ru_light() = snapshot(name = "badged_ru", dark = false) {
+        PipelineLibraryContent(state = PipelineLibraryPreview.badged())
+    }
+
+    @Test
     fun library_swipe_open_light() = snapshot(name = "swipe_open", dark = false) {
         PipelineLibraryContent(state = PipelineLibraryPreview.swipeOpen())
     }

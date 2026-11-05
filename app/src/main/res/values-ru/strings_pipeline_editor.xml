@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pipeline_editor_node_pipeline_target">→ %1$s</string>
+    <string name="pipeline_editor_node_pipeline_no_target">Целевой пайплайн не выбран</string>
+    <string name="pipeline_editor_node_pipeline_missing">Пайплайн не найден</string>
+    <string name="pipeline_editor_fab_add_node">Добавить узел</string>
+    <string name="pipeline_editor_validation_clean">Пайплайн в порядке</string>
+    <plurals name="pipeline_editor_validation_count">
+        <item quantity="one">%1$d проблема — запуск невозможен</item>
+        <item quantity="few">%1$d проблемы — запуск невозможен</item>
+        <item quantity="many">%1$d проблем — запуск невозможен</item>
+        <item quantity="other">%1$d проблемы — запуск невозможен</item>
+    </plurals>
+    <string name="pipeline_editor_validation_auto_fix">Исправить</string>
+    <string name="pipeline_editor_validation_go">Перейти</string>
+    <string name="pipeline_editor_validation_auto_fix_none">Безопасного автоисправления нет — исправьте проблемы вручную.</string>
+    <string name="pipeline_editor_validation_auto_fix_done">Автоисправление применено.</string>
+    <plurals name="pipeline_editor_multi_select_count">
+        <item quantity="one">Выбрано: %1$d</item>
+        <item quantity="few">Выбрано: %1$d</item>
+        <item quantity="many">Выбрано: %1$d</item>
+        <item quantity="other">Выбрано: %1$d</item>
+    </plurals>
+    <string name="pipeline_editor_multi_select_cancel">Отменить выбор</string>
+    <string name="pipeline_editor_multi_select_copy">Скопировать выбранные узлы</string>
+    <string name="pipeline_editor_multi_select_delete">Удалить выбранные узлы</string>
+    <string name="pipeline_editor_overflow_paste">Вставить</string>
+    <string name="pipeline_editor_overflow_paste_empty">Буфер пуст — сначала скопируйте узел.</string>
+    <string name="pipeline_editor_overflow_rename">Переименовать узел…</string>
+    <string name="pipeline_editor_rename_title">Переименовать узел</string>
+    <string name="pipeline_editor_rename_field_label">Подпись узла</string>
+    <string name="pipeline_editor_rename_confirm">Переименовать</string>
+    <string name="pipeline_editor_rename_cancel">Отменить</string>
+    <string name="pipeline_editor_overflow_cookbook">Рецепты пайплайнов</string>
+    <string name="pipeline_editor_overflow_find">Найти узел…</string>
+    <string name="pipeline_editor_search_placeholder">Поиск узлов…</string>
+    <string name="pipeline_editor_search_close">Закрыть поиск</string>
+    <plurals name="pipeline_editor_search_count">
+        <item quantity="one">%1$d совпадение</item>
+        <item quantity="few">%1$d совпадения</item>
+        <item quantity="many">%1$d совпадений</item>
+        <item quantity="other">%1$d совпадения</item>
+    </plurals>
+    <string name="pipeline_editor_empty_title">Пустой пайплайн</string>
+    <string name="pipeline_editor_empty_helper">Нажмите +, чтобы добавить первый узел, или нажмите и удерживайте холст там, где он нужен.</string>
+    <string name="pipeline_editor_empty_cta_start">Начать с INPUT</string>
+    <string name="pipeline_editor_empty_cta_template">Из шаблона</string>
+    <string name="pipeline_editor_empty_info_pill">холст: %1$d × %2$d · сетка %3$d dp · %4$s</string>
+    <string name="pipeline_editor_zoom_rail_zoom_in">Увеличить</string>
+    <string name="pipeline_editor_zoom_rail_zoom_out">Уменьшить</string>
+    <string name="pipeline_editor_zoom_rail_fit">Вписать пайплайн в экран</string>
+    <string name="pipeline_editor_mini_map_title">ОБЗОР</string>
+    <string name="pipeline_editor_mini_map_close">Закрыть мини-карту</string>
+    <string name="pipeline_editor_overflow_mini_map">Мини-карта</string>
+    <string name="pipeline_editor_subtitle_overview">Обзор · %1$s · узлов: %2$d</string>
+    <string name="pipeline_editor_subtitle_editing">Правка · узлов: %1$d · связей: %2$d</string>
+    <plurals name="pipeline_editor_subtitle_issues">
+        <item quantity="one">Проблем: %1$d · сохранить нельзя</item>
+        <item quantity="few">Проблем: %1$d · сохранить нельзя</item>
+        <item quantity="many">Проблем: %1$d · сохранить нельзя</item>
+        <item quantity="other">Проблем: %1$d · сохранить нельзя</item>
+    </plurals>
+    <string name="pipeline_editor_overflow_undo">Отменить</string>
+    <string name="pipeline_editor_overflow_redo">Повторить</string>
+    <string name="pipeline_editor_overflow_delete">Удалить выделенное</string>
+    <string name="pipeline_editor_overflow_auto_layout">Авторасстановка</string>
+    <string name="pipeline_editor_overflow_save">Сохранить пайплайн</string>
+    <string name="pipeline_editor_overflow_save_as_preset">Сохранить как пресет…</string>
+    <string name="pipeline_editor_save_done">Пайплайн сохранён.</string>
+    <string name="pipeline_editor_overflow_toggle_grid_show">Показать сетку</string>
+    <string name="pipeline_editor_overflow_toggle_grid_hide">Скрыть сетку</string>
+    <string name="pipeline_editor_edge_selected_hint">Связь выбрана. Нажмите 🗑, чтобы удалить её.</string>
+    <string name="pipeline_editor_connection_dropped_hint">Чтобы соединить узлы, перетащите от нижнего порта узла на другой узел.</string>
+    <string name="pipeline_editor_unsaved_title">Выйти без сохранения?</string>
+    <string name="pipeline_editor_unsaved_text">В пайплайне есть несохранённые изменения. Если выйти сейчас, они пропадут.</string>
+    <string name="pipeline_editor_unsaved_save">Сохранить и выйти</string>
+    <string name="pipeline_editor_unsaved_discard">Не сохранять</string>
+    <string name="pipeline_editor_remove_connection_title">Удалить связь?</string>
+    <string name="pipeline_editor_remove_connection_text">Связь между двумя узлами будет удалена. Это можно отменить с панели редактора.</string>
+    <string name="pipeline_editor_remove_connection_confirm">Удалить</string>
+    <string name="pipeline_editor_remove_connection_cancel">Отменить</string>
+    <string name="pipeline_editor_skill_allowlist_all">Все инструменты</string>
+    <string name="pipeline_editor_skill_allowlist_none">Без инструментов</string>
+    <plurals name="pipeline_editor_skill_allowlist_subset">
+        <item quantity="one">%d инструмент</item>
+        <item quantity="few">%d инструмента</item>
+        <item quantity="many">%d инструментов</item>
+        <item quantity="other">%d инструмента</item>
+    </plurals>
+</resources>

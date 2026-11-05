@@ -60,6 +60,21 @@ internal object PipelineLibraryPreview {
         totalCount = rows().size,
     )
 
+    /**
+     * The populated library with the first pipeline bound everywhere it can be — the
+     * default, the share target and the Quick Settings tile: the widest badge row.
+     */
+    fun badged(): PipelineLibraryViewState {
+        val bound = rows().mapIndexed { index, row ->
+            if (index == 0) row.copy(isDefault = true, isShareTarget = true, isQuickTile = true) else row
+        }
+        return PipelineLibraryViewState(
+            visualState = PipelineLibraryVisualState.Populated,
+            pipelines = bound,
+            totalCount = bound.size,
+        )
+    }
+
     fun swipeOpen(): PipelineLibraryViewState {
         val markedRevealed = rows().mapIndexed { index, row ->
             if (index == 1) row.copy(revealed = true) else row

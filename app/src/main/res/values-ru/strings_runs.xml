@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="run_copied_seed">Сид скопирован</string>
+    <string name="run_copied_sha">SHA-256 модели скопирован</string>
+    <string name="run_copied_digest">Дайджест прогона скопирован</string>
+    <string name="run_copied_hash">Скопирован хеш (%1$s) узла «%2$s»</string>
+    <string name="run_hash_input">Вход</string>
+    <string name="run_hash_output">Выход</string>
+    <string name="run_copied_verification_hash">Хеш скопирован</string>
+    <string name="run_again_snackbar">Повторный запуск с сидом %1$s. Ответ повторится, только если все входные данные те же.</string>
+    <string name="run_trace_export_chooser_title">Поделиться трассой прогона</string>
+    <string name="run_trace_export_save_failed">Не удалось сохранить трассу прогона</string>
+    <string name="run_trace_export_render_failed">Не удалось прочитать трассу прогона</string>
+    <plurals name="run_trace_export_saved">
+        <item quantity="one">Сохранена %1$d запись</item>
+        <item quantity="few">Сохранено %1$d записи</item>
+        <item quantity="many">Сохранено %1$d записей</item>
+        <item quantity="other">Сохранено %1$d записи</item>
+    </plurals>
+</resources>
