@@ -18,7 +18,7 @@
     <string name="import_problem_context_flag">Узел «%1$s»: contextConfig.%2$s должен быть true или false</string>
     <string name="import_problem_unknown_provider">Узел «%1$s» указывает неизвестного облачного провайдера «%2$s»</string>
     <string name="import_problem_empty_bundle">В пакете нет пайплайнов</string>
-    <string name="import_problem_bundle_too_large">Пайплайнов в пакете: %1$d — больше предела в %2$d</string>
+    <string name="import_problem_bundle_too_large">Пайплайнов в пакете: %1$d — больше лимита в %2$d</string>
     <string name="import_problem_bundle_entry_not_object">Пайплайн №%1$d в пакете — не JSON-объект</string>
     <string name="import_problem_bundle_entry_invalid">Пайплайн №%1$d в пакете неверен: %2$s</string>
     <string name="import_problem_duplicate_pipeline_ids">В пакете повторяются id пайплайнов: %1$s</string>
@@ -41,7 +41,7 @@
     <string name="input_problem_scenario_not_found">Неизвестный сценарий первого запуска: %1$s</string>
     <string name="export_problem_root_not_found">Пайплайн «%1$s» не найден.</string>
     <string name="export_problem_reference_not_found">Вызываемый пайплайн «%1$s» не найден, экспорт невозможен.</string>
-    <string name="export_problem_too_many_pipelines">Вместе с вызываемыми пайплайнов больше предела: %1$d.</string>
+    <string name="export_problem_too_many_pipelines">Вместе с вызываемыми пайплайнов больше лимита: %1$d.</string>
     <string name="import_problem_quoted_value">«%1$s»</string>
     <string name="import_problem_and_more">%1$s и ещё %2$d</string>
     <string name="errors_generic_unexpected">Произошла непредвиденная ошибка</string>
@@ -62,7 +62,7 @@
     <string name="errors_orchestrator_validation_missing_target_pipeline">В узле пайплайна «%1$s» не выбран целевой пайплайн</string>
     <string name="errors_orchestrator_validation_target_pipeline_not_found">Узел пайплайна «%1$s» ссылается на пайплайн, которого больше нет</string>
     <string name="errors_orchestrator_validation_pipeline_cycle">Пайплайны вызывают друг друга по кругу: %1$s</string>
-    <string name="errors_orchestrator_validation_pipeline_nesting_too_deep">Пайплайны вложены глубже предела в %1$d</string>
+    <string name="errors_orchestrator_validation_pipeline_nesting_too_deep">Вложенность пайплайнов больше лимита: %1$d</string>
     <string name="errors_orchestrator_validation_missing_skill">В узле навыка «%1$s» не выбран навык</string>
     <string name="errors_orchestrator_validation_skill_not_found">Узел навыка «%1$s» ссылается на навык, которого больше нет</string>
 </resources>

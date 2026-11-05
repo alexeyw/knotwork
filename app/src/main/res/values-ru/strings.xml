@@ -82,7 +82,7 @@
     <string name="tile_label">Запустить пайплайн</string>
     <string name="tile_duty_prompt">Запусти мой дежурный пайплайн.</string>
     <string name="tile_running">Пайплайн выполняется в фоне…</string>
-    <string name="tile_not_configured">Выберите пайплайн для быстрых настроек в «Настройки» → «Фон и триггеры».</string>
+    <string name="tile_not_configured">Выберите пайплайн для плитки быстрых настроек в «Настройки» → «Фон и триггеры».</string>
     <string name="tile_subtitle_ready">Готово</string>
     <string name="tile_subtitle_unconfigured">Не настроено</string>
 </resources>

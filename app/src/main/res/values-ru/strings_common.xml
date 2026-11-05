@@ -28,7 +28,7 @@
     <string name="common_back">Назад</string>
     <string name="common_retry">Повторить</string>
     <string name="common_ok">ОК</string>
-    <string name="common_list_separator">, </string>
+    <string name="common_list_separator">", "</string>
     <string name="nav_tab_chat">Чат</string>
     <string name="nav_tab_pipelines">Пайплайны</string>
     <string name="nav_tab_tools">Инструменты</string>

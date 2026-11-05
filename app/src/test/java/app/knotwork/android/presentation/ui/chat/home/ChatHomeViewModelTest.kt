@@ -44,7 +44,7 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
-import app.knotwork.android.domain.services.EnglishChatSystemRows
+import app.knotwork.android.domain.services.ChatSystemRows
 import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.RecordingState
@@ -139,6 +139,16 @@ import org.junit.Test
 class ChatHomeViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+
+    /**
+     * Rows unlike any sentence the delegate could hold itself, so a test sees the
+     * row came through [ChatSystemRows] rather than from a literal.
+     */
+    private val systemRows = object : ChatSystemRows {
+        override fun toolDenied(toolName: String): String = "row:denied:$toolName"
+
+        override fun clarificationReplyNotDelivered(): String = "row:reply-not-delivered"
+    }
 
     private lateinit var agentOrchestratorUseCase: AgentOrchestratorUseCase
     private lateinit var chatRepository: ChatRepository
@@ -328,7 +338,7 @@ class ChatHomeViewModelTest {
         runUseCases,
         resolveApprovalRequestContext,
         EnglishDefaultNames,
-        EnglishChatSystemRows,
+        systemRows,
     ).also { vm ->
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.
@@ -2248,7 +2258,7 @@ class ChatHomeViewModelTest {
         coVerify {
             chatRepository.saveMessage(
                 match { msg ->
-                    msg.role == Role.SYSTEM && msg.content == EnglishChatSystemRows.toolDenied("fs.delete_file")
+                    msg.role == Role.SYSTEM && msg.content == "row:denied:fs.delete_file"
                 },
             )
         }
@@ -3386,7 +3396,7 @@ class ChatHomeViewModelTest {
             chatRepository.saveMessage(
                 match {
                     it.role == Role.SYSTEM &&
-                        it.content == EnglishChatSystemRows.REPLY_NOT_DELIVERED
+                        it.content == "row:reply-not-delivered"
                 },
             )
         }

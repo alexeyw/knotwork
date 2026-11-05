@@ -75,7 +75,7 @@
     <string name="knotwork_chat_message_action_rerun">Перезапустить</string>
     <string name="knotwork_chat_message_action_save_to_memory">Сохранить в память</string>
     <string name="knotwork_chat_message_action_report">Пожаловаться на ответ</string>
-    <string name="knotwork_copy_too_long">Слишком длинно для буфера обмена. Ничего не скопировано.</string>
+    <string name="knotwork_copy_too_long">Текст слишком длинный для буфера обмена. Ничего не скопировано.</string>
     <string name="knotwork_chat_long_read_whole">Прочитать сообщение целиком</string>
     <string name="knotwork_chat_long_shown">Показано: %1$s</string>
     <string name="knotwork_chat_long_shown_less">Показано меньше %1$s</string>
@@ -95,8 +95,8 @@
     <string name="knotwork_hitl_typed_confirm_placeholder">Введите «%1$s», чтобы подтвердить</string>
     <string name="knotwork_hitl_args_expand">Развернуть аргументы</string>
     <string name="knotwork_hitl_args_collapse">Свернуть аргументы</string>
-    <string name="knotwork_hitl_request_source_chat">Вы спросили</string>
-    <string name="knotwork_hitl_request_source_chat_image">Вы спросили, приложив изображение</string>
+    <string name="knotwork_hitl_request_source_chat">Ваш запрос</string>
+    <string name="knotwork_hitl_request_source_chat_image">Ваш запрос с изображением</string>
     <string name="knotwork_hitl_request_source_image_only">Вы отправили изображение</string>
     <string name="knotwork_hitl_request_image_only_body">Без текста.</string>
     <string name="knotwork_hitl_request_source_shared">Вы поделились</string>
@@ -175,7 +175,7 @@
     <string name="knotwork_console_value_meta_bad_json">Текст, не JSON · %1$s · %2$s</string>
     <string name="knotwork_console_value_loading">Форматирование…</string>
     <string name="knotwork_console_value_scroll_pos">Строка %1$s из %2$s</string>
-    <string name="knotwork_console_span_copy">Скопировать отрезок</string>
+    <string name="knotwork_console_span_copy">Скопировать запись трассы</string>
     <string name="knotwork_console_line_filter_only">Показывать только этот источник</string>
     <string name="knotwork_console_empty_search">Ни одна строка журнала не подходит под поиск.</string>
     <string name="knotwork_chat_home_action_threads">Открыть список чатов</string>

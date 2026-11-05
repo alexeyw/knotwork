@@ -2588,8 +2588,9 @@ destructive tool call runs or your data is erased — is the interface
 language's word; the field names it. Names the app gives — a new chat, a new
 pipeline and its first nodes, a copy — are written in the language of the
 moment and stay as written if you change it later; a new chat still takes its
-first message as its name. So are the lines the app adds to a chat — a tool
-call you denied, how a run ended — and a model reads them as they were written.
+first message as its name. The lines the app adds to a chat — a tool call you
+denied, how a run ended — are written the same way, and a model reads them as
+written.
 
 ### What every setting means
 
