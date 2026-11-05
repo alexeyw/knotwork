@@ -1,4 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="knotwork_settings_about_language_title">Язык</string>
+    <!-- Shared components: status and risk pills, health badge, loading, chips, placeholder. -->
+    <string name="knotwork_status_pill_cd">Статус: %1$s</string>
+    <string name="knotwork_status_queued">В очереди</string>
+    <string name="knotwork_status_idle">Ожидание</string>
+    <string name="knotwork_status_running">Выполняется</string>
+    <string name="knotwork_status_success">Успешно</string>
+    <string name="knotwork_status_warning">Предупреждение</string>
+    <string name="knotwork_status_error">Ошибка</string>
+    <string name="knotwork_status_cancelled">Отменено</string>
+    <string name="knotwork_risk_pill_cd">Уровень риска: %1$s</string>
+    <string name="knotwork_health_badge_cd">Состояние: %1$s</string>
+    <string name="knotwork_loading">Загрузка</string>
+    <string name="knotwork_input_chip_remove_cd">Удалить %1$s</string>
+    <string name="knotwork_chips_input_placeholder">Введите и нажмите Enter…</string>
+    <plurals name="knotwork_chips_input_max">
+        <item quantity="one">Не больше %1$d элемента</item>
+        <item quantity="few">Не больше %1$d элементов</item>
+        <item quantity="many">Не больше %1$d элементов</item>
+        <item quantity="other">Не больше %1$d элемента</item>
+    </plurals>
+    <string name="knotwork_placeholder_illustration_cd">Иллюстрация-заглушка</string>
+    <string name="knotwork_tools_pill_readonly">Только чтение</string>
+    <string name="knotwork_tools_pill_sensitive">Чувствительный</string>
+    <string name="knotwork_tools_pill_destructive">Разрушительный</string>
+    <!-- Task monitor filter chips. -->
+    <string name="knotwork_task_filter_all">Все</string>
+    <string name="knotwork_task_filter_active">Активные</string>
+    <string name="knotwork_task_filter_background">Фоновые</string>
+    <string name="knotwork_task_filter_completed">Завершённые</string>
+    <!-- Onboarding: step indicator and the model rows. -->
+    <string name="knotwork_onboarding_step_welcome">Добро пожаловать</string>
+    <string name="knotwork_onboarding_step_scenario">Выбор сценария</string>
+    <string name="knotwork_onboarding_step_download">Загрузка</string>
+    <string name="knotwork_onboarding_step_ready">Готово</string>
+    <string name="knotwork_onboarding_model_custom_url">Своя ссылка…</string>
+    <string name="knotwork_onboarding_model_size_paste">вставьте</string>
+    <string name="knotwork_onboarding_model_size_gb">%1$s ГБ</string>
+    <!-- MCP server form: auth chips and URL problems. -->
+    <string name="knotwork_mcp_auth_none">Нет</string>
+    <string name="knotwork_mcp_auth_bearer">Bearer</string>
+    <string name="knotwork_mcp_auth_basic">Basic</string>
+    <string name="knotwork_mcp_auth_api_key">API-ключ</string>
+    <string name="knotwork_mcp_url_required">Введите адрес сервера.</string>
+    <string name="knotwork_mcp_url_scheme_required">Адрес должен начинаться с http://, https:// или mcp://.</string>
+    <string name="knotwork_mcp_url_host_required">В адресе нет имени хоста.</string>
+    <string name="knotwork_mcp_url_cleartext_unapproved">Перед сохранением разрешите незашифрованное соединение выше.</string>
+    <string name="knotwork_mcp_url_collision">Сервер с этим адресом уже есть: «%1$s».</string>
+    <!-- Tools screen: error state, server rows, tool detail. -->
+    <string name="knotwork_tools_error_title">Не удалось загрузить инструменты</string>
+    <string name="knotwork_tools_error_retry">Повторить</string>
+    <string name="knotwork_tool_detail_enabled">Включён</string>
+    <string name="knotwork_tool_detail_disabled">Выключен</string>
+    <plurals name="knotwork_tools_server_subtitle">
+        <item quantity="one">%1$d инструмент · %2$s</item>
+        <item quantity="few">%1$d инструмента · %2$s</item>
+        <item quantity="many">%1$d инструментов · %2$s</item>
+        <item quantity="other">%1$d инструмента · %2$s</item>
+    </plurals>
+    <!-- Provider names that describe rather than name. -->
+    <string name="knotwork_provider_openai_compatible">Сервер с API OpenAI</string>
+    <string name="knotwork_provider_auto">Авто</string>
+    <!-- Splash recovery. -->
+    <string name="knotwork_splash_retry">Повторить</string>
+    <!-- Trigger interval presets. -->
+    <string name="knotwork_trigger_interval_hours">%1$d ч</string>
+    <string name="knotwork_trigger_interval_minutes">%1$d мин</string>
 </resources>

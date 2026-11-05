@@ -26,6 +26,11 @@ import java.io.File
  * is a URL or a date pattern, and when it is a design-system class's default in
  * its constructor — `CatalogStringsWiringTest` holds those.
  *
+ * **What it cannot see.** A single lowercase word ("untitled", "unbound") and a
+ * count with one word ("$n nodes") look like keys, routes and file names to a
+ * text census, so they are not counted; review finds those. The first pass of the
+ * interface translation found four such texts in one row mapper.
+ *
  * **The list.** `config/l10n/displayed-literals.txt` names, as
  * `path<TAB>literal`, the literals that are interface text today. It only
  * shrinks: move a listed text to a resource and delete its line; write new
@@ -59,6 +64,29 @@ class DisplayedLiteralGuardTest {
             .forEach { assertTrue(it, isProse(it)) }
         listOf("chat_session_id", "text/plain", "https://example.org/a b", "dd MMM yyyy", "%1\$s · %2\$s", "MCP", "")
             .forEach { assertFalse(it, isProse(it)) }
+    }
+
+    @Test
+    fun `the census skips text that is never shown and keeps text that is`() {
+        val code = """
+            fun f(x: Int) {
+                require(x > 0) { "max must be at least 2" }
+                checkNotNull(x) { "no run trace was rendered" }
+                Timber.w(e, "Import failed for %s", x)
+                val icon = iconBuilder("Add")
+                Text("Agent is waiting")
+            }
+            private const val TAG = "Trigger"
+            const val DEFAULT_NEW_CHAT_NAME = "New Chat"
+            @Preview
+            @Composable
+            private fun Sample() { Text("Sample row title") }
+            data class Copy(val title: String = "Performance")
+        """.trimIndent()
+
+        assertEquals(listOf("Agent is waiting", "New Chat"), displayedIn(code, catalog = true))
+        // An app class's default is shown as written: nothing else checks it.
+        assertEquals(listOf("Agent is waiting", "New Chat", "Performance"), displayedIn(code, catalog = false))
     }
 
     @Test
@@ -96,12 +124,45 @@ class DisplayedLiteralGuardTest {
     // ─── The census ──────────────────────────────────────────────────────────
 
     private fun displayedLiterals(): Set<String> = interfaceSources().flatMap { (path, code) ->
-        val defaults = KotlinStringLiterals.constructors(code).filter { it.englishDefaults.isNotEmpty() }
-        KotlinStringLiterals.literals(code)
-            .filter { literal -> defaults.none { literal.start in it.start until it.end } }
-            .filter { isProse(it.content) && !inSilentCall(code, it.start) }
-            .map { "$path\t${it.content}" }
+        displayedIn(code, catalog = path.startsWith("catalog/")).map { "$path\t$it" }
     }.toSet()
+
+    /**
+     * The literals of one file's [code] that read as interface text. A design-system
+     * class's English constructor defaults are left to `CatalogStringsWiringTest`
+     * ([catalog]); an app class's are counted here — no other guard sees them.
+     */
+    private fun displayedIn(code: String, catalog: Boolean): List<String> {
+        val defaults = if (catalog) {
+            KotlinStringLiterals.constructors(code).filter { it.englishDefaults.isNotEmpty() }
+                .map { it.start until it.end }
+        } else {
+            emptyList()
+        }
+        val skipped = defaults + previewBodies(code)
+        return KotlinStringLiterals.literals(code)
+            .filter { literal -> skipped.none { literal.start in it } }
+            .filter { isProse(it.content) && !inSilentCall(code, it.start) && !namedTechnical(code, it.start) }
+            .map { it.content }
+    }
+
+    /** Ranges of the functions annotated `@Preview` — sample content for the IDE, never shown in the app. */
+    private fun previewBodies(code: String): List<IntRange> = PREVIEW.findAll(code).mapNotNull { annotation ->
+        val function = code.indexOf("fun ", annotation.range.last).takeIf { it >= 0 } ?: return@mapNotNull null
+        val parameters = code.indexOf('(', function).takeIf { it >= 0 } ?: return@mapNotNull null
+        val afterParameters = KotlinStringLiterals.matchingParenthesis(code, parameters) ?: return@mapNotNull null
+        val body = code.indexOfAny(charArrayOf('{', '='), afterParameters).takeIf { it >= 0 }
+            ?: return@mapNotNull null
+        val end = if (code[body] == '{') KotlinStringLiterals.matchingParenthesis(code, body) else null
+        annotation.range.first..(end ?: code.indexOf('\n', body).takeIf { it >= 0 } ?: code.length)
+    }.toList()
+
+    /** Whether the literal at [offset] is the value of a constant named as a key, tag, route or the like. */
+    private fun namedTechnical(code: String, offset: Int): Boolean {
+        val lineStart = code.lastIndexOf('\n', offset - 1) + 1
+        val name = TECHNICAL_CONSTANT.find(code.substring(lineStart, offset))?.groupValues?.get(1) ?: return false
+        return TECHNICAL_SUFFIXES.any { name.endsWith(it) }
+    }
 
     private fun interfaceSources(): Map<String, String> {
         val app = ProductionSources.code
@@ -132,15 +193,38 @@ class DisplayedLiteralGuardTest {
                 } else {
                     depth--
                 }
-                '{' -> if (depth == 0) return false else depth--
+                // A trailing lambda: `require(ok) { "…" }` is as silent as `require(ok, "…")`.
+                '{' -> if (depth == 0) return lambdaOwner(code, i) in SILENT_CALLS else depth--
             }
             i--
         }
         return false
     }
 
+    /** The name of the call a lambda opening at [brace] is the trailing argument of, or `null`. */
+    private fun lambdaOwner(code: String, brace: Int): String? {
+        var i = brace - 1
+        while (i >= 0 && code[i].isWhitespace()) i--
+        if (i < 0) return null
+        if (code[i] == ')') {
+            var depth = 0
+            while (i >= 0) {
+                if (code[i] == ')') depth++
+                if (code[i] == '(') {
+                    depth--
+                    if (depth == 0) break
+                }
+                i--
+            }
+        } else {
+            i++
+        }
+        return CALLEE.find(code.substring(maxOf(0, i - CALLEE_LOOKBACK), maxOf(0, i)))?.groupValues?.get(1)
+            ?.substringAfterLast('.')
+    }
+
     private fun isProse(content: String): Boolean {
-        val text = TEMPLATE.replace(content, " ").trim()
+        val text = TEMPLATE.replace(content, "").trim()
         if ("://" in text) return false
         val words = WORD.findAll(text).map { it.value }.toList()
         if (words.isEmpty() || words.all { DATE_PATTERN_WORD.matches(it) }) return false
@@ -171,7 +255,13 @@ class DisplayedLiteralGuardTest {
             """(?m)^(?:public\s+|internal\s+)?(?:fun|val|object|class|data class)\s+(?:<[^>]*>\s*)?""" +
                 """(?:\w+(?:<[^>]*>)?\??\.)?(\w+)""",
         )
+        val PREVIEW = Regex("""@Preview\b""")
+        val TECHNICAL_CONSTANT = Regex("""\bva[lr]\s+([A-Z][A-Z0-9_]*)\s*(?::\s*String)?\s*=\s*$""")
+        val TECHNICAL_SUFFIXES = listOf(
+            "TAG", "KEY", "ROUTE", "ACTION", "EXTRA", "SCHEME", "MIME", "PATTERN", "URL", "STEM", "ID",
+        )
         val SILENT_CALLS = setOf(
+            "iconBuilder",
             "v", "d", "i", "w", "e", "wtf", "Log",
             "require", "requireNotNull", "check", "checkNotNull", "error", "TODO", "assert",
             "IllegalStateException", "IllegalArgumentException", "UnsupportedOperationException",

@@ -637,7 +637,7 @@ internal object ToolsPreview {
 
     fun addMcpInvalid(): AddMcpServerForm = AddMcpServerForm(
         url = "server.example.com",
-        urlError = "URL must start with http:// or https://.",
+        urlError = McpUrlProblem.MissingScheme,
     )
 
     fun editMcpWithHeaders(): AddMcpServerForm = AddMcpServerForm(

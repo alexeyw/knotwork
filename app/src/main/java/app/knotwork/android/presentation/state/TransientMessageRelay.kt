@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.state
 
+import app.knotwork.android.presentation.ui.common.UiText
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -19,7 +20,7 @@ import javax.inject.Singleton
  * through this singleton lets any composable mounted at a stable level
  * (currently `MainActivity`) keep the host alive across navigation.
  *
- * The relay is intentionally minimal — a single `SharedFlow<String>`,
+ * The relay is intentionally minimal — a single `SharedFlow<UiText>`,
  * no severity / action / id metadata — because the only consumer today
  * is the activity-level snackbar host. If a second consumer surfaces
  * (e.g. a system-status banner), expand to a sealed `TransientMessage`
@@ -39,24 +40,26 @@ class TransientMessageRelay @Inject constructor() {
      *    before the first is drained, drop the older one; in practice
      *    this never happens but the deterministic policy beats hanging.
      */
-    private val _messages: MutableSharedFlow<String> = MutableSharedFlow(
+    private val _messages: MutableSharedFlow<UiText> = MutableSharedFlow(
         replay = 0,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
 
     /** Externally-observed stream consumed by the activity-level host. */
-    val messages: SharedFlow<String> = _messages.asSharedFlow()
+    val messages: SharedFlow<UiText> = _messages.asSharedFlow()
 
     /**
      * Publishes a single user-visible message. Non-suspending so the
      * caller (typically a ViewModel) can fire-and-forget from any
      * coroutine context.
      *
-     * @param message the literal text to render in the snackbar. The
-     * caller is responsible for any string-resource resolution / i18n.
+     * @param message the text to render in the snackbar. A resource is
+     * resolved by the host when it shows the message, in the language the
+     * screen is in then; a caller that already resolved its text passes
+     * [UiText.Dynamic].
      */
-    fun post(message: String) {
+    fun post(message: UiText) {
         _messages.tryEmit(message)
     }
 }

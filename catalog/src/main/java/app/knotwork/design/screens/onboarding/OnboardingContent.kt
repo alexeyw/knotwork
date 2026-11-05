@@ -243,7 +243,7 @@ private fun ProgressSegments(currentStepIndex: Int) {
 private fun StepIndicator(step: OnboardingStep) {
     val padded = "%02d".format(step.pageIndex + 1)
     Text(
-        text = "$padded · ${step.indicatorLabel}",
+        text = "$padded · ${stringResource(step.indicatorLabelRes)}",
         style = KnotworkTextStyles.MonoSm,
         color = KnotworkTheme.extended.onSurfaceMuted,
     )
@@ -413,7 +413,7 @@ private fun ScenarioMetaRow(scenario: OnboardingScenario) {
         verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
     ) {
         MetaChip(
-            text = stringResource(R.string.knotwork_onboarding_scenario_meta_model, scenario.requiredModel.sizeLabel),
+            text = stringResource(R.string.knotwork_onboarding_scenario_meta_model, scenario.requiredModel.sizeText),
         )
         scenarioMetaExtras(scenario).forEach { chip -> MetaChip(text = chip.text, sensitive = chip.sensitive) }
     }
@@ -578,12 +578,12 @@ private fun LiteRtModelRow(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = model.displayName,
+                    text = model.title,
                     style = KnotworkTextStyles.TitleMd.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = model.sizeLabel,
+                    text = model.sizeText,
                     style = KnotworkTextStyles.MonoSm,
                     color = KnotworkTheme.extended.onSurfaceMuted,
                 )
@@ -746,17 +746,17 @@ private fun downloadHeadline(
     selectedModel: OnboardingLiteRtModel,
 ): String = when {
     state.installedModelId == selectedModel.id ->
-        stringResource(R.string.knotwork_onboarding_download_installed_headline, selectedModel.displayName)
+        stringResource(R.string.knotwork_onboarding_download_installed_headline, selectedModel.title)
     selectedModel == OnboardingLiteRtModel.CustomUrl ->
         stringResource(R.string.knotwork_onboarding_download_custom_headline)
     scenario != null && selectedModel == scenario.requiredModel ->
         stringResource(
             R.string.knotwork_onboarding_download_headline,
             scenarioTitle(scenario),
-            selectedModel.displayName,
+            selectedModel.title,
         )
     else ->
-        stringResource(R.string.knotwork_onboarding_download_generic_headline, selectedModel.displayName)
+        stringResource(R.string.knotwork_onboarding_download_generic_headline, selectedModel.title)
 }
 
 /** Download-step body, framed around the selected model (see [downloadHeadline]). */
@@ -767,14 +767,14 @@ private fun downloadBody(state: OnboardingViewState, selectedModel: OnboardingLi
     selectedModel == OnboardingLiteRtModel.CustomUrl ->
         stringResource(R.string.knotwork_onboarding_download_custom_body)
     else ->
-        stringResource(R.string.knotwork_onboarding_download_body, selectedModel.sizeLabel)
+        stringResource(R.string.knotwork_onboarding_download_body, selectedModel.sizeText)
 }
 
 @Composable
 private fun liteRtCtaLabel(state: OnboardingViewState): String = when {
     state.downloadProgress != null -> stringResource(R.string.knotwork_onboarding_models_downloading_cta)
     state.installedModelId != null -> stringResource(R.string.knotwork_onboarding_models_continue_cta)
-    else -> stringResource(R.string.knotwork_onboarding_models_download_cta, state.liteRtModel.displayName)
+    else -> stringResource(R.string.knotwork_onboarding_models_download_cta, state.liteRtModel.title)
 }
 
 @Composable
@@ -868,8 +868,8 @@ private fun DocumentationRow(onOpen: () -> Unit) {
 @Composable
 private fun ActiveModelRow(state: OnboardingViewState) {
     val installedDisplayName = state.installedModelId?.let { id ->
-        OnboardingLiteRtModel.entries.firstOrNull { it.id == id }?.displayName
-    }
+        OnboardingLiteRtModel.entries.firstOrNull { it.id == id }
+    }?.title
     val value = if (installedDisplayName != null && state.isModelWarmed) {
         stringResource(R.string.knotwork_onboarding_ready_active_model_value, installedDisplayName)
     } else {

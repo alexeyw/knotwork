@@ -249,10 +249,10 @@ private fun ToolsError(state: ToolsViewState, callbacks: ToolsCallbacks, padding
             modifier = Modifier.size(KnotworkTheme.spacing.sp16),
         )
         EmptyState(
-            title = "Couldn't load tools",
+            title = stringResource(R.string.knotwork_tools_error_title),
             subtitle = state.errorMessage.orEmpty(),
             illustration = { /* icon above */ },
-            ctaLabel = "Retry",
+            ctaLabel = stringResource(R.string.knotwork_tools_error_retry),
             onCtaClick = callbacks.onErrorRetry,
         )
     }
@@ -537,6 +537,7 @@ internal fun riskLabelRes(risk: BuiltInToolRisk): Int = when (risk) {
 internal fun RiskOutlinePill(risk: BuiltInToolRisk) {
     val accent = riskAccent(risk)
     val label = stringResource(riskLabelRes(risk))
+    val riskDescription = stringResource(R.string.knotwork_risk_pill_cd, label)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
@@ -545,7 +546,7 @@ internal fun RiskOutlinePill(risk: BuiltInToolRisk) {
             .clip(KnotworkTheme.shapes.full)
             .border(width = 1.dp, color = accent, shape = KnotworkTheme.shapes.full)
             .padding(horizontal = KnotworkTheme.spacing.sp2)
-            .semantics { contentDescription = "Risk level: $label" },
+            .semantics { contentDescription = riskDescription },
     ) {
         Box(
             modifier = Modifier
@@ -668,7 +669,12 @@ private fun McpServerRowView(server: McpServerRow, callbacks: ToolsCallbacks, ro
                     }
                 } else {
                     Text(
-                        text = "${subtitle.count} tools · ${subtitle.label}",
+                        text = pluralStringResource(
+                            R.plurals.knotwork_tools_server_subtitle,
+                            subtitle.count,
+                            subtitle.count,
+                            subtitle.label,
+                        ),
                         style = KnotworkTextStyles.MonoSm,
                         color = KnotworkTheme.extended.onSurfaceMuted,
                     )

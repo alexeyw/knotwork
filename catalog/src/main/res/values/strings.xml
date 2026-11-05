@@ -1229,4 +1229,63 @@
     <!-- Password field: the eye toggle, read by TalkBack. -->
     <string name="knotwork_password_show">Show password</string>
     <string name="knotwork_password_hide">Hide password</string>
+    <!-- Shared components: status and risk pills, health badge, loading, chips, placeholder. -->
+    <string name="knotwork_status_pill_cd">Status: %1$s</string>
+    <string name="knotwork_status_queued">Queued</string>
+    <string name="knotwork_status_idle">Idle</string>
+    <string name="knotwork_status_running">Running</string>
+    <string name="knotwork_status_success">Success</string>
+    <string name="knotwork_status_warning">Warning</string>
+    <string name="knotwork_status_error">Error</string>
+    <string name="knotwork_status_cancelled">Cancelled</string>
+    <string name="knotwork_risk_pill_cd">Risk level: %1$s</string>
+    <string name="knotwork_health_badge_cd">Health: %1$s</string>
+    <string name="knotwork_loading">Loading</string>
+    <string name="knotwork_input_chip_remove_cd">Remove %1$s</string>
+    <string name="knotwork_chips_input_placeholder">Add and press Enter…</string>
+    <plurals name="knotwork_chips_input_max">
+        <item quantity="one">Max %1$d item</item>
+        <item quantity="other">Max %1$d items</item>
+    </plurals>
+    <string name="knotwork_placeholder_illustration_cd">Placeholder illustration</string>
+    <!-- Task monitor filter chips. -->
+    <string name="knotwork_task_filter_all">All</string>
+    <string name="knotwork_task_filter_active">Active</string>
+    <string name="knotwork_task_filter_background">Background</string>
+    <string name="knotwork_task_filter_completed">Completed</string>
+    <!-- Onboarding: step indicator and the model rows. -->
+    <string name="knotwork_onboarding_step_welcome">Welcome</string>
+    <string name="knotwork_onboarding_step_scenario">Choose a scenario</string>
+    <string name="knotwork_onboarding_step_download">Download</string>
+    <string name="knotwork_onboarding_step_ready">Ready</string>
+    <string name="knotwork_onboarding_model_custom_url">Custom URL…</string>
+    <string name="knotwork_onboarding_model_size_paste">paste</string>
+    <string name="knotwork_onboarding_model_size_gb">%1$s GB</string>
+    <!-- MCP server form: auth chips and URL problems. -->
+    <string name="knotwork_mcp_auth_none">None</string>
+    <string name="knotwork_mcp_auth_bearer">Bearer</string>
+    <string name="knotwork_mcp_auth_basic">Basic</string>
+    <string name="knotwork_mcp_auth_api_key">API key</string>
+    <string name="knotwork_mcp_url_required">Enter a server URL.</string>
+    <string name="knotwork_mcp_url_scheme_required">URL must start with http://, https:// or mcp://.</string>
+    <string name="knotwork_mcp_url_host_required">URL needs a host name.</string>
+    <string name="knotwork_mcp_url_cleartext_unapproved">Approve the unencrypted connection above before saving.</string>
+    <string name="knotwork_mcp_url_collision">A server with this URL already exists: \"%1$s\".</string>
+    <!-- Tools screen: error state, server rows, tool detail. -->
+    <string name="knotwork_tools_error_title">Couldn\'t load tools</string>
+    <string name="knotwork_tools_error_retry">Retry</string>
+    <string name="knotwork_tool_detail_enabled">Enabled</string>
+    <string name="knotwork_tool_detail_disabled">Disabled</string>
+    <plurals name="knotwork_tools_server_subtitle">
+        <item quantity="one">%1$d tool · %2$s</item>
+        <item quantity="other">%1$d tools · %2$s</item>
+    </plurals>
+    <!-- Provider names that describe rather than name. -->
+    <string name="knotwork_provider_openai_compatible">OpenAI-compatible server</string>
+    <string name="knotwork_provider_auto">Auto</string>
+    <!-- Splash recovery. -->
+    <string name="knotwork_splash_retry">Retry</string>
+    <!-- Trigger interval presets. -->
+    <string name="knotwork_trigger_interval_hours">%1$dh</string>
+    <string name="knotwork_trigger_interval_minutes">%1$dm</string>
 </resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Model capabilities and the Performance card. -->
+    <string name="models_vision_label">Поддержка изображений</string>
+    <string name="models_vision_description">Модель сможет читать прикреплённые фото</string>
+    <string name="models_audio_label">Поддержка аудио</string>
+    <string name="models_audio_description">Запишите или выберите запись для расшифровки</string>
+    <string name="models_performance_title">Производительность</string>
+    <string name="models_performance_ttft">Время до первого токена</string>
+    <string name="models_performance_decode">Скорость генерации</string>
+    <string name="models_performance_peak_memory">Пиковая память</string>
+    <string name="models_performance_total">Всего</string>
+    <string name="models_performance_unknown">—</string>
+    <string name="models_performance_memory_note">Пиковая память — примерный объём нативной кучи всего процесса, а не точный объём самой модели.</string>
+    <string name="models_performance_memory_report_note">нативная куча · примерно</string>
+    <string name="models_performance_benchmark_badge">ЗАМЕР</string>
+    <string name="models_performance_run_benchmark">Запустить замер</string>
+    <string name="models_performance_share">Поделиться</string>
+    <string name="models_performance_done">Готово</string>
+    <string name="models_performance_warming_up_title">Прогрев…</string>
+    <string name="models_performance_warming_up_sub">прогревочный прогон · не учитывается</string>
+    <string name="models_performance_measuring_title">Замер…</string>
+    <string name="models_performance_measuring_sub">замеряемый прогон · фиксированный промпт</string>
+    <string name="models_performance_empty_title">Прогонов пока нет</string>
+    <string name="models_performance_empty_body">Отправьте сообщение или запустите замер, чтобы увидеть, как модель работает на вашем устройстве.</string>
+    <string name="models_performance_busy_title">Занят задачей</string>
+    <string name="models_performance_busy_body">Замер начнётся, когда закончится текущая задача: движок выполняет один прогон за раз.</string>
+    <string name="models_performance_no_model_body">Сначала выберите модель — производительность измеряется для каждой модели отдельно.</string>
+    <string name="models_performance_unit_ms">%1$s мс</string>
+    <string name="models_performance_unit_seconds">%1$s с</string>
+    <string name="models_performance_unit_tokens_per_second">%1$s ток/с</string>
+    <plurals name="models_performance_sample_caption">
+        <item quantity="one">в среднем · последний %1$d прогон</item>
+        <item quantity="few">в среднем · последние %1$d прогона</item>
+        <item quantity="many">в среднем · последние %1$d прогонов</item>
+        <item quantity="other">в среднем · последние %1$d прогона</item>
+    </plurals>
+</resources>

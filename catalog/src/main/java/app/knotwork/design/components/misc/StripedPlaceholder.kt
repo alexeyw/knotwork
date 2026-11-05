@@ -12,10 +12,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -56,7 +58,7 @@ fun StripedPlaceholder(
     modifier: Modifier = Modifier,
     caption: String? = null,
     shape: androidx.compose.ui.graphics.Shape = KnotworkTheme.shapes.md,
-    contentDescription: String = "Placeholder illustration",
+    contentDescription: String = stringResource(R.string.knotwork_placeholder_illustration_cd),
 ) {
     val background = KnotworkTheme.extended.surface2
     val foreground = KnotworkTheme.extended.onSurfaceDim.copy(alpha = STRIPE_ALPHA)

@@ -6,8 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.knotwork.android.R
 import app.knotwork.android.data.repositories.McpServerRepositoryImpl
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.presentation.common.JsonLayout
@@ -58,9 +60,11 @@ fun ToolDetailScreen(
             },
             toolName = mcpTool?.name ?: toolId,
             description = mcpTool?.description
-                ?: (owningStatus as? McpConnectionStatus.Error)?.let { "Server error: ${it.reason}" }
+                ?: (owningStatus as? McpConnectionStatus.Error)?.let {
+                    stringResource(R.string.tool_detail_server_error, it.reason)
+                }
                 ?: "",
-            serverDisplayName = mcpTool?.serverUrl ?: "MCP tool",
+            serverDisplayName = mcpTool?.serverUrl ?: stringResource(R.string.tool_detail_mcp_tool),
             schemaJson = remember(mcpTool) { mcpTool?.inputSchemaJson?.let(::laidOutSchema) },
             lastUsed = null,
             enabled = enabled,
@@ -80,7 +84,7 @@ fun ToolDetailScreen(
             visualState = tool?.parameters?.visualStateForSchema() ?: ToolDetailVisualState.Default,
             toolName = tool?.name ?: toolId,
             description = tool?.description.orEmpty(),
-            serverDisplayName = "Local tool",
+            serverDisplayName = stringResource(R.string.tool_detail_local_tool),
             schemaJson = remember(tool) { tool?.parameters?.takeIf { it.isNotBlank() }?.let(::laidOutSchema) ?: "{}" },
             lastUsed = null,
             enabled = enabled,

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import app.knotwork.android.R
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -41,7 +42,7 @@ class FilesMessengerTest {
         messenger.failure(R.string.files_message_import_failed)
 
         assertEquals(R.string.files_message_import_failed, resolved.captured)
-        verify { relay.post(TEXT) }
+        verify { relay.post(UiText.Dynamic(TEXT)) }
     }
 
     @Test
@@ -67,7 +68,7 @@ class FilesMessengerTest {
         messenger.shareStaged(staged = 0, requested = 2)
 
         assertEquals(R.string.files_message_share_failed, resolved.captured)
-        verify { relay.post(TEXT) }
+        verify { relay.post(UiText.Dynamic(TEXT)) }
     }
 
     @Test
@@ -85,7 +86,7 @@ class FilesMessengerTest {
 
         messenger.shareStaged(staged = 2, requested = 3)
 
-        verify { relay.post(TEXT) }
+        verify { relay.post(UiText.Dynamic(TEXT)) }
     }
 
     private companion object {

@@ -19,6 +19,7 @@ import app.knotwork.android.data.network.AndroidModelDownloadManager.DownloadErr
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.ModelDownloadFailure
 import app.knotwork.android.domain.usecases.BenchmarkRunPhase
+import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.android.presentation.ui.common.readPlainClipboardText
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.models.ActiveModelRow
@@ -29,6 +30,7 @@ import app.knotwork.design.screens.models.ModelsStrings
 import app.knotwork.design.screens.models.ModelsViewState
 import app.knotwork.design.screens.models.ModelsVisualState
 import app.knotwork.design.screens.models.PerformanceCardState
+import app.knotwork.design.screens.models.PerformanceStrings
 import app.knotwork.design.screens.models.PresetRow
 import app.knotwork.design.screens.models.PresetStatus
 
@@ -103,8 +105,9 @@ fun ModelsScreen(
         }
     }
 
-    val viewState = remember(uiState, verificationLabels) {
-        uiState.toViewState(strings.subtitleFormat, verificationLabels)
+    val performanceUnits = rememberPerformanceUnits()
+    val viewState = remember(uiState, verificationLabels, performanceUnits) {
+        uiState.toViewState(strings.subtitleFormat, verificationLabels, performanceUnits)
     }
 
     ModelsContent(
@@ -175,10 +178,13 @@ private fun shareBenchmarkText(context: Context, text: String, subject: String) 
  * @param subtitleFormat localised `"%1$d active · %2$d on disk · %3$s"` template.
  * @param verificationLabels localised words for whether a model's file was checked
  *   against the hash its source published.
+ * @param units units and numerals of the interface language, for sizes and the
+ *   Performance card's figures.
  */
 internal fun ModelsUiState.toViewState(
     subtitleFormat: String,
     verificationLabels: VerificationLabels,
+    units: PerformanceUnits,
 ): ModelsViewState {
     // Sum of `LocalModel.size` is unreliable because the download manager
     // doesn't currently report content-length back to the local store,
@@ -189,7 +195,7 @@ internal fun ModelsUiState.toViewState(
     val totalSizeLabel = if (downloadedModels.isNotEmpty() && sumBytes == 0L) {
         "—"
     } else {
-        sumBytes.toGigabytesLabel()
+        sumBytes.toGigabytesLabel(units.sizes)
     }
     val subtitle = subtitleFormat.format(
         if (activeModel != null) 1 else 0,
@@ -199,6 +205,7 @@ internal fun ModelsUiState.toViewState(
     val backendLabel = backendDisplayLabel(localBackendKey)
 
     fun LocalModel.metaLine(): String = toMetaLine(
+        sizes = units.sizes,
         backendLabel = backendLabel,
         verificationLabel = if (id in verifiedModelIds) verificationLabels.verified else verificationLabels.notVerified,
     )
@@ -227,7 +234,7 @@ internal fun ModelsUiState.toViewState(
                 sizeMeta = matchingModel.metaLine(),
             )
             else -> PresetStatus.Idle(
-                sizeMeta = presetSize?.takeIf { it > 0L }?.toGigabytesLabel(),
+                sizeMeta = presetSize?.takeIf { it > 0L }?.toGigabytesLabel(units.sizes),
             )
         }
     }
@@ -275,7 +282,7 @@ internal fun ModelsUiState.toViewState(
         presets = presets,
         downloadedRows = downloadedRows,
         subtitle = subtitle,
-        performance = toPerformanceCardState(),
+        performance = toPerformanceCardState(units),
     )
 }
 
@@ -284,23 +291,23 @@ internal fun ModelsUiState.toViewState(
  * engine-busy signal and the benchmark sub-state into the single
  * [PerformanceCardState] the catalog card renders.
  */
-private fun ModelsUiState.toPerformanceCardState(): PerformanceCardState {
+private fun ModelsUiState.toPerformanceCardState(units: PerformanceUnits): PerformanceCardState {
     if (activeModel == null) return PerformanceCardState.NoModel
     return when (val bench = benchmark) {
         is BenchmarkUiState.Running -> PerformanceCardState.Running(bench.phase.toCatalogPhase())
         is BenchmarkUiState.Result -> PerformanceCardState.Result(
-            ttft = PerformanceFormatting.ttft(bench.report.ttftMs),
-            decode = PerformanceFormatting.decode(bench.report.decodeTokensPerSec),
-            total = PerformanceFormatting.totalSeconds(bench.report.totalMs),
-            peakMemory = PerformanceFormatting.memory(bench.report.peakNativeHeapBytes),
+            ttft = PerformanceFormatting.ttft(bench.report.ttftMs, units),
+            decode = PerformanceFormatting.decode(bench.report.decodeTokensPerSec, units),
+            total = PerformanceFormatting.totalSeconds(bench.report.totalMs, units),
+            peakMemory = PerformanceFormatting.memory(bench.report.peakNativeHeapBytes, units),
         )
         BenchmarkUiState.Idle -> when {
             engineBusy -> PerformanceCardState.EngineBusy
             performanceSummary != null -> PerformanceCardState.Populated(
-                ttft = PerformanceFormatting.ttft(performanceSummary.avgTtftMs),
-                decode = PerformanceFormatting.decode(performanceSummary.avgDecodeTokensPerSec),
-                peakMemory = PerformanceFormatting.memory(performanceSummary.peakNativeHeapBytes),
-                sampleCaption = PerformanceFormatting.sampleCaption(performanceSummary.sampleCount),
+                ttft = PerformanceFormatting.ttft(performanceSummary.avgTtftMs, units),
+                decode = PerformanceFormatting.decode(performanceSummary.avgDecodeTokensPerSec, units),
+                peakMemory = PerformanceFormatting.memory(performanceSummary.peakNativeHeapBytes, units),
+                sampleCaption = units.sampleCaption(performanceSummary.sampleCount),
             )
             else -> PerformanceCardState.Empty
         }
@@ -313,11 +320,11 @@ private fun BenchmarkRunPhase.toCatalogPhase(): BenchmarkPhase = when (this) {
     BenchmarkRunPhase.MEASURING -> BenchmarkPhase.Measuring
 }
 
-private fun LocalModel.toMetaLine(backendLabel: String, verificationLabel: String): String {
+private fun LocalModel.toMetaLine(sizes: ByteUnits, backendLabel: String, verificationLabel: String): String {
     // Drop the size prefix when the on-disk file is unreadable so we
     // don't render a misleading "0 GB" — the size is enriched from the
     // file system by `LocalModelRepositoryImpl.getAllModels()`.
-    val prefix = if (size > 0L) "${size.toGigabytesLabel()} · " else ""
+    val prefix = if (size > 0L) "${size.toGigabytesLabel(sizes)} · " else ""
     return "$prefix$backendLabel · LiteRT · $verificationLabel"
 }
 
@@ -361,7 +368,8 @@ private const val MAX_SOURCE_LEN = 44
 
 // Reuses the shared GiB/MiB ladder ([gigabyteOrMegabyteLabel]); model sizes
 // render "0 GB" for an unknown/zero size rather than nothing.
-private fun Long.toGigabytesLabel(): String = if (this <= 0L) "0 GB" else gigabyteOrMegabyteLabel(this)
+private fun Long.toGigabytesLabel(sizes: ByteUnits): String =
+    if (this <= 0L) sizes.inGigabytes("0") else gigabyteOrMegabyteLabel(this, sizes)
 
 /** Bundle of localised display strings threaded into [ModelsContent]. */
 private data class LocalisedModelsStrings(val content: ModelsStrings, val subtitleFormat: String)
@@ -395,6 +403,38 @@ private fun modelsStrings(): LocalisedModelsStrings = LocalisedModelsStrings(
         errorTitle = stringResource(R.string.models_error_title),
         errorRetry = stringResource(R.string.common_retry),
         discoverCd = stringResource(R.string.models_discover_cd),
+        visionLabel = stringResource(R.string.models_vision_label),
+        visionDescription = stringResource(R.string.models_vision_description),
+        audioLabel = stringResource(R.string.models_audio_label),
+        audioDescription = stringResource(R.string.models_audio_description),
+        performance = performanceStrings(),
     ),
     subtitleFormat = stringResource(R.string.models_subtitle_format),
+)
+
+/** The Performance card's words, from string resources. */
+@Composable
+private fun performanceStrings(): PerformanceStrings = PerformanceStrings(
+    title = stringResource(R.string.models_performance_title),
+    ttftLabel = stringResource(R.string.models_performance_ttft),
+    decodeLabel = stringResource(R.string.models_performance_decode),
+    peakMemoryLabel = stringResource(R.string.models_performance_peak_memory),
+    totalLabel = stringResource(R.string.models_performance_total),
+    unknownValue = stringResource(R.string.models_performance_unknown),
+    memoryNote = stringResource(R.string.models_performance_memory_note),
+    memoryReportNote = stringResource(R.string.models_performance_memory_report_note),
+    benchmarkBadge = stringResource(R.string.models_performance_benchmark_badge),
+    runBenchmark = stringResource(R.string.models_performance_run_benchmark),
+    cancel = stringResource(R.string.common_cancel),
+    share = stringResource(R.string.models_performance_share),
+    done = stringResource(R.string.models_performance_done),
+    warmingUpTitle = stringResource(R.string.models_performance_warming_up_title),
+    warmingUpSub = stringResource(R.string.models_performance_warming_up_sub),
+    measuringTitle = stringResource(R.string.models_performance_measuring_title),
+    measuringSub = stringResource(R.string.models_performance_measuring_sub),
+    emptyTitle = stringResource(R.string.models_performance_empty_title),
+    emptyBody = stringResource(R.string.models_performance_empty_body),
+    busyTitle = stringResource(R.string.models_performance_busy_title),
+    busyBody = stringResource(R.string.models_performance_busy_body),
+    noModelBody = stringResource(R.string.models_performance_no_model_body),
 )

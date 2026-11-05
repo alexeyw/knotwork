@@ -1,5 +1,8 @@
 package app.knotwork.design.screens.taskmonitor
 
+import androidx.annotation.StringRes
+import app.knotwork.design.R
+
 /** Visual variant of the Task Monitor surface. */
 enum class TaskMonitorVisualState {
     Loading,
@@ -19,11 +22,11 @@ enum class TaskRowStatus { Queued, Running, Success, Cancelled, Failed }
 /**
  * Top-level filter chip applied to the list.
  */
-enum class TaskFilterKind(val displayName: String) {
-    All(displayName = "All"),
-    Active(displayName = "Active"),
-    Background(displayName = "Background"),
-    Completed(displayName = "Completed"),
+enum class TaskFilterKind(@StringRes val labelRes: Int) {
+    All(labelRes = R.string.knotwork_task_filter_all),
+    Active(labelRes = R.string.knotwork_task_filter_active),
+    Background(labelRes = R.string.knotwork_task_filter_background),
+    Completed(labelRes = R.string.knotwork_task_filter_completed),
 }
 
 /**

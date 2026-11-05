@@ -128,7 +128,7 @@ private fun AuthChip(option: McpAuthSelector, selected: Boolean, onClick: () -> 
             .padding(horizontal = KnotworkTheme.spacing.sp3, vertical = KnotworkTheme.spacing.sp1),
     ) {
         Text(
-            text = option.label,
+            text = stringResource(option.labelRes),
             style = KnotworkTextStyles.LabelMd,
             color = labelColor,
         )
@@ -335,9 +335,9 @@ fun McpServerConfigContent(
                 visible = addressHintOpen,
                 text = stringResource(R.string.knotwork_tools_add_form_address_hint),
             )
-            if (form.urlError != null) {
+            form.urlError?.let { problem ->
                 Text(
-                    text = form.urlError,
+                    text = urlProblemText(problem),
                     style = KnotworkTextStyles.BodySm,
                     color = KnotworkTheme.extended.signalError,
                 )
@@ -441,3 +441,13 @@ fun McpServerConfigContent(
 
 /** Test tag for the unencrypted-connection consent banner in the MCP server form. */
 const val MCP_CLEARTEXT_CONSENT_TAG: String = "mcp_cleartext_consent_banner"
+
+/** The sentence the form shows under the URL field for [problem]. */
+@Composable
+private fun urlProblemText(problem: McpUrlProblem): String = when (problem) {
+    McpUrlProblem.Required -> stringResource(R.string.knotwork_mcp_url_required)
+    McpUrlProblem.MissingScheme -> stringResource(R.string.knotwork_mcp_url_scheme_required)
+    McpUrlProblem.MissingHost -> stringResource(R.string.knotwork_mcp_url_host_required)
+    McpUrlProblem.CleartextUnapproved -> stringResource(R.string.knotwork_mcp_url_cleartext_unapproved)
+    is McpUrlProblem.Collision -> stringResource(R.string.knotwork_mcp_url_collision, problem.label)
+}

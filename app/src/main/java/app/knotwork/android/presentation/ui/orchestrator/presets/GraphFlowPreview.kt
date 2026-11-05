@@ -13,8 +13,8 @@ import app.knotwork.android.domain.models.PipelineGraph
  * mutated by an older version of the app:
  *
  * 1. The walk starts at the first `INPUT`-typed node (or the first node when
- *    no `INPUT` exists). If no nodes are present, the helper returns the
- *    placeholder `empty graph`.
+ *    no `INPUT` exists). If no nodes are present, the helper returns `null`
+ *    and the caller writes its placeholder in the interface language.
  * 2. At each step the walker picks the **first outgoing connection** in
  *    declaration order — branches are dropped from the preview because the
  *    card has no room for a fan-out diagram, and the preview only needs to
@@ -31,19 +31,17 @@ internal object GraphFlowPreview {
     /** Arrow used between tokens — non-breaking shape, mirrors browser editor. */
     private const val ARROW = " → "
 
-    /** Placeholder returned when the graph has zero nodes. */
-    private const val EMPTY_PLACEHOLDER = "empty graph"
-
     /**
      * Builds the preview string for [graph].
      *
      * @param graph The pipeline graph whose node-type chain should be rendered.
-     * @return A single-line string like `INPUT → LITE_RT → OUTPUT`, or
-     *   `empty graph` when the graph carries no nodes.
+     * @return A single-line string like `INPUT → LITE_RT → OUTPUT` — node-type
+     *   codes, the same in every language — or `null` when the graph carries no
+     *   nodes, for the caller to word in the interface language.
      */
-    fun render(graph: PipelineGraph): String {
+    fun render(graph: PipelineGraph): String? {
         val nodes = graph.nodes
-        if (nodes.isEmpty()) return EMPTY_PLACEHOLDER
+        if (nodes.isEmpty()) return null
 
         val nodesById = nodes.associateBy { it.id }
         // Outgoing-edges projection: first connection in declaration order

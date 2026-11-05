@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Knotwork</string>
 
     <!-- Approval notification (Human-in-the-loop fallback when chat is not visible) -->
@@ -44,4 +44,37 @@
     <string name="tile_not_configured">Pick a Quick Settings pipeline in Settings → Background.</string>
     <string name="tile_subtitle_ready">Ready</string>
     <string name="tile_subtitle_unconfigured">Not set up</string>
+    <!-- More tab: row counters and the network footer. -->
+    <string name="more_models_active">%1$s · active</string>
+    <string name="more_models_none">no model installed</string>
+    <string name="more_prompts_counts" tools:ignore="PluralsCandidate">%1$d categories · %2$d prompts</string>
+    <string name="more_tasks_none">none</string>
+    <string name="more_tasks_counts" tools:ignore="PluralsCandidate">%1$d running · %2$d queued</string>
+    <string name="more_metrics_subtitle">tok/s · latency · battery</string>
+    <string name="more_settings_subtitle">system prompt · LLM params · keys</string>
+    <string name="more_about_version">v%1$s · build %2$d</string>
+    <string name="more_library_none">no saved presets</string>
+    <string name="more_files_empty">empty</string>
+    <string name="more_network_no_calls_yet">on-device · no network calls yet</string>
+    <string name="more_network_just_now">online · network call just now</string>
+    <string name="more_network_quiet">on-device · no network calls in last %1$d m</string>
+    <plurals name="more_memory_counts">
+        <item quantity="one">%1$s chunk · %2$s</item>
+        <item quantity="other">%1$s chunks · %2$s</item>
+    </plurals>
+    <plurals name="more_library_saved_presets">
+        <item quantity="one">%1$d saved preset</item>
+        <item quantity="other">%1$d saved presets</item>
+    </plurals>
+    <plurals name="more_files_counts">
+        <item quantity="one">%1$d file · %2$s</item>
+        <item quantity="other">%1$d files · %2$s</item>
+    </plurals>
+    <!-- Onboarding skip hints, shown after the screen closes. -->
+    <string name="onboarding_skip_hint">You can install a model from Settings → Models</string>
+    <string name="onboarding_skip_download_continues">Download continues in the background</string>
+    <!-- Tool detail: where a tool comes from. -->
+    <string name="tool_detail_server_error">Server error: %1$s</string>
+    <string name="tool_detail_mcp_tool">MCP tool</string>
+    <string name="tool_detail_local_tool">Local tool</string>
 </resources>

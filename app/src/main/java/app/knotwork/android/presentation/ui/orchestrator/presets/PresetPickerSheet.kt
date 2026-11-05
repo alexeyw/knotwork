@@ -91,7 +91,7 @@ internal fun PipelinePreset.toPickerRow(context: Context): PresetPickerRowUi = P
     id = id,
     name = name,
     description = description,
-    flowPreview = GraphFlowPreview.render(graph),
+    flowPreview = GraphFlowPreview.render(graph) ?: context.getString(R.string.pipeline_flow_empty),
     categoryLabel = context.getString(category.labelRes()),
     categoryTone = category.toTone(),
 )

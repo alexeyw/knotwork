@@ -33,7 +33,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -134,13 +134,14 @@ class MoreViewModelTest {
         testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertEquals("no model installed", state.modelsSubtitle)
-        assertEquals("none", state.tasksSubtitle)
+        // The counters are values; MoreFormattersTest holds how each is worded.
+        assertNull(state.activeModelName)
+        assertTrue(state.modelsLoaded)
+        assertEquals(MoreTaskCount(running = 0, queued = 0), state.tasks)
         assertEquals(0, state.tasksBadge)
-        assertEquals("no saved presets", state.librarySubtitle)
-        assertEquals("empty", state.filesSubtitle)
-        assertEquals("on-device · no network calls yet", state.networkStatusText)
-        assertTrue(state.networkStatusOk)
+        assertEquals(0, state.savedPresets)
+        assertEquals(MoreWorkspaceStat.Empty, state.files)
+        assertEquals(MoreNetworkStat.NoCallsYet, state.network)
 
         job.cancel()
     }
@@ -163,7 +164,7 @@ class MoreViewModelTest {
         }
         testScheduler.runCurrent()
 
-        assertEquals("2 files · 1.9 MB", viewModel.uiState.value.filesSubtitle)
+        assertEquals(2, (viewModel.uiState.value.files as MoreWorkspaceStat.Files).count)
 
         job.cancel()
     }
@@ -192,9 +193,9 @@ class MoreViewModelTest {
         testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertEquals("Gemma · active", state.modelsSubtitle)
+        assertEquals("Gemma", state.activeModelName)
         // Two running (Thinking + Answering), two queued; the resting Idle chat is neither.
-        assertEquals("2 running · 2 queued", state.tasksSubtitle)
+        assertEquals(MoreTaskCount(running = 2, queued = 2), state.tasks)
         assertEquals(2, state.tasksBadge)
 
         job.cancel()
@@ -220,7 +221,7 @@ class MoreViewModelTest {
         // Before: only Thinking / Answering counted, so a run in any other status read as none
         // and the tab's badge stayed hidden.
         val state = viewModel.uiState.value
-        assertEquals("3 running · 1 queued", state.tasksSubtitle)
+        assertEquals(MoreTaskCount(running = 3, queued = 1), state.tasks)
         assertEquals(3, state.tasksBadge)
 
         job.cancel()
@@ -252,8 +253,8 @@ class MoreViewModelTest {
 
         val state = viewModel.uiState.value
         // Distinct node types: LITE_RT + CLOUD = 2 categories; 3 prompts total.
-        assertEquals("2 categories · 3 prompts", state.promptsSubtitle)
-        assertEquals("12 chunks · 1.9 MB", state.memorySubtitle)
+        assertEquals(MorePromptCount(categories = 2, prompts = 3), state.prompts)
+        assertEquals(12, state.memory?.chunks)
 
         job.cancel()
     }
@@ -272,8 +273,7 @@ class MoreViewModelTest {
         testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertEquals("online · network call just now", state.networkStatusText)
-        assertFalse(state.networkStatusOk)
+        assertEquals(MoreNetworkStat.JustNow, state.network)
 
         job.cancel()
     }
@@ -293,8 +293,7 @@ class MoreViewModelTest {
         testScheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertTrue(state.networkStatusText.startsWith("on-device · no network calls in last"))
-        assertTrue(state.networkStatusOk)
+        assertTrue(state.network is MoreNetworkStat.Quiet)
 
         job.cancel()
     }

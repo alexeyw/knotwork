@@ -2,4 +2,12 @@
 <resources>
     <string name="settings_language_dialog_title">Язык</string>
     <string name="settings_language_device">Язык устройства</string>
+    <!-- Provider name that describes rather than names. -->
+    <string name="settings_provider_openai_compatible">Сервер с API OpenAI</string>
+    <!-- Units of slider values; %1$d is the number. -->
+    <string name="settings_unit_tokens">%1$d ток.</string>
+    <string name="settings_unit_seconds">%1$d с</string>
+    <string name="settings_unit_megabytes">%1$d МБ</string>
+    <string name="settings_unit_kilobytes">%1$d КБ</string>
+    <string name="settings_unit_hours">%1$d ч</string>
 </resources>

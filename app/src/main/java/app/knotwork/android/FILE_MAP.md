@@ -862,8 +862,10 @@ Only Kotlin files appear inside the generated blocks.
     - `VerifyRunUseCase.kt` - Checks a finished run by repeating its on-device model calls.
 - `presentation/` - UI and presentation layer.
   - `common/` - Cross-feature presentation utilities.
+    - `AgeUnits.kt` - How a short age is written in one language — "now", "5 m", "3 h", "2 d", "1 w" in English.
     - `ApprovalArguments.kt` - The arguments of a tool call waiting for approval, as each approval surface shows them.
     - `BoundedText.kt` - What reading a picked file within a size limit produced.
+    - `ByteUnits.kt` - The words and number style a byte size is written in, for one language: "14.2 MB" in English, "14,2 МБ" in Russian.
     - `DisplayFormat.kt` - Shared display formatters (`formatBytes` byte-size ladder, `approxTokenCount`, `CHARS_PER_TOKEN`) so byte sizes / token estimates render identically across Memory and Settings instead of drifting between per-screen copies.
     - `HitlRequestMapping.kt` - Maps what the run behind an approval was asked to do onto the catalog's model of it — the one translation the approval card and the approval notification both read, so the two cannot name a source differently.
     - `JsonLayout.kt` - The one way the app lays JSON out for a person to read: the arguments of a tool call waiting for approval (the chat card and the notification), a tool's parameter schema, and a value opened in the console.
@@ -983,6 +985,7 @@ Only Kotlin files appear inside the generated blocks.
     - `memory/` - Memory screen components.
       - `MemoryHistoryDelegate.kt` - The Memory screen's history actions, split from `MemoryViewModel` like the chat screen's delegates: resolving an update waiting on a pinned entry, and deleting one earlier version.
       - `MemoryScreen.kt` - Slim mapper. Subscribes to `MemoryViewModel`, projects `MemoryUiState` to the catalog `MemoryContent` (stats header + provenance breakdown, category chips, sort/date dropdowns, time-grouped sections, semantic-search rows with scores, detail sheet, Compact/Add dialogs). Owns the pure `toViewState` projection (grouping / breakdown / relative-time + detail labels) and the SAF launcher for full export.
+      - `MemoryTexts.kt` - The words the Memory screen's projection writes into its rows, headers and detail sheet, in the interface language.
       - `MemoryUiState.kt` - Memory UI state: raw chunk list + size + last-compacted + session-name cache, plus the view selections (category / sort / date / semantic-search) and transient detail/dialog flags.
       - `MemoryViewModel.kt` - Memory ViewModel. Loads chunks/stats/last-compacted/session-names; owns category/sort/date selection, debounced semantic search (`RetrieveRelevantMemoryUseCase.retrieveScored`), inline edit + tag editing, manual add (`SaveMessageToMemoryUseCase`), pin toggling, manual compaction (`MemoryCompactionUseCase` + `EstimateCompactionUseCase`), and full export.
     - `models/` - Models screen components (Knotwork redesign with inline Active card + HF auth + Custom URL + Presets list).
@@ -997,6 +1000,7 @@ Only Kotlin files appear inside the generated blocks.
       - `MonitoringViewModel.kt` - Monitoring ViewModel.
     - `more/` - "More" tab landing screen (Knotwork-converted, now stateful with live counters + footer privacy pill).
       - `MoreScreen.kt` - Landing screen of the More tab. Maps `MoreUiState` into the four named sections the catalog renders — Automation · Your content · Building blocks · App — with Triggers as the first row of the first section. Sections are labels, not screens: no row is re-pointed and no navigation is added.
+      - `MoreSubtitles.kt` - The More tab's row subtitles and footer line, written in the interface language from the counters of `MoreUiState`.
       - `MoreUiState.kt` - Pre-formatted display strings for each row subtitle + the footer pill (memory chunks, active model, prompt categories, active task counts, network status, user-preset count for Library).
       - `MoreViewModel.kt` - Aggregates the live counters from `MemoryRepository.observeStats`, `LocalModelRepository.getAllModels`, `PromptRepository.getAllPrompts`, `TaskQueueManager.activeSessionsState`, `NetworkActivityTracker.lastOutboundAt`, and `PipelinePresetRepository.getUserPresets`. Owns the pure-Kotlin formatters (`formatMemoryStats`, `formatPromptsStats`, `formatLibraryStats`, `formatNetworkStatus`).
     - `navigation/` - App shell, bottom-nav scaffold, and the single nav-graph for the app.

@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.taskmonitor
 
 import app.knotwork.android.domain.services.ScheduledTaskLabel
+import app.knotwork.android.presentation.ui.common.UiText
 
 /**
  * Represents the type of a task in the monitoring screen.
@@ -38,19 +39,20 @@ enum class TaskFilterType(@androidx.annotation.StringRes val displayNameRes: Int
  * Data model for a single task card.
  *
  * @property id Unique identifier for the task or session.
- * @property title The display title.
+ * @property title The display title, resolved by the screen in the interface language.
  * @property status The current execution status.
  * @property progress The progress from 0 to 1, or null if indeterminate/not applicable.
  * @property type The type of task (session vs background work).
- * @property pipelineStage The current stage of the pipeline if applicable.
+ * @property pipelineStage The current stage of the pipeline if applicable — a node's
+ *   name as the user wrote it, or a stage the app names.
  */
 data class TaskItem(
     val id: String,
-    val title: String,
+    val title: UiText,
     val status: TaskStatus,
     val progress: Float?,
     val type: TaskType,
-    val pipelineStage: String? = null,
+    val pipelineStage: UiText? = null,
     val scheduled: ScheduledTaskLabel? = null,
     val boundSessionName: String? = null,
 )

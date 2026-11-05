@@ -408,7 +408,12 @@ private fun ChoiceLine(line: String, here: Boolean) {
     }
 }
 
-/** A provider's own name. Product names, never translated. */
+/**
+ * A provider's name. Product names are never translated; the two that are
+ * descriptions rather than names — a server the user runs, and *Auto* — read in
+ * the interface language.
+ */
+@Composable
 internal fun CloudProvider.displayName(): String = when (this) {
     CloudProvider.OPEN_AI -> "OpenAI"
     CloudProvider.ANTHROPIC -> "Anthropic"
@@ -417,8 +422,8 @@ internal fun CloudProvider.displayName(): String = when (this) {
     CloudProvider.OPENROUTER -> "OpenRouter"
     CloudProvider.GROQ -> "Groq"
     CloudProvider.OLLAMA -> "Ollama"
-    CloudProvider.OPENAI_COMPATIBLE -> "OpenAI-compatible server"
-    CloudProvider.AUTO -> "Auto"
+    CloudProvider.OPENAI_COMPATIBLE -> stringResource(R.string.knotwork_provider_openai_compatible)
+    CloudProvider.AUTO -> stringResource(R.string.knotwork_provider_auto)
 }
 
 /** Every concrete provider, in the order the provider surfaces share. */

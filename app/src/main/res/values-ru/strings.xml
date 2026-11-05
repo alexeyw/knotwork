@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- More tab: row counters and the network footer. -->
+    <string name="more_models_active">%1$s · активна</string>
+    <string name="more_models_none">модель не установлена</string>
+    <string name="more_prompts_counts">категорий: %1$d · промптов: %2$d</string>
+    <string name="more_tasks_none">нет</string>
+    <string name="more_tasks_counts">выполняется: %1$d · в очереди: %2$d</string>
+    <string name="more_metrics_subtitle">ток/с · задержка · батарея</string>
+    <string name="more_settings_subtitle">системный промпт · параметры LLM · ключи</string>
+    <string name="more_about_version">v%1$s · сборка %2$d</string>
+    <string name="more_library_none">сохранённых пресетов нет</string>
+    <string name="more_files_empty">пусто</string>
+    <string name="more_network_no_calls_yet">на устройстве · обращений к сети не было</string>
+    <string name="more_network_just_now">в сети · обращение к сети только что</string>
+    <string name="more_network_quiet">на устройстве · без обращений к сети %1$d мин</string>
+    <plurals name="more_memory_counts">
+        <item quantity="one">%1$s фрагмент · %2$s</item>
+        <item quantity="few">%1$s фрагмента · %2$s</item>
+        <item quantity="many">%1$s фрагментов · %2$s</item>
+        <item quantity="other">%1$s фрагмента · %2$s</item>
+    </plurals>
+    <plurals name="more_library_saved_presets">
+        <item quantity="one">%1$d сохранённый пресет</item>
+        <item quantity="few">%1$d сохранённых пресета</item>
+        <item quantity="many">%1$d сохранённых пресетов</item>
+        <item quantity="other">%1$d сохранённого пресета</item>
+    </plurals>
+    <plurals name="more_files_counts">
+        <item quantity="one">%1$d файл · %2$s</item>
+        <item quantity="few">%1$d файла · %2$s</item>
+        <item quantity="many">%1$d файлов · %2$s</item>
+        <item quantity="other">%1$d файла · %2$s</item>
+    </plurals>
+    <!-- Onboarding skip hints, shown after the screen closes. -->
+    <string name="onboarding_skip_hint">Модель можно установить в Настройки → Модели</string>
+    <string name="onboarding_skip_download_continues">Загрузка продолжится в фоне</string>
+    <!-- Tool detail: where a tool comes from. -->
+    <string name="tool_detail_server_error">Ошибка сервера: %1$s</string>
+    <string name="tool_detail_mcp_tool">Инструмент MCP</string>
+    <string name="tool_detail_local_tool">Локальный инструмент</string>
+</resources>

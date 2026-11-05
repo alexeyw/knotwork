@@ -25,9 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -90,6 +92,8 @@ enum class Status {
 @Composable
 fun StatusPill(status: Status, modifier: Modifier = Modifier) {
     val color = statusColor(status)
+    val label = status.label
+    val description = stringResource(R.string.knotwork_status_pill_cd, label)
     val pulseAlpha = if (status == Status.Running && !KnotworkTheme.a11y.reducedMotion()) {
         rememberPulseAlpha()
     } else {
@@ -102,7 +106,7 @@ fun StatusPill(status: Status, modifier: Modifier = Modifier) {
         border = BorderStroke(width = 1.dp, color = color),
         modifier = modifier
             .height(StatusPillHeight)
-            .semantics { contentDescription = "Status: ${status.label}" },
+            .semantics { contentDescription = description },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -116,7 +120,7 @@ fun StatusPill(status: Status, modifier: Modifier = Modifier) {
                     .background(color = color, shape = CircleShape),
             )
             Text(
-                text = status.label,
+                text = label,
                 style = KnotworkTextStyles.MonoSm,
                 color = color,
             )
@@ -153,15 +157,17 @@ private fun statusColor(status: Status): Color = when (status) {
 
 /** Human-readable label rendered inside the pill (also used in `contentDescription`). */
 private val Status.label: String
-    get() = when (this) {
-        Status.Queued -> "Queued"
-        Status.Idle -> "Idle"
-        Status.Running -> "Running"
-        Status.Success -> "Success"
-        Status.Warning -> "Warning"
-        Status.Error -> "Error"
-        Status.Cancelled -> "Cancelled"
-    }
+    @Composable get() = stringResource(
+        when (this) {
+            Status.Queued -> R.string.knotwork_status_queued
+            Status.Idle -> R.string.knotwork_status_idle
+            Status.Running -> R.string.knotwork_status_running
+            Status.Success -> R.string.knotwork_status_success
+            Status.Warning -> R.string.knotwork_status_warning
+            Status.Error -> R.string.knotwork_status_error
+            Status.Cancelled -> R.string.knotwork_status_cancelled
+        },
+    )
 
 private val StatusPillHeight = 24.dp
 private val StatusDotSize = 6.dp

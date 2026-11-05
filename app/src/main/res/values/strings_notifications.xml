@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Status line of the running-agent notification. -->
+    <string name="notifications_agent_status_initializing">Initializing…</string>
+    <string name="notifications_agent_status_idle">Agent is waiting</string>
+    <string name="notifications_agent_status_loading">Loading context…</string>
+    <string name="notifications_agent_status_queued">Queued behind another run</string>
+    <string name="notifications_agent_status_thinking">Agent is thinking…</string>
+    <string name="notifications_agent_status_executing_tool">Using tool: %1$s…</string>
+    <string name="notifications_agent_status_approval">Awaiting user confirmation…</string>
+    <string name="notifications_agent_status_clarification">Awaiting user clarification…</string>
+    <string name="notifications_agent_status_ceiling">Waiting: the run reached a limit</string>
+    <string name="notifications_agent_status_suspended">Waiting for user response in background</string>
+    <string name="notifications_agent_status_observation">Processing tool result…</string>
+    <string name="notifications_agent_status_answering">Answering…</string>
+    <string name="notifications_agent_status_completed">Task completed</string>
+    <string name="notifications_agent_status_stopped">Run stopped</string>
+    <string name="notifications_agent_status_stage">Pipeline stage: %1$s</string>
+    <string name="notifications_agent_status_trace">Pipeline trace updated</string>
+    <string name="notifications_agent_status_running">Pipeline running…</string>
+</resources>

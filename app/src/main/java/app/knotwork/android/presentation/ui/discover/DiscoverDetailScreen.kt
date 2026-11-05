@@ -19,6 +19,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.DiscoverableModelDetail
 import app.knotwork.android.domain.models.DiscoverableModelFile
+import app.knotwork.android.presentation.common.ByteUnits
+import app.knotwork.android.presentation.common.rememberByteUnits
 import app.knotwork.android.presentation.ui.common.readPlainClipboardText
 import app.knotwork.android.presentation.ui.models.gigabyteOrMegabyteLabel
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
@@ -81,7 +83,10 @@ fun DiscoverDetailScreen(
         }
     }
 
-    val viewState = remember(uiState, detailLoadError) { uiState.toViewState(errorText = detailLoadError) }
+    val sizes = rememberByteUnits()
+    val viewState = remember(uiState, detailLoadError, sizes) {
+        uiState.toViewState(errorText = detailLoadError, sizes = sizes)
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         DiscoverDetailContent(
@@ -104,40 +109,41 @@ fun DiscoverDetailScreen(
 }
 
 /** Folds the app detail UI state onto the catalog detail view state. */
-private fun DiscoverDetailUiState.toViewState(errorText: String): DiscoverDetailViewState = when (status) {
-    DiscoverDetailStatus.Loading -> DiscoverDetailViewState(
-        visualState = DiscoverDetailVisualState.Loading,
-        title = detail?.displayName.orEmpty(),
-        repoId = detail?.repoId.orEmpty(),
-    )
-    DiscoverDetailStatus.Error -> DiscoverDetailViewState(
-        visualState = DiscoverDetailVisualState.Error,
-        title = detail?.displayName.orEmpty(),
-        repoId = detail?.repoId.orEmpty(),
-        errorMessage = errorText,
-    )
-    DiscoverDetailStatus.Loaded -> {
-        val loaded = requireNotNull(detail)
-        DiscoverDetailViewState(
-            visualState = DiscoverDetailVisualState.Loaded,
-            title = loaded.displayName,
-            repoId = loaded.repoId,
-            metaLine = loaded.metaLine(),
-            license = loaded.license,
-            gated = loaded.gated,
-            files = loaded.files.map { file -> file.toRow(this) },
-            pendingLicenseFileName = pendingLicenseFileName,
-            tokenInput = tokenInput,
-            tokenRevealed = tokenRevealed,
+private fun DiscoverDetailUiState.toViewState(errorText: String, sizes: ByteUnits): DiscoverDetailViewState =
+    when (status) {
+        DiscoverDetailStatus.Loading -> DiscoverDetailViewState(
+            visualState = DiscoverDetailVisualState.Loading,
+            title = detail?.displayName.orEmpty(),
+            repoId = detail?.repoId.orEmpty(),
         )
+        DiscoverDetailStatus.Error -> DiscoverDetailViewState(
+            visualState = DiscoverDetailVisualState.Error,
+            title = detail?.displayName.orEmpty(),
+            repoId = detail?.repoId.orEmpty(),
+            errorMessage = errorText,
+        )
+        DiscoverDetailStatus.Loaded -> {
+            val loaded = requireNotNull(detail)
+            DiscoverDetailViewState(
+                visualState = DiscoverDetailVisualState.Loaded,
+                title = loaded.displayName,
+                repoId = loaded.repoId,
+                metaLine = loaded.metaLine(),
+                license = loaded.license,
+                gated = loaded.gated,
+                files = loaded.files.map { file -> file.toRow(this, sizes) },
+                pendingLicenseFileName = pendingLicenseFileName,
+                tokenInput = tokenInput,
+                tokenRevealed = tokenRevealed,
+            )
+        }
     }
-}
 
 /** `"↓ 12.4k · ♥ 86"` stats line (license is shown on its own line). */
 private fun DiscoverableModelDetail.metaLine(): String = "↓ ${formatHfCount(downloads)} · ♥ ${formatHfCount(likes)}"
 
 /** Maps one domain file onto a catalog file row, resolving its install status. */
-private fun DiscoverableModelFile.toRow(state: DiscoverDetailUiState): DiscoverFileRow {
+private fun DiscoverableModelFile.toRow(state: DiscoverDetailUiState, sizes: ByteUnits): DiscoverFileRow {
     val status = when {
         isInstalled || fileName in state.installed -> DiscoverFileStatus.Installed
         state.progress.containsKey(fileName) -> DiscoverFileStatus.Downloading(state.progress.getValue(fileName))
@@ -145,7 +151,7 @@ private fun DiscoverableModelFile.toRow(state: DiscoverDetailUiState): DiscoverF
     }
     return DiscoverFileRow(
         fileName = fileName,
-        sizeLabel = sizeBytes.takeIf { it > 0L }?.let { gigabyteOrMegabyteLabel(it) },
+        sizeLabel = sizeBytes.takeIf { it > 0L }?.let { gigabyteOrMegabyteLabel(it, sizes) },
         status = status,
     )
 }

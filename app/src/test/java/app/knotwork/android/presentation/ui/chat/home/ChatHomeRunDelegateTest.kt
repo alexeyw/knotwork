@@ -26,6 +26,7 @@ import app.knotwork.android.domain.verification.VerificationSummary
 import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.domain.verification.VerifyRunUseCase
 import app.knotwork.android.domain.verification.VisitKind
+import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.design.components.console.ConsoleHashCopy
 import app.knotwork.design.components.console.HashKind
 import app.knotwork.design.components.console.RunSettingsTarget
@@ -268,7 +269,9 @@ class ChatHomeRunDelegateTest {
 
             delegate.openExport()
             val sheet = state.value.run.export
-            assertEquals("7 B", sheet?.size)
+            // The size is kept as a number; the screen writes it in its language.
+            assertEquals(7L, state.value.runExportSizeBytes)
+            assertEquals("7 B", state.value.toViewState(sizes = ByteUnits.ENGLISH).run.export?.size)
             assertEquals(sheet?.fileName, delegate.export.newFileName())
 
             delegate.dismissExport()

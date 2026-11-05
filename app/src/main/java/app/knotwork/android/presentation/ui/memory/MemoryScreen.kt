@@ -87,7 +87,9 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
     // The expensive list projection (filter / group / sort / breakdown / chip
     // counts) is memoised only on the fields that affect it, so search
     // keystrokes and dialog-visibility toggles don't re-run the O(N) work.
+    val texts = rememberMemoryTexts()
     val listViewState = remember(
+        texts,
         uiState.memories,
         uiState.history,
         uiState.pendingUpdates,
@@ -104,14 +106,14 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
         uiState.sessionNames,
         uiState.loadFailed,
     ) {
-        uiState.toViewState(nowMillis = System.currentTimeMillis())
+        uiState.toViewState(nowMillis = System.currentTimeMillis(), texts = texts)
     }
     // Dialog visibility + the loaded estimate are intentionally excluded from
     // the memo keys (toggling them must not re-run the O(N) projection); they
     // are overlaid here cheaply on every recomposition.
     val viewState = listViewState.copy(
         compactDialogVisible = uiState.compactDialogVisible,
-        compactEstimate = uiState.compactEstimate?.toView(),
+        compactEstimate = uiState.compactEstimate?.toView(texts),
         addDialogVisible = uiState.addDialogVisible,
     )
 
@@ -155,9 +157,10 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
 
 /**
  * Pure projection of [MemoryUiState] onto the catalog [MemoryViewState].
- * `internal` + `nowMillis` so the grouping / breakdown / labelling is unit-testable.
+ * `internal` + `nowMillis` so the grouping / breakdown / labelling is unit-testable;
+ * every word it writes comes from [texts].
  */
-internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
+internal fun MemoryUiState.toViewState(nowMillis: Long, texts: MemoryTexts): MemoryViewState {
     val expanded = expandedId?.let { id -> memories.firstOrNull { it.id == id } }
     val visualState = when {
         loadFailed -> MemoryVisualState.Error
@@ -178,7 +181,7 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
             emptyList()
         } else {
             val rows = facts.withUpdatesUnderPinned(hits) { it.first.id }.map { (hit, child) ->
-                hit.first.toRow(hit.second, nowMillis, facts, child)
+                hit.first.toRow(hit.second, nowMillis, facts, child, texts)
             }
             listOf(MemorySection(title = "", count = rows.count { !it.pairChild }, rows = rows))
         }
@@ -186,7 +189,7 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
         val filtered = memories
             .filter { it.matchesCategory(selectedCategory) }
             .filter { it.matchesDate(dateFilter, nowMillis) }
-        buildSections(filtered.map { it to null as Float? }, sortMode, nowMillis, facts, selectedCategory)
+        buildSections(filtered.map { it to null as Float? }, sortMode, nowMillis, facts, selectedCategory, texts)
     }
 
     // Dialog visibility + the loaded estimate are authored live by the screen
@@ -194,7 +197,7 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
     // defaults here; the screen overlays them. See MemoryScreen's `.copy(...)`.
     return MemoryViewState(
         visualState = visualState,
-        header = buildHeader(nowMillis),
+        header = buildHeader(nowMillis, texts),
         categoryChips = buildCategoryChips(),
         selectedCategory = selectedCategory,
         sortMode = sortMode,
@@ -203,7 +206,7 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
         searchEmpty = searchEmpty(),
         searchQuery = searchQuery,
         sections = sections,
-        expandedEntry = expanded?.toDetail(nowMillis, sessionNames, facts),
+        expandedEntry = expanded?.toDetail(nowMillis, sessionNames, facts, texts),
         errorMessage = null,
     )
 }
@@ -212,23 +215,24 @@ internal fun MemoryUiState.toViewState(nowMillis: Long): MemoryViewState {
 internal fun MemoryUiState.searchEmpty(): Boolean =
     searchActive && searchQuery.isNotBlank() && searchResults?.isEmpty() == true
 
-private fun MemoryUiState.buildHeader(nowMillis: Long): MemoryStatsHeader {
+private fun MemoryUiState.buildHeader(nowMillis: Long, texts: MemoryTexts): MemoryStatsHeader {
     val total = memories.size
     val auto = memories.count { it.source is MemorySource.ChatSession }
     val manual = memories.count { it.source is MemorySource.Manual }
     val compaction = memories.count { it.source is MemorySource.Compaction }
     val segments = buildList {
-        if (auto > 0) add(segment(MemorySourceKind.Auto, "AUTO", auto, total))
-        if (compaction > 0) add(segment(MemorySourceKind.Compaction, "COMPACT", compaction, total))
-        if (manual > 0) add(segment(MemorySourceKind.Manual, "MANUAL", manual, total))
+        if (auto > 0) add(segment(MemorySourceKind.Auto, texts.segmentAuto, auto, total))
+        if (compaction > 0) add(segment(MemorySourceKind.Compaction, texts.segmentCompaction, compaction, total))
+        if (manual > 0) add(segment(MemorySourceKind.Manual, texts.segmentManual, manual, total))
     }
     return MemoryStatsHeader(
         totalLabel = total.toString(),
-        sizeLabel = DisplayFormat.formatBytes(totalBytes),
+        sizeLabel = DisplayFormat.formatBytes(totalBytes, texts.sizes),
         lastCompactedLabel = if (lastCompactedAt >
             0L
         ) {
-            "compacted ${relativeShort(nowMillis - lastCompactedAt)} ago"
+            val age = nowMillis - lastCompactedAt
+            if (texts.ages.isNow(age)) texts.compactedJustNow else texts.compactedAgo.format(texts.ages.short(age))
         } else {
             null
         },
@@ -265,6 +269,7 @@ private fun buildSections(
     nowMillis: Long,
     facts: MemoryRowFacts,
     category: MemoryCategory,
+    texts: MemoryTexts,
 ): List<MemorySection> {
     // A waiting update is never sorted on its own: it is drawn under its pinned entry,
     // wherever that entry lands. It stays a row of its own only when its pinned entry
@@ -294,10 +299,10 @@ private fun buildSections(
     }
 
     return listOf(
-        "Pinned" to pinned,
-        "Today" to today,
-        "This week" to week,
-        "Earlier" to earlier,
+        texts.sectionPinned to pinned,
+        texts.sectionToday to today,
+        texts.sectionThisWeek to week,
+        texts.sectionEarlier to earlier,
     ).mapNotNull { (title, bucket) ->
         if (bucket.isEmpty()) {
             null
@@ -307,8 +312,8 @@ private fun buildSections(
                 count = bucket.size,
                 rows = bucket.sorted().flatMap { (chunk, score) ->
                     listOfNotNull(
-                        chunk.toRow(score, nowMillis, facts, child = false),
-                        attached[chunk.id]?.toRow(null, nowMillis, facts, child = true),
+                        chunk.toRow(score, nowMillis, facts, child = false, texts),
+                        attached[chunk.id]?.toRow(null, nowMillis, facts, child = true, texts),
                     )
                 },
             )
@@ -375,35 +380,44 @@ private fun MemoryUiState.rowFacts(): MemoryRowFacts {
     )
 }
 
-private fun MemoryChunk.toRow(score: Float?, nowMillis: Long, facts: MemoryRowFacts, child: Boolean): MemoryRow =
-    MemoryRow(
-        id = id.toString(),
-        title = title(),
-        body = text,
-        sourceKind = source.toKind(),
-        tags = tags,
-        relevanceScore = score?.let { String.format(Locale.US, "%.2f", it) },
-        timestampLabel = relativeShort(nowMillis - timestamp),
-        isPinned = isPinned,
-        historyCount = facts.historyCounts[id] ?: 0,
-        pairRole = facts.roleOf(id),
-        pairChild = child,
-    )
+private fun MemoryChunk.toRow(
+    score: Float?,
+    nowMillis: Long,
+    facts: MemoryRowFacts,
+    child: Boolean,
+    texts: MemoryTexts,
+): MemoryRow = MemoryRow(
+    id = id.toString(),
+    title = title(),
+    body = text,
+    sourceKind = source.toKind(),
+    tags = tags,
+    relevanceScore = score?.let { String.format(texts.locale, "%.2f", it) },
+    timestampLabel = texts.ages.short(nowMillis - timestamp),
+    isPinned = isPinned,
+    historyCount = facts.historyCounts[id] ?: 0,
+    pairRole = facts.roleOf(id),
+    pairChild = child,
+)
 
 private fun MemoryChunk.toDetail(
     nowMillis: Long,
     sessionNames: Map<String, String>,
     facts: MemoryRowFacts,
+    texts: MemoryTexts,
 ): MemoryEntryDetail {
     val learnedFrom = (source as? MemorySource.ChatSession)?.sessionId?.let { id ->
-        sessionNames[id]?.let { "Chat \"$it\"" }
+        sessionNames[id]?.let { texts.learnedFromChat.format(it) }
     }
     // The counter goes up once per run whose memory block received the chunk —
     // runs, not replies: the model may not have used it.
     val usedIn = if (useCount > 0) {
-        val last = lastUsedAt?.let { " · last ${relativeShort(nowMillis - it)} ago" }.orEmpty()
-        val runs = if (useCount == 1) "run" else "runs"
-        "$useCount $runs$last"
+        val last = lastUsedAt?.let {
+            val age = nowMillis - it
+            " · " +
+                if (texts.ages.isNow(age)) texts.lastUsedJustNow else texts.lastUsedAgo.format(texts.ages.short(age))
+        }.orEmpty()
+        texts.usedInRuns(useCount) + last
     } else {
         null
     }
@@ -418,8 +432,8 @@ private fun MemoryChunk.toDetail(
         title = title(),
         body = text,
         sourceKind = source.toKind(),
-        sourceLabel = source.toLabel(),
-        tokenLabel = "${DisplayFormat.approxTokenCount(text).coerceAtLeast(1)} tok",
+        sourceLabel = source.toLabel(texts),
+        tokenLabel = texts.tokens.format(DisplayFormat.approxTokenCount(text).coerceAtLeast(1)),
         tags = tags,
         learnedFromLabel = learnedFrom,
         capturedLabel = formatCaptured(timestamp),
@@ -453,10 +467,10 @@ private fun MemoryChunk.toDetail(
 private fun MemorySource.chatName(sessionNames: Map<String, String>): String? =
     (this as? MemorySource.ChatSession)?.sessionId?.let(sessionNames::get)
 
-private fun CompactionEstimate.toView(): CompactionEstimateView = CompactionEstimateView(
+private fun CompactionEstimate.toView(texts: MemoryTexts): CompactionEstimateView = CompactionEstimateView(
     removedLabel = "~$estimatedRemoved",
-    freedLabel = "~${DisplayFormat.formatBytes(estimatedFreedBytes)}",
-    runtimeLabel = "~$estimatedRuntimeSeconds s",
+    freedLabel = "~${DisplayFormat.formatBytes(estimatedFreedBytes, texts.sizes)}",
+    runtimeLabel = texts.secondsApprox.format(estimatedRuntimeSeconds),
 )
 
 private fun MemoryChunk.title(): String = text.lineSequence().firstOrNull()?.take(MEMORY_TITLE_MAX_CHARS).orEmpty()
@@ -482,23 +496,11 @@ private fun MemorySource.toKind(): MemorySourceKind = when (this) {
     MemorySource.Unknown -> MemorySourceKind.Unknown
 }
 
-private fun MemorySource.toLabel(): String = when (this) {
-    is MemorySource.ChatSession -> "Auto-extracted"
-    MemorySource.Manual -> "Saved manually"
-    is MemorySource.Compaction -> "Compacted"
-    MemorySource.Unknown -> "Unknown"
-}
-
-/** Compact relative duration label: `Nm` / `Nh` / `Nd` / `Nw`. */
-private fun relativeShort(ageMillis: Long): String {
-    val mins = ageMillis / MINUTE_MS
-    return when {
-        mins < 1 -> "now"
-        mins < MINUTES_PER_HOUR -> "$mins m"
-        mins < MINUTES_PER_DAY -> "${mins / MINUTES_PER_HOUR} h"
-        mins < MINUTES_PER_WEEK -> "${mins / MINUTES_PER_DAY} d"
-        else -> "${mins / MINUTES_PER_WEEK} w"
-    }
+private fun MemorySource.toLabel(texts: MemoryTexts): String = when (this) {
+    is MemorySource.ChatSession -> texts.sourceAuto
+    MemorySource.Manual -> texts.sourceManual
+    is MemorySource.Compaction -> texts.sourceCompaction
+    MemorySource.Unknown -> texts.sourceUnknown
 }
 
 /** TestTag applied to the screen root. */
@@ -508,10 +510,6 @@ private const val MEMORY_TITLE_MAX_CHARS = 60
 private const val MIME_JSON = "application/json"
 private const val EXPORT_FILENAME = "memory-base.json"
 
-private const val MINUTE_MS = 60_000L
-private const val MINUTES_PER_HOUR = 60L
-private const val MINUTES_PER_DAY = 60L * 24
-private const val MINUTES_PER_WEEK = 60L * 24 * 7
 private const val DAY_MS = 24L * 60 * 60 * 1000
 private const val WEEK_MS = 7L * DAY_MS
 private const val MONTH_MS = 30L * DAY_MS

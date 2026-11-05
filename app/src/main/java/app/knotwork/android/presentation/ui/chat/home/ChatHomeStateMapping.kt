@@ -3,6 +3,8 @@ package app.knotwork.android.presentation.ui.chat.home
 import app.knotwork.android.domain.models.ClarificationRequest
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.presentation.common.ApprovalArguments
+import app.knotwork.android.presentation.common.ByteUnits
+import app.knotwork.android.presentation.common.DisplayFormat
 import app.knotwork.android.presentation.common.toHitlRequestContext
 import app.knotwork.android.presentation.ui.common.RunTerminationCopy
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
@@ -21,6 +23,7 @@ import app.knotwork.design.components.chat.RunCeilingPauseCardModel
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
+import app.knotwork.design.screens.chat.ChatHomeRunState
 import app.knotwork.design.screens.chat.ChatHomeSamplePromptCard
 import app.knotwork.design.screens.chat.ChatHomeViewState
 import app.knotwork.design.screens.chat.ChatHomeVisualState
@@ -82,6 +85,7 @@ private fun generatingLoaderLabel(visual: ChatHomeUiState.Generating, fixtures: 
  *
  * @param fixtures locale-resolved stub strings (status pills, drawer
  *   fallbacks, empty-state suggestion cards).
+ * @param sizes size units of the interface language, for the run export sheet.
  * @return the immutable view-state passed directly to `ChatHomeContent`.
  */
 // Reason: single switch over 8 visual variants, each branch a flat
@@ -90,6 +94,7 @@ private fun generatingLoaderLabel(visual: ChatHomeUiState.Generating, fixtures: 
 fun ChatHomeScreenState.toViewState(
     fixtures: ChatHomeFixtures = ChatHomeFixtures.forTesting(),
     resolveText: (UiText) -> String = ::stubResolveText,
+    sizes: ByteUnits = ByteUnits.ENGLISH,
 ): ChatHomeViewState {
     val threadTitle = thread.title
     val modelName = model.name
@@ -291,9 +296,24 @@ fun ChatHomeScreenState.toViewState(
         // flight, so it can coexist with any visual — generating, or a HITL
         // gate held open — rather than belonging to one of them.
         runNotice = runNotice?.toCatalog(resolveText),
-        // The run's surfaces sit over the console, whatever the chat is doing.
-        run = run,
+        // The run's surfaces sit over the console, whatever the chat is doing. The
+        // export sheet's size is written here, in the language of this render.
+        run = run.withExportSize(runExportSizeBytes, sizes),
     )
+}
+
+/**
+ * The run surfaces with the export sheet's size written in [sizes]' language;
+ * unchanged while no sheet is open or no size is known.
+ *
+ * @param bytes The trace file's size, or `null`.
+ * @param sizes Size units of the interface language.
+ * @return The run state to render.
+ */
+private fun ChatHomeRunState.withExportSize(bytes: Long?, sizes: ByteUnits): ChatHomeRunState {
+    val sheet = export ?: return this
+    if (bytes == null) return this
+    return copy(export = sheet.copy(size = DisplayFormat.formatBytes(bytes, sizes)))
 }
 
 /**

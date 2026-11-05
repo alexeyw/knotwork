@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.settings.provider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -44,9 +45,10 @@ fun ProviderPickerScreen(
 ) {
     val added by viewModel.added.collectAsState()
     val compatDescription = stringResource(R.string.settings_provider_picker_compat_desc)
+    val context = LocalContext.current
     fun row(id: ProviderId) = ProviderPickerRowUi(
         id = id.name,
-        title = id.displayName(),
+        title = id.displayName(context),
         description = compatDescription.takeIf { id == ProviderId.OpenAiCompatible },
         added = id in added,
     )

@@ -25,8 +25,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.controls.KnotworkFieldDefaults
 import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
@@ -64,7 +67,7 @@ fun KnotworkChipsInput(
     values: List<String>,
     onValuesChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Add and press Enter…",
+    placeholder: String = stringResource(R.string.knotwork_chips_input_placeholder),
     maxItems: Int? = null,
 ) {
     val ext = KnotworkTheme.extended
@@ -155,7 +158,7 @@ fun KnotworkChipsInput(
             val cap = checkNotNull(maxItems)
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Max $cap items",
+                text = pluralStringResource(R.plurals.knotwork_chips_input_max, cap, cap),
                 style = KnotworkTextStyles.LabelSm,
                 color = ext.onSurfaceMuted,
             )

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Task monitor: row titles and stages. -->
+    <string name="taskmonitor_title_session">Чат: %1$s</string>
+    <string name="taskmonitor_title_background">Фоновая задача (%1$s)</string>
+    <string name="taskmonitor_stage_thinking">Думает</string>
+    <string name="taskmonitor_stage_tool">Вызов инструмента</string>
+    <string name="taskmonitor_stage_approval">Ждёт подтверждения</string>
+    <string name="taskmonitor_stage_loading">Загрузка</string>
+    <string name="taskmonitor_stage_answering">Отвечает</string>
+    <!-- Monitoring stats. -->
+    <string name="monitoring_stat_inference_time">ВРЕМЯ ИНФЕРЕНСА</string>
+    <string name="monitoring_stat_tokens_per_second">ТОКЕНОВ/С</string>
+    <string name="monitoring_stat_total_tokens">ВСЕГО ТОКЕНОВ</string>
+    <string name="monitoring_unit_ms">%1$d мс</string>
+</resources>

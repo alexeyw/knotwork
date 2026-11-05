@@ -18,7 +18,7 @@ class MonitoringScreenMappingTest {
     )
 
     private fun map(vararg logs: ChatMessage) =
-        MonitoringUiState(recentLogs = logs.toList()).toViewState(MonitoringStrings())
+        MonitoringUiState(recentLogs = logs.toList()).toViewState(MonitoringStrings(), ENGLISH_LABELS)
 
     @Test
     fun `given the same message twice in one second when mapped then the lines keep distinct ids`() {
@@ -45,3 +45,11 @@ class MonitoringScreenMappingTest {
         assertEquals(listOf("row:1", "pos:1"), state.logs.map { it.id })
     }
 }
+
+private val ENGLISH_LABELS = MonitoringStatLabels(
+    inferenceTime = "INFERENCE TIME",
+    tokensPerSecond = "TOKENS/S",
+    totalTokens = "TOTAL TOKENS",
+    milliseconds = "%1\$d ms",
+    locale = java.util.Locale.US,
+)

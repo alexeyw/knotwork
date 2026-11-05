@@ -62,6 +62,7 @@ import app.knotwork.android.R
 import app.knotwork.android.domain.report.ContentReport
 import app.knotwork.android.domain.report.ContentReportComposer
 import app.knotwork.android.domain.report.ContentReportReason
+import app.knotwork.android.presentation.common.rememberByteUnits
 import app.knotwork.android.presentation.ui.chat.CHAT_EXPORT_MIME_JSON
 import app.knotwork.android.presentation.ui.chat.ChatExportEffects
 import app.knotwork.android.presentation.ui.common.JournalExportCopy
@@ -413,7 +414,8 @@ fun ChatHomeScreen(
     // `strings_chat.xml`.
     val fixtures = rememberChatHomeFixtures()
 
-    val viewState = screenState.toViewState(fixtures = fixtures) { context.resolve(it) }
+    val sizes = rememberByteUnits()
+    val viewState = screenState.toViewState(fixtures = fixtures, resolveText = { context.resolve(it) }, sizes = sizes)
 
     // A console copy that does not fit the clipboard says so; one that does is
     // confirmed by the system's own preview.

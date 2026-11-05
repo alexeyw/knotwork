@@ -17,6 +17,7 @@ import app.knotwork.android.domain.usecases.workspace.PreviewWorkspaceFileUseCas
 import app.knotwork.android.domain.usecases.workspace.StageWorkspaceFileForShareUseCase
 import app.knotwork.android.domain.usecases.workspace.WorkspaceDeleteSummary
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -304,7 +305,7 @@ class FilesViewModelTest {
 
         assertFalse(events.any { it is FilesEvent.ShareStaged })
         assertEquals(R.string.files_message_share_failed, resolvedRes.captured)
-        verify { relay.post(SNACKBAR_TEXT) }
+        verify { relay.post(UiText.Dynamic(SNACKBAR_TEXT)) }
         job.cancel()
     }
 
@@ -324,7 +325,7 @@ class FilesViewModelTest {
         advanceUntilIdle()
 
         assertTrue(events.any { it is FilesEvent.ShareStaged && it.stagedPaths == listOf("/cache/shared/k-2/b.bin") })
-        verify { relay.post(SNACKBAR_TEXT) }
+        verify { relay.post(UiText.Dynamic(SNACKBAR_TEXT)) }
         job.cancel()
     }
 
@@ -363,7 +364,7 @@ class FilesViewModelTest {
         // dropped in an empty `when` branch, so it stayed green while the user
         // saw nothing at all.
         assertEquals(R.string.files_message_preview_failed, resolvedRes.captured)
-        verify { relay.post(SNACKBAR_TEXT) }
+        verify { relay.post(UiText.Dynamic(SNACKBAR_TEXT)) }
     }
 
     @Test
@@ -378,7 +379,7 @@ class FilesViewModelTest {
 
         assertNull(vm.uiState.value.pendingDelete)
         assertEquals(R.string.files_message_delete_partial, resolvedRes.captured)
-        verify { relay.post(SNACKBAR_TEXT) }
+        verify { relay.post(UiText.Dynamic(SNACKBAR_TEXT)) }
     }
 
     private fun streamOf(content: String = "data"): InputStream = ByteArrayInputStream(content.toByteArray())

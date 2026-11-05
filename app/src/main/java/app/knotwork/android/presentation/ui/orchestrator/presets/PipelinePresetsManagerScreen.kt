@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.R
@@ -70,6 +71,9 @@ fun PipelinePresetsManagerScreen(viewModel: PipelinePresetsViewModel = hiltViewM
         }
     }
 
+    // Resolved in composition: the launcher's callback runs outside it.
+    val exportedText = stringResource(R.string.orchestrator_preset_exported)
+    val exportFailedText = stringResource(R.string.orchestrator_preset_export_failed)
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(mimeType = EXPORT_MIME_TYPE),
     ) { uri ->
@@ -81,12 +85,12 @@ fun PipelinePresetsManagerScreen(viewModel: PipelinePresetsViewModel = hiltViewM
                 context.contentResolver.openOutputStream(uri)?.use { out ->
                     out.write(viewModel.exportPresetToJson(preset).toByteArray())
                 }
-                EXPORT_SUCCESS_FALLBACK
+                exportedText
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "Preset export failed for %s", preset.id)
-                e.message ?: EXPORT_FAILED_FALLBACK
+                e.message ?: exportFailedText
             }
             viewModel.announce(message)
         }
@@ -264,7 +268,7 @@ internal fun PipelinePreset.toRow(context: Context): PresetRowUi = PresetRowUi(
     id = id,
     name = name,
     description = description,
-    flowPreview = GraphFlowPreview.render(graph),
+    flowPreview = GraphFlowPreview.render(graph) ?: context.getString(R.string.pipeline_flow_empty),
     categoryLabel = context.getString(category.labelRes()),
     categoryTone = category.toTone(),
     canRename = !isBundled,
@@ -354,5 +358,3 @@ private fun defaultFileName(preset: PipelinePreset): String {
 }
 
 private const val EXPORT_MIME_TYPE = "application/json"
-private const val EXPORT_FAILED_FALLBACK = "Export failed"
-private const val EXPORT_SUCCESS_FALLBACK = "Preset exported"
