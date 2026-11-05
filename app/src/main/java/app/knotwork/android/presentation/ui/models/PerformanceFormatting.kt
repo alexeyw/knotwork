@@ -127,15 +127,21 @@ internal fun rememberPerformanceUnits(): PerformanceUnits = PerformanceUnits(
     tokensPerSecond = stringResource(R.string.models_performance_unit_tokens_per_second),
     sizes = rememberByteUnits(),
     locale = LocalConfiguration.current.locales[0],
-    sampleCaption = sampleCaption(LocalResources.current),
+    sampleCaption = SampleCaption(LocalResources.current),
 )
 
 /**
  * Words the rolling-window caption ("avg · last 8 runs") with the language's
- * plural rules.
+ * plural rules. A data class, not a lambda, so [PerformanceUnits] built again on
+ * a recomposition compares equal and the screen's memoised projection holds.
  *
- * @param resources Resources in the interface language.
- * @return The caption for a run count.
+ * @property resources Resources in the interface language.
  */
-internal fun sampleCaption(resources: Resources): (Int) -> String =
-    { count -> resources.getQuantityString(R.plurals.models_performance_sample_caption, count, count) }
+internal data class SampleCaption(private val resources: Resources) : (Int) -> String {
+    /**
+     * @param count Runs in the averaged window.
+     * @return The caption.
+     */
+    override fun invoke(count: Int): String =
+        resources.getQuantityString(R.plurals.models_performance_sample_caption, count, count)
+}

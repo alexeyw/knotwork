@@ -130,7 +130,8 @@ class TaskMonitorViewModel @Inject constructor(
                 },
                 progress = if (info.state == WorkInfo.State.RUNNING) -1f else 1f,
                 type = TaskType.BACKGROUND_WORK,
-                // The stage a background worker reports is a node's name as the user wrote it.
+                // A background worker reports the current node's id or the run's status code
+                // (AgentWorker.KEY_CURRENT_STAGE) — identifiers, shown as they are.
                 pipelineStage = stage?.let(UiText::Dynamic),
                 scheduled = scheduled,
                 boundSessionName = scheduled?.sessionId?.let(sessionNamesById::get),

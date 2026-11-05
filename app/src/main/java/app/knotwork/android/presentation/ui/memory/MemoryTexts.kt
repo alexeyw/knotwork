@@ -86,7 +86,7 @@ fun rememberMemoryTexts(): MemoryTexts {
         sectionThisWeek = stringResource(R.string.memory_section_this_week),
         sectionEarlier = stringResource(R.string.memory_section_earlier),
         learnedFromChat = stringResource(R.string.memory_detail_learned_from_chat),
-        usedInRuns = runCounter(LocalResources.current),
+        usedInRuns = RunCounter(LocalResources.current),
         lastUsedAgo = stringResource(R.string.memory_detail_last_used_ago),
         lastUsedJustNow = stringResource(R.string.memory_detail_last_used_just_now),
         sourceAuto = stringResource(R.string.memory_source_auto),
@@ -105,8 +105,17 @@ fun rememberMemoryTexts(): MemoryTexts {
  * Words a run count with the language's plural rules — one count per entry, so
  * it cannot be resolved once in composition.
  *
- * @param resources Resources in the interface language.
- * @return The count's line, for any count.
+ * A data class, not a lambda: two counters over the same resources are equal,
+ * so [MemoryTexts] built again on a recomposition compares equal and the screen's
+ * memoised projection is not rebuilt on every keystroke. A fresh lambda would
+ * break that equality each time.
+ *
+ * @property resources Resources in the interface language.
  */
-internal fun runCounter(resources: Resources): (Int) -> String =
-    { count -> resources.getQuantityString(R.plurals.memory_used_in_runs, count, count) }
+internal data class RunCounter(private val resources: Resources) : (Int) -> String {
+    /**
+     * @param count Runs that received the entry.
+     * @return The count's line.
+     */
+    override fun invoke(count: Int): String = resources.getQuantityString(R.plurals.memory_used_in_runs, count, count)
+}

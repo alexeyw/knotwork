@@ -44,7 +44,7 @@ enum class TaskFilterType(@androidx.annotation.StringRes val displayNameRes: Int
  * @property progress The progress from 0 to 1, or null if indeterminate/not applicable.
  * @property type The type of task (session vs background work).
  * @property pipelineStage The current stage of the pipeline if applicable — a node's
- *   name as the user wrote it, or a stage the app names.
+ *   name or id as the run reports it, or a stage the app names.
  */
 data class TaskItem(
     val id: String,
