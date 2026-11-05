@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelinePreset
@@ -82,7 +84,9 @@ class LoadPipelineFromPresetUseCase @Inject constructor(
      */
     suspend fun materialize(presetId: String): Result<PipelineGraph> = try {
         val preset = pipelinePresetRepository.getPresetById(presetId)
-            ?: return Result.failure(IllegalStateException("Preset not found: $presetId"))
+            ?: return Result.failure(
+                InvalidInputException(InputProblem.NotFound(InputProblem.Subject.PRESET, presetId)),
+            )
         buildGraph(preset, pipelineId = UUID.randomUUID().toString())
     } catch (e: CancellationException) {
         throw e

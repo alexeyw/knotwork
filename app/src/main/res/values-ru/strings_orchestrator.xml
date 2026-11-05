@@ -13,4 +13,5 @@
         <item quantity="many">%1$d узлов</item>
         <item quantity="other">%1$d узла</item>
     </plurals>
+    <string name="orchestrator_library_export_bundle_failed">Не удалось экспортировать пакет: %1$s</string>
 </resources>

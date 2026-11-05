@@ -602,6 +602,7 @@ Only Kotlin files appear inside the generated blocks.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
     - `DefaultNamesImplTest.kt` - The names the app gives what it creates: written in the interface language, and a new chat's name recognised whatever language it was stored in — the auto-rename must not stop when the language changed between creating a chat and sending its first message.
     - `HitlRequestMappingTest.kt` - `toHitlRequestContext` — the one translation the approval card and the approval notification both read: every source keeps its meaning, a trigger keeps its name (or its lack of one), and the text and flags pass unchanged.
+    - `ImportProblemTextTest.kt` - The sentences a refused import, export or input becomes.
     - `JsonLayoutLosslessTest.kt` - Guard: laying JSON out never changes what it says, and text that is not JSON is shown as it came.
     - `JsonLayoutTest.kt` - Cases of the shared JSON layout one by one; `JsonLayoutLosslessTest` holds the rule over generated documents.
   - `notifications/` - Tests for the notification channels and notifiers.
@@ -765,6 +766,7 @@ Only Kotlin files appear inside the generated blocks.
       - `ToolsUiStateTest.kt` - The Tools screen's "not offered to the agent" line must tell the story the agent lives in: these cases mirror the ones `ToolRepositoryImplTest` pins for the agent's catalogue.
       - `ToolsViewModelTest.kt` - Tests for ToolsViewModel.
     - `triggers/` - Tests for the triggers surface.
+      - `JournalRunErrorTest.kt` - A trigger journal row stores the reason a run failed as text.
       - `TriggerConditionFormatterTest.kt` - Unit tests for `TriggerConditionFormatter` — the pure mapping from a domain `TriggerCondition` to a `TriggerConditionLabel`.
       - `TriggerSilenceLabelTest.kt` - Unit tests for `TriggerSilenceLabel`: a moment from today is a bare time, one from an earlier day carries its date.
       - `TriggersViewModelTest.kt` - Unit tests for `TriggersViewModel`.

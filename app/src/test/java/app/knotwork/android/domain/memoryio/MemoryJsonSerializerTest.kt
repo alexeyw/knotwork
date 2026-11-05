@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.memoryio
 
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryImportOutcome
 import app.knotwork.android.domain.models.MemorySource
@@ -188,8 +189,7 @@ class MemoryJsonSerializerTest {
 
         assertEquals(
             MemoryImportOutcome.Failure(
-                "File contains $tooMany memory chunks, more than the " +
-                    "${SettingsDefaults.MAX_MEMORY_CHUNKS_MAX} the memory can hold",
+                ImportProblem.TooManyMemories(count = tooMany, limit = SettingsDefaults.MAX_MEMORY_CHUNKS_MAX),
             ),
             outcome,
         )

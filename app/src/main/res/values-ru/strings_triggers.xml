@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="triggers_journal_run_failed">Прогон не удался</string>
+</resources>

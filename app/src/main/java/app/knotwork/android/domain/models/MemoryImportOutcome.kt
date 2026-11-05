@@ -36,7 +36,8 @@ sealed class MemoryImportOutcome {
 
     /**
      * Parsing failed irrecoverably (malformed JSON, missing required fields).
-     * [message] is a human-readable description suitable for the UI.
+     *
+     * @property problem Why, for the screen to word in the interface language.
      */
-    data class Failure(val message: String) : MemoryImportOutcome()
+    data class Failure(val problem: ImportProblem) : MemoryImportOutcome()
 }

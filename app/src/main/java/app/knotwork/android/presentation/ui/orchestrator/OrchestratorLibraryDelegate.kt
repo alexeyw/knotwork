@@ -223,7 +223,7 @@ class OrchestratorLibraryDelegate(
             uiState.update { it.copy(isLoading = true) }
             val result = useCases.renamePipeline(pipelineId, newName)
             uiState.update { state ->
-                val error = result.exceptionOrNull()?.message?.let { UiText.Dynamic(it) }
+                val error = result.exceptionOrNull()?.let(OrchestratorErrorText::forThrowable)
                 val patchedCurrent = if (
                     result.isSuccess && state.currentPipeline.id == pipelineId
                 ) {
@@ -262,7 +262,7 @@ class OrchestratorLibraryDelegate(
             val result = useCases.duplicatePipeline(pipelineId)
             uiState.update { state ->
                 val duplicate = result.getOrNull()
-                val error = result.exceptionOrNull()?.message?.let { UiText.Dynamic(it) }
+                val error = result.exceptionOrNull()?.let(OrchestratorErrorText::forThrowable)
                 state.copy(
                     isLoading = false,
                     currentPipeline = duplicate ?: state.currentPipeline,
@@ -380,7 +380,7 @@ class OrchestratorLibraryDelegate(
                     isLoading = false,
                     currentPipeline = created ?: state.currentPipeline,
                     persistedPipeline = created ?: state.persistedPipeline,
-                    errorMessage = result.exceptionOrNull()?.message?.let { UiText.Dynamic(it) },
+                    errorMessage = result.exceptionOrNull()?.let(OrchestratorErrorText::forThrowable),
                     feedbackMessage = if (created != null) {
                         UiText(R.string.orchestrator_feedback_pipeline_created)
                     } else {

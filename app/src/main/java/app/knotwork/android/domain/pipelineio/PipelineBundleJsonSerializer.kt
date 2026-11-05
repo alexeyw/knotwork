@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.pipelineio
 
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
 import app.knotwork.android.domain.models.PipelineGraph
@@ -137,26 +138,28 @@ object PipelineBundleJsonSerializer {
     // extracting them would scatter the contract without removing a return.
     @Suppress("ReturnCount")
     fun parse(jsonText: String): PipelineBundleImportOutcome {
-        if (JsonNesting.exceeds(jsonText)) return PipelineBundleImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
+        if (JsonNesting.exceeds(jsonText)) {
+            return PipelineBundleImportOutcome.Failure(ImportProblem.TooDeep(JsonNesting.MAX_DEPTH))
+        }
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
             // Clamped: on Android the message quotes the entire input.
-            return PipelineBundleImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
+            return PipelineBundleImportOutcome.Failure(ImportProblem.NotJson(e.message.orEmpty().toDisplaySafe()))
         }
 
         if (!root.has("bundleVersion")) {
-            return PipelineBundleImportOutcome.Failure("Missing required field: bundleVersion")
+            return PipelineBundleImportOutcome.Failure(ImportProblem.MissingField("bundleVersion"))
         }
 
         val pipelinesJson = root.optJSONArray("pipelines")
-            ?: return PipelineBundleImportOutcome.Failure("Missing required field: pipelines")
+            ?: return PipelineBundleImportOutcome.Failure(ImportProblem.MissingField("pipelines"))
         if (pipelinesJson.length() == 0) {
-            return PipelineBundleImportOutcome.Failure("Bundle contains no pipelines")
+            return PipelineBundleImportOutcome.Failure(ImportProblem.EmptyBundle)
         }
         if (pipelinesJson.length() > MAX_BUNDLE_PIPELINES) {
             return PipelineBundleImportOutcome.Failure(
-                "Bundle contains ${pipelinesJson.length()} pipelines, exceeding the limit of $MAX_BUNDLE_PIPELINES",
+                ImportProblem.BundleTooLarge(count = pipelinesJson.length(), limit = MAX_BUNDLE_PIPELINES),
             )
         }
 
@@ -164,10 +167,10 @@ object PipelineBundleJsonSerializer {
         val mismatches = mutableListOf<PipelineBundleImportOutcome.SchemaMismatch>()
         for (i in 0 until pipelinesJson.length()) {
             val element = pipelinesJson.optJSONObject(i)
-                ?: return PipelineBundleImportOutcome.Failure("Bundle pipeline #$i is not a JSON object")
+                ?: return PipelineBundleImportOutcome.Failure(ImportProblem.BundleEntryNotObject(i))
             when (val outcome = PipelineJsonSerializer.parse(element.toString())) {
                 is PipelineImportOutcome.Failure ->
-                    return PipelineBundleImportOutcome.Failure("Bundle pipeline #$i is invalid: ${outcome.message}")
+                    return PipelineBundleImportOutcome.Failure(ImportProblem.BundleEntryInvalid(i, outcome.problem))
 
                 is PipelineImportOutcome.Success -> graphs.add(outcome.graph)
 
@@ -188,15 +191,13 @@ object PipelineBundleJsonSerializer {
             .filterValues { it > 1 }.keys
         if (duplicateIds.isNotEmpty()) {
             return PipelineBundleImportOutcome.Failure(
-                "Bundle contains duplicate pipeline ids: ${quoteSome(duplicateIds.sorted())}",
+                ImportProblem.DuplicatePipelineIds(quoteSome(duplicateIds.sorted())),
             )
         }
 
         val danglingReferences = danglingTargets(graphs)
         if (danglingReferences.isNotEmpty()) {
-            return PipelineBundleImportOutcome.Failure(
-                "Bundle references pipelines not contained in it: ${quoteSome(danglingReferences)}",
-            )
+            return PipelineBundleImportOutcome.Failure(ImportProblem.MissingPipelines(quoteSome(danglingReferences)))
         }
 
         return if (mismatches.isEmpty()) {

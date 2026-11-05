@@ -8,6 +8,7 @@ import app.knotwork.android.data.mappers.toDomain
 import app.knotwork.android.data.mappers.toEntity
 import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ChatImportException
+import app.knotwork.android.domain.models.ChatImportReason
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.Role
@@ -178,8 +179,8 @@ class ChatRepositoryImpl @Inject constructor(
      * device's own notices and tool observations, which this app would never write for
      * a conversation it did not run.
      *
-     * @throws ChatImportException with an app-written reason; the file's text is never
-     *   part of it.
+     * @throws ChatImportException with a typed reason the screen words; the file's text
+     *   is never part of it.
      */
     private fun parseChatFile(json: String, now: Long): Pair<String, List<ImportedRow>> {
         val trimmed = json.trim()
@@ -189,17 +190,17 @@ class ChatRepositoryImpl @Inject constructor(
                 trimmed.startsWith("{") -> {
                     val root = JSONObject(trimmed)
                     sessionName = root.optString("sessionName").takeIf { it.isNotBlank() } ?: sessionName
-                    root.optJSONArray("messages") ?: throw ChatImportException(NO_MESSAGES)
+                    root.optJSONArray("messages") ?: throw ChatImportException(ChatImportReason.NoMessages)
                 }
                 trimmed.startsWith("[") -> JSONArray(trimmed)
-                else -> throw ChatImportException(NOT_A_CHAT_EXPORT)
+                else -> throw ChatImportException(ChatImportReason.NotAChatFile)
             }
         } catch (e: JSONException) {
-            throw ChatImportException(NOT_VALID_JSON, e)
+            throw ChatImportException(ChatImportReason.NotJson, e)
         }
         val rows = (0 until messagesArray.length()).mapNotNull { i ->
             val item = messagesArray.optJSONObject(i)
-                ?: throw ChatImportException("message ${i + 1} of the file is not a message")
+                ?: throw ChatImportException(ChatImportReason.NotAMessage(position = i + 1))
             val roleStr = item.optString("role").ifBlank { Role.USER.name }
             val role = Role.entries.firstOrNull { it.name == roleStr } ?: Role.USER
             if (role !in IMPORTED_ROLES) return@mapNotNull null
@@ -257,9 +258,5 @@ class ChatRepositoryImpl @Inject constructor(
          * notices and tool observations — are left out.
          */
         val IMPORTED_ROLES: Set<Role> = setOf(Role.USER, Role.AGENT)
-
-        private const val NOT_VALID_JSON = "the file is not valid JSON"
-        private const val NOT_A_CHAT_EXPORT = "the file is not a chat export"
-        private const val NO_MESSAGES = "the file has no list of messages"
     }
 }

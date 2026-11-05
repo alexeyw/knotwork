@@ -249,4 +249,10 @@
     <string name="chat_model_placeholder">Local model</string>
     <string name="chat_pipeline_placeholder">default</string>
     <string name="chat_interrupted_unknown_step">unknown step</string>
+    <!-- Why a chat file could not be imported; each completes chat_import_failed. -->
+    <string name="chat_import_reason_not_json">the file is not valid JSON</string>
+    <string name="chat_import_reason_not_export">the file is not a chat export</string>
+    <string name="chat_import_reason_no_messages">the file has no list of messages</string>
+    <string name="chat_import_reason_not_a_message">message %1$d of the file is not a message</string>
+    <string name="chat_import_reason_unreadable">the file could not be read</string>
 </resources>

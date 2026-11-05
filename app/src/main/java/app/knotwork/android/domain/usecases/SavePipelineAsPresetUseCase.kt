@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PipelineValidationException
@@ -47,11 +49,11 @@ class SavePipelineAsPresetUseCase @Inject constructor(private val pipelinePreset
     ): Result<String> {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Preset name must not be blank"))
+            return Result.failure(InvalidInputException(InputProblem.BlankName(InputProblem.Subject.PRESET)))
         }
         if (trimmedName.length > MAX_NAME_LENGTH) {
             return Result.failure(
-                IllegalArgumentException("Preset name must be at most $MAX_NAME_LENGTH characters"),
+                InvalidInputException(InputProblem.NameTooLong(InputProblem.Subject.PRESET, MAX_NAME_LENGTH)),
             )
         }
 

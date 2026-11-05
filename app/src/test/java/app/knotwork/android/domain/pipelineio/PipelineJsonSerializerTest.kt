@@ -351,7 +351,7 @@ class PipelineJsonSerializerTest {
         val outcome = PipelineJsonSerializer.parse(json)
 
         assertTrue(outcome is PipelineImportOutcome.Failure)
-        val msg = (outcome as PipelineImportOutcome.Failure).message
+        val msg = (outcome as PipelineImportOutcome.Failure).problem.toString()
         assertTrue("Message should mention schemaVersion: $msg", msg.contains("schemaVersion"))
     }
 
@@ -377,7 +377,7 @@ class PipelineJsonSerializerTest {
         assertTrue(outcome is PipelineImportOutcome.Failure)
         assertTrue(
             "Failure should mention BOGUS",
-            (outcome as PipelineImportOutcome.Failure).message.contains("BOGUS"),
+            (outcome as PipelineImportOutcome.Failure).problem.toString().contains("BOGUS"),
         )
     }
 
@@ -395,7 +395,7 @@ class PipelineJsonSerializerTest {
         val outcome = PipelineJsonSerializer.parse(json)
 
         assertTrue(outcome is PipelineImportOutcome.Failure)
-        assertTrue((outcome as PipelineImportOutcome.Failure).message.contains("ghost"))
+        assertTrue((outcome as PipelineImportOutcome.Failure).problem.toString().contains("ghost"))
     }
 
     /** A one-node document: a CLOUD node with the given `contextConfig` block and provider id. */
@@ -434,7 +434,7 @@ class PipelineJsonSerializerTest {
         )
 
         assertTrue("Expected Failure but was $outcome", outcome is PipelineImportOutcome.Failure)
-        assertTrue((outcome as PipelineImportOutcome.Failure).message.contains("longTermMemory"))
+        assertTrue((outcome as PipelineImportOutcome.Failure).problem.toString().contains("longTermMemory"))
     }
 
     @Test
@@ -477,7 +477,7 @@ class PipelineJsonSerializerTest {
                 refused.forEach { value ->
                     val outcome = PipelineJsonSerializer.parse(document(value))
                     assertTrue("$type.$flag = $value must be refused", outcome is PipelineImportOutcome.Failure)
-                    assertTrue((outcome as PipelineImportOutcome.Failure).message.contains(flag))
+                    assertTrue((outcome as PipelineImportOutcome.Failure).problem.toString().contains(flag))
                 }
             }
         }
@@ -488,7 +488,7 @@ class PipelineJsonSerializerTest {
         val outcome = PipelineJsonSerializer.parse(cloudNodeDocument("{}", cloudProvider = "mistral"))
 
         assertTrue("Expected Failure but was $outcome", outcome is PipelineImportOutcome.Failure)
-        assertTrue((outcome as PipelineImportOutcome.Failure).message.contains("mistral"))
+        assertTrue((outcome as PipelineImportOutcome.Failure).problem.toString().contains("mistral"))
     }
 
     @Test

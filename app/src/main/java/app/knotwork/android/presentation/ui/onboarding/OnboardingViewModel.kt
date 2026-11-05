@@ -8,6 +8,7 @@ import app.knotwork.android.domain.constants.OnboardingModelCatalog
 import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.CustomModelLink
 import app.knotwork.android.domain.models.DownloadState
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.OnboardingMilestone
 import app.knotwork.android.domain.repositories.AppStateSettings
 import app.knotwork.android.domain.repositories.InterruptedDownload
@@ -16,6 +17,7 @@ import app.knotwork.android.domain.repositories.ModelDownloadManager
 import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.usecases.PrepareInferenceBackendUseCase
 import app.knotwork.android.domain.usecases.SetUpScenarioUseCase
+import app.knotwork.android.presentation.common.inputProblemText
 import app.knotwork.android.presentation.state.TransientMessageRelay
 import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.screens.onboarding.OnboardingDefaultPipelinePreview
@@ -251,7 +253,8 @@ class OnboardingViewModel @Inject constructor(
                         }
                     }
                     .onFailure { error ->
-                        _downloadError.value = error.message?.let(UiText::Dynamic)
+                        _downloadError.value = (error as? InvalidInputException)?.let { inputProblemText(it.problem) }
+                            ?: error.message?.let(UiText::Dynamic)
                             ?: UiText(R.string.onboarding_error_setup)
                     }
             } finally {

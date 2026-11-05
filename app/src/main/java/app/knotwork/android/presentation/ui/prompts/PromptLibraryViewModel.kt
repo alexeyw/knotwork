@@ -18,6 +18,7 @@ import app.knotwork.android.domain.usecases.promptpack.PromptPackCollisionChoice
 import app.knotwork.android.domain.usecases.promptpack.PromptPackImportResult
 import app.knotwork.android.domain.usecases.promptpack.ResolvePromptPackCollisionUseCase
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.orchestrator.OrchestratorErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -323,7 +324,7 @@ class PromptLibraryViewModel @Inject constructor(
     /** Routes an unexpected throwable to the screen's error channel. */
     private fun surfaceError(error: Throwable) {
         _uiState.update {
-            it.copy(errorMessage = error.message?.let(UiText::Dynamic) ?: UiText(R.string.errors_generic_unexpected))
+            it.copy(errorMessage = OrchestratorErrorText.forThrowable(error))
         }
     }
 
@@ -451,7 +452,7 @@ class PromptLibraryViewModel @Inject constructor(
             if (result.isFailure) {
                 _uiState.update {
                     it.copy(
-                        errorMessage = result.exceptionOrNull()?.message?.let(UiText::Dynamic)
+                        errorMessage = result.exceptionOrNull()?.let(OrchestratorErrorText::forThrowable)
                             ?: UiText(R.string.errors_generic_unexpected),
                     )
                 }

@@ -5,14 +5,13 @@ import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineImportOutcome
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
-import app.knotwork.android.domain.text.ImportedText
-import app.knotwork.android.domain.text.toDisplaySafe
 import app.knotwork.android.domain.usecases.ConfirmedImport
 import app.knotwork.android.domain.usecases.ExportPipelineBundleUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineBundleUseCase
 import app.knotwork.android.domain.usecases.ImportPipelineUseCase
 import app.knotwork.android.domain.usecases.PipelineBundlePrepareResult
 import app.knotwork.android.domain.usecases.SavePipelineUseCase
+import app.knotwork.android.presentation.common.importProblemText
 import app.knotwork.android.presentation.ui.common.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -133,12 +132,9 @@ class OrchestratorTransferDelegate(
                         state.copy(
                             isLoading = false,
                             pendingImport = null,
-                            // Display-safe as a whole, behind the per-value rule in
-                            // the serializer: the message quotes a file the user did
-                            // not write.
-                            errorMessage = UiText.Dynamic(
-                                outcome.message.toDisplaySafe(ImportedText.MAX_MESSAGE_LENGTH),
-                            ),
+                            // Worded here; every value it quotes from the file is
+                            // bounded by the parser and again by the wording.
+                            errorMessage = importProblemText(outcome.problem),
                         )
                 }
             }
@@ -196,9 +192,7 @@ class OrchestratorTransferDelegate(
                     uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = UiText.Dynamic(
-                                prepared.message.toDisplaySafe(ImportedText.MAX_MESSAGE_LENGTH),
-                            ),
+                            errorMessage = importProblemText(prepared.problem),
                         )
                     }
 
@@ -304,7 +298,7 @@ class OrchestratorTransferDelegate(
                             isLoading = false,
                             errorMessage = UiText.of(
                                 R.string.orchestrator_library_export_bundle_failed,
-                                e.message ?: "",
+                                OrchestratorErrorText.forThrowable(e),
                             ),
                         )
                     },

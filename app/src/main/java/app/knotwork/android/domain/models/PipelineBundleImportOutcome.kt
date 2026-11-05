@@ -48,12 +48,11 @@ sealed class PipelineBundleImportOutcome {
      * Parsing failed irrecoverably: malformed JSON, a missing envelope field,
      * an empty `pipelines` array, a structurally invalid element, duplicate
      * ids, or a dangling `targetPipelineId` reference that no element in the
-     * bundle satisfies. [message] is a human-readable description suitable for
-     * the UI.
+     * bundle satisfies.
      *
-     * @property message Human-readable failure description.
+     * @property problem Why, for the screen to word in the interface language.
      */
-    data class Failure(val message: String) : PipelineBundleImportOutcome()
+    data class Failure(val problem: ImportProblem) : PipelineBundleImportOutcome()
 
     /**
      * A single element's schema-version divergence, carried inside

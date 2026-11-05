@@ -62,8 +62,9 @@ sealed class PipelineImportOutcome {
 
     /**
      * Parsing failed irrecoverably (malformed JSON, missing required
-     * fields, unknown `NodeType`, etc.). [message] contains a
-     * human-readable description suitable for the UI.
+     * fields, unknown `NodeType`, etc.).
+     *
+     * @property problem Why, for the screen to word in the interface language.
      */
-    data class Failure(val message: String) : PipelineImportOutcome()
+    data class Failure(val problem: ImportProblem) : PipelineImportOutcome()
 }

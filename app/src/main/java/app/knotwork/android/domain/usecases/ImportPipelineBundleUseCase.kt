@@ -1,10 +1,10 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.ImportCollisionResolution
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
 import app.knotwork.android.domain.models.PipelineCollision
 import app.knotwork.android.domain.models.PipelineGraph
-import app.knotwork.android.domain.models.PipelineValidationException
 import app.knotwork.android.domain.pipelineio.ImportedPipelineClaims
 import app.knotwork.android.domain.pipelineio.PipelineBundleIdRemapper
 import app.knotwork.android.domain.pipelineio.PipelineBundleJsonSerializer
@@ -53,7 +53,7 @@ class ImportPipelineBundleUseCase @Inject constructor(
     suspend fun prepare(jsonText: String): PipelineBundlePrepareResult {
         val (parsed, mismatches) = when (val outcome = PipelineBundleJsonSerializer.parse(jsonText)) {
             is PipelineBundleImportOutcome.Failure ->
-                return PipelineBundlePrepareResult.Failure(outcome.message)
+                return PipelineBundlePrepareResult.Failure(outcome.problem)
 
             is PipelineBundleImportOutcome.Success -> outcome.pipelines to emptyList()
 
@@ -73,10 +73,7 @@ class ImportPipelineBundleUseCase @Inject constructor(
             val errors = graph.validate() + compositionValidator.validate(graph, extraResolvable = bundleById)
             errors.takeIf { it.isNotEmpty() }?.let { graph to it }
         }?.let { (graph, errors) ->
-            return PipelineBundlePrepareResult.Failure(
-                "Pipeline \"${graph.name}\" is invalid: " +
-                    PipelineValidationException(errors).message,
-            )
+            return PipelineBundlePrepareResult.Failure(ImportProblem.PipelineFailsChecks(graph, errors))
         }
 
         // Lightweight existence check: id → name projection, one query, no graph
@@ -171,7 +168,7 @@ sealed class PipelineBundlePrepareResult {
      * The bundle could not be parsed, or a contained graph was structurally
      * invalid. Nothing was written.
      *
-     * @property message Human-readable failure description for the UI.
+     * @property problem Why, for the screen to word in the interface language.
      */
-    data class Failure(val message: String) : PipelineBundlePrepareResult()
+    data class Failure(val problem: ImportProblem) : PipelineBundlePrepareResult()
 }

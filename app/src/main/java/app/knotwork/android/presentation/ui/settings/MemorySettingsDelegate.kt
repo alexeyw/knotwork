@@ -11,16 +11,16 @@ import app.knotwork.android.domain.repositories.MemoryRepository
 import app.knotwork.android.domain.repositories.MemorySettings
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
-import app.knotwork.android.domain.text.ImportedText
-import app.knotwork.android.domain.text.toDisplaySafe
 import app.knotwork.android.domain.usecases.ClearAllMemoryUseCase
 import app.knotwork.android.domain.usecases.ExportMemoryBaseUseCase
 import app.knotwork.android.domain.usecases.MemoryImportResult
 import app.knotwork.android.domain.usecases.MemoryImportUseCase
 import app.knotwork.android.domain.usecases.ReembedAllMemoriesUseCase
 import app.knotwork.android.presentation.common.BoundedText
+import app.knotwork.android.presentation.common.importProblemText
 import app.knotwork.android.presentation.common.memoryImportLimitBytes
 import app.knotwork.android.presentation.common.readTextWithin
+import app.knotwork.android.presentation.ui.common.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -375,8 +375,9 @@ class MemorySettingsDelegate(
                     emitSnackbar(
                         appContext.getString(
                             R.string.settings_memory_import_failed,
-                            // The message quotes the file; one bounded line whatever it holds.
-                            outcome.message.toDisplaySafe(ImportedText.MAX_MESSAGE_LENGTH),
+                            // Every value it quotes from the file is bounded by the parser and
+                            // again by the wording.
+                            appContext.resolve(importProblemText(outcome.problem)),
                         ),
                     )
                 is MemoryImportOutcome.Success -> stagePendingImport(outcome.document, schemaMismatch = false)

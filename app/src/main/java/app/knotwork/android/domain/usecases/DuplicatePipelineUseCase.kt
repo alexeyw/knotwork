@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.services.DefaultNames
@@ -45,7 +47,7 @@ class DuplicatePipelineUseCase @Inject constructor(
         // instead of escaping the use-case boundary as an uncaught exception.
         return try {
             val source = pipelineRepository.getPipelineById(pipelineId)
-                ?: return Result.failure(IllegalStateException("Pipeline not found"))
+                ?: return Result.failure(InvalidInputException(InputProblem.NotFound(InputProblem.Subject.PIPELINE)))
 
             val nodeIdMapping: Map<String, String> =
                 source.nodes.associate { it.id to UUID.randomUUID().toString() }

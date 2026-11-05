@@ -40,6 +40,9 @@ details.
   *Test* — what happened and what to do — and a tool's detail page says the
   same. The task monitor names a running step by its node type's name
   (*Intent Router*) instead of its code (`INTENT_ROUTER`).
+- **A pipeline bundle refused for a pipeline that would not run names what
+  is wrong with it** — the same findings the editor shows — instead of only
+  counting them.
 - **Names the app gives are written in the app's language** — a new chat, a
   new pipeline and its first nodes, a copy — and stay as written if the
   language changes later. A new chat still takes its first message as its name,
