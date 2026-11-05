@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.ChatImportException
+import app.knotwork.android.domain.models.ChatImportReason
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.ClarificationRequest
@@ -2643,7 +2644,7 @@ class ChatHomeViewModelTest {
 
     @Test
     fun `importChatFromJson shows the import's own reason for a file it refused`() = runTest(testDispatcher) {
-        coEvery { chatRepository.importChat(any()) } throws ChatImportException("the file is not valid JSON")
+        coEvery { chatRepository.importChat(any()) } throws ChatImportException(ChatImportReason.NotJson)
         viewModel = createViewModel()
         advanceUntilIdle()
         val received = async { viewModel.transfer.importErrorEvents.first() }
@@ -2652,7 +2653,7 @@ class ChatHomeViewModelTest {
         viewModel.transfer.importChatFromJson("not json")
         advanceUntilIdle()
 
-        assertEquals("the file is not valid JSON", received.await())
+        assertEquals(UiText(R.string.chat_import_reason_not_json), received.await())
     }
 
     @Test
@@ -2674,7 +2675,7 @@ class ChatHomeViewModelTest {
         viewModel.transfer.importChatFromJson("not json")
         advanceUntilIdle()
 
-        assertEquals(ChatHomeTransferDelegate.IMPORT_GENERIC_FAILURE_MESSAGE, received.await())
+        assertEquals(UiText(R.string.chat_import_reason_unreadable), received.await())
     }
 
     @Test

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Why an import, an export or an input was refused; values quoted from a file are bounded by the code. -->
+    <string name="import_problem_too_deep">Неверный JSON: вложенность глубже %1$d уровней</string>
+    <string name="import_problem_not_json">Неверный JSON: %1$s</string>
+    <string name="import_problem_malformed">Документ пайплайна повреждён: %1$s</string>
+    <string name="import_problem_missing_field">Нет обязательного поля: %1$s</string>
+    <string name="import_problem_invalid_pipeline_id">Неверный id пайплайна: он должен быть одной строкой не длиннее %1$d символов</string>
+    <string name="import_problem_duplicate_node_id">Повторяющийся id узла «%1$s»</string>
+    <string name="import_problem_duplicate_connection_id">Повторяющийся id связи «%1$s»</string>
+    <string name="import_problem_node_without_id">У узла №%1$d нет id</string>
+    <string name="import_problem_node_without_type">У узла «%1$s» нет типа</string>
+    <string name="import_problem_unknown_node_type">У узла «%1$s» неизвестный тип «%2$s»</string>
+    <string name="import_problem_connection_without_id">У связи №%1$d нет id</string>
+    <string name="import_problem_connection_without_end">У связи «%1$s» нет %2$s</string>
+    <string name="import_problem_connection_unknown_node">Связь «%1$s» ведёт к неизвестному узлу «%2$s»</string>
+    <string name="import_problem_label_not_a_branch">Связь «%1$s» от узла %2$s «%3$s» помечена «%4$s»; его ветви: %5$s</string>
+    <string name="import_problem_context_flag">Узел «%1$s»: contextConfig.%2$s должен быть true или false</string>
+    <string name="import_problem_unknown_provider">Узел «%1$s» указывает неизвестного облачного провайдера «%2$s»</string>
+    <string name="import_problem_empty_bundle">В пакете нет пайплайнов</string>
+    <string name="import_problem_bundle_too_large">Пайплайнов в пакете: %1$d — больше предела в %2$d</string>
+    <string name="import_problem_bundle_entry_not_object">Пайплайн №%1$d в пакете — не JSON-объект</string>
+    <string name="import_problem_bundle_entry_invalid">Пайплайн №%1$d в пакете неверен: %2$s</string>
+    <string name="import_problem_duplicate_pipeline_ids">В пакете повторяются id пайплайнов: %1$s</string>
+    <string name="import_problem_missing_pipelines">Пакет вызывает пайплайны, которых в нём нет: %1$s</string>
+    <string name="import_problem_pipeline_fails_checks">Пайплайн «%1$s» не проходит проверку: %2$s</string>
+    <string name="import_problem_too_many_memories">Фрагментов памяти в файле: %1$d — больше, чем вмещает память (%2$d)</string>
+    <string name="import_problem_memory_entry_not_object">Повреждённый фрагмент с индексом %1$d</string>
+    <string name="import_problem_memory_entry_invalid">У фрагмента с индексом %1$d нет обязательного поля или оно повреждено: текст должен быть непустым, эмбеддинг — непустым массивом конечных чисел, а timestamp — положительным значением epoch-millis</string>
+    <string name="import_problem_memory_history_invalid">У фрагмента с индексом %1$d повреждена прежняя версия: её текст должен быть непустым, а capturedAt и replacedAt — положительными значениями epoch-millis</string>
+    <string name="input_problem_blank_pipeline_name">Имя пайплайна не может быть пустым</string>
+    <string name="input_problem_blank_preset_name">Имя пресета не может быть пустым</string>
+    <string name="input_problem_long_pipeline_name">Имя пайплайна — не длиннее %1$d символов</string>
+    <string name="input_problem_long_preset_name">Имя пресета — не длиннее %1$d символов</string>
+    <string name="input_problem_blank_system_prompt">Системный промпт не может быть пустым</string>
+    <string name="input_problem_long_system_prompt">Системный промпт — не длиннее %1$d символов</string>
+    <string name="input_problem_no_prompt_for_node">Узел типа %1$s не работает с моделью, и у него не может быть пресета промпта</string>
+    <string name="input_problem_pipeline_not_found">Пайплайн не найден</string>
+    <string name="input_problem_preset_not_found">Пресет не найден: %1$s</string>
+    <string name="input_problem_prompt_preset_not_found">Нет пресета промпта с id %1$s</string>
+    <string name="input_problem_scenario_not_found">Неизвестный сценарий первого запуска: %1$s</string>
+    <string name="export_problem_root_not_found">Пайплайн «%1$s» не найден.</string>
+    <string name="export_problem_reference_not_found">Вызываемый пайплайн «%1$s» не найден, экспорт невозможен.</string>
+    <string name="export_problem_too_many_pipelines">Вместе с вызываемыми пайплайнов больше предела: %1$d.</string>
+    <string name="import_problem_quoted_value">«%1$s»</string>
+    <string name="import_problem_and_more">%1$s и ещё %2$d</string>
+</resources>

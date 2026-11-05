@@ -1,6 +1,5 @@
 package app.knotwork.android.domain.usecases
 
-import androidx.annotation.VisibleForTesting
 import app.knotwork.android.domain.models.PipelineRunStatus
 import app.knotwork.android.domain.models.RunTerminationKind
 import app.knotwork.android.domain.models.RunTerminationReason
@@ -100,8 +99,12 @@ fun triggerRunOutcomeForTerminal(
     -> throw IllegalArgumentException("triggerRunOutcomeForTerminal requires a terminal status, got $status")
 }
 
-/** Neutral failure text used when a run finished FAILED without a recorded reason. */
-private const val DEFAULT_FAILURE_MESSAGE = "Run failed"
+/**
+ * Neutral failure text used when a run finished FAILED without a recorded reason.
+ * Stored as written; the journal shows it in the interface language by recognising
+ * it (`TriggersScreen`), so it must not change — a stored row would stop matching.
+ */
+internal const val DEFAULT_FAILURE_MESSAGE = "Run failed"
 
 /**
  * What the trigger journal says about a run the stuck-detector ended.
@@ -121,11 +124,9 @@ private const val DEFAULT_FAILURE_MESSAGE = "Run failed"
  * The tidier shape — a typed `TriggerRunOutcome` variant like
  * `StoppedByCeiling`, letting the journal resolve its own copy from the kind —
  * is deliberately not taken here: it is a persisted journal vocabulary plus an
- * export schema bump, which is a wider change than this task opened. That shape
- * would also settle the one cost being accepted: a domain constant cannot be
- * translated, so when the planned `values-ru` pass lands the chat will speak
- * Russian about a stuck run while this journal row stays English.
+ * export schema bump. Instead the journal recognises this exact sentence when it
+ * shows a row (`TriggersScreen`) and shows the resource in the interface language,
+ * which also covers rows stored before — so the text must not change.
  */
-@VisibleForTesting
 internal const val NO_PROGRESS_JOURNAL_MESSAGE =
     "The same work kept repeating without moving the task forward, so the run was ended."

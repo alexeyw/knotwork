@@ -305,7 +305,7 @@ fun ChatHomeScreen(
     ChatExportEffects(delegate = viewModel.transfer.export, snackbarHostState = snackbarHostState)
     LaunchedEffect(viewModel) {
         viewModel.transfer.importErrorEvents.collect { reason ->
-            snackbarHostState.showSnackbar(message = importFailedTemplate.format(reason))
+            snackbarHostState.showSnackbar(message = importFailedTemplate.format(context.resolve(reason)))
         }
     }
     LaunchedEffect(viewModel) {

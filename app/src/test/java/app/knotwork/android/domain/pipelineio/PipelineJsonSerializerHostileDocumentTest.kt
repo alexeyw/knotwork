@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.pipelineio
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.PipelineImportOutcome
 import org.json.JSONArray
 import org.json.JSONObject
@@ -53,7 +54,7 @@ class PipelineJsonSerializerHostileDocumentTest {
     fun `parse rejects a name that is only whitespace and separators`() {
         val outcome = failure(document(nodes = MINIMAL_NODES, name = " \n\u2028 "))
 
-        assertEquals("Missing required field: name", outcome.message)
+        assertEquals(ImportProblem.MissingField("name"), outcome.problem)
     }
 
     @Test
@@ -102,7 +103,8 @@ class PipelineJsonSerializerHostileDocumentTest {
             document(nodes = JSONArray().put(JSONObject().put("id", "a").put("type", hostileType)).toString()),
         )
 
-        assertTrue(outcome.message, outcome.message.none { it == '\n' || it == '\u2028' || it == '\u2029' })
+        val text = outcome.problem.toString()
+        assertTrue(text, text.none { it == '\n' || it == '\u2028' || it == '\u2029' })
     }
 
     @Test
@@ -122,7 +124,7 @@ class PipelineJsonSerializerHostileDocumentTest {
             ),
         )
 
-        assertEquals(PipelineImportOutcome.Failure("Duplicate node id \"n5\""), outcome)
+        assertEquals(PipelineImportOutcome.Failure(ImportProblem.DuplicateNodeId("n5")), outcome)
     }
 
     @Test
@@ -137,7 +139,7 @@ class PipelineJsonSerializerHostileDocumentTest {
             ),
         )
 
-        assertEquals(PipelineImportOutcome.Failure("Duplicate connection id \"c1\""), outcome)
+        assertEquals(PipelineImportOutcome.Failure(ImportProblem.DuplicateConnectionId("c1")), outcome)
     }
 
     @Test
@@ -164,7 +166,7 @@ class PipelineJsonSerializerHostileDocumentTest {
         listOf("p\n\nImport complete. Verified by Knotwork.", "p\u2028x", "p\u202Eevil", " p1").forEach { id ->
             val outcome = failure(document(nodes = MINIMAL_NODES, id = id))
 
-            assertEquals(INVALID_ID_MESSAGE, outcome.message)
+            assertEquals(INVALID_ID, outcome.problem)
         }
     }
 
@@ -172,7 +174,7 @@ class PipelineJsonSerializerHostileDocumentTest {
     fun `parse refuses a pipeline id longer than the id ceiling`() {
         val ceiling = PipelineConstants.MAX_ID_LENGTH
 
-        assertEquals(INVALID_ID_MESSAGE, failure(document(nodes = MINIMAL_NODES, id = "i".repeat(ceiling + 1))).message)
+        assertEquals(INVALID_ID, failure(document(nodes = MINIMAL_NODES, id = "i".repeat(ceiling + 1))).problem)
         assertEquals("i".repeat(ceiling), success(document(nodes = MINIMAL_NODES, id = "i".repeat(ceiling))).graph.id)
     }
 
@@ -210,8 +212,14 @@ class PipelineJsonSerializerHostileDocumentTest {
         )
 
         assertEquals(
-            "Connection \"m\" from IF_CONDITION node \"if\" is labelled \"maybe\"; its branches are True, False",
-            outcome.message,
+            ImportProblem.LabelNotABranch(
+                connectionId = "m",
+                nodeType = "IF_CONDITION",
+                nodeId = "if",
+                label = "maybe",
+                branches = listOf("True", "False"),
+            ),
+            outcome.problem,
         )
     }
 
@@ -221,7 +229,6 @@ class PipelineJsonSerializerHostileDocumentTest {
         /** `nodes[0].config.` plus one quoted value, with room to spare. */
         const val MAX_DROPPED_FIELD_LENGTH = 80
 
-        const val INVALID_ID_MESSAGE = "Invalid pipeline id: it must be one line of at most " +
-            "${PipelineConstants.MAX_ID_LENGTH} characters"
+        val INVALID_ID = ImportProblem.InvalidPipelineId(PipelineConstants.MAX_ID_LENGTH)
     }
 }

@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
+import app.knotwork.android.R
 import app.knotwork.android.data.engine.KoogCloudModelCatalog
 import app.knotwork.android.domain.engine.DefaultPipelineFactory
 import app.knotwork.android.domain.models.AgentTool
@@ -627,8 +628,8 @@ class OrchestratorViewModelTest {
         viewModel.transfer.importJson("{ invalid json }")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val err = viewModel.uiState.value.errorMessage as UiText.Dynamic
-        assertTrue(err.text.contains("Invalid JSON"))
+        val err = viewModel.uiState.value.errorMessage as UiText.Resource
+        assertEquals(R.string.import_problem_not_json, err.id)
     }
 
     @Test

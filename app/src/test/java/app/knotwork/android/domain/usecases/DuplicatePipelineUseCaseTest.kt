@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.ConnectionModel
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
@@ -29,7 +31,10 @@ class DuplicatePipelineUseCaseTest {
         val result = useCase("missing")
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals(
+            InputProblem.NotFound(InputProblem.Subject.PIPELINE),
+            (result.exceptionOrNull() as InvalidInputException).problem,
+        )
         coVerify(exactly = 0) { pipelineRepository.savePipeline(any()) }
     }
 

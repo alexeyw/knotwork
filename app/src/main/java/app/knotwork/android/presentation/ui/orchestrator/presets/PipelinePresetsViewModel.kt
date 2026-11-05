@@ -11,6 +11,7 @@ import app.knotwork.android.domain.usecases.LoadPipelineFromPresetUseCase
 import app.knotwork.android.domain.usecases.SavePipelineAsPresetUseCase
 import app.knotwork.android.presentation.state.TransientMessageRelay
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.orchestrator.OrchestratorErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -239,6 +240,5 @@ class PipelinePresetsViewModel @Inject constructor(
         _uiState.update { it.copy(feedbackMessage = null) }
     }
 
-    private fun throwableAsUiText(e: Throwable): UiText =
-        e.message?.let { UiText.Dynamic(it) } ?: UiText(R.string.errors_generic_unexpected)
+    private fun throwableAsUiText(e: Throwable): UiText = OrchestratorErrorText.forThrowable(e)
 }

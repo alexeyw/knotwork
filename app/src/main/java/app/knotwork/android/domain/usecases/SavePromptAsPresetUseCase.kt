@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PromptPresetConstants
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.repositories.PromptPresetRepository
@@ -58,35 +60,28 @@ class SavePromptAsPresetUseCase @Inject constructor(private val promptPresetRepo
     ): Result<String> {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Preset name must not be blank"))
+            return Result.failure(InvalidInputException(InputProblem.BlankName(InputProblem.Subject.PRESET)))
         }
         if (trimmedName.length > PromptPresetConstants.MAX_NAME_LENGTH) {
             return Result.failure(
-                IllegalArgumentException(
-                    "Preset name must be at most ${PromptPresetConstants.MAX_NAME_LENGTH} characters",
+                InvalidInputException(
+                    InputProblem.NameTooLong(InputProblem.Subject.PRESET, PromptPresetConstants.MAX_NAME_LENGTH),
                 ),
             )
         }
 
         val trimmedPrompt = systemPrompt.trim()
         if (trimmedPrompt.isEmpty()) {
-            return Result.failure(IllegalArgumentException("System prompt must not be blank"))
+            return Result.failure(InvalidInputException(InputProblem.BlankSystemPrompt))
         }
         if (trimmedPrompt.length > PromptPresetConstants.MAX_SYSTEM_PROMPT_LENGTH) {
             return Result.failure(
-                IllegalArgumentException(
-                    "System prompt must be at most " +
-                        "${PromptPresetConstants.MAX_SYSTEM_PROMPT_LENGTH} characters",
-                ),
+                InvalidInputException(InputProblem.SystemPromptTooLong(PromptPresetConstants.MAX_SYSTEM_PROMPT_LENGTH)),
             )
         }
 
         if (nodeType !in PromptPresetConstants.LLM_DRIVEN_NODE_TYPES) {
-            return Result.failure(
-                IllegalArgumentException(
-                    "NodeType $nodeType is not LLM-driven and cannot have a prompt preset",
-                ),
-            )
+            return Result.failure(InvalidInputException(InputProblem.NoPromptForNodeType(nodeType.name)))
         }
 
         val preset = PromptPreset(

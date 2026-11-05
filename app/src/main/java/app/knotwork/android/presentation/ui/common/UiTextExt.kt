@@ -25,6 +25,9 @@ fun UiText.asString(): String {
  * Use this from notifications, services, broadcast receivers, or any other
  * surface that holds a `Context` but is not part of a Composition.
  *
+ * An argument that is itself a [UiText] is resolved first, so a sentence can carry
+ * another — "Bundle pipeline #2 is invalid: <why>" — each worded in the same language.
+ *
  * @param text The [UiText] to resolve.
  * @return The translated, formatted string, or `""` for [UiText.Empty].
  */
@@ -32,10 +35,14 @@ fun Context.resolve(text: UiText): String = when (text) {
     is UiText.Resource -> if (text.args.isEmpty()) {
         getString(text.id)
     } else {
-        getString(text.id, *text.args.toTypedArray())
+        getString(text.id, *resolvedArgs(text.args))
     }
     is UiText.Dynamic -> text.text
     is UiText.Joined -> text.parts.joinToString(text.separator) { resolve(it) }
-    is UiText.Plural -> resources.getQuantityString(text.id, text.quantity, *text.args.toTypedArray())
+    is UiText.Plural -> resources.getQuantityString(text.id, text.quantity, *resolvedArgs(text.args))
     UiText.Empty -> ""
 }
+
+/** The format arguments of a text, with every [UiText] among them resolved. */
+private fun Context.resolvedArgs(args: List<Any>): Array<Any> =
+    args.map { arg -> if (arg is UiText) resolve(arg) else arg }.toTypedArray()

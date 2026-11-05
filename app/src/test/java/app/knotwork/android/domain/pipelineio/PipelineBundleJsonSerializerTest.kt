@@ -70,7 +70,7 @@ class PipelineBundleJsonSerializerTest {
         val outcome = PipelineBundleJsonSerializer.parse(json)
 
         assertTrue(outcome is PipelineBundleImportOutcome.Failure)
-        assertTrue((outcome as PipelineBundleImportOutcome.Failure).message.contains("missing"))
+        assertTrue((outcome as PipelineBundleImportOutcome.Failure).problem.toString().contains("missing"))
     }
 
     @Test

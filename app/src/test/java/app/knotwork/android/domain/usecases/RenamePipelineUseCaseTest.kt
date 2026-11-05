@@ -1,5 +1,7 @@
 package app.knotwork.android.domain.usecases
 
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
 import io.mockk.coEvery
@@ -43,7 +45,10 @@ class RenamePipelineUseCaseTest {
         val result = useCase("missing", "Renamed")
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals(
+            InputProblem.NotFound(InputProblem.Subject.PIPELINE),
+            (result.exceptionOrNull() as InvalidInputException).problem,
+        )
         coVerify(exactly = 0) { pipelineRepository.savePipeline(any()) }
     }
 

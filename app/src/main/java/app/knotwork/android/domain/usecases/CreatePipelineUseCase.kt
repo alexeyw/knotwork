@@ -2,6 +2,8 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.ConnectionModel
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
@@ -43,11 +45,11 @@ class CreatePipelineUseCase @Inject constructor(
     suspend operator fun invoke(name: String): Result<PipelineGraph> {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Pipeline name cannot be empty"))
+            return Result.failure(InvalidInputException(InputProblem.BlankName(InputProblem.Subject.PIPELINE)))
         }
         if (trimmed.length > MAX_NAME_LENGTH) {
             return Result.failure(
-                IllegalArgumentException("Pipeline name must be $MAX_NAME_LENGTH characters or fewer"),
+                InvalidInputException(InputProblem.NameTooLong(InputProblem.Subject.PIPELINE, MAX_NAME_LENGTH)),
             )
         }
 

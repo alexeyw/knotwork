@@ -55,7 +55,6 @@ app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMa
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Which calendar should I add the meeting to?	# sample row of the debug-build state picker, never in a release
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Work	# sample row of the debug-build state picker, never in a release
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	{"title":"Rollout sync","duration":30,"calendar":"work"}	# sample row of the debug-build state picker, never in a release
-app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeTransferDelegate.kt	the file could not be read
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ContentReportIssueUrl.kt	\n\n_[report truncated to fit the link — copy the full report instead]_	# report to the developer: stays in English (decisions §113 R3)
 app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	$it (native heap, approx.)	# shared benchmark text: exports stay in English (decisions §113 R3)
 app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Measured on-device · 1 warm-up + 1 measured run.	# shared benchmark text: exports stay in English (decisions §113 R3)

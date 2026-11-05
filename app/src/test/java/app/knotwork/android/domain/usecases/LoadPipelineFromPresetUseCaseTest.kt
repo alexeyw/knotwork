@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.ConnectionModel
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
@@ -70,7 +72,10 @@ class LoadPipelineFromPresetUseCaseTest {
         val result = useCase("nope")
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals(
+            InputProblem.NotFound(InputProblem.Subject.PRESET, "nope"),
+            (result.exceptionOrNull() as InvalidInputException).problem,
+        )
         coVerify(exactly = 0) { pipelineRepository.savePipeline(any()) }
     }
 
@@ -207,7 +212,10 @@ class LoadPipelineFromPresetUseCaseTest {
         val result = useCase.materialize("nope")
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals(
+            InputProblem.NotFound(InputProblem.Subject.PRESET, "nope"),
+            (result.exceptionOrNull() as InvalidInputException).problem,
+        )
         coVerify(exactly = 0) { pipelineRepository.savePipeline(any()) }
     }
 

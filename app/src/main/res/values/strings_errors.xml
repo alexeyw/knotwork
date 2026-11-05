@@ -7,7 +7,7 @@
     the surface that emits them while remaining in a single localisation
     file. Generic fallbacks live under `errors_generic_*`.
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Generic fallbacks -->
     <string name="errors_generic_unexpected">An unexpected error occurred</string>
 
@@ -42,4 +42,48 @@
         envelope (failure copy now lives inside `settings_row_test_backend_failed`
         and is reused by the snackbar surface).
     -->
+    <!-- Why an import, an export or an input was refused; values quoted from a file are bounded by the code. -->
+    <string name="import_problem_too_deep" tools:ignore="PluralsCandidate">Invalid JSON: nested deeper than %1$d levels</string>
+    <string name="import_problem_not_json">Invalid JSON: %1$s</string>
+    <string name="import_problem_malformed">Malformed pipeline document: %1$s</string>
+    <string name="import_problem_missing_field">Missing required field: %1$s</string>
+    <string name="import_problem_invalid_pipeline_id" tools:ignore="PluralsCandidate">Invalid pipeline id: it must be one line of at most %1$d characters</string>
+    <string name="import_problem_duplicate_node_id">Duplicate node id \"%1$s\"</string>
+    <string name="import_problem_duplicate_connection_id">Duplicate connection id \"%1$s\"</string>
+    <string name="import_problem_node_without_id" tools:ignore="PluralsCandidate">Node #%1$d missing id</string>
+    <string name="import_problem_node_without_type">Node \"%1$s\" missing type</string>
+    <string name="import_problem_unknown_node_type">Node \"%1$s\" has unknown type \"%2$s\"</string>
+    <string name="import_problem_connection_without_id" tools:ignore="PluralsCandidate">Connection #%1$d missing id</string>
+    <string name="import_problem_connection_without_end">Connection \"%1$s\" missing %2$s</string>
+    <string name="import_problem_connection_unknown_node">Connection \"%1$s\" references unknown node \"%2$s\"</string>
+    <string name="import_problem_label_not_a_branch">Connection \"%1$s\" from %2$s node \"%3$s\" is labelled \"%4$s\"; its branches are %5$s</string>
+    <string name="import_problem_context_flag">Node \"%1$s\": contextConfig.%2$s must be true or false</string>
+    <string name="import_problem_unknown_provider">Node \"%1$s\" names an unknown cloud provider \"%2$s\"</string>
+    <string name="import_problem_empty_bundle">Bundle contains no pipelines</string>
+    <string name="import_problem_bundle_too_large" tools:ignore="PluralsCandidate">Bundle contains %1$d pipelines, exceeding the limit of %2$d</string>
+    <string name="import_problem_bundle_entry_not_object">Bundle pipeline #%1$d is not a JSON object</string>
+    <string name="import_problem_bundle_entry_invalid">Bundle pipeline #%1$d is invalid: %2$s</string>
+    <string name="import_problem_duplicate_pipeline_ids">Bundle contains duplicate pipeline ids: %1$s</string>
+    <string name="import_problem_missing_pipelines">Bundle references pipelines not contained in it: %1$s</string>
+    <string name="import_problem_pipeline_fails_checks">Pipeline \"%1$s\" is invalid: %2$s</string>
+    <string name="import_problem_too_many_memories" tools:ignore="PluralsCandidate">File contains %1$d memory chunks, more than the %2$d the memory can hold</string>
+    <string name="import_problem_memory_entry_not_object">Malformed chunk at index %1$d</string>
+    <string name="import_problem_memory_entry_invalid" tools:ignore="PluralsCandidate">Chunk at index %1$d has a missing or malformed required field: text must be non-blank, embedding a non-empty array of finite numbers, and timestamp a positive epoch-millis value</string>
+    <string name="import_problem_memory_history_invalid" tools:ignore="PluralsCandidate">Chunk at index %1$d has a malformed earlier version: its text must be non-blank and capturedAt and replacedAt positive epoch-millis values</string>
+    <string name="input_problem_blank_pipeline_name">Pipeline name cannot be empty</string>
+    <string name="input_problem_blank_preset_name">Preset name must not be blank</string>
+    <string name="input_problem_long_pipeline_name" tools:ignore="PluralsCandidate">Pipeline name must be %1$d characters or fewer</string>
+    <string name="input_problem_long_preset_name" tools:ignore="PluralsCandidate">Preset name must be at most %1$d characters</string>
+    <string name="input_problem_blank_system_prompt">System prompt must not be blank</string>
+    <string name="input_problem_long_system_prompt" tools:ignore="PluralsCandidate">System prompt must be at most %1$d characters</string>
+    <string name="input_problem_no_prompt_for_node">NodeType %1$s is not LLM-driven and cannot have a prompt preset</string>
+    <string name="input_problem_pipeline_not_found">Pipeline not found</string>
+    <string name="input_problem_preset_not_found">Preset not found: %1$s</string>
+    <string name="input_problem_prompt_preset_not_found">No prompt preset with id %1$s</string>
+    <string name="input_problem_scenario_not_found">Unknown onboarding scenario: %1$s</string>
+    <string name="export_problem_root_not_found">Root pipeline \"%1$s\" was not found.</string>
+    <string name="export_problem_reference_not_found">Referenced pipeline \"%1$s\" could not be resolved for export.</string>
+    <string name="export_problem_too_many_pipelines" tools:ignore="PluralsCandidate">Dependency closure exceeds the limit of %1$d pipelines.</string>
+    <string name="import_problem_quoted_value">\"%1$s\"</string>
+    <string name="import_problem_and_more" tools:ignore="PluralsCandidate">%1$s and %2$d more</string>
 </resources>

@@ -1,11 +1,14 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.R
 import app.knotwork.android.domain.models.ChatImportException
+import app.knotwork.android.domain.models.ChatImportReason
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.SaveMessageToMemoryUseCase
 import app.knotwork.android.domain.usecases.SaveToMemoryOutcome
 import app.knotwork.android.presentation.ui.chat.ChatExportDelegate
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chat.ChatContent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +50,7 @@ class ChatHomeTransferDelegate(
     private val selectThread: (String) -> Unit,
 ) {
 
-    private val _importErrorEvents: MutableSharedFlow<String> = MutableSharedFlow(extraBufferCapacity = 1)
+    private val _importErrorEvents: MutableSharedFlow<UiText> = MutableSharedFlow(extraBufferCapacity = 1)
     private val _memorySaveEvents: MutableSharedFlow<MemorySaveEvent> = MutableSharedFlow(extraBufferCapacity = 1)
 
     /**
@@ -57,11 +60,11 @@ class ChatHomeTransferDelegate(
     val export: ChatExportDelegate = ChatExportDelegate(scope = scope, exportChat = exportChatUseCase)
 
     /**
-     * One-shot stream of import-failure messages. Surfaced via the shared
-     * `SnackbarHostState`; the carried string is a localised user-visible
-     * description ("Could not read the selected file", JSON parse error, …).
+     * One-shot stream of import-failure reasons, worded by the screen in the
+     * interface language and shown in the shared `SnackbarHostState` as
+     * "Could not import chat: <reason>".
      */
-    val importErrorEvents: SharedFlow<String> = _importErrorEvents.asSharedFlow()
+    val importErrorEvents: SharedFlow<UiText> = _importErrorEvents.asSharedFlow()
 
     /**
      * One-shot stream of "Save to memory" outcomes raised by the message
@@ -127,12 +130,12 @@ class ChatHomeTransferDelegate(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: ChatImportException) {
-                // App-written reason; it never quotes the file.
-                _importErrorEvents.tryEmit(e.message ?: IMPORT_GENERIC_FAILURE_MESSAGE)
+                // A typed reason; it never quotes the file.
+                _importErrorEvents.tryEmit(chatImportReasonText(e.reason))
             } catch (e: Throwable) {
                 // Anything else carries text this app did not write (a parser or
                 // storage message can quote the file), so it is not shown.
-                _importErrorEvents.tryEmit(IMPORT_GENERIC_FAILURE_MESSAGE)
+                _importErrorEvents.tryEmit(UiText(R.string.chat_import_reason_unreadable))
             }
         }
     }
@@ -154,15 +157,6 @@ class ChatHomeTransferDelegate(
     fun saveCurrentSession() {
         export.save(state.value.thread.currentSessionId)
     }
-
-    companion object {
-        /**
-         * The reason shown when an import fails for anything but a
-         * [app.knotwork.android.domain.models.ChatImportException] — whose text this app
-         * did not write. It completes "Could not import chat: …".
-         */
-        const val IMPORT_GENERIC_FAILURE_MESSAGE: String = "the file could not be read"
-    }
 }
 
 /**
@@ -176,4 +170,18 @@ enum class MemorySaveEvent {
 
     /** Embedding or persistence failed; surface a retry-able failure copy. */
     Failed,
+}
+
+/**
+ * The words for why a chat file could not be imported; each completes
+ * "Could not import chat: …".
+ *
+ * @param reason What was wrong with the file.
+ * @return The reason in the interface language.
+ */
+internal fun chatImportReasonText(reason: ChatImportReason): UiText = when (reason) {
+    ChatImportReason.NotJson -> UiText(R.string.chat_import_reason_not_json)
+    ChatImportReason.NotAChatFile -> UiText(R.string.chat_import_reason_not_export)
+    ChatImportReason.NoMessages -> UiText(R.string.chat_import_reason_no_messages)
+    is ChatImportReason.NotAMessage -> UiText.of(R.string.chat_import_reason_not_a_message, reason.position)
 }

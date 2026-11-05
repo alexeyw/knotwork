@@ -140,7 +140,6 @@ app:string/chat_home_suggestion_card_2_title
 app:string/chat_home_suggestion_card_2_tools
 app:string/chat_home_suggestion_card_3_title
 app:string/chat_home_suggestion_card_3_tools
-app:string/chat_import_failed
 app:string/chat_import_unreadable
 app:string/chat_new_thread_sheet_cancel
 app:string/chat_new_thread_sheet_create
@@ -456,7 +455,6 @@ app:string/orchestrator_library_delete_confirm
 app:string/orchestrator_library_delete_dependents_header
 app:string/orchestrator_library_delete_keep
 app:string/orchestrator_library_delete_pipeline_title
-app:string/orchestrator_library_export_bundle_failed
 app:string/orchestrator_library_export_bundle_success
 app:string/orchestrator_library_import_anyway
 app:string/orchestrator_library_import_bundle_collision_body
@@ -848,7 +846,6 @@ app:string/settings_memory_import
 app:string/settings_memory_import_cancel
 app:string/settings_memory_import_dialog_body
 app:string/settings_memory_import_dialog_title
-app:string/settings_memory_import_failed
 app:string/settings_memory_import_failed_generic
 app:string/settings_memory_import_merge
 app:string/settings_memory_import_not_saved

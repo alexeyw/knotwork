@@ -13,4 +13,11 @@
     <string name="chat_model_placeholder">Локальная модель</string>
     <string name="chat_pipeline_placeholder">по умолчанию</string>
     <string name="chat_interrupted_unknown_step">неизвестный шаг</string>
+    <!-- Why a chat file could not be imported; each completes chat_import_failed. -->
+    <string name="chat_import_reason_not_json">файл не в формате JSON</string>
+    <string name="chat_import_reason_not_export">файл не является экспортом чата</string>
+    <string name="chat_import_reason_no_messages">в файле нет списка сообщений</string>
+    <string name="chat_import_reason_not_a_message">элемент %1$d в файле — не сообщение</string>
+    <string name="chat_import_reason_unreadable">не удалось прочитать файл</string>
+    <string name="chat_import_failed">Не удалось импортировать чат: %1$s</string>
 </resources>
