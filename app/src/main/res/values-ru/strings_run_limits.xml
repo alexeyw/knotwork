@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="run_termination_tone_limit">Защитный лимит</string>
+    <string name="run_termination_tone_stuck">Нет продвижения</string>
+    <string name="run_termination_tone_info">Прогон завершён</string>
+    <string name="run_termination_title_ceiling">Остановлен защитным лимитом</string>
+    <string name="run_termination_body_step_ceiling">Этот прогон израсходовал все разрешённые шаги. Поднимите лимит шагов или разбейте работу на прогоны поменьше.</string>
+    <string name="run_termination_body_token_ceiling">Этот прогон израсходовал все разрешённые токены. Поднимите лимит токенов или попросите о чём-то более узком.</string>
+    <string name="run_termination_title_no_progress">Остановлен: прогон не продвигался</string>
+    <string name="run_termination_body_no_progress">Одна и та же работа повторялась и не продвигала задачу, поэтому прогон завершён.</string>
+    <string name="run_termination_title_run_stalled">Остановлен: прогон затих</string>
+    <string name="run_termination_body_run_stalled">Задача перестала отвечать и была завершена, чтобы могли выполняться другие сообщения. Шаг, которого она ждала, — чаще всего внешний инструмент — так и не ответил.</string>
+    <string name="run_termination_title_hitl_expired">Остановлен: не дождался вашего подтверждения</string>
+    <string name="run_termination_body_hitl_expired">Шагу нужно было ваше подтверждение, но время ожидания вышло раньше, чем пришёл ответ.</string>
+    <string name="run_termination_title_graph_changed">Пайплайн изменился, пока прогон стоял на паузе</string>
+    <string name="run_termination_body_graph_changed">Этот прогон был построен на прежней версии пайплайна, поэтому не смог продолжить с места остановки. Повторный запуск возьмёт текущую версию.</string>
+    <string name="run_termination_title_process_died">Приложение остановилось во время прогона</string>
+    <string name="run_termination_body_process_died">При следующем запуске прогон нашёлся незавершённым и был закрыт. Ничего не осталось работать наполовину.</string>
+    <string name="run_termination_title_discarded">Вы отбросили этот прогон</string>
+    <string name="run_termination_body_discarded">Он завершён по вашей просьбе, ничего не осталось запущенным.</string>
+    <string name="run_termination_title_not_resumable">Этот прогон не удалось продолжить</string>
+    <string name="run_termination_body_not_resumable">Ваш ответ пришёл, но прогон к тому времени уже был закрыт. Повторный запуск начнёт с начала.</string>
+    <string name="run_termination_meter_steps_live" tools:ignore="PluralsCandidate">Использовано шагов: %1$,d из %2$,d</string>
+    <string name="run_termination_meter_tokens_live" tools:ignore="PluralsCandidate">Использовано токенов: %1$,d из %2$,d</string>
+    <string name="run_ceiling_pause_title">Пауза на защитном лимите</string>
+    <string name="run_ceiling_pause_body_steps" tools:ignore="PluralsCandidate">Этот прогон израсходовал все разрешённые шаги. Можно продлить лимит шагов ещё на %1$,d или остановить прогон здесь.</string>
+    <string name="run_ceiling_pause_body_tokens" tools:ignore="PluralsCandidate">Этот прогон израсходовал все разрешённые токены. Можно продлить лимит токенов ещё на %1$,d или остановить прогон здесь.</string>
+    <string name="run_ceiling_pause_continue" tools:ignore="PluralsCandidate">Продолжить (+%1$,d)</string>
+    <string name="run_ceiling_pause_stop">Остановить прогон</string>
+    <string name="run_ceiling_pause_notification_title">Прогон ждёт вашего решения</string>
+    <string name="run_ceiling_pause_notification_text_steps" tools:ignore="PluralsCandidate">Использовано шагов: %1$,d из %2$,d. Нажмите, чтобы решить, продолжать ли.</string>
+    <string name="run_ceiling_pause_notification_text_tokens" tools:ignore="PluralsCandidate">Использовано токенов: %1$,d из %2$,d. Нажмите, чтобы решить, продолжать ли.</string>
+    <string name="run_ceiling_channel_name">Лимиты прогонов</string>
+    <string name="run_ceiling_channel_description">Прогоны, которые дошли до заданного вами лимита и ждут решения, продолжать ли.</string>
+    <string name="run_termination_banner_step_ceiling" tools:ignore="PluralsCandidate">Остановлен защитным лимитом — шагов: %1$,d из %2$,d.</string>
+    <string name="run_termination_banner_token_ceiling" tools:ignore="PluralsCandidate">Остановлен защитным лимитом — токенов: %1$,d из %2$,d.</string>
+    <string name="run_termination_banner_no_progress">Остановлен: прогон не продвигался.</string>
+    <string name="run_termination_banner_run_stalled">Остановлен: шаг так и не ответил.</string>
+    <string name="run_termination_banner_hitl_expired">Остановлен: не дождался вашего подтверждения.</string>
+    <string name="run_termination_banner_graph_changed">Пайплайн изменился, пока прогон стоял на паузе.</string>
+    <string name="run_termination_banner_process_died">Приложение остановилось во время прогона.</string>
+    <string name="run_termination_banner_discarded">Вы отбросили этот прогон.</string>
+    <string name="run_termination_banner_not_resumable">Этот прогон не удалось продолжить.</string>
+    <string name="run_termination_action_adjust_limits">Изменить лимиты</string>
+    <string name="run_termination_action_open_console">Открыть консоль</string>
+    <string name="run_termination_action_run_again">Запустить снова</string>
+    <string name="run_notice_soft_steps" tools:ignore="PluralsCandidate">Близко к лимиту шагов: использовано %1$,d из %2$,d.</string>
+    <string name="run_notice_soft_tokens" tools:ignore="PluralsCandidate">Близко к лимиту токенов: использовано %1$,d из %2$,d.</string>
+    <string name="run_notice_looks_stuck">Похоже, прогон застрял — один и тот же шаг повторяется. Если ничего не изменится, он остановится.</string>
+    <string name="run_termination_notification_body_step_ceiling" tools:ignore="PluralsCandidate">«%1$s» остановлен на лимите шагов. Сделано шагов: %2$,d.</string>
+    <string name="run_termination_notification_body_token_ceiling" tools:ignore="PluralsCandidate">«%1$s» остановлен на лимите токенов. Израсходовано токенов: %2$,d.</string>
+    <string name="run_outcome_chat_failed_with_diagnostic">Этот прогон остановился, не успев ответить: %1$s</string>
+    <string name="run_outcome_chat_failed">Этот прогон остановился, не успев ответить.</string>
+    <string name="run_outcome_chat_cancelled">Этот прогон остановили, прежде чем он успел ответить.</string>
+    <string name="run_outcome_chat_interrupted">Этот прогон был прерван и не завершился.</string>
+</resources>

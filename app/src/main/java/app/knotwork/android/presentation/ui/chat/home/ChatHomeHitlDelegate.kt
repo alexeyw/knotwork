@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.models.diagnostic
 import app.knotwork.android.domain.repositories.ChatRepository
+import app.knotwork.android.domain.services.ChatSystemRows
 import app.knotwork.android.domain.usecases.PendingSubmissionOutcome
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitCeilingDecisionUseCase
@@ -43,6 +44,7 @@ import kotlinx.coroutines.launch
  * @property scope The ViewModel's [androidx.lifecycle.viewModelScope].
  * @property state The ViewModel's single source-of-truth state flow.
  * @property chatRepository Persists the SYSTEM rows recording a denial / undelivered reply.
+ * @property systemRows The words of those rows, in the interface language at the moment they are saved.
  * @property submitApprovalDecisionUseCase Routes an approve/deny to the live gate or parked record.
  * @property submitClarificationAnswerUseCase Routes a clarification reply likewise.
  * @property submitCeilingDecisionUseCase Routes a continue/stop decision on a run paused at a ceiling.
@@ -53,6 +55,7 @@ class ChatHomeHitlDelegate(
     private val scope: CoroutineScope,
     private val state: MutableStateFlow<ChatHomeScreenState>,
     private val chatRepository: ChatRepository,
+    private val systemRows: ChatSystemRows,
     private val submitApprovalDecisionUseCase: SubmitApprovalDecisionUseCase,
     private val submitClarificationAnswerUseCase: SubmitClarificationAnswerUseCase,
     private val submitCeilingDecisionUseCase: SubmitCeilingDecisionUseCase,
@@ -121,7 +124,7 @@ class ChatHomeHitlDelegate(
                 ChatMessage(
                     sessionId = sessionId,
                     role = Role.SYSTEM,
-                    content = SYSTEM_MESSAGE_TOOL_DENIED.format(pending.toolName),
+                    content = systemRows.toolDenied(pending.toolName),
                     timestamp = System.currentTimeMillis(),
                 ),
             )
@@ -162,7 +165,7 @@ class ChatHomeHitlDelegate(
                         ChatMessage(
                             sessionId = sessionId,
                             role = Role.SYSTEM,
-                            content = SYSTEM_MESSAGE_CLARIFICATION_REPLY_NOT_DELIVERED,
+                            content = systemRows.clarificationReplyNotDelivered(),
                             timestamp = System.currentTimeMillis(),
                         ),
                     )
@@ -405,20 +408,6 @@ class ChatHomeHitlDelegate(
     /** Whether the current typed-confirm input is [confirmWord], the destructive HITL gate. */
     private fun isTypedConfirmValid(confirmWord: String): Boolean =
         typedConfirmMatches(input = state.value.composer.typedConfirm, keyword = confirmWord)
-
-    companion object {
-        /** Template of the SYSTEM chat row persisted when the user rejects a tool call. `%s` is the tool name. */
-        const val SYSTEM_MESSAGE_TOOL_DENIED: String = "Tool '%s' denied by user."
-
-        /**
-         * SYSTEM chat row persisted when the user's clarification reply was not
-         * consumed by the pipeline (the request had already resolved — typically
-         * the repository's timeout fired while a reattach-restored card was still
-         * on screen).
-         */
-        const val SYSTEM_MESSAGE_CLARIFICATION_REPLY_NOT_DELIVERED: String =
-            "Reply was not delivered — the clarification had already been resolved with a default answer."
-    }
 }
 
 /**

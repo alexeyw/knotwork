@@ -44,12 +44,14 @@ import app.knotwork.android.data.tools.local.LocalAppFunctionManager
 import app.knotwork.android.data.tools.local.SearchTool
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
+import app.knotwork.android.domain.services.ChatSystemRows
 import app.knotwork.android.domain.services.ClarificationNotifier
 import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.services.ExternalAutomationCallbackNotifier
 import app.knotwork.android.domain.services.RunOutcomeAnnouncer
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
 import app.knotwork.android.domain.services.TaskScheduler
+import app.knotwork.android.presentation.common.ChatSystemRowsImpl
 import app.knotwork.android.presentation.common.DefaultNamesImpl
 import app.knotwork.android.presentation.notifications.ApprovalNotificationManager
 import app.knotwork.android.presentation.notifications.CeilingNotificationManager
@@ -438,6 +440,15 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDefaultNames(impl: DefaultNamesImpl): DefaultNames = impl
+
+    /**
+     * Binds the presentation-layer [ChatSystemRowsImpl] to the domain-level
+     * [ChatSystemRows]: the rows the chat records for a denied tool call or an
+     * undelivered reply are interface text, read from resources.
+     */
+    @Provides
+    @Singleton
+    fun provideChatSystemRows(impl: ChatSystemRowsImpl): ChatSystemRows = impl
 
     /**
      * Binds the presentation-layer [ClarificationNotificationManager]

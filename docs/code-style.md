@@ -145,8 +145,10 @@ For the broader layering rationale, see
   that language's list in `config/l10n/` names it, and the lists only shrink.
 - What a model reads is not translated: system prompts, tool descriptions and
   tool results stay in English, as do the tokens a model's output is matched
-  against (route labels, intent classes). A chat's system rows are part of the
-  history a model reads, so a system row the app writes stays English too.
+  against (route labels, intent classes). A chat's system rows (a denied tool
+  call, how a run ended) are written in the interface language when saved,
+  through `ChatSystemRows` or the run's own copy, and kept as written: the model
+  reads them in the language of the conversation.
 - A failure the app words itself travels as a type, not a sentence: `domain` and
   `data` hand over what happened (`ModelLoadError`, `ConnectionFailure`,
   `TestProbeFailure`), and the screen names it. Text an engine, a server or the

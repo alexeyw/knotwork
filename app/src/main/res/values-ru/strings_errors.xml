@@ -44,4 +44,25 @@
     <string name="export_problem_too_many_pipelines">Вместе с вызываемыми пайплайнов больше предела: %1$d.</string>
     <string name="import_problem_quoted_value">«%1$s»</string>
     <string name="import_problem_and_more">%1$s и ещё %2$d</string>
+    <string name="errors_generic_unexpected">Произошла непредвиденная ошибка</string>
+    <string name="errors_chat_pipeline_removed">Пайплайн удалён. Теперь используется пайплайн по умолчанию.</string>
+    <string name="errors_orchestrator_cycle_detected">Нельзя соединить: получится цикл</string>
+    <string name="errors_orchestrator_at_least_one_source">Хотя бы один источник данных должен остаться включённым</string>
+    <string name="errors_orchestrator_pipeline_not_found">Пайплайн не найден</string>
+    <string name="errors_orchestrator_validation_missing_input">Нет узла INPUT</string>
+    <string name="errors_orchestrator_validation_missing_output">Нет узла OUTPUT</string>
+    <string name="errors_orchestrator_validation_multiple_inputs">Узел INPUT может быть только один</string>
+    <string name="errors_orchestrator_validation_multiple_outputs">Узел OUTPUT может быть только один</string>
+    <string name="errors_orchestrator_validation_has_cycles">В пайплайне есть циклы</string>
+    <string name="errors_orchestrator_validation_disconnected_input">Узел INPUT ни с чем не соединён</string>
+    <string name="errors_orchestrator_validation_disconnected_output">Узел OUTPUT ни с чем не соединён</string>
+    <string name="errors_orchestrator_validation_unreachable_node">До некоторых узлов нельзя дойти от INPUT</string>
+    <string name="errors_orchestrator_validation_dead_end">Некоторые узлы не доходят до OUTPUT</string>
+    <string name="errors_orchestrator_validation_node_no_sources">Узел «%1$s» не получит данных — включите хотя бы один источник</string>
+    <string name="errors_orchestrator_validation_missing_target_pipeline">В узле пайплайна «%1$s» не выбран целевой пайплайн</string>
+    <string name="errors_orchestrator_validation_target_pipeline_not_found">Узел пайплайна «%1$s» ссылается на пайплайн, которого больше нет</string>
+    <string name="errors_orchestrator_validation_pipeline_cycle">Пайплайны вызывают друг друга по кругу: %1$s</string>
+    <string name="errors_orchestrator_validation_pipeline_nesting_too_deep">Пайплайны вложены глубже предела в %1$d</string>
+    <string name="errors_orchestrator_validation_missing_skill">В узле навыка «%1$s» не выбран навык</string>
+    <string name="errors_orchestrator_validation_skill_not_found">Узел навыка «%1$s» ссылается на навык, которого больше нет</string>
 </resources>

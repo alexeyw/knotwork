@@ -28,6 +28,7 @@ import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
 import app.knotwork.android.domain.services.ChatHistoryCompressionCoordinator
+import app.knotwork.android.domain.services.ChatSystemRows
 import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.MemoryAutoExtractionCoordinator
@@ -122,7 +123,7 @@ class ChatHomeViewModel
 @Inject
 // Reason: the chat surface is one screen whose behaviour is already split into
 // nine delegates, and this constructor is where their collaborators arrive
-// before being handed on — 34 of them. Measured, not assumed: the core alone
+// before being handed on — 36 of them. Measured, not assumed: the core alone
 // reads 11 (orchestrator, chat, two settings sections, context window, engine,
 // models, model loading, two after-turn coordinators, session tracker), the
 // delegates share 6 more, and even one injected holder per remaining delegate
@@ -167,6 +168,7 @@ constructor(
     private val runUseCases: ChatHomeRunUseCases,
     private val resolveApprovalRequestContext: ResolveApprovalRequestContextUseCase,
     private val defaultNames: DefaultNames,
+    private val chatSystemRows: ChatSystemRows,
 ) : ViewModel() {
 
     private val _state: MutableStateFlow<ChatHomeScreenState> = MutableStateFlow(ChatHomeScreenState())
@@ -434,6 +436,7 @@ constructor(
         scope = viewModelScope,
         state = _state,
         chatRepository = chatRepository,
+        systemRows = chatSystemRows,
         submitApprovalDecisionUseCase = submitApprovalDecisionUseCase,
         submitClarificationAnswerUseCase = submitClarificationAnswerUseCase,
         submitCeilingDecisionUseCase = submitCeilingDecisionUseCase,

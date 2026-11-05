@@ -7,4 +7,12 @@
     <string name="splash_stage_chats">Чтение чатов…</string>
     <string name="splash_stage_memory">Чтение памяти…</string>
     <string name="splash_stage_ready">Готово</string>
+    <string name="splash_starting">Запуск…</string>
+    <string name="splash_data_locked_title">Не удаётся разблокировать ваши данные</string>
+    <string name="splash_data_locked_body">Не удалось прочитать ключ шифрования, который защищает ваши данные на устройстве. Часто это временно — например, сразу после обновления Android. Сначала попробуйте ещё раз. Если ошибка не уходит, продолжить пользоваться приложением можно, только стерев данные и начав заново.</string>
+    <string name="splash_data_locked_reset">Стереть данные</string>
+    <string name="splash_reset_dialog_title">Стереть ваши данные?</string>
+    <string name="splash_reset_dialog_body">Это навсегда удалит ваши чаты, долговременную память, пайплайны, пресеты, файлы рабочей папки, вложения и запланированные задачи на этом устройстве. Настройки и сохранённые ключи останутся. Отменить это нельзя. Чтобы подтвердить, введите «%1$s».</string>
+    <string name="splash_reset_dialog_hint">Введите «%1$s», чтобы подтвердить</string>
+    <string name="splash_reset_dialog_confirm">Стереть данные</string>
 </resources>

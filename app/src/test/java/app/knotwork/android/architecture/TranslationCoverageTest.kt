@@ -119,7 +119,7 @@ class TranslationCoverageTest {
             val copies = MODULES.flatMap { module ->
                 val english = textsIn(defaultFolder(module))
                 val translated = textsIn(languageFolders(module).getValue(language))
-                translated.filter { (key, text) -> english[key] == text && text.any(Char::isLetter) }
+                translated.filter { (key, text) -> english[key] == text && hasWords(text) }
                     .keys.map { "$module:$it" }
             }.toSet()
 
@@ -174,6 +174,9 @@ class TranslationCoverageTest {
     private fun textsIn(folder: File): Map<String, String> =
         entries(folder).filter { it.tagName == "string" }.associate { keyOf(it) to it.textContent }
 
+    /** Whether [text] has a letter outside its format specifiers: `%1$s: %2$s` has none. */
+    private fun hasWords(text: String): Boolean = text.replace(FORMAT_SPECIFIER, "").any(Char::isLetter)
+
     private fun keyOf(element: Element): String = "${element.tagName}/${element.getAttribute("name")}"
 
     private fun entries(folder: File): List<Element> = folder.listFiles().orEmpty()
@@ -215,5 +218,6 @@ class TranslationCoverageTest {
         val LOCALE_FILTERS = Regex("""localeFilters\s*\+=\s*listOf\(([^)]*)\)""")
         val LANGUAGE_SPLIT_OFF = Regex("""bundle\s*\{\s*language\s*\{\s*enableSplit\s*=\s*false\s*}""")
         val QUOTED = Regex(""""([^"]+)"""")
+        val FORMAT_SPECIFIER = Regex("""%(\d+\$)?[-#+ 0,(]*\d*(\.\d+)?[a-zA-Z%]""")
     }
 }

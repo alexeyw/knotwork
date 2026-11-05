@@ -44,6 +44,7 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
+import app.knotwork.android.domain.services.EnglishChatSystemRows
 import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.RecordingState
@@ -327,6 +328,7 @@ class ChatHomeViewModelTest {
         runUseCases,
         resolveApprovalRequestContext,
         EnglishDefaultNames,
+        EnglishChatSystemRows,
     ).also { vm ->
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.
@@ -2246,9 +2248,7 @@ class ChatHomeViewModelTest {
         coVerify {
             chatRepository.saveMessage(
                 match { msg ->
-                    msg.role == Role.SYSTEM &&
-                        msg.content.contains("fs.delete_file") &&
-                        msg.content.contains("denied")
+                    msg.role == Role.SYSTEM && msg.content == EnglishChatSystemRows.toolDenied("fs.delete_file")
                 },
             )
         }
@@ -3386,7 +3386,7 @@ class ChatHomeViewModelTest {
             chatRepository.saveMessage(
                 match {
                     it.role == Role.SYSTEM &&
-                        it.content == ChatHomeHitlDelegate.SYSTEM_MESSAGE_CLARIFICATION_REPLY_NOT_DELIVERED
+                        it.content == EnglishChatSystemRows.REPLY_NOT_DELIVERED
                 },
             )
         }

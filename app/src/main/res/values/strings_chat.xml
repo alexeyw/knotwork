@@ -255,4 +255,7 @@
     <string name="chat_import_reason_no_messages">the file has no list of messages</string>
     <string name="chat_import_reason_not_a_message">message %1$d of the file is not a message</string>
     <string name="chat_import_reason_unreadable">the file could not be read</string>
+    <!-- SYSTEM rows of the chat history, written in the interface language when saved; a model reads them in the language of the conversation (ChatSystemRows). -->
+    <string name="chat_system_tool_denied">Tool \'%1$s\' denied by user.</string>
+    <string name="chat_system_clarification_reply_not_delivered">Reply was not delivered — the clarification had already been resolved with a default answer.</string>
 </resources>
