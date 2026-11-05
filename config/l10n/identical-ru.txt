@@ -9,3 +9,13 @@ app:string/external_automation_target_by_id	# "id" and a value, the same in Russ
 catalog:string/knotwork_node_type_lite_rt_name	# engine name
 catalog:string/knotwork_run_sampler_value	# sampler parameter names
 catalog:string/knotwork_run_field_sha	# hash algorithm name
+catalog:string/knotwork_allowed_domains_add_placeholder	# example host name
+catalog:string/knotwork_settings_providers_lan	# network term used as is
+app:string/settings_identity_avatar_initials	# initials of the placeholder identity
+app:string/settings_row_top_k_title	# sampling parameter name
+app:string/settings_row_top_p_title	# sampling parameter name
+app:string/settings_ollama_base_url_placeholder	# example address
+app:string/settings_memory_export_filename	# file name
+app:string/settings_usage_export_filename	# file name
+app:string/settings_search_name_top_k	# sampling parameter name
+app:string/settings_search_name_top_p	# sampling parameter name
