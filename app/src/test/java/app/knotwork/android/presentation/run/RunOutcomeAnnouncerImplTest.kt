@@ -21,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import java.io.IOException
 
 /**
@@ -156,6 +157,21 @@ class RunOutcomeAnnouncerImplTest {
         coEvery { chatRepository.saveMessage(any()) } throws IOException("disk fault")
 
         announcer.announce("s-1", PipelineRunStatus.FAILED, reason = null, diagnostic = DIAGNOSTIC)
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `given the app in Russian when an outcome is announced then the row is written in Russian`() = runTest {
+        // The line is history a model reads; it is written in the interface language
+        // at the moment it is saved, so a Russian chat's model reads Russian.
+        announcer.announce("s-1", PipelineRunStatus.CANCELLED, reason = null, diagnostic = null)
+        assertEquals("Этот прогон остановили, прежде чем он успел ответить.", saved.captured.content)
+
+        announcer.announce("s-1", PipelineRunStatus.FAILED, RunTerminationReason.NoProgress, DIAGNOSTIC)
+        assertEquals(
+            "Одна и та же работа повторялась и не продвигала задачу, поэтому прогон завершён.",
+            saved.captured.content,
+        )
     }
 
     /** Builds a representative [RunTerminationReason] for [kind], with numbers where the kind carries them. */

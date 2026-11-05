@@ -26,7 +26,8 @@ details.
 - **Choose the app's language.** *Settings → About → Language* picks the
   language of the app's screens, or follows the phone's; your phone's per-app
   language setting is the same choice. What a model reads stays in English —
-  system prompts, tool descriptions and tool results.
+  system prompts, tool descriptions and tool results; the lines the app adds to
+  a chat, such as a tool call you denied, are written in the app's language.
 
 ### Changed
 

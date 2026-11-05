@@ -18,4 +18,6 @@
     <string name="settings_test_backend_failure_unknown">Неизвестная ошибка</string>
     <string name="settings_destructive_typed_hint">Введите «%1$s», чтобы подтвердить</string>
     <string name="settings_memory_import_failed">Не удалось импортировать: %1$s</string>
+    <string name="more_row_help">Справка</string>
+    <string name="more_row_help_sub">Решение проблем · вопросы и ответы · руководства</string>
 </resources>

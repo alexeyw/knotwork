@@ -27,7 +27,7 @@
     <string name="shortcut_new_chat_long">Start a new chat</string>
     <string name="shortcut_pipelines_short">Pipelines</string>
     <string name="shortcut_pipelines_long">Open pipeline library</string>
-    <string name="share_not_configured">Pick a pipeline for sharing in Settings → Background.</string>
+    <string name="share_not_configured">Pick a pipeline for sharing in Settings → Background &amp; triggers.</string>
     <string name="share_nothing_to_share">Nothing to share.</string>
     <string name="share_rate_limited">Too many shares in the last hour. Try again later.</string>
     <!-- A toast holds two lines on Android 12+, so these are shorter than the chat's
@@ -41,7 +41,7 @@
     <string name="tile_label">Run pipeline</string>
     <string name="tile_duty_prompt">Run my duty pipeline.</string>
     <string name="tile_running">Running pipeline in the background…</string>
-    <string name="tile_not_configured">Pick a Quick Settings pipeline in Settings → Background.</string>
+    <string name="tile_not_configured">Pick a Quick Settings pipeline in Settings → Background &amp; triggers.</string>
     <string name="tile_subtitle_ready">Ready</string>
     <string name="tile_subtitle_unconfigured">Not set up</string>
     <!-- More tab: row counters and the network footer. -->

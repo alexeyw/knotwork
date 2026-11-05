@@ -44,8 +44,6 @@ app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Timb
 app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Universal Sentence Encoder	# proper name of a library, font or licence
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeFixtures.kt	stub card 1	# test fixture, never shown
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeFixtures.kt	stub card 2	# test fixture, never shown
-app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeHitlDelegate.kt	Reply was not delivered — the clarification had already been resolved with a default answer.	# system row of the chat history, which the model reads (decisions §113 R1)
-app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeHitlDelegate.kt	Tool '%s' denied by user.	# system row of the chat history, which the model reads (decisions §113 R1)
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Add a 30-minute meeting \"Rollout sync\" to your work calendar tomorrow at 10:00.	# sample row of the debug-build state picker, never in a release
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Family	# sample row of the debug-build state picker, never in a release
 app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Permanently remove /Users/me/old-notes.md (4.2 KB).	# sample row of the debug-build state picker, never in a release

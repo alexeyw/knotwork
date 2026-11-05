@@ -430,6 +430,7 @@ Only Kotlin files appear inside the generated blocks.
     - `CleartextPolicyTest.kt` - Unit tests for `CleartextPolicy` — the rule that replaced the hand-written IP list in `network_security_config.xml`.
     - `CompactionCoverageVerifierTest.kt` - Unit tests for `CompactionCoverageVerifier`.
     - `EmbeddingProviderResolverTest.kt` - Unit tests for `EmbeddingProviderResolver`.
+    - `EnglishChatSystemRows.kt` - `ChatSystemRows` with the English values of the resources, for tests that run without resources.
     - `EnglishDefaultNames.kt` - `DefaultNames` with the English values of the resources, for tests that run without resources.
     - `HttpRequestPolicyTest.kt` - Unit tests for `HttpRequestPolicy` — the pure security policy behind the `http_request` tool.
     - `KMeansClustererTest.kt` - Unit tests for `KMeansClusterer`.
@@ -600,6 +601,7 @@ Only Kotlin files appear inside the generated blocks.
   - `common/` - Tests for the cross-feature presentation utilities.
     - `ApprovalArgumentsTest.kt` - The arguments of a call waiting for approval as the card and the notification show them: laid out, never respelled, shown as they came when they are not JSON.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
+    - `ChatSystemRowsImplTest.kt` - The rows the chat records for a denied tool call and an undelivered reply.
     - `DefaultNamesImplTest.kt` - The names the app gives what it creates: written in the interface language, and a new chat's name recognised whatever language it was stored in — the auto-rename must not stop when the language changed between creating a chat and sending its first message.
     - `HitlRequestMappingTest.kt` - `toHitlRequestContext` — the one translation the approval card and the approval notification both read: every source keeps its meaning, a trigger keeps its name (or its lack of one), and the text and flags pass unchanged.
     - `ImportProblemTextTest.kt` - The sentences a refused import, export or input becomes.

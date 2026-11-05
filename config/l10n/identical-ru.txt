@@ -4,3 +4,4 @@
 # HTTP authentication scheme names, the same in every language.
 catalog:string/knotwork_mcp_auth_bearer	# HTTP scheme name
 catalog:string/knotwork_mcp_auth_basic	# HTTP scheme name
+app:string/app_name	# same in Russian

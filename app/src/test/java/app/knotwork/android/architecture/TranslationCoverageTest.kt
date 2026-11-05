@@ -38,6 +38,8 @@ import javax.xml.parsers.DocumentBuilderFactory
  *   (`bundle.language.enableSplit = false`): Google Play installs language
  *   resources by the phone's system language, so a language picked in the app
  *   would otherwise find nothing to show in a Play install.
+ * - A translation keeps the spaces at the edges of its English text: the
+ *   resource compiler trims them unless the value is quoted.
  * - A translation that equals its English text is a copy, not a translation,
  *   unless `config/l10n/identical-<lang>.txt` names it (brand names, units).
  *   Text without a letter (`%1$s · %2$s`) is not compared.
@@ -119,7 +121,7 @@ class TranslationCoverageTest {
             val copies = MODULES.flatMap { module ->
                 val english = textsIn(defaultFolder(module))
                 val translated = textsIn(languageFolders(module).getValue(language))
-                translated.filter { (key, text) -> english[key] == text && text.any(Char::isLetter) }
+                translated.filter { (key, text) -> english[key] == text && hasWords(text) }
                     .keys.map { "$module:$it" }
             }.toSet()
 
@@ -135,6 +137,23 @@ class TranslationCoverageTest {
                 "${identicalList(language).name} names strings that are not identical any more — remove:\n" +
                     stale.joinToString("\n"),
                 stale.isEmpty(),
+            )
+        }
+    }
+
+    @Test
+    fun `a translation keeps the spaces at the edges of its English`() {
+        for (language in shippedLanguages()) {
+            val clipped = MODULES.flatMap { module ->
+                val english = textsIn(defaultFolder(module))
+                textsIn(languageFolders(module).getValue(language))
+                    .filter { (key, text) -> english[key]?.let { edgeSpaces(it) != edgeSpaces(text) } == true }
+                    .keys.map { "$module:$it" }
+            }.sorted()
+            assertTrue(
+                "values-$language loses or adds a space at the edge of the English text — the build trims " +
+                    "unquoted edge spaces, so quote the value (\", \"):\n" + clipped.joinToString("\n"),
+                clipped.isEmpty(),
             )
         }
     }
@@ -173,6 +192,20 @@ class TranslationCoverageTest {
     /** Plain strings by key, as text; plurals are compared by lint's quantity checks, not here. */
     private fun textsIn(folder: File): Map<String, String> =
         entries(folder).filter { it.tagName == "string" }.associate { keyOf(it) to it.textContent }
+
+    /**
+     * Whether the value the build makes of [raw] starts and ends with a space. The resource
+     * compiler trims unquoted spaces at the edges of a string; a quoted value keeps them.
+     */
+    private fun edgeSpaces(raw: String): Pair<Boolean, Boolean> {
+        val trimmed = raw.trim()
+        val quoted = trimmed.length >= 2 && trimmed.first() == '"' && trimmed.last() == '"'
+        val value = if (quoted) trimmed.substring(1, trimmed.length - 1) else trimmed
+        return (value.firstOrNull()?.isWhitespace() == true) to (value.lastOrNull()?.isWhitespace() == true)
+    }
+
+    /** Whether [text] has a letter outside its format specifiers: `%1$s: %2$s` has none. */
+    private fun hasWords(text: String): Boolean = text.replace(FORMAT_SPECIFIER, "").any(Char::isLetter)
 
     private fun keyOf(element: Element): String = "${element.tagName}/${element.getAttribute("name")}"
 
@@ -215,5 +248,6 @@ class TranslationCoverageTest {
         val LOCALE_FILTERS = Regex("""localeFilters\s*\+=\s*listOf\(([^)]*)\)""")
         val LANGUAGE_SPLIT_OFF = Regex("""bundle\s*\{\s*language\s*\{\s*enableSplit\s*=\s*false\s*}""")
         val QUOTED = Regex(""""([^"]+)"""")
+        val FORMAT_SPECIFIER = Regex("""%(\d+\$)?[-#+ 0,(]*\d*(\.\d+)?[a-zA-Z%]""")
     }
 }
