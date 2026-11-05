@@ -305,10 +305,13 @@ data class PrivacySettingsViewState(
  * @property identity Identity card; `null` while loading.
  * @property versionLine Pre-formatted "v0.9.2 · alpha · 2026.05.18" line shown
  *   on the version/licenses link row.
+ * @property languageLine The language the interface is shown in, as the
+ *   language-picker row's value ("Device language", "English", "Русский").
  * @property destructiveAction Reset-settings confirm payload; `null` hides it.
  */
 data class AboutSettingsViewState(
     val identity: IdentityCardState?,
     val versionLine: String,
+    val languageLine: String,
     val destructiveAction: DestructiveActionState? = null,
 )

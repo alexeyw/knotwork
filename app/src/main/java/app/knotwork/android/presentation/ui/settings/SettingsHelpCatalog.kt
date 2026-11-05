@@ -154,6 +154,7 @@ object SettingsHelpCatalog {
         "TRACE_RETENTION_MAX_AGE_DAYS" to text(R.string.settings_help_trace_retention_max_age_days),
         "LINK_BACKUP_RESTORE" to none(NoHint.LINK_ROW),
         "IDENTITY" to none(NoHint.DISPLAY_ROW),
+        "LANGUAGE" to text(R.string.settings_help_language),
         "LINK_LICENSES" to none(NoHint.LINK_ROW),
         "RESET" to none(NoHint.SELF_EVIDENT),
     )

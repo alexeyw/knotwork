@@ -1,0 +1,32 @@
+# Design-system text defaults the app does not replace with a resource, one
+# `Class.parameter` per line — read by CatalogStringsWiringTest. Each shows its
+# English default in every language.
+#
+# The list only shrinks: pass the text from a string resource where the class is
+# built and delete its line; a new default is wired in the change that adds it.
+ModelsStrings.audioDescription
+ModelsStrings.audioLabel
+ModelsStrings.visionDescription
+ModelsStrings.visionLabel
+PerformanceStrings.benchmarkBadge
+PerformanceStrings.busyBody
+PerformanceStrings.busyTitle
+PerformanceStrings.cancel
+PerformanceStrings.decodeLabel
+PerformanceStrings.done
+PerformanceStrings.emptyBody
+PerformanceStrings.emptyTitle
+PerformanceStrings.measuringSub
+PerformanceStrings.measuringTitle
+PerformanceStrings.memoryNote
+PerformanceStrings.memoryReportNote
+PerformanceStrings.noModelBody
+PerformanceStrings.peakMemoryLabel
+PerformanceStrings.runBenchmark
+PerformanceStrings.share
+PerformanceStrings.title
+PerformanceStrings.totalLabel
+PerformanceStrings.ttftLabel
+PerformanceStrings.warmingUpSub
+PerformanceStrings.warmingUpTitle
+SkillLibraryStrings.toolsCountFormat

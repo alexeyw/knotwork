@@ -252,6 +252,7 @@ object SettingsSearchCatalog {
         ),
         // ─── About ───────────────────────────────────────────────────────────
         "IDENTITY" to strings(R.string.settings_search_name_identity, R.string.settings_search_desc_identity),
+        "LANGUAGE" to strings(R.string.settings_search_name_language, R.string.settings_search_desc_language),
         "LINK_LICENSES" to strings(
             R.string.settings_search_name_link_licenses,
             R.string.settings_search_desc_link_licenses,

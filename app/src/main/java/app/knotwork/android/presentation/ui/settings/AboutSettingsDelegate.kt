@@ -2,18 +2,21 @@ package app.knotwork.android.presentation.ui.settings
 
 import android.content.Context
 import app.knotwork.android.R
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.CrashReportingRepository
 import app.knotwork.android.domain.repositories.IdentityRepository
 import app.knotwork.android.domain.usecases.ResetToRecommendedDefaultsUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
  * About category delegate of [SettingsViewModel].
  *
- * Loads the read-only identity card on construction and owns the
+ * Loads the read-only identity card on construction, mirrors the app's
+ * interface language into the state for the language row, and owns the
  * "Reset all settings" action. Shares the ViewModel's [scope] and single
  * [SettingsUiState] reducer.
  *
@@ -21,6 +24,8 @@ import kotlinx.coroutines.launch
  * @property state The ViewModel's single source-of-truth state flow.
  * @property appContext Application context for the identity placeholder + snackbar copy.
  * @property identityRepository Source of the identity-card snapshot.
+ * @property appLanguageRepository The app's interface language — read for the
+ *   language row, written by the picker.
  * @property resetToRecommendedDefaultsUseCase Single atomic write restoring every
  *   tunable preference to its recommended default.
  */
@@ -29,11 +34,37 @@ class AboutSettingsDelegate(
     private val state: MutableStateFlow<SettingsUiState>,
     private val appContext: Context,
     private val identityRepository: IdentityRepository,
+    private val appLanguageRepository: AppLanguageRepository,
     private val resetToRecommendedDefaultsUseCase: ResetToRecommendedDefaultsUseCase,
 ) {
 
     init {
         loadIdentity()
+        observeLanguage()
+    }
+
+    /**
+     * Picks the app's interface language. The system re-creates the screen in it;
+     * the state follows through [observeLanguage].
+     *
+     * @param languageTag A tag from [SettingsUiState.supportedLanguages], or
+     *   `null` to follow the device's language.
+     */
+    fun selectLanguage(languageTag: String?) {
+        appLanguageRepository.select(languageTag)
+    }
+
+    private fun observeLanguage() {
+        state.update { it.copy(supportedLanguages = appLanguageRepository.supportedLanguages()) }
+        scope.launch {
+            appLanguageRepository.selectedLanguage.collect { tag -> state.update { it.copy(appLanguage = tag) } }
+        }
+        // The identity card's label is resolved from resources, and the ViewModel
+        // outlives the screen's re-creation in the new language: resolve it again
+        // on every change after the current one.
+        scope.launch {
+            appLanguageRepository.selectedLanguage.drop(1).collect { loadIdentity() }
+        }
     }
 
     private fun loadIdentity() {

@@ -29,6 +29,8 @@ class SettingsCallbacks(
     val onOpenAllowedDomains: () -> Unit = {},
     /** Open the About screen (version + open-source licenses). */
     val onOpenLicenses: () -> Unit = {},
+    /** Open the interface-language picker from the About category. */
+    val onLanguageClick: () -> Unit = {},
 
     // ─── Generation ──────────────────────────────────────────────────────────
     /** System-instructions textarea edit. */

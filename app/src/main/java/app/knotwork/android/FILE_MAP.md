@@ -265,6 +265,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ToolsVariableProvider.kt` - Resolves `$TOOLS` to the active tools list (`name — description`, one per line).
     - `UserVariableProvider.kt` - Resolves `$USER` to the identity card's display name (currently "Anonymous").
   - `repositories/` - Repository implementations.
+    - `AppLanguageRepositoryImpl.kt` - `AppLanguageRepository` over the platform's per-app language (`LocaleManager`).
     - `AssetBundledDocumentationRepository.kt` - Reads the documentation the build copied into `assets/docs`.
     - `AssetBundledSkillSource.kt` - Asset-backed `BundledSkillSource`: lists the JSON files under `assets/presets/skills`, parses each via `SkillJsonSerializer` on the IO dispatcher, skipping malformed files.
     - `BackgroundPromptRepositoryImpl.kt` - `BackgroundPromptRepository` over the `background_prompts` table of the encrypted database.
@@ -628,6 +629,7 @@ Only Kotlin files appear inside the generated blocks.
     - `ContentReportComposer.kt` - Pure renderer: subject line plus a Markdown body (note, category, block-quoted model output capped at `MAX_QUOTED_CHARS` with the omission stated, build metadata). Framework-free so "what exactly is in a report" is unit-testable.
   - `repositories/` - Repository interfaces.
     - `ApiKeyRepository.kt` - Provider credentials keyed by `CloudProvider` — API key, chosen model, server address — plus `requiredCredential`, the one definition of "is this provider set up", and `configuredProviders` in enum order.
+    - `AppLanguageRepository.kt` - The language the app's interface is shown in.
     - `AppStateSettings.kt` - State the app keeps between starts that is not a preference: the first-launch and onboarding flags, the chat that is open, and the console tab last chosen.
     - `BackgroundPromptRepository.kt` - The prompts of background runs waiting in the scheduler, kept in the encrypted database rather than handed to the background runtime.
     - `BundledDocumentationRepository.kt` - Access to the documentation that ships inside the APK.
@@ -1074,6 +1076,7 @@ Only Kotlin files appear inside the generated blocks.
       - `PromptLibraryViewModel.kt` - Prompt library ViewModel. Injects `PromptPresetRepository` + `SavePromptAsPresetUseCase`. Exposes `selectCategory`, `openEditor(id?)`, `closeEditor`, per-field editor setters, `saveEditor` (upsert via `existingId`), `duplicatePrompt`, `deletePrompt` (bundled-aware no-op).
     - `settings/` - Settings surface as a nested navigation graph: a category **hub** (inline Basic controls + eight category rows) routing to eight per-category sub-screens, each with an in-category "Advanced — change deliberately" disclosure. Catalog `SettingsHubContent` + `<Category>SettingsContent` render the slices; re-organisation only — every setting keeps its meaning, range, default, validation and gating 1:1.
       - `AboutSettingsDelegate.kt` - About category: read-only identity card load + the Reset-all-settings action.
+      - `AppLanguageLabels.kt` - How the interface-language picker names a language.
       - `BackgroundSettingsDelegate.kt` - Background & triggers category: notification toggles, resume / background-approval windows, the three entry-surface pipeline bindings, and the external-automation consent switch. That switch is the one setting here that does not write through: moving it **on** only stages `pendingExternalAutomationConsent` and `confirmExternalAutomationConsent` persists it, while moving it **off** writes immediately — a confirmation on the way out would falsify the consent copy's "one tap turns it off". Also folds the newest external-request journal row (only the newest: that table's write rate is set by a third-party app) into the Background row subtitle.
       - `backup/` - Settings → Privacy → *Backup & restore*: the screen and its ViewModel.
         - `AfterRestoreHost.kt` - The after-restore sheet over the chat, while there is a restore report to show (`AfterRestoreViewModel`).
@@ -1083,6 +1086,7 @@ Only Kotlin files appear inside the generated blocks.
         - `RestoreViewModel.kt` - Settings → Privacy → *Backup & restore* → *Restore from file…*: the picked file, its password, the check, the summary, the typed confirm, and the commit after which the app restarts.
       - `ExternalAutomationRowSummary.kt` - Composes the Settings row for the external-automation entry point: its binding label, its status word, and the journal one-liner beneath it. Separate from the screen because the "switched on with nothing to run" state has to read as a warning rather than as an untouched default.
       - `GenerationSettingsDelegate.kt` - Generation category: system instructions (+ `$VARIABLE` chip catalog), the four sampling parameters and the voice-input length; resetSamplingDefaults.
+      - `KeyedCache.kt` - A value built on first use and again whenever its key changes.
       - `MemorySettingsDelegate.kt` - Memory category: live stats, every memory-tuning parameter with range validation, the `$MEMORY_SUMMARY` default limit, embedding-provider selection, verbose memory logging, and the export / import / re-embed / clear data actions.
       - `ModelsSettingsDelegate.kt` - Models category: local-model backend + test probe, active-model card, collapsed external-provider rows, and the restart-required derived flag (backend / Ollama base-URL baselines captured before observers start).
       - `PipelinesSettingsDelegate.kt` - Run limits & structured output category: the autonomous-step safety cap, the PIPELINE-node max nesting depth and the structured-output repair budget.

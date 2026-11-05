@@ -20,6 +20,10 @@ import app.knotwork.design.screens.settings.HubSearchResultRow
  *
  * @property identity Current identity snapshot; `null` while the first
  *   read is in flight.
+ * @property appLanguage The language picked for the app as a BCP-47 tag, or
+ *   `null` while it follows the device.
+ * @property supportedLanguages The languages the interface is translated into,
+ *   the default first — the picker's choices besides following the device.
  * @property systemInstructions Live textarea content (user-editable).
  * @property variableCatalog Catalog of `$VARIABLE` placeholders surfaced
  *   in the chip row beneath the textarea.
@@ -142,6 +146,8 @@ import app.knotwork.design.screens.settings.HubSearchResultRow
  */
 data class SettingsUiState(
     val identity: Identity? = null,
+    val appLanguage: String? = null,
+    val supportedLanguages: List<String> = emptyList(),
     val systemInstructions: String = "",
     val variableCatalog: List<VariableCatalogChip> = emptyList(),
     val toolApprovalPolicy: ToolApprovalPolicy = ToolApprovalPolicy.DEFAULT,

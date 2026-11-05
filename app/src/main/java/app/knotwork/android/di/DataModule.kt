@@ -26,6 +26,7 @@ import app.knotwork.android.data.mcp.KoogMcpClientFactory
 import app.knotwork.android.data.mcp.KoogMcpConnectionChecker
 import app.knotwork.android.data.mcp.McpClientFactory
 import app.knotwork.android.data.network.AndroidModelDownloadManager
+import app.knotwork.android.data.repositories.AppLanguageRepositoryImpl
 import app.knotwork.android.data.repositories.AssetBundledDocumentationRepository
 import app.knotwork.android.data.repositories.AssetBundledSkillSource
 import app.knotwork.android.data.repositories.BackgroundPromptRepositoryImpl
@@ -67,6 +68,7 @@ import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.engine.TextEmbeddingEngine
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.BundledDocumentationRepository
 import app.knotwork.android.domain.repositories.ChatRepository
@@ -478,6 +480,15 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindClarificationRepository(repository: ClarificationRepositoryImpl): ClarificationRepository
+
+    /**
+     * Binds [AppLanguageRepositoryImpl] to [AppLanguageRepository] — the app's
+     * interface language, read from and written to the platform's per-app
+     * language.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindAppLanguageRepository(repository: AppLanguageRepositoryImpl): AppLanguageRepository
 
     /**
      * Binds [IdentityRepositoryImpl] to [IdentityRepository]. Surfaces the

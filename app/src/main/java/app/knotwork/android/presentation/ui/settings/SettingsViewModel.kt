@@ -11,6 +11,7 @@ import app.knotwork.android.domain.models.MemoryImportStrategy
 import app.knotwork.android.domain.models.ProviderId
 import app.knotwork.android.domain.models.ToolApprovalPolicy
 import app.knotwork.android.domain.repositories.ApiKeyRepository
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.ExternalAutomationJournalRepository
 import app.knotwork.android.domain.repositories.IdentityRepository
 import app.knotwork.android.domain.repositories.LocalModelRepository
@@ -71,6 +72,7 @@ class SettingsViewModel @Inject constructor(
     localModelRepository: LocalModelRepository,
     memoryRepository: MemoryRepository,
     identityRepository: IdentityRepository,
+    appLanguageRepository: AppLanguageRepository,
     testBackendUseCase: TestBackendUseCase,
     resetSamplingDefaultsUseCase: ResetSamplingDefaultsUseCase,
     resetToRecommendedDefaultsUseCase: ResetToRecommendedDefaultsUseCase,
@@ -154,6 +156,7 @@ class SettingsViewModel @Inject constructor(
         state = _uiState,
         appContext = appContext,
         identityRepository = identityRepository,
+        appLanguageRepository = appLanguageRepository,
         resetToRecommendedDefaultsUseCase = resetToRecommendedDefaultsUseCase,
     )
 
@@ -284,6 +287,16 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(pendingDestructive = null, destructiveTypedInput = "") }
     }
 
+    // ─── About ───────────────────────────────────────────────────────────────
+
+    /**
+     * Picks the app's interface language from the About picker.
+     *
+     * @param languageTag A tag from [SettingsUiState.supportedLanguages], or
+     *   `null` to follow the device's language.
+     */
+    fun selectLanguage(languageTag: String?) = about.selectLanguage(languageTag)
+
     // ─── Surface ───────────────────────────────────────────────────────────
 
     fun snackbarShown() {
@@ -293,10 +306,15 @@ class SettingsViewModel @Inject constructor(
     // ─── Settings search ─────────────────────────────────────────────────────
 
     /**
-     * Localized settings-search index, built once from the registry. Lazy so the
-     * (~50 string-resource) resolution happens on first query, not at VM init.
+     * Localized settings-search index. Built on first query, not at VM init (~50
+     * string-resource reads), and again after the interface language changes: the
+     * ViewModel outlives the screen's re-creation, so an index built once would
+     * keep matching the old language.
      */
-    private val searchIndex by lazy { SettingsSearchCatalog.buildIndex(appContext) }
+    private val searchIndex = KeyedCache(
+        key = { appContext.resources.configuration.locales },
+        build = { SettingsSearchCatalog.buildIndex(appContext) },
+    )
 
     /** Registry rows keyed by their deep-link anchor for O(1) highlight resolution. */
     private val entriesByAnchor: Map<String, SettingEntry> =
@@ -310,7 +328,7 @@ class SettingsViewModel @Inject constructor(
      * @param query Raw search query; blank clears the result list.
      */
     fun onSearchQueryChange(query: String) {
-        val results = SettingsSearchEngine.search(query, searchIndex).map { it.toHubRow() }
+        val results = SettingsSearchEngine.search(query, searchIndex.get()).map { it.toHubRow() }
         _uiState.update { it.copy(searchQuery = query, searchResults = results) }
     }
 

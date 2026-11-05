@@ -439,6 +439,7 @@ internal object SettingsPreview {
     fun about(): AboutSettingsViewState = AboutSettingsViewState(
         identity = identity(),
         versionLine = "v0.9.2 · alpha · 2026.05.18",
+        languageLine = "Device language",
     )
 
     // ─── Shared building blocks ──────────────────────────────────────────────

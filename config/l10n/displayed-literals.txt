@@ -1,0 +1,335 @@
+# Interface text written as string literals in code, one `path<TAB>literal` per
+# line — read by DisplayedLiteralGuardTest. A literal here shows in English in
+# every language.
+#
+# The list only shrinks: move a text to a string resource and delete its line in
+# the same change; new interface text goes into a resource from the start. A
+# literal that is rightly the same in every language (a brand name) stays, with
+# its reason after a TAB and `#`.
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Agent is thinking...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Agent is waiting
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Answering...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Awaiting user clarification...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Awaiting user confirmation...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Initializing…
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Loading context...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Pipeline running...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Pipeline stage: ${state.stepInfo.nodeName}
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Pipeline trace updated
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Processing tool result...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Queued behind another run
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Run stopped
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Task completed
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Using tool: ${state.toolName}...
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Waiting for user response in background
+app/src/main/java/app/knotwork/android/data/services/AgentForegroundService.kt	Waiting: the run reached a limit
+app/src/main/java/app/knotwork/android/data/services/ChargingTriggerSweepWorker.kt	Trigger
+app/src/main/java/app/knotwork/android/data/services/DownloadedModelInstaller.kt	Could not move the downloaded file into place.
+app/src/main/java/app/knotwork/android/data/services/DownloadedModelInstaller.kt	The downloaded file could not be read to check it.
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Accepted
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Blocked
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Completed
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Failed
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Rejected
+app/src/main/java/app/knotwork/android/data/services/ModelDownloadWorker.kt	Download request was missing its URL or file name.
+app/src/main/java/app/knotwork/android/data/services/TriggerWatchWorker.kt	Trigger
+app/src/main/java/app/knotwork/android/data/services/embedding/CloudEmbeddingProvider.kt	OpenAI (text-embedding-3-small)
+app/src/main/java/app/knotwork/android/data/services/embedding/CloudEmbeddingProvider.kt	OpenAI API key is not configured
+app/src/main/java/app/knotwork/android/data/services/embedding/CloudEmbeddingProvider.kt	OpenAI embedding request failed
+app/src/main/java/app/knotwork/android/data/services/embedding/OllamaEmbeddingProvider.kt	Ollama (nomic-embed-text)
+app/src/main/java/app/knotwork/android/data/services/embedding/OllamaEmbeddingProvider.kt	Ollama base URL is not configured
+app/src/main/java/app/knotwork/android/data/services/embedding/OllamaEmbeddingProvider.kt	Ollama embedding request failed
+app/src/main/java/app/knotwork/android/data/services/embedding/UseEmbeddingProvider.kt	On-device (Universal Sentence Encoder)
+app/src/main/java/app/knotwork/android/presentation/common/BoundedText.kt	maxBytes must be positive
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	attachment orphan cleanup
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	launcher shortcuts
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	memory compaction
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	memory re-embed re-arm
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	model file hash re-arm
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	pending-interaction expiry
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	run retention
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	trigger sync
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	unfinished backup
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	AndroidX Jetpack
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Firebase Crashlytics
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Gson
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Hilt
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Inter
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	JetBrains Mono
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Jetpack Compose
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Koog
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Kotlin Coroutines
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Ktor
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Multiplatform Markdown Renderer
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Room
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	SIL OFL 1.1
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Timber
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Universal Sentence Encoder
+app/src/main/java/app/knotwork/android/presentation/ui/chat/archive/ChatArchiveViewModel.kt	New conversation
+app/src/main/java/app/knotwork/android/presentation/ui/chat/archive/ChatArchiveViewModel.kt	Your archived chats are still on the device — reading them failed. Try again.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeFixtures.kt	stub card 1
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeFixtures.kt	stub card 2
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeHitlDelegate.kt	Reply was not delivered — the clarification had already been resolved with a default answer.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeHitlDelegate.kt	Tool '%s' denied by user.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeReattachDelegate.kt	unknown step
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeRunDelegate.kt	no run trace was rendered
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeScreenState.kt	Local model
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeScreenState.kt	New conversation
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Add a 30-minute meeting \"Rollout sync\" to your work calendar tomorrow at 10:00.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Add a 30-minute meeting tomorrow at 10:00 to discuss the rollout.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Family
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Permanently remove /Users/me/old-notes.md (4.2 KB).
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Personal
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Pipeline editor refactor, context-window meter for the chat header, 
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Read tomorrow's events from your work calendar.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Something went wrong while generating the reply.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Summarise
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Summarise the three PRs that landed yesterday.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Which calendar should I add the meeting to?
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Work
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	and a memory-summary regression fix.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	{"title":"Rollout sync","duration":30,"calendar":"work"}
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeThreadsDelegate.kt	New Chat
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeTransferDelegate.kt	the file could not be read
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeViewModel.kt	No active model. Open Settings → Models to install or activate one.
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeViewModel.kt	Unknown error
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ContentReportIssueUrl.kt	$ISSUE_TRACKER_NEW_URL?title=$encodedSubject&body=$encodedBody
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ContentReportIssueUrl.kt	\n\n_[report truncated to fit the link — copy the full report instead]_
+app/src/main/java/app/knotwork/android/presentation/ui/common/ImageAttachmentBlockCopy.kt	Images stay on your device and aren't sent to cloud models. Use a pipeline that starts 
+app/src/main/java/app/knotwork/android/presentation/ui/common/ImageAttachmentBlockCopy.kt	This model can't read images. Turn on image support for it on the Models screen, 
+app/src/main/java/app/knotwork/android/presentation/ui/common/ImageAttachmentBlockCopy.kt	This pipeline has no on-device step that can read an image. Pick a pipeline with an 
+app/src/main/java/app/knotwork/android/presentation/ui/common/ImageAttachmentBlockCopy.kt	on-device model step to send a picture.
+app/src/main/java/app/knotwork/android/presentation/ui/common/ImageAttachmentBlockCopy.kt	or switch to a vision-capable model.
+app/src/main/java/app/knotwork/android/presentation/ui/common/ImageAttachmentBlockCopy.kt	with an on-device step to send a picture.
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	 · last ${relativeShort(nowMillis - it)} ago
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	Compacted
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	Earlier
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	Pinned
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	Saved manually
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	This week
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	Today
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	Unknown
+app/src/main/java/app/knotwork/android/presentation/ui/memory/MemoryScreen.kt	compacted ${relativeShort(nowMillis - lastCompactedAt)} ago
+app/src/main/java/app/knotwork/android/presentation/ui/models/ModelsViewModel.kt	Unknown error occurred
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	$it (native heap, approx.)
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Decode       ${decode(report.decodeTokensPerSec)}
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Measured on-device · 1 warm-up + 1 measured run.
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Peak memory  $peak
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Total        ${totalSeconds(report.totalMs)}
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	avg · last $sampleCount $noun
+app/src/main/java/app/knotwork/android/presentation/ui/monitoring/MonitoringScreen.kt	INFERENCE TIME
+app/src/main/java/app/knotwork/android/presentation/ui/monitoring/MonitoringScreen.kt	TOTAL TOKENS
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	$categoriesCount categories · $promptsCount prompts
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	$runningCount running · $queuedCount queued
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	$userPresetCount saved presets
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	1 saved preset
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	no model installed
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	no saved presets
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	on-device · no network calls in last $minutes m
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	on-device · no network calls yet
+app/src/main/java/app/knotwork/android/presentation/ui/more/MoreViewModel.kt	online · network call just now
+app/src/main/java/app/knotwork/android/presentation/ui/navigation/NavRoutes.kt	help/$id?anchor=${android.net.Uri.encode(anchor.orEmpty())}
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	Couldn't set up this scenario.
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	Download continues in the background
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	Download failed.
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	Enter a model URL to download.
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	Failed to load the model.
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	This link isn't a .litertlm file. Only .litertlm models run on the phone.
+app/src/main/java/app/knotwork/android/presentation/ui/onboarding/OnboardingViewModel.kt	You can install a model from Settings → Models
+app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/OrchestratorUiState.kt	New Pipeline
+app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/PipelineLibraryScreen.kt	knotwork-bundle-${LocalDate.now()}.json
+app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/presets/GraphFlowPreview.kt	empty graph
+app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/presets/PipelinePresetsManagerScreen.kt	Export failed
+app/src/main/java/app/knotwork/android/presentation/ui/orchestrator/presets/PipelinePresetsManagerScreen.kt	Preset exported
+app/src/main/java/app/knotwork/android/presentation/ui/pipeline/editor/core/BezierEdge.kt	samples must be >= 2 to evaluate at least one segment
+app/src/main/java/app/knotwork/android/presentation/ui/pipeline/editor/core/ValidationAutoFix.kt	Input
+app/src/main/java/app/knotwork/android/presentation/ui/pipeline/editor/core/ValidationAutoFix.kt	Output
+app/src/main/java/app/knotwork/android/presentation/ui/settings/SettingsSearchCatalog.kt	Missing search copy for anchor '$anchor'
+app/src/main/java/app/knotwork/android/presentation/ui/settings/backup/BackupViewModel.kt	knotwork-backup-${LocalDate.now()}.${BackupFormat.FILE_EXTENSION}
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Anthropic
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Google
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Groq
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Ollama
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	OpenAI-compatible server
+app/src/main/java/app/knotwork/android/presentation/ui/splash/SplashUiState.kt	Starting…
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Answering
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Background Task (${info.tags.firstOrNull() ?: "AgentWorker"})
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Chat Session: ${session.name}
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Loading
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Thinking
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Tool Execution
+app/src/main/java/app/knotwork/android/presentation/ui/taskmonitor/TaskMonitorViewModel.kt	Waiting Approval
+app/src/main/java/app/knotwork/android/presentation/ui/tools/McpServerConfigViewModel.kt	A server with this URL already exists: \"$label\".
+app/src/main/java/app/knotwork/android/presentation/ui/tools/McpServerConfigViewModel.kt	Approve the unencrypted connection above before saving.
+app/src/main/java/app/knotwork/android/presentation/ui/tools/McpServerConfigViewModel.kt	Enter a server URL.
+app/src/main/java/app/knotwork/android/presentation/ui/tools/McpServerConfigViewModel.kt	URL needs a host name.
+app/src/main/java/app/knotwork/android/presentation/ui/tools/ToolDetailScreen.kt	Local tool
+app/src/main/java/app/knotwork/android/presentation/ui/tools/ToolDetailScreen.kt	MCP tool
+app/src/main/java/app/knotwork/android/presentation/ui/tools/ToolDetailScreen.kt	Server error: ${it.reason}
+catalog/src/main/java/app/knotwork/design/components/UnbrokenRunCuts.kt	max must be at least 2
+catalog/src/main/java/app/knotwork/design/components/buttons/KnotworkPrimaryButton.kt	Loading
+catalog/src/main/java/app/knotwork/design/components/buttons/KnotworkSecondaryButton.kt	Loading
+catalog/src/main/java/app/knotwork/design/components/chips/HealthBadge.kt	Health: $label
+catalog/src/main/java/app/knotwork/design/components/chips/KnotworkChipsInput.kt	Add and press Enter…
+catalog/src/main/java/app/knotwork/design/components/chips/KnotworkChipsInput.kt	Max $cap items
+catalog/src/main/java/app/knotwork/design/components/chips/KnotworkInputChip.kt	Remove $label
+catalog/src/main/java/app/knotwork/design/components/chips/RiskPill.kt	Destructive
+catalog/src/main/java/app/knotwork/design/components/chips/RiskPill.kt	Read only
+catalog/src/main/java/app/knotwork/design/components/chips/RiskPill.kt	Risk level: ${risk.label}
+catalog/src/main/java/app/knotwork/design/components/chips/RiskPill.kt	Sensitive
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Cancelled
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Error
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Idle
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Queued
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Running
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Status: ${status.label}
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Success
+catalog/src/main/java/app/knotwork/design/components/chips/StatusPill.kt	Warning
+catalog/src/main/java/app/knotwork/design/components/lists/PipelineListRow.kt	Archive
+catalog/src/main/java/app/knotwork/design/components/lists/PipelineListRow.kt	Delete
+catalog/src/main/java/app/knotwork/design/components/lists/PipelineListRow.kt	Duplicate
+catalog/src/main/java/app/knotwork/design/components/misc/KnotworkLoader.kt	Loading
+catalog/src/main/java/app/knotwork/design/components/misc/StripedPlaceholder.kt	Placeholder illustration
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	Done
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	EdgeLabel — variants
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	Fail
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	False
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	Item
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	Pass
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	Retry
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EdgeLabel.kt	True
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	2 issues · can't save
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	Editing · 4 nodes · 3 edges
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	EditorToolbar — dark overview
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	EditorToolbar — issues
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	EditorToolbar — light editing
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	Overview · 0.42× · 11 nodes
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/EditorToolbar.kt	Weekly digest
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeCard.kt	Local response
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeCard.kt	NodeCard — LiteRT idle
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeCard.kt	NodeCard — selected
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeCard.kt	Route the request
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Done
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Fail
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	False
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Item
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Pass
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Retry
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	True
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeTypeColors.kt	INTENT ROUTER
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Anthropic
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Auto
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Google
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Groq
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Ollama
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	OpenAI-compatible server
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Add.kt	Add
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Archive.kt	Archive
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Back.kt	Back
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Battery.kt	Battery
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Block.kt	Block
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Bolt.kt	Bolt
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Book.kt	Book
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Bookmark.kt	Bookmark
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Brain.kt	Brain
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Branch.kt	Branch
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Camera.kt	Camera
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Chat.kt	Chat
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Check.kt	Check
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Chip.kt	Chip
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Circle.kt	Circle
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Cloud.kt	Cloud
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Cog.kt	Cog
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Copy.kt	Copy
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Db.kt	Db
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Dot.kt	Dot
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Download.kt	Download
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Download2.kt	Download2
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Edit.kt	Edit
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Expand.kt	Expand
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Extension.kt	Extension
+catalog/src/main/java/app/knotwork/design/icons/imagevector/External.kt	External
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Eye.kt	Eye
+catalog/src/main/java/app/knotwork/design/icons/imagevector/File.kt	File
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Filter.kt	Filter
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Flow.kt	Flow
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Folder.kt	Folder
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Gauge.kt	Gauge
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Globe.kt	Globe
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Grid.kt	Grid
+catalog/src/main/java/app/knotwork/design/icons/imagevector/History.kt	History
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Hourglass.kt	Hourglass
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Hub.kt	Hub
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Image.kt	Image
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Info.kt	Info
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Key.kt	Key
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Link.kt	Link
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Lock.kt	Lock
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Mark.kt	Mark
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Menu.kt	Menu
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Mic.kt	Mic
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Minus.kt	Minus
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Monitor.kt	Monitor
+catalog/src/main/java/app/knotwork/design/icons/imagevector/More.kt	More
+catalog/src/main/java/app/knotwork/design/icons/imagevector/More2.kt	More2
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Paste.kt	Paste
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Pause.kt	Pause
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Pin.kt	Pin
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Play.kt	Play
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Ram.kt	Ram
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Redo.kt	Redo
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Refresh.kt	Refresh
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Save.kt	Save
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Search.kt	Search
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Send.kt	Send
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Share.kt	Share
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Shield.kt	Shield
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Skill.kt	Skill
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Sliders.kt	Sliders
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Spark.kt	Spark
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Star.kt	Star
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Stop.kt	Stop
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Terminal.kt	Terminal
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Theme.kt	Theme
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Tool.kt	Tool
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Trash.kt	Trash
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Trigger.kt	Trigger
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Unarchive.kt	Unarchive
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Undo.kt	Undo
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Warn.kt	Warn
+catalog/src/main/java/app/knotwork/design/icons/imagevector/Wordmark.kt	Wordmark
+catalog/src/main/java/app/knotwork/design/screens/chat/ChatHomeViewState.kt	a stopped run is either an untyped failure or a typed termination, never both
+catalog/src/main/java/app/knotwork/design/screens/chat/ChatHomeViewState.kt	the Error visual must be explained somewhere: errorMessage, termination, or the thread itself
+catalog/src/main/java/app/knotwork/design/screens/chatarchive/ChatArchiveViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/discover/DiscoverDetailViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/discover/DiscoverViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/models/ModelsViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/monitoring/MonitoringViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/onboarding/OnboardingViewState.kt	Choose a scenario
+catalog/src/main/java/app/knotwork/design/screens/onboarding/OnboardingViewState.kt	Custom URL…
+catalog/src/main/java/app/knotwork/design/screens/onboarding/OnboardingViewState.kt	Download
+catalog/src/main/java/app/knotwork/design/screens/onboarding/OnboardingViewState.kt	Ready
+catalog/src/main/java/app/knotwork/design/screens/onboarding/OnboardingViewState.kt	Welcome
+catalog/src/main/java/app/knotwork/design/screens/pipelines/PipelineLibraryViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/pipelines/PipelineLibraryViewState.kt	selectedCount must be non-negative
+catalog/src/main/java/app/knotwork/design/screens/prompts/PromptLibraryViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/skills/SkillLibraryViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/splash/SplashContent.kt	Retry
+catalog/src/main/java/app/knotwork/design/screens/splash/SplashViewState.kt	progress must be in 0f..1f, was $progress
+catalog/src/main/java/app/knotwork/design/screens/taskmonitor/TaskMonitorViewState.kt	Active
+catalog/src/main/java/app/knotwork/design/screens/taskmonitor/TaskMonitorViewState.kt	All
+catalog/src/main/java/app/knotwork/design/screens/taskmonitor/TaskMonitorViewState.kt	Background
+catalog/src/main/java/app/knotwork/design/screens/taskmonitor/TaskMonitorViewState.kt	Completed
+catalog/src/main/java/app/knotwork/design/screens/taskmonitor/TaskMonitorViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolDetailContent.kt	Disabled
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolDetailContent.kt	Enabled
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsContent.kt	Couldn't load tools
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsContent.kt	Retry
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsContent.kt	Risk level: $label
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	API key
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	Basic
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	Bearer
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	None
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	Streamable HTTP
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	errorMessage must be non-null iff visualState == Error
+catalog/src/main/java/app/knotwork/design/screens/triggers/TriggersViewState.kt	errorMessage must be non-null iff visualState == Error

@@ -128,6 +128,25 @@ For the broader layering rationale, see
   variable, would be sent. `TimberMessageTemplateKonsistTest` fails any other
   shape.
 
+## Interface text
+
+- Every text the interface shows is a **string resource**, translated into each
+  language the app ships (`localeFilters` in `app/build.gradle.kts`). A sentence
+  written into Kotlin shows in English in every language.
+  `DisplayedLiteralGuardTest` fails a literal that reads like words in the code
+  that draws interface; `CatalogStringsWiringTest` fails a design-system English
+  default the app never replaces with a resource.
+- A ViewModel outlives the screen's re-creation in a new language, so text it
+  resolves once and keeps stays in the old one. Hand the screen a resource id or
+  a typed value and resolve it there; text a ViewModel must keep is rebuilt when
+  the configuration's locales change (`KeyedCache`).
+- A new string gets its translation in the same change.
+  `TranslationCoverageTest` fails a string missing from a shipped language unless
+  that language's list in `config/l10n/` names it, and the lists only shrink.
+- What a model reads is not translated: system prompts, tool descriptions and
+  tool results stay in English, as do the tokens a model's output is matched
+  against (route labels, intent classes).
+
 ## Dependency injection (Hilt)
 
 - Use `@HiltViewModel` for every `ViewModel`.

@@ -69,6 +69,8 @@ enum class SettingTier {
  * - [MEMORY_ACTIONS] the Export / Import / Re-embed / Clear action cluster.
  * - [IDENTITY] the read-only identity card.
  * - [RESET] the "Reset all settings" destructive action.
+ * - [LANGUAGE] the interface-language picker; the value is the system's
+ *   per-app language, not a stored setting.
  */
 enum class SettingControlType {
     /** Free-text editor (e.g. system instructions). */
@@ -100,6 +102,9 @@ enum class SettingControlType {
 
     /** The "Reset all settings" destructive action. */
     RESET,
+
+    /** The interface-language picker; the value is the system's per-app language, not a stored key. */
+    LANGUAGE,
 }
 
 /**

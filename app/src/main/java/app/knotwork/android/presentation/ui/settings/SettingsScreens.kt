@@ -376,12 +376,16 @@ fun PrivacySettingsScreen(viewModel: SettingsViewModel, nav: SettingsNavActions)
     }
 }
 
-/** About category sub-screen (also hosts the reset confirm dialog via the content). */
+/**
+ * About category sub-screen (also hosts the reset confirm dialog via the content,
+ * and the interface-language picker).
+ */
 @Composable
 fun AboutSettingsScreen(viewModel: SettingsViewModel, nav: SettingsNavActions) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val callbacks = rememberSettingsCallbacks(viewModel, nav)
+    var languagePickerOpen by remember { mutableStateOf(false) }
+    val callbacks = rememberSettingsCallbacks(viewModel, nav, onLanguageClick = { languagePickerOpen = true })
     val highlight = rememberCategoryHighlight(viewModel, uiState.pendingHighlightAnchor, DomainCategoryId.ABOUT)
     SettingsSurface(viewModel) {
         CompositionLocalProvider(LocalSettingsHighlightKey provides highlight.key) {
@@ -392,6 +396,49 @@ fun AboutSettingsScreen(viewModel: SettingsViewModel, nav: SettingsNavActions) {
             )
         }
     }
+    if (languagePickerOpen) {
+        AppLanguagePickerDialog(
+            supportedLanguages = uiState.supportedLanguages,
+            selectedLanguage = uiState.appLanguage,
+            onSelect = { languageTag ->
+                // Closed first: picking a language re-creates the screen in it.
+                languagePickerOpen = false
+                viewModel.selectLanguage(languageTag)
+            },
+            onDismiss = { languagePickerOpen = false },
+        )
+    }
+}
+
+/**
+ * The interface-language picker: following the device first, then every
+ * language the interface is translated into, each named in itself.
+ *
+ * @param supportedLanguages BCP-47 tags of the translated languages.
+ * @param selectedLanguage The picked language, or `null` while the app follows
+ *   the device.
+ * @param onSelect A row was tapped; `null` follows the device.
+ * @param onDismiss Cancel or scrim tap.
+ */
+@Composable
+private fun AppLanguagePickerDialog(
+    supportedLanguages: List<String>,
+    selectedLanguage: String?,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    SingleChoiceDialog(
+        ui = SingleChoiceDialogUi(
+            title = stringResource(R.string.settings_language_dialog_title),
+            options = listOf(
+                SingleChoiceOptionUi(id = null, label = stringResource(R.string.settings_language_device)),
+            ) + supportedLanguages.map { SingleChoiceOptionUi(id = it, label = AppLanguageLabels.autonym(it)) },
+            selectedId = selectedLanguage,
+            cancelLabel = stringResource(R.string.common_cancel),
+        ),
+        onSelect = onSelect,
+        onDismiss = onDismiss,
+    )
 }
 
 /**
@@ -439,6 +486,7 @@ private fun rememberSettingsCallbacks(
     onShareTargetPipelineClick: () -> Unit = {},
     onQuickTilePipelineClick: () -> Unit = {},
     onExternalAutomationPipelineClick: () -> Unit = {},
+    onLanguageClick: () -> Unit = {},
 ): SettingsCallbacks {
     val context = LocalContext.current
     val exportFilename = stringResource(R.string.settings_memory_export_filename)
@@ -467,6 +515,7 @@ private fun rememberSettingsCallbacks(
         onOpenManageTools = nav.onOpenManageTools,
         onOpenAllowedDomains = nav.onOpenAllowedDomains,
         onOpenLicenses = nav.onOpenLicenses,
+        onLanguageClick = onLanguageClick,
         onSystemInstructionsChange = viewModel::updateSystemInstructions,
         onChipInsert = viewModel::insertVariable,
         onGenerationSliderChange = { id, value -> routeGenerationSlider(viewModel, id, value) },
