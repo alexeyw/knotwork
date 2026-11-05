@@ -9,6 +9,7 @@ import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.services.AttachmentStore
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -37,7 +38,7 @@ class ChatRepositoryImplTest {
         chatDao = mockk(relaxed = true)
         chatHistorySummaryDao = mockk(relaxed = true)
         attachmentStore = mockk(relaxed = true)
-        repository = ChatRepositoryImpl(chatDao, chatHistorySummaryDao, attachmentStore)
+        repository = ChatRepositoryImpl(chatDao, chatHistorySummaryDao, attachmentStore, EnglishDefaultNames)
     }
 
     /**

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="knotwork_run_verify_failed_reason_unknown">неизвестная ошибка</string>
+</resources>

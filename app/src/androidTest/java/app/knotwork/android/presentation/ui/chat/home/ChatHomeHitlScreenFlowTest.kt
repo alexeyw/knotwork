@@ -50,7 +50,7 @@ class ChatHomeHitlScreenFlowTest {
         composeTestRule.onNodeWithText(allowLabel).performClick()
         composeTestRule.waitForIdle()
 
-        verify(exactly = 1) { handles.hitl.approveTool() }
+        verify(exactly = 1) { handles.hitl.approveTool(any()) }
     }
 
     @Test
@@ -129,7 +129,7 @@ class ChatHomeHitlScreenFlowTest {
         composeTestRule.onAllNodesWithText(allowLabel)[0].performClick()
         composeTestRule.waitForIdle()
 
-        verify(exactly = 1) { handles.hitl.approveTool() }
+        verify(exactly = 1) { handles.hitl.approveTool(any()) }
     }
 
     @Test

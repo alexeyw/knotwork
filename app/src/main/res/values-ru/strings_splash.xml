@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cold-start steps, named under the progress bar. -->
+    <string name="splash_stage_preparing">Подготовка приложения…</string>
+    <string name="splash_stage_models">Проверка загруженных моделей…</string>
+    <string name="splash_stage_pipelines">Чтение пайплайнов…</string>
+    <string name="splash_stage_chats">Чтение чатов…</string>
+    <string name="splash_stage_memory">Чтение памяти…</string>
+    <string name="splash_stage_ready">Готово</string>
+</resources>

@@ -712,8 +712,13 @@ pure-domain registry. Every user-facing setting is declared once as a
 [`SettingsRegistry`](../app/src/main/java/app/knotwork/android/domain/settings/SettingsRegistry.kt)
 — that single declaration stamps its category (Generation, Models,
 Memory, Pipelines, Tools, Background, Privacy, About), its Basic/Advanced
-tier, its control type and its search synonyms, so the control lands in
-the right sub-screen and becomes searchable automatically. Each category
+tier and its control type, so the control lands in the right sub-screen.
+Its search text lives in
+[`SettingsSearchCatalog`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/SettingsSearchCatalog.kt),
+keyed by the row's anchor: a name, a one-line description and a
+`settings_search_syn_*` resource of comma-separated synonyms, each in every
+language the app ships — `SettingsSearchCatalogTest` fails a row without
+them. Each category
 renders through a catalog `*SettingsContent` composable
 (`catalog/src/main/java/app/knotwork/design/screens/settings/`) fed by a
 per-category delegate

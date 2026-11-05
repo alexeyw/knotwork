@@ -3,7 +3,6 @@ package app.knotwork.android.presentation.ui.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.knotwork.android.R
 import app.knotwork.android.domain.engine.CloudModelCatalog
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.EntrySurface
@@ -35,6 +34,7 @@ import app.knotwork.android.domain.usecases.ResetSamplingDefaultsUseCase
 import app.knotwork.android.domain.usecases.ResetToRecommendedDefaultsUseCase
 import app.knotwork.android.domain.usecases.SetSurfacePipelineUseCase
 import app.knotwork.android.domain.usecases.TestBackendUseCase
+import app.knotwork.design.R
 import app.knotwork.design.components.dialogs.typedConfirmMatches
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -277,7 +277,7 @@ class SettingsViewModel @Inject constructor(
         when (pending) {
             // Wiping memory is irreversible — keep the typed-keyword gate.
             PendingDestructiveAction.ClearMemory -> {
-                val keyword = appContext.getString(R.string.destructive_typed_keyword)
+                val keyword = appContext.getString(R.string.knotwork_typed_confirm_word)
                 if (!typedConfirmMatches(input = _uiState.value.destructiveTypedInput, keyword = keyword)) return
                 memory.performClearMemory()
             }

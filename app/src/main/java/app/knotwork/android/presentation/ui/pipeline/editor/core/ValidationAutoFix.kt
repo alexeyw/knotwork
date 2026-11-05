@@ -37,13 +37,24 @@ object ValidationAutoFix {
      *  5. DisconnectedOutput → connect the OUTPUT to the bottommost non-OUTPUT node.
      *  6. UnreachableNode / DeadEndNode / HasCycles / NodeEmptyContext →
      *     **no auto-fix** (require human judgement).
+     *
+     * @param graph The pipeline to fix.
+     * @param errors What its validation found.
+     * @param inputLabel The label of an INPUT node the fix adds, in the interface language.
+     * @param outputLabel The label of an OUTPUT node the fix adds, in the interface language.
+     * @return The fixed graph and which recipes ran.
      */
-    fun apply(graph: PipelineGraph, errors: List<PipelineValidationError>): AutoFixOutcome {
+    fun apply(
+        graph: PipelineGraph,
+        errors: List<PipelineValidationError>,
+        inputLabel: String,
+        outputLabel: String,
+    ): AutoFixOutcome {
         var working = graph
         val appliedRecipes = mutableListOf<String>()
         errors.distinct().forEach { error ->
             val before = working
-            val after = applyRecipe(working, error)
+            val after = applyRecipe(working, error, inputLabel, outputLabel)
             if (after !== before) {
                 working = after
                 appliedRecipes += recipeNameFor(error)
@@ -61,9 +72,14 @@ object ValidationAutoFix {
      * the error class has no recipe.
      */
     @Suppress("ReturnCount")
-    private fun applyRecipe(graph: PipelineGraph, error: PipelineValidationError): PipelineGraph = when (error) {
-        PipelineValidationError.MissingInput -> addInputNode(graph)
-        PipelineValidationError.MissingOutput -> addOutputNode(graph)
+    private fun applyRecipe(
+        graph: PipelineGraph,
+        error: PipelineValidationError,
+        inputLabel: String,
+        outputLabel: String,
+    ): PipelineGraph = when (error) {
+        PipelineValidationError.MissingInput -> addInputNode(graph, inputLabel)
+        PipelineValidationError.MissingOutput -> addOutputNode(graph, outputLabel)
         PipelineValidationError.MultipleInputs -> keepFirstNodeOfType(graph, NodeType.INPUT)
         PipelineValidationError.MultipleOutputs -> keepFirstNodeOfType(graph, NodeType.OUTPUT)
         PipelineValidationError.DisconnectedInput -> connectInputToTopmostPeer(graph)
@@ -84,25 +100,25 @@ object ValidationAutoFix {
         is PipelineValidationError.SkillNotFound -> graph
     }
 
-    private fun addInputNode(graph: PipelineGraph): PipelineGraph {
+    private fun addInputNode(graph: PipelineGraph, label: String): PipelineGraph {
         if (graph.nodes.any { it.type == NodeType.INPUT }) return graph
         val node = NodeModel(
             id = newNodeId(),
             type = NodeType.INPUT,
-            label = "Input",
+            label = label,
             x = 0f,
             y = 0f,
         )
         return graph.copy(nodes = listOf(node) + graph.nodes)
     }
 
-    private fun addOutputNode(graph: PipelineGraph): PipelineGraph {
+    private fun addOutputNode(graph: PipelineGraph, label: String): PipelineGraph {
         if (graph.nodes.any { it.type == NodeType.OUTPUT }) return graph
         val lowestY = graph.nodes.maxOfOrNull { it.y } ?: 0f
         val node = NodeModel(
             id = newNodeId(),
             type = NodeType.OUTPUT,
-            label = "Output",
+            label = label,
             x = 0f,
             y = lowestY + AUTO_FIX_VERTICAL_SPACING,
         )

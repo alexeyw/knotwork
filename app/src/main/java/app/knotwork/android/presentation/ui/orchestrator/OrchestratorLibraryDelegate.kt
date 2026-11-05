@@ -4,6 +4,7 @@ import app.knotwork.android.R
 import app.knotwork.android.domain.models.EntrySurface
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.EntryPointSettings
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.services.findDependentPipelines
 import app.knotwork.android.domain.usecases.CreatePipelineUseCase
 import app.knotwork.android.domain.usecases.DeletePipelineUseCase
@@ -33,6 +34,7 @@ import javax.inject.Inject
  * @property resolveSurfacePipeline Reads which pipeline an entry surface (share, tile) runs.
  * @property setSurfacePipeline Binds an entry surface to a pipeline, or clears the binding.
  * @property entryPointSettings The default pipeline and the per-surface bindings.
+ * @property defaultNames The name of the blank pipeline the editor falls back to.
  */
 class OrchestratorLibraryUseCases @Inject constructor(
     val loadPipeline: LoadPipelineUseCase,
@@ -43,6 +45,7 @@ class OrchestratorLibraryUseCases @Inject constructor(
     val resolveSurfacePipeline: ResolveSurfacePipelineUseCase,
     val setSurfacePipeline: SetSurfacePipelineUseCase,
     val entryPointSettings: EntryPointSettings,
+    val defaultNames: DefaultNames,
 )
 
 /**
@@ -344,7 +347,7 @@ class OrchestratorLibraryDelegate(
                         next != null -> next
                         else -> PipelineGraph(
                             id = UUID.randomUUID().toString(),
-                            name = OrchestratorUiState.DEFAULT_PIPELINE_NAME,
+                            name = useCases.defaultNames.newPipeline(),
                         )
                     },
                     persistedPipeline = if (editorHeldIt) next else state.persistedPipeline,

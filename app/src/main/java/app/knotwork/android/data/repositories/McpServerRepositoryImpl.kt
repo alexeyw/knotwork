@@ -3,11 +3,14 @@ package app.knotwork.android.data.repositories
 import androidx.annotation.VisibleForTesting
 import app.knotwork.android.data.mcp.McpClient
 import app.knotwork.android.data.mcp.McpConnectionPool
+import app.knotwork.android.data.mcp.mcpFailureContext
+import app.knotwork.android.data.network.ConnectionFailureClassifier
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTool
 import app.knotwork.android.domain.repositories.McpServerRepository
+import app.knotwork.android.domain.services.CleartextPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -148,7 +151,10 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
                 // broken, abandoning it half-retired would leave exactly the stale
                 // entry this whole class exists to avoid.
                 withContext(NonCancellable) { invalidate() }
-                flow.value = McpConnectionStatus.Error(reason = e.localizedMessage ?: e.javaClass.simpleName)
+                flow.value = McpConnectionStatus.Error(
+                    host = CleartextPolicy.hostOf(serverUrl) ?: serverUrl,
+                    failure = ConnectionFailureClassifier.classify(e, mcpFailureContext(config)),
+                )
                 settled = true
                 Result.failure(e)
             } finally {
@@ -165,7 +171,7 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
                         statusBeforeFetch != McpConnectionStatus.Connecting -> statusBeforeFetch
                         cached?.connection != null && cached.connection === pool.peek(serverUrl) ->
                             McpConnectionStatus.Connected
-                        else -> McpConnectionStatus.Error(reason = INTERRUPTED_REASON)
+                        else -> McpConnectionStatus.Interrupted
                     }
                 }
             }
@@ -231,9 +237,6 @@ class McpServerRepositoryImpl @Inject constructor(private val pool: McpConnectio
     companion object {
         /** Recognises [mcpToolId] outputs in route parameters and other callers. */
         const val MCP_ID_PREFIX: String = "mcp:"
-
-        /** Shown when a tool-list fetch was abandoned before it could resolve. */
-        private const val INTERRUPTED_REASON: String = "Connection attempt was interrupted"
 
         /** Number of hex chars taken from the SHA-256 digest for the id prefix. */
         private const val ID_HASH_HEX_LEN: Int = 8

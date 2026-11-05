@@ -4,6 +4,7 @@ import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.models.TestProbeFailure
 import app.knotwork.android.domain.models.TestProbeResult
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
@@ -84,7 +85,8 @@ class TestBackendUseCaseTest {
         val result = useCase()
 
         assertFalse(result.success)
-        assertEquals("No active model selected.", result.errorMessage)
+        assertEquals(TestProbeFailure.NO_ACTIVE_MODEL, result.failure)
+        assertEquals(null, result.errorMessage)
         coVerify(exactly = 0) { loadModelUseCase.invoke(any(), any(), any()) }
     }
 
@@ -118,5 +120,30 @@ class TestBackendUseCaseTest {
         assertFalse(result.success)
         assertEquals("Can not find OpenCL library", result.errorMessage)
         assertEquals(1, result.tokensGenerated)
+    }
+
+    @Test
+    fun `given a model file gone from the device when probing then the failure is typed for the screen`() = runTest {
+        coEvery { loadModelUseCase.invoke(any(), any(), any()) } returns Result.Error(
+            error = ModelLoadError.FileMissing("/data/gone.litertlm"),
+            message = "Model file not found at: /data/gone.litertlm. Please download it again.",
+        )
+
+        val result = useCase("/data/gone.litertlm")
+
+        // The run's English sentence stays with the load; the settings row words this itself.
+        assertEquals(TestProbeFailure.MODEL_FILE_MISSING, result.failure)
+        assertEquals(null, result.errorMessage)
+    }
+
+    @Test
+    fun `given a stream that throws without a message when probing then the failure reads as unknown`() = runTest {
+        every { llmInferenceEngine.generateResponseStream(any(), any(), any()) } returns
+            flow { throw IllegalStateException() }
+
+        val result = useCase("/data/fresh.litertlm")
+
+        assertEquals(TestProbeFailure.UNKNOWN, result.failure)
+        assertEquals(null, result.errorMessage)
     }
 }

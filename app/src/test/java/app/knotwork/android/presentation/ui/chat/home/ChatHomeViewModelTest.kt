@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.R
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.engine.LlmInferenceEngine
@@ -42,6 +43,7 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.RecordingState
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
@@ -73,7 +75,7 @@ import app.knotwork.android.domain.verification.RunDescription
 import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.presentation.state.ActiveSessionTracker
 import app.knotwork.android.presentation.ui.chat.ChatExportEvent
-import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessagePreview
 import app.knotwork.design.components.chat.ChatMessageStatus
@@ -323,6 +325,7 @@ class ChatHomeViewModelTest {
         unarchiveChatUseCase,
         runUseCases,
         resolveApprovalRequestContext,
+        EnglishDefaultNames,
     ).also { vm ->
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.
@@ -697,7 +700,7 @@ class ChatHomeViewModelTest {
                     ChatMessage(sessionId = sessionId, role = Role.USER, content = "the failed turn", timestamp = 1L),
                 ),
             )
-            viewModel.forceState(ChatHomeUiState.Error("boom"))
+            viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
             viewModel.onComposerValueChange("typed while reading the error")
 
             viewModel.retryAfterError()
@@ -856,7 +859,7 @@ class ChatHomeViewModelTest {
                 ),
             ),
         )
-        viewModel.forceState(ChatHomeUiState.Error("boom"))
+        viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
 
         viewModel.retryAfterError()
         advanceUntilIdle()
@@ -881,7 +884,7 @@ class ChatHomeViewModelTest {
             advanceUntilIdle()
             val sessionId = viewModel.state.value.thread.currentSessionId
             every { chatRepository.getMessagesForSession(sessionId) } returns flowOf(emptyList())
-            viewModel.forceState(ChatHomeUiState.Error("boom"))
+            viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
 
             viewModel.retryAfterError()
             advanceUntilIdle()
@@ -1284,7 +1287,7 @@ class ChatHomeViewModelTest {
 
         // The chat keeps its default name — the instruction text must not become the title.
         assertEquals(
-            ChatHomeThreadsDelegate.DEFAULT_NEW_CHAT_NAME,
+            EnglishDefaultNames.NEW_CHAT,
             sessionsFlow.value.first { it.id == sessionId }.name,
         )
     }
@@ -1309,7 +1312,7 @@ class ChatHomeViewModelTest {
 
             val visual = viewModel.state.value.visual
             assertTrue(visual is ChatHomeUiState.Error)
-            assertEquals(ImageAttachmentBlockCopy.MODEL_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
+            assertEquals(UiText(R.string.chat_image_blocked_model), (visual as ChatHomeUiState.Error).message)
             // The run never starts and the draft attachment is preserved.
             coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
             assertNotNull(viewModel.state.value.composer.attachment)
@@ -1334,7 +1337,7 @@ class ChatHomeViewModelTest {
 
         val visual = viewModel.state.value.visual
         assertTrue(visual is ChatHomeUiState.Error)
-        assertEquals(ImageAttachmentBlockCopy.PIPELINE_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
+        assertEquals(UiText(R.string.chat_image_blocked_pipeline), (visual as ChatHomeUiState.Error).message)
         coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
     }
 
@@ -1385,7 +1388,7 @@ class ChatHomeViewModelTest {
             val visual = viewModel.state.value.visual
             assertTrue(visual is ChatHomeUiState.Error)
             assertEquals(
-                ImageAttachmentBlockCopy.CLOUD_ATTACHMENT_BLOCKED_MESSAGE,
+                UiText(R.string.chat_image_blocked_cloud),
                 (visual as ChatHomeUiState.Error).message,
             )
             coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
@@ -1548,7 +1551,7 @@ class ChatHomeViewModelTest {
         coEvery {
             agentOrchestratorUseCase(sessionId, "the failed turn", any(), any(), any(), persistUserMessage = false)
         } returns flow { awaitCancellation() }
-        viewModel.forceState(ChatHomeUiState.Error("boom"))
+        viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
 
         viewModel.retryAfterError()
         advanceUntilIdle()
@@ -1653,7 +1656,7 @@ class ChatHomeViewModelTest {
 
         val state = viewModel.state.value.visual
         assertTrue("Expected Error, got $state", state is ChatHomeUiState.Error)
-        assertEquals("boom", (state as ChatHomeUiState.Error).message)
+        assertEquals(UiText.Dynamic("boom"), (state as ChatHomeUiState.Error).message)
     }
 
     @Test
@@ -1684,9 +1687,9 @@ class ChatHomeViewModelTest {
         viewModel = createViewModel()
         advanceUntilIdle()
         val sessionId = viewModel.state.value.thread.currentSessionId
-        // initializeSession() created a session named DEFAULT_NEW_CHAT_NAME
+        // initializeSession() created a session under the new-chat name
         assertEquals(
-            ChatHomeThreadsDelegate.DEFAULT_NEW_CHAT_NAME,
+            EnglishDefaultNames.NEW_CHAT,
             sessionsFlow.value.first { it.id == sessionId }.name,
         )
         coEvery { agentOrchestratorUseCase(sessionId, any(), any()) } returns flowOf(
@@ -2207,7 +2210,7 @@ class ChatHomeViewModelTest {
         viewModel.sendMessage()
         advanceUntilIdle()
 
-        viewModel.hitl.approveTool()
+        viewModel.hitl.approveTool(CONFIRM_WORD)
         advanceUntilIdle()
 
         coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
@@ -2275,18 +2278,51 @@ class ChatHomeViewModelTest {
         advanceUntilIdle()
 
         // Empty typed-confirm — Allow must be refused.
-        viewModel.hitl.approveTool()
+        viewModel.hitl.approveTool(CONFIRM_WORD)
         advanceUntilIdle()
         coVerify(exactly = 0) { submitApprovalDecisionUseCase(any(), any(), true) }
         assertTrue(viewModel.state.value.visual is ChatHomeUiState.HitlConfirm)
 
         // Typing the canonical magic word unlocks the gate.
         viewModel.hitl.onTypedConfirmChange("yes")
-        viewModel.hitl.approveTool()
+        viewModel.hitl.approveTool(CONFIRM_WORD)
         advanceUntilIdle()
         coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
         assertEquals(ChatHomeUiState.Generating(), viewModel.state.value.visual)
     }
+
+    @Test
+    fun `given the interface in Russian when a destructive call is approved then the gate takes the Russian word`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            coEvery { agentOrchestratorUseCase(sessionId, "hi", null) } returns flow {
+                emit(
+                    AgentOrchestratorState.WaitingForApproval(
+                        toolName = "fs.delete_file",
+                        arguments = "{}",
+                        risk = ToolRisk.DESTRUCTIVE,
+                        requestId = "request-1",
+                    ),
+                )
+                delay(10_000)
+            }
+            viewModel.onComposerValueChange("hi")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            // The card asks for the word of the interface language; the English one does not pass.
+            viewModel.hitl.onTypedConfirmChange("yes")
+            viewModel.hitl.approveTool("да")
+            advanceUntilIdle()
+            coVerify(exactly = 0) { submitApprovalDecisionUseCase(any(), any(), true) }
+
+            viewModel.hitl.onTypedConfirmChange(" Да ")
+            viewModel.hitl.approveTool("да")
+            advanceUntilIdle()
+            coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
+        }
 
     @Test
     fun `AwaitingClarification emits Clarification state and captures the request`() = runTest(testDispatcher) {
@@ -2863,7 +2899,7 @@ class ChatHomeViewModelTest {
 
             viewModel = createViewModel()
             advanceUntilIdle()
-            viewModel.hitl.approveTool()
+            viewModel.hitl.approveTool(CONFIRM_WORD)
             advanceUntilIdle()
 
             coVerify(exactly = 1) { submitApprovalDecisionUseCase(sessionId, "request-parked", true) }
@@ -2888,7 +2924,7 @@ class ChatHomeViewModelTest {
 
             viewModel = createViewModel()
             advanceUntilIdle()
-            viewModel.hitl.approveTool()
+            viewModel.hitl.approveTool(CONFIRM_WORD)
             advanceUntilIdle()
 
             coVerify(exactly = 1) { submitApprovalDecisionUseCase(sessionId, "run-parked", true) }
@@ -3096,10 +3132,10 @@ class ChatHomeViewModelTest {
             viewModel = createViewModel()
             advanceUntilIdle()
 
-            assertEquals(
-                ChatHomeReattachDelegate.INTERRUPTED_UNKNOWN_NODE_LABEL,
-                viewModel.state.value.pending.interrupted?.nodeLabel,
-            )
+            // The card words a node it cannot name; the pending record carries no label.
+            val interrupted = viewModel.state.value.pending.interrupted
+            assertNotNull(interrupted)
+            assertNull(interrupted?.nodeLabel)
         }
 
     @Test
@@ -3682,6 +3718,8 @@ class ChatHomeViewModelTest {
     // endregion
 
     private companion object {
+        /** The English value of `knotwork_typed_confirm_word`, which the screen passes. */
+        const val CONFIRM_WORD = "yes"
         const val EARLIER_INGEST_MS = 30L
         const val LATER_INGEST_MS = 60L
         const val DEFAULT_TOKENS_MAX: Int = 4096

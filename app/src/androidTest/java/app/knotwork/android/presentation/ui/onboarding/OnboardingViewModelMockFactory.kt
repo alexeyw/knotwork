@@ -30,6 +30,7 @@ internal fun mockOnboardingViewModel(
     // The screen collects it; left to the relaxed mock, its value is a mock of Any that the screen
     // casts to an interruption and crashes on.
     every { vm.pendingInterruption } returns MutableStateFlow(null)
+    every { vm.downloadError } returns MutableStateFlow(null)
     val handles = OnboardingMockHandles(stateFlow = stateFlow)
     return vm to handles
 }

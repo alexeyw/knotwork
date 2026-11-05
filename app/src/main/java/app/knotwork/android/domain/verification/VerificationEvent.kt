@@ -61,11 +61,11 @@ sealed interface VerificationEvent {
      * The on-device model could not load, or a generation failed.
      *
      * @property modelName The model that failed.
-     * @property reason The loader's or the engine's reason.
+     * @property reason The loader's or the engine's reason, or `null` when they gave none.
      * @property done Calls repeated before the failure.
      * @property total Calls the check repeats.
      */
-    data class Failed(val modelName: String, val reason: String, val done: Int, val total: Int) : VerificationEvent
+    data class Failed(val modelName: String, val reason: String?, val done: Int, val total: Int) : VerificationEvent
 }
 
 /** What the repeats of one visit found. */

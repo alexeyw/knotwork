@@ -120,7 +120,7 @@ class SettingsRegistryTest {
     fun `link rows carry a destination and non-link rows do not`() {
         SettingsRegistry.allEntries().forEach { entry ->
             if (entry.controlType == SettingControlType.LINK) {
-                assertTrue("LINK without destination: ${entry.key ?: entry.synonyms}", entry.linkDestination != null)
+                assertTrue("LINK without destination: ${entry.key ?: entry.tier}", entry.linkDestination != null)
             } else {
                 assertNull("non-LINK with destination: ${entry.key}", entry.linkDestination)
             }

@@ -5,6 +5,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,7 +20,7 @@ import org.junit.Test
 class DuplicatePipelineUseCaseTest {
 
     private val pipelineRepository: PipelineRepository = mockk(relaxed = true)
-    private val useCase = DuplicatePipelineUseCase(pipelineRepository)
+    private val useCase = DuplicatePipelineUseCase(pipelineRepository, EnglishDefaultNames)
 
     @Test
     fun `given missing pipeline when invoke then returns failure`() = runTest {

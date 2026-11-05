@@ -7,6 +7,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.services.DefaultNames
 import kotlinx.coroutines.CancellationException
 import java.util.UUID
 import javax.inject.Inject
@@ -23,8 +24,12 @@ import javax.inject.Inject
  * orchestrator state and navigate to the editor in one step.
  *
  * @property pipelineRepository Persistence sink for the seeded graph.
+ * @property defaultNames The seed nodes' labels, in the interface language of the moment.
  */
-class CreatePipelineUseCase @Inject constructor(private val pipelineRepository: PipelineRepository) {
+class CreatePipelineUseCase @Inject constructor(
+    private val pipelineRepository: PipelineRepository,
+    private val defaultNames: DefaultNames,
+) {
     /**
      * Creates and persists a new pipeline named [name].
      *
@@ -49,7 +54,7 @@ class CreatePipelineUseCase @Inject constructor(private val pipelineRepository: 
         val inputNode = NodeModel(
             id = UUID.randomUUID().toString(),
             type = NodeType.INPUT,
-            label = "Input",
+            label = defaultNames.inputNode(),
             x = INPUT_NODE_X,
             y = SEED_NODE_Y,
             contextConfig = NodeContextConfig.defaultForType(NodeType.INPUT),
@@ -57,7 +62,7 @@ class CreatePipelineUseCase @Inject constructor(private val pipelineRepository: 
         val outputNode = NodeModel(
             id = UUID.randomUUID().toString(),
             type = NodeType.OUTPUT,
-            label = "Output",
+            label = defaultNames.outputNode(),
             x = OUTPUT_NODE_X,
             y = SEED_NODE_Y,
             contextConfig = NodeContextConfig.defaultForType(NodeType.OUTPUT),

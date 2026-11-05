@@ -236,4 +236,17 @@
         <item quantity="one">Archived %1$d y ago</item>
         <item quantity="other">Archived %1$d y ago</item>
     </plurals>
+    <!-- Chat error banner: failures the app words itself. -->
+    <string name="chat_image_blocked_model">This model can\'t read images. Turn on image support for it on the Models screen, or switch to a vision-capable model.</string>
+    <string name="chat_image_blocked_cloud">Images stay on your device and aren\'t sent to cloud models. Use a pipeline that starts with an on-device step to send a picture.</string>
+    <string name="chat_image_blocked_pipeline">This pipeline has no on-device step that can read an image. Pick a pipeline with an on-device model step to send a picture.</string>
+    <string name="chat_error_no_active_model">No active model. Open Settings → Models to install or activate one.</string>
+    <string name="chat_error_unknown">Unknown error</string>
+    <string name="chat_error_model_file_missing">Model file not found at: %1$s. Please download it again.</string>
+    <!-- Chat names and archive failures. -->
+    <string name="chat_untitled">New conversation</string>
+    <string name="chat_archive_error_read_failed">Your archived chats are still on the device — reading them failed. Try again.</string>
+    <string name="chat_model_placeholder">Local model</string>
+    <string name="chat_pipeline_placeholder">default</string>
+    <string name="chat_interrupted_unknown_step">unknown step</string>
 </resources>

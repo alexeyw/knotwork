@@ -39,4 +39,14 @@
     <string name="tool_detail_server_error">Ошибка сервера: %1$s</string>
     <string name="tool_detail_mcp_tool">Инструмент MCP</string>
     <string name="tool_detail_local_tool">Локальный инструмент</string>
+    <!-- Onboarding Download step: why it cannot go on. -->
+    <string name="onboarding_error_download">Не удалось загрузить.</string>
+    <string name="onboarding_error_load">Не удалось загрузить модель в память.</string>
+    <string name="onboarding_error_setup">Не удалось настроить этот сценарий.</string>
+    <string name="onboarding_error_custom_url_required">Введите адрес модели для загрузки.</string>
+    <string name="onboarding_error_custom_url_not_litertlm">Эта ссылка ведёт не на файл .litertlm. На телефоне работают только модели .litertlm.</string>
+    <!-- An MCP server row's connection status on the Tools screen. -->
+    <string name="tools_mcp_status_connecting">подключение…</string>
+    <string name="tools_mcp_status_ok">работает</string>
+    <string name="tools_mcp_status_interrupted">Попытка подключения прервана</string>
 </resources>

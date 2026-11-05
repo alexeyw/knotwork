@@ -75,8 +75,10 @@
     <!-- Always-allow text button — Sensitive variant only. -->
     <string name="knotwork_hitl_action_always_allow">Always allow</string>
 
-    <!-- Placeholder for the destructive type-confirm OutlinedTextField. The "%1$s" -->
-    <!-- token is replaced with HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD ("yes"). -->
+    <!-- The word a person types to confirm an action that cannot be undone: a destructive -->
+    <!-- tool call, erasing memory, erasing all data. Compared ignoring letter case. -->
+    <string name="knotwork_typed_confirm_word">yes</string>
+    <!-- Placeholder for the destructive type-confirm OutlinedTextField; "%1$s" is knotwork_typed_confirm_word. -->
     <string name="knotwork_hitl_typed_confirm_placeholder">Type \"%1$s\" to confirm</string>
 
     <!-- ContentDescription for the JSON-args expand/collapse chevron. -->

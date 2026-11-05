@@ -146,7 +146,17 @@ private fun reachableText(context: Context, count: Int, subject: TestSubject): S
     else -> context.resources.getQuantityString(R.plurals.settings_test_ok_models, count, count)
 }
 
-private fun failureText(context: Context, failed: ConnectionCheckResult.Failed, subject: TestSubject): String {
+/**
+ * The words for a failed connection to [failed]'s host: what happened, the code in brackets, one
+ * action. Shared by the form's test row and the Tools screen's server status, so one failure reads
+ * the same in both.
+ *
+ * @param context Resource resolution.
+ * @param failed The host and what went wrong.
+ * @param subject What was being reached.
+ * @return The sentence in the interface language.
+ */
+internal fun failureText(context: Context, failed: ConnectionCheckResult.Failed, subject: TestSubject): String {
     val host = failed.host
     return when (val failure = failed.failure) {
         is ConnectionFailure.Unauthorized -> unauthorizedText(context, failure, subject)

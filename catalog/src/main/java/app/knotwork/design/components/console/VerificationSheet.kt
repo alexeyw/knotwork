@@ -335,7 +335,11 @@ private fun summaryBody(stage: VerificationStageUi): String? = when (stage) {
         },
     )
     is VerificationStageUi.Stopped -> mismatchText(stage.reason)
-    is VerificationStageUi.Failed -> stringResource(R.string.knotwork_run_verify_failed_body, stage.model, stage.reason)
+    is VerificationStageUi.Failed -> stringResource(
+        R.string.knotwork_run_verify_failed_body,
+        stage.model,
+        stage.reason ?: stringResource(R.string.knotwork_run_verify_failed_reason_unknown),
+    )
     is VerificationStageUi.Running -> null
 }
 

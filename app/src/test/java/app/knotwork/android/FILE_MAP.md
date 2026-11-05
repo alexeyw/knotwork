@@ -153,6 +153,7 @@ Only Kotlin files appear inside the generated blocks.
       - `MigrationStepGuardTest.kt` - Runs every step of `ALL_MIGRATIONS` on real SQLite and validates the schema it leaves against the schema Room exported for the step's target version — one test case per step, in `check`.
     - `PathContainmentTest.kt` - Verifies `PathContainment` on a real filesystem: `..`, a sibling sharing the root's name as a prefix, and a symlink out are all refused — the three ways a prefix test on the string as written lets a path escape.
     - `settings/` - Tests of the settings section stores' shared read helper.
+      - `GenerationSettingsStoreProbeTest.kt` - The last backend probe as `GenerationSettingsStore` keeps it, on a real file-backed DataStore: the typed failure the settings row words survives a write and a read, and a record an earlier release stored — the engine's text only — reads as it did.
       - `PreferencesOrEmptyTest.kt` - `preferencesOrEmpty`: readable preferences pass through, an `IOException` becomes empty preferences, any other failure propagates.
       - `ToolSettingsStoreTest.kt` - `ToolSettingsStore`'s MCP server list as an observer sees it while a server changes, on a real file-backed DataStore.
       - `ToolSettingsStoreToolSwitchesTest.kt` - The tool switches of `ToolSettingsStore` — `setMcpToolsEnabled` and `setAppFunctionsEnabled` — on a real file-backed DataStore.
@@ -429,6 +430,7 @@ Only Kotlin files appear inside the generated blocks.
     - `CleartextPolicyTest.kt` - Unit tests for `CleartextPolicy` — the rule that replaced the hand-written IP list in `network_security_config.xml`.
     - `CompactionCoverageVerifierTest.kt` - Unit tests for `CompactionCoverageVerifier`.
     - `EmbeddingProviderResolverTest.kt` - Unit tests for `EmbeddingProviderResolver`.
+    - `EnglishDefaultNames.kt` - `DefaultNames` with the English values of the resources, for tests that run without resources.
     - `HttpRequestPolicyTest.kt` - Unit tests for `HttpRequestPolicy` — the pure security policy behind the `http_request` tool.
     - `KMeansClustererTest.kt` - Unit tests for `KMeansClusterer`.
     - `LocalOnlyPolicyTest.kt` - Unit tests for `LocalOnlyPolicy` — which model endpoints stay reachable while "Block network from local model" is on.
@@ -598,6 +600,7 @@ Only Kotlin files appear inside the generated blocks.
   - `common/` - Tests for the cross-feature presentation utilities.
     - `ApprovalArgumentsTest.kt` - The arguments of a call waiting for approval as the card and the notification show them: laid out, never respelled, shown as they came when they are not JSON.
     - `BoundedTextTest.kt` - `readTextWithin` — an import reads the picked file only up to its ceiling, and stops reading there rather than after the whole file is in memory — plus the heap-derived ceiling for memory files.
+    - `DefaultNamesImplTest.kt` - The names the app gives what it creates: written in the interface language, and a new chat's name recognised whatever language it was stored in — the auto-rename must not stop when the language changed between creating a chat and sending its first message.
     - `HitlRequestMappingTest.kt` - `toHitlRequestContext` — the one translation the approval card and the approval notification both read: every source keeps its meaning, a trigger keeps its name (or its lack of one), and the text and flags pass unchanged.
     - `JsonLayoutLosslessTest.kt` - Guard: laying JSON out never changes what it says, and text that is not JSON is shown as it came.
     - `JsonLayoutTest.kt` - Cases of the shared JSON layout one by one; `JsonLayoutLosslessTest` holds the rule over generated documents.
@@ -643,6 +646,7 @@ Only Kotlin files appear inside the generated blocks.
         - `ConsoleCopyPayloadsTest.kt` - Unit tests for `ConsoleCopyPayloads`.
         - `ConsoleValueFormatterTest.kt` - How `ConsoleValueFormatter` reads and lays out a Vars value for the value viewer.
         - `ContentReportIssueUrlTest.kt` - Unit tests for `contentReportIssueUrl`.
+        - `LoadFailureTextTest.kt` - The chat banner's words for a failure: the two load failures a person can act on are the app's sentences in the interface language, everything else is the engine's own text, and a failure with no text reads as unknown.
         - `MessageReaderStateTest.kt` - What the message reader shows for a chat row.
         - `RunDisplayTest.kt` - The run strip's projection of a run: numbers written for reading, the line and fields per case, the promise's wording, the actions' reasons, and when a check asks first.
         - `VerificationProgressTest.kt` - `VerificationProgress`: the check's sheet frame by frame — the first repeated visit checking, calls advancing within a visit, a settled visit handing over to the next, the time left shrinking, and each ending leaving the visits it never reached as "not checked".
@@ -728,6 +732,7 @@ Only Kotlin files appear inside the generated blocks.
       - `MemorySettingsDelegateTest.kt` - Unit tests for `MemorySettingsDelegate` — the memory import's last step, where a failure meets the user.
       - `ModelsSettingsDelegateTest.kt` - The provider rows of Settings → Models, as `ModelsSettingsDelegate` summarises them: one per provider in the order every provider surface uses, and the one state no row had before — a key saved with no model, for a provider that has no default.
       - `PendingMemoryImportTest.kt` - Unit tests for `PendingMemoryImport.warnings` — which notices the memory-import dialog raises about a staged file, and in what order.
+      - `ProbeFailureTextTest.kt` - The settings row's reason for a failed backend probe: the engine's own text as it came, the app's sentence in the interface language otherwise — including for a record stored by an earlier release, which carries neither.
       - `provider/` - Tests for the cloud-provider editor.
         - `ProviderDetailProjectionTest.kt` - Coverage for the projection that feeds the catalog's provider detail surface.
         - `ProviderDetailViewModelTest.kt` - Unit tests for `ProviderDetailViewModel` — the standalone editor backing the Settings → External providers detail screen.
@@ -739,6 +744,7 @@ Only Kotlin files appear inside the generated blocks.
       - `SettingsSearchAnchorSyncTest.kt` - Drift guard tying the deep-link highlight anchors back to the settings registry.
       - `SettingsSearchCatalogTest.kt` - Drift guard for the settings-search index bridge.
       - `SettingsViewModelTest.kt` - Tests for SettingsViewModel.
+      - `SettingsViewStateBuildersTest.kt` - The clear-memory dialog tells the user the word its gate takes.
       - `ToolCeilingUnitsTest.kt` - Round-trip guard for the tool / workspace ceiling unit conversions.
       - `usage/` - Tests for the on-device usage-statistics surface.
         - `UsageTelemetryViewModelTest.kt` - Verifies the `UsageTelemetryViewModel` state aggregation, opt-in, export and reset wiring.
@@ -748,6 +754,7 @@ Only Kotlin files appear inside the generated blocks.
       - `SplashStateMappingTest.kt` - Verifies the `SplashUiState.toViewState(...)` mapper that bridges the app-side cold-start projection to the catalog `SplashViewState` consumed by `SplashContent`.
       - `SplashViewModelTest.kt` - Verifies that `SplashViewModel` folds `InitProgress` emissions into the UI state correctly across the success path, the failed path, the retry path, and the data-locked recovery flow (typed-confirm full reset).
     - `taskmonitor/` - Tests for the task monitor.
+      - `NodeTypeNameTest.kt` - A running step is named by its node type in the interface language: the run reports the type's code, and the task monitor used to show the code itself.
       - `TaskMonitorViewModelTest.kt` - Tests for TaskMonitorViewModel.
     - `tools/` - Tests for the Tools surface, the MCP server editor and the domain allowlist.
       - `AllowedDomainsViewModelTest.kt` - Unit tests for `AllowedDomainsViewModel` — the add-field feedback computation (delegated to `HttpRequestPolicy.normalizeDomain`) and the add / remove persistence gestures.

@@ -10,6 +10,7 @@ import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.ActiveModelMeta
 import app.knotwork.android.domain.models.LocalBackend
 import app.knotwork.android.domain.models.ToolApprovalPolicy
+import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.android.presentation.common.DisplayFormat
 import app.knotwork.android.presentation.common.rememberByteUnits
@@ -59,6 +60,7 @@ import app.knotwork.design.screens.settings.ToolsSettingsViewState
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.roundToInt
+import app.knotwork.design.R as DesignR
 
 /** Builds the settings hub state (subtitle, the five inline Basic controls, restart, search). */
 @Composable
@@ -191,11 +193,13 @@ internal fun buildMemoryViewState(uiState: SettingsUiState, context: Context): M
         advancedSliders = memoryAdvancedSliders(uiState, locale),
         verboseLoggingEnabled = uiState.verboseMemoryLoggingEnabled,
         embeddingTitle = stringResource(R.string.settings_memory_embedding_title),
-        embeddingOptions = uiState.embeddingProviderOptions.map { EmbeddingOptionRow(it.id, it.displayName) },
+        embeddingOptions = uiState.embeddingProviderOptions.map { option ->
+            EmbeddingOptionRow(option.id, embeddingName(option, context))
+        },
         selectedEmbeddingId = uiState.activeEmbeddingProviderId,
         selectedEmbeddingLabel = uiState.embeddingProviderOptions
             .firstOrNull { it.id == uiState.activeEmbeddingProviderId }
-            ?.displayName
+            ?.let { embeddingName(it, context) }
             ?: uiState.activeEmbeddingProviderId,
         validationError = uiState.memoryValidationError?.let { memoryValidationMessage(it, context) },
         reembedBanner = stringResource(R.string.settings_memory_reembed_banner).takeIf {
@@ -577,14 +581,20 @@ private fun ToolApprovalPolicy.toApproveOption(): ApproveToolCallsOption = when 
  * Resolves the destructive-dialog payload for [forKind] when that action is the
  * one currently staged; `null` otherwise. Keeps each category screen rendering
  * only its own destructive dialog (Clear-memory on Memory, Reset on About).
+ *
+ * @param uiState The settings state.
+ * @param context Resource resolution, in the interface language.
+ * @param forKind The action this screen's dialog is for.
+ * @return The dialog's texts, or `null` when another action is staged.
  */
-private fun destructiveActionFor(
+internal fun destructiveActionFor(
     uiState: SettingsUiState,
     context: Context,
     forKind: PendingDestructiveAction,
 ): DestructiveActionState? {
     if (uiState.pendingDestructive != forKind) return null
     val isClearMemory = forKind == PendingDestructiveAction.ClearMemory
+    val keyword = context.getString(DesignR.string.knotwork_typed_confirm_word)
     return DestructiveActionState(
         title = context.getString(
             if (isClearMemory) {
@@ -600,8 +610,10 @@ private fun destructiveActionFor(
                 R.string.settings_destructive_reset_body
             },
         ),
-        keyword = if (isClearMemory) context.getString(R.string.destructive_typed_keyword) else "",
-        hint = if (isClearMemory) context.getString(R.string.settings_destructive_typed_hint) else "",
+        keyword = if (isClearMemory) keyword else "",
+        // The hint names the word the gate takes, in the interface language — a hint
+        // with the English word in it left a Russian dialog unconfirmable.
+        hint = if (isClearMemory) context.getString(R.string.settings_destructive_typed_hint, keyword) else "",
         pendingInput = if (isClearMemory) uiState.destructiveTypedInput else "",
         kind = if (isClearMemory) DestructiveActionKind.ClearMemory else DestructiveActionKind.ResetSettings,
     )
@@ -668,7 +680,7 @@ private fun formatTestProbe(uiState: SettingsUiState, context: Context): String 
         val tpsLabel = String.format(Locale.getDefault(), "%.1f", probe.tokensPerSecond)
         context.getString(R.string.settings_row_test_backend_success, probe.tokensGenerated, durationLabel, tpsLabel)
     } else {
-        context.getString(R.string.settings_row_test_backend_failed, probe.errorMessage.orEmpty())
+        context.getString(R.string.settings_row_test_backend_failed, probeFailureText(context, probe))
     }
 }
 
@@ -685,3 +697,15 @@ private const val TOP_K_STEPS = 99
 private const val MAX_CONTEXT_STEPS = 14
 private const val HOURS_MIN = 1f
 private const val HOURS_MAX = 168f
+
+/**
+ * An embedding provider's name in the interface language: the on-device one is
+ * described in words; the others are a product and a model name, the same in
+ * every language, as the provider gives them.
+ */
+private fun embeddingName(option: EmbeddingProviderOption, context: Context): String =
+    if (option.id == EmbeddingProvider.ID_USE) {
+        context.getString(R.string.settings_memory_embedding_on_device)
+    } else {
+        option.displayName
+    }

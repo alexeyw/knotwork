@@ -11,4 +11,13 @@
     <string name="unit_age_hours">%1$d ч</string>
     <string name="unit_age_days">%1$d д</string>
     <string name="unit_age_weeks">%1$d нед</string>
+    <!-- Names the app gives what it creates before a person names it (DefaultNames). Stored as written, in the language of the moment. -->
+    <string name="default_name_chat">Новый чат</string>
+    <string name="default_name_imported_chat">Импортированный чат</string>
+    <string name="default_name_chat_with_id">Чат %1$s</string>
+    <string name="default_name_trigger_chat">Триггер</string>
+    <string name="default_name_pipeline">Новый пайплайн</string>
+    <string name="default_name_input_node">Вход</string>
+    <string name="default_name_output_node">Выход</string>
+    <string name="default_name_copy">%1$s (копия)</string>
 </resources>

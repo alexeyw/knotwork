@@ -6,6 +6,7 @@ import app.knotwork.android.data.repositories.BundledSkillSource
 import app.knotwork.android.data.repositories.SkillRepositoryImpl
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.Skill
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -56,7 +57,7 @@ class SeedBundledSkillsUseCaseTest {
         val source = object : BundledSkillSource {
             override suspend fun load(): List<Skill> = listOf(bundled("summarizer"), bundled("translator"))
         }
-        val useCase = SeedBundledSkillsUseCase(SkillRepositoryImpl(dao, source))
+        val useCase = SeedBundledSkillsUseCase(SkillRepositoryImpl(dao, source, EnglishDefaultNames))
 
         useCase()
         useCase()

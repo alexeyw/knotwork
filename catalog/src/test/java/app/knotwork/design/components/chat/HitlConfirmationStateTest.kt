@@ -1,7 +1,7 @@
 package app.knotwork.design.components.chat
 
 import app.knotwork.design.components.chips.Risk
-import org.junit.Assert.assertEquals
+import app.knotwork.design.components.dialogs.typedConfirmMatches
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,45 +18,45 @@ class HitlConfirmationStateTest {
 
     @Test
     fun `given readonly when isAllowOnceEnabled then returns true regardless of typed value`() {
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Readonly, ""))
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Readonly, "no"))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Readonly, "", WORD))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Readonly, "no", WORD))
     }
 
     @Test
     fun `given sensitive when isAllowOnceEnabled then returns true regardless of typed value`() {
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Sensitive, ""))
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Sensitive, "anything"))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Sensitive, "", WORD))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Sensitive, "anything", WORD))
     }
 
     @Test
     fun `given destructive and empty typed when isAllowOnceEnabled then returns false`() {
-        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, ""))
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "", WORD))
     }
 
     @Test
     fun `given destructive and partial typed when isAllowOnceEnabled then returns false`() {
-        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "ye"))
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "ye", WORD))
     }
 
     @Test
     fun `given destructive and exact match when isAllowOnceEnabled then returns true`() {
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "yes"))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "yes", WORD))
     }
 
     @Test
     fun `given destructive and uppercase match when isAllowOnceEnabled then returns true`() {
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "YES"))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "YES", WORD))
     }
 
     @Test
     fun `given destructive and padded match when isAllowOnceEnabled then trims and returns true`() {
-        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "  yes  "))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "  yes  ", WORD))
     }
 
     @Test
     fun `given destructive and non-matching word when isAllowOnceEnabled then returns false`() {
-        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "yeah"))
-        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "no"))
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "yeah", WORD))
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "no", WORD))
     }
 
     @Test
@@ -74,7 +74,26 @@ class HitlConfirmationStateTest {
     }
 
     @Test
-    fun `confirm word is canonical lowercase`() {
-        assertEquals("yes", HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD)
+    fun `given the Russian word typed in another case when matched then it confirms`() {
+        assertTrue(typedConfirmMatches(input = " ДА ", keyword = "да"))
+        assertTrue(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "Да", "да"))
+    }
+
+    @Test
+    fun `given the English word while the interface asks for the Russian one when matched then it does not confirm`() {
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "yes", "да"))
+    }
+
+    @Test
+    fun `given a confirmation word left blank by a translation when typed nothing then nothing is approved`() {
+        // A blank word must close the gate, not open it to an empty field.
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "", ""))
+        assertFalse(HitlConfirmationState.isAllowOnceEnabled(Risk.Destructive, "  ", " "))
+        assertFalse(typedConfirmMatches(input = "", keyword = ""))
+    }
+
+    private companion object {
+        /** The English value of `knotwork_typed_confirm_word`. */
+        const val WORD = "yes"
     }
 }

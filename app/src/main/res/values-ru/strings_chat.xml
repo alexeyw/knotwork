@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Chat error banner: failures the app words itself. -->
+    <string name="chat_image_blocked_model">Эта модель не читает изображения. Включите для неё поддержку изображений на экране «Модели» или выберите модель, которая их читает.</string>
+    <string name="chat_image_blocked_cloud">Изображения остаются на устройстве и не отправляются облачным моделям. Чтобы отправить картинку, выберите пайплайн, который начинается с локального шага.</string>
+    <string name="chat_image_blocked_pipeline">В этом пайплайне нет локального шага, который может прочитать изображение. Чтобы отправить картинку, выберите пайплайн с шагом локальной модели.</string>
+    <string name="chat_error_no_active_model">Нет активной модели. Установите или включите её в «Настройки» → «Модели».</string>
+    <string name="chat_error_unknown">Неизвестная ошибка</string>
+    <string name="chat_error_model_file_missing">Файл модели не найден: %1$s. Загрузите его заново.</string>
+    <!-- Chat names and archive failures. -->
+    <string name="chat_untitled">Новый разговор</string>
+    <string name="chat_archive_error_read_failed">Архивные чаты по-прежнему на устройстве — не удалось их прочитать. Попробуйте ещё раз.</string>
+    <string name="chat_model_placeholder">Локальная модель</string>
+    <string name="chat_pipeline_placeholder">по умолчанию</string>
+    <string name="chat_interrupted_unknown_step">неизвестный шаг</string>
+</resources>

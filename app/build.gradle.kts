@@ -413,6 +413,20 @@ android {
         generateLocaleConfig = true
     }
 
+    // Every language goes into every install. Google Play installs an app bundle's
+    // language resources by the phone's system language, so an app whose own
+    // picker chooses another language must either ship all of them or download
+    // them through Play Core ("Handling language changes", developer.android.com
+    // /guide/app-bundle/configure-base). Without this, Russian chosen in
+    // Settings → About → Language on a phone set to English finds no Russian
+    // resources in a Play install and stays English. The cost is the translations
+    // of two languages in every APK; `TranslationCoverageTest` holds the line.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     // AGP stamps a Google-encrypted blob of the dependency list into every
     // artefact. It is opaque by construction — only Google can read it — which
     // is a poor fit for an APK distributed as the FOSS build and inspected by
@@ -2044,8 +2058,8 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/static-analysis.md"))
         .withPropertyName("staticAnalysisGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-    // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` read this very
-    // script. Editing it reconfigures the project but leaves this task's inputs as
+    // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` (locale filters, language
+    // splits) read this very script. Editing it reconfigures the project but leaves this task's inputs as
     // they were: measured, the signing assignment put back on two lines left the
     // task UP-TO-DATE and green.
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))

@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.chat.home
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.text.toSingleLineTitle
 import app.knotwork.android.domain.usecases.ArchiveChatUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
@@ -53,6 +54,8 @@ import java.util.UUID
  *   (supplied by the pipeline-binding delegate) so it rides the metadata refresh.
  * @property onSessionsChanged Invoked after each sessions-flow emission so the
  *   pipeline-binding delegate can rebind a chat whose pipeline was deleted.
+ * @property defaultNames A new chat's name in the interface language, and whether
+ *   a stored name is still one — in any shipped language — for the auto-rename.
  */
 class ChatHomeThreadsDelegate(
     private val scope: CoroutineScope,
@@ -65,6 +68,7 @@ class ChatHomeThreadsDelegate(
     private val clearDraft: (String) -> Unit,
     private val pipelineNameRefresher: (ChatHomeScreenState) -> ChatHomeScreenState,
     private val onSessionsChanged: suspend () -> Unit,
+    private val defaultNames: DefaultNames,
 ) {
 
     private var sessions: List<ChatSession> = emptyList()
@@ -129,12 +133,12 @@ class ChatHomeThreadsDelegate(
         val session = sessions.firstOrNull { it.id == currentId }
         val refreshedThread = when {
             session != null -> s.thread.copy(
-                title = session.name.ifBlank { ChatHomeThreadState.DEFAULT_TITLE },
+                title = session.name,
                 favorite = session.isStarred,
                 archived = session.isArchived,
             )
             currentId.isBlank() -> s.thread.copy(
-                title = ChatHomeThreadState.DEFAULT_TITLE,
+                title = "",
                 favorite = false,
                 archived = false,
             )
@@ -155,10 +159,15 @@ class ChatHomeThreadsDelegate(
      * [AUTO_RENAME_CHAR_LIMIT] characters). Invoked by the
      * send path so the drawer entry reflects the user's framing.
      *
+     * A chat counts as newly created while its name is still the new-chat name
+     * in any language the app ships ([DefaultNames.isNewChat]): the name is
+     * stored in the language of the moment, and the language may have changed
+     * since.
+     *
      * The session is looked up **after** the new-chat save has landed, not from the
      * in-memory list at send time. A first message typed straight into a new chat
      * could otherwise reach here before the list observed the new row, and the
-     * rename was silently skipped — the chat kept its "New Chat" title for good.
+     * rename was silently skipped — the chat kept its new-chat title for good.
      * The name is written with a targeted rename rather than a whole-row save, so a
      * concurrent write to the same row (the favourite flag, the timestamp the first
      * message bumps) is not overwritten with the stale copy.
@@ -177,7 +186,7 @@ class ChatHomeThreadsDelegate(
             val currentName = sessions.firstOrNull { it.id == sessionId }?.name
                 ?: chatRepository.getSessionById(sessionId)?.name
                 ?: return@launch
-            if (currentName != DEFAULT_NEW_CHAT_NAME) return@launch
+            if (!defaultNames.isNewChat(currentName)) return@launch
             chatRepository.renameSession(sessionId, truncated)
         }
     }
@@ -195,7 +204,7 @@ class ChatHomeThreadsDelegate(
             chatRepository.saveSession(
                 ChatSession(
                     id = newId,
-                    name = DEFAULT_NEW_CHAT_NAME,
+                    name = defaultNames.newChat(),
                     updatedAt = System.currentTimeMillis(),
                     pipelineId = pipelineId,
                 ),
@@ -390,7 +399,7 @@ class ChatHomeThreadsDelegate(
         return sorted.map { session ->
             ChatHomeThreadRow(
                 id = session.id,
-                title = session.name.ifBlank { ChatHomeThreadState.DEFAULT_TITLE },
+                title = session.name,
                 subtitle = formatThreadSubtitle(session.updatedAt),
                 selected = session.id == activeId,
                 active = session.id == activeId,
@@ -405,9 +414,6 @@ class ChatHomeThreadsDelegate(
         SimpleDateFormat(THREAD_SUBTITLE_PATTERN, Locale.getDefault()).format(Date(updatedAt))
 
     companion object {
-        /** Default name of a freshly-created chat session — must match legacy `ChatViewModel` for compatibility. */
-        const val DEFAULT_NEW_CHAT_NAME: String = "New Chat"
-
         /** Maximum characters of the first user message used as the auto-generated session name. */
         const val AUTO_RENAME_CHAR_LIMIT: Int = 40
 

@@ -8,6 +8,7 @@ import app.knotwork.android.domain.prompt.PromptSegment
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.PromptPresetRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.usecases.SavePromptAsPresetUseCase
 import app.knotwork.android.domain.usecases.promptpack.ExportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.ImportPromptPackUseCase
@@ -95,6 +96,7 @@ class PromptLibraryViewModelTest {
             importPromptPackUseCase,
             resolvePromptPackCollisionUseCase,
             exportPromptPackUseCase,
+            EnglishDefaultNames,
         )
     }
 

@@ -76,9 +76,10 @@ sealed interface VerificationStageUi {
      * The model did not load.
      *
      * @property model The model.
-     * @property reason The loader's reason.
+     * @property reason The loader's reason, or `null` when it gave none — the sheet then says
+     *   the reason is unknown, in the interface language.
      */
-    data class Failed(val model: String, val reason: String) : VerificationStageUi
+    data class Failed(val model: String, val reason: String?) : VerificationStageUi
 }
 
 /**

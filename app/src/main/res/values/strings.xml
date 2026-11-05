@@ -77,4 +77,15 @@
     <string name="tool_detail_server_error">Server error: %1$s</string>
     <string name="tool_detail_mcp_tool">MCP tool</string>
     <string name="tool_detail_local_tool">Local tool</string>
+    <!-- Onboarding Download step: why it cannot go on. -->
+    <string name="onboarding_error_download">Download failed.</string>
+    <string name="onboarding_error_load">Failed to load the model.</string>
+    <string name="onboarding_error_setup">Couldn\'t set up this scenario.</string>
+    <string name="onboarding_error_custom_url_required">Enter a model URL to download.</string>
+    <string name="onboarding_error_custom_url_not_litertlm">This link isn\'t a .litertlm file. Only .litertlm models run on the phone.</string>
+    <!-- An MCP server row's connection status on the Tools screen. -->
+    <string name="tools_mcp_status_connecting">connecting…</string>
+    <!-- Lowercase like the other status words of the row ("connecting…"), not a button. -->
+    <string name="tools_mcp_status_ok" tools:ignore="Typos,ButtonCase">ok</string>
+    <string name="tools_mcp_status_interrupted">Connection attempt was interrupted</string>
 </resources>

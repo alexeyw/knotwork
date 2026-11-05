@@ -13,6 +13,7 @@ import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.services.AttachmentStore
+import app.knotwork.android.domain.services.DefaultNames
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -36,12 +37,15 @@ import javax.inject.Singleton
  *   the on-disk image when its owning message or session is removed. File
  *   deletion is best-effort: a failure is tolerated because the orphan-cleanup
  *   sweep reclaims any leftover file later.
+ * @property defaultNames The name of a chat this repository creates — one a message
+ *   arrives in first, or an imported file that names none — in the interface language.
  */
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
     private val chatDao: ChatDao,
     private val chatHistorySummaryDao: ChatHistorySummaryDao,
     private val attachmentStore: AttachmentStore,
+    private val defaultNames: DefaultNames,
 ) : ChatRepository {
 
     @Volatile
@@ -63,7 +67,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatDao.insertSession(
                     ChatSessionEntity(
                         id = message.sessionId,
-                        name = "Chat " + message.sessionId.take(NEW_SESSION_NAME_SUFFIX_LENGTH),
+                        name = defaultNames.chatWithId(message.sessionId.take(NEW_SESSION_NAME_SUFFIX_LENGTH)),
                         updatedAt = message.timestamp,
                     ),
                 )
@@ -179,7 +183,7 @@ class ChatRepositoryImpl @Inject constructor(
      */
     private fun parseChatFile(json: String, now: Long): Pair<String, List<ImportedRow>> {
         val trimmed = json.trim()
-        var sessionName = DEFAULT_IMPORTED_CHAT_NAME
+        var sessionName = defaultNames.importedChat()
         val messagesArray: JSONArray = try {
             when {
                 trimmed.startsWith("{") -> {
@@ -247,13 +251,6 @@ class ChatRepositoryImpl @Inject constructor(
          * display name (e.g. `Chat 5b7a2c`) shown when the user has not renamed the chat.
          */
         const val NEW_SESSION_NAME_SUFFIX_LENGTH: Int = 6
-
-        /**
-         * Default name assigned to a chat session created via [importChat] when the
-         * incoming document carries no `sessionName` field. Mirrors the legacy
-         * `ChatViewModel.DEFAULT_IMPORTED_CHAT_NAME` so behaviour is preserved.
-         */
-        const val DEFAULT_IMPORTED_CHAT_NAME: String = "Imported Chat"
 
         /**
          * The roles a chat file may contribute. `SYSTEM` rows — the source device's

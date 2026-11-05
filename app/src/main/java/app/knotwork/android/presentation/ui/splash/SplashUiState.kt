@@ -8,7 +8,8 @@ import app.knotwork.android.domain.models.InitStage
  * Mirrors the latest `InitProgress` snapshot from `AppInitializationUseCase`,
  * normalised for direct UI consumption (progress fraction, error/done flags).
  *
- * @property message Status text rendered under the progress bar.
+ * @property stage The step in flight, named by the screen in the interface
+ *   language; `null` before the first emission lands.
  * @property progressFraction Determinate progress in `0f..1f` derived from
  *   `completedSteps / totalSteps`. `1f` once the run reaches [InitStage.Done].
  * @property isDone `true` after the use case successfully reaches
@@ -27,7 +28,7 @@ import app.knotwork.android.domain.models.InitStage
  *   flight; gates re-entrant confirm taps.
  */
 data class SplashUiState(
-    val message: String = DEFAULT_STARTING_MESSAGE,
+    val stage: InitStage? = null,
     val progressFraction: Float = 0f,
     val isDone: Boolean = false,
     val errorMessage: String? = null,
@@ -35,16 +36,4 @@ data class SplashUiState(
     val showResetDialog: Boolean = false,
     val resetTypedInput: String = "",
     val isResetting: Boolean = false,
-) {
-    companion object {
-        /**
-         * Default `message` used before the first [InitStage] emission lands.
-         * Kept as a plain `const val` (not a resource) because it is a Kotlin
-         * default argument and `data class` defaults must be compile-time
-         * constants; the screen is allowed to override the rendered text via
-         * `stringResource(R.string.splash_starting)` when the user-visible
-         * value is needed.
-         */
-        const val DEFAULT_STARTING_MESSAGE: String = "Starting…"
-    }
-}
+)

@@ -1,7 +1,5 @@
 package app.knotwork.android.presentation.ui.chat.home
 
-import app.knotwork.design.components.chat.HitlConfirmationState
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -28,20 +26,10 @@ class ApprovalPolicyDocumentsTest {
         val sentence = sentences(section).singleOrNull { it.contains("typing") }
             ?: error("'Approving a tool call' has no single sentence about typing the confirmation")
 
+        val word = englishConfirmWord()
         assertTrue(
-            "The guide must name the word the destructive confirmation accepts, was: $sentence",
-            sentence.contains("**${ChatHomeHitlDelegate.DESTRUCTIVE_TYPED_CONFIRM_WORD}**"),
-        )
-    }
-
-    @Test
-    fun `given the two copies of the confirmation word when compared then they agree`() {
-        // The delegate decides whether Approve is applied; the catalog card
-        // decides whether the button is enabled. Two words would leave a button
-        // that lights up for an answer the gate then rejects.
-        assertEquals(
-            HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD,
-            ChatHomeHitlDelegate.DESTRUCTIVE_TYPED_CONFIRM_WORD,
+            "The guide must name the word the destructive confirmation accepts ($word), was: $sentence",
+            sentence.contains("**$word**"),
         )
     }
 
@@ -68,6 +56,16 @@ class ApprovalPolicyDocumentsTest {
     }
 
     private fun read(path: String): String = File(repositoryRoot(), path).readText()
+
+    /**
+     * The English value of `knotwork_typed_confirm_word` — the one word the card,
+     * the chat's gate and the erase dialogs all read, so no second copy can drift.
+     */
+    private fun englishConfirmWord(): String {
+        val match = CONFIRM_WORD.find(read(CATALOG_STRINGS))
+            ?: error("knotwork_typed_confirm_word not in $CATALOG_STRINGS")
+        return match.groupValues[1]
+    }
 
     /** The text from [heading] to the next heading of the same or a higher level. */
     private fun section(markdown: String, heading: String): String {
@@ -100,6 +98,8 @@ class ApprovalPolicyDocumentsTest {
         const val USER_GUIDE = "docs/user-guide.md"
         const val SECURITY = "SECURITY.md"
         const val PRIVACY = "PRIVACY.md"
+        const val CATALOG_STRINGS = "catalog/src/main/res/values/strings.xml"
+        val CONFIRM_WORD = Regex("""<string name="knotwork_typed_confirm_word">([^<]+)</string>""")
 
         /** Label of the *Approve tool calls* option that quiets the non-destructive prompts. */
         const val NEVER_OPTION = "Never"

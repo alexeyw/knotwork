@@ -10,6 +10,7 @@ import app.knotwork.android.domain.models.PromptPackImportNotes
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.PromptPresetRepository
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.usecases.SavePromptAsPresetUseCase
 import app.knotwork.android.domain.usecases.promptpack.ExportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.ImportPromptPackUseCase
@@ -47,6 +48,7 @@ class PromptLibraryViewModel @Inject constructor(
     private val importPromptPackUseCase: ImportPromptPackUseCase,
     private val resolvePromptPackCollisionUseCase: ResolvePromptPackCollisionUseCase,
     private val exportPromptPackUseCase: ExportPromptPackUseCase,
+    private val defaultNames: DefaultNames,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -441,7 +443,7 @@ class PromptLibraryViewModel @Inject constructor(
         viewModelScope.launch {
             val result = savePromptAsPresetUseCase(
                 systemPrompt = source.systemPrompt,
-                name = source.name + " (copy)",
+                name = defaultNames.copyOf(source.name),
                 description = source.description,
                 nodeType = source.nodeType,
                 tags = source.tags,

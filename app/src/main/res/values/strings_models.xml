@@ -69,4 +69,10 @@
         <item quantity="one">avg · last %1$d run</item>
         <item quantity="other">avg · last %1$d runs</item>
     </plurals>
+    <!-- Why a model download failed, worded by the download worker in the language of the moment. -->
+    <string name="model_download_failed_request">Download request was missing its URL or file name.</string>
+    <string name="model_download_failed_unreadable">The downloaded file could not be read to check it.</string>
+    <string name="model_download_failed_not_moved">Could not move the downloaded file into place.</string>
+    <string name="model_download_failed_http">Server returned code: %1$d</string>
+    <string name="model_download_failed_unknown">Unknown download error</string>
 </resources>

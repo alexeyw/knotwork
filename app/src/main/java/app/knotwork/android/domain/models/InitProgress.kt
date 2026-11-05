@@ -71,13 +71,14 @@ enum class InitFailureKind {
  * on every stage transition. The pair `(completedSteps, totalSteps)` lets
  * the UI render a determinate `LinearProgressIndicator`.
  *
+ * The snapshot carries no words: the splash screen names each [stage] in the
+ * interface language.
+ *
  * @property stage Current [InitStage].
- * @property message Human-readable label rendered under the progress bar
- *   (e.g. "Reading pipelines…").
  * @property completedSteps Number of stages already finished — `0` when
  *   the very first stage is in flight, `totalSteps` once [InitStage.Done]
  *   is emitted.
  * @property totalSteps Total number of stages, fixed for the duration of a
  *   single initialization attempt. Renderer uses this as the denominator.
  */
-data class InitProgress(val stage: InitStage, val message: String, val completedSteps: Int, val totalSteps: Int)
+data class InitProgress(val stage: InitStage, val completedSteps: Int, val totalSteps: Int)

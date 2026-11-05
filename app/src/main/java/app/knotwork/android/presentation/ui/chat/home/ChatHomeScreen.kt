@@ -99,6 +99,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import app.knotwork.design.R as DesignR
 
 /**
  * Redesigned Knotwork chat home — the user-facing surface that wires up:
@@ -423,6 +424,7 @@ fun ChatHomeScreen(
         if (!clipboardManager.setClipboardText(text)) viewModel.console.signalConsoleCopyTooLarge()
     }
 
+    val confirmWord = stringResource(DesignR.string.knotwork_typed_confirm_word)
     val callbacks = ChatHomeCallbacks(
         onComposerValueChange = viewModel::onComposerValueChange,
         onSend = viewModel::sendMessage,
@@ -502,7 +504,7 @@ fun ChatHomeScreen(
             },
             onDismissExport = viewModel.run::dismissExport,
         ),
-        onHitlAllowOnce = viewModel.hitl::approveTool,
+        onHitlAllowOnce = { viewModel.hitl.approveTool(confirmWord) },
         onHitlReject = viewModel.hitl::rejectTool,
         onHitlTypedConfirmChange = viewModel.hitl::onTypedConfirmChange,
         onClarificationReply = viewModel.hitl::submitClarificationReply,
