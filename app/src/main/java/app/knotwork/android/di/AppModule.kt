@@ -45,10 +45,12 @@ import app.knotwork.android.data.tools.local.SearchTool
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.services.ExternalAutomationCallbackNotifier
 import app.knotwork.android.domain.services.RunOutcomeAnnouncer
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
 import app.knotwork.android.domain.services.TaskScheduler
+import app.knotwork.android.presentation.common.DefaultNamesImpl
 import app.knotwork.android.presentation.notifications.ApprovalNotificationManager
 import app.knotwork.android.presentation.notifications.CeilingNotificationManager
 import app.knotwork.android.presentation.notifications.ClarificationNotificationManager
@@ -427,6 +429,15 @@ object AppModule {
     @Provides
     @Singleton
     fun provideRunOutcomeAnnouncer(impl: RunOutcomeAnnouncerImpl): RunOutcomeAnnouncer = impl
+
+    /**
+     * Binds the presentation-layer [DefaultNamesImpl] to the domain-level
+     * [DefaultNames]: the names the app gives a chat, a pipeline or a copy before
+     * a person names it are interface text, read from resources.
+     */
+    @Provides
+    @Singleton
+    fun provideDefaultNames(impl: DefaultNamesImpl): DefaultNames = impl
 
     /**
      * Binds the presentation-layer [ClarificationNotificationManager]

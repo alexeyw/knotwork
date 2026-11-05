@@ -2583,6 +2583,13 @@ English. The `$LANG` variable carries the language you read the app in, so a
 prompt that asks for an answer "in `$LANG`" follows your choice; `$LOCATION`
 keeps the region of the phone's own language settings.
 
+The word you type to confirm what cannot be undone — **yes** before a
+destructive tool call runs or your data is erased — is the interface
+language's word; the field names it. Names the app gives — a new chat, a new
+pipeline and its first nodes, a copy — are written in the language of the
+moment and stay as written if you change it later; a new chat still takes its
+first message as its name.
+
 ### What every setting means
 
 Most rows in Settings carry a small **ⓘ** next to the label. Tapping it opens a

@@ -415,4 +415,10 @@
     <string name="settings_unit_megabytes">%1$d MB</string>
     <string name="settings_unit_kilobytes">%1$d KB</string>
     <string name="settings_unit_hours">%1$d h</string>
+    <string name="settings_memory_embedding_on_device">On-device (Universal Sentence Encoder)</string>
+    <!-- Why the last backend probe failed, when the app words it. -->
+    <string name="settings_test_backend_failure_no_model">No active model selected.</string>
+    <string name="settings_test_backend_failure_file_missing">The model file is not on the device. Download it again.</string>
+    <string name="settings_test_backend_failure_load">Failed to load model.</string>
+    <string name="settings_test_backend_failure_unknown">Unknown error</string>
 </resources>

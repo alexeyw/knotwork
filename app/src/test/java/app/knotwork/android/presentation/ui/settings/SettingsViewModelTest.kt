@@ -557,7 +557,7 @@ class SettingsViewModelTest {
 
     @Test
     fun `confirmDestructive without matching keyword is a no-op`() = runTest {
-        every { context.getString(app.knotwork.android.R.string.destructive_typed_keyword) } returns "yes"
+        every { context.getString(app.knotwork.design.R.string.knotwork_typed_confirm_word) } returns "yes"
         advanceUntilIdle()
         viewModel.stageClearMemory()
         viewModel.updateDestructiveTypedInput("nope")
@@ -569,7 +569,7 @@ class SettingsViewModelTest {
 
     @Test
     fun `confirmDestructive with matching keyword clears memory`() = runTest {
-        every { context.getString(app.knotwork.android.R.string.destructive_typed_keyword) } returns "yes"
+        every { context.getString(app.knotwork.design.R.string.knotwork_typed_confirm_word) } returns "yes"
         advanceUntilIdle()
         viewModel.stageClearMemory()
         viewModel.updateDestructiveTypedInput("yes")
@@ -710,7 +710,7 @@ class SettingsViewModelTest {
 
     @Test
     fun `given confirmed memory wipe when performed then the active provider is recorded as baseline`() = runTest {
-        every { context.getString(app.knotwork.android.R.string.destructive_typed_keyword) } returns "yes"
+        every { context.getString(app.knotwork.design.R.string.knotwork_typed_confirm_word) } returns "yes"
         advanceUntilIdle()
 
         viewModel.stageClearMemory()
@@ -762,8 +762,12 @@ class SettingsViewModelTest {
 
     @Test
     fun `onSearchQueryChange publishes synonym hits and clearSearch empties them`() = runTest {
+        // The synonyms come from the row's resource in the interface language.
+        every {
+            context.getString(app.knotwork.android.R.string.settings_search_syn_local_model_backend)
+        } returns "npu, gpu, litert"
         advanceUntilIdle()
-        // "npu" matches LOCAL_MODEL_BACKEND via its registry synonym.
+        // "npu" matches LOCAL_MODEL_BACKEND via its synonym.
         viewModel.onSearchQueryChange("npu")
         assertEquals("npu", viewModel.uiState.value.searchQuery)
         assertTrue(viewModel.uiState.value.searchResults.any { it.anchorKey == "LOCAL_MODEL_BACKEND" })

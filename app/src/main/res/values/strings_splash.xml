@@ -10,4 +10,11 @@
     <string name="splash_reset_dialog_body">This permanently deletes your chats, long-term memory, pipelines, presets, workspace files, attachments and scheduled tasks on this device. Your settings and saved keys are kept. This cannot be undone. Type %1$s to confirm.</string>
     <string name="splash_reset_dialog_hint">Type %1$s to confirm</string>
     <string name="splash_reset_dialog_confirm">Erase data</string>
+    <!-- Cold-start steps, named under the progress bar. -->
+    <string name="splash_stage_preparing">Preparing application…</string>
+    <string name="splash_stage_models">Checking downloaded models…</string>
+    <string name="splash_stage_pipelines">Reading pipelines…</string>
+    <string name="splash_stage_chats">Reading chats…</string>
+    <string name="splash_stage_memory">Reading memory…</string>
+    <string name="splash_stage_ready">Ready</string>
 </resources>

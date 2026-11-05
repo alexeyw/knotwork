@@ -1,5 +1,7 @@
 package app.knotwork.android.domain.models
 
+import app.knotwork.android.domain.connection.ConnectionFailure
+
 /**
  * Connection lifecycle of an MCP server as observed by `McpServerRepository`.
  *
@@ -16,9 +18,18 @@ sealed interface McpConnectionStatus {
     data object Connected : McpConnectionStatus
 
     /**
-     * Terminal state for the current attempt. The repository surfaces the
-     * exception's localized message in [reason] so the UI can render it
-     * without re-throwing.
+     * Terminal state for the current attempt: the connection or the `tools/list` call failed.
+     * The failure is typed — the same classification the form's connection check uses — so the
+     * screen words it in the interface language.
+     *
+     * @property host The server's host, named in the sentence.
+     * @property failure What went wrong.
      */
-    data class Error(val reason: String) : McpConnectionStatus
+    data class Error(val host: String, val failure: ConnectionFailure) : McpConnectionStatus
+
+    /**
+     * The attempt was abandoned before it resolved, and no earlier answer stands: the server is
+     * not connected, and trying again is the way on.
+     */
+    data object Interrupted : McpConnectionStatus
 }

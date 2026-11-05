@@ -202,7 +202,7 @@ class ModelsSettingsDelegate(
                     String.format(Locale.getDefault(), "%.1f", result.tokensPerSecond),
                 )
             } else {
-                appContext.getString(R.string.settings_row_test_backend_failed, result.errorMessage.orEmpty())
+                appContext.getString(R.string.settings_row_test_backend_failed, probeFailureText(appContext, result))
             }
             state.update { it.copy(snackbarMessage = message) }
         }

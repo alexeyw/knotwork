@@ -2,6 +2,7 @@ package app.knotwork.android.data.services
 
 import android.content.Context
 import android.content.pm.ServiceInfo
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -103,7 +104,9 @@ class ModelDownloadWorker @AssistedInject constructor(
         val url = inputData.getString(KEY_URL)
         val fileName = inputData.getString(KEY_FILE_NAME)
         if (url.isNullOrBlank() || fileName.isNullOrBlank()) {
-            return Result.failure(workDataOf(KEY_ERROR to "Download request was missing its URL or file name."))
+            return Result.failure(
+                workDataOf(KEY_ERROR to applicationContext.getString(R.string.model_download_failed_request)),
+            )
         }
         if (foregroundBudget.isExhausted()) {
             return pausedByTimeLimit(url, fileName)
@@ -191,7 +194,7 @@ class ModelDownloadWorker @AssistedInject constructor(
         is DownloadedModelInstaller.Result.NotInstalled ->
             failOrRetry(
                 ResumableFileDownloader.Outcome.Failure(
-                    message = installed.message,
+                    message = applicationContext.getString(notInstalledText(installed.cause)),
                     bytesTransferred = when (installed.cause) {
                         DownloadedModelInstaller.Result.Cause.UNREADABLE -> downloaded.bytesTransferred
                         DownloadedModelInstaller.Result.Cause.NOT_MOVED -> 0L
@@ -219,7 +222,7 @@ class ModelDownloadWorker @AssistedInject constructor(
             Timber.w("Model download failed permanently: %s", failure.message)
             Result.failure(
                 workDataOf(
-                    KEY_ERROR to failure.message,
+                    KEY_ERROR to failureText(failure),
                     // -1 rather than an absent key: the UI branches on the status
                     // (a gated 401/403 offers the token flow), and losing it here
                     // would silently downgrade that to a generic error.
@@ -230,6 +233,24 @@ class ModelDownloadWorker @AssistedInject constructor(
             Timber.i("Model download attempt %d failed (%s); retrying.", runAttemptCount + 1, failure.message)
             Result.retry()
         }
+    }
+
+    /** The words for a downloaded file the installer could not install, by the step that stopped it. */
+    @StringRes
+    private fun notInstalledText(cause: DownloadedModelInstaller.Result.Cause): Int = when (cause) {
+        DownloadedModelInstaller.Result.Cause.UNREADABLE -> R.string.model_download_failed_unreadable
+        DownloadedModelInstaller.Result.Cause.NOT_MOVED -> R.string.model_download_failed_not_moved
+    }
+
+    /**
+     * What the screens show for a download that failed for good, in the interface language
+     * of the moment: a server's answer by its status, anything else as the failure reads — the
+     * transport's own text — or as an unknown failure when it reads nothing.
+     */
+    private fun failureText(failure: ResumableFileDownloader.Outcome.Failure): String = when {
+        failure.httpCode != null -> applicationContext.getString(R.string.model_download_failed_http, failure.httpCode)
+        failure.message.isNotBlank() -> failure.message
+        else -> applicationContext.getString(R.string.model_download_failed_unknown)
     }
 
     /**

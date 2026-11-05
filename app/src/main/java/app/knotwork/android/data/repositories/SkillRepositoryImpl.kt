@@ -5,6 +5,7 @@ import app.knotwork.android.data.local.dao.SkillDao
 import app.knotwork.android.data.local.models.SkillEntity
 import app.knotwork.android.domain.models.Skill
 import app.knotwork.android.domain.repositories.SkillRepository
+import app.knotwork.android.domain.services.DefaultNames
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -21,10 +22,13 @@ import javax.inject.Inject
  * - domain `null` (all tools) ↔ column `null`,
  * - domain `[]` (no tools) ↔ column `""`,
  * - domain `[a, b]` ↔ column `"a,b"`.
+ *
+ * A duplicate is named with [DefaultNames.copyOf], in the interface language.
  */
 class SkillRepositoryImpl @Inject constructor(
     private val dao: SkillDao,
     private val bundledSkillSource: BundledSkillSource,
+    private val defaultNames: DefaultNames,
 ) : SkillRepository {
 
     override fun getBundledSkills(): Flow<List<Skill>> =
@@ -56,7 +60,7 @@ class SkillRepositoryImpl @Inject constructor(
         val now = System.currentTimeMillis()
         val copy = source.copy(
             id = UUID.randomUUID().toString(),
-            name = "${source.name} (copy)",
+            name = defaultNames.copyOf(source.name),
             isBundled = false,
             createdAt = now,
             updatedAt = now,

@@ -1,5 +1,7 @@
 package app.knotwork.android.presentation.ui.common
 
+import androidx.annotation.StringRes
+import app.knotwork.android.R
 import app.knotwork.android.domain.usecases.ImageAttachmentBlock
 
 /**
@@ -9,40 +11,25 @@ import app.knotwork.android.domain.usecases.ImageAttachmentBlock
  * toast holds two lines on Android 12+.
  */
 object ImageAttachmentBlockCopy {
-    /**
-     * The active local model is not marked vision-capable. The run is blocked so
-     * the native inference layer never receives an image it cannot decode.
-     */
-    const val MODEL_NO_VISION_MESSAGE: String =
-        "This model can't read images. Turn on image support for it on the Models screen, " +
-            "or switch to a vision-capable model."
 
     /**
-     * The pipeline starts on a CLOUD node. Attachments stay on-device by design,
-     * so the run is blocked rather than dropping the image silently.
-     */
-    const val CLOUD_ATTACHMENT_BLOCKED_MESSAGE: String =
-        "Images stay on your device and aren't sent to cloud models. Use a pipeline that starts " +
-            "with an on-device step to send a picture."
-
-    /**
-     * The pipeline has no on-device step that could read the image (no reachable
-     * `LITE_RT` node carrying the original task); the engine would otherwise drop
-     * it while the run looks normal.
-     */
-    const val PIPELINE_NO_VISION_MESSAGE: String =
-        "This pipeline has no on-device step that can read an image. Pick a pipeline with an " +
-            "on-device model step to send a picture."
-
-    /**
-     * Returns the user-facing message for [block].
+     * Returns the user-facing message for [block]:
+     *
+     * - [ImageAttachmentBlock.MODEL_NO_VISION] — the active local model is not marked
+     *   vision-capable; the run is blocked so the native inference layer never receives an
+     *   image it cannot decode.
+     * - [ImageAttachmentBlock.CLOUD_ENTRY] — the pipeline starts on a CLOUD node; attachments
+     *   stay on-device by design, so the run is blocked rather than dropping the image silently.
+     * - [ImageAttachmentBlock.NO_VISION_STEP] — no reachable on-device step carries the original
+     *   task, so the engine would drop the image while the run looks normal.
      *
      * @param block Why the image may not start the run.
-     * @return The message to show.
+     * @return The string resource of the message, worded by the screen in the interface language.
      */
-    fun messageFor(block: ImageAttachmentBlock): String = when (block) {
-        ImageAttachmentBlock.CLOUD_ENTRY -> CLOUD_ATTACHMENT_BLOCKED_MESSAGE
-        ImageAttachmentBlock.MODEL_NO_VISION -> MODEL_NO_VISION_MESSAGE
-        ImageAttachmentBlock.NO_VISION_STEP -> PIPELINE_NO_VISION_MESSAGE
+    @StringRes
+    fun messageFor(block: ImageAttachmentBlock): Int = when (block) {
+        ImageAttachmentBlock.CLOUD_ENTRY -> R.string.chat_image_blocked_cloud
+        ImageAttachmentBlock.MODEL_NO_VISION -> R.string.chat_image_blocked_model
+        ImageAttachmentBlock.NO_VISION_STEP -> R.string.chat_image_blocked_pipeline
     }
 }

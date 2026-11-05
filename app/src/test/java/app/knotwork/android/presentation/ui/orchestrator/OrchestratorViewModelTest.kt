@@ -28,6 +28,7 @@ import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.PipelineCompositionValidator
 import app.knotwork.android.domain.text.ImportedText
 import app.knotwork.android.domain.usecases.CreatePipelineUseCase
@@ -182,6 +183,7 @@ class OrchestratorViewModelTest {
             resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>(relaxed = true),
             setSurfacePipeline = mockk<SetSurfacePipelineUseCase>(relaxed = true),
             entryPointSettings = settingsRepository,
+            defaultNames = EnglishDefaultNames,
         ),
         transferUseCases = OrchestratorTransferUseCases(
             importPipeline = importPipelineUseCase,

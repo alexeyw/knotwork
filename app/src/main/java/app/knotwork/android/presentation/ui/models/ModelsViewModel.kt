@@ -354,9 +354,8 @@ class ModelsViewModel @Inject constructor(
                     it.copy(
                         isDownloading = false,
                         downloadProgress = null,
-                        downloadError = AndroidModelDownloadManager.DownloadError(
-                            e.message ?: "Unknown error occurred",
-                        ),
+                        // Blank without the stream's own text: the screen words that case.
+                        downloadError = AndroidModelDownloadManager.DownloadError(e.message.orEmpty()),
                         activeDownloadFileName = null,
                     )
                 }

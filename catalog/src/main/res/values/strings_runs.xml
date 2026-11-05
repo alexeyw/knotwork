@@ -198,4 +198,5 @@
     <string name="knotwork_run_export_body">The file holds everything the model read in this run: prompts, memory excerpts, and the chat history inside those prompts. It stays on this device unless you share it.</string>
     <string name="knotwork_run_export_share">Share</string>
     <string name="knotwork_run_export_save">Save to file</string>
+    <string name="knotwork_run_verify_failed_reason_unknown">unknown error</string>
 </resources>

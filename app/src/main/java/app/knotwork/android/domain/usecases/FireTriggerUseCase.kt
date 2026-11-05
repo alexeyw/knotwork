@@ -13,6 +13,7 @@ import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PowerStateRepository
 import app.knotwork.android.domain.repositories.TriggerRepository
 import app.knotwork.android.domain.repositories.UsageTelemetryRepository
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.services.ScheduledTaskConstraints
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
 import app.knotwork.android.domain.services.TaskScheduler
@@ -126,6 +127,9 @@ sealed interface TriggerFireOutcome {
  * was deleted, so there is nothing to attribute a row to. Recording is best-effort
  * (the journal store absorbs and logs its own failures) and never alters or aborts
  * the fire it observes.
+ *
+ * A chat the trigger creates is named after the trigger, else after its prompt, else
+ * with [DefaultNames.triggerChat] in the interface language.
  */
 @Singleton
 class FireTriggerUseCase @Inject constructor(
@@ -140,6 +144,7 @@ class FireTriggerUseCase @Inject constructor(
     private val triggerScheduler: TriggerScheduler,
     private val usageTelemetry: UsageTelemetryRepository,
     private val recordTriggerEvaluation: RecordTriggerEvaluationUseCase,
+    private val defaultNames: DefaultNames,
 ) {
 
     /**
@@ -324,7 +329,8 @@ class FireTriggerUseCase @Inject constructor(
      * raw persisted row read off the background path.
      */
     private fun sessionName(trigger: Trigger): String =
-        trigger.name.ifBlank { trigger.prompt.take(SESSION_NAME_FALLBACK_LENGTH) }.ifBlank { DEFAULT_SESSION_NAME }
+        trigger.name.ifBlank { trigger.prompt.take(SESSION_NAME_FALLBACK_LENGTH) }
+            .ifBlank { defaultNames.triggerChat() }
 
     /**
      * Posts the "Trigger fired" notification best-effort: a notification failure
@@ -355,8 +361,5 @@ class FireTriggerUseCase @Inject constructor(
 
         /** Max prompt characters used as a defensive session-name fallback. */
         const val SESSION_NAME_FALLBACK_LENGTH = 40
-
-        /** Last-resort session title when both the trigger name and prompt are blank. */
-        const val DEFAULT_SESSION_NAME = "Trigger"
     }
 }

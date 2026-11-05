@@ -51,7 +51,7 @@ class KoogMcpConnectionChecker @Inject constructor(
             throw e
         } catch (e: Exception) {
             Timber.d(e, "MCP connection check of %s failed", host)
-            ConnectionCheckResult.Failed(host, ConnectionFailureClassifier.classify(e, contextFor(config)))
+            ConnectionCheckResult.Failed(host, ConnectionFailureClassifier.classify(e, mcpFailureContext(config)))
         } finally {
             withContext(NonCancellable) { disconnect(client) }
         }
@@ -69,17 +69,25 @@ class KoogMcpConnectionChecker @Inject constructor(
     }
 
     /** What the classifier needs to know about a check of [config]. */
-    private fun contextFor(config: McpServerConfig) = ConnectionFailureClassifier.Context(
-        keySent = config.auth != McpAuth.None ||
-            config.headers.keys.any { it.equals(AUTHORIZATION, ignoreCase = true) },
-        requestedUrl = config.url.trim(),
-        retryAfterHeader = null,
-        connectTimeout = KoogMcpClient.CONNECT_TIMEOUT_MS.milliseconds,
-        socketTimeout = (KoogMcpClient.TOOL_CALL_TIMEOUT_MS + KoogMcpClient.SOCKET_TIMEOUT_SLACK_MS).milliseconds,
-        mcp = true,
-    )
-
-    private companion object {
-        const val AUTHORIZATION = "Authorization"
-    }
 }
+
+/**
+ * What [ConnectionFailureClassifier] needs to know about a request to the MCP server [config]
+ * describes — for the form's check and for the Tools screen's connection status alike, so one
+ * failure is worded the same in both places.
+ *
+ * @param config The server.
+ * @return The classifier's context: whether credentials went with the request, its address and
+ *   the deadlines `KoogMcpClient` applies.
+ */
+internal fun mcpFailureContext(config: McpServerConfig) = ConnectionFailureClassifier.Context(
+    keySent = config.auth != McpAuth.None ||
+        config.headers.keys.any { it.equals(AUTHORIZATION_HEADER, ignoreCase = true) },
+    requestedUrl = config.url.trim(),
+    retryAfterHeader = null,
+    connectTimeout = KoogMcpClient.CONNECT_TIMEOUT_MS.milliseconds,
+    socketTimeout = (KoogMcpClient.TOOL_CALL_TIMEOUT_MS + KoogMcpClient.SOCKET_TIMEOUT_SLACK_MS).milliseconds,
+    mcp = true,
+)
+
+private const val AUTHORIZATION_HEADER = "Authorization"

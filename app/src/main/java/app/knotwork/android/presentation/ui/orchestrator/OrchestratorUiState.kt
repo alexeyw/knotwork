@@ -15,7 +15,8 @@ import app.knotwork.android.presentation.ui.common.UiText
 /**
  * Represents the UI state for the Visual Orchestrator screen.
  *
- * @property currentPipeline The pipeline graph currently being edited.
+ * @property currentPipeline The pipeline graph currently being edited. The default — a blank
+ * pipeline with no name — is replaced by the view model with one named in the interface language.
  * @property savedPipelines List of all saved pipelines available to load.
  * @property persistedPipeline The last version of [currentPipeline] known to be
  * in storage, or `null` for a pipeline that has never been saved. Compared
@@ -64,7 +65,7 @@ import app.knotwork.android.presentation.ui.common.UiText
 data class OrchestratorUiState(
     val currentPipeline: PipelineGraph = PipelineGraph(
         id = java.util.UUID.randomUUID().toString(),
-        name = DEFAULT_PIPELINE_NAME,
+        name = "",
     ),
     val savedPipelines: List<PipelineGraph> = emptyList(),
     val persistedPipeline: PipelineGraph? = null,
@@ -114,16 +115,6 @@ data class OrchestratorUiState(
      * Dynamically computed list of validation errors for the current pipeline.
      */
     val validationErrors: List<PipelineValidationError> get() = currentPipeline.validate()
-
-    companion object {
-        /**
-         * Display name applied to a freshly-instantiated scratch pipeline
-         * (the in-memory placeholder shown before the user creates or loads
-         * anything). Kept here so the editor and any tests creating a
-         * scratch state agree on the same baseline label.
-         */
-        const val DEFAULT_PIPELINE_NAME = "New Pipeline"
-    }
 }
 
 /**

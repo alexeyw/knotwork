@@ -13,6 +13,7 @@ import app.knotwork.android.data.local.crypto.SecureValueUnreadableException
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.LocalBackend
+import app.knotwork.android.domain.models.TestProbeFailure
 import app.knotwork.android.domain.models.TestProbeResult
 import app.knotwork.android.domain.repositories.GenerationSettings
 import kotlinx.coroutines.CancellationException
@@ -385,6 +386,7 @@ class GenerationSettingsStore @Inject constructor(
         put("timestampMs", result.timestampMs)
         put("success", result.success)
         if (result.errorMessage != null) put("error", result.errorMessage)
+        if (result.failure != null) put("failure", result.failure.name)
     }.toString()
 
     private fun decodeTestProbeResult(raw: String?): TestProbeResult? {
@@ -397,6 +399,9 @@ class GenerationSettingsStore @Inject constructor(
                 timestampMs = json.optLong("timestampMs", 0L),
                 success = json.optBoolean("success", false),
                 errorMessage = json.optString("error", "").takeIf { it.isNotBlank() },
+                failure = json.optString("failure", "").let { name ->
+                    TestProbeFailure.entries.firstOrNull { it.name == name }
+                },
             )
         } catch (e: JSONException) {
             Timber.w(e, "Failed to parse last_test_probe_result — clearing")

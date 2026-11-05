@@ -145,7 +145,16 @@ For the broader layering rationale, see
   that language's list in `config/l10n/` names it, and the lists only shrink.
 - What a model reads is not translated: system prompts, tool descriptions and
   tool results stay in English, as do the tokens a model's output is matched
-  against (route labels, intent classes).
+  against (route labels, intent classes). A chat's system rows are part of the
+  history a model reads, so a system row the app writes stays English too.
+- A failure the app words itself travels as a type, not a sentence: `domain` and
+  `data` hand over what happened (`ModelLoadError`, `ConnectionFailure`,
+  `TestProbeFailure`), and the screen names it. Text an engine, a server or the
+  platform wrote is shown as it came.
+- A name the app gives what it creates — a new chat, a pipeline, its first
+  nodes, a copy — comes from `DefaultNames` and is stored as written, in the
+  language of the moment. Never compare a stored name with a literal: a new
+  chat is recognised by `DefaultNames.isNewChat`, in every shipped language.
 
 ## Dependency injection (Hilt)
 

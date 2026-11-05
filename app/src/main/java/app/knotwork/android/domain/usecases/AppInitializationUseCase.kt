@@ -64,7 +64,7 @@ class AppInitializationUseCase @Inject constructor(
      * value.
      */
     operator fun invoke(): Flow<InitProgress> = flow {
-        emit(progress(InitStage.Initializing, "Preparing application…", completed = 0))
+        emit(progress(InitStage.Initializing, completed = 0))
         try {
             backupRestorer.finishPending()
         } catch (e: CancellationException) {
@@ -83,7 +83,7 @@ class AppInitializationUseCase @Inject constructor(
             return@flow
         }
 
-        emit(progress(InitStage.FindingModels, "Checking downloaded models…", completed = 1))
+        emit(progress(InitStage.FindingModels, completed = 1))
         try {
             rediscoverDownloadedModels()
         } catch (e: CancellationException) {
@@ -93,7 +93,7 @@ class AppInitializationUseCase @Inject constructor(
             Timber.tag(TAG).w(e, "Downloaded-model rediscovery failed; continuing")
         }
 
-        emit(progress(InitStage.LoadingPipelines, "Reading pipelines…", completed = 2))
+        emit(progress(InitStage.LoadingPipelines, completed = 2))
         try {
             pipelineRepository.getAllPipelines().first()
         } catch (e: CancellationException) {
@@ -104,7 +104,7 @@ class AppInitializationUseCase @Inject constructor(
             return@flow
         }
 
-        emit(progress(InitStage.LoadingChats, "Reading chats…", completed = 3))
+        emit(progress(InitStage.LoadingChats, completed = 3))
         try {
             chatRepository.getSessionsFlow().first()
         } catch (e: CancellationException) {
@@ -115,7 +115,7 @@ class AppInitializationUseCase @Inject constructor(
             return@flow
         }
 
-        emit(progress(InitStage.LoadingMemory, "Reading memory…", completed = 4))
+        emit(progress(InitStage.LoadingMemory, completed = 4))
         try {
             memoryRepository.getRecentMemorySummaries(MEMORY_PREFETCH_LIMIT)
         } catch (e: CancellationException) {
@@ -126,11 +126,11 @@ class AppInitializationUseCase @Inject constructor(
             return@flow
         }
 
-        emit(InitProgress(InitStage.Done, "Ready", completedSteps = TOTAL_STEPS, totalSteps = TOTAL_STEPS))
+        emit(InitProgress(InitStage.Done, completedSteps = TOTAL_STEPS, totalSteps = TOTAL_STEPS))
     }
 
-    private fun progress(stage: InitStage, message: String, completed: Int): InitProgress =
-        InitProgress(stage = stage, message = message, completedSteps = completed, totalSteps = TOTAL_STEPS)
+    private fun progress(stage: InitStage, completed: Int): InitProgress =
+        InitProgress(stage = stage, completedSteps = completed, totalSteps = TOTAL_STEPS)
 
     private fun failure(stage: InitStage, cause: Throwable): InitProgress = InitProgress(
         stage = InitStage.Failed(
@@ -138,7 +138,6 @@ class AppInitializationUseCase @Inject constructor(
             failedStage = stage,
             failureKind = classifyFailure(cause),
         ),
-        message = cause.localizedMessage ?: "Initialization failed",
         completedSteps = 0,
         totalSteps = TOTAL_STEPS,
     )

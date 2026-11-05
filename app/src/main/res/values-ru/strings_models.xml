@@ -35,4 +35,10 @@
         <item quantity="many">в среднем · последние %1$d прогонов</item>
         <item quantity="other">в среднем · последние %1$d прогона</item>
     </plurals>
+    <!-- Why a model download failed, worded by the download worker in the language of the moment. -->
+    <string name="model_download_failed_request">В запросе на загрузку нет адреса или имени файла.</string>
+    <string name="model_download_failed_unreadable">Не удалось прочитать загруженный файл, чтобы проверить его.</string>
+    <string name="model_download_failed_not_moved">Не удалось переместить загруженный файл на место.</string>
+    <string name="model_download_failed_http">Сервер вернул код %1$d</string>
+    <string name="model_download_failed_unknown">Неизвестная ошибка загрузки</string>
 </resources>

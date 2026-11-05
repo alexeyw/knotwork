@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import app.knotwork.android.data.repositories.McpServerRepositoryImpl
+import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpServerConfig
@@ -75,7 +76,7 @@ class ToolDetailScreenTest {
                 mcpServers = listOf(
                     McpServerSnapshot(
                         config = McpServerConfig(url = serverUrl),
-                        status = McpConnectionStatus.Error(reason = "handshake failed"),
+                        status = McpConnectionStatus.Error(host = "mcp.example", failure = ConnectionFailure.NotMcp),
                         tools = emptyList(),
                     ),
                 ),

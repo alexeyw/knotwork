@@ -122,7 +122,7 @@ private const val UNNAMED_TRIGGER_GLYPH_ALPHA = 0.6f
  * @param onTypedConfirmChange invoked with each keystroke in the type-confirm
  * field. No-op for Readonly / Sensitive.
  * @param allowOnceEnabled gates the Allow CTA. Default policy:
- * `HitlConfirmationState.isAllowOnceEnabled(model.risk, pendingTypedConfirm)`.
+ * `HitlConfirmationState.isAllowOnceEnabled(model.risk, pendingTypedConfirm, confirmWord)`.
  * Callers may override (e.g. while a previous Allow request is still pending
  * server-side).
  * @param onAllowOnce invoked when the user taps Allow.
@@ -406,7 +406,7 @@ private fun JsonArgsBlock(arguments: String) {
     }
 }
 
-/** Destructive "type yes" row. */
+/** Destructive type-to-confirm row: the user types the confirmation word. */
 @Composable
 private fun TypedConfirmRow(value: String, onChange: (String) -> Unit) {
     OutlinedTextField(
@@ -416,7 +416,7 @@ private fun TypedConfirmRow(value: String, onChange: (String) -> Unit) {
             Text(
                 text = stringResource(
                     R.string.knotwork_hitl_typed_confirm_placeholder,
-                    HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD,
+                    stringResource(R.string.knotwork_typed_confirm_word),
                 ),
                 style = KnotworkTextStyles.MonoBase,
                 color = KnotworkTheme.extended.onSurfaceDim,

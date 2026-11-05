@@ -67,4 +67,5 @@
     <!-- Trigger interval presets. -->
     <string name="knotwork_trigger_interval_hours">%1$d ч</string>
     <string name="knotwork_trigger_interval_minutes">%1$d мин</string>
+    <string name="knotwork_typed_confirm_word">да</string>
 </resources>

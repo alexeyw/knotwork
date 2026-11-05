@@ -9,12 +9,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
 import app.knotwork.android.presentation.ui.chat.ChatExportEffects
+import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chatarchive.ChatArchiveCallbacks
 import app.knotwork.design.screens.chatarchive.ChatArchiveContent
@@ -56,6 +59,7 @@ fun ChatArchiveScreen(
         }
     }
 
+    val context = LocalContext.current
     Box(modifier = modifier.fillMaxSize()) {
         ChatArchiveContent(
             state = uiState.toViewState(
@@ -67,6 +71,8 @@ fun ChatArchiveScreen(
                     uiState.rows.size,
                     uiState.rows.size,
                 ),
+                untitled = stringResource(R.string.chat_untitled),
+                resolveText = { context.resolve(it) },
             ),
             modifier = Modifier.fillMaxSize().testTag(CHAT_ARCHIVE_ROOT_TEST_TAG),
             strings = chatArchiveStrings(),
@@ -144,10 +150,14 @@ internal fun archivedAtText(label: ArchivedAtLabel): String = when (label) {
  * @param archivedLabels row id → localised archived-at sentence. Resolved by
  *   the caller because plural forms live in resources.
  * @param subtitle pre-formatted TopAppBar subtitle.
+ * @param untitled the title of a chat never named, in the interface language.
+ * @param resolveText words the read failure.
  */
 internal fun ChatArchiveUiState.toViewState(
     archivedLabels: Map<String, String>,
     subtitle: String,
+    untitled: String,
+    resolveText: (UiText) -> String,
 ): ChatArchiveViewState {
     val visualState = when {
         errorMessage != null -> ChatArchiveVisualState.Error
@@ -158,7 +168,7 @@ internal fun ChatArchiveUiState.toViewState(
     val mappedRows = rows.map { row ->
         ChatArchiveRowUi(
             id = row.id,
-            title = row.title,
+            title = row.title.ifBlank { untitled },
             archivedLabel = archivedLabels[row.id].orEmpty(),
             starred = row.starred,
             ranAfterArchiving = row.ranAfterArchiving,
@@ -170,7 +180,7 @@ internal fun ChatArchiveUiState.toViewState(
         subtitle = if (visualState == ChatArchiveVisualState.Default) subtitle else "",
         openMenuRowId = openMenuRowId,
         deleteTarget = deleteTargetId?.let { id -> mappedRows.firstOrNull { it.id == id } },
-        errorMessage = errorMessage,
+        errorMessage = errorMessage?.let(resolveText),
     )
 }
 

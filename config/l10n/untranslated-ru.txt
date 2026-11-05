@@ -192,7 +192,6 @@ app:string/common_list_separator
 app:string/common_ok
 app:string/common_retry
 app:string/common_save
-app:string/destructive_typed_keyword
 app:string/discover_detail_load_error
 app:string/discover_error_network
 app:string/discover_install_failed

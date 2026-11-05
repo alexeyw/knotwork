@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.tools
 
+import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpServerConfig
@@ -167,12 +168,13 @@ class ToolsViewModelTest {
         mcpServersFlow.value = listOf(McpServerConfig(url = url))
         advanceUntilIdle()
 
-        statusFlowFor(url).value = McpConnectionStatus.Error(reason = "boom")
+        statusFlowFor(url).value =
+            McpConnectionStatus.Error(host = "broken.example", failure = ConnectionFailure.UnknownHost)
         advanceUntilIdle()
 
         val snapshot = viewModel.uiState.value.mcpServers.first()
         assertTrue(snapshot.status is McpConnectionStatus.Error)
-        assertEquals("boom", (snapshot.status as McpConnectionStatus.Error).reason)
+        assertEquals(ConnectionFailure.UnknownHost, (snapshot.status as McpConnectionStatus.Error).failure)
     }
 
     @Test

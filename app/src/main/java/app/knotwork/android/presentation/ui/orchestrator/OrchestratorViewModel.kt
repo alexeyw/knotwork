@@ -58,7 +58,15 @@ class OrchestratorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        OrchestratorUiState(availableVariables = computeAvailableVariables(nodeSheetSources.promptVariableProviders)),
+        OrchestratorUiState(
+            // The blank pipeline the editor opens on is named in the interface language,
+            // and keeps that name if it is saved as it is.
+            currentPipeline = PipelineGraph(
+                id = UUID.randomUUID().toString(),
+                name = libraryUseCases.defaultNames.newPipeline(),
+            ),
+            availableVariables = computeAvailableVariables(nodeSheetSources.promptVariableProviders),
+        ),
     )
 
     /**

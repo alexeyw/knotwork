@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
 import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.presentation.ui.common.openDocumentation
+import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
@@ -79,7 +80,12 @@ fun OnboardingScreen(
     onOpenDocument: (String) -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val viewState by viewModel.state.collectAsStateWithLifecycle()
+    val downloadError by viewModel.downloadError.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // The view model keeps why the step cannot go on as a value; it is worded here, so a
+    // change of language rewords it.
+    val state = viewState.copy(downloadError = downloadError?.let(context::resolve))
     val pendingInterruption by viewModel.pendingInterruption.collectAsStateWithLifecycle()
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
@@ -92,7 +98,6 @@ fun OnboardingScreen(
     val activity = LocalActivity.current
     var exitConfirmVisible by rememberSaveable { mutableStateOf(value = false) }
 
-    val context = LocalContext.current
     val callbacks = remember(viewModel, context, onOpenDocument) {
         OnboardingCallbacks(
             onNext = viewModel::next,

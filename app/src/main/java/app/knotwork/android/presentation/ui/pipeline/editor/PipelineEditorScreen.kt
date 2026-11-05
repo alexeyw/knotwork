@@ -220,6 +220,8 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
         // scope). Wrapping `getString` here is fine because `stringResource`
         // already does the work — we just close over the result.
         val autoFixNoneMessage = stringResource(R.string.pipeline_editor_validation_auto_fix_none)
+        val inputNodeLabel = stringResource(R.string.default_name_input_node)
+        val outputNodeLabel = stringResource(R.string.default_name_output_node)
         val pasteEmptyMessage = stringResource(R.string.pipeline_editor_overflow_paste_empty)
         val autoFixDoneMessage = stringResource(R.string.pipeline_editor_validation_auto_fix_done)
         val connectionDroppedHint = stringResource(R.string.pipeline_editor_connection_dropped_hint)
@@ -398,7 +400,12 @@ fun PipelineEditorScreen(viewModel: OrchestratorViewModel, onBack: () -> Unit) {
             onFromTemplate = { showPresetPicker = true },
             onFocusNode = viewModel::requestFocusNode,
             onAutoFix = {
-                val outcome = ValidationAutoFix.apply(pipeline, validationErrors)
+                val outcome = ValidationAutoFix.apply(
+                    graph = pipeline,
+                    errors = validationErrors,
+                    inputLabel = inputNodeLabel,
+                    outputLabel = outputNodeLabel,
+                )
                 if (outcome.unchanged) {
                     scope.launch { snackbarHostState.showSnackbar(autoFixNoneMessage) }
                 } else {

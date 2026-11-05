@@ -173,9 +173,9 @@ data class ImageViewerTarget(
  * @property value current composer draft. Hoisted to the ViewModel so
  *   screen recompositions never own the text.
  * @property typedConfirm typed-confirm input shown next to the Destructive
- *   HITL confirmation row; must equal the magic word
- *   ([ChatHomeHitlDelegate.DESTRUCTIVE_TYPED_CONFIRM_WORD], case-insensitive)
- *   before a destructive tool can be approved.
+ *   HITL confirmation row; must equal the confirmation word of the interface
+ *   language (`knotwork_typed_confirm_word`, case-insensitive) before a
+ *   destructive tool can be approved.
  * @property attachment pending image attachment shown above the input row, or
  *   `null` when none is attached.
  * @property voice the voice-input capture/transcription phase driving the
@@ -241,7 +241,9 @@ data class ChatHomePendingState(
 /**
  * Active-thread metadata and the drawer thread list.
  *
- * @property title thread title rendered in the TopAppBar.
+ * @property title thread title rendered in the TopAppBar, as stored; blank for
+ *   a chat never named (or none selected yet), which the screen words in the
+ *   interface language.
  * @property rows drawer thread list projected from the live session cache;
  *   favorited sessions sort to the top, the rest follow `updatedAt DESC`.
  * @property favorite whether the active session is favorited — drives the
@@ -260,40 +262,31 @@ data class ChatHomePendingState(
  *   `null`.
  */
 data class ChatHomeThreadState(
-    val title: String = DEFAULT_TITLE,
+    val title: String = "",
     val rows: List<ChatHomeThreadRow> = emptyList(),
     val favorite: Boolean = false,
     val currentSessionId: String = "",
     val archived: Boolean = false,
     val archivedCount: Int = 0,
     val openMenuId: String? = null,
-) {
-    companion object {
-        /** Pre-formatted fallback thread title surfaced before any thread is selected. */
-        const val DEFAULT_TITLE: String = "New conversation"
-    }
-}
+)
 
 /**
  * Local-model slice feeding the TopAppBar subtitle and the model-picker
  * sheet.
  *
- * @property name display name of the currently active local model, or the
- *   [DEFAULT_NAME] placeholder when none is active.
+ * @property name display name of the currently active local model, or `null`
+ *   when none is active — the screen then shows a placeholder in the interface
+ *   language.
  * @property installed locally installed LiteRT models listed by the picker.
  * @property activeId row id of the currently active model (`null` when none
  *   is active) — the picker renders the checkmark from this.
  */
 data class ChatHomeModelState(
-    val name: String = DEFAULT_NAME,
+    val name: String? = null,
     val installed: List<LocalModel> = emptyList(),
     val activeId: Long? = null,
-) {
-    companion object {
-        /** Pre-formatted fallback model name surfaced when no local model is loaded. */
-        const val DEFAULT_NAME: String = "Local model"
-    }
-}
+)
 
 /**
  * Token-meter slice of [ChatHomeScreenState].
@@ -364,8 +357,10 @@ data class HitlPending(
  *
  * @property runId id of the interrupted persistent run record — the Discard
  *   intent settles exactly this record, never "whatever is interrupted now".
- * @property nodeLabel resolved display label of the node the run stopped at
- *   (falls back to [ChatHomeReattachDelegate.INTERRUPTED_UNKNOWN_NODE_LABEL]).
+ * @property nodeLabel resolved display label of the node the run stopped at, or
+ *   `null` when it cannot be named — the run stopped before any node, its
+ *   pipeline was deleted, or the node is gone from the edited graph. The card
+ *   then reads "unknown step" in the interface language.
  * @property timestamp pre-formatted time the run was actually interrupted
  *   (`finishedAt` of the record). Captured once here so the card shows a
  *   stable, truthful time instead of re-deriving "now" on every
@@ -377,7 +372,7 @@ data class HitlPending(
  */
 data class InterruptedRunPending(
     val runId: String,
-    val nodeLabel: String,
+    val nodeLabel: String?,
     val timestamp: String,
     val resumable: Boolean = true,
 )

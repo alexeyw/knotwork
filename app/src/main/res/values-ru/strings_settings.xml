@@ -10,4 +10,10 @@
     <string name="settings_unit_megabytes">%1$d МБ</string>
     <string name="settings_unit_kilobytes">%1$d КБ</string>
     <string name="settings_unit_hours">%1$d ч</string>
+    <string name="settings_memory_embedding_on_device">На устройстве (Universal Sentence Encoder)</string>
+    <!-- Why the last backend probe failed, when the app words it. -->
+    <string name="settings_test_backend_failure_no_model">Активная модель не выбрана.</string>
+    <string name="settings_test_backend_failure_file_missing">Файла модели нет на устройстве. Загрузите его заново.</string>
+    <string name="settings_test_backend_failure_load">Не удалось загрузить модель.</string>
+    <string name="settings_test_backend_failure_unknown">Неизвестная ошибка</string>
 </resources>

@@ -4,6 +4,7 @@ import android.content.Context
 import app.knotwork.android.domain.settings.SettingTier
 import app.knotwork.android.domain.settings.SettingsCategoryId
 import app.knotwork.android.domain.settings.SettingsRegistry
+import app.knotwork.android.domain.settings.SettingsSearchEngine
 import app.knotwork.android.domain.settings.SettingsSearchField
 import app.knotwork.android.domain.settings.SettingsSearchResult
 import app.knotwork.android.domain.settings.SettingsSearchableEntry
@@ -15,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import app.knotwork.design.screens.settings.SettingsCategoryId as CatalogCategoryId
 
 /**
@@ -50,6 +52,34 @@ class SettingsSearchCatalogTest {
             anchors,
             SettingsSearchCatalog.SEARCH_STRINGS.keys,
         )
+    }
+
+    @Test
+    fun `every registry anchor has search synonyms and there are none for a row that is gone`() {
+        val anchors = SettingsRegistry.allEntries().map { it.anchorKey() }.toSet()
+        assertEquals(anchors, SettingsSearchCatalog.SEARCH_SYNONYMS.keys)
+    }
+
+    @Test
+    fun `given the app in English when the index is built then every row has its synonyms`() {
+        val index = SettingsSearchCatalog.buildIndex(context)
+
+        assertTrue(index.all { it.synonyms.isNotEmpty() })
+        // A query that names nothing in the row's own text still finds it.
+        val hit = SettingsSearchEngine.search("cost", index).first()
+        assertEquals("LINK_RUN_LIMITS", hit.entry.anchorKey)
+        assertEquals("cost", hit.synonymHit)
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `given the app in Russian when a Russian or technical term is searched then the row is found`() {
+        val index = SettingsSearchCatalog.buildIndex(context)
+
+        val spend = SettingsSearchEngine.search("расходы", index).first()
+        assertEquals("LINK_RUN_LIMITS", spend.entry.anchorKey)
+        assertEquals("расходы", spend.synonymHit)
+        assertEquals("LOCAL_MODEL_BACKEND", SettingsSearchEngine.search("gpu", index).first().entry.anchorKey)
     }
 
     @Test

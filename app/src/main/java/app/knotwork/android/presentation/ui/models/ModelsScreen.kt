@@ -66,7 +66,7 @@ fun ModelsScreen(
     LaunchedEffect(uiState.downloadError) {
         uiState.downloadError?.let { error ->
             val errorMessage = when (error) {
-                is DownloadError -> error.message
+                is DownloadError -> error.message.ifBlank { unknownErrorText }
                 else -> unknownErrorText
             }
             snackbarHostState.showSnackbar(errorMessage)

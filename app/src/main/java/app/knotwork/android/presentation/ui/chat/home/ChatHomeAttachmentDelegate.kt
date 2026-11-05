@@ -6,6 +6,7 @@ import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.usecases.CheckImageAttachmentUseCase
 import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
+import app.knotwork.android.presentation.ui.common.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,10 +92,10 @@ class ChatHomeAttachmentDelegate(
      *
      * @return The block reason, or `null` to allow the send.
      */
-    suspend fun preflightBlockReason(): String? {
+    suspend fun preflightBlockReason(): UiText? {
         val sessionId = state.value.thread.currentSessionId
         val pipelineId = sessions().firstOrNull { it.id == sessionId }?.pipelineId
-        return checkImageAttachment(pipelineId)?.let(ImageAttachmentBlockCopy::messageFor)
+        return checkImageAttachment(pipelineId)?.let { UiText(ImageAttachmentBlockCopy.messageFor(it)) }
     }
 
     /** Opens the image-source chooser sheet (Photo library / Camera). */

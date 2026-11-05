@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
+import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.verify
 import org.junit.Rule
 import org.junit.Test
@@ -127,7 +128,7 @@ class ChatHomeSendFlowTest {
     @Test
     fun errorState_rendersErrorTileWithRetryAction() {
         val (viewModel, _) = mockChatHomeViewModel(
-            initialState = ChatHomeUiState.Error(message = "Test failure"),
+            initialState = ChatHomeUiState.Error(message = UiText.Dynamic("Test failure")),
         )
 
         composeTestRule.setContent {

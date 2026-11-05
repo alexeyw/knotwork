@@ -5,6 +5,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -60,9 +61,8 @@ fun ToolDetailScreen(
             },
             toolName = mcpTool?.name ?: toolId,
             description = mcpTool?.description
-                ?: (owningStatus as? McpConnectionStatus.Error)?.let {
-                    stringResource(R.string.tool_detail_server_error, it.reason)
-                }
+                ?: owningStatus?.takeIf { it is McpConnectionStatus.Error || it == McpConnectionStatus.Interrupted }
+                    ?.let { stringResource(R.string.tool_detail_server_error, it.toLabel(LocalContext.current)) }
                 ?: "",
             serverDisplayName = mcpTool?.serverUrl ?: stringResource(R.string.tool_detail_mcp_tool),
             schemaJson = remember(mcpTool) { mcpTool?.inputSchemaJson?.let(::laidOutSchema) },

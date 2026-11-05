@@ -20,6 +20,7 @@ import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
 import app.knotwork.android.domain.usecases.ApprovalRequestContextFixtures
 import app.knotwork.android.domain.usecases.GetContextWindowUseCase
@@ -188,6 +189,7 @@ class ChatHomeConsoleStreamingTest {
         mockk(relaxed = true),
         mockk(relaxed = true),
         ApprovalRequestContextFixtures.none(),
+        EnglishDefaultNames,
     ).also { vm ->
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.

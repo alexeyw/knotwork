@@ -35,6 +35,15 @@ details.
 - **The on-device inference engine is LiteRT-LM 0.19.0** (was 0.17.1). Its
   GPU sampling for a given seed now matches the CPU's, so a run on the GPU can
   give a different answer than it did before the update.
+- **An MCP server that cannot connect says why in words.** Its row on the
+  Tools screen used to show the raw error; it now reads like the server form's
+  *Test* — what happened and what to do — and a tool's detail page says the
+  same. The task monitor names a running step by its node type's name
+  (*Intent Router*) instead of its code (`INTENT_ROUTER`).
+- **Names the app gives are written in the app's language** — a new chat, a
+  new pipeline and its first nodes, a copy — and stay as written if the
+  language changes later. A new chat still takes its first message as its name,
+  whichever language it was created in.
 - **Verify checks a run only on the engine version that recorded it.** Equal
   answers were measured within one LiteRT-LM version, and an update can change
   them, so for a run recorded before the update Verify stays off and names both

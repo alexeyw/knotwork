@@ -34,6 +34,10 @@ import javax.xml.parsers.DocumentBuilderFactory
  *   English, and one translated but filtered out would never show.
  * - The default resources are the language [AppLanguageRepositoryImpl] puts
  *   first in the picker.
+ * - The app bundle keeps every language in every install
+ *   (`bundle.language.enableSplit = false`): Google Play installs language
+ *   resources by the phone's system language, so a language picked in the app
+ *   would otherwise find nothing to show in a Play install.
  * - A translation that equals its English text is a copy, not a translation,
  *   unless `config/l10n/identical-<lang>.txt` names it (brand names, units).
  *   Text without a letter (`%1$s · %2$s`) is not compared.
@@ -61,6 +65,17 @@ class TranslationCoverageTest {
                 languageFolders(module).keys,
             )
         }
+    }
+
+    @Test
+    fun `the app bundle ships every language to every install`() {
+        val script = File(moduleRoot("app"), "build.gradle.kts").readText()
+
+        assertTrue(
+            "app/build.gradle.kts must keep bundle { language { enableSplit = false } }: Play installs " +
+                "languages by the system's, and the in-app picker chooses its own",
+            LANGUAGE_SPLIT_OFF.containsMatchIn(script),
+        )
     }
 
     @Test
@@ -198,6 +213,7 @@ class TranslationCoverageTest {
         val TRANSLATABLE_TAGS = setOf("string", "plurals", "string-array")
         val LANGUAGE_FOLDER = Regex("values-[a-z]{2,3}(-r[A-Z]{2})?")
         val LOCALE_FILTERS = Regex("""localeFilters\s*\+=\s*listOf\(([^)]*)\)""")
+        val LANGUAGE_SPLIT_OFF = Regex("""bundle\s*\{\s*language\s*\{\s*enableSplit\s*=\s*false\s*}""")
         val QUOTED = Regex(""""([^"]+)"""")
     }
 }

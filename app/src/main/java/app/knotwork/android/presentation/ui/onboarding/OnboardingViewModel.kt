@@ -68,7 +68,7 @@ import javax.inject.Inject
  * @property localModelRepository detects previously-installed models and persists
  * freshly-downloaded ones.
  * @property downloadManager streams `DownloadState` updates folded into
- * `OnboardingViewState.downloadProgress` / `downloadError`.
+ * `OnboardingViewState.downloadProgress` and [downloadError].
  * @property prepareInferenceBackendUseCase resolves the execution backend on a
  * first-time install (GPU when the device plausibly supports it and a real
  * generation confirms it, CPU otherwise) and warms the LiteRT inference handle.
@@ -94,8 +94,21 @@ class OnboardingViewModel @Inject constructor(
 
     private val _state: MutableStateFlow<OnboardingViewState> = MutableStateFlow(OnboardingViewState())
 
-    /** Externally-observable view state passed to `OnboardingContent`. */
+    /**
+     * Externally-observable view state passed to `OnboardingContent`. Its `downloadError` stays
+     * `null` here: the screen fills it in from [downloadError], in the interface language.
+     */
     val state: StateFlow<OnboardingViewState> = _state.asStateFlow()
+
+    private val _downloadError = MutableStateFlow<UiText?>(null)
+
+    /**
+     * Why the Download step cannot go on — a refused link, a failed download, set-up or warm-up —
+     * or `null`. A value, not a sentence: this view model outlives a change of language, so the
+     * screen words it. Text the data layer already wrote (a download's failure, a stop on record)
+     * arrives as it was written.
+     */
+    val downloadError: StateFlow<UiText?> = _downloadError.asStateFlow()
 
     private val _pendingInterruption = MutableStateFlow<InterruptedDownload?>(null)
 
@@ -191,11 +204,11 @@ class OnboardingViewModel @Inject constructor(
                 selectedScenario = scenario,
                 liteRtModel = scenario.requiredModel,
                 downloadProgress = null,
-                downloadError = null,
                 installedModelId = null,
                 isModelWarmed = false,
             )
         }
+        _downloadError.value = null
         installedModelPath = null
         checkIfPickedModelAlreadyInstalled(scenario.requiredModel)
     }
@@ -238,7 +251,8 @@ class OnboardingViewModel @Inject constructor(
                         }
                     }
                     .onFailure { error ->
-                        _state.update { it.copy(downloadError = error.message ?: GENERIC_SETUP_ERROR) }
+                        _downloadError.value = error.message?.let(UiText::Dynamic)
+                            ?: UiText(R.string.onboarding_error_setup)
                     }
             } finally {
                 // Runs on the cancellation path too, so a cancelled set-up can
@@ -255,7 +269,7 @@ class OnboardingViewModel @Inject constructor(
      * a disabled "Preparing…" CTA.
      */
     fun retryWarmUp() {
-        _state.update { it.copy(downloadError = null) }
+        _downloadError.value = null
         scheduleWarmUp()
     }
 
@@ -282,18 +296,19 @@ class OnboardingViewModel @Inject constructor(
             it.copy(
                 liteRtModel = model,
                 downloadProgress = null,
-                downloadError = null,
                 installedModelId = null,
                 isModelWarmed = false,
             )
         }
+        _downloadError.value = null
         installedModelPath = null
         checkIfPickedModelAlreadyInstalled(model)
     }
 
     /** Updates the bound custom-URL field; clears any prior download error. */
     fun onCustomDownloadUrlChanged(url: String) {
-        _state.update { it.copy(customDownloadUrl = url, downloadError = null) }
+        _state.update { it.copy(customDownloadUrl = url) }
+        _downloadError.value = null
     }
 
     /**
@@ -307,7 +322,8 @@ class OnboardingViewModel @Inject constructor(
         val picked = _state.value.liteRtModel
         val resolved = resolveDownloadTarget(picked) ?: return
 
-        _state.update { it.copy(downloadProgress = 0f, downloadError = null) }
+        _state.update { it.copy(downloadProgress = 0f) }
+        _downloadError.value = null
         markMilestone(OnboardingMilestone.MODEL_DOWNLOAD_STARTED)
 
         collectDownload(downloadManager.downloadModel(resolved.url, resolved.fileName), picked, resolved)
@@ -337,7 +353,8 @@ class OnboardingViewModel @Inject constructor(
                 url = preset?.downloadUrl.orEmpty(),
                 fileName = active.fileName,
             )
-            _state.update { it.copy(liteRtModel = picked, downloadError = null) }
+            _state.update { it.copy(liteRtModel = picked) }
+            _downloadError.value = null
             collectDownload(downloadManager.observeDownload(active.fileName), picked, resolved)
         }
     }
@@ -382,11 +399,9 @@ class OnboardingViewModel @Inject constructor(
             ?: OnboardingLiteRtModel.CustomUrl
         if (picked != current.liteRtModel) pickLiteRtModel(picked)
         _state.update {
-            it.copy(
-                customDownloadUrl = if (preset == null) interruption.url else it.customDownloadUrl,
-                downloadError = interruption.message,
-            )
+            it.copy(customDownloadUrl = if (preset == null) interruption.url else it.customDownloadUrl)
         }
+        _downloadError.value = UiText.Dynamic(interruption.message)
         _pendingInterruption.value = null
         shownStopThisVisit = true
         downloadManager.acknowledgeInterruption(interruption.fileName)
@@ -404,9 +419,9 @@ class OnboardingViewModel @Inject constructor(
         downloadJob = states
             .onEach { downloadState -> handleDownloadEmission(downloadState, picked, resolved) }
             .catch { e ->
-                _state.update {
-                    it.copy(downloadProgress = null, downloadError = e.message ?: GENERIC_DOWNLOAD_ERROR)
-                }
+                _state.update { it.copy(downloadProgress = null) }
+                _downloadError.value = e.message?.let(UiText::Dynamic)
+                    ?: UiText(R.string.onboarding_error_download)
             }
             // A download cancelled elsewhere — the notification's Cancel action —
             // ends the stream with no terminal state. Without this the step would
@@ -466,17 +481,13 @@ class OnboardingViewModel @Inject constructor(
                 it.copy(downloadProgress = downloadState.progress / PERCENT_DIVISOR)
             }
             is DownloadState.Success -> onDownloadSucceeded(downloadState, picked, resolved)
-            is DownloadState.Error -> _state.update {
-                it.copy(
-                    downloadProgress = null,
-                    // A pause or a checksum mismatch was recorded before the download failed and is
-                    // shown from that record, once — this path does not word it a second time.
-                    downloadError = if (downloadState.error.isRecordedInterruption()) {
-                        it.downloadError
-                    } else {
-                        extractErrorMessage(downloadState.error)
-                    },
-                )
+            is DownloadState.Error -> {
+                _state.update { it.copy(downloadProgress = null) }
+                // A pause or a checksum mismatch was recorded before the download failed and is
+                // shown from that record, once — this path does not word it a second time.
+                if (!downloadState.error.isRecordedInterruption()) {
+                    _downloadError.value = extractErrorMessage(downloadState.error)
+                }
             }
         }
     }
@@ -485,9 +496,10 @@ class OnboardingViewModel @Inject constructor(
     private fun AppError.isRecordedInterruption(): Boolean =
         (this as? AndroidModelDownloadManager.DownloadError)?.recordedInterruption == true
 
-    private fun extractErrorMessage(error: AppError): String {
+    private fun extractErrorMessage(error: AppError): UiText {
         val message = (error as? AndroidModelDownloadManager.DownloadError)?.message
-        return message?.takeIf { it.isNotBlank() } ?: GENERIC_DOWNLOAD_ERROR
+        return message?.takeIf { it.isNotBlank() }?.let(UiText::Dynamic)
+            ?: UiText(R.string.onboarding_error_download)
     }
 
     private fun onDownloadSucceeded(
@@ -538,9 +550,9 @@ class OnboardingViewModel @Inject constructor(
                     is PrepareInferenceBackendUseCase.Outcome.Warmed ->
                         _state.update { it.copy(isModelWarmed = true) }
 
-                    is PrepareInferenceBackendUseCase.Outcome.Failed -> _state.update {
-                        it.copy(downloadError = outcome.message ?: GENERIC_LOAD_ERROR)
-                    }
+                    is PrepareInferenceBackendUseCase.Outcome.Failed ->
+                        _downloadError.value = outcome.message?.let(UiText::Dynamic)
+                            ?: UiText(R.string.onboarding_error_load)
                 }
             } finally {
                 _state.update { it.copy(isCheckingAcceleration = false) }
@@ -577,10 +589,10 @@ class OnboardingViewModel @Inject constructor(
         }
         val refusal = when (val link = CustomModelLink.parse(_state.value.customDownloadUrl)) {
             is CustomModelLink.Accepted -> return ResolvedDownloadTarget(url = link.url, fileName = link.fileName)
-            CustomModelLink.Blank -> CUSTOM_URL_REQUIRED_MESSAGE
-            CustomModelLink.NotLitertlm -> CUSTOM_URL_NOT_LITERTLM_MESSAGE
+            CustomModelLink.Blank -> UiText(R.string.onboarding_error_custom_url_required)
+            CustomModelLink.NotLitertlm -> UiText(R.string.onboarding_error_custom_url_not_litertlm)
         }
-        _state.update { it.copy(downloadError = refusal) }
+        _downloadError.value = refusal
         return null
     }
 
@@ -609,22 +621,6 @@ class OnboardingViewModel @Inject constructor(
 
         /** Skip copy while a download is in flight — it keeps running without the screen. */
         val DOWNLOAD_CONTINUES_MESSAGE: UiText = UiText(R.string.onboarding_skip_download_continues)
-
-        /** Fallback copy when an unknown exception breaks the download stream. */
-        private const val GENERIC_DOWNLOAD_ERROR: String = "Download failed."
-
-        /** Fallback copy when `LoadModelUseCase` returns a result without a message. */
-        private const val GENERIC_LOAD_ERROR: String = "Failed to load the model."
-
-        /** Fallback copy when scenario set-up fails without a message. */
-        private const val GENERIC_SETUP_ERROR: String = "Couldn't set up this scenario."
-
-        /** Surfaced when the user taps the CTA on the Custom URL row with an empty input. */
-        private const val CUSTOM_URL_REQUIRED_MESSAGE: String = "Enter a model URL to download."
-
-        /** Surfaced, before anything downloads, for a custom URL whose file is not `.litertlm`. */
-        private const val CUSTOM_URL_NOT_LITERTLM_MESSAGE: String =
-            "This link isn't a .litertlm file. Only .litertlm models run on the phone."
 
         /** Divisor turning a 0..100 Int progress into a 0f..1f float for `OnboardingViewState`. */
         private const val PERCENT_DIVISOR: Float = 100f

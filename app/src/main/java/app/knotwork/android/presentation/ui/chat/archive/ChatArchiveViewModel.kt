@@ -2,11 +2,13 @@ package app.knotwork.android.presentation.ui.chat.archive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.knotwork.android.R
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
 import app.knotwork.android.presentation.ui.chat.ChatExportDelegate
+import app.knotwork.android.presentation.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -167,7 +169,11 @@ class ChatArchiveViewModel @Inject constructor(
                 .catch { e ->
                     Timber.e(e, "Reading the chat archive failed")
                     _uiState.update {
-                        it.copy(loading = false, errorMessage = e.localizedMessage ?: GENERIC_READ_FAILURE)
+                        it.copy(
+                            loading = false,
+                            errorMessage = e.localizedMessage?.let(UiText::Dynamic)
+                                ?: UiText(R.string.chat_archive_error_read_failed),
+                        )
                     }
                 }
                 .collect { sessions ->
@@ -186,7 +192,7 @@ class ChatArchiveViewModel @Inject constructor(
     /** Projects one archived session onto its row. */
     private fun ChatSession.toRow(now: Long): ChatArchiveRow = ChatArchiveRow(
         id = id,
-        title = name.ifBlank { DEFAULT_CHAT_TITLE },
+        title = name,
         archivedAt = archivedAtLabel(archivedAt = archivedAt, now = now),
         starred = isStarred,
         // A background run is allowed to write into an archived chat without
@@ -194,13 +200,4 @@ class ChatArchiveViewModel @Inject constructor(
         // conversation changed after the user put it away.
         ranAfterArchiving = archivedAt != null && updatedAt > archivedAt,
     )
-
-    companion object {
-        /** Title shown for an archived chat that was never named. */
-        const val DEFAULT_CHAT_TITLE: String = "New conversation"
-
-        /** Fallback error copy when the read failure carries no message. */
-        const val GENERIC_READ_FAILURE: String =
-            "Your archived chats are still on the device — reading them failed. Try again."
-    }
 }

@@ -16,6 +16,7 @@ import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PowerStateRepository
 import app.knotwork.android.domain.repositories.TriggerRepository
 import app.knotwork.android.domain.repositories.UsageTelemetryRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
 import app.knotwork.android.domain.services.TaskScheduler
 import app.knotwork.android.domain.services.TriggerScheduler
@@ -99,6 +100,7 @@ class FireTriggerUseCaseTest {
             triggerScheduler = triggerScheduler,
             usageTelemetry = usageTelemetry,
             recordTriggerEvaluation = recordEvaluation,
+            defaultNames = EnglishDefaultNames,
         )
     }
 

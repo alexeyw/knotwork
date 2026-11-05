@@ -4,6 +4,7 @@ import app.knotwork.android.data.local.dao.SkillDao
 import app.knotwork.android.data.local.models.SkillEntity
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.Skill
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -26,7 +27,7 @@ class SkillRepositoryImplTest {
 
     private val dao: SkillDao = mockk(relaxed = true)
     private val bundledSource: BundledSkillSource = mockk(relaxed = true)
-    private val repository = SkillRepositoryImpl(dao, bundledSource)
+    private val repository = SkillRepositoryImpl(dao, bundledSource, EnglishDefaultNames)
 
     private fun entity(id: String, toolAllowlistCsv: String?, isBundled: Boolean = false) = SkillEntity(
         id = id,

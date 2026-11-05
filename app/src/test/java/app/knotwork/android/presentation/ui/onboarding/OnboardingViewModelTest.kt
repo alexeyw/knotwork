@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.onboarding
 
+import app.knotwork.android.R
 import app.knotwork.android.data.network.AndroidModelDownloadManager
 import app.knotwork.android.domain.constants.OnboardingModelCatalog
 import app.knotwork.android.domain.models.DownloadState
@@ -16,6 +17,7 @@ import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.usecases.PrepareInferenceBackendUseCase
 import app.knotwork.android.domain.usecases.SetUpScenarioUseCase
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.screens.onboarding.OnboardingLiteRtModel
 import app.knotwork.design.screens.onboarding.OnboardingScenario
 import app.knotwork.design.screens.onboarding.OnboardingStep
@@ -261,13 +263,13 @@ class OnboardingViewModelTest {
         val viewModel = newViewModel()
         viewModel.pickScenario(OnboardingScenario.StyledTranslation)
         advanceUntilIdle()
-        assertEquals("warm failed", viewModel.state.value.downloadError)
+        assertEquals(UiText.Dynamic("warm failed"), viewModel.downloadError.value)
         assertFalse(viewModel.state.value.isModelWarmed)
 
         viewModel.retryWarmUp()
         advanceUntilIdle()
 
-        assertNull(viewModel.state.value.downloadError)
+        assertNull(viewModel.downloadError.value)
         assertTrue(viewModel.state.value.isModelWarmed)
     }
 
@@ -376,7 +378,7 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertFalse(viewModel.state.value.isCheckingAcceleration)
-        assertEquals("warm failed", viewModel.state.value.downloadError)
+        assertEquals(UiText.Dynamic("warm failed"), viewModel.downloadError.value)
     }
 
     @Test
@@ -393,7 +395,7 @@ class OnboardingViewModelTest {
         val state = viewModel.state.value
         // Stays on the gallery step and shows the error rather than stranding the user.
         assertEquals(OnboardingStep.ChooseScenario, state.step)
-        assertEquals("boom", state.downloadError)
+        assertEquals(UiText.Dynamic("boom"), viewModel.downloadError.value)
     }
 
     @Test
@@ -541,7 +543,7 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(OnboardingStep.Welcome, viewModel.state.value.step)
-        assertNull(viewModel.state.value.downloadError)
+        assertNull(viewModel.downloadError.value)
         verify(exactly = 0) { downloadManager.acknowledgeInterruption(any()) }
     }
 
@@ -570,7 +572,7 @@ class OnboardingViewModelTest {
             // The step returns to the preset that paused, so Download continues it from its bytes.
             val state = viewModel.state.value
             assertEquals(OnboardingModelCatalog.ID_GEMMA_4_E2B, state.liteRtModel.id)
-            assertEquals("paused", state.downloadError)
+            assertEquals(UiText.Dynamic("paused"), viewModel.downloadError.value)
             assertNull(state.downloadProgress)
             assertNull(viewModel.pendingInterruption.value)
             verify(exactly = 1) { downloadManager.acknowledgeInterruption(e2b.fileName) }
@@ -592,7 +594,7 @@ class OnboardingViewModelTest {
         val state = viewModel.state.value
         assertEquals(OnboardingLiteRtModel.CustomUrl, state.liteRtModel)
         assertEquals(url, state.customDownloadUrl)
-        assertEquals("did not match", state.downloadError)
+        assertEquals(UiText.Dynamic("did not match"), viewModel.downloadError.value)
     }
 
     @Test
@@ -608,7 +610,7 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertEquals(stopped, viewModel.pendingInterruption.value)
-        assertNull(viewModel.state.value.downloadError)
+        assertNull(viewModel.downloadError.value)
         verify(exactly = 0) { downloadManager.acknowledgeInterruption(any()) }
     }
 
@@ -653,10 +655,10 @@ class OnboardingViewModelTest {
                 ),
             )
             advanceUntilIdle()
-            assertNull("the live failure words nothing itself", viewModel.state.value.downloadError)
+            assertNull("the live failure words nothing itself", viewModel.downloadError.value)
             viewModel.showPendingInterruption()
 
-            assertEquals("paused", viewModel.state.value.downloadError)
+            assertEquals(UiText.Dynamic("paused"), viewModel.downloadError.value)
             assertEquals(OnboardingModelCatalog.ID_GEMMA_4_E4B, viewModel.state.value.liteRtModel.id)
             verify(exactly = 1) { downloadManager.acknowledgeInterruption(e4b.fileName) }
         }
@@ -684,7 +686,7 @@ class OnboardingViewModelTest {
         viewModel.showPendingInterruption()
         advanceUntilIdle()
 
-        assertEquals("E2B", viewModel.state.value.downloadError)
+        assertEquals(UiText.Dynamic("E2B"), viewModel.downloadError.value)
         assertEquals(OnboardingModelCatalog.ID_GEMMA_4_E2B, viewModel.state.value.liteRtModel.id)
         verify(exactly = 0) { downloadManager.acknowledgeInterruption(e4b.fileName) }
     }
@@ -717,7 +719,7 @@ class OnboardingViewModelTest {
             viewModel.showPendingInterruption()
             advanceUntilIdle()
 
-            assertEquals("Server returned 500", viewModel.state.value.downloadError)
+            assertEquals(UiText.Dynamic("Server returned 500"), viewModel.downloadError.value)
             assertEquals(OnboardingModelCatalog.ID_GEMMA_4_E4B, viewModel.state.value.liteRtModel.id)
             verify(exactly = 0) { downloadManager.acknowledgeInterruption(e2b.fileName) }
         }
@@ -769,7 +771,7 @@ class OnboardingViewModelTest {
 
         val state = viewModel.state.value
         assertNull(state.downloadProgress)
-        assertEquals("Server returned 500", state.downloadError)
+        assertEquals(UiText.Dynamic("Server returned 500"), viewModel.downloadError.value)
         assertNull(state.installedModelId)
     }
 
@@ -788,7 +790,7 @@ class OnboardingViewModelTest {
             verify(exactly = 0) { downloadManager.downloadModel(any(), any(), any()) }
             val state = viewModel.state.value
             assertNull(state.downloadProgress)
-            assertTrue(state.downloadError.orEmpty().contains(".litertlm"))
+            assertEquals(UiText(R.string.onboarding_error_custom_url_not_litertlm), viewModel.downloadError.value)
         }
 
     @Test

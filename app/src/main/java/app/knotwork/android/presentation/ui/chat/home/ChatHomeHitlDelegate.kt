@@ -13,6 +13,8 @@ import app.knotwork.android.domain.usecases.PendingSubmissionOutcome
 import app.knotwork.android.domain.usecases.SubmitApprovalDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitCeilingDecisionUseCase
 import app.knotwork.android.domain.usecases.SubmitClarificationAnswerUseCase
+import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.design.components.chat.HitlConfirmationState
 import app.knotwork.design.components.chips.Risk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,18 +67,22 @@ class ChatHomeHitlDelegate(
 
     /**
      * Approves the request the card shows. For a destructive tool the approval
-     * is gated on the typed-confirm matching the canonical magic word (`"yes"`,
-     * trimmed, case-insensitive) — the catalog `HitlConfirmationCard` already
-     * disables the Allow CTA in that case, but the gate is mirrored defensively
-     * so a programmatic caller cannot bypass it. No-op when no tool is pending.
+     * is gated on the typed-confirm matching [confirmWord] (trimmed,
+     * case-insensitive) — the catalog `HitlConfirmationCard` already disables
+     * the Allow CTA in that case, but the gate is mirrored defensively so a
+     * programmatic caller cannot bypass it. No-op when no tool is pending.
      *
      * The answer names the card's request, so the risk checked here is the risk
      * of the request that can be settled: when the run has since moved on to a
      * different request, this answer settles nothing rather than that one.
+     *
+     * @param confirmWord The word the card asked for, in the interface language
+     *   (`knotwork_typed_confirm_word`). The screen passes it: this delegate
+     *   outlives a change of language and holds no resources.
      */
-    fun approveTool() {
+    fun approveTool(confirmWord: String) {
         val pending = state.value.pending.tool ?: return
-        if (pending.risk == ToolRisk.DESTRUCTIVE && !isTypedConfirmValid()) return
+        if (pending.risk == ToolRisk.DESTRUCTIVE && !isTypedConfirmValid(confirmWord)) return
         val sessionId = state.value.thread.currentSessionId
         if (sessionId.isBlank()) return
         state.update {
@@ -219,7 +225,7 @@ class ChatHomeHitlDelegate(
             cleared.copy(
                 visual = if (reason != null) {
                     ChatHomeUiState.Error(
-                        message = reason.diagnostic(),
+                        message = UiText.Dynamic(reason.diagnostic()),
                         reason = reason,
                         announcedInThread = true,
                     )
@@ -396,18 +402,11 @@ class ChatHomeHitlDelegate(
         }
     }
 
-    /** Whether the current typed-confirm input satisfies the destructive HITL gate. */
-    private fun isTypedConfirmValid(): Boolean =
-        state.value.composer.typedConfirm.trim().equals(DESTRUCTIVE_TYPED_CONFIRM_WORD, ignoreCase = true)
+    /** Whether the current typed-confirm input is [confirmWord], the destructive HITL gate. */
+    private fun isTypedConfirmValid(confirmWord: String): Boolean =
+        HitlConfirmationState.matchesConfirmWord(state.value.composer.typedConfirm, confirmWord)
 
     companion object {
-        /**
-         * Magic word the user must type to confirm a destructive tool call.
-         * Mirrors the catalog `HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD`
-         * but duplicated here so the gate stays free of `:catalog` imports.
-         */
-        const val DESTRUCTIVE_TYPED_CONFIRM_WORD: String = "yes"
-
         /** Template of the SYSTEM chat row persisted when the user rejects a tool call. `%s` is the tool name. */
         const val SYSTEM_MESSAGE_TOOL_DENIED: String = "Tool '%s' denied by user."
 

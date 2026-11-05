@@ -65,7 +65,6 @@ class SplashViewModelTest {
             failedStage = InitStage.LoadingPipelines,
             failureKind = InitFailureKind.DB_PASSPHRASE_UNAVAILABLE,
         ),
-        message = "Database passphrase unavailable",
         completedSteps = 0,
         totalSteps = 5,
     )
@@ -73,12 +72,12 @@ class SplashViewModelTest {
     @Test
     fun `given full successful run when collected then ends in done state`() = runTest {
         every { appInitializationUseCase() } returns flowOf(
-            InitProgress(InitStage.Initializing, "Preparing…", 0, 5),
-            InitProgress(InitStage.FindingModels, "Checking downloaded models…", 1, 5),
-            InitProgress(InitStage.LoadingPipelines, "Reading pipelines…", 2, 5),
-            InitProgress(InitStage.LoadingChats, "Reading chats…", 3, 5),
-            InitProgress(InitStage.LoadingMemory, "Reading memory…", 4, 5),
-            InitProgress(InitStage.Done, "Ready", 5, 5),
+            InitProgress(InitStage.Initializing, 0, 5),
+            InitProgress(InitStage.FindingModels, 1, 5),
+            InitProgress(InitStage.LoadingPipelines, 2, 5),
+            InitProgress(InitStage.LoadingChats, 3, 5),
+            InitProgress(InitStage.LoadingMemory, 4, 5),
+            InitProgress(InitStage.Done, 5, 5),
         )
 
         val viewModel = createViewModel()
@@ -88,14 +87,14 @@ class SplashViewModelTest {
         assertTrue(state.isDone)
         assertEquals(1f, state.progressFraction, 0.001f)
         assertNull(state.errorMessage)
-        assertEquals("Ready", state.message)
+        assertEquals(InitStage.Done, state.stage)
     }
 
     @Test
     fun `given mid-flight emission when collected then progressFraction reflects completed steps`() = runTest {
         every { appInitializationUseCase() } returns flowOf(
-            InitProgress(InitStage.Initializing, "Preparing…", 0, 5),
-            InitProgress(InitStage.LoadingPipelines, "Reading pipelines…", 2, 5),
+            InitProgress(InitStage.Initializing, 0, 5),
+            InitProgress(InitStage.LoadingPipelines, 2, 5),
         )
 
         val viewModel = createViewModel()
@@ -104,17 +103,16 @@ class SplashViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isDone)
         assertEquals(2f / 5f, state.progressFraction, 0.001f)
-        assertEquals("Reading pipelines…", state.message)
+        assertEquals(InitStage.LoadingPipelines, state.stage)
         assertNull(state.errorMessage)
     }
 
     @Test
     fun `given Failed emission when collected then surfaces error message`() = runTest {
         every { appInitializationUseCase() } returns flowOf(
-            InitProgress(InitStage.Initializing, "Preparing…", 0, 5),
+            InitProgress(InitStage.Initializing, 0, 5),
             InitProgress(
                 stage = InitStage.Failed("seed prompts failed", InitStage.Initializing),
-                message = "seed prompts failed",
                 completedSteps = 0,
                 totalSteps = 5,
             ),
@@ -140,14 +138,13 @@ class SplashViewModelTest {
                 flowOf(
                     InitProgress(
                         stage = InitStage.Failed("boom", InitStage.LoadingPipelines),
-                        message = "boom",
                         completedSteps = 0,
                         totalSteps = 5,
                     ),
                 )
             } else {
                 flowOf(
-                    InitProgress(InitStage.Done, "Ready", 5, 5),
+                    InitProgress(InitStage.Done, 5, 5),
                 )
             }
         }
@@ -235,7 +232,7 @@ class SplashViewModelTest {
             if (invocationCount == 1) {
                 flowOf(passphraseFailure())
             } else {
-                flowOf(InitProgress(InitStage.Done, "Ready", 5, 5))
+                flowOf(InitProgress(InitStage.Done, 5, 5))
             }
         }
 
@@ -263,7 +260,7 @@ class SplashViewModelTest {
             if (invocationCount == 1) {
                 flowOf(passphraseFailure())
             } else {
-                flowOf(InitProgress(InitStage.Done, "Ready", 5, 5))
+                flowOf(InitProgress(InitStage.Done, 5, 5))
             }
         }
 
@@ -287,7 +284,7 @@ class SplashViewModelTest {
             if (invocationCount == 1) {
                 flowOf(passphraseFailure())
             } else {
-                flowOf(InitProgress(InitStage.Done, "Ready", 5, 5))
+                flowOf(InitProgress(InitStage.Done, 5, 5))
             }
         }
         // Hold the wipe open so retry() can race it.
@@ -319,7 +316,6 @@ class SplashViewModelTest {
         every { appInitializationUseCase() } returns flowOf(
             InitProgress(
                 stage = InitStage.Failed("boom", InitStage.LoadingPipelines),
-                message = "boom",
                 completedSteps = 0,
                 totalSteps = 5,
             ),

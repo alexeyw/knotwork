@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.R
 import app.knotwork.android.domain.models.ClarificationRequest
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.presentation.common.ApprovalArguments
@@ -11,7 +12,6 @@ import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
 import app.knotwork.android.presentation.ui.common.RunTerminationTone
 import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chat.ChatContent
-import app.knotwork.design.components.chat.ChatMessageStatus
 import app.knotwork.design.components.chat.ChatMetadata
 import app.knotwork.design.components.chat.ChatRole
 import app.knotwork.design.components.chat.ClarificationCardModel
@@ -25,6 +25,7 @@ import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.screens.chat.ChatHomeMessageRow
 import app.knotwork.design.screens.chat.ChatHomeRunState
 import app.knotwork.design.screens.chat.ChatHomeSamplePromptCard
+import app.knotwork.design.screens.chat.ChatHomeThreadRow
 import app.knotwork.design.screens.chat.ChatHomeViewState
 import app.knotwork.design.screens.chat.ChatHomeVisualState
 import app.knotwork.design.screens.chat.ChatRunNoticeUi
@@ -96,10 +97,11 @@ fun ChatHomeScreenState.toViewState(
     resolveText: (UiText) -> String = ::stubResolveText,
     sizes: ByteUnits = ByteUnits.ENGLISH,
 ): ChatHomeViewState {
-    val threadTitle = thread.title
-    val modelName = model.name
+    val untitled = resolveText(UiText(R.string.chat_untitled))
+    val threadTitle = thread.title.ifBlank { untitled }
+    val modelName = model.name ?: resolveText(UiText(R.string.chat_model_placeholder))
     val composerValue = composer.value
-    val resolvedPipelineName = pipelineName ?: PIPELINE_NAME_PLACEHOLDER
+    val resolvedPipelineName = pipelineName ?: resolveText(UiText(R.string.chat_pipeline_placeholder))
     val composerAttachment = composer.attachment?.toCatalogComposerAttachment()
     val baseViewState = when (val visual = visual) {
         is ChatHomeUiState.Loading -> ChatHomeViewState(
@@ -196,7 +198,9 @@ fun ChatHomeScreenState.toViewState(
             threadTitle = threadTitle,
             modelName = modelName,
             messages = visibleMessages + (
-                pending.interrupted?.let { liveInterruptedRow(modelName, it) }
+                pending.interrupted?.let {
+                    liveInterruptedRow(modelName, it, resolveText(UiText(R.string.chat_interrupted_unknown_step)))
+                }
                     ?: interruptedRow(modelName)
                 ),
             composerValue = composerValue,
@@ -243,8 +247,8 @@ fun ChatHomeScreenState.toViewState(
                 // state. A typed stop explains itself in its own tone above the
                 // composer instead — the error banner is destructive-red, which
                 // would have contradicted the tile two inches above it.
-                composerState = untypedComposerState(visual.message, termination),
-                errorMessage = untypedErrorMessage(visual.message, termination, visual.announcedInThread),
+                composerState = untypedComposerState(resolveText(visual.message), termination),
+                errorMessage = untypedErrorMessage(resolveText(visual.message), termination, visual.announcedInThread),
                 termination = termination?.toCatalog(resolveText),
                 explainedInThread = visual.announcedInThread,
                 pipelineName = resolvedPipelineName,
@@ -266,7 +270,7 @@ fun ChatHomeScreenState.toViewState(
             // the debug picker forces DrawerOpen on an empty session list
             // (e.g. before the first session is persisted) — production
             // flows always have at least the active session present.
-            threads = thread.rows.ifEmpty { fixtures.sessionRows },
+            threads = thread.rows.titled(untitled).ifEmpty { fixtures.sessionRows },
             pipelineName = resolvedPipelineName,
             tokensUsed = tokens.used,
             tokensMax = tokens.max,
@@ -421,6 +425,13 @@ internal fun stubResolveText(text: UiText): String = when (text) {
 }
 
 /**
+ * The drawer's rows with a chat that was never named titled [untitled] — the stored
+ * name stays blank, so the title follows the interface language.
+ */
+private fun List<ChatHomeThreadRow>.titled(untitled: String): List<ChatHomeThreadRow> =
+    map { row -> if (row.title.isBlank()) row.copy(title = untitled) else row }
+
+/**
  * Projects the app-side pending attachment draft onto the catalog
  * [app.knotwork.design.components.chat.ComposerAttachment] consumed by the
  * composer.
@@ -429,36 +440,6 @@ private fun ComposerAttachmentDraft.toCatalogComposerAttachment(): ComposerAttac
     is ComposerAttachmentDraft.Processing -> ComposerAttachment.Processing
     is ComposerAttachmentDraft.Ready -> ComposerAttachment.Ready(model = absolutePath, detail = detail)
 }
-
-/** Pre-canned baseline conversation used by every non-Empty state. */
-internal fun baselineMessages(modelName: String): List<ChatHomeMessageRow> = listOf(
-    ChatHomeMessageRow(
-        id = "u1",
-        role = ChatRole.User,
-        content = ChatContent.Text("Summarise the three PRs that landed yesterday."),
-        metadata = ChatMetadata(timestamp = "09:14"),
-    ),
-    ChatHomeMessageRow(
-        id = "a1",
-        role = ChatRole.Assistant,
-        content = ChatContent.Markdown(
-            source = "Pipeline editor refactor, context-window meter for the chat header, " +
-                "and a memory-summary regression fix.",
-        ),
-        metadata = ChatMetadata(
-            timestamp = "09:14",
-            model = modelName,
-            tokens = 64,
-            status = ChatMessageStatus.Sent,
-        ),
-    ),
-    ChatHomeMessageRow(
-        id = "u2",
-        role = ChatRole.User,
-        content = ChatContent.Text("Add a 30-minute meeting tomorrow at 10:00 to discuss the rollout."),
-        metadata = ChatMetadata(timestamp = "09:15"),
-    ),
-)
 
 /** Trailing HITL confirmation row appended in the HitlConfirm state. */
 internal fun hitlRow(modelName: String, risk: Risk): ChatHomeMessageRow {
@@ -567,14 +548,6 @@ internal fun chatRowTimestamp(epochMs: Long): String =
     SimpleDateFormat(HITL_TIMESTAMP_PATTERN, Locale.getDefault()).format(Date(epochMs))
 
 /**
- * Fallback subtitle rendered when the pipeline library is still empty
- * (no pipelines have been created yet). Matches the catalog default in
- * `ChatHomeViewState.pipelineName` so the TopAppBar subtitle does not
- * jump between values once a pipeline is created.
- */
-internal const val PIPELINE_NAME_PLACEHOLDER: String = "default"
-
-/**
  * Trailing interrupted-run status row driven by the live
  * [InterruptedRunPending] snapshot the reattach protocol captured. Renders
  * the resolved node label inside the catalog `InterruptedRunCard`. The
@@ -582,16 +555,24 @@ internal const val PIPELINE_NAME_PLACEHOLDER: String = "default"
  * formatted once when the card was installed) — recomputing "now" here
  * would both lie about when the run died and change on every
  * recomposition.
+ *
+ * @param unknownStep the label of a node that cannot be named, in the interface language.
  */
-internal fun liveInterruptedRow(modelName: String, pending: InterruptedRunPending): ChatHomeMessageRow =
-    ChatHomeMessageRow(
-        id = "a-interrupted-${pending.runId}",
-        role = ChatRole.Assistant,
-        content = ChatContent.RunInterrupted(
-            model = InterruptedRunCardModel(nodeLabel = pending.nodeLabel, resumable = pending.resumable),
+internal fun liveInterruptedRow(
+    modelName: String,
+    pending: InterruptedRunPending,
+    unknownStep: String,
+): ChatHomeMessageRow = ChatHomeMessageRow(
+    id = "a-interrupted-${pending.runId}",
+    role = ChatRole.Assistant,
+    content = ChatContent.RunInterrupted(
+        model = InterruptedRunCardModel(
+            nodeLabel = pending.nodeLabel ?: unknownStep,
+            resumable = pending.resumable,
         ),
-        metadata = ChatMetadata(timestamp = pending.timestamp, model = modelName),
-    )
+    ),
+    metadata = ChatMetadata(timestamp = pending.timestamp, model = modelName),
+)
 
 /** Trailing interrupted-run row appended when the debug picker forces the state without a pending snapshot. */
 internal fun interruptedRow(modelName: String): ChatHomeMessageRow = ChatHomeMessageRow(
@@ -684,7 +665,7 @@ internal fun debugStateForId(id: String): ChatHomeUiState? = when (id) {
     DebugStateIds.HITL_DESTRUCTIVE -> ChatHomeUiState.HitlConfirm(Risk.Destructive)
     DebugStateIds.CLARIFICATION -> ChatHomeUiState.Clarification
     DebugStateIds.INTERRUPTED -> ChatHomeUiState.Interrupted
-    DebugStateIds.ERROR -> ChatHomeUiState.Error(message = "Something went wrong while generating the reply.")
+    DebugStateIds.ERROR -> ChatHomeUiState.Error(message = UiText(R.string.chat_error_unknown))
     DebugStateIds.DRAWER_OPEN -> ChatHomeUiState.DrawerOpen
     // Console snaps are handled separately via [debugConsoleSnapForId] —
     // they no longer correspond to a top-level [ChatHomeUiState] because

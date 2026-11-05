@@ -4,6 +4,7 @@ import app.knotwork.android.data.mcp.McpClient
 import app.knotwork.android.data.mcp.McpClientFactory
 import app.knotwork.android.data.mcp.McpConnectionPool
 import app.knotwork.android.data.mcp.McpSessionExpiredException
+import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpConnectionStatus
@@ -94,7 +95,8 @@ class McpServerRepositoryImplTest {
         assertTrue(result.isFailure)
         val status = repo.observeConnectionStatus(url).first()
         assertTrue("expected Error status, was $status", status is McpConnectionStatus.Error)
-        assertEquals("handshake failed", (status as McpConnectionStatus.Error).reason)
+        // Classified as the form's check classifies it, so the screen words it the same way.
+        assertEquals(ConnectionFailure.Other("handshake failed"), (status as McpConnectionStatus.Error).failure)
     }
 
     @Test

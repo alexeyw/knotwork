@@ -8,7 +8,11 @@ import app.knotwork.android.domain.models.RunCeilingAxis
 import app.knotwork.android.domain.models.RunNoticeCause
 import app.knotwork.android.domain.models.RunTerminationReason
 import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chat.ChatContent
+import app.knotwork.design.components.chat.ChatMessageStatus
+import app.knotwork.design.components.chat.ChatMetadata
+import app.knotwork.design.components.chat.ChatRole
 import app.knotwork.design.components.chat.ComposerState
 import app.knotwork.design.components.chat.HitlRequestContext
 import app.knotwork.design.components.chat.HitlRequestSource
@@ -74,7 +78,7 @@ class ChatHomeStateMappingTest {
 
     @Test
     fun `an untyped failure keeps the error tile and its retry`() {
-        val view = screenState(ChatHomeUiState.Error("Tool 'http.get' failed")).toViewState()
+        val view = screenState(ChatHomeUiState.Error(UiText.Dynamic("Tool 'http.get' failed"))).toViewState()
 
         assertEquals(ChatHomeVisualState.Error, view.visualState)
         assertEquals("Tool 'http.get' failed", view.errorMessage)
@@ -85,7 +89,7 @@ class ChatHomeStateMappingTest {
     fun `a typed termination is explained instead of shown as an error`() {
         val view = screenState(
             ChatHomeUiState.Error(
-                message = "step-ceiling: 15/15 steps",
+                message = UiText.Dynamic("step-ceiling: 15/15 steps"),
                 reason = RunTerminationReason.StepCeiling(limit = 15, spent = 15),
             ),
         ).toViewState()
@@ -103,7 +107,7 @@ class ChatHomeStateMappingTest {
     fun `a typed stop does not put the composer into its error state`() {
         val view = screenState(
             ChatHomeUiState.Error(
-                message = "step-ceiling: 15/15 steps",
+                message = UiText.Dynamic("step-ceiling: 15/15 steps"),
                 reason = RunTerminationReason.StepCeiling(limit = 15, spent = 15),
             ),
         ).toViewState()
@@ -125,7 +129,7 @@ class ChatHomeStateMappingTest {
         // is the numbers and the action — the parts a thread line cannot carry.
         val view = screenState(
             ChatHomeUiState.Error(
-                message = "step-ceiling: 15/15 steps",
+                message = UiText.Dynamic("step-ceiling: 15/15 steps"),
                 reason = RunTerminationReason.StepCeiling(limit = 15, spent = 15),
                 announcedInThread = true,
             ),
@@ -140,7 +144,7 @@ class ChatHomeStateMappingTest {
     @Test
     fun `an untyped failure the thread already announced shows no tile but keeps Retry`() {
         val view = screenState(
-            ChatHomeUiState.Error("Tool 'http.get' failed", announcedInThread = true),
+            ChatHomeUiState.Error(UiText.Dynamic("Tool 'http.get' failed"), announcedInThread = true),
         ).toViewState()
 
         assertNull("The conversation already says this.", view.errorMessage)
@@ -153,7 +157,7 @@ class ChatHomeStateMappingTest {
         // run, so nothing wrote a line for it — this text is the only account
         // the user gets, and suppressing it would trade one silent failure for
         // another.
-        val view = screenState(ChatHomeUiState.Error("Tool 'http.get' failed")).toViewState()
+        val view = screenState(ChatHomeUiState.Error(UiText.Dynamic("Tool 'http.get' failed"))).toViewState()
 
         assertEquals("Tool 'http.get' failed", view.errorMessage)
         assertEquals(ComposerState.Error("Tool 'http.get' failed"), view.composerState)
@@ -185,7 +189,7 @@ class ChatHomeStateMappingTest {
         // arrived wearing the destructive tile and a Retry that would stall all
         // over again.
         val view = screenState(
-            ChatHomeUiState.Error(message = "no-progress", reason = RunTerminationReason.NoProgress),
+            ChatHomeUiState.Error(message = UiText.Dynamic("no-progress"), reason = RunTerminationReason.NoProgress),
         ).toViewState()
 
         assertNull(view.errorMessage)
@@ -449,7 +453,7 @@ class ChatHomeStateMappingTest {
 
     @Test
     fun `Error carries the message into both the inline tile and the composer banner`() {
-        val state = ChatHomeUiState.Error(message = "Network unreachable")
+        val state = ChatHomeUiState.Error(message = UiText.Dynamic("Network unreachable"))
         val view = screenState(state).toViewState()
         assertEquals(ChatHomeVisualState.Error, view.visualState)
         assertEquals("Network unreachable", view.errorMessage)
@@ -520,7 +524,7 @@ class ChatHomeStateMappingTest {
             ChatHomeUiState.Generating(),
             ChatHomeUiState.HitlConfirm(Risk.Readonly),
             ChatHomeUiState.Clarification,
-            ChatHomeUiState.Error("boom"),
+            ChatHomeUiState.Error(UiText.Dynamic("boom")),
             ChatHomeUiState.DrawerOpen,
         )
         states.forEach { state ->
@@ -598,4 +602,34 @@ class ChatHomeStateMappingTest {
         assertEquals(ChatHomeVisualState.CeilingPause, view.visualState)
         assertTrue(view.messages.none { it.content is ChatContent.RunCeilingPause })
     }
+
+    /** A short conversation for the states that thread supplied messages through. */
+    private fun baselineMessages(modelName: String): List<ChatHomeMessageRow> = listOf(
+        ChatHomeMessageRow(
+            id = "u1",
+            role = ChatRole.User,
+            content = ChatContent.Text("Summarise the three PRs that landed yesterday."),
+            metadata = ChatMetadata(timestamp = "09:14"),
+        ),
+        ChatHomeMessageRow(
+            id = "a1",
+            role = ChatRole.Assistant,
+            content = ChatContent.Markdown(
+                source = "Pipeline editor refactor, context-window meter for the chat header, " +
+                    "and a memory-summary regression fix.",
+            ),
+            metadata = ChatMetadata(
+                timestamp = "09:14",
+                model = modelName,
+                tokens = 64,
+                status = ChatMessageStatus.Sent,
+            ),
+        ),
+        ChatHomeMessageRow(
+            id = "u2",
+            role = ChatRole.User,
+            content = ChatContent.Text("Add a 30-minute meeting tomorrow at 10:00 to discuss the rollout."),
+            metadata = ChatMetadata(timestamp = "09:15"),
+        ),
+    )
 }

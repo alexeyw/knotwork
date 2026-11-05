@@ -97,7 +97,7 @@ class VerifyRunUseCase @Inject constructor(
         val name = localModelRepository.findByPath(path)?.name ?: path.substringAfterLast('/')
         return try {
             val loaded = loadModel(path)
-            if (loaded is Result.Error) return Repeat.Halted.LoadFailed(name, loaded.message ?: "unknown error")
+            if (loaded is Result.Error) return Repeat.Halted.LoadFailed(name, loaded.message)
             engineMismatch(call, name)?.let { return Repeat.Halted.Changed(it) }
             val answer = engine.generateResponseStream(call.prompt, null, call.sampling).toList().joinToString("")
             engineMismatch(call, name)?.let { return Repeat.Halted.Changed(it) }
@@ -172,9 +172,10 @@ class VerifyRunUseCase @Inject constructor(
              * The model could not load, or the generation failed.
              *
              * @property modelName The model.
-             * @property reason Why.
+             * @property reason Why, as the engine or the platform said it; `null` when they said
+             *   nothing — the sheet then words it in the interface language.
              */
-            data class LoadFailed(val modelName: String, val reason: String) : Halted {
+            data class LoadFailed(val modelName: String, val reason: String?) : Halted {
                 override fun event(done: Int, total: Int) = VerificationEvent.Failed(modelName, reason, done, total)
             }
         }

@@ -7,6 +7,7 @@ import app.knotwork.android.data.local.models.ChatMessageEntity
 import app.knotwork.android.data.local.models.ChatSessionEntity
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.Role
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.usecases.ArchiveChatUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
 import io.mockk.mockk
@@ -48,7 +49,8 @@ class ChatArchivePersistenceTest {
             .allowMainThreadQueries()
             .build()
         chatDao = database.chatDao()
-        repository = ChatRepositoryImpl(chatDao, database.chatHistorySummaryDao(), mockk(relaxed = true))
+        repository =
+            ChatRepositoryImpl(chatDao, database.chatHistorySummaryDao(), mockk(relaxed = true), EnglishDefaultNames)
         archive = ArchiveChatUseCase(repository)
         unarchive = UnarchiveChatUseCase(repository)
     }

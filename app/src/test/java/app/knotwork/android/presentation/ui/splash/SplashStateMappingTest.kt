@@ -1,5 +1,7 @@
 package app.knotwork.android.presentation.ui.splash
 
+import app.knotwork.android.R
+import app.knotwork.android.domain.models.InitStage
 import app.knotwork.design.screens.splash.SplashViewState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -28,8 +30,11 @@ class SplashStateMappingTest {
         keyword = "RESET",
     )
 
-    private fun map(state: SplashUiState): SplashViewState =
-        state.toViewState(defaultMessage = defaultMessage, dataLockedTexts = dataLockedTexts)
+    private fun map(state: SplashUiState): SplashViewState = state.toViewState(
+        defaultMessage = defaultMessage,
+        stageText = { stage -> "stage:${stage::class.simpleName}" },
+        dataLockedTexts = dataLockedTexts,
+    )
 
     @Test
     fun `given pristine ui state when mapped then Initializing`() {
@@ -41,9 +46,9 @@ class SplashStateMappingTest {
     }
 
     @Test
-    fun `given in-flight progress when mapped then Loading with real message`() {
+    fun `given in-flight progress when mapped then Loading names the stage`() {
         val state = SplashUiState(
-            message = "Loading model",
+            stage = InitStage.LoadingChats,
             progressFraction = 0.42f,
         )
 
@@ -51,7 +56,7 @@ class SplashStateMappingTest {
 
         assertTrue(result is SplashViewState.Loading)
         result as SplashViewState.Loading
-        assertEquals("Loading model", result.message)
+        assertEquals("stage:LoadingChats", result.message)
         assertEquals(0.42f, result.progress, 0.001f)
     }
 
@@ -67,7 +72,7 @@ class SplashStateMappingTest {
 
     @Test
     fun `given out-of-range progress when mapped then coerced into 0_1f`() {
-        val state = SplashUiState(message = "x", progressFraction = 2f)
+        val state = SplashUiState(stage = InitStage.LoadingMemory, progressFraction = 2f)
 
         val result = map(state)
 
@@ -77,7 +82,7 @@ class SplashStateMappingTest {
     @Test
     fun `given error message when mapped then Error wins over loading`() {
         val state = SplashUiState(
-            message = "still progressing",
+            stage = InitStage.LoadingMemory,
             progressFraction = 0.8f,
             errorMessage = "model file missing",
         )
@@ -134,5 +139,22 @@ class SplashStateMappingTest {
         val result = map(state)
 
         assertTrue(result is SplashViewState.Loading)
+    }
+
+    @Test
+    fun `given every stage when labelled then each reads its own resource`() {
+        val stages = listOf(
+            InitStage.Initializing,
+            InitStage.FindingModels,
+            InitStage.LoadingPipelines,
+            InitStage.LoadingChats,
+            InitStage.LoadingMemory,
+            InitStage.Done,
+        )
+
+        val labels = stages.map(::stageLabel)
+
+        assertEquals(stages.size, labels.toSet().size)
+        assertEquals(R.string.splash_stage_pipelines, stageLabel(InitStage.Failed("x", InitStage.LoadingPipelines)))
     }
 }
