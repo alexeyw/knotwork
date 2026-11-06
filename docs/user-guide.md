@@ -2574,9 +2574,10 @@ for the search results in action.
 
 ### Interface language
 
-**About → Language** picks the language of the app's screens: **Device
-language**, the default, follows your phone; any other entry is a language the
-app is translated into, each named in itself. Your phone's per-app language
+The app is in English and Russian. **About → Language** picks the language of
+the app's screens: **Device language**, the default, follows your phone — the
+first of its languages the app is translated into, else English; the other
+entries are those languages, each named in itself. Your phone's per-app language
 setting is the same choice — change either and both change. What a model reads
 is not translated: system prompts, tool descriptions and tool results stay in
 English. The `$LANG` variable carries the language you read the app in, so a

@@ -27,15 +27,31 @@ import java.util.Locale
 @Composable
 fun MonitoringScreen(viewModel: MonitoringViewModel, modifier: Modifier = Modifier, onBack: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
+    MonitoringScreenContent(
+        uiState = uiState,
+        callbacks = MonitoringCallbacks(onBack = onBack, onRetry = viewModel::loadLogs),
+        modifier = modifier,
+    )
+}
+
+/**
+ * The Monitoring screen for a given state, without its ViewModel: the words, the
+ * number style and the projection onto [MonitoringContent].
+ *
+ * @param uiState The state to show.
+ * @param callbacks The screen's actions.
+ * @param modifier Layout modifier applied to the screen.
+ */
+@Composable
+internal fun MonitoringScreenContent(
+    uiState: MonitoringUiState,
+    callbacks: MonitoringCallbacks,
+    modifier: Modifier = Modifier,
+) {
     val strings = monitoringStrings()
     val labels = monitoringStatLabels()
     val viewState = remember(uiState, labels) { uiState.toViewState(strings, labels) }
-    MonitoringContent(
-        state = viewState,
-        modifier = modifier,
-        strings = strings,
-        callbacks = MonitoringCallbacks(onBack = onBack, onRetry = viewModel::loadLogs),
-    )
+    MonitoringContent(state = viewState, modifier = modifier, strings = strings, callbacks = callbacks)
 }
 
 private val LOG_TIME_FORMATTER = SimpleDateFormat("HH:mm:ss", Locale.US)

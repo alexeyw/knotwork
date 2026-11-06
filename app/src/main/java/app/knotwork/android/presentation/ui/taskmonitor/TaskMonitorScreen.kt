@@ -40,12 +40,6 @@ fun TaskMonitorScreen(
     onBack: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val strings = taskMonitorStrings(scheduledTaskCount = uiState.scheduledTaskCount)
-    // Row copy is resolved once in composable context; the projection below is a
-    // plain function, so it cannot call `stringResource` per row.
-    val labels = taskMonitorRowLabels()
-    val context = LocalContext.current
-    val viewState = remember(uiState, labels, context) { uiState.toViewState(labels) { context.resolve(it) } }
     val callbacks = TaskMonitorCallbacks(
         onBack = onBack,
         onFilterChanged = { viewModel.onFilterChanged(it.toAppFilter()) },
@@ -76,12 +70,37 @@ fun TaskMonitorScreen(
         onRetry = { /* unreachable: this screen never enters the Error state. */ },
     )
 
+    TaskMonitorScreenContent(uiState = uiState, callbacks = callbacks, modifier = modifier)
+}
+
+/**
+ * The Task Monitor for a given state, without its ViewModel: the words, the row
+ * projection, [TaskMonitorContent] and the row-detail sheet.
+ *
+ * @param uiState The state to show.
+ * @param callbacks The screen's actions; [TaskMonitorCallbacks.onDetailDismiss]
+ *   also closes the detail sheet.
+ * @param modifier Layout modifier applied to the screen.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun TaskMonitorScreenContent(
+    uiState: TaskMonitorState,
+    callbacks: TaskMonitorCallbacks,
+    modifier: Modifier = Modifier,
+) {
+    val strings = taskMonitorStrings(scheduledTaskCount = uiState.scheduledTaskCount)
+    // Row copy is resolved once in composable context; the projection below is a
+    // plain function, so it cannot call `stringResource` per row.
+    val labels = taskMonitorRowLabels()
+    val context = LocalContext.current
+    val viewState = remember(uiState, labels, context) { uiState.toViewState(labels) { context.resolve(it) } }
     TaskMonitorContent(state = viewState, modifier = modifier, strings = strings, callbacks = callbacks)
 
     val detail = viewState.expandedDetail
     if (detail != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(onDismissRequest = viewModel::closeDetails, sheetState = sheetState) {
+        ModalBottomSheet(onDismissRequest = callbacks.onDetailDismiss, sheetState = sheetState) {
             TaskMonitorDetailSheetBody(detail = detail, strings = strings, callbacks = callbacks)
         }
     }

@@ -3,12 +3,12 @@
     <string name="knotwork_settings_about_language_title">Язык</string>
     <!-- Shared components: status and risk pills, health badge, loading, chips, placeholder. -->
     <string name="knotwork_status_pill_cd">Статус: %1$s</string>
-    <string name="knotwork_status_queued">В очереди</string>
+    <string name="knotwork_status_queued">Ждёт</string>
     <string name="knotwork_status_idle">Ожидание</string>
-    <string name="knotwork_status_running">Выполняется</string>
+    <string name="knotwork_status_running">Идёт</string>
     <string name="knotwork_status_success">Успешно</string>
     <string name="knotwork_status_warning">Предупреждение</string>
-    <string name="knotwork_status_error">Ошибка</string>
+    <string name="knotwork_status_error">Сбой</string>
     <string name="knotwork_status_cancelled">Отменено</string>
     <string name="knotwork_risk_pill_cd">Уровень риска: %1$s</string>
     <string name="knotwork_health_badge_cd">Состояние: %1$s</string>
@@ -616,7 +616,7 @@
         <item quantity="other">%1$d совпадения</item>
     </plurals>
     <string name="knotwork_memory_title">Память</string>
-    <string name="knotwork_memory_subtitle">ДОЛГОВРЕМЕННАЯ · ВЕКТОРНАЯ БАЗА</string>
+    <string name="knotwork_memory_subtitle">ДОЛГАЯ · ВЕКТОРНАЯ БАЗА</string>
     <string name="knotwork_memory_overflow_cd">Другие действия</string>
     <string name="knotwork_memory_export_all">Экспортировать память</string>
     <string name="knotwork_memory_add_memory">Добавить воспоминание</string>

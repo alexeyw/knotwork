@@ -1,8 +1,0 @@
-# Strings not yet translated into Russian, one `module:kind/name` per line.
-#
-# The interface translation lands over several changes; while it does, lint's
-# MissingTranslation is off and TranslationCoverageTest reads this list instead.
-# The list only shrinks: translate a string and delete its line in the same change.
-# A string added to the interface is translated with it, never added here.
-# The change that empties this list deletes the file and turns MissingTranslation
-# back on (app/build.gradle.kts and catalog/build.gradle.kts).

@@ -623,6 +623,10 @@ Only Kotlin files appear inside the generated blocks.
     - `ExternalAutomationReceiverTest.kt` - Robolectric coverage for `ExternalAutomationReceiver` — the exported entry point a third-party automation app broadcasts to.
   - `run/` - Tests for the run-lifecycle collaborators in `presentation/run/`.
     - `RunOutcomeAnnouncerImplTest.kt` - Coverage for `RunOutcomeAnnouncerImpl` — the line a stopped run leaves in the chat it ran in.
+  - `screenshots/` - Roborazzi baselines of app screens in a translation, drawn by the screens' own code without their ViewModels, and the guard on their comparison options.
+    - `AppRoborazziOptions.kt` - Comparison options every screenshot of this module is captured with.
+    - `AppSnapshotOptionsGuardTest.kt` - Fails a screenshot of this module captured without `AppRoborazziOptions`.
+    - `RussianScreensSnapshotTest.kt` - Screenshots of app screens in Russian, at font scale 200 % in the light theme.
   - `share/` - Tests for the share-target entry point: reading a caller's share extras without crashing.
     - `SharedIntentFieldsTest.kt` - Unit tests for `SharedIntentFields.read` — the only place `ShareReceiverActivity` touches a caller's extras.
   - `startup/` - Tests for the cold-start upkeep: every step failing in turn leaves the others running.
