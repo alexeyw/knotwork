@@ -27,7 +27,9 @@ data class TranslatedText(val source: String, val text: String)
  * @property name The preset's name; a pipeline made from it is named so.
  * @property description The preset's description in the gallery.
  * @property nodeLabels Node titles by node id. A node's title is shown on the
- *   canvas, in the editor and in a run's console; no model reads it.
+ *   canvas, in the editor and in a run's console. A model meets it in one place
+ *   only — as the name a TOOL node's result is filed under when its tool could
+ *   not be resolved — as it meets any title a person gives a node.
  * @property samplePrompts The starter prompts a new chat offers. They are the
  *   user's words to the agent, so they are translated (decisions §113, R2).
  */

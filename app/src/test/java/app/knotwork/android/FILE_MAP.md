@@ -197,6 +197,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AppLanguageRepositoryImplTest.kt` - `AppLanguageRepositoryImpl` over Robolectric's `LocaleManager`: what a pick writes, what the repository reports, and that a change made on the system's settings page reaches it through a configuration change.
     - `AssetBundledDocumentationRepositoryTest.kt` - Verifies `AssetBundledDocumentationRepository` against the **real** generated assets rather than a fixture.
     - `BackgroundPromptRepositoryImplTest.kt` - `BackgroundPromptRepositoryImpl` against a real (in-memory) Room database: the encrypted home of the prompts queued background runs execute.
+    - `BundledPresetTranslationsTest.kt` - `BundledPresetTranslations`: which file a language reads, that it is read once, and that every way a file can fail to read leaves the presets as written rather than failing the catalogue.
     - `ChatArchivePersistenceTest.kt` - Drives the chat-archive stack — `ArchiveChatUseCase` / `UnarchiveChatUseCase` → `ChatRepositoryImpl` → `ChatDao` — against a **real in-memory Room database**, so the SQL itself is under test and not just the call routing the mocked repository tests cover.
     - `ChatRepositoryImplTest.kt` - Unit tests for `ChatRepositoryImpl`. Session deletion must go through the single transactional DAO method — messages, run records (no FK cascade) and the session row die together or not at all.
     - `ClarificationRepositoryImplTest.kt` - Unit tests for `ClarificationRepositoryImpl`.

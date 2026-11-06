@@ -221,9 +221,9 @@
         "node-3": {"en": "Mood Triage", "ru": "Определение настроения"},
         "node-4": {"en": "Casual", "ru": "Обычный"},
         "node-5": {"en": "Affectionate", "ru": "Нежный"},
-        "node-6": {"en": "Supportive", "ru": "Поддержка"},
+        "node-6": {"en": "Supportive", "ru": "Поддерживающий"},
         "node-7": {"en": "Playful", "ru": "Игривый"},
-        "node-8": {"en": "Intimate", "ru": "Близость"},
+        "node-8": {"en": "Intimate", "ru": "Близкий"},
         "node-9": {"en": "Reply", "ru": "Ответ"}
       },
       "samplePrompts": [
@@ -290,10 +290,10 @@
     },
     "evaluation_pass_fail_judge": {
       "name": {"en": "Pass/fail judge", "ru": "Судья Pass/Fail"},
-      "description": {"en": "Binary verdict — Pass or Fail, never Retry. Routes through the node's matching output port.", "ru": "Двоичный вердикт — Pass или Fail, никогда Retry. Ведёт по соответствующему выходу узла."},
+      "description": {"en": "Binary verdict — Pass or Fail, never Retry. Routes through the node's matching output port.", "ru": "Вердикт из двух вариантов — Pass или Fail, никогда Retry. Ведёт по соответствующему выходу узла."},
       "tags": [
         {"en": "evaluation", "ru": "оценка"},
-        {"en": "binary", "ru": "двоичный"},
+        {"en": "binary", "ru": "бинарный"},
         {"en": "routing", "ru": "маршрутизация"}
       ]
     },
@@ -326,7 +326,7 @@
     },
     "if_question_vs_command": {
       "name": {"en": "Is question, not command", "ru": "Вопрос, а не команда"},
-      "description": {"en": "True when the upstream text is an information-seeking question rather than an instruction to perform an action.", "ru": "True, если входной текст — вопрос, который ищет сведения, а не указание что-то сделать."},
+      "description": {"en": "True when the upstream text is an information-seeking question rather than an instruction to perform an action.", "ru": "True, если входной текст — вопрос, чтобы что-то узнать, а не указание что-то сделать."},
       "tags": [
         {"en": "intent", "ru": "намерение"},
         {"en": "question", "ru": "вопрос"},
@@ -337,7 +337,7 @@
       "name": {"en": "Concise assistant", "ru": "Краткий помощник"},
       "description": {"en": "Single-paragraph, no-preamble answers. Best for quick factual questions when latency matters.", "ru": "Ответы в один абзац без вступлений. Лучше всего для быстрых вопросов о фактах, когда важна скорость."},
       "tags": [
-        {"en": "concise", "ru": "кратко"},
+        {"en": "concise", "ru": "краткий"},
         {"en": "starter", "ru": "стартовый"},
         {"en": "offline", "ru": "офлайн"}
       ]
@@ -361,12 +361,12 @@
       ]
     },
     "output_json_structured": {
-      "name": {"en": "JSON-structured", "ru": "Структура JSON"},
+      "name": {"en": "JSON-structured", "ru": "Ответ в JSON"},
       "description": {"en": "Emits the answer as a strict JSON object for downstream tooling.", "ru": "Выдаёт ответ строгим JSON-объектом для следующих инструментов."},
       "tags": [
         {"en": "json", "ru": "json"},
         {"en": "structured", "ru": "структурный"},
-        {"en": "tooling", "ru": "инструменты"}
+        {"en": "tooling", "ru": "для программ"}
       ]
     },
     "output_markdown_with_sections": {
@@ -410,7 +410,7 @@
       "description": {"en": "Condenses upstream outputs into a tight bullet list of the key points.", "ru": "Сжимает результаты предыдущих узлов в короткий маркированный список главного."},
       "tags": [
         {"en": "bullets", "ru": "список"},
-        {"en": "concise", "ru": "кратко"},
+        {"en": "concise", "ru": "краткий"},
         {"en": "recap", "ru": "итог"}
       ]
     },

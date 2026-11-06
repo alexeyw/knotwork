@@ -2592,6 +2592,12 @@ first message as its name. The lines the app adds to a chat — a tool call you
 denied, how a run ended — are written the same way, and a model reads them as
 written.
 
+The bundled pipelines and prompt templates follow the interface language too:
+their names, descriptions, node titles, starter prompts and tags — never their
+prompts. A pipeline made from one keeps the words it was made with.
+Troubleshooting and the FAQ open in the interface language; the documents that
+open in the browser are in English.
+
 ### What every setting means
 
 Most rows in Settings carry a small **ⓘ** next to the label. Tapping it opens a
@@ -3646,6 +3652,11 @@ reader, not a browser:
 
 The **Open in browser** action in the top bar is always available, for
 when you want the web version of what you are reading.
+
+Both documents are translated into each language the app ships, and the reader
+opens the one in the interface language; a link into a section lands on the same
+section in either. The web version, and every document that opens in the
+browser, is in English.
 
 ### The documents that stay on the web
 

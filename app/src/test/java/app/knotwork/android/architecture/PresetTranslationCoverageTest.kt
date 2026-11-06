@@ -36,7 +36,8 @@ import java.io.File
  *   pipeline preset, and every name, description and tag of every bundled
  *   template, has a translation, written for its current English;
  * - nothing in the file names a preset, node, prompt or tag that is not there;
- * - one English tag has one translation, or the picker would offer two chips for it;
+ * - one English tag has one translation, or the picker would offer two chips for
+ *   it, and one translation one English tag, or a chip would mean two things;
  * - a translated preset still fits the limits its English fits (name, starter
  *   prompt), still validates, opens in the editor with every node title
  *   distinct, and carries the same title in the `nodeConfig` an export hands
@@ -132,14 +133,19 @@ class PresetTranslationCoverageTest {
     }
 
     @Test
-    fun `one English tag has one translation across the templates`() {
+    fun `one English tag has one translation, and one translation one English tag`() {
         forEachLanguage { language, translations ->
-            val conflicting = translations.prompts.values.flatMap { it.tags }
-                .groupBy({ it.source }, { it.text })
+            val tags = translations.prompts.values.flatMap { it.tags }
+            val split = tags.groupBy({ it.source }, { it.text })
                 .mapValues { (_, texts) -> texts.toSet() }
                 .filterValues { it.size > 1 }
                 .map { (tag, texts) -> "tag \"$tag\" is translated as $texts" }
-            assertTrue(conflicting.report(language), conflicting.isEmpty())
+            // Two English tags made one would merge two filter chips into one that means both.
+            val merged = tags.groupBy({ it.text }, { it.source })
+                .mapValues { (_, sources) -> sources.toSet() }
+                .filterValues { it.size > 1 }
+                .map { (text, sources) -> "tags $sources are all translated as \"$text\"" }
+            assertTrue((split + merged).report(language), (split + merged).isEmpty())
         }
     }
 

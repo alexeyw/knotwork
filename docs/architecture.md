@@ -60,7 +60,7 @@ Each layer maps onto concrete packages:
 | Layer          | Packages                                                                                          |
 |----------------|---------------------------------------------------------------------------------------------------|
 | `presentation` | `presentation/ui/{about,automation,chat,common,components,discover,files,help,memory,models,monitoring,more,navigation,onboarding,orchestrator,pipeline,prompts,settings,skills,splash,taskmonitor,tools,triggers}`, `presentation/{common,notifications,receivers,run,share,shortcuts,state,theme,tile}` |
-| `domain`       | `domain/{constants,engine,memoryio,models,pipelineio,prompt,promptio,promptpack,report,repositories,services,settings,skillio,text,triggerio,usecases}` |
+| `domain`       | `domain/{constants,engine,memoryio,models,pipelineio,presetl10n,prompt,promptio,promptpack,report,repositories,services,settings,skillio,text,triggerio,usecases}` |
 | `data`         | `data/{audio,engine,local,logging,mappers,mcp,network,prompt,repositories,services,testing,tools}` |
 
 Cross-layer wiring is handled by **Hilt**. Modules in `di/` provide

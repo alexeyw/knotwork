@@ -11,6 +11,7 @@ import app.knotwork.android.domain.repositories.NetworkStateRepository
 import app.knotwork.android.domain.usecases.ResolveDocumentationLinkUseCase
 import app.knotwork.android.presentation.ui.navigation.NavRoutes
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -106,17 +107,31 @@ class HelpReaderViewModel @Inject constructor(
 
     private var document: BundledDocument? = null
 
+    /** The read in flight; a newer one replaces it, so an older answer never lands last. */
+    private var reading: Job? = null
+
     init {
         load()
         // A change of language re-creates the screen but not this ViewModel, which
         // would go on showing the text it read in the old one.
-        viewModelScope.launch { appLanguage.interfaceLanguage.drop(1).collect { load() } }
+        viewModelScope.launch { appLanguage.interfaceLanguage.drop(1).collect { read(arrive = false) } }
     }
 
     /** Reads the document and resolves the arrival anchor. */
-    fun load() {
-        _uiState.update { it.copy(loading = true, failed = false) }
-        viewModelScope.launch {
+    fun load() = read(arrive = true)
+
+    /**
+     * Reads the document.
+     *
+     * @param arrive Whether to scroll to the anchor the reader was opened at. A
+     *   read in a new language does not: the reader stays where it was rather
+     *   than jumping back to where it arrived, and keeps showing the old text,
+     *   not a loading state, until the new one is in.
+     */
+    private fun read(arrive: Boolean) {
+        reading?.cancel()
+        if (arrive) _uiState.update { it.copy(loading = true, failed = false) }
+        reading = viewModelScope.launch {
             val documents = repository.documents().getOrElse {
                 Timber.e(it, "Could not read the bundled documentation index")
                 _uiState.update { state -> state.copy(loading = false, failed = true) }
@@ -129,7 +144,7 @@ class HelpReaderViewModel @Inject constructor(
                 return@launch
             }
             document = entry
-            val offset = anchor?.let { entry.anchors[it] }
+            val offset = if (arrive) anchor?.let { entry.anchors[it] } else null
             _uiState.update {
                 it.copy(
                     markdown = text,
