@@ -22,9 +22,9 @@
         <item quantity="other">Не больше %1$d элемента</item>
     </plurals>
     <string name="knotwork_placeholder_illustration_cd">Иллюстрация-заглушка</string>
-    <string name="knotwork_tools_pill_readonly">Только чтение</string>
-    <string name="knotwork_tools_pill_sensitive">Чувствительный</string>
-    <string name="knotwork_tools_pill_destructive">Разрушительный</string>
+    <string name="knotwork_tools_pill_readonly">Чтение</string>
+    <string name="knotwork_tools_pill_sensitive">Осторожно</string>
+    <string name="knotwork_tools_pill_destructive">Опасно</string>
     <!-- Task monitor filter chips. -->
     <string name="knotwork_task_filter_all">Все</string>
     <string name="knotwork_task_filter_active">Активные</string>
@@ -490,7 +490,7 @@
     <string name="knotwork_usage_action_reset">Сбросить статистику</string>
     <string name="knotwork_settings_system_instructions_counter" tools:ignore="PluralsCandidate">%1$d / %2$d симв. · ≈ %3$d ток</string>
     <string name="knotwork_settings_restrictions_approve">Спрашивать</string>
-    <string name="knotwork_settings_restrictions_block_destructive">Блокировать разрушительные инструменты</string>
+    <string name="knotwork_settings_restrictions_block_destructive">Блокировать опасные инструменты</string>
     <string name="knotwork_settings_restrictions_block_network">Блокировать сеть для локальной модели</string>
     <string name="knotwork_settings_llm_reset">Сбросить к значениям по умолчанию</string>
     <string name="knotwork_settings_local_model_manage">Управлять</string>
@@ -580,7 +580,7 @@
     <string name="knotwork_tools_detail_schema">JSON Schema</string>
     <string name="knotwork_tools_detail_risk">Уровень риска</string>
     <string name="knotwork_tools_detail_risk_fixed_note">Встроен в приложение, поэтому уровень фиксирован.</string>
-    <string name="knotwork_tools_detail_risk_editable_note">Только вы знаете, что этот инструмент делает на самом деле. «Только чтение» снимает запрос подтверждения; разрушительный можно сразу запретить.</string>
+    <string name="knotwork_tools_detail_risk_editable_note">Только вы знаете, что этот инструмент делает на самом деле. «Чтение» снимает запрос подтверждения; «Опасно» можно сразу запретить.</string>
     <string name="knotwork_tools_detail_schema_error">Схема недоступна — сервер вернул повреждённый JSON.</string>
     <string name="knotwork_tools_expand_server_cd">Показать или скрыть инструменты MCP</string>
     <string name="knotwork_tools_row_overflow_cd">Действия с MCP-сервером</string>
@@ -607,7 +607,7 @@
     <string name="knotwork_tools_form_title_add">Добавить MCP-сервер</string>
     <string name="knotwork_tools_form_title_edit">Изменить MCP-сервер</string>
     <string name="knotwork_model_sheet_title">Выберите модель</string>
-    <string name="knotwork_model_sheet_count" tools:ignore="PluralsCandidate">%1$d из %2$s</string>
+    <string name="knotwork_model_sheet_count" tools:ignore="PluralsCandidate">Моделей у %2$s: %1$d</string>
     <string name="knotwork_model_sheet_search">Поиск по id моделей</string>
     <plurals name="knotwork_model_sheet_matches">
         <item quantity="one">%1$d совпадение</item>
@@ -676,12 +676,12 @@
     <string name="knotwork_memory_dlg_delete_version_title">Удалить эту версию?</string>
     <string name="knotwork_memory_dlg_delete_version_body">Прежний текст будет удалён из истории этого воспоминания. Текущий текст останется.</string>
     <string name="knotwork_memory_edit_history_note">Ваша правка заменяет текст, не добавляя прежнюю версию.</string>
-    <string name="knotwork_memory_pair_pinned_title">Ждёт обновление</string>
+    <string name="knotwork_memory_pair_pinned_title">Есть обновление</string>
     <string name="knotwork_memory_pair_update_title">Обновляет закреплённое воспоминание</string>
     <string name="knotwork_memory_pair_note">Пока вы не выберете, агент использует закреплённый текст.</string>
     <string name="knotwork_memory_pair_use">Взять обновление</string>
     <string name="knotwork_memory_pair_keep">Оставить закреплённое</string>
-    <string name="knotwork_memory_row_pair_pinned">Ждёт обновление</string>
+    <string name="knotwork_memory_row_pair_pinned">Есть обновление</string>
     <string name="knotwork_memory_row_pair_update">Обновляет закреплённое</string>
     <plurals name="knotwork_memory_a11y_row_history">
         <item quantity="one">%1$d прежняя версия</item>
@@ -714,7 +714,7 @@
     <string name="knotwork_onboarding_skip">Пропустить</string>
     <string name="knotwork_onboarding_continue">Продолжить</string>
     <string name="knotwork_onboarding_welcome_headline">Личный AI-агент, который работает на вашем телефоне.</string>
-    <string name="knotwork_onboarding_welcome_body">Без облака. Без телеметрии. Ваши разговоры остаются на устройстве. Облачные провайдеры — по желанию: подключите свой ключ, если они нужны.</string>
+    <string name="knotwork_onboarding_welcome_body">Без обращений к облаку. Без телеметрии. Ваши разговоры остаются на устройстве. Облачные провайдеры — по желанию: подключите свой ключ, если они нужны.</string>
     <string name="knotwork_onboarding_welcome_tile_litert">Генерация LiteRT на устройстве</string>
     <string name="knotwork_onboarding_welcome_tile_appfunctions">Локальные инструменты AppFunctions</string>
     <string name="knotwork_onboarding_welcome_tile_storage">Зашифрованное хранилище (SQLCipher · Keystore)</string>
@@ -759,7 +759,7 @@
     <string name="knotwork_onboarding_ready_surface_label">Точка входа</string>
     <string name="knotwork_onboarding_ready_surface_value">Слушает системное меню «Поделиться»</string>
     <string name="knotwork_onboarding_ready_safety_label">Безопасность</string>
-    <string name="knotwork_onboarding_ready_safety_value">Подтверждает каждую запись в файл (HITL)</string>
+    <string name="knotwork_onboarding_ready_safety_value">Спрашивает перед каждой записью в файл (HITL)</string>
     <string name="knotwork_onboarding_ready_scenario_headline">Сценарий «%1$s» готов.</string>
     <string name="knotwork_onboarding_ready_generic_headline">Всё готово.</string>
     <string name="knotwork_onboarding_ready_docs_label">Если что-то не получится</string>
@@ -801,9 +801,9 @@
     </plurals>
     <string name="knotwork_files_badge_new">новый</string>
     <string name="knotwork_files_badge_binary">двоичный</string>
-    <string name="knotwork_files_row_menu_cd">Действия с %1$s</string>
+    <string name="knotwork_files_row_menu_cd">Действия с файлом %1$s</string>
     <string name="knotwork_files_empty_title">Здесь пока пусто</string>
-    <string name="knotwork_files_empty_body">Рабочая папка — закрытая песочница, которую агент читает и пишет: сюда попадают его отчёты и экспорты. Файлы появляются, когда агент что-то сохраняет или когда вы импортируете свой файл, чтобы он его прочитал.</string>
+    <string name="knotwork_files_empty_body">Рабочая папка — закрытая песочница, в которой агент читает и пишет файлы: сюда попадают его отчёты и экспорты. Файлы появляются, когда агент что-то сохраняет или когда вы импортируете свой файл, чтобы он его прочитал.</string>
     <string name="knotwork_files_empty_cta">Импортировать файл</string>
     <string name="knotwork_files_error_title">Не удалось прочитать рабочую папку</string>
     <string name="knotwork_files_error_body">Не удалось получить список файлов (ошибка ввода-вывода). Ваши файлы в сохранности — это касается только этого экрана.</string>

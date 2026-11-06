@@ -47,7 +47,7 @@
     <string name="models_meta_not_verified">Не проверена</string>
     <string name="models_interrupted_continue">Продолжить</string>
     <string name="models_error_link_not_litertlm">Эта ссылка ведёт не на файл .litertlm. На телефоне работают только модели .litertlm.</string>
-    <string name="models_subtitle_format" tools:ignore="PluralsCandidate">активна: %1$d · на диске: %2$d · %3$s</string>
+    <string name="models_subtitle_format" tools:ignore="PluralsCandidate">активных: %1$d · на диске: %2$d · %3$s</string>
     <string name="models_section_hf">HUGGINGFACE</string>
     <string name="models_section_hf_optional">необязательно</string>
     <string name="models_field_hf_placeholder">Нажмите, чтобы вставить токен hf_…</string>

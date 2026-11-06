@@ -72,7 +72,7 @@
     <string name="external_automation_consent_intro">Приложения автоматизации вроде Tasker или MacroDroid — и скрипты оболочки через adb — смогут попросить Knotwork запустить для них один пайплайн.</string>
     <string name="external_automation_consent_any_app">Попросить может любое приложение на этом устройстве, которое умеет отправлять broadcast. Списка приложений нет: выбранный вами пайплайн — это всё разрешение целиком.</string>
     <string name="external_automation_consent_one_pipeline">Запустить можно только этот один пайплайн. Запрос, называющий что-то другое, отклоняется и никогда не перенаправляется на выбранный.</string>
-    <string name="external_automation_consent_approvals">Ваши настройки подтверждения продолжают действовать: вызов инструмента останавливается и сначала спрашивает вас — так же, как в фоновых прогонах самого приложения, — а разрушительный спрашивает всегда.</string>
+    <string name="external_automation_consent_approvals">Ваши настройки подтверждения продолжают действовать: вызов инструмента останавливается и сначала спрашивает вас — так же, как в фоновых прогонах самого приложения, — а опасный спрашивает всегда.</string>
     <string name="external_automation_consent_cost">Прогон, запущенный так, может использовать ваш облачный API-ключ и стоит столько, сколько стоит этот прогон.</string>
     <string name="external_automation_consent_reversible">Выключить это можно тем же переключателем, одним нажатием.</string>
     <string name="external_automation_consent_confirm">Включить</string>
