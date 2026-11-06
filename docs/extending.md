@@ -1649,7 +1649,8 @@ The aggregated `check` task runs, among others:
 - `testFullDebugUnitTest` + `testFossDebugUnitTest` — JVM unit tests, including
   the architecture and source guards.
 - `:catalog:verifyRoborazziDebug` — design-system screenshots against their
-  baselines.
+  baselines; `:app:verifyRoborazziFullDebug` — app screens in a translation
+  against theirs.
 - the generated-document gates this guide's recipes touch —
   `verifyBrowserEditorConstants`, `verifyCookbookDocs`, `verifyFileMap`,
   `verifyDocLinks` and the rest.

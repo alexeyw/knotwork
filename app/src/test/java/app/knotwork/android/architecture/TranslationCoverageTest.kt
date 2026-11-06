@@ -10,24 +10,16 @@ import java.util.Properties
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Every string the interface shows exists in every language the app ships —
- * or is named, one by one, on that language's untranslated list.
+ * The languages the app ships hold together: every module translates the same
+ * ones, the build ships exactly those, and a translation is a translation.
  *
- * **Why a test and not lint.** Lint's `MissingTranslation` is the end state, but
- * the translation lands over several changes, and with it on, the first
- * translated string fails the build for each of the ~2 200 that are not yet.
- * So the check is off (`lint { disable += "MissingTranslation" }` in `app` and
- * `catalog`) while `config/l10n/untranslated-<lang>.txt` lists what is still
- * missing, and this test holds the list honest in both directions:
- * - a string missing from a language and not on its list fails — a string added
- *   during the series is translated with it, not left behind;
- * - a list entry that is translated by now, or names no string, fails — the list
- *   only shrinks.
+ * That every string exists in every language is lint's `MissingTranslation`, an
+ * error in `app` and `catalog`. While the first translation landed over several
+ * changes it was off, and this test held a shrinking list of the strings not yet
+ * translated instead; the change that emptied the list deleted it and turned the
+ * check back on (decisions §113).
  *
- * The change that empties a list deletes it and turns `MissingTranslation` back
- * on; the language and module checks below stay.
- *
- * **What else it holds.**
+ * **What it holds.**
  * - The build's `localeFilters` names exactly the default language and the
  *   languages with translations, in `app` and `catalog` alike: a language that
  *   is filtered in but untranslated in one module would show that module in
@@ -119,30 +111,6 @@ class TranslationCoverageTest {
                 "app/src/main/assets/docs/<language>/ and run ./gradlew :app:syncBundledDocs",
             missing.isEmpty(),
         )
-    }
-
-    @Test
-    fun `every translatable string is translated or on the language's untranslated list`() {
-        for (language in shippedLanguages()) {
-            val missing = MODULES.flatMap { module ->
-                val translated = keysIn(languageFolders(module).getValue(language))
-                (translatableKeys(module) - translated).map { "$module:$it" }
-            }.toSet()
-            val listed = listEntries(untranslatedList(language))
-
-            val unlisted = (missing - listed).sorted()
-            assertTrue(
-                "strings missing from values-$language and not on ${untranslatedList(language).name} — " +
-                    "translate them in the same change (the list only shrinks):\n" + unlisted.joinToString("\n"),
-                unlisted.isEmpty(),
-            )
-            val stale = (listed - missing).sorted()
-            assertTrue(
-                "${untranslatedList(language).name} names strings that are translated by now or no longer " +
-                    "exist — remove these lines:\n" + stale.joinToString("\n"),
-                stale.isEmpty(),
-            )
-        }
     }
 
     @Test
@@ -257,8 +225,6 @@ class TranslationCoverageTest {
     }
 
     // ─── The lists ───────────────────────────────────────────────────────────
-
-    private fun untranslatedList(language: String): File = File(listDirectory(), "untranslated-$language.txt")
 
     private fun identicalList(language: String): File = File(listDirectory(), "identical-$language.txt")
 

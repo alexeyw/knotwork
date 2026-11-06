@@ -498,11 +498,18 @@ private fun MemoryCategoryRow(
     }
 }
 
+/**
+ * The sort label and the two dropdowns. A flow rather than a row: in a row the
+ * last dropdown was measured last and, when the three did not fit — Russian at
+ * 200 % font scale — got no width at all, its label wrapping a letter per line
+ * into a column taller than the screen. A flow moves it to the next line instead.
+ */
 @Composable
 private fun MemorySortRow(state: MemoryViewState, callbacks: MemoryCallbacks) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    FlowRow(
+        itemVerticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
         modifier = Modifier.padding(horizontal = KnotworkTheme.spacing.sp4, vertical = KnotworkTheme.spacing.sp1),
     ) {
         Text(

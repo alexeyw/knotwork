@@ -124,7 +124,8 @@ running `check` alone is a narrower gate than the one that decides the merge.
   [`docs/testing.md`](docs/testing.md#golden-run-traces) for how to rewrite one
   on purpose).
 - **Screenshot tests** — the design-system renders compared with their
-  committed baselines (`:catalog:verifyRoborazziDebug`).
+  committed baselines (`:catalog:verifyRoborazziDebug`), and a few app screens
+  in a translation with theirs (`:app:verifyRoborazziFullDebug`).
 - **Kover** coverage verification (`koverVerifyFullDebug`).
 - **Documentation gates** — dead internal links and `#anchors`
   (`verifyDocLinks`), Mermaid diagram structure (`verifyMermaidDiagrams`), the

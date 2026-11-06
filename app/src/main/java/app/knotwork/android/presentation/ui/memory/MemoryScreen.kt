@@ -84,39 +84,6 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
         }
     }
 
-    // The expensive list projection (filter / group / sort / breakdown / chip
-    // counts) is memoised only on the fields that affect it, so search
-    // keystrokes and dialog-visibility toggles don't re-run the O(N) work.
-    val texts = rememberMemoryTexts()
-    val listViewState = remember(
-        texts,
-        uiState.memories,
-        uiState.history,
-        uiState.pendingUpdates,
-        uiState.selectedCategory,
-        uiState.sortMode,
-        uiState.dateFilter,
-        uiState.searchResults,
-        uiState.searchActive,
-        uiState.searchQuery,
-        uiState.expandedId,
-        uiState.editing,
-        uiState.totalBytes,
-        uiState.lastCompactedAt,
-        uiState.sessionNames,
-        uiState.loadFailed,
-    ) {
-        uiState.toViewState(nowMillis = System.currentTimeMillis(), texts = texts)
-    }
-    // Dialog visibility + the loaded estimate are intentionally excluded from
-    // the memo keys (toggling them must not re-run the O(N) projection); they
-    // are overlaid here cheaply on every recomposition.
-    val viewState = listViewState.copy(
-        compactDialogVisible = uiState.compactDialogVisible,
-        compactEstimate = uiState.compactEstimate?.toView(texts),
-        addDialogVisible = uiState.addDialogVisible,
-    )
-
     val callbacks = MemoryCallbacks(
         onBack = onBack,
         onSearchOpen = viewModel::openSearch,
@@ -145,12 +112,69 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel(), onBack: () -> Uni
         onVersionDelete = { id -> id.toLongOrNull()?.let(viewModel.history::deleteVersion) },
     )
 
+    MemoryScreenContent(
+        uiState = uiState,
+        callbacks = callbacks,
+        snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
+        nowMillis = System.currentTimeMillis(),
+    )
+}
+
+/**
+ * The Memory screen for a given state, without its ViewModel: the words, the list
+ * projection, the dialog overlays and [MemoryContent].
+ *
+ * @param uiState The state to show.
+ * @param callbacks The screen's actions.
+ * @param snackbarHost The host messages appear in, lifted above the add button.
+ * @param nowMillis The moment ages and date sections are measured from.
+ */
+@Composable
+internal fun MemoryScreenContent(
+    uiState: MemoryUiState,
+    callbacks: MemoryCallbacks,
+    snackbarHost: @Composable () -> Unit,
+    nowMillis: Long,
+) {
+    // The expensive list projection (filter / group / sort / breakdown / chip
+    // counts) is memoised only on the fields that affect it, so search
+    // keystrokes and dialog-visibility toggles don't re-run the O(N) work.
+    val texts = rememberMemoryTexts()
+    val listViewState = remember(
+        texts,
+        uiState.memories,
+        uiState.history,
+        uiState.pendingUpdates,
+        uiState.selectedCategory,
+        uiState.sortMode,
+        uiState.dateFilter,
+        uiState.searchResults,
+        uiState.searchActive,
+        uiState.searchQuery,
+        uiState.expandedId,
+        uiState.editing,
+        uiState.totalBytes,
+        uiState.lastCompactedAt,
+        uiState.sessionNames,
+        uiState.loadFailed,
+    ) {
+        uiState.toViewState(nowMillis = nowMillis, texts = texts)
+    }
+    // Dialog visibility + the loaded estimate are intentionally excluded from
+    // the memo keys (toggling them must not re-run the O(N) projection); they
+    // are overlaid here cheaply on every recomposition.
+    val viewState = listViewState.copy(
+        compactDialogVisible = uiState.compactDialogVisible,
+        compactEstimate = uiState.compactEstimate?.toView(texts),
+        addDialogVisible = uiState.addDialogVisible,
+    )
+
     Box(modifier = Modifier.fillMaxSize().testTag(tag = MEMORY_ROOT_TEST_TAG)) {
         // In the content's Scaffold, which lifts it above the "Add memory" FAB.
         MemoryContent(
             state = viewState,
             callbacks = callbacks,
-            snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
+            snackbarHost = snackbarHost,
         )
     }
 }

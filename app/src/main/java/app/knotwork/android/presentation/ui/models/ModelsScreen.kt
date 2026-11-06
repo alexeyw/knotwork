@@ -57,11 +57,6 @@ fun ModelsScreen(
     val linkNotLitertlmText = stringResource(R.string.models_error_link_not_litertlm)
     val benchmarkFailedText = stringResource(R.string.models_benchmark_failed)
     val benchmarkShareSubject = stringResource(R.string.models_benchmark_share_subject)
-    val strings = modelsStrings()
-    val verificationLabels = VerificationLabels(
-        verified = stringResource(R.string.models_meta_verified),
-        notVerified = stringResource(R.string.models_meta_not_verified),
-    )
 
     LaunchedEffect(uiState.downloadError) {
         uiState.downloadError?.let { error ->
@@ -105,15 +100,9 @@ fun ModelsScreen(
         }
     }
 
-    val performanceUnits = rememberPerformanceUnits()
-    val viewState = remember(uiState, verificationLabels, performanceUnits) {
-        uiState.toViewState(strings.subtitleFormat, verificationLabels, performanceUnits)
-    }
-
-    ModelsContent(
-        state = viewState,
+    ModelsScreenContent(
+        uiState = uiState,
         modifier = modifier,
-        strings = strings.content,
         callbacks = ModelsCallbacks(
             onBack = onBack,
             onDiscover = onOpenDiscover,
@@ -157,6 +146,40 @@ fun ModelsScreen(
         // The screen showed download and benchmark failures through this state
         // without ever rendering a host, so they never appeared.
         snackbarHost = { KnotworkSnackbarHost(hostState = snackbarHostState) },
+    )
+}
+
+/**
+ * The Models screen for a given state, without its ViewModel: the words, units and
+ * verification labels, the projection, and [ModelsContent].
+ *
+ * @param uiState The state to show.
+ * @param callbacks The screen's actions.
+ * @param snackbarHost The host messages appear in.
+ * @param modifier Layout modifier applied to the screen.
+ */
+@Composable
+internal fun ModelsScreenContent(
+    uiState: ModelsUiState,
+    callbacks: ModelsCallbacks,
+    snackbarHost: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val strings = modelsStrings()
+    val verificationLabels = VerificationLabels(
+        verified = stringResource(R.string.models_meta_verified),
+        notVerified = stringResource(R.string.models_meta_not_verified),
+    )
+    val performanceUnits = rememberPerformanceUnits()
+    val viewState = remember(uiState, verificationLabels, performanceUnits) {
+        uiState.toViewState(strings.subtitleFormat, verificationLabels, performanceUnits)
+    }
+    ModelsContent(
+        state = viewState,
+        modifier = modifier,
+        strings = strings.content,
+        callbacks = callbacks,
+        snackbarHost = snackbarHost,
     )
 }
 

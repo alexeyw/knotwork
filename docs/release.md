@@ -457,7 +457,8 @@ bundletool get-size total --apks=app.apks
 - `check` aggregates `detekt` and the type-resolution detekt tasks,
   `ktlintCheck`, lint, the unit-test suite for **both** flavours
   (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the design-system
-  screenshot comparison (`:catalog:verifyRoborazziDebug`),
+  screenshot comparison (`:catalog:verifyRoborazziDebug`), the translated app
+  screens' (`:app:verifyRoborazziFullDebug`),
   `koverVerifyFullDebug` (coverage is measured on the representative `full`
   variant; the flavours share every measured source), and the documentation,
   version and store-listing gates, and the supply-chain gates — the actions and

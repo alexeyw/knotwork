@@ -6,7 +6,8 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Keeps the instrumented tests on the v2 Compose test APIs.
+ * Keeps this module's Compose tests — instrumented, and the JVM screenshots of
+ * `presentation/screenshots/` — on the v2 Compose test APIs.
  *
  * **Why.** The v1 factories (`junit4.createComposeRule`, `createAndroidComposeRule`, `runComposeUiTest`
  * and the rest) are deprecated. They run the composition's coroutines (effects,
@@ -18,19 +19,22 @@ import java.io.File
  *
  * **Why a source scan.** The `androidTest` source set is not on the JVM unit-test classpath, so the
  * guard reads its files. `src/androidTest` is a declared input of this module's test tasks, so an
- * edit there re-runs it.
+ * edit there re-runs it; `src/test` compiles with them.
  */
 class ComposeTestRuleV2GuardTest {
 
     @Test
-    fun `given an instrumented test then it builds its Compose rule with the v2 factories`() {
-        val files = File(ProductionSources.moduleDirectory(), ANDROID_TEST).walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }
-            .toList()
-        assertTrue(
-            "found no v2 Compose rule in $ANDROID_TEST — the scan no longer matches the code",
-            files.any { V2_FACTORY.containsMatchIn(it.readText()) },
-        )
+    fun `given a Compose test then it builds its Compose rule with the v2 factories`() {
+        val files = SOURCE_SETS.flatMap { sourceSet ->
+            val sources = File(ProductionSources.moduleDirectory(), sourceSet).walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .toList()
+            assertTrue(
+                "found no v2 Compose rule in $sourceSet — the scan no longer matches the code",
+                sources.any { V2_FACTORY.containsMatchIn(it.readText()) },
+            )
+            sources
+        }
 
         val v1 = files.flatMap { file ->
             V1_API.findAll(file.readText()).map { "${file.name}: ${it.value}" }.toList()
@@ -40,7 +44,8 @@ class ComposeTestRuleV2GuardTest {
     }
 
     private companion object {
-        const val ANDROID_TEST = "src/androidTest"
+        /** Every source set of this module that composes in a test. */
+        val SOURCE_SETS = listOf("src/androidTest", "src/test")
 
         /**
          * A deprecated v1 factory, imported or written out. The rule and environment *types*

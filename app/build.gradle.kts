@@ -167,6 +167,10 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.kover)
+    // Screenshots of a few screens in a translation, where the app's own strings
+    // meet the design system's (`presentation/screenshots/`); every other
+    // baseline lives in `:catalog`.
+    alias(libs.plugins.roborazzi)
     // The `google-services` and `firebase-crashlytics` Gradle plugins are NOT
     // applied here unconditionally. They are proprietary and pull Google's
     // build-time tooling into the graph, which the F-Droid channel rejects.
@@ -528,13 +532,6 @@ android {
         // this does not depend on the API floor). ChromeOS support is not in
         // scope for v0.1 — disable the lint check that demands an x86 binary.
         disable += "ChromeOsAbiSupport"
-        // Off while the interface translation lands over several changes: until every
-        // string has its translation, each missing one would fail the build. Meanwhile
-        // `TranslationCoverageTest` (`:app`, over both modules) gates the same thing — a
-        // string missing from a language and not on that language's untranslated list
-        // (`config/l10n/`) fails it — and the change that empties the list turns this
-        // check back on.
-        disable += "MissingTranslation"
         // Version-freshness and deadline checks stay ENABLED, but are demoted to
         // INFORMATIONAL so they report instead of gating. Their verdict is a
         // function of an external version index (or of the calendar), not of the
@@ -1160,8 +1157,9 @@ val scanGitMetadataVocabulary by tasks.registering(ScanGitMetadataVocabularyTask
 
 // Dialog inventory gate.
 //
-// A dialog composed in `:app` cannot be photographed: Roborazzi runs in
-// `:catalog`. That is not theory — `SaveAsPresetDialog` shipped with its
+// A dialog composed in `:app` is not photographed: the design system's baselines are
+// in `:catalog`, and `:app` photographs only a few whole screens, in a translation
+// (`presentation/screenshots/`). That is not theory — `SaveAsPresetDialog` shipped with its
 // selected category chip visually indistinguishable from the unselected ones,
 // and reached a manual device run before anyone noticed, because nothing could
 // compare it against anything.
@@ -1864,6 +1862,11 @@ val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
 verifyBundledDocs { mustRunAfter(syncBundledDocs) }
 tasks.named("check") { dependsOn(verifyBundledDocs) }
 
+// The translated-screen baselines are a gate, as `:catalog`'s are: `check` compares
+// every capture with its committed baseline instead of only rendering it. One
+// variant is enough — both flavours draw the same screens from the same sources.
+tasks.named("check") { dependsOn("verifyRoborazziFullDebug") }
+
 // Public documentation hygiene guard — moved.
 //
 // It used to be registered here with a file set of its own: the repository
@@ -1970,6 +1973,12 @@ tasks.named("check") { dependsOn(verifyLintBaselineOverrides) }
 tasks.withType<Test>().configureEach {
     inputs.dir(rootProject.file("fastlane/metadata"))
         .withPropertyName("storeMetadata")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // The Roborazzi baselines of `presentation/screenshots/` live on no classpath;
+    // without this a replaced baseline leaves the test task UP-TO-DATE and the
+    // verification green (measured in `:catalog`, which declares the same).
+    inputs.dir(layout.projectDirectory.dir("src/test/snapshots"))
+        .withPropertyName("roborazziBaselines")
         .withPathSensitivity(PathSensitivity.RELATIVE)
     // `TopBarInsetGuardTest`, `SnackbarHostGuardTest` and `BoundedTextGuardTest` read the design system's
     // sources as text. A `:catalog` edit usually re-runs this task through the
@@ -2290,6 +2299,14 @@ dependencies {
     // when Clean Architecture layer boundaries regress (e.g. a `domain`
     // class importing `data`/`presentation` or the Android SDK).
     testImplementation(libs.konsist)
+    // Compose under Robolectric and Roborazzi for the translated-screen baselines
+    // in `presentation/screenshots/`, as `:catalog` takes them.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

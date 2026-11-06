@@ -23,9 +23,11 @@ details.
 - **Save a chat straight to a file.** The chat's `⋮` menu and an archived
   chat's row menu now have *Save to file*: the system file picker opens and the
   chat is written where you choose, as the same JSON file *Export chat* shares.
-- **Choose the app's language.** *Settings → About → Language* picks the
-  language of the app's screens, or follows the phone's; your phone's per-app
-  language setting is the same choice. What a model reads stays in English —
+- **The app speaks Russian.** Every screen, the bundled pipelines and prompt
+  templates, the FAQ and the troubleshooting guide are translated.
+  *Settings → About → Language* picks the language of the app's screens, or
+  follows the phone's; your phone's per-app language setting is the same
+  choice. What a model reads stays in English —
   system prompts, tool descriptions and tool results; the lines the app adds to
   a chat, such as a tool call you denied, are written in the app's language.
   The bundled pipelines and prompt templates show their names, descriptions,

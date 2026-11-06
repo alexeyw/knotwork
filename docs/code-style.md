@@ -140,9 +140,10 @@ For the broader layering rationale, see
   resolves once and keeps stays in the old one. Hand the screen a resource id or
   a typed value and resolve it there; text a ViewModel must keep is rebuilt when
   the configuration's locales change (`KeyedCache`).
-- A new string gets its translation in the same change.
-  `TranslationCoverageTest` fails a string missing from a shipped language unless
-  that language's list in `config/l10n/` names it, and the lists only shrink.
+- A new string gets its translation in the same change. Lint's
+  `MissingTranslation`, an error in both modules, fails a string missing from a
+  shipped language; `TranslationCoverageTest` fails a translation that only
+  copies its English unless `config/l10n/identical-<lang>.txt` names it.
 - What a model reads is not translated: system prompts, tool descriptions and
   tool results stay in English, as do the tokens a model's output is matched
   against (route labels, intent classes). The system rows a chat shows (a tool
