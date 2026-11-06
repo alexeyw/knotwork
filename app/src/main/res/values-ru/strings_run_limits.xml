@@ -53,4 +53,26 @@
     <string name="run_outcome_chat_failed">Этот прогон остановился, не успев ответить.</string>
     <string name="run_outcome_chat_cancelled">Этот прогон остановили, прежде чем он успел ответить.</string>
     <string name="run_outcome_chat_interrupted">Этот прогон был прерван и не завершился.</string>
+    <string name="run_limits_entry_label">Лимиты прогона</string>
+    <string name="run_limits_entry_value" tools:ignore="PluralsCandidate">за прогон: шагов %1$,d · токенов %2$,d</string>
+    <string name="run_limits_entry_search">Лимиты одного автономного прогона: шаги, токены и то, что ограничить нельзя.</string>
+    <string name="run_limits_number" tools:ignore="PluralsCandidate">%1$,d</string>
+    <string name="run_limits_intro">Автономный прогон останавливается сам, когда доходит до одного из этих лимитов. В них засчитывается всё, что прогон запускает, — вызываемые пайплайны и каждое продолжение.</string>
+    <string name="run_limits_group_steps">Шаги</string>
+    <string name="run_limits_group_tokens">Токены</string>
+    <string name="run_limits_group_spend">Расходы</string>
+    <string name="run_limits_steps_label">Шагов на прогон</string>
+    <string name="run_limits_steps_desc">Сколько шагов прогон может сделать, прежде чем остановиться. Один шаг — одно выполнение узла.</string>
+    <string name="run_limits_steps_background_label">Шагов на фоновый прогон</string>
+    <string name="run_limits_steps_background_desc_set">Относится к прогонам, которые запустили не вы: триггер, расписание, плитка быстрых настроек или другое приложение.</string>
+    <string name="run_limits_steps_background_desc_inherited">Отдельно не задано, поэтому прогоны, которые запустили не вы (триггер, расписание, плитка быстрых настроек или другое приложение), используют тот же лимит, что выше.</string>
+    <string name="run_limits_tokens_label">Токенов на прогон</string>
+    <string name="run_limits_tokens_desc">Сколько токенов прогон может отправить и получить в сумме.</string>
+    <string name="run_limits_tokens_background_label">Токенов на фоновый прогон</string>
+    <string name="run_limits_tokens_background_desc">Прогонам, которые запустили не вы, по умолчанию дан меньший лимит токенов: никто не следит, как они завершаются.</string>
+    <string name="run_limits_qualifier_inherited">Как выше</string>
+    <string name="run_limits_spend_label">Лимит расходов</string>
+    <string name="run_limits_spend_state">Не измеряется</string>
+    <string name="run_limits_spend_body">Приложение работает на вашем собственном API-ключе, поэтому не видит ваш счёт и не может измерить или ограничить стоимость прогона. Ближе всего к этому — лимит токенов выше.</string>
+    <string name="run_limits_soft_note" formatted="false">Прогон в открытом чате предупреждает, когда проходит 75% лимита, пока ещё есть запас, чтобы закончить. Порог предупреждения не настраивается, а прогон, продолженный после паузы, может предупредить снова.</string>
 </resources>

@@ -78,7 +78,7 @@
     <string name="run_limits_spend_state">Not measured</string>
     <string name="run_limits_spend_body">The app runs on your own API key, so it never sees your bill and cannot measure or cap what a run costs. The token limit above is the closest control.</string>
 
-    <string name="run_limits_soft_note">A run in an open chat warns you when it passes 75% of a limit, while there is still room to finish. The warning point is not adjustable, and a run that resumes after a pause may warn again.</string>
+    <string name="run_limits_soft_note" formatted="false">A run in an open chat warns you when it passes 75% of a limit, while there is still room to finish. The warning point is not adjustable, and a run that resumes after a pause may warn again.</string>
 
 
     <!-- ─── Surface B · why a run stopped, all eight typed reasons ────── -->
