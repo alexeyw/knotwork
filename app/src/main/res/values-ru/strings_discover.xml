@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="discover_error_network">Не удаётся связаться с Hugging Face. Проверьте подключение и повторите.</string>
+    <string name="discover_detail_load_error">Не удалось загрузить сведения об этой модели.</string>
+    <string name="discover_install_success">Установлена %1$s</string>
+    <string name="discover_install_gated">Доступ к этой модели ограничен. Примите её лицензию на Hugging Face, добавьте токен и повторите.</string>
+    <string name="discover_install_failed">Загрузка не удалась. Проверьте подключение и повторите.</string>
+</resources>

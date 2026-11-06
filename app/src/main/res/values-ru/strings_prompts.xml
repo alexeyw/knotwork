@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="prompts_screen_title">Библиотека промптов</string>
+    <string name="prompts_subtitle_format" tools:ignore="PluralsCandidate">категорий: %1$d · промптов: %2$d</string>
+    <string name="prompts_back_cd">Назад</string>
+    <string name="prompts_fab_cd">Добавить промпт</string>
+    <string name="prompts_edit_cd">Изменить промпт</string>
+    <string name="prompts_delete_cd">Удалить промпт</string>
+    <string name="prompts_preview_cd">Посмотреть промпт</string>
+    <string name="prompts_used_by_format" tools:ignore="PluralsCandidate">используется в пайплайнах: %1$d</string>
+    <string name="prompts_duplicate_cd">Создать копию промпта</string>
+    <string name="prompts_more_cd">Другие действия</string>
+    <string name="prompts_empty_title">Промптов пока нет</string>
+    <string name="prompts_empty_subtitle">Импортируйте промпт из файла Markdown или напишите с нуля.</string>
+    <string name="prompts_empty_import_cta">Импортировать промпт</string>
+    <string name="prompts_empty_new_cta">Новый промпт</string>
+    <string name="prompts_empty_category_title">Здесь пока пусто</string>
+    <string name="prompts_empty_category_subtitle">Здесь появляются промпты для этого типа шага. Импортируйте промпт или нажмите +, чтобы написать.</string>
+    <string name="prompts_error_title">Не удалось загрузить промпты</string>
+    <string name="prompts_import_cd">Импортировать промпт из файла</string>
+    <string name="prompts_export_cd_format">Экспортировать «%1$s» в файл</string>
+    <string name="prompts_action_export">Экспортировать</string>
+    <string name="prompts_action_delete">Удалить</string>
+    <string name="prompts_import_success_format">Промпт «%1$s» импортирован в раздел %2$s.</string>
+    <string name="prompts_import_success_action">Показать</string>
+    <string name="prompts_export_success_format">Промпт «%1$s» экспортирован.</string>
+    <string name="prompts_import_unchanged_format">Промпт «%1$s» уже есть в библиотеке — ничего не изменилось.</string>
+    <string name="prompts_import_unreadable">Не удалось прочитать файл.</string>
+    <string name="prompts_export_unwritable">Не удалось сохранить файл.</string>
+    <string name="prompts_import_left_out_heading">НЕ ВОШЛО</string>
+    <plurals name="prompts_import_left_out_more">
+        <item quantity="one">и ещё %1$d</item>
+        <item quantity="few">и ещё %1$d</item>
+        <item quantity="many">и ещё %1$d</item>
+        <item quantity="other">и ещё %1$d</item>
+    </plurals>
+    <string name="prompts_import_mismatch_title">Импортировано без части настроек</string>
+    <string name="prompts_import_mismatch_body_format">Промпт «%1$s» записан другой версией приложения. Текст промпта перенесён, эти настройки — нет.</string>
+    <string name="prompts_import_unknown_keys_body_format">Промпт «%1$s» добавлен в библиотеку. Некоторые настройки в файле этому приложению неизвестны, поэтому они пропущены.</string>
+    <string name="prompts_import_refused_title">Импортировано только как текст</string>
+    <string name="prompts_import_refused_body_format">Промпт «%1$s» добавлен в библиотеку. Файл также просил добавить %2$s — но промпт задаёт только формулировку, поэтому эта часть пропущена.</string>
+    <string name="prompts_import_refused_asked_tools">инструменты</string>
+    <string name="prompts_import_refused_asked_steps">шаги</string>
+    <string name="prompts_import_refused_asked_scripts">скрипты</string>
+    <string name="prompts_import_refused_tools_format">Инструменты: %1$s</string>
+    <string name="prompts_import_refused_steps_format" tools:ignore="PluralsCandidate">Шаги: %1$d</string>
+    <string name="prompts_import_refused_scripts_format" tools:ignore="PluralsCandidate">Скрипты: %1$d</string>
+    <string name="prompts_import_version_left_out_format">Версия: %1$d</string>
+    <string name="prompts_import_failed_title">Ничего не импортировано</string>
+    <string name="prompts_import_failed_frontmatter">Блок настроек в начале файла отсутствует или неполный. Он должен стоять между двумя строками из трёх дефисов.</string>
+    <string name="prompts_import_failed_duplicate_key">В блоке настроек в начале файла одна и та же настройка названа дважды, поэтому непонятно, какую вы имели в виду.</string>
+    <string name="prompts_import_failed_missing_key_format">В файле не хватает нужного: %1$s.</string>
+    <string name="prompts_import_failed_no_prompt">В файле есть имя, но нет текста промпта, поэтому сохранять нечего.</string>
+    <string name="prompts_import_failed_unknown_type_format">Файл предназначен для типа шага, которого в этом приложении нет: %1$s.</string>
+    <string name="prompts_import_failed_not_llm_format">Промпты относятся к шагам, которые вызывают модель. Этот файл — для %1$s, а этот шаг модель не вызывает.</string>
+    <string name="prompts_import_failed_name_too_long_format" tools:ignore="PluralsCandidate">Имя в файле длиннее %1$d символов.</string>
+    <string name="prompts_import_failed_prompt_too_long_format" tools:ignore="PluralsCandidate">Промпт в файле длиннее %1$d символов.</string>
+    <string name="prompts_import_collision_title_format">«%1$s» уже есть в вашей библиотеке</string>
+    <string name="prompts_import_collision_body">Файл и сохранённый промпт различаются. «Оставить оба» сохранит файл как отдельный промпт.</string>
+    <string name="prompts_import_collision_replace">Заменить</string>
+    <string name="prompts_import_collision_keep_both">Оставить оба</string>
+    <string name="prompts_editor_title_new">Новый промпт</string>
+    <string name="prompts_editor_title_edit">Изменить промпт</string>
+    <string name="prompts_editor_name_label">НАЗВАНИЕ</string>
+    <string name="prompts_editor_name_placeholder">Без названия</string>
+    <string name="prompts_editor_category_label">РАЗДЕЛ (ТИП УЗЛА)</string>
+    <string name="prompts_editor_category_placeholder">DECOMPOSITION</string>
+    <string name="prompts_editor_body_label">ТЕКСТ ПРОМПТА</string>
+    <string name="prompts_editor_body_placeholder">Напишите промпт здесь…</string>
+    <string name="prompts_editor_insert_label">ВСТАВИТЬ</string>
+    <string name="prompts_editor_category_invalid">Выберите тип узла, который работает с моделью (LITE_RT, CLOUD, OUTPUT, SUMMARY, INTENT_ROUTER, DECOMPOSITION, EVALUATION, CLARIFICATION).</string>
+    <string name="prompts_editor_footer_format" tools:ignore="PluralsCandidate">Используется в пайплайнах: %1$d · изменения применятся при следующем прогоне</string>
+    <string name="prompts_editor_close_cd">Закрыть редактор</string>
+</resources>

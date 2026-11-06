@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Model capabilities and the Performance card. -->
     <string name="models_vision_label">Поддержка изображений</string>
     <string name="models_vision_description">Модель сможет читать прикреплённые фото</string>
@@ -41,4 +41,36 @@
     <string name="model_download_failed_not_moved">Не удалось переместить загруженный файл на место.</string>
     <string name="model_download_failed_http">Сервер вернул код %1$d</string>
     <string name="model_download_failed_unknown">Неизвестная ошибка загрузки</string>
+    <string name="models_screen_title">Модели</string>
+    <string name="models_error_unknown">Произошла неизвестная ошибка</string>
+    <string name="models_meta_verified">Проверена</string>
+    <string name="models_meta_not_verified">Не проверена</string>
+    <string name="models_interrupted_continue">Продолжить</string>
+    <string name="models_error_link_not_litertlm">Эта ссылка ведёт не на файл .litertlm. На телефоне работают только модели .litertlm.</string>
+    <string name="models_subtitle_format" tools:ignore="PluralsCandidate">активна: %1$d · на диске: %2$d · %3$s</string>
+    <string name="models_section_hf">HUGGINGFACE</string>
+    <string name="models_section_hf_optional">необязательно</string>
+    <string name="models_field_hf_placeholder">Нажмите, чтобы вставить токен hf_…</string>
+    <string name="models_action_paste">+ Вставить</string>
+    <string name="models_section_custom_url">СВОЙ URL МОДЕЛИ</string>
+    <string name="models_field_url_placeholder">https://huggingface.co/…/model.litertlm</string>
+    <string name="models_action_get">Скачать</string>
+    <string name="models_hint_formats">только .litertlm</string>
+    <string name="models_section_available_presets">ДОСТУПНЫЕ МОДЕЛИ</string>
+    <string name="models_preset_get">Скачать</string>
+    <string name="models_preset_activate">Сделать активной</string>
+    <string name="models_preset_delete">Удалить</string>
+    <string name="models_preset_cancel_cd">Отменить загрузку</string>
+    <string name="models_row_menu_cd">Действия с моделью</string>
+    <string name="models_section_downloaded_v2">ЗАГРУЖЕННЫЕ МОДЕЛИ</string>
+    <string name="models_custom_download_label">Загрузка своей модели…</string>
+    <string name="models_active_badge">АКТИВНА</string>
+    <string name="models_empty_title">Модели не установлены</string>
+    <string name="models_empty_subtitle">Добавьте модель из списка или вставьте свой URL.</string>
+    <string name="models_empty_cta">Добавить модель</string>
+    <string name="models_error_title">Не удалось загрузить модели</string>
+    <string name="models_overflow_cd">Другие действия</string>
+    <string name="models_discover_cd">Каталог моделей</string>
+    <string name="models_benchmark_failed">Не удалось провести замер</string>
+    <string name="models_benchmark_share_subject">Замер модели</string>
 </resources>

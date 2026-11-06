@@ -19,3 +19,12 @@ app:string/settings_memory_export_filename	# file name
 app:string/settings_usage_export_filename	# file name
 app:string/settings_search_name_top_k	# sampling parameter name
 app:string/settings_search_name_top_p	# sampling parameter name
+catalog:string/knotwork_tools_add_form_placeholder	# example address
+catalog:string/knotwork_tools_detail_schema	# format name
+catalog:string/knotwork_tools_form_header_key_placeholder	# HTTP header name
+catalog:string/knotwork_tools_form_header_value_placeholder	# HTTP scheme name
+catalog:string/knotwork_onboarding_brand_title	# brand name
+catalog:string/knotwork_onboarding_models_custom_url_placeholder	# example address
+app:string/models_section_hf	# brand name
+app:string/models_field_url_placeholder	# example address
+app:string/prompts_editor_category_placeholder	# node type code
