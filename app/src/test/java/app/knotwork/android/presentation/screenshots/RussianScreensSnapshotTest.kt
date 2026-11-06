@@ -7,7 +7,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Density
+import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.AgentMetrics
+import app.knotwork.android.domain.models.Identity
 import app.knotwork.android.domain.models.LocalModel
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemorySource
@@ -103,7 +105,7 @@ class RussianScreensSnapshotTest {
     @Test
     fun settings_hub() = snapshot("settings_hub") {
         SettingsHubContent(
-            state = buildHubViewState(SettingsUiState()).copy(
+            state = buildHubViewState(SETTINGS).copy(
                 subtitleVersion = FIXED_VERSION,
                 subtitleChannel = FIXED_CHANNEL,
                 subtitleBuildDate = FIXED_BUILD_DATE,
@@ -113,17 +115,17 @@ class RussianScreensSnapshotTest {
 
     @Test
     fun settings_tools() = snapshot("settings_tools") {
-        ToolsSettingsContent(state = buildToolsViewState(SettingsUiState()))
+        ToolsSettingsContent(state = buildToolsViewState(SETTINGS))
     }
 
     @Test
     fun settings_generation() = snapshot("settings_generation") {
-        GenerationSettingsContent(state = buildGenerationViewState(SettingsUiState(), LocalContext.current))
+        GenerationSettingsContent(state = buildGenerationViewState(SETTINGS, LocalContext.current))
     }
 
     @Test
     fun settings_about() = snapshot("settings_about") {
-        val state = SettingsUiState(appLanguage = "ru", supportedLanguages = listOf("en", "ru"))
+        val state = SETTINGS.copy(appLanguage = "ru", supportedLanguages = listOf("en", "ru"))
         AboutSettingsContent(
             state = buildAboutViewState(state, LocalContext.current).copy(
                 versionLine = "v$FIXED_VERSION · $FIXED_CHANNEL · $FIXED_BUILD_DATE",
@@ -168,7 +170,7 @@ class RussianScreensSnapshotTest {
     @Test
     fun help() = snapshot("help") {
         HelpListContent(
-            state = helpListViewState(HelpUiState(), alternativeId = null),
+            state = helpListViewState(HelpUiState(documents = HELP_DOCUMENTS), alternativeId = null),
             strings = helpStrings(),
             callbacks = HelpListCallbacks(),
         )
@@ -295,6 +297,21 @@ class RussianScreensSnapshotTest {
     }
 
     private companion object {
+        /**
+         * Settings as a running app has them: the identity is loaded (without it the
+         * screens show their loading placeholders, which no translation reaches).
+         */
+        val SETTINGS = SettingsUiState(
+            identity = Identity(displayName = "Anonymous", deviceId = "a1b2c3d4", keystoreAvailable = true),
+        )
+
+        /**
+         * The Help list's documents with fixed sizes. The real registry is generated from
+         * `docs/`, and its line and section counts would make a documentation edit change
+         * this baseline.
+         */
+        val HELP_DOCUMENTS = DocumentationLinks.DOCUMENTS.map { it.copy(lineCount = 500, sectionCount = 10) }
+
         const val FONT_SCALE = 2f
         const val CHAT_ID = "chat-1"
         const val FIXED_VERSION = "0.14.0"

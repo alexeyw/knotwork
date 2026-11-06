@@ -616,10 +616,10 @@
         <item quantity="other">%1$d совпадения</item>
     </plurals>
     <string name="knotwork_memory_title">Память</string>
-    <string name="knotwork_memory_subtitle">ДОЛГАЯ · ВЕКТОРНАЯ БАЗА</string>
+    <string name="knotwork_memory_subtitle">ВЕКТОРНАЯ БАЗА</string>
     <string name="knotwork_memory_overflow_cd">Другие действия</string>
     <string name="knotwork_memory_export_all">Экспортировать память</string>
-    <string name="knotwork_memory_add_memory">Добавить воспоминание</string>
+    <string name="knotwork_memory_add_memory">Запомнить</string>
     <string name="knotwork_memory_count_unit">в памяти</string>
     <string name="knotwork_memory_compact">Сжать</string>
     <string name="knotwork_memory_search_placeholder">Поиск по памяти</string>

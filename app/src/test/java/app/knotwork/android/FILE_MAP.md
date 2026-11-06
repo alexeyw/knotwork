@@ -72,7 +72,7 @@ Only Kotlin files appear inside the generated blocks.
   - `TopBarInsetGuardTest.kt` - Structural guard: **a bar at the top of a screen applies the status-bar inset, or a named parent applies it for it.**
   - `TranscriptJoinKonsistTest.kt` - Census of the idiom that let stored content forge a turn of its own inside a prompt: a speaker label and a message body spliced into one string template, `"${message.role.name}: ${message.content}"`.
   - `TransientCacheDirectoryGuardTest.kt` - Every directory the app creates under its cache is an entry of `TransientCacheDirectory` — and therefore swept by the daily maintenance pass.
-  - `TranslationCoverageTest.kt` - Every string the interface shows exists in every language the app ships — or is named, one by one, on that language's untranslated list.
+  - `TranslationCoverageTest.kt` - The languages the app ships hold together: every module translates the same ones, the build ships exactly those, and a translation is a translation.
   - `UsageTelemetryNoNetworkKonsistTest.kt` - Konsist guard enforcing the core privacy promise of the local usage-telemetry feature: **nothing on the telemetry path may make a network call.**
   - `VerificationToolIsolationKonsistTest.kt` - The check of a past run cannot run a tool.
   - `WorkspaceToolsDocumentedTest.kt` - Pins the three places that enumerate the tools able to read and write the agent's workspace to the tools that actually can.

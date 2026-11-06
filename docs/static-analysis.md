@@ -70,6 +70,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest` (`ShippedPipelineLayoutTest`) | Fails if two node cards overlap in a bundled pipeline preset or a cookbook recipe (see below). |
 | `:app:testFullDebugUnitTest` (`GoldenTraceTest`, `GoldenTraceCatalogueTest`) | Fails if running a bundled preset, a cookbook recipe or a test fixture through the real engine produces a trace that differs from its committed golden file, or a pipeline file, a node type or a golden file falls out of the catalogue (see below). |
 | `:catalog:verifyRoborazziDebug`               | Fails if a design-system screenshot differs from its committed baseline (see below). |
+| `:app:verifyRoborazziFullDebug`               | Fails if a screenshot of an app screen in a translation differs from its committed baseline (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
 safely-correctable subset before invoking `check`.
@@ -522,7 +523,7 @@ flag them with spurious, environment-dependent violations.
 | `TranslationCoverageTest`          | The build's `localeFilters` names exactly the default language plus every language with a `values-<lang>` folder, in both modules alike; the default resources are English, the language the picker puts first; the app bundle keeps every language in every install (`bundle.language.enableSplit = false` — Play installs languages by the system's, and the in-app picker chooses its own); a translation equal to its English text fails unless `config/l10n/identical-<lang>.txt` names it; each language's `interface_language_tag` names that language (it picks the bundled presets' translation); and every shipped language has the bundled help documents translated (`app/src/main/assets/docs/<lang>/index.json`). That every string exists in every language is lint's `MissingTranslation`, an error in both modules; while the first translation landed it was off and this test held a shrinking list of the strings still missing, deleted with its last entry. |
 | `DisplayedLiteralGuardTest`        | Interface text comes from string resources. A string literal that reads like words (two words with a space, or one capitalised word) in `:app`'s `presentation` or `data/services`, or in `:catalog` without its showcase, fails unless `config/l10n/displayed-literals.txt` names it; arguments of calls that never show text (logging, preconditions, exceptions, test tags, patterns, intents), URLs, date patterns and a catalog class's constructor defaults are left out. The list only shrinks. A sentence written into code shows in English in every language — about 300 did when the interface was first translated. A single lowercase word ("untitled") or a count with one word ("$n nodes") looks like a key or a route to a text census and is not counted; review finds those. |
 | `CatalogStringsWiringTest`         | Every English default a `:catalog` class gives a `String` constructor parameter (`val title: String = "Performance"`) is passed from a resource by some call of that constructor in `:app` or `:catalog`, or named in `config/l10n/unwired-strings.txt`, which only shrinks. The defaults keep previews free of resources; one the app never replaces ships in English in every language — the Models screen's Performance card kept 21 such defaults, because `:app` never built `PerformanceStrings`. |
-| `ComposeTestRuleV2GuardTest`       | No instrumented test builds its Compose rule with a deprecated v1 factory (`junit4.createComposeRule` and the rest); the v2 ones run the composition's coroutines on a `StandardTestDispatcher`, as `runTest` does. A twin in `:catalog` holds its screenshot tests to the same rule. |
+| `ComposeTestRuleV2GuardTest`       | No instrumented test, and no JVM Compose test of `:app` (`presentation/screenshots/`), builds its Compose rule with a deprecated v1 factory (`junit4.createComposeRule` and the rest); the v2 ones run the composition's coroutines on a `StandardTestDispatcher`, as `runTest` does. A twin in `:catalog` holds its screenshot tests to the same rule. |
 | `InstrumentedTestExclusionGuardTest` | The roster of device-only instrumented tests, and the annotation the emulator workflow excludes by, stay in step. |
 | `FdroidSigningStripGuardTest`      | The release signing assignment in `app/build.gradle.kts` keeps a shape F-Droid's build server removes whole. Before building, fdroidserver strips signing configuration line by line; the test runs a port of its rules over the real script and fails when a signing assignment survives — F-Droid's release build would come out debug-signed — or when a kept line continues a statement whose first line was removed, as the two-line `findByName("release") ?: getByName("debug")` did, its second half gluing onto the line above. Fixtures show the port reproduces both. |
 | `ArchitectureGuardsDocumentedTest` | Every test class of this suite is named in this guide — as a row of this table or in the heading of its own section — and every row names a test that exists. Seventeen rows were once missing at the same time, each found by hand. |
@@ -851,7 +852,32 @@ and commit them with the change that caused them. On a CI failure the diffs are
 uploaded as the `roborazzi-report` artefact.
 
 **What it cannot see:** anything Robolectric does not render — system insets
-above all (see the top-bar inset guard) — and screens outside `:catalog`.
+above all (see the top-bar inset guard) — and screens outside `:catalog`, but
+for the few `:app` photographs in a translation below.
+
+### App screens in a translation (`:app:verifyRoborazziFullDebug`)
+
+The catalog's screens show the design system's own words; most of what a screen
+says comes from `:app`. A translation therefore only shows whole where the app
+draws the screen, and a translation is where a label outgrows its English and
+erases the text beside it. `app/src/test/…/presentation/screenshots/` captures ten
+app screens in Russian at font scale 200 % in the light theme, each drawn by the
+screen's own state builder or `…ScreenContent` from a hand-made state, without
+its ViewModel (whose repositories open a database Robolectric cannot load). Build
+information, the clock, the time zone and the Help list's document sizes are
+fixed, so a baseline changes only when a screen does. The baselines
+(`app/src/test/snapshots/`) are a declared test input, `check` runs the
+verification, and `AppSnapshotOptionsGuardTest` holds every capture to
+`AppRoborazziOptions` — the catalog's tolerance, repeated because test sources are
+not shared between modules.
+
+Re-record with `./gradlew :app:recordRoborazziFullDebug --tests '*RussianScreensSnapshotTest*'`,
+look at the PNGs, and commit them with the change that caused them. A change to a
+catalog component or to a translated string can need both modules re-recorded.
+Before calling a break in a render a translation defect, render the same screen in
+English at the same scale: several screens break at 200 % in English as well. One
+cost: the Roborazzi plugin makes the verify mode an input of the test task, so a
+local `testFullDebugUnitTest` run is not reused by `check`.
 
 ### Observed failing
 
@@ -2470,7 +2496,7 @@ is not.**
   plugins, and the instrumented suite failed verification on CI. The census now
   comes from a bootstrap dry run, which resolves every resolvable configuration,
   and each configuration was then resolved in strict mode.
-- **Unsigned artifacts are pinned by SHA-256**, per version (145 files) — part of
+- **Unsigned artifacts are pinned by SHA-256**, per version (155 files) — part of
   Firebase's transitive graph and older `androidx` releases, for example, are
   published without a signature.
 - **The keys are committed** (`gradle/verification-keyring.keys`, armored) **and

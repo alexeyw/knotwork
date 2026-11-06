@@ -231,9 +231,9 @@ does, so such a coroutine runs when the test lets the clock move. A gesture
 themselves; before a non-Compose assertion — a MockK `verify`, a captured
 value — that follows a semantics action such as `performTextInput`, call
 `waitForIdle()` or assert inside `runOnIdle { }`. Every instrumented test and
-every `:catalog` test is on v2. `ComposeTestRuleV2GuardTest` — one in `:app` over
-`src/androidTest`, one in `:catalog` over its tests — fails a v1 factory,
-imported or written out.
+every Compose test of `:app` and `:catalog` is on v2. `ComposeTestRuleV2GuardTest`
+— one in `:app` over `src/androidTest` and `src/test`, one in `:catalog` over its
+tests — fails a v1 factory, imported or written out.
 
 ### Naming
 

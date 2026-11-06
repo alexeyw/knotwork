@@ -31,7 +31,6 @@ import app.knotwork.design.screens.taskmonitor.TaskRowStatus
  * [TaskMonitorViewModel.uiState] and renders [TaskMonitorContent] with an
  * optional row-detail `ModalBottomSheet`.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskMonitorScreen(
     viewModel: TaskMonitorViewModel,
