@@ -257,6 +257,10 @@ Before requesting review, please confirm:
       was run — the Help screen shows each document's size, so a changed line
       count is drift — and, when `docs/faq.md` or `docs/troubleshooting.md`
       changed, `./gradlew :app:syncBundledDocs`, with both results committed.
+      Those two are also translated, in `app/src/main/assets/docs/<language>/`;
+      the change updates each translation and the hash on its first line
+      (`verifyBundledDocs` prints the line). If you cannot write the
+      translation, say so in the PR and the maintainer will.
 - [ ] `./gradlew :app:generateFileMap` was run and its result committed
       when Kotlin files or directories were added, moved, or removed. The
       task also owns the `catalog/` and test maps; the root `FILE_MAP.md`

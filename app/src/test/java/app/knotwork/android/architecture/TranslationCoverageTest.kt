@@ -40,6 +40,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  *   would otherwise find nothing to show in a Play install.
  * - Each language's `interface_language_tag` is that language: it is how the
  *   app learns which translation the screens show.
+ * - Each language has the bundled help documents translated, with their index.
  * - A translation keeps the spaces at the edges of its English text: the
  *   resource compiler trims them unless the value is quoted.
  * - A translation that equals its English text is a copy, not a translation,
@@ -103,6 +104,21 @@ class TranslationCoverageTest {
         }
 
         assertEquals(tags.keys.associateWith { it }, tags)
+    }
+
+    @Test
+    fun `every shipped language reads the bundled documents in that language`() {
+        // `verifyBundledDocs` checks each translation it finds; this is what makes
+        // finding one per language a requirement rather than a possibility.
+        val missing = shippedLanguages().filterNot { language ->
+            File(moduleRoot("app"), "src/main/assets/docs/$language/index.json").isFile
+        }
+
+        assertTrue(
+            "no translated help documents for $missing — translate docs/faq.md and docs/troubleshooting.md into " +
+                "app/src/main/assets/docs/<language>/ and run ./gradlew :app:syncBundledDocs",
+            missing.isEmpty(),
+        )
     }
 
     @Test

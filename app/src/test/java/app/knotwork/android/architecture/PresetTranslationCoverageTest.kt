@@ -159,8 +159,8 @@ class PresetTranslationCoverageTest {
                     preset.graph.nodes.forEach { node ->
                         val exported = node.configJson?.let { JSONObject(it).optString("title") }
                         if (exported != null && exported != node.label) {
-                            add("${preset.id} node ${node.id}: titled \"${node.label}\", but an export would show " +
-                                "the browser editor \"$exported\"")
+                            val where = "${preset.id} node ${node.id}"
+                            add("$where: titled \"${node.label}\", but an export shows the browser \"$exported\"")
                         }
                         val peers = titles.filterKeys { it != node.id }.values.toSet()
                         val errors = NodeConfigValidation.validate(NodeConfigCodec.decode(node), peers)

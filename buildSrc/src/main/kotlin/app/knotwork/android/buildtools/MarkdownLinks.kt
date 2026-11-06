@@ -296,6 +296,20 @@ object MarkdownLinks {
     }
 
     /**
+     * Finds the lines that are headings.
+     *
+     * Read from the masked text, as [anchorsOf] reads them, so a `#` line inside
+     * a fenced block or a comment is not a heading here either.
+     *
+     * @param markdown The document's full text.
+     * @return 0-indexed lines that open a heading with a non-empty slug, in order.
+     */
+    fun headingLineIndices(markdown: String): List<Int> =
+        maskedLines(markdown, maskCodeSpans = false).mapIndexedNotNull { index, line ->
+            index.takeIf { headingSlugOf(line) != null }
+        }
+
+    /**
      * Counts the lines of a document.
      *
      * @param markdown The document's full text.

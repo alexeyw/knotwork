@@ -294,7 +294,7 @@
     <string name="help_back">Назад</string>
     <string name="help_dismiss">Закрыть</string>
     <string name="help_state_on_device">на этом устройстве · %1$s</string>
-    <string name="help_state_in_browser">открывается в браузере · %1$s</string>
+    <string name="help_state_in_browser">в браузере, на английском · %1$s</string>
     <string name="help_measure_problems">проблем: %1$s</string>
     <string name="help_measure_sections">разделов: %1$s</string>
     <string name="help_measure_lines">строк: %1$s</string>
@@ -314,7 +314,7 @@
     <string name="help_offline_copy">Скопировать ссылку</string>
     <string name="help_offline_alternative">Открыть «Решение проблем»</string>
     <string name="help_offline_bar">Эта ссылка ведёт в интернет. Сейчас сети нет.</string>
-    <string name="help_reader_action">Открыть в браузере</string>
+    <string name="help_reader_action">Открыть английский оригинал в браузере</string>
     <string name="help_reader_loading">читаем с устройства</string>
     <string name="help_reader_anchor">вы здесь</string>
     <string name="help_reader_error_title">Эта копия не открылась.</string>

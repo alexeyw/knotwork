@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.help
 
 import androidx.test.platform.app.InstrumentationRegistry
+import app.knotwork.android.data.repositories.AppLanguageRepositoryImpl
 import app.knotwork.android.data.repositories.AssetBundledDocumentationRepository
 import app.knotwork.android.domain.models.DocumentationTarget
 import app.knotwork.android.domain.usecases.ResolveDocumentationLinkUseCase
@@ -31,8 +32,9 @@ import org.junit.Test
  */
 class HelpReaderNavigationTest {
 
-    private val repository =
-        AssetBundledDocumentationRepository(InstrumentationRegistry.getInstrumentation().targetContext)
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    private val repository = AssetBundledDocumentationRepository(context, AppLanguageRepositoryImpl(context))
 
     // Constructed directly rather than injected: it has no dependencies, and a
     // Hilt test rule here would buy nothing but a longer setup.

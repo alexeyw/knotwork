@@ -30,7 +30,9 @@ details.
   a chat, such as a tool call you denied, are written in the app's language.
   The bundled pipelines and prompt templates show their names, descriptions,
   node titles, starter prompts and tags in the app's language too; a pipeline
-  made from one keeps the words it was made with.
+  made from one keeps the words it was made with. *Help* opens the FAQ and the
+  troubleshooting guide in the app's language; the documents that open in the
+  browser are in English, and the Help screen says so.
 
 ### Changed
 

@@ -559,7 +559,7 @@
         <item quantity="many">отключено: %1$d</item>
         <item quantity="other">отключено: %1$d</item>
     </plurals>
-    <string name="knotwork_tools_docs_cd">Прочитать о MCP-серверах</string>
+    <string name="knotwork_tools_docs_cd">Прочитать о MCP-серверах (на английском)</string>
     <string name="knotwork_tools_add_mcp_cd">Добавить MCP-сервер</string>
     <string name="knotwork_tools_empty_mcp_title">Серверов пока нет</string>
     <string name="knotwork_tools_empty_mcp_body">MCP-сервер добавляет инструменты, которые агент может вызывать, — веб-поиск, файлы, командную строку.</string>

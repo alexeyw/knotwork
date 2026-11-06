@@ -132,19 +132,53 @@ object BundledDocs {
      * @param documents Repository-relative path to full text.
      * @return The complete JSON text, ending in a newline.
      */
-    fun renderIndex(documents: Map<String, String>): String = buildString {
+    fun renderIndex(documents: Map<String, String>): String = renderIndexOf(
+        bundledDocuments().map { entry ->
+            val markdown = documents.getValue(entry.path)
+            IndexEntry(
+                id = entry.id,
+                path = entry.path,
+                asset = assetPathOf(entry.path),
+                anchors = MarkdownLinks.anchorOffsets(markdown),
+                links = resolvedLinksOf(entry.path, markdown),
+            )
+        },
+    )
+
+    /**
+     * One document as the index describes it.
+     *
+     * @property id Registry id.
+     * @property path Repository-relative path of the English source.
+     * @property asset Path of the text the reader shows, under `assets`.
+     * @property anchors Anchor to the offset of its heading in that text.
+     * @property links Raw link target in that text to its resolved meaning.
+     */
+    data class IndexEntry(
+        val id: String,
+        val path: String,
+        val asset: String,
+        val anchors: Map<String, Int>,
+        val links: Map<String, Target>,
+    )
+
+    /**
+     * Renders an index of [entries] — the English one, or a translation's.
+     *
+     * @param entries The documents, in registry order.
+     * @return The complete JSON text, ending in a newline.
+     */
+    fun renderIndexOf(entries: List<IndexEntry>): String = buildString {
         appendLine("{")
         appendLine("""  "formatVersion": $INDEX_FORMAT_VERSION,""")
         appendLine("""  "documents": [""")
-        val entries = bundledDocuments()
         entries.forEachIndexed { index, entry ->
-            val markdown = documents.getValue(entry.path)
             appendLine("    {")
             appendLine("""      "id": ${quote(entry.id)},""")
             appendLine("""      "path": ${quote(entry.path)},""")
-            appendLine("""      "asset": ${quote(assetPathOf(entry.path))},""")
-            appendObject("anchors", MarkdownLinks.anchorOffsets(markdown), trailingComma = true) { it.toString() }
-            appendObject("links", resolvedLinksOf(entry.path, markdown), trailingComma = false) { renderTarget(it) }
+            appendLine("""      "asset": ${quote(entry.asset)},""")
+            appendObject("anchors", entry.anchors, trailingComma = true) { it.toString() }
+            appendObject("links", entry.links, trailingComma = false) { renderTarget(it) }
             appendLine("    }${if (index == entries.lastIndex) "" else ","}")
         }
         appendLine("  ]")
@@ -210,7 +244,7 @@ object BundledDocs {
      * @param markdown The document's full text.
      * @return One line per unsupported construct found.
      */
-    private fun unsupportedConstructsIn(path: String, markdown: String): List<String> {
+    internal fun unsupportedConstructsIn(path: String, markdown: String): List<String> {
         val violations = mutableListOf<String>()
         MarkdownLinks.mermaidBlockLines(markdown).forEach { line ->
             violations += "`$path:$line` opens a Mermaid block. The in-app renderer draws no diagrams, so it " +
@@ -277,7 +311,7 @@ object BundledDocs {
      * @param anchor The anchor the link names, or `null`/empty for the top.
      * @return The violation, or `null` when the link resolves.
      */
-    private fun anchorViolation(
+    internal fun anchorViolation(
         where: String,
         target: String,
         targetPath: String,

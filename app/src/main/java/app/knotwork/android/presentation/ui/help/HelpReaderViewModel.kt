@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.domain.models.BundledDocument
 import app.knotwork.android.domain.models.DocumentationTarget
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.BundledDocumentationRepository
 import app.knotwork.android.domain.repositories.NetworkStateRepository
 import app.knotwork.android.domain.usecases.ResolveDocumentationLinkUseCase
@@ -13,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -77,6 +79,8 @@ data class HelpReaderUiState(
  * @property repository Source of the bundled text and its index.
  * @property resolveLink Looks a tapped target up in the index.
  * @property networkState Repository the connectivity check reads from.
+ * @property appLanguage The language the interface is shown in; the document is
+ *   read again in a new one.
  * @property savedStateHandle Carries the document id and the optional anchor.
  */
 @HiltViewModel
@@ -84,6 +88,7 @@ class HelpReaderViewModel @Inject constructor(
     private val repository: BundledDocumentationRepository,
     private val resolveLink: ResolveDocumentationLinkUseCase,
     private val networkState: NetworkStateRepository,
+    private val appLanguage: AppLanguageRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -103,6 +108,9 @@ class HelpReaderViewModel @Inject constructor(
 
     init {
         load()
+        // A change of language re-creates the screen but not this ViewModel, which
+        // would go on showing the text it read in the old one.
+        viewModelScope.launch { appLanguage.interfaceLanguage.drop(1).collect { load() } }
     }
 
     /** Reads the document and resolves the arrival anchor. */

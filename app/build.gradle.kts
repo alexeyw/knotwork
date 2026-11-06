@@ -1836,12 +1836,18 @@ val bundledDocsSources: FileCollection = files(
 
 val bundledDocsAssetDirectory = layout.projectDirectory.dir("src/main/assets/docs")
 
+// The hand-written translations of the bundled documents, one directory per
+// language (`docs/<language>/<file>.md`). Sources, not outputs: the tasks read
+// them and write only each language's index beside them.
+val bundledDocsTranslations: FileCollection = fileTree(bundledDocsAssetDirectory) { include("*/*.md") }
+
 val syncBundledDocs by tasks.registering(SyncBundledDocsTask::class) {
     group = "build"
     description = "Copies the bundled documents into the app's assets and regenerates their reader index."
     repositoryRoot.set(rootProject.layout.projectDirectory)
     documents.from(bundledDocsSources)
     assetDirectory.set(bundledDocsAssetDirectory)
+    translations.from(bundledDocsTranslations)
 }
 
 val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
@@ -1850,6 +1856,7 @@ val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
     repositoryRoot.set(rootProject.layout.projectDirectory)
     documents.from(bundledDocsSources)
     assetDirectory.set(bundledDocsAssetDirectory)
+    translations.from(bundledDocsTranslations)
     committedAssets.from(fileTree(bundledDocsAssetDirectory) { include("**/*") })
     stampFile.set(layout.buildDirectory.file("reports/bundled-docs/verified.txt"))
 }

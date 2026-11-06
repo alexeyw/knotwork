@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import app.knotwork.android.domain.models.BundledDocument
 import app.knotwork.android.domain.models.DocumentationTarget
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.BundledDocumentationRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -17,8 +18,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import timber.log.Timber
+import java.io.FileNotFoundException
 import java.io.IOException
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,18 +34,27 @@ import javax.inject.Singleton
  * for "this copy did not open", and it tells the user that reinstalling
  * replaces the file.
  *
+ * The documents come in the language the interface is shown in. A translation
+ * lives beside the English copies, `docs/<language>/`, with an index of its own
+ * that maps the English anchors to the translated headings — so every link the
+ * app or a document makes by anchor lands in either language. A language the
+ * documents are not translated into reads the English.
+ *
  * @property context Application context used to open the asset stream.
+ * @property appLanguage The language the interface is shown in.
  */
 @Singleton
-class AssetBundledDocumentationRepository @Inject constructor(@ApplicationContext private val context: Context) :
-    BundledDocumentationRepository {
+class AssetBundledDocumentationRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val appLanguage: AppLanguageRepository,
+) : BundledDocumentationRepository {
 
     /** Dispatcher every asset read runs on. Swapped in unit tests. */
     @VisibleForTesting
     internal var dispatcher: CoroutineDispatcher = Dispatchers.IO
 
     /**
-     * The parsed index, held after the first successful read.
+     * The parsed indexes, by language, each held after its first successful read.
      *
      * The assets cannot change while the process lives — they are packaged into
      * the APK — so re-parsing is pure waste, and it was happening twice per
@@ -52,12 +63,13 @@ class AssetBundledDocumentationRepository @Inject constructor(@ApplicationContex
      * the user may be about to fix by reinstalling, and caching it would make
      * the reader's *Try again* a lie.
      */
-    private val cachedDocuments = AtomicReference<List<BundledDocument>?>(null)
+    private val cachedDocuments = ConcurrentHashMap<String, List<BundledDocument>>()
 
     override suspend fun documents(): Result<List<BundledDocument>> = withContext(dispatcher) {
-        cachedDocuments.get()?.let { return@withContext Result.success(it) }
+        val language = appLanguage.interfaceLanguage.value
+        cachedDocuments[language]?.let { return@withContext Result.success(it) }
         try {
-            Result.success(parseIndex(readAsset(INDEX_ASSET_PATH)).also(cachedDocuments::set))
+            Result.success(parseIndex(readIndex(language)).also { cachedDocuments[language] = it })
         } catch (e: IOException) {
             Timber.e(e, "Bundled documentation index could not be read")
             Result.failure(e)
@@ -88,6 +100,23 @@ class AssetBundledDocumentationRepository @Inject constructor(@ApplicationContex
         } catch (e: IOException) {
             Timber.e(e, "Bundled document '%s' could not be read", id)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Reads the index of the documents in [language]: its translation's, or the
+     * English one when the documents are not translated into it.
+     *
+     * @param language A BCP-47 tag, as the interface language is reported.
+     * @return The index file's text.
+     * @throws IOException when no index can be read at all.
+     */
+    private fun readIndex(language: String): String {
+        if (language == AppLanguageRepositoryImpl.DEFAULT_LANGUAGE) return readAsset(INDEX_ASSET_PATH)
+        return try {
+            readAsset("$ASSET_DIRECTORY/$language/$INDEX_FILE_NAME")
+        } catch (_: FileNotFoundException) {
+            readAsset(INDEX_ASSET_PATH)
         }
     }
 
@@ -146,8 +175,14 @@ class AssetBundledDocumentationRepository @Inject constructor(@ApplicationContex
     }
 
     private companion object {
-        /** Path of the generated index under `assets`. */
-        const val INDEX_ASSET_PATH = "docs/index.json"
+        /** Directory of the documents under `assets`; a translation is a subdirectory named by its language. */
+        const val ASSET_DIRECTORY = "docs"
+
+        /** File name of a generated index. */
+        const val INDEX_FILE_NAME = "index.json"
+
+        /** Path of the English documents' index under `assets`. */
+        const val INDEX_ASSET_PATH = "$ASSET_DIRECTORY/$INDEX_FILE_NAME"
 
         /**
          * Index shape this build reads.

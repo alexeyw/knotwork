@@ -673,6 +673,8 @@ Only Kotlin files appear inside the generated blocks.
       - `FilesMessengerTest.kt` - Unit coverage for `FilesMessenger` — the single owner of what the Files screen says when an operation does not go through.
       - `FilesScreenMappingTest.kt` - Verifies the pure `FilesUiState.toViewState()` projection used by `FilesScreen`.
       - `FilesViewModelTest.kt` - Unit tests for `FilesViewModel`.
+    - `help/` - Tests of the in-app help: the reader follows the interface language.
+      - `HelpReaderViewModelTest.kt` - `HelpReaderViewModel` and the interface language: the document is read in the language the interface is shown in, and again when that language changes — the ViewModel outlives the screen's re-creation in the new language.
     - `memory/` - Tests for the long-term-memory surface.
       - `MemoryScreenMappingTest.kt` - Unit tests for `toViewState` — the pure projection from `MemoryUiState` to the catalog `MemoryViewState` (filtering, grouping, breakdown, detail labels).
       - `MemoryViewModelTest.kt` - Tests for MemoryViewModel.
