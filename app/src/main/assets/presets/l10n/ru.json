@@ -1,0 +1,427 @@
+{
+  "formatVersion": 1,
+  "language": "ru",
+  "pipelines": {
+    "clarify_then_act": {
+      "name": {"en": "Clarify, then act", "ru": "Уточнить и действовать"},
+      "description": {"en": "Pauses to ask one clarifying question when the request is ambiguous, then answers locally with the disambiguated input. Useful when the user's intent is often underspecified.", "ru": "Если запрос неоднозначен, задаёт один уточняющий вопрос, а затем отвечает локально с учётом ответа. Полезно, когда намерение пользователя часто сформулировано не до конца."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "clarify": {"en": "Clarify", "ru": "Уточнение"},
+        "lite_rt": {"en": "Local LLM", "ru": "Локальная модель"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Help me plan my weekend", "ru": "Помоги спланировать выходные"},
+        {"en": "Help me choose a laptop", "ru": "Помоги выбрать ноутбук"},
+        {"en": "Summarise this for my team", "ru": "Сделай выжимку для моей команды"}
+      ]
+    },
+    "cloud_assist": {
+      "name": {"en": "Cloud-assisted chat", "ru": "Чат с облачной моделью"},
+      "description": {"en": "Cloud LLM with full conversation history and long-term memory. Use when you need broader knowledge, longer context, or stronger reasoning than the on-device model can offer.", "ru": "Облачная модель с полной историей разговора и долговременной памятью. Подходит, когда нужны более широкие знания, длинный контекст или более сильные рассуждения, чем может дать локальная модель."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "cloud": {"en": "Cloud LLM", "ru": "Облачная модель"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Compare two ways to learn a language as an adult", "ru": "Сравни два способа выучить язык во взрослом возрасте"},
+        {"en": "Draft a polite follow-up email about an unanswered request", "ru": "Набросай вежливое письмо-напоминание о запросе, на который не ответили"},
+        {"en": "Explain what a database index does and when it hurts", "ru": "Объясни, что делает индекс в базе данных и когда он вредит"}
+      ]
+    },
+    "local_only_qa": {
+      "name": {"en": "Local-only Q&A", "ru": "Ответы на устройстве"},
+      "description": {"en": "Single-turn answers handled entirely by the on-device model. No network, no tools. Best for quick factual questions when you want privacy and predictable latency.", "ru": "Ответы в один ход целиком на локальной модели. Без сети и без инструментов. Лучше всего для быстрых вопросов о фактах, когда важны приватность и предсказуемая задержка."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "lite_rt": {"en": "Local LLM", "ru": "Локальная модель"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Explain how a solar eclipse happens", "ru": "Объясни, как происходит солнечное затмение"},
+        {"en": "What is the difference between RAM and storage?", "ru": "Чем оперативная память отличается от накопителя?"},
+        {"en": "Give me three practical tips for sleeping better", "ru": "Дай три практических совета, как лучше спать"}
+      ]
+    },
+    "multi_step_research": {
+      "name": {"en": "Multi-step research", "ru": "Многошаговое исследование"},
+      "description": {"en": "Decomposes the request into subtasks, then loops over each subtask through a cloud LLM via the queue processor. The Done branch leaves the loop and produces the final answer.", "ru": "Разбивает запрос на подзадачи и по очереди проводит каждую через облачную модель с помощью обработчика очереди. Ветка Done выходит из цикла и даёт итоговый ответ."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "decomposition": {"en": "Decomposition", "ru": "Декомпозиция"},
+        "queue": {"en": "Queue", "ru": "Очередь"},
+        "cloud": {"en": "Researcher", "ru": "Исследователь"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Compare electric and hybrid cars for city driving", "ru": "Сравни электромобили и гибриды для езды по городу"},
+        {"en": "Research how coffee spread through Latin America", "ru": "Изучи, как кофе распространился по Латинской Америке"},
+        {"en": "What are the trade-offs of fully remote work?", "ru": "Какие плюсы и минусы у полностью удалённой работы?"}
+      ]
+    },
+    "routed_local_cloud": {
+      "name": {"en": "Routed local + cloud", "ru": "Локально или в облако"},
+      "description": {"en": "An intent router classifies the request and sends simple queries to the on-device model and complex ones to the cloud. Balances latency and capability without the user having to choose.", "ru": "Маршрутизатор намерений определяет, какой это запрос: простые отправляет локальной модели, сложные — в облако. Уравновешивает скорость и возможности, и выбирать самому не нужно."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "router": {"en": "Router", "ru": "Маршрутизатор"},
+        "lite_rt": {"en": "Local LLM", "ru": "Локальная модель"},
+        "cloud": {"en": "Cloud LLM", "ru": "Облачная модель"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "What time zone is Santiago in?", "ru": "В каком часовом поясе Сантьяго?"},
+        {"en": "Design a six-week plan to learn basic statistics", "ru": "Составь план на шесть недель, чтобы освоить основы статистики"},
+        {"en": "Why would the same query be fast on one machine and slow on another?", "ru": "Почему один и тот же запрос на одной машине выполняется быстро, а на другой — медленно?"}
+      ]
+    },
+    "share_handler": {
+      "name": {"en": "Share Handler", "ru": "Обработчик «Поделиться»"},
+      "description": {"en": "Share anything to the agent and it becomes a clean, structured note in your inbox. Asks before writing files.", "ru": "Поделитесь с агентом чем угодно — и это станет аккуратной структурированной заметкой во входящих. Спрашивает перед записью файлов."},
+      "nodes": {
+        "node-1": {"en": "Shared content", "ru": "Присланное"},
+        "node-2": {"en": "Structure", "ru": "Структурировать"},
+        "node-3": {"en": "Save capture", "ru": "Сохранить заметку"},
+        "node-4": {"en": "Confirm", "ru": "Подтверждение"}
+      },
+      "samplePrompts": [
+        {"en": "Save this: buy milk, call the dentist, renew the parking permit", "ru": "Сохрани: купить молоко, позвонить стоматологу, продлить разрешение на парковку"},
+        {"en": "Capture this: the team sync moved to Thursday at 3pm", "ru": "Запиши: созвон команды перенесли на четверг, 15:00"},
+        {"en": "Keep this for later: lentil soup with cumin and lemon", "ru": "Сохрани на потом: чечевичный суп с кумином и лимоном"}
+      ]
+    },
+    "showcase_full_agent": {
+      "name": {"en": "Showcase — full agent", "ru": "Демо — полный агент"},
+      "description": {"en": "A vision intake step turns any attached image into text up front, then the full breadth of the on-device agent runs: intent routing (chat / factual / task), an IF-condition complexity gate, task and query decomposition feeding queue-processor loops, Wikipedia tool lookups, and research / task synthesis. Each subtask runs as a composed sub-pipeline (Clarify / Lookup / Act / Process) through PIPELINE nodes, including a human-in-the-loop clarification.", "ru": "Сначала шаг распознавания превращает приложенное изображение в текст, затем работает весь локальный агент: маршрутизация намерений (chat / factual / task), проверка сложности узлом-условием, декомпозиция задач и запросов с циклами обработчика очереди, поиск в Википедии и сводка исследования или задачи. Каждая подзадача выполняется вложенным пайплайном («Уточнение» / «Поиск» / «Действие» / «Обработка») через узлы «Пайплайн», в том числе с уточнением у человека."},
+      "nodes": {
+        "node-1": {"en": "Input", "ru": "Вход"},
+        "node-23": {"en": "Vision intake", "ru": "Распознавание изображения"},
+        "node-2": {"en": "Output", "ru": "Выход"},
+        "node-3": {"en": "Message Triage", "ru": "Сортировка сообщений"},
+        "node-4": {"en": "Chat Reply", "ru": "Ответ в чате"},
+        "node-5": {"en": "Complexity Check", "ru": "Проверка сложности"},
+        "node-6": {"en": "Wikipedia Lookup (simple)", "ru": "Поиск в Википедии (простой)"},
+        "node-7": {"en": "Query Builder", "ru": "Составление запроса"},
+        "node-8": {"en": "Grounded Answer", "ru": "Ответ по источникам"},
+        "node-9": {"en": "Query Decomposer", "ru": "Разбор запроса"},
+        "node-10": {"en": "Topic Queue", "ru": "Очередь тем"},
+        "node-11": {"en": "Wikipedia Lookup (research)", "ru": "Поиск в Википедии (исследование)"},
+        "node-12": {"en": "Research Synthesis", "ru": "Сводка исследования"},
+        "node-13": {"en": "Task Planner", "ru": "Планировщик задач"},
+        "node-14": {"en": "Subtask Queue", "ru": "Очередь подзадач"},
+        "node-15": {"en": "Subtask Router", "ru": "Маршрутизатор подзадач"},
+        "node-16": {"en": "Task Synthesis", "ru": "Сводка задачи"},
+        "node-17": {"en": "Clarify", "ru": "Уточнение"},
+        "node-18": {"en": "Lookup", "ru": "Поиск"},
+        "node-20": {"en": "Act", "ru": "Действие"},
+        "node-21": {"en": "Process", "ru": "Обработка"},
+        "node-22": {"en": "Research Distiller", "ru": "Выжимка исследования"}
+      },
+      "samplePrompts": [
+        {"en": "What is the tallest mountain in South America?", "ru": "Какая гора самая высокая в Южной Америке?"},
+        {"en": "Compare two programming languages for a beginner", "ru": "Сравни два языка программирования для новичка"},
+        {"en": "Plan a three-day trip to Valparaíso", "ru": "Спланируй поездку в Вальпараисо на три дня"}
+      ]
+    },
+    "showcase_research_to_file": {
+      "name": {"en": "Research to file", "ru": "Исследование в файл"},
+      "description": {"en": "End-to-end showcase: the local model turns your question into a Wikipedia lookup, distils the raw extract into clean facts, writes a short Markdown report into the agent workspace under reports/, and replies with the saved path. A working 'research → file in your hands' loop out of the box.", "ru": "Сквозная демонстрация: локальная модель превращает ваш вопрос в поиск по Википедии, сводит найденный фрагмент к чистым фактам, пишет короткий отчёт в Markdown в рабочую папку агента, в reports/, и отвечает путём к сохранённому файлу. Готовый цикл «исследование → файл у вас в руках»."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "query_builder": {"en": "Query Builder", "ru": "Составление запроса"},
+        "search": {"en": "Wikipedia Lookup", "ru": "Поиск в Википедии"},
+        "distiller": {"en": "Research Distiller", "ru": "Выжимка исследования"},
+        "synthesis": {"en": "Synthesis", "ru": "Сводка"},
+        "write_report": {"en": "Save Report", "ru": "Сохранить отчёт"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Write me a report on the Atacama Desert", "ru": "Напиши мне отчёт о пустыне Атакама"},
+        {"en": "Research the history of the Santiago metro", "ru": "Изучи историю метро Сантьяго"},
+        {"en": "Explain what quantum computing is and save it", "ru": "Объясни, что такое квантовые вычисления, и сохрани"}
+      ]
+    },
+    "styled_translation": {
+      "name": {"en": "Styled Translation", "ru": "Перевод со стилем"},
+      "description": {"en": "Translate messages while keeping their tone, register and dialect — not just the words. Runs entirely on-device.", "ru": "Переводит сообщения, сохраняя тон, регистр и диалект, — не только слова. Работает целиком на устройстве."},
+      "nodes": {
+        "node-1": {"en": "Text", "ru": "Текст"},
+        "node-2": {"en": "Translate", "ru": "Перевести"},
+        "node-3": {"en": "Translation", "ru": "Перевод"}
+      },
+      "samplePrompts": [
+        {"en": "Hi, are we still meeting tomorrow?", "ru": "Привет, мы завтра всё ещё встречаемся?"},
+        {"en": "Thank you for your help, I really appreciate it", "ru": "Спасибо за помощь, правда очень ценю"},
+        {"en": "Could you send me the documents before Friday?", "ru": "Можешь прислать мне документы до пятницы?"}
+      ]
+    },
+    "subtask_act": {
+      "name": {"en": "Subtask — Act", "ru": "Подзадача — действие"},
+      "description": {"en": "Sub-pipeline for a task subtask that performs an action through a tool (auto-selected from the available tools, behind the usual confirmation gate). Used by the Showcase agent's Subtask Router.", "ru": "Вложенный пайплайн для подзадачи, которая выполняет действие инструментом (он выбирается автоматически из доступных, с обычным подтверждением). Его вызывает «Маршрутизатор подзадач» демо-агента."},
+      "nodes": {
+        "node-1": {"en": "Input", "ru": "Вход"},
+        "node-2": {"en": "Tool Action", "ru": "Действие инструмента"},
+        "node-3": {"en": "Output", "ru": "Выход"}
+      }
+    },
+    "subtask_clarify": {
+      "name": {"en": "Subtask — Clarify", "ru": "Подзадача — уточнение"},
+      "description": {"en": "Sub-pipeline for a task subtask that needs the user's input: it asks one focused human-in-the-loop question and forwards the answer. Used by the Showcase agent's Subtask Router.", "ru": "Вложенный пайплайн для подзадачи, которой нужен ответ пользователя: задаёт человеку один точный вопрос и передаёт ответ дальше. Его вызывает «Маршрутизатор подзадач» демо-агента."},
+      "nodes": {
+        "node-1": {"en": "Input", "ru": "Вход"},
+        "node-2": {"en": "Clarify", "ru": "Уточнение"},
+        "node-3": {"en": "Output", "ru": "Выход"}
+      }
+    },
+    "subtask_lookup": {
+      "name": {"en": "Subtask — Lookup", "ru": "Подзадача — поиск"},
+      "description": {"en": "Sub-pipeline for a task subtask that needs a factual lookup: it turns the subtask into a Wikipedia search term and runs the search. Used by the Showcase agent's Subtask Router.", "ru": "Вложенный пайплайн для подзадачи, которой нужен поиск фактов: превращает подзадачу в поисковый запрос к Википедии и выполняет поиск. Его вызывает «Маршрутизатор подзадач» демо-агента."},
+      "nodes": {
+        "node-1": {"en": "Input", "ru": "Вход"},
+        "node-2": {"en": "Subtask Query Builder", "ru": "Запрос для подзадачи"},
+        "node-3": {"en": "Wikipedia Lookup (subtask)", "ru": "Поиск в Википедии (подзадача)"},
+        "node-4": {"en": "Output", "ru": "Выход"}
+      }
+    },
+    "subtask_process": {
+      "name": {"en": "Subtask — Process", "ru": "Подзадача — обработка"},
+      "description": {"en": "Sub-pipeline for a task subtask the model can complete on its own — reasoning, writing, transforming or calculating from what is already available. Used by the Showcase agent's Subtask Router.", "ru": "Вложенный пайплайн для подзадачи, которую модель решает сама: рассуждает, пишет, преобразует или считает по тому, что уже есть. Его вызывает «Маршрутизатор подзадач» демо-агента."},
+      "nodes": {
+        "node-1": {"en": "Input", "ru": "Вход"},
+        "node-2": {"en": "Process", "ru": "Обработка"},
+        "node-3": {"en": "Output", "ru": "Выход"}
+      }
+    },
+    "tool_using_react": {
+      "name": {"en": "Tool-using agent", "ru": "Агент с инструментами"},
+      "description": {"en": "An IF-condition decides whether the request needs an external lookup. If it does, the local model turns it into a search term, the tool runs (auto-selected from the registry) and a summariser folds the result into the answer. If it does not, the model answers directly. Good template for action-oriented tasks.", "ru": "Узел-условие решает, нужен ли запросу внешний поиск. Если нужен, локальная модель превращает запрос в поисковую фразу, запускается инструмент (он выбирается автоматически из доступных), и сводка встраивает результат в ответ. Если нет, модель отвечает сразу. Хороший шаблон для задач, где нужно действовать."},
+      "nodes": {
+        "input": {"en": "Input", "ru": "Вход"},
+        "needs_tool": {"en": "Needs a lookup?", "ru": "Нужен поиск?"},
+        "query_builder": {"en": "Query Builder", "ru": "Составление запроса"},
+        "tool": {"en": "Tool", "ru": "Инструмент"},
+        "summary": {"en": "Summariser", "ru": "Сводка"},
+        "direct_answer": {"en": "Direct Answer", "ru": "Прямой ответ"},
+        "output": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Look up the population of Chile", "ru": "Узнай население Чили"},
+        {"en": "When was the Eiffel Tower opened?", "ru": "Когда открыли Эйфелеву башню?"},
+        {"en": "Who was Ada Lovelace?", "ru": "Кто такая Ада Лавлейс?"}
+      ]
+    },
+    "virtual_companion_mood_router": {
+      "name": {"en": "Virtual Companion (Mood Router)", "ru": "Виртуальный собеседник"},
+      "description": {"en": "A companion that senses your mood and shifts how it talks with you. Fully private, on-device.", "ru": "Собеседник, который чувствует ваше настроение и меняет то, как с вами говорит. Полностью приватно, на устройстве."},
+      "nodes": {
+        "node-1": {"en": "Message", "ru": "Сообщение"},
+        "node-2": {"en": "Relationship Memory", "ru": "Память об отношениях"},
+        "node-3": {"en": "Mood Triage", "ru": "Определение настроения"},
+        "node-4": {"en": "Casual", "ru": "Обычный"},
+        "node-5": {"en": "Affectionate", "ru": "Нежный"},
+        "node-6": {"en": "Supportive", "ru": "Поддержка"},
+        "node-7": {"en": "Playful", "ru": "Игривый"},
+        "node-8": {"en": "Intimate", "ru": "Близость"},
+        "node-9": {"en": "Reply", "ru": "Ответ"}
+      },
+      "samplePrompts": [
+        {"en": "Hey, I just got home", "ru": "Привет, я уже дома"},
+        {"en": "Rough day at work today", "ru": "Тяжёлый сегодня день на работе"},
+        {"en": "Guess what happened to me!", "ru": "Угадай, что со мной случилось!"}
+      ]
+    }
+  },
+  "prompts": {
+    "clarification_multiple_choice": {
+      "name": {"en": "Multiple-choice question", "ru": "Вопрос с вариантами"},
+      "description": {"en": "Emits a clarifying question with 2–4 concrete answer options for the user to tap.", "ru": "Задаёт уточняющий вопрос с 2–4 конкретными вариантами ответа, из которых пользователь выбирает касанием."},
+      "tags": [
+        {"en": "clarification", "ru": "уточнение"},
+        {"en": "multiple-choice", "ru": "варианты"},
+        {"en": "json", "ru": "json"}
+      ]
+    },
+    "clarification_open_ended": {
+      "name": {"en": "Open-ended clarifier", "ru": "Открытый уточняющий вопрос"},
+      "description": {"en": "Asks a single open-ended clarifying question with no pre-baked answer options.", "ru": "Задаёт один открытый уточняющий вопрос без готовых вариантов ответа."},
+      "tags": [
+        {"en": "clarification", "ru": "уточнение"},
+        {"en": "open-ended", "ru": "открытый"},
+        {"en": "json", "ru": "json"}
+      ]
+    },
+    "cloud_capable_analyst": {
+      "name": {"en": "Capable analyst", "ru": "Сильный аналитик"},
+      "description": {"en": "Cloud-grade analytical reasoning for multi-faceted questions and structured comparisons.", "ru": "Аналитические рассуждения облачного уровня для многогранных вопросов и структурированных сравнений."},
+      "tags": [
+        {"en": "analysis", "ru": "анализ"},
+        {"en": "cloud", "ru": "облако"},
+        {"en": "depth", "ru": "глубина"}
+      ]
+    },
+    "cloud_web_savvy_researcher": {
+      "name": {"en": "Web-savvy researcher", "ru": "Веб-исследователь"},
+      "description": {"en": "Cloud-grade researcher framing for tool-augmented pipelines and source-aware answers.", "ru": "Роль исследователя облачного уровня для пайплайнов с инструментами и ответов со ссылками на источники."},
+      "tags": [
+        {"en": "research", "ru": "исследование"},
+        {"en": "cloud", "ru": "облако"},
+        {"en": "sources", "ru": "источники"}
+      ]
+    },
+    "decomposition_dependency_aware": {
+      "name": {"en": "Dependency-aware subtasks", "ru": "Подзадачи с зависимостями"},
+      "description": {"en": "JSON array of subtasks, each prefixed with its prerequisites so downstream nodes can sequence them.", "ru": "JSON-массив подзадач; перед каждой указано, что нужно сделать до неё, чтобы следующие узлы выстроили порядок."},
+      "tags": [
+        {"en": "decomposition", "ru": "декомпозиция"},
+        {"en": "json", "ru": "json"},
+        {"en": "dependencies", "ru": "зависимости"}
+      ]
+    },
+    "decomposition_json_subtasks": {
+      "name": {"en": "JSON subtasks", "ru": "Подзадачи в JSON"},
+      "description": {"en": "Strict JSON array of subtask strings — drop-in default for the queue processor.", "ru": "Строгий JSON-массив строк-подзадач — готовый вариант по умолчанию для обработчика очереди."},
+      "tags": [
+        {"en": "decomposition", "ru": "декомпозиция"},
+        {"en": "json", "ru": "json"},
+        {"en": "strict", "ru": "строгий"}
+      ]
+    },
+    "evaluation_pass_fail_judge": {
+      "name": {"en": "Pass/fail judge", "ru": "Судья Pass/Fail"},
+      "description": {"en": "Binary verdict — Pass or Fail, never Retry. Routes through the node's matching output port.", "ru": "Двоичный вердикт — Pass или Fail, никогда Retry. Ведёт по соответствующему выходу узла."},
+      "tags": [
+        {"en": "evaluation", "ru": "оценка"},
+        {"en": "binary", "ru": "двоичный"},
+        {"en": "routing", "ru": "маршрутизация"}
+      ]
+    },
+    "evaluation_scored_critic": {
+      "name": {"en": "Scored critic", "ru": "Критик с баллами"},
+      "description": {"en": "Pass / Retry / Fail verdict backed by a 0–10 score and one actionable improvement.", "ru": "Вердикт Pass / Retry / Fail с оценкой от 0 до 10 и одним конкретным улучшением."},
+      "tags": [
+        {"en": "evaluation", "ru": "оценка"},
+        {"en": "scoring", "ru": "баллы"},
+        {"en": "routing", "ru": "маршрутизация"}
+      ]
+    },
+    "if_destructive_intent": {
+      "name": {"en": "Destructive or sensitive action", "ru": "Опасное или рискованное действие"},
+      "description": {"en": "True when fulfilling the request would modify, delete, send, purchase, or otherwise mutate user data or external state.", "ru": "True, если выполнение запроса изменит, удалит, отправит, купит или как-то ещё затронет данные пользователя или внешнее состояние."},
+      "tags": [
+        {"en": "safety", "ru": "безопасность"},
+        {"en": "destructive", "ru": "опасное"},
+        {"en": "starter", "ru": "стартовый"}
+      ]
+    },
+    "if_needs_external_info": {
+      "name": {"en": "Needs external lookup", "ru": "Нужен внешний поиск"},
+      "description": {"en": "True when answering the request requires live external information (web search, current events, fresh data) beyond the model's training cut-off.", "ru": "True, если для ответа нужны свежие внешние сведения (поиск в интернете, текущие события, новые данные), которых нет в знаниях модели."},
+      "tags": [
+        {"en": "routing", "ru": "маршрутизация"},
+        {"en": "search", "ru": "поиск"},
+        {"en": "tools", "ru": "инструменты"}
+      ]
+    },
+    "if_question_vs_command": {
+      "name": {"en": "Is question, not command", "ru": "Вопрос, а не команда"},
+      "description": {"en": "True when the upstream text is an information-seeking question rather than an instruction to perform an action.", "ru": "True, если входной текст — вопрос, который ищет сведения, а не указание что-то сделать."},
+      "tags": [
+        {"en": "intent", "ru": "намерение"},
+        {"en": "question", "ru": "вопрос"},
+        {"en": "starter", "ru": "стартовый"}
+      ]
+    },
+    "litert_concise_assistant": {
+      "name": {"en": "Concise assistant", "ru": "Краткий помощник"},
+      "description": {"en": "Single-paragraph, no-preamble answers. Best for quick factual questions when latency matters.", "ru": "Ответы в один абзац без вступлений. Лучше всего для быстрых вопросов о фактах, когда важна скорость."},
+      "tags": [
+        {"en": "concise", "ru": "кратко"},
+        {"en": "starter", "ru": "стартовый"},
+        {"en": "offline", "ru": "офлайн"}
+      ]
+    },
+    "litert_memory_aware_reply": {
+      "name": {"en": "Memory-aware reply", "ru": "Ответ с учётом памяти"},
+      "description": {"en": "Personalises the answer using the agent's long-term memory summary.", "ru": "Подстраивает ответ под пользователя по сводке долговременной памяти агента."},
+      "tags": [
+        {"en": "memory", "ru": "память"},
+        {"en": "personalised", "ru": "персональный"},
+        {"en": "offline", "ru": "офлайн"}
+      ]
+    },
+    "litert_step_by_step_reasoner": {
+      "name": {"en": "Step-by-step reasoner", "ru": "Рассуждение по шагам"},
+      "description": {"en": "Walks through the problem with numbered intermediate steps before delivering the final answer.", "ru": "Разбирает задачу по пронумерованным промежуточным шагам и только потом даёт итоговый ответ."},
+      "tags": [
+        {"en": "reasoning", "ru": "рассуждение"},
+        {"en": "cot", "ru": "cot"},
+        {"en": "offline", "ru": "офлайн"}
+      ]
+    },
+    "output_json_structured": {
+      "name": {"en": "JSON-structured", "ru": "Структура JSON"},
+      "description": {"en": "Emits the answer as a strict JSON object for downstream tooling.", "ru": "Выдаёт ответ строгим JSON-объектом для следующих инструментов."},
+      "tags": [
+        {"en": "json", "ru": "json"},
+        {"en": "structured", "ru": "структурный"},
+        {"en": "tooling", "ru": "инструменты"}
+      ]
+    },
+    "output_markdown_with_sections": {
+      "name": {"en": "Markdown with sections", "ru": "Markdown с разделами"},
+      "description": {"en": "Renders the answer as well-structured markdown with headings, lists, and emphasis.", "ru": "Оформляет ответ как хорошо структурированный Markdown с заголовками, списками и выделением."},
+      "tags": [
+        {"en": "markdown", "ru": "markdown"},
+        {"en": "structured", "ru": "структурный"},
+        {"en": "long-form", "ru": "развёрнутый"}
+      ]
+    },
+    "output_plain_conversational": {
+      "name": {"en": "Plain conversational", "ru": "Простой разговорный"},
+      "description": {"en": "Friendly, paragraph-style reply with no markdown decoration.", "ru": "Дружелюбный ответ абзацами без оформления Markdown."},
+      "tags": [
+        {"en": "plain", "ru": "простой"},
+        {"en": "conversational", "ru": "разговорный"},
+        {"en": "starter", "ru": "стартовый"}
+      ]
+    },
+    "router_keyword_classifier": {
+      "name": {"en": "Keyword classifier", "ru": "Классификатор по ключевому слову"},
+      "description": {"en": "Strict single-keyword router for a node wired with Simple / Data / Complex / Task ports.", "ru": "Строгий маршрутизатор с одним ключевым словом для узла с выходами Simple / Data / Complex / Task."},
+      "tags": [
+        {"en": "routing", "ru": "маршрутизация"},
+        {"en": "classifier", "ru": "классификатор"},
+        {"en": "strict", "ru": "строгий"}
+      ]
+    },
+    "router_tool_first": {
+      "name": {"en": "Tool-first router", "ru": "Маршрутизатор «сначала инструмент»"},
+      "description": {"en": "Biases a Simple / Data / Complex / Task router toward Task whenever a tool could plausibly help.", "ru": "Склоняет маршрутизатор Simple / Data / Complex / Task к Task всякий раз, когда может пригодиться инструмент."},
+      "tags": [
+        {"en": "routing", "ru": "маршрутизация"},
+        {"en": "tools", "ru": "инструменты"},
+        {"en": "task-bias", "ru": "уклон к Task"}
+      ]
+    },
+    "summary_bullet_recap": {
+      "name": {"en": "Bullet recap", "ru": "Итог списком"},
+      "description": {"en": "Condenses upstream outputs into a tight bullet list of the key points.", "ru": "Сжимает результаты предыдущих узлов в короткий маркированный список главного."},
+      "tags": [
+        {"en": "bullets", "ru": "список"},
+        {"en": "concise", "ru": "кратко"},
+        {"en": "recap", "ru": "итог"}
+      ]
+    },
+    "summary_detailed_narrative": {
+      "name": {"en": "Detailed narrative", "ru": "Подробный рассказ"},
+      "description": {"en": "Weaves the upstream subtask outputs into a coherent multi-paragraph narrative.", "ru": "Сплетает результаты подзадач в связный рассказ из нескольких абзацев."},
+      "tags": [
+        {"en": "narrative", "ru": "рассказ"},
+        {"en": "long-form", "ru": "развёрнутый"},
+        {"en": "synthesis", "ru": "сведение"}
+      ]
+    }
+  }
+}

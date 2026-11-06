@@ -20,6 +20,11 @@
          "Web search, Fetch a URL"). Separate from a bullet list so a
          translation can carry its language's own spacing. -->
     <string name="common_list_separator">", "</string>
+    <!-- The language these strings are written in, as a BCP-47 tag. Not shown:
+         it names the language the interface is in, which picks the bundled
+         presets' translation (assets/presets/l10n/<tag>.json). Each translation
+         writes its own tag here; TranslationCoverageTest holds the two equal. -->
+    <string name="interface_language_tag">en</string>
 
     <!-- Bottom navigation tab labels -->
     <string name="nav_tab_chat">Chat</string>

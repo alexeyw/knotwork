@@ -55,6 +55,7 @@ Only Kotlin files appear inside the generated blocks.
   - `PolicyDocumentClaimsTest.kt` - Sentences of the privacy policy, the threat model and the bundled FAQ that the code once contradicted, pinned to what the code does now.
   - `PreferenceKeyCensus.kt` - Every preference key the production code declares, read from the sources: the name and value type of each `<type>PreferencesKey("name")` call (`ProductionSources`, comments removed).
   - `PreferenceStorageSnapshotTest.kt` - Snapshot of what the app keeps in its preferences storage: the name and value type of every DataStore key, and the names of the files the settings live in.
+  - `PresetTranslationCoverageTest.kt` - Every text a person reads in a bundled preset exists in every language the app ships, and was translated from the English the preset carries now.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
   - `RawExecSqlGuardTest.kt` - No production code runs a statement through SQLCipher's `rawExecSQL`.
@@ -410,6 +411,9 @@ Only Kotlin files appear inside the generated blocks.
     - `ShowcaseCompositionIntegrationTest.kt` - End-to-end integration test for the **composed** bundled Showcase agent: the task loop whose four subtask branches now run as sub-pipelines through `PIPELINE` nodes.
     - `ShowcaseResearchToFilePresetIntegrationTest.kt` - End-to-end integration test for the bundled `showcase_research_to_file` preset: the "research → file in the user's hands" loop the phase exists to prove.
     - `SkillReportWriterIntegrationTest.kt` - End-to-end integration test for a **`SKILL` node bound to the bundled Report Writer skill** — the tie between skill execution and the agent's workspace file tools.
+  - `presetl10n/` - Tests of the bundled presets' translations: what a translation replaces, and the strict file reader.
+    - `PresetTranslationsJsonTest.kt` - `PresetTranslationsJson.parse`: the file format, and the strictness that keeps a text a model reads out of a translation.
+    - `PresetTranslationsTest.kt` - `PresetTranslations.translate`: which texts of a bundled preset a translation replaces, and that it replaces each one only where the preset still carries the English the translation was written for.
   - `prompt/` - Tests for the prompt templating layer.
     - `ChatTranscriptTest.kt` - Unit tests for `ChatTranscript` — the one rule by which stored content is laid into a model's line-oriented lists without being able to open a line of its own.
     - `ForgedTurnFixture.kt` - Shared fixture for the transcript-forgery tests: message content that tries to open a turn of its own after each of the eight line terminators a tokenizer may render as a line break, and a splitter that honours all eight.

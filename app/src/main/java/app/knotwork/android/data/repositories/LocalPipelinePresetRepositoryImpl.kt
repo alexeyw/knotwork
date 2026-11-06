@@ -10,11 +10,11 @@ import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PipelinePresetImportOutcome
 import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.pipelineio.PipelinePresetJsonSerializer
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.PipelinePresetRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -38,14 +38,27 @@ import javax.inject.Inject
  * bundled and user buckets in distinct tabs without re-deriving them on
  * every recomposition.
  *
+ * A bundled preset is handed out in the language the interface is shown in:
+ * its names, node titles and starter prompts come from [translations], never
+ * its system prompts (decisions §113, R1). The cache holds the presets as
+ * written, so a change of language re-emits the catalogue in the new one, and a
+ * pipeline made from a preset is made in the language of that moment.
+ *
  * Asset I/O and JSON parsing run on [Dispatchers.IO]. Malformed asset
  * files are logged and skipped rather than failing the whole catalogue
  * load, so a single corrupt file cannot hide the rest
  * of the starter set from the user.
+ *
+ * @property context Application context the assets are opened from.
+ * @property dao The user's saved presets.
+ * @property appLanguage The language the interface is shown in.
+ * @property translations The bundled presets' texts in that language.
  */
 class LocalPipelinePresetRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dao: PipelinePresetDao,
+    private val appLanguage: AppLanguageRepository,
+    private val translations: BundledPresetTranslations,
 ) : PipelinePresetRepository {
 
     private val bundledCacheMutex = Mutex()
@@ -53,7 +66,7 @@ class LocalPipelinePresetRepositoryImpl @Inject constructor(
     @Volatile
     private var bundledCache: List<PipelinePreset>? = null
 
-    override fun getBundledPresets(): Flow<List<PipelinePreset>> = flow {
+    override fun getBundledPresets(): Flow<List<PipelinePreset>> = appLanguage.interfaceLanguage.map { language ->
         // Internal presets are building blocks of a composed preset, not
         // catalogue entries — they are filtered out of the observable
         // catalogue here and *only* here, so getPresetById still resolves
@@ -64,18 +77,20 @@ class LocalPipelinePresetRepositoryImpl @Inject constructor(
         // so it leads with the onboarding scenarios instead of whichever
         // filename sorts first. `sortedBy` is stable, so unranked ids keep
         // their listing order at the end.
-        emit(
-            loadBundledOnce()
-                .filterNot { it.isInternal }
-                .sortedBy { BundledPresetCatalog.rankOf(it.id) },
-        )
+        val translation = translations.forLanguage(language)
+        loadBundledOnce()
+            .filterNot { it.isInternal }
+            .sortedBy { BundledPresetCatalog.rankOf(it.id) }
+            .map(translation::translate)
     }
 
     override fun getUserPresets(): Flow<List<PipelinePreset>> =
         dao.getAll().map { rows -> rows.map { it.toDomainModel() } }
 
     override suspend fun getPresetById(id: String): PipelinePreset? {
-        loadBundledOnce().firstOrNull { it.id == id }?.let { return it }
+        loadBundledOnce().firstOrNull { it.id == id }?.let { bundled ->
+            return translations.forLanguage(appLanguage.interfaceLanguage.value).translate(bundled)
+        }
         return dao.getById(id)?.toDomainModel()
     }
 
