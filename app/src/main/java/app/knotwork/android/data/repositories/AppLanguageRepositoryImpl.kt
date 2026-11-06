@@ -6,6 +6,7 @@ import android.content.ComponentCallbacks
 import android.content.Context
 import android.content.res.Configuration
 import android.os.LocaleList
+import app.knotwork.android.R
 import app.knotwork.android.domain.repositories.AppLanguageRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,11 @@ import javax.inject.Singleton
  * the process as a configuration change, never as a call into this class, so the
  * repository listens for configuration changes on the application context and
  * re-reads the system's choice on each one.
+ *
+ * The language the interface is shown in is read from the string resources
+ * themselves (`interface_language_tag`, which each translation writes as its own
+ * tag), so it is the language the screens resolve to — never a second guess at
+ * Android's resource matching.
  *
  * @property context Application context: the `LocaleManager` and the
  *   configuration-change callback belong to the application.
@@ -60,6 +66,10 @@ class AppLanguageRepositoryImpl internal constructor(
 
     override val selectedLanguage: StateFlow<String?> = selection.asStateFlow()
 
+    private val shown = MutableStateFlow(readInterfaceLanguage(context))
+
+    override val interfaceLanguage: StateFlow<String> = shown.asStateFlow()
+
     private val supported: List<String> by lazy { readSupportedLanguages() }
 
     init {
@@ -67,6 +77,7 @@ class AppLanguageRepositoryImpl internal constructor(
             object : ComponentCallbacks {
                 override fun onConfigurationChanged(newConfig: Configuration) {
                     selection.value = readSelection()
+                    shown.value = readInterfaceLanguage(context.createConfigurationContext(newConfig))
                 }
 
                 @Deprecated("Deprecated in API 34; nothing to release here")
@@ -88,6 +99,14 @@ class AppLanguageRepositoryImpl internal constructor(
         val locales = localeManager.applicationLocales
         return if (locales.isEmpty) null else locales[0].toLanguageTag()
     }
+
+    /**
+     * The language [resources] resolve the interface's strings to.
+     *
+     * @param resources A context carrying the configuration to read under.
+     * @return The tag the resolved translation writes for itself.
+     */
+    private fun readInterfaceLanguage(resources: Context): String = resources.getString(R.string.interface_language_tag)
 
     /**
      * The generated `LocaleConfig`'s languages, the default first; just the

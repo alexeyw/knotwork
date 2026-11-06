@@ -13,6 +13,7 @@ import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.pipelineio.PipelinePresetJsonSerializer
+import app.knotwork.android.presentation.ui.settings.FakeAppLanguageRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -20,6 +21,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,6 +31,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.FileNotFoundException
 import java.io.IOException
 
 class LocalPipelinePresetRepositoryImplTest {
@@ -35,6 +39,7 @@ class LocalPipelinePresetRepositoryImplTest {
     private lateinit var context: Context
     private lateinit var assets: AssetManager
     private lateinit var dao: PipelinePresetDao
+    private lateinit var language: FakeAppLanguageRepository
     private lateinit var repository: LocalPipelinePresetRepositoryImpl
 
     private val sampleGraph = PipelineGraph(
@@ -83,7 +88,67 @@ class LocalPipelinePresetRepositoryImplTest {
         assets = mockk()
         dao = mockk(relaxed = true)
         every { context.assets } returns assets
-        repository = LocalPipelinePresetRepositoryImpl(context, dao)
+        language = FakeAppLanguageRepository()
+        val translations = BundledPresetTranslations(context).apply { dispatcher = UnconfinedTestDispatcher() }
+        repository = LocalPipelinePresetRepositoryImpl(context, dao, language, translations)
+    }
+
+    /** One bundled preset, "p", and a Russian translation of its name. */
+    private fun givenOneBundledPresetTranslatedIntoRussian() {
+        val bundled = preset(id = "bundled_one", isBundled = true)
+        every { assets.list("presets/pipelines") } returns arrayOf("bundled_one.json")
+        every { assets.open("presets/pipelines/bundled_one.json") } answers {
+            PipelinePresetJsonSerializer.serialize(bundled).byteInputStream()
+        }
+        every { assets.open("presets/l10n/ru.json") } answers {
+            """{"formatVersion": 1, "language": "ru",
+               "pipelines": {"bundled_one": {"name": {"en": "p", "ru": "пресет"}}}}""".byteInputStream()
+        }
+    }
+
+    @Test
+    fun `given the interface in Russian when getBundledPresets then a bundled preset comes translated`() = runTest {
+        givenOneBundledPresetTranslatedIntoRussian()
+        language.showIn("ru")
+
+        val emitted = repository.getBundledPresets().first()
+
+        assertEquals("пресет", emitted.single().name)
+    }
+
+    @Test
+    fun `when the interface language changes then the catalogue is emitted again in it`() = runTest {
+        givenOneBundledPresetTranslatedIntoRussian()
+
+        // The first read of the assets runs on Dispatchers.IO; after it, the catalogue
+        // comes from the cache and every emission below is immediate.
+        repository.getBundledPresets().first()
+        val names = mutableListOf<String>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            repository.getBundledPresets().collect { names += it.single().name }
+        }
+
+        language.showIn("ru")
+        language.showIn("en")
+
+        assertEquals(listOf("p", "пресет", "p"), names)
+    }
+
+    @Test
+    fun `given the interface in Russian when getPresetById then a bundled preset comes translated`() = runTest {
+        givenOneBundledPresetTranslatedIntoRussian()
+        language.showIn("ru")
+
+        assertEquals("пресет", repository.getPresetById("bundled_one")?.name)
+    }
+
+    @Test
+    fun `given a language with no translation file when getBundledPresets then presets show as written`() = runTest {
+        givenOneBundledPresetTranslatedIntoRussian()
+        every { assets.open("presets/l10n/de.json") } throws FileNotFoundException("presets/l10n/de.json")
+        language.showIn("de")
+
+        assertEquals("p", repository.getBundledPresets().first().single().name)
     }
 
     @Test

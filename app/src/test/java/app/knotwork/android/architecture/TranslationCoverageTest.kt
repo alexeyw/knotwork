@@ -38,6 +38,9 @@ import javax.xml.parsers.DocumentBuilderFactory
  *   (`bundle.language.enableSplit = false`): Google Play installs language
  *   resources by the phone's system language, so a language picked in the app
  *   would otherwise find nothing to show in a Play install.
+ * - Each language's `interface_language_tag` is that language: it is how the
+ *   app learns which translation the screens show.
+ * - Each language has the bundled help documents translated, with their index.
  * - A translation keeps the spaces at the edges of its English text: the
  *   resource compiler trims them unless the value is quoted.
  * - A translation that equals its English text is a copy, not a translation,
@@ -88,6 +91,34 @@ class TranslationCoverageTest {
 
         assertEquals(AppLanguageRepositoryImpl.DEFAULT_LANGUAGE, properties.getProperty("unqualifiedResLocale"))
         assertEquals(AppLanguageRepositoryImpl.DEFAULT_LANGUAGE, DEFAULT_LANGUAGE)
+    }
+
+    @Test
+    fun `each language's strings name that language`() {
+        // `interface_language_tag` tells the app which language the screens resolved to;
+        // it picks the bundled presets' translation, so a copied English value would
+        // show those presets in English under a translated interface.
+        val tags = (shippedLanguages() + DEFAULT_LANGUAGE).associateWith { language ->
+            val folder = if (language == DEFAULT_LANGUAGE) defaultFolder("app") else languageFolders("app")[language]
+            folder?.let { textsIn(it)["string/interface_language_tag"] }
+        }
+
+        assertEquals(tags.keys.associateWith { it }, tags)
+    }
+
+    @Test
+    fun `every shipped language reads the bundled documents in that language`() {
+        // `verifyBundledDocs` checks each translation it finds; this is what makes
+        // finding one per language a requirement rather than a possibility.
+        val missing = shippedLanguages().filterNot { language ->
+            File(moduleRoot("app"), "src/main/assets/docs/$language/index.json").isFile
+        }
+
+        assertTrue(
+            "no translated help documents for $missing — translate docs/faq.md and docs/troubleshooting.md into " +
+                "app/src/main/assets/docs/<language>/ and run ./gradlew :app:syncBundledDocs",
+            missing.isEmpty(),
+        )
     }
 
     @Test

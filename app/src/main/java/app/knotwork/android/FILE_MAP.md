@@ -270,6 +270,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AssetBundledSkillSource.kt` - Asset-backed `BundledSkillSource`: lists the JSON files under `assets/presets/skills`, parses each via `SkillJsonSerializer` on the IO dispatcher, skipping malformed files.
     - `BackgroundPromptRepositoryImpl.kt` - `BackgroundPromptRepository` over the `background_prompts` table of the encrypted database.
     - `BestEffortStore.kt` - Shared `absorbingStoreFailure` helper implementing the best-effort persistence contract (absorb storage failures, re-throw `CancellationException` first) reused by the run-record and run-trace repositories.
+    - `BundledPresetTranslations.kt` - Reads the bundled presets' translations, `assets/presets/l10n/<language>.json`.
     - `BundledSkillSource.kt` - Interface reading the bundled skills under `assets/presets/skills` (split from its impl so the repository seed path is unit-testable with a fake).
     - `ChatRepositoryImpl.kt` - Chat repository implementation.
     - `ClarificationRepositoryImpl.kt` - In-memory implementation of `ClarificationRepository` that suspends pipeline coroutines until the user answers (or the request times out).
@@ -616,6 +617,9 @@ Only Kotlin files appear inside the generated blocks.
     - `PipelineJsonSerializer.kt` - Two-way mapper between `PipelineGraph` and the `schemaVersion: 1` JSON document shared with the browser-side editor (`pipeline-editor.html`). Carries the flat runtime `config` fields plus an optional opaque `nodeConfig` object (the rich `NodeConfigCodec` payload) round-tripped verbatim into `NodeModel.configJson` without interpreting it.
     - `PipelinePresetJsonSerializer.kt` - Two-way mapper between `PipelinePreset` and the pipeline-preset JSON format used by `assets/presets/pipelines/*.json` and the browser editor's `*.preset.json` export. Strict superset of the pipeline JSON; delegates the graph half to `PipelineJsonSerializer`.
     - `PipelineSamplePromptJson.kt` - Single source of truth for the `{title, toolsHint?}` JSON wire shape of a pipeline's `samplePrompts`; both `PipelineJsonSerializer` (export/import) and the Room `Converters` (the `pipelines.samplePrompts` column) delegate here so the two encodings cannot drift. Total decode (blank/malformed → empty list).
+  - `presetl10n/` - Bundled presets in the interface language: the texts a person reads, paired with the English they translate, and the reader of their translation files.
+    - `PresetTranslations.kt` - The bundled presets' texts in one interface language.
+    - `PresetTranslationsJson.kt` - Reads a bundled preset translation file, `assets/presets/l10n/<language>.json`.
   - `prompt/` - Prompt templating layer.
     - `ChatTranscript.kt` - Renders stored content into the line-oriented lists the app builds for a model — a conversation transcript, the numbered memory and tool-result lists — so that the content cannot open a line of its own.
     - `PromptSegment.kt` - Sealed interface modelling rendered prompt chunks (literal/resolved/unknown) for previews.

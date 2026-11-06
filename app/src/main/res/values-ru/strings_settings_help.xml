@@ -33,7 +33,7 @@
     <string name="settings_help_share_target_pipeline_id">Какой пайплайн запускается, когда вы делитесь с приложением текстом или ссылкой из другого места.</string>
     <string name="settings_help_share_reuse_session">Если включено, всё присланное попадает в один чат «Присланное». Если выключено, каждое присланное открывает свой чат, и список чатов растёт.</string>
     <string name="settings_help_quick_settings_tile_pipeline_id">Какой пайплайн запускает плитка быстрых настроек, когда вы нажимаете её в шторке уведомлений.</string>
-    <string name="settings_help_link_external_automation">Прочитать контракт</string>
+    <string name="settings_help_link_external_automation">Прочитать контракт (на английском)</string>
     <string name="settings_help_external_automation_enabled">Другие приложения на этом устройстве могут запускать прогон — Tasker, MacroDroid, adb. Если выключено, такие запросы отклоняются и ничего не отправляется обратно.</string>
     <string name="settings_help_external_automation_pipeline_id">Единственный пайплайн, который может запустить стороннее приложение. Что бы ни просил запрос, назвать в нём другой нельзя.</string>
     <string name="settings_help_resume_max_age_hours">Насколько устаревшим может быть отложенный прогон, чтобы его ещё можно было продолжить. Дальше прогон отбрасывается: собранный им контекст уже неактуален.</string>

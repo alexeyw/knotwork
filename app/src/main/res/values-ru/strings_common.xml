@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- The language of this translation; picks assets/presets/l10n/ru.json. -->
+    <string name="interface_language_tag">ru</string>
     <!-- Size units; %1$s is the number, already written in the language. -->
     <string name="unit_size_bytes">%1$s Б</string>
     <string name="unit_size_kilobytes">%1$s КБ</string>

@@ -12,6 +12,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import java.util.Locale
 
 /**
  * [AppLanguageRepositoryImpl] over Robolectric's `LocaleManager`: what a pick
@@ -75,6 +77,40 @@ class AppLanguageRepositoryImplTest {
         application.onConfigurationChanged(Configuration(application.resources.configuration))
 
         assertEquals("ru", repository.selectedLanguage.value)
+    }
+
+    @Test
+    fun `given an English device when created then the interface is shown in English`() {
+        val repository = AppLanguageRepositoryImpl(application)
+
+        assertEquals("en", repository.interfaceLanguage.value)
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `given a Russian device when created then the interface is shown in Russian`() {
+        val repository = AppLanguageRepositoryImpl(application)
+
+        assertEquals("ru", repository.interfaceLanguage.value)
+    }
+
+    @Test
+    @Config(qualifiers = "de")
+    fun `given an untranslated device language when created then the interface is in the default`() {
+        val repository = AppLanguageRepositoryImpl(application)
+
+        assertEquals(AppLanguageRepositoryImpl.DEFAULT_LANGUAGE, repository.interfaceLanguage.value)
+    }
+
+    @Test
+    fun `when the configuration changes to another language then the interface language follows it`() {
+        val repository = AppLanguageRepositoryImpl(application)
+        val russian = Configuration(application.resources.configuration)
+        russian.setLocale(Locale.forLanguageTag("ru"))
+
+        application.onConfigurationChanged(russian)
+
+        assertEquals("ru", repository.interfaceLanguage.value)
     }
 
     @Test

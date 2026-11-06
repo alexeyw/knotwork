@@ -19,6 +19,11 @@ class FakeAppLanguageRepository(private val languages: List<String> = listOf("en
 
     override val selectedLanguage: StateFlow<String?> = selection
 
+    /** What [interfaceLanguage] reports; a test moves it with [showIn]. */
+    private val shown = MutableStateFlow(languages.first())
+
+    override val interfaceLanguage: StateFlow<String> = shown
+
     override fun supportedLanguages(): List<String> = languages
 
     override fun select(languageTag: String?) {
@@ -34,5 +39,15 @@ class FakeAppLanguageRepository(private val languages: List<String> = listOf("en
      */
     fun changeFromSystem(languageTag: String?) {
         selection.value = languageTag
+    }
+
+    /**
+     * Changes the language the interface is shown in, as a configuration change
+     * would.
+     *
+     * @param languageTag The language the strings now resolve to.
+     */
+    fun showIn(languageTag: String) {
+        shown.value = languageTag
     }
 }

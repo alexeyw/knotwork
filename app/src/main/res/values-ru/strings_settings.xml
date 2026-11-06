@@ -218,7 +218,7 @@
     <string name="about_section_license">Лицензия</string>
     <string name="about_section_acknowledgments">Благодарности</string>
     <string name="about_section_privacy_policy">Политика конфиденциальности</string>
-    <string name="about_privacy_policy_body">Вся генерация и память по умолчанию находятся на устройстве. Отчёты о сбоях отправляются только с вашего согласия. API-ключи хранятся в Android Keystore. SDK аналитики в приложении нет.</string>
+    <string name="about_privacy_policy_body">Вся генерация и память по умолчанию находятся на устройстве. Отчёты о сбоях отправляются только с вашего согласия. API-ключи хранятся в Android Keystore. SDK аналитики в приложении нет. Полный текст политики — на английском.</string>
     <string name="about_tagline">AI-агент на устройстве для Android</string>
     <string name="about_build_format">Сборка %1$d · %2$s</string>
     <string name="about_open_license_cta">Открыть текст лицензии</string>
@@ -294,7 +294,7 @@
     <string name="help_back">Назад</string>
     <string name="help_dismiss">Закрыть</string>
     <string name="help_state_on_device">на этом устройстве · %1$s</string>
-    <string name="help_state_in_browser">открывается в браузере · %1$s</string>
+    <string name="help_state_in_browser">в браузере, на английском · %1$s</string>
     <string name="help_measure_problems">проблем: %1$s</string>
     <string name="help_measure_sections">разделов: %1$s</string>
     <string name="help_measure_lines">строк: %1$s</string>
@@ -314,7 +314,7 @@
     <string name="help_offline_copy">Скопировать ссылку</string>
     <string name="help_offline_alternative">Открыть «Решение проблем»</string>
     <string name="help_offline_bar">Эта ссылка ведёт в интернет. Сейчас сети нет.</string>
-    <string name="help_reader_action">Открыть в браузере</string>
+    <string name="help_reader_action">Открыть английский оригинал в браузере</string>
     <string name="help_reader_loading">читаем с устройства</string>
     <string name="help_reader_anchor">вы здесь</string>
     <string name="help_reader_error_title">Эта копия не открылась.</string>

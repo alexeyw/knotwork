@@ -55,6 +55,7 @@ Only Kotlin files appear inside the generated blocks.
   - `PolicyDocumentClaimsTest.kt` - Sentences of the privacy policy, the threat model and the bundled FAQ that the code once contradicted, pinned to what the code does now.
   - `PreferenceKeyCensus.kt` - Every preference key the production code declares, read from the sources: the name and value type of each `<type>PreferencesKey("name")` call (`ProductionSources`, comments removed).
   - `PreferenceStorageSnapshotTest.kt` - Snapshot of what the app keeps in its preferences storage: the name and value type of every DataStore key, and the names of the files the settings live in.
+  - `PresetTranslationCoverageTest.kt` - Every text a person reads in a bundled preset exists in every language the app ships, and was translated from the English the preset carries now.
   - `ProductionSources.kt` - The module's production Kotlin sources as text, for the guards that census a name or an idiom rather than a type (`HitlDispatchKonsistTest`, `TranscriptJoinKonsistTest`).
   - `PromptPackNoNetworkKonsistTest.kt` - Konsist guard enforcing the provenance rule of prompt packs: **a pack is imported from a local file the user picked, never fetched.**
   - `RawExecSqlGuardTest.kt` - No production code runs a statement through SQLCipher's `rawExecSQL`.
@@ -196,6 +197,7 @@ Only Kotlin files appear inside the generated blocks.
     - `AppLanguageRepositoryImplTest.kt` - `AppLanguageRepositoryImpl` over Robolectric's `LocaleManager`: what a pick writes, what the repository reports, and that a change made on the system's settings page reaches it through a configuration change.
     - `AssetBundledDocumentationRepositoryTest.kt` - Verifies `AssetBundledDocumentationRepository` against the **real** generated assets rather than a fixture.
     - `BackgroundPromptRepositoryImplTest.kt` - `BackgroundPromptRepositoryImpl` against a real (in-memory) Room database: the encrypted home of the prompts queued background runs execute.
+    - `BundledPresetTranslationsTest.kt` - `BundledPresetTranslations`: which file a language reads, that it is read once, and that every way a file can fail to read leaves the presets as written rather than failing the catalogue.
     - `ChatArchivePersistenceTest.kt` - Drives the chat-archive stack — `ArchiveChatUseCase` / `UnarchiveChatUseCase` → `ChatRepositoryImpl` → `ChatDao` — against a **real in-memory Room database**, so the SQL itself is under test and not just the call routing the mocked repository tests cover.
     - `ChatRepositoryImplTest.kt` - Unit tests for `ChatRepositoryImpl`. Session deletion must go through the single transactional DAO method — messages, run records (no FK cascade) and the session row die together or not at all.
     - `ClarificationRepositoryImplTest.kt` - Unit tests for `ClarificationRepositoryImpl`.
@@ -410,6 +412,9 @@ Only Kotlin files appear inside the generated blocks.
     - `ShowcaseCompositionIntegrationTest.kt` - End-to-end integration test for the **composed** bundled Showcase agent: the task loop whose four subtask branches now run as sub-pipelines through `PIPELINE` nodes.
     - `ShowcaseResearchToFilePresetIntegrationTest.kt` - End-to-end integration test for the bundled `showcase_research_to_file` preset: the "research → file in the user's hands" loop the phase exists to prove.
     - `SkillReportWriterIntegrationTest.kt` - End-to-end integration test for a **`SKILL` node bound to the bundled Report Writer skill** — the tie between skill execution and the agent's workspace file tools.
+  - `presetl10n/` - Tests of the bundled presets' translations: what a translation replaces, and the strict file reader.
+    - `PresetTranslationsJsonTest.kt` - `PresetTranslationsJson.parse`: the file format, and the strictness that keeps a text a model reads out of a translation.
+    - `PresetTranslationsTest.kt` - `PresetTranslations.translate`: which texts of a bundled preset a translation replaces, and that it replaces each one only where the preset still carries the English the translation was written for.
   - `prompt/` - Tests for the prompt templating layer.
     - `ChatTranscriptTest.kt` - Unit tests for `ChatTranscript` — the one rule by which stored content is laid into a model's line-oriented lists without being able to open a line of its own.
     - `ForgedTurnFixture.kt` - Shared fixture for the transcript-forgery tests: message content that tries to open a turn of its own after each of the eight line terminators a tokenizer may render as a line break, and a splitter that honours all eight.
@@ -669,6 +674,8 @@ Only Kotlin files appear inside the generated blocks.
       - `FilesMessengerTest.kt` - Unit coverage for `FilesMessenger` — the single owner of what the Files screen says when an operation does not go through.
       - `FilesScreenMappingTest.kt` - Verifies the pure `FilesUiState.toViewState()` projection used by `FilesScreen`.
       - `FilesViewModelTest.kt` - Unit tests for `FilesViewModel`.
+    - `help/` - Tests of the in-app help: the reader follows the interface language.
+      - `HelpReaderViewModelTest.kt` - `HelpReaderViewModel` and the interface language: the document is read in the language the interface is shown in, and again when that language changes — the ViewModel outlives the screen's re-creation in the new language.
     - `memory/` - Tests for the long-term-memory surface.
       - `MemoryScreenMappingTest.kt` - Unit tests for `toViewState` — the pure projection from `MemoryUiState` to the catalog `MemoryViewState` (filtering, grouping, breakdown, detail labels).
       - `MemoryViewModelTest.kt` - Tests for MemoryViewModel.

@@ -2,6 +2,7 @@ package app.knotwork.android.data.repositories
 
 import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.DocumentationTarget
+import app.knotwork.android.presentation.ui.settings.FakeAppLanguageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -25,16 +26,60 @@ import org.robolectric.RuntimeEnvironment
  * whatever the fixture's author believed the generator emits. Reading the
  * shipped artifact is what closes the loop — and it is the same artifact the
  * APK carries.
+ *
+ * Every check on the English index runs on each translation too: a translated
+ * document is read through its own index, and the app links into it by the
+ * English anchors.
  */
 @RunWith(RobolectricTestRunner::class)
 class AssetBundledDocumentationRepositoryTest {
 
     private lateinit var repository: AssetBundledDocumentationRepository
+    private val language = FakeAppLanguageRepository()
 
     @Before
     fun setUp() {
-        repository = AssetBundledDocumentationRepository(RuntimeEnvironment.getApplication())
+        repository = AssetBundledDocumentationRepository(RuntimeEnvironment.getApplication(), language)
             .apply { dispatcher = Dispatchers.Unconfined }
+    }
+
+    @Test
+    fun `given the interface in Russian when documents are read then they are the Russian translation`() = runTest {
+        val english = repository.documents().getOrThrow()
+        language.showIn("ru")
+
+        val russian = repository.documents().getOrThrow()
+
+        assertEquals(english.map { it.id }, russian.map { it.id })
+        assertEquals(english.map { it.path }, russian.map { it.path })
+        assertTrue(russian.map { it.assetPath }.toString(), russian.all { it.assetPath.startsWith("docs/ru/") })
+        // The app and the documents link by the English anchors, in every language.
+        assertEquals(english.map { it.anchors.keys.toList() }, russian.map { it.anchors.keys.toList() })
+        for (document in russian) {
+            assertTrue(document.id, CYRILLIC.containsMatchIn(repository.content(document.id).getOrThrow()))
+        }
+    }
+
+    @Test
+    fun `given the interface in Russian when anchors are read then each offset lands on a translated heading`() =
+        runTest {
+            language.showIn("ru")
+
+            for (document in repository.documents().getOrThrow()) {
+                val text = repository.content(document.id).getOrThrow()
+                for ((anchor, offset) in document.anchors) {
+                    val line = text.substring(offset, text.indexOf('\n', offset).takeIf { it >= 0 } ?: text.length)
+                    assertTrue("Anchor '$anchor' of ${document.id} points at '$line'", line.startsWith("#"))
+                }
+            }
+        }
+
+    @Test
+    fun `given a language the documents are not translated into when read then the English is read`() = runTest {
+        val english = repository.documents().getOrThrow()
+        language.showIn("de")
+
+        assertEquals(english, repository.documents().getOrThrow())
     }
 
     @Test
@@ -117,5 +162,9 @@ class AssetBundledDocumentationRepositoryTest {
         val result = repository.content("no-such-document")
         assertTrue("Expected a failure, got $result", result.isFailure)
         assertFalse(result.isSuccess)
+    }
+
+    private companion object {
+        val CYRILLIC = Regex("[а-яё]", RegexOption.IGNORE_CASE)
     }
 }

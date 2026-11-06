@@ -136,7 +136,7 @@
     <string name="triggers_journal_time_minutes_ago">%1$d мин назад</string>
     <string name="triggers_journal_day_today">Сегодня</string>
     <string name="triggers_journal_day_yesterday">Вчера</string>
-    <string name="triggers_documentation_cd">Прочитать о триггерах</string>
+    <string name="triggers_documentation_cd">Прочитать о триггерах (на английском)</string>
     <string name="triggers_export_share_cd">Поделиться журналом проверок</string>
     <string name="triggers_export_save_cd">Сохранить журнал проверок</string>
 </resources>

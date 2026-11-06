@@ -31,7 +31,7 @@
     <string name="pipeline_editor_rename_field_label">Подпись узла</string>
     <string name="pipeline_editor_rename_confirm">Переименовать</string>
     <string name="pipeline_editor_rename_cancel">Отменить</string>
-    <string name="pipeline_editor_overflow_cookbook">Рецепты пайплайнов</string>
+    <string name="pipeline_editor_overflow_cookbook">Рецепты пайплайнов (на английском)</string>
     <string name="pipeline_editor_overflow_find">Найти узел…</string>
     <string name="pipeline_editor_search_placeholder">Поиск узлов…</string>
     <string name="pipeline_editor_search_close">Закрыть поиск</string>

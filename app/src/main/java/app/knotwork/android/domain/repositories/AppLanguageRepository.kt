@@ -32,6 +32,17 @@ interface AppLanguageRepository {
     val selectedLanguage: StateFlow<String?>
 
     /**
+     * The language the interface is shown in now, as a BCP-47 tag from
+     * [supportedLanguages]: the picked language, else the device's when the app
+     * is translated into it, else the default. Emits again when it changes —
+     * from a pick, or from a change of the device's language.
+     *
+     * Text the app keeps outside its string resources (the bundled presets'
+     * names) follows this, so it is shown in the language the screens are.
+     */
+    val interfaceLanguage: StateFlow<String>
+
+    /**
      * Picks the app's language. The system then re-creates the visible screens in
      * that language.
      *
