@@ -13,4 +13,36 @@
     <string name="monitoring_stat_tokens_per_second">ТОКЕНОВ/С</string>
     <string name="monitoring_stat_total_tokens">ВСЕГО ТОКЕНОВ</string>
     <string name="monitoring_unit_ms">%1$d мс</string>
+    <string name="monitoring_power_saving_title">Включён режим энергосбережения</string>
+    <string name="monitoring_power_saving_text">Заряд батареи низкий. Модель агента выгружена, фоновые задачи приостановлены.</string>
+    <string name="monitoring_section_session_aggregates">Итоги сеанса</string>
+    <string name="monitoring_section_time_per_node">Время по типам узлов</string>
+    <string name="monitoring_section_logs">Системные действия и журнал</string>
+    <string name="monitoring_no_recent_actions">Недавних действий нет.</string>
+    <string name="monitoring_screen_title">Метрики в реальном времени</string>
+    <string name="monitoring_empty_title">Метрик пока нет</string>
+    <string name="monitoring_empty_subtitle">Запустите пайплайн, чтобы здесь появились метрики.</string>
+    <string name="monitoring_error_title">Не удалось загрузить метрики</string>
+    <string name="taskmonitor_screen_title">Активные задачи</string>
+    <string name="taskmonitor_empty_title">Нет выполняемых задач</string>
+    <string name="taskmonitor_empty_subtitle">Здесь появляются фоновые задачи и активные чаты.</string>
+    <string name="taskmonitor_error_title">Не удалось загрузить задачи</string>
+    <string name="taskmonitor_open_chat">Открыть чат</string>
+    <string name="taskmonitor_filter_all">Все</string>
+    <string name="taskmonitor_filter_active">Активные</string>
+    <string name="taskmonitor_filter_background">Фоновые</string>
+    <string name="taskmonitor_filter_completed">Завершённые</string>
+    <string name="taskmonitor_detail_no_logs">Строк журнала пока нет.</string>
+    <string name="taskmonitor_row_scheduled_title">Запланированная задача</string>
+    <string name="taskmonitor_row_scheduled_interval_format">раз в %1$d ч</string>
+    <string name="taskmonitor_cancel_all_cd">Остановить все запланированные задачи</string>
+    <string name="taskmonitor_cancel_all_title">Остановить все запланированные задачи?</string>
+    <string name="taskmonitor_cancel_all_confirm">Остановить все</string>
+    <string name="taskmonitor_cancel_all_dismiss">Оставить</string>
+    <plurals name="taskmonitor_cancel_all_body">
+        <item quantity="one">Будет остановлено запланированных задач: %1$d, включая выполняемые прямо сейчас. Автоматизации и их триггеры не затрагиваются, ничего не удаляется — задачу можно запланировать снова.</item>
+        <item quantity="few">Будет остановлено запланированных задач: %1$d, включая выполняемые прямо сейчас. Автоматизации и их триггеры не затрагиваются, ничего не удаляется — задачу можно запланировать снова.</item>
+        <item quantity="many">Будет остановлено запланированных задач: %1$d, включая выполняемые прямо сейчас. Автоматизации и их триггеры не затрагиваются, ничего не удаляется — задачу можно запланировать снова.</item>
+        <item quantity="other">Будет остановлено запланированных задач: %1$d, включая выполняемые прямо сейчас. Автоматизации и их триггеры не затрагиваются, ничего не удаляется — задачу можно запланировать снова.</item>
+    </plurals>
 </resources>

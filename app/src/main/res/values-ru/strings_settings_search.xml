@@ -111,8 +111,8 @@
     <string name="settings_search_desc_link_provider_detail">Повторы облака настраиваются на странице провайдера — здесь только ссылка.</string>
     <string name="settings_search_name_tool_approval_policy">Спрашивать о вызовах инструментов</string>
     <string name="settings_search_desc_tool_approval_policy">Когда останавливаться и ждать вашего согласия.</string>
-    <string name="settings_search_name_block_destructive_tools">Блокировать разрушительные инструменты</string>
-    <string name="settings_search_desc_block_destructive_tools">Сразу отказывать в разрушительных вызовах, не спрашивая.</string>
+    <string name="settings_search_name_block_destructive_tools">Блокировать опасные инструменты</string>
+    <string name="settings_search_desc_block_destructive_tools">Сразу отказывать в опасных вызовах, не спрашивая.</string>
     <string name="settings_search_name_block_network_from_local_model">Блокировать сеть для локальной модели</string>
     <string name="settings_search_desc_block_network_from_local_model">Облачные модели, поиск по памяти и Википедия выключены · Ollama только по локальному IP.</string>
     <string name="settings_search_name_link_tools_screen">Инструменты и MCP-серверы</string>

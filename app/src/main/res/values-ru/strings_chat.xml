@@ -41,9 +41,9 @@
     <string name="chat_home_debug_state_empty">Пусто</string>
     <string name="chat_home_debug_state_idle">Ожидание</string>
     <string name="chat_home_debug_state_generating">Генерация</string>
-    <string name="chat_home_debug_state_hitl_readonly">HITL — только чтение</string>
-    <string name="chat_home_debug_state_hitl_sensitive">HITL — чувствительный</string>
-    <string name="chat_home_debug_state_hitl_destructive">HITL — разрушительный</string>
+    <string name="chat_home_debug_state_hitl_readonly">HITL — чтение</string>
+    <string name="chat_home_debug_state_hitl_sensitive">HITL — осторожно</string>
+    <string name="chat_home_debug_state_hitl_destructive">HITL — опасно</string>
     <string name="chat_home_debug_state_clarification">Уточнение</string>
     <string name="chat_home_debug_state_interrupted">Прервано</string>
     <string name="chat_home_debug_state_error">Ошибка</string>

@@ -51,11 +51,11 @@
     <string name="tools_mcp_status_interrupted">Попытка подключения прервана</string>
     <string name="app_name">Knotwork</string>
     <string name="approval_channel_sensitive_name">Подтверждения агента</string>
-    <string name="approval_channel_sensitive_description">Запросы подтверждения для чувствительных вызовов инструментов.</string>
-    <string name="approval_channel_destructive_name">Подтверждения агента — разрушительные действия</string>
+    <string name="approval_channel_sensitive_description">Запросы подтверждения для вызовов инструментов уровня «Осторожно».</string>
+    <string name="approval_channel_destructive_name">Подтверждения агента — опасные действия</string>
     <string name="approval_channel_destructive_description">Запросы подтверждения для необратимых вызовов инструментов (например, отправка, удаление, покупка).</string>
     <string name="approval_notification_title_sensitive">Подтверждение вызова инструмента</string>
-    <string name="approval_notification_title_destructive">Разрушительное действие требует подтверждения</string>
+    <string name="approval_notification_title_destructive">Опасное действие требует подтверждения</string>
     <string name="approval_notification_text">Агент хочет использовать %1$s. Разрешить?</string>
     <string name="approval_notification_big_text">Агент хочет использовать %1$s с аргументами:\n%2$s</string>
     <string name="approval_notification_waiting_text">Ждём вашего подтверждения, чтобы использовать %1$s.</string>

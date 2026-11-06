@@ -25,4 +25,7 @@
         <item quantity="many">%1$d прогонов</item>
         <item quantity="other">%1$d прогона</item>
     </plurals>
+    <string name="memory_msg_load_error">Не удалось обновить память</string>
+    <string name="memory_msg_add_error">Не удалось сохранить в память</string>
+    <string name="memory_msg_edit_error">Не удалось сохранить правку</string>
 </resources>
