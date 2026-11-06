@@ -30,7 +30,7 @@
     <string name="settings_search_syn_pipeline_max_nesting_depth">вложенность, максимум, глубина, пайплайны</string>
     <string name="settings_search_syn_structured_output_max_repairs">json, исправление, максимум</string>
     <string name="settings_search_syn_link_provider_detail">повтор, облако, задержка</string>
-    <string name="settings_search_syn_tool_approval_policy">hitl, подтверждение</string>
+    <string name="settings_search_syn_tool_approval_policy">hitl, подтверждение, подтверждать, спрашивать</string>
     <string name="settings_search_syn_block_destructive_tools">безопасность</string>
     <string name="settings_search_syn_block_network_from_local_model">сеть, офлайн</string>
     <string name="settings_search_syn_link_tools_screen">mcp, инструменты, серверы</string>
@@ -109,7 +109,7 @@
     <string name="settings_search_desc_structured_output_max_repairs">Попытки привести неверный JSON-вывод к схеме.</string>
     <string name="settings_search_name_link_provider_detail">Повторы облака: попытки и задержка</string>
     <string name="settings_search_desc_link_provider_detail">Повторы облака настраиваются на странице провайдера — здесь только ссылка.</string>
-    <string name="settings_search_name_tool_approval_policy">Подтверждать вызовы инструментов</string>
+    <string name="settings_search_name_tool_approval_policy">Спрашивать о вызовах инструментов</string>
     <string name="settings_search_desc_tool_approval_policy">Когда останавливаться и ждать вашего согласия.</string>
     <string name="settings_search_name_block_destructive_tools">Блокировать разрушительные инструменты</string>
     <string name="settings_search_desc_block_destructive_tools">Сразу отказывать в разрушительных вызовах, не спрашивая.</string>

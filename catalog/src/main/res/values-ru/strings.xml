@@ -489,7 +489,7 @@
     <string name="knotwork_usage_action_export">Экспортировать JSON</string>
     <string name="knotwork_usage_action_reset">Сбросить статистику</string>
     <string name="knotwork_settings_system_instructions_counter" tools:ignore="PluralsCandidate">%1$d / %2$d симв. · ≈ %3$d ток</string>
-    <string name="knotwork_settings_restrictions_approve">Подтверждать вызовы инструментов</string>
+    <string name="knotwork_settings_restrictions_approve">Спрашивать</string>
     <string name="knotwork_settings_restrictions_block_destructive">Блокировать разрушительные инструменты</string>
     <string name="knotwork_settings_restrictions_block_network">Блокировать сеть для локальной модели</string>
     <string name="knotwork_settings_llm_reset">Сбросить к значениям по умолчанию</string>

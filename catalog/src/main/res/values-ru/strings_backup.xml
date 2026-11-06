@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="knotwork_backup_settings_row">Резервная копия и восстановление</string>
     <string name="knotwork_backup_settings_row_sub">Сохранить копию или перенести на новый телефон</string>
     <string name="knotwork_backup_home_title">Резервная копия и восстановление</string>
@@ -16,8 +16,8 @@
     <string name="knotwork_backup_pw_short">Слишком короткий. Нужно не меньше 12 символов.</string>
     <string name="knotwork_backup_pw2_label">Пароль ещё раз</string>
     <string name="knotwork_backup_pw2_mismatch">Не совпадает с паролем выше.</string>
-    <string name="knotwork_backup_secrets_label">Включить API-ключи и входы</string>
-    <string name="knotwork_backup_secrets_sub">Облачные API-ключи, токен Hugging Face и входы в MCP. Если не включать, на новом телефоне их придётся ввести заново.</string>
+    <string name="knotwork_backup_secrets_label">Включить API-ключи и данные для входа</string>
+    <string name="knotwork_backup_secrets_sub">Облачные API-ключи, токен Hugging Face и данные для входа в MCP. Если не включать, на новом телефоне их придётся ввести заново.</string>
     <string name="knotwork_backup_choose_where">Выбрать, куда сохранить</string>
     <string name="knotwork_backup_working_title">Создание копии</string>
     <string name="knotwork_backup_step_password">Защита пароля</string>
@@ -27,8 +27,8 @@
     <string name="knotwork_backup_keep_open">Не закрывайте Knotwork, пока это не закончится.</string>
     <string name="knotwork_backup_cancel">Отменить</string>
     <string name="knotwork_backup_saved_title">Копия сохранена</string>
-    <string name="knotwork_backup_saved_keys_in">API-ключи и входы есть в этом файле. Любой, у кого есть файл и пароль, может ими воспользоваться.</string>
-    <string name="knotwork_backup_saved_keys_out">API-ключей и входов в этом файле нет.</string>
+    <string name="knotwork_backup_saved_keys_in">API-ключи и данные для входа есть в этом файле. Любой, у кого есть файл и пароль, может ими воспользоваться.</string>
+    <string name="knotwork_backup_saved_keys_out">API-ключей и данных для входа в этом файле нет.</string>
     <string name="knotwork_backup_saved_reminder">Храните пароль в надёжном месте. Без него файл не открыть.</string>
     <plurals name="knotwork_backup_saved_skipped">
         <item quantity="one">Файлов не попало в копию: %1$s — их имена нельзя в ней сохранить.</item>
@@ -78,8 +78,8 @@
     <string name="knotwork_backup_summary_title">Готово к восстановлению</string>
     <string name="knotwork_backup_summary_checked">Пароль и файл проверены</string>
     <string name="knotwork_backup_summary_from">Из копии</string>
-    <string name="knotwork_backup_summary_keys_in">API-ключи и входы: есть</string>
-    <string name="knotwork_backup_summary_keys_out">API-ключи и входы: в этой копии нет</string>
+    <string name="knotwork_backup_summary_keys_in">API-ключи и данные для входа: есть</string>
+    <string name="knotwork_backup_summary_keys_out">API-ключи и данные для входа: в этой копии нет</string>
     <plurals name="knotwork_backup_summary_models">
         <item quantity="one">%1$d модель — скачать заново · %2$s</item>
         <item quantity="few">%1$d модели — скачать заново · %2$s</item>
@@ -108,7 +108,7 @@
     <string name="knotwork_backup_download_failed">Загрузка не завершилась. Повторите или найдите модель в «Каталоге».</string>
     <string name="knotwork_backup_download_paused">Приостановлено: Android ограничивает, сколько загрузка может идти в фоне.</string>
     <string name="knotwork_backup_download_mismatch">Файл не совпал с контрольной суммой, опубликованной Hugging Face, поэтому он удалён.</string>
-    <string name="knotwork_backup_after_keys">Снова введите API-ключи в «Настройках», токен Hugging Face — в «Моделях», а входы в MCP — в «Инструментах».</string>
+    <string name="knotwork_backup_after_keys">Снова введите API-ключи в «Настройках», токен Hugging Face — в «Моделях», а данные для входа в MCP — в «Инструментах».</string>
     <string name="knotwork_backup_after_tasks">Задачи, запланированные агентом, не перенесены. Попросите его настроить их заново.</string>
     <string name="knotwork_backup_cancel_download">Отменить загрузку</string>
     <plurals name="knotwork_backup_n_chats">
@@ -135,25 +135,26 @@
         <item quantity="many">%1$s файлов</item>
         <item quantity="other">%1$s файла</item>
     </plurals>
-    <plurals name="knotwork_backup_stat_chats">
+    <!-- The noun under a count shown in its own cell: the form for 21 is the form for 1, so "one" needs no number. -->
+    <plurals name="knotwork_backup_stat_chats" tools:ignore="ImpliedQuantity">
         <item quantity="one">чат</item>
         <item quantity="few">чата</item>
         <item quantity="many">чатов</item>
         <item quantity="other">чата</item>
     </plurals>
-    <plurals name="knotwork_backup_stat_memories">
+    <plurals name="knotwork_backup_stat_memories" tools:ignore="ImpliedQuantity">
         <item quantity="one">воспоминание</item>
         <item quantity="few">воспоминания</item>
         <item quantity="many">воспоминаний</item>
         <item quantity="other">воспоминания</item>
     </plurals>
-    <plurals name="knotwork_backup_stat_pipelines">
+    <plurals name="knotwork_backup_stat_pipelines" tools:ignore="ImpliedQuantity">
         <item quantity="one">пайплайн</item>
         <item quantity="few">пайплайна</item>
         <item quantity="many">пайплайнов</item>
         <item quantity="other">пайплайна</item>
     </plurals>
-    <plurals name="knotwork_backup_stat_files">
+    <plurals name="knotwork_backup_stat_files" tools:ignore="ImpliedQuantity">
         <item quantity="one">файл</item>
         <item quantity="few">файла</item>
         <item quantity="many">файлов</item>

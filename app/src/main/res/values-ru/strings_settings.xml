@@ -5,7 +5,7 @@
     <!-- Provider name that describes rather than names. -->
     <string name="settings_provider_openai_compatible">Сервер с API OpenAI</string>
     <!-- Units of slider values; %1$d is the number. -->
-    <string name="settings_unit_tokens">%1$d ток.</string>
+    <string name="settings_unit_tokens" tools:ignore="PluralsCandidate">%1$d ток</string>
     <string name="settings_unit_seconds">%1$d с</string>
     <string name="settings_unit_megabytes">%1$d МБ</string>
     <string name="settings_unit_kilobytes">%1$d КБ</string>
@@ -28,7 +28,7 @@
     <string name="settings_system_instructions_too_long">Системные инструкции длиннее лимита в %1$d символов.</string>
     <string name="settings_field_system_prompt_prefix">Отвечай кратко. Списки лучше сплошного текста. Используй $DATE для дат и $LANG для языка пользователя.</string>
     <string name="settings_restrictions_approve_all">Все</string>
-    <string name="settings_restrictions_approve_sensitive">Чувствительные +</string>
+    <string name="settings_restrictions_approve_sensitive">С риском</string>
     <string name="settings_restrictions_approve_never">Никогда</string>
     <string name="settings_row_temperature_title">Температура</string>
     <string name="settings_row_top_k_title">Top-K</string>
@@ -53,14 +53,14 @@
     <string name="settings_row_test_backend_failed">Последняя проверка не удалась · %1$s</string>
     <string name="settings_ollama_base_url_label">Базовый URL Ollama</string>
     <string name="settings_ollama_base_url_placeholder">http://192.168.1.100:11434</string>
-    <string name="settings_cleartext_consent_body">Трафик к %1$s не шифруется. Любой в той же сети может прочитать, что вы отправляете. Подтверждайте, только если этот адрес — доверенная машина в вашей собственной сети.</string>
+    <string name="settings_cleartext_consent_body">Трафик к %1$s не шифруется. Любой в той же сети может прочитать, что вы отправляете. Разрешайте, только если этот адрес — доверенная машина в вашей собственной сети.</string>
     <string name="settings_cleartext_consent_action">Разрешить незашифрованное соединение</string>
     <string name="settings_ollama_model_label">Имя модели Ollama</string>
     <string name="settings_ollama_context_label">Размер контекстного окна Ollama</string>
     <string name="settings_provider_api_key_label">API-ключ %1$s</string>
     <string name="settings_provider_model_label">Модель %1$s</string>
     <string name="settings_address_label">Адрес сервера</string>
-    <string name="settings_address_hint_v1">Включите /v1 — большинство серверов отдают API OpenAI по этому пути.</string>
+    <string name="settings_address_hint_v1">Добавьте /v1 — большинство серверов отдают API OpenAI по этому пути.</string>
     <string name="settings_address_error_empty">Введите адрес сервера.</string>
     <string name="settings_address_error_not_url">Это не адрес. Адрес начинается с http:// или https://.</string>
     <string name="settings_address_refused_public_http">%1$s в публичном интернете, и по http:// ваши промпты уйдут без шифрования. Используйте https://.</string>
@@ -118,9 +118,9 @@
     <string name="settings_test_failed_key_own">Ключ отклонён (%1$d). Проверьте, какой ключ ожидает сервер.</string>
     <string name="settings_test_failed_key_missing">Серверу нужен ключ (%1$d). Введите его в поле «API-ключ».</string>
     <string name="settings_test_failed_not_found">По адресу %1$s ничего нет (404). Большинству серверов нужен адрес, оканчивающийся на /v1.</string>
-    <string name="settings_test_failed_rate">Слишком много запросов. Сервер %1$s просит подождать %2$d с — затем проверьте снова.</string>
-    <string name="settings_test_failed_rate_no_wait">Сервер %1$s ограничил частоту запросов. Проверьте снова через минуту.</string>
-    <string name="settings_test_failed_server_hosted">Ошибка сервера (%1$d) на %2$s. Проблема на их стороне: проверьте снова через несколько минут.</string>
+    <string name="settings_test_failed_rate">Слишком много запросов: %1$s просит подождать %2$d с. Затем проверьте снова.</string>
+    <string name="settings_test_failed_rate_no_wait">%1$s ограничивает частоту запросов. Проверьте снова через минуту.</string>
+    <string name="settings_test_failed_server_hosted">Ошибка сервера (%1$d) у %2$s. Проблема на их стороне: проверьте снова через несколько минут.</string>
     <string name="settings_test_failed_server_own">Ошибка сервера (%1$d). Сервер ответил, а затем сбился: посмотрите его журнал и проверьте снова.</string>
     <string name="settings_test_failed_dns">Не удаётся найти %1$s. Проверьте написание адреса.</string>
     <string name="settings_test_failed_offline">Не удаётся связаться с %1$s. Убедитесь, что телефон в сети, и проверьте снова.</string>
@@ -132,7 +132,7 @@
     <string name="settings_test_failed_no_list">Сервер ответил, но не списком моделей.</string>
     <string name="settings_test_failed_handshake">Сервер %1$s принял подключение, но не завершил рукопожатие MCP за %2$d с. Убедитесь, что URL — это MCP-эндпоинт сервера.</string>
     <string name="settings_test_failed_not_mcp">Сервер %1$s ответил, но не как MCP-сервер. Проверьте путь: часто это /mcp или /sse.</string>
-    <string name="settings_test_failed_mcp_auth">Учётные данные отклонены (%1$d). Проверьте токен в разделе «Аутентификация».</string>
+    <string name="settings_test_failed_mcp_auth">Данные для входа отклонены (%1$d). Проверьте токен в разделе «Аутентификация».</string>
     <string name="settings_test_failed_unknown">Не удалось подключиться: %1$s</string>
     <string name="settings_test_a11y_started">Проверка подключения</string>
     <string name="settings_memory_stat_chunks">Фрагменты</string>
@@ -202,7 +202,7 @@
     <string name="notifications_model_download_paused_title">Загрузка модели приостановлена</string>
     <string name="notifications_model_download_paused_text">%1$s: Android ограничивает, сколько загрузка может идти в фоне. Запустите её снова в приложении, чтобы продолжить с места остановки.</string>
     <string name="notifications_model_download_mismatch_title">Загруженная модель не совпала</string>
-    <string name="notifications_model_download_mismatch_text">%1$s не совпал с контрольной суммой, опубликованной Hugging Face, поэтому файл удалён. Загрузите его снова в приложении.</string>
+    <string name="notifications_model_download_mismatch_text">Файл %1$s не совпал с контрольной суммой, опубликованной Hugging Face, поэтому он удалён. Загрузите его снова в приложении.</string>
     <string name="model_download_interrupted_format">%1$s: %2$s</string>
     <string name="model_download_checksum_mismatch">Загруженный файл не совпал с контрольной суммой, опубликованной Hugging Face, поэтому он удалён. Загрузите его снова.</string>
     <string name="model_download_paused_time_limit">Загрузка приостановлена: Android ограничивает, сколько загрузка может идти в фоне. Запустите её снова, чтобы продолжить с места остановки.</string>
@@ -230,7 +230,7 @@
     <string name="settings_cloud_retry_attempts_title">Максимум попыток</string>
     <string name="settings_cloud_retry_delay_title">Базовая задержка</string>
     <string name="settings_cloud_retry_delay_value">%1$d мс</string>
-    <string name="settings_cloud_retry_hint">Относится ко всем облачным провайдерам и облачным эмбеддингам. Ограничения частоты и ошибки сервера повторяются после паузы, которую просит провайдер; неверный ключ — никогда.</string>
+    <string name="settings_cloud_retry_hint">Относится ко всем облачным провайдерам и облачным эмбеддингам. Запросы, упёршиеся в ограничение частоты или ошибку сервера, повторяются после паузы, которую просит провайдер; при неверном ключе — никогда.</string>
     <string name="settings_cloud_retry_attempts_hint">Сколько раз неудачный вызов повторяется, прежде чем сдаться. При значении 1 ошибка сообщается сразу.</string>
     <string name="settings_cloud_retry_delay_hint">Пауза перед первым повтором; каждая следующая длиннее. Короткая реагирует быстрее, длинная бережнее к ограничению частоты.</string>
     <string name="settings_pipeline_not_set">Не задан</string>
