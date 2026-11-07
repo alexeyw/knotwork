@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="prompts_screen_title">Biblioteca de prompts</string>
+    <string name="prompts_subtitle_format" tools:ignore="PluralsCandidate">Categorías: %1$d · prompts: %2$d</string>
+    <string name="prompts_back_cd">Atrás</string>
+    <string name="prompts_fab_cd">Agregar prompt</string>
+    <string name="prompts_edit_cd">Editar prompt</string>
+    <string name="prompts_delete_cd">Eliminar prompt</string>
+    <string name="prompts_preview_cd">Vista previa del prompt</string>
+    <string name="prompts_used_by_format" tools:ignore="PluralsCandidate">pipelines que lo usan: %1$d</string>
+    <string name="prompts_duplicate_cd">Duplicar prompt</string>
+    <string name="prompts_more_cd">Más acciones</string>
+    <string name="prompts_empty_title">Aún no hay prompts</string>
+    <string name="prompts_empty_subtitle">Importa un prompt desde un archivo Markdown o escribe uno desde cero.</string>
+    <string name="prompts_empty_import_cta">Importar prompt</string>
+    <string name="prompts_empty_new_cta">Nuevo prompt</string>
+    <string name="prompts_empty_category_title">Aún no hay nada aquí</string>
+    <string name="prompts_empty_category_subtitle">Aquí aparecen los prompts de este tipo de paso. Importa uno o toca + para escribirlo.</string>
+    <string name="prompts_error_title">No se pudieron cargar los prompts</string>
+    <string name="prompts_import_cd">Importar un prompt desde un archivo</string>
+    <string name="prompts_export_cd_format">Exportar «%1$s» a un archivo</string>
+    <string name="prompts_action_export">Exportar</string>
+    <string name="prompts_action_delete">Eliminar</string>
+    <string name="prompts_import_success_format">Se importó «%1$s» en %2$s.</string>
+    <string name="prompts_import_success_action">Mostrar</string>
+    <string name="prompts_export_success_format">Se exportó «%1$s».</string>
+    <string name="prompts_import_unchanged_format">«%1$s» ya está en tu biblioteca: no cambió nada.</string>
+    <string name="prompts_import_unreadable">No se pudo leer ese archivo.</string>
+    <string name="prompts_export_unwritable">No se pudo guardar ese archivo.</string>
+    <string name="prompts_import_left_out_heading">OMITIDO</string>
+    <plurals name="prompts_import_left_out_more">
+        <item quantity="one">y %1$d más</item>
+        <item quantity="many">y %1$d más</item>
+        <item quantity="other">y %1$d más</item>
+    </plurals>
+    <string name="prompts_import_mismatch_title">Importado sin algunos ajustes</string>
+    <string name="prompts_import_mismatch_body_format">«%1$s» se escribió con otra versión de la app. El prompt llegó; estos ajustes no.</string>
+    <string name="prompts_import_unknown_keys_body_format">«%1$s» está en tu biblioteca. Algunos ajustes del archivo no los conoce esta app, así que se omitieron.</string>
+    <string name="prompts_import_refused_title">Importado solo como texto</string>
+    <string name="prompts_import_refused_body_format">«%1$s» ya está en tu biblioteca. El archivo también pedía agregar %2$s: un prompt solo puede aportar texto, así que esa parte se omitió.</string>
+    <string name="prompts_import_refused_asked_tools">herramientas</string>
+    <string name="prompts_import_refused_asked_steps">pasos</string>
+    <string name="prompts_import_refused_asked_scripts">scripts</string>
+    <string name="prompts_import_refused_tools_format">Herramientas: %1$s</string>
+    <string name="prompts_import_refused_steps_format" tools:ignore="PluralsCandidate">Pasos: %1$d</string>
+    <string name="prompts_import_refused_scripts_format" tools:ignore="PluralsCandidate">Scripts: %1$d</string>
+    <string name="prompts_import_version_left_out_format">Versión: %1$d</string>
+    <string name="prompts_import_failed_title">No se importó nada</string>
+    <string name="prompts_import_failed_frontmatter">Falta el bloque de ajustes del principio del archivo o está incompleto. Tiene que ir entre dos líneas de tres guiones.</string>
+    <string name="prompts_import_failed_duplicate_key">El bloque de ajustes del principio del archivo nombra el mismo ajuste dos veces, así que no hay forma de saber cuál querías.</string>
+    <string name="prompts_import_failed_missing_key_format">Al archivo le falta algo que necesita: %1$s.</string>
+    <string name="prompts_import_failed_no_prompt">El archivo tiene un nombre, pero no el texto del prompt, así que no hay nada que guardar.</string>
+    <string name="prompts_import_failed_unknown_type_format">El archivo es para un tipo de paso que esta app no tiene: %1$s.</string>
+    <string name="prompts_import_failed_not_llm_format">Los prompts son de pasos que llaman a un modelo. Este archivo es para %1$s, que no lo hace.</string>
+    <string name="prompts_import_failed_name_too_long_format" tools:ignore="PluralsCandidate">El nombre del archivo tiene más de %1$d caracteres.</string>
+    <string name="prompts_import_failed_prompt_too_long_format" tools:ignore="PluralsCandidate">El prompt del archivo tiene más de %1$d caracteres.</string>
+    <string name="prompts_import_collision_title_format">«%1$s» ya está en tu biblioteca</string>
+    <string name="prompts_import_collision_body">El archivo y el prompt guardado no son iguales. Si conservas ambos, el archivo se guarda como un prompt aparte.</string>
+    <string name="prompts_import_collision_replace">Reemplazar</string>
+    <string name="prompts_import_collision_keep_both">Conservar ambos</string>
+    <string name="prompts_editor_title_new">Nuevo prompt</string>
+    <string name="prompts_editor_title_edit">Editar prompt</string>
+    <string name="prompts_editor_name_label">NOMBRE</string>
+    <string name="prompts_editor_name_placeholder">Sin título</string>
+    <string name="prompts_editor_category_label">CATEGORÍA (TIPO DE NODO)</string>
+    <string name="prompts_editor_category_placeholder">DECOMPOSITION</string>
+    <string name="prompts_editor_body_label">TEXTO DEL PROMPT</string>
+    <string name="prompts_editor_body_placeholder">Escribe el prompt aquí…</string>
+    <string name="prompts_editor_insert_label">INSERTAR</string>
+    <string name="prompts_editor_category_invalid">Elige un tipo de nodo que use un LLM (LITE_RT, CLOUD, OUTPUT, SUMMARY, INTENT_ROUTER, DECOMPOSITION, EVALUATION, CLARIFICATION).</string>
+    <string name="prompts_editor_footer_format" tools:ignore="PluralsCandidate">Pipelines que lo usan: %1$d · los cambios se aplican en la próxima ejecución</string>
+    <string name="prompts_editor_close_cd">Cerrar el editor</string>
+</resources>
