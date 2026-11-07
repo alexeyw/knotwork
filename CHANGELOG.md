@@ -67,6 +67,12 @@ details.
 
 ### Fixed
 
+- **The help names three controls as the app shows them**: **Activate** on the
+  Models screen (it said *Make Active*), Memory's **Compact** (it said
+  *Compact Memory*) and the More tab's **Tasks** row (it said *Active tasks*,
+  the title of the screen that row opens). The troubleshooting section on a
+  trigger that did not fire now counts its three cases as three. The Russian
+  and Spanish help follow.
 - **Exporting a long chat no longer closes the app.** *Export chat* handed the
   whole chat to the share sheet as text, and a chat over about 350 000
   characters is more than Android lets an app pass that way. It now shares the

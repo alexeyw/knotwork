@@ -156,7 +156,7 @@ shows it or the download starts again.
 ### 3. Activate the model
 
 After the download finishes, the model shows up in the **Downloaded**
-list below the presets. Tap **Make Active** on the row you want to
+list below the presets. Tap **Activate** on the row you want to
 use. The active model is highlighted and labelled **Active**. Only
 one model can be active at a time.
 
@@ -1930,7 +1930,7 @@ Two things bound this. The app refuses to schedule anything more once
 too many scheduled runs have already started within the last hour, and
 tells the agent so instead of failing silently — a legitimate schedule
 (hourly or slower, which is all background work honours anyway) never
-comes close to that. And **More → Active tasks → Stop all scheduled
+comes close to that. And **More → Tasks → Stop all scheduled
 tasks** ends the chain outright, which cancelling the one queued item by
 hand cannot do while the run that will enqueue the next one is still
 going.
@@ -3571,8 +3571,8 @@ lowers a tool's risk or skips a confirmation.
 
 ## Active tasks
 
-**More → Active tasks** lists everything the agent is running right
-now plus completed history. Filter chips at the top scope the list
+**More → Tasks** opens this screen. It lists everything the agent is
+running right now plus completed history. Filter chips at the top scope the list
 to `All`, `Active`, `Background`, or `Completed`. Each row shows
 the task title, a mono subtitle with the pipeline stage, a status
 pill (Queued / Running / Success / Failed / Cancelled), and an
