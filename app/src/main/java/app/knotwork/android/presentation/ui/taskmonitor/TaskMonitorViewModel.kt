@@ -14,7 +14,7 @@ import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.services.ScheduledTaskTag
 import app.knotwork.android.domain.usecases.CancelScheduledTasksUseCase
 import app.knotwork.android.presentation.ui.common.UiText
-import app.knotwork.design.components.pipelineeditor.text
+import app.knotwork.android.presentation.ui.common.nodeTypeName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
-import app.knotwork.design.components.pipelineeditor.NodeType as CatalogNodeType
 
 /**
  * ViewModel for monitoring active chat sessions and WorkManager background tasks.
@@ -276,14 +275,3 @@ class TaskMonitorViewModel @Inject constructor(
 
 /** What a background task's title names when the work carries no tag — the worker's class. */
 private const val WORKER_TAG_FALLBACK = "AgentWorker"
-
-/**
- * The name of the node type a running step belongs to, in the interface language —
- * the run reports the type's code (`LITE_RT`). A code no type answers to is shown
- * as it came.
- *
- * @param code The node type's code.
- * @return The type's name.
- */
-internal fun nodeTypeName(code: String): UiText =
-    CatalogNodeType.entries.firstOrNull { it.name == code }?.let { UiText(it.text.name) } ?: UiText.Dynamic(code)

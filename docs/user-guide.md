@@ -3600,9 +3600,10 @@ which cancelling the one queued row by hand cannot end.
 counters and the most recent system log lines. The header three-cell
 grid shows last inference time (ms), tokens-per-second, and the
 total tokens processed since process start. Under it sit the
-session-wide totals and a per-node-type breakdown. When the device
-enters power-saving mode, a warning banner appears above the grid
-to flag that the agent has paused background work.
+session-wide totals and the time spent per node type, each type by
+the name the pipeline editor gives it. When the device enters
+power-saving mode, a warning banner appears above the grid to flag
+that the agent has paused background work.
 
 ## About
 

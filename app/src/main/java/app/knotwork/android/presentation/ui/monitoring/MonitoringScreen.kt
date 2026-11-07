@@ -8,6 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.R
+import app.knotwork.android.domain.models.NodeType
+import app.knotwork.android.presentation.ui.common.asString
+import app.knotwork.android.presentation.ui.common.nodeTypeName
 import app.knotwork.design.screens.monitoring.MonitoringCallbacks
 import app.knotwork.design.screens.monitoring.MonitoringContent
 import app.knotwork.design.screens.monitoring.MonitoringLogLine
@@ -64,6 +67,8 @@ private val LOG_TIME_FORMATTER = SimpleDateFormat("HH:mm:ss", Locale.US)
  * @property totalTokens Label of the session's token count.
  * @property milliseconds Format of a duration in ms; `%1$d` is the count.
  * @property locale Writes the throughput's decimal separator.
+ * @property nodeTypeNames Name of each node type, which the time-per-node-type rows show
+ *   instead of the type's code.
  */
 internal data class MonitoringStatLabels(
     val inferenceTime: String,
@@ -71,6 +76,7 @@ internal data class MonitoringStatLabels(
     val totalTokens: String,
     val milliseconds: String,
     val locale: Locale,
+    val nodeTypeNames: Map<NodeType, String>,
 )
 
 @Composable
@@ -80,6 +86,7 @@ private fun monitoringStatLabels(): MonitoringStatLabels = MonitoringStatLabels(
     totalTokens = stringResource(R.string.monitoring_stat_total_tokens),
     milliseconds = stringResource(R.string.monitoring_unit_ms),
     locale = LocalConfiguration.current.locales[0],
+    nodeTypeNames = NodeType.entries.associateWith { nodeTypeName(it.name).asString() },
 )
 
 internal fun MonitoringUiState.toViewState(
@@ -102,7 +109,10 @@ internal fun MonitoringUiState.toViewState(
         .toList()
         .sortedByDescending { it.second }
         .map { (nodeType, durationMs) ->
-            NodeBreakdownRow(nodeType = nodeType.name, totalLabel = labels.milliseconds.format(durationMs))
+            NodeBreakdownRow(
+                nodeType = labels.nodeTypeNames[nodeType] ?: nodeType.name,
+                totalLabel = labels.milliseconds.format(durationMs),
+            )
         }
     val logs = recentLogs.mapIndexed { index, message ->
         MonitoringLogLine(
