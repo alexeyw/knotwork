@@ -67,6 +67,10 @@ Required toolchain:
   build needs the version named by `ndk` in `gradle/libs.versions.toml`, whose
   `llvm-strip` strips the prebuilt native libraries; it fails without it
   (`sdkmanager "ndk;<version>"`, see [`docs/release.md`](docs/release.md) §2).
+- **Memory** — plan on 16 GB. `./gradlew check` gives the Gradle daemon
+  4 GiB, the Kotlin compile daemon 4 GiB and the unit-test JVM up to 2 GiB
+  (`gradle.properties`, `app/build.gradle.kts`), as on the GitHub-hosted
+  runner that gates every PR.
 
 Debug and release install side by side:
 

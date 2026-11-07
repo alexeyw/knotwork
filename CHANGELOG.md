@@ -64,6 +64,10 @@ details.
   answers were measured within one LiteRT-LM version, and an update can change
   them, so for a run recorded before the update Verify stays off and names both
   versions. The run's promise now says so as well.
+- **Building the app gives the Gradle daemon 4 GiB** (was 2 GiB). A daemon
+  kept across several `./gradlew check` runs or a release build used to stop
+  because its garbage collector was thrashing. Plan on 16 GB of memory to
+  build — `CONTRIBUTING.md` lists what takes it.
 
 ### Fixed
 
