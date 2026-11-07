@@ -22,7 +22,8 @@ class AppLanguageRepositoryInstrumentedTest {
 
     @Test
     fun theLanguagesOfferedAreTheBuildsDefaultFirst() {
-        assertEquals(listOf("en", "ru"), AppLanguageRepositoryImpl(context).supportedLanguages())
+        // The generated config lists the languages in the order of their resource folders.
+        assertEquals(listOf("en", "es", "ru"), AppLanguageRepositoryImpl(context).supportedLanguages())
     }
 
     @Test

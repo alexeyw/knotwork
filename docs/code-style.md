@@ -142,7 +142,11 @@ For the broader layering rationale, see
   the configuration's locales change (`KeyedCache`).
 - A new string gets its translation in the same change. Lint's
   `MissingTranslation`, an error in both modules, fails a string missing from a
-  shipped language; `TranslationCoverageTest` fails a translation that only
+  shipped language — except while a language's translation lands over several
+  changes: then lint's check is off, `config/l10n/untranslated-<lang>.txt` names
+  what that language still misses, and `TranslationCoverageTest` fails a string
+  missing from any shipped language and not on its list (the list only shrinks;
+  a language without one must be complete). It also fails a translation that only
   copies its English unless `config/l10n/identical-<lang>.txt` names it.
 - What a model reads is not translated: system prompts, tool descriptions and
   tool results stay in English, as do the tokens a model's output is matched

@@ -77,6 +77,10 @@ android {
         // its own baseline is empty, and the root `check` runs its lint too, so
         // leaving it out would keep the mandatory gate non-deterministic.
         informational += LintBaselineGuard.DEMOTED_ISSUE_IDS
+        // Off while a language's translation lands over several changes, as in `:app`
+        // (the reason is there): `TranslationCoverageTest` in `:app` holds this module's
+        // strings to each language's untranslated list (`config/l10n/`) meanwhile.
+        disable += "MissingTranslation"
     }
 }
 

@@ -409,7 +409,7 @@ android {
         // translated into falls back to English throughout. A new interface
         // language is added here AND gets its `values-<lang>` folders in `app` and
         // `catalog`; `TranslationCoverageTest` reads this list.
-        localeFilters += listOf("en", "ru")
+        localeFilters += listOf("en", "ru", "es")
         // Lists the app's languages in the system's per-app language settings
         // (Android 13+) and gives the in-app picker its choices, through the
         // generated `LocaleConfig`. The default locale comes from
@@ -424,7 +424,7 @@ android {
     // /guide/app-bundle/configure-base). Without this, Russian chosen in
     // Settings → About → Language on a phone set to English finds no Russian
     // resources in a Play install and stays English. The cost is the translations
-    // of two languages in every APK; `TranslationCoverageTest` holds the line.
+    // of every language in every APK; `TranslationCoverageTest` holds the line.
     bundle {
         language {
             enableSplit = false
@@ -532,6 +532,15 @@ android {
         // this does not depend on the API floor). ChromeOS support is not in
         // scope for v0.1 — disable the lint check that demands an x86 binary.
         disable += "ChromeOsAbiSupport"
+        // Off while a language's translation lands over several changes: until every
+        // string has its translation, each missing one would fail the build. Meanwhile
+        // `TranslationCoverageTest` (`:app`, over both modules) gates the same thing for
+        // every shipped language — a string missing from a language and not on that
+        // language's untranslated list (`config/l10n/untranslated-<lang>.txt`) fails it,
+        // and a language without a list must be complete. The change that deletes the
+        // last list turns this check back on; the test fails a build that leaves it
+        // off with no list, or turns it on while one remains.
+        disable += "MissingTranslation"
         // Version-freshness and deadline checks stay ENABLED, but are demoted to
         // INFORMATIONAL so they report instead of gating. Their verdict is a
         // function of an external version index (or of the calendar), not of the
@@ -2047,9 +2056,9 @@ tasks.withType<Test>().configureEach {
         .withPropertyName("extendingGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
     // `TranslationCoverageTest` reads the design system's string resources and the
-    // interface-text lists (it, `DisplayedLiteralGuardTest` and
-    // `CatalogStringsWiringTest`) — none on a classpath of this module, and an edit
-    // to a list changes no compiled byte. It reads this script's `localeFilters` too,
+    // interface-text lists (it, `DisplayedLiteralGuardTest`, `CatalogStringsWiringTest`
+    // and `PresetTranslationCoverageTest`) — none on a classpath of this module, and an
+    // edit to a list changes no compiled byte. It reads this script's `localeFilters` too,
     // declared below.
     inputs.dir(rootProject.file("catalog/src/main/res"))
         .withPropertyName("catalogResources")
@@ -2074,8 +2083,13 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/static-analysis.md"))
         .withPropertyName("staticAnalysisGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `TranslationCoverageTest` holds lint's `MissingTranslation` in the catalog's build
+    // script to the untranslated lists; a build script is on no classpath.
+    inputs.file(rootProject.file("catalog/build.gradle.kts"))
+        .withPropertyName("catalogBuildScript")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` (locale filters, language
-    // splits) read this very script. Editing it reconfigures the project but leaves this task's inputs as
+    // splits, `MissingTranslation`) read this very script. Editing it reconfigures the project but leaves this task's inputs as
     // they were: measured, the signing assignment put back on two lines left the
     // task UP-TO-DATE and green.
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))

@@ -115,9 +115,10 @@ class AppLanguageRepositoryImplTest {
 
     @Test
     fun `given the config's languages when listed then the default comes first, once`() {
-        val repository = AppLanguageRepositoryImpl(application) { LocaleList.forLanguageTags("ru,en,ru") }
+        val repository = AppLanguageRepositoryImpl(application) { LocaleList.forLanguageTags("es,ru,en,ru") }
 
-        assertEquals(listOf("en", "ru"), repository.supportedLanguages())
+        // The rest keep the config's order.
+        assertEquals(listOf("en", "es", "ru"), repository.supportedLanguages())
     }
 
     @Test
