@@ -366,7 +366,7 @@
     <string name="knotwork_node_provider_hint_cloud">Si %1$s no está configurado en el dispositivo que lo ejecuta, el nodo falla e indica el motivo.</string>
     <string name="knotwork_node_provider_hint_engine">Si %1$s no está configurado en el dispositivo que lo ejecuta, el nodo se ejecuta con el modelo local y escribe una línea en la consola.</string>
     <string name="knotwork_node_provider_hint_auto">Usa el primero configurado entre Google, Anthropic, OpenAI y DeepSeek; nunca OpenRouter, Groq ni tu propio servidor. Si no hay ninguno configurado, el nodo falla e indica el motivo.</string>
-    <string name="knotwork_node_provider_group_hosted">Alojados</string>
+    <string name="knotwork_node_provider_group_hosted">En la nube</string>
     <string name="knotwork_node_provider_group_own">Tu propio servidor</string>
     <string name="knotwork_model_sheet_title">Elige un modelo</string>
     <string name="knotwork_model_sheet_count" tools:ignore="PluralsCandidate">%1$d de %2$s</string>

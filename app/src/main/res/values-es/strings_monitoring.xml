@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="monitoring_power_saving_title">Ahorro de batería activado</string>
+    <string name="monitoring_power_saving_text">Queda poca batería. El modelo del agente está descargado de la memoria y las tareas en segundo plano están en pausa.</string>
+    <string name="monitoring_section_session_aggregates">Totales de la sesión</string>
+    <string name="monitoring_section_time_per_node">Tiempo por tipo de nodo</string>
+    <string name="monitoring_section_logs">Acciones del sistema y registro</string>
+    <string name="monitoring_no_recent_actions">No hay acciones recientes.</string>
+    <string name="monitoring_screen_title">Métricas en tiempo real</string>
+    <string name="monitoring_empty_title">Aún no hay métricas</string>
+    <string name="monitoring_empty_subtitle">Ejecuta un pipeline para que aparezcan aquí las métricas.</string>
+    <string name="monitoring_error_title">No se pudieron cargar las métricas</string>
+    <string name="taskmonitor_screen_title">Tareas activas</string>
+    <string name="taskmonitor_empty_title">No hay tareas en curso</string>
+    <string name="taskmonitor_empty_subtitle">Aquí aparecen las tareas en segundo plano y los chats activos.</string>
+    <string name="taskmonitor_error_title">No se pudieron cargar las tareas</string>
+    <string name="taskmonitor_open_chat">Abrir chat</string>
+    <string name="taskmonitor_filter_all">Todas</string>
+    <string name="taskmonitor_filter_active">Activas</string>
+    <string name="taskmonitor_filter_background">En segundo plano</string>
+    <string name="taskmonitor_filter_completed">Completadas</string>
+    <string name="taskmonitor_detail_no_logs">Aún no hay líneas de registro.</string>
+    <string name="taskmonitor_row_scheduled_title">Tarea programada</string>
+    <string name="taskmonitor_row_scheduled_interval_format">cada %1$d h</string>
+    <string name="taskmonitor_cancel_all_cd">Detener todas las tareas programadas</string>
+    <string name="taskmonitor_cancel_all_title">¿Detener todas las tareas programadas?</string>
+    <string name="taskmonitor_cancel_all_confirm">Detener todas</string>
+    <string name="taskmonitor_cancel_all_dismiss">Conservarlas</string>
+    <plurals name="taskmonitor_cancel_all_body">
+        <item quantity="one">Se detiene %1$d tarea programada, también si se está ejecutando ahora. Las automatizaciones y sus activadores no se ven afectados, y no se elimina nada: una tarea se puede volver a programar.</item>
+        <item quantity="many">Se detienen las %1$d tareas programadas, también las que se estén ejecutando ahora. Las automatizaciones y sus activadores no se ven afectados, y no se elimina nada: una tarea se puede volver a programar.</item>
+        <item quantity="other">Se detienen las %1$d tareas programadas, también las que se estén ejecutando ahora. Las automatizaciones y sus activadores no se ven afectados, y no se elimina nada: una tarea se puede volver a programar.</item>
+    </plurals>
+    <string name="taskmonitor_title_session">Chat: %1$s</string>
+    <string name="taskmonitor_title_background">Tarea en segundo plano (%1$s)</string>
+    <string name="taskmonitor_stage_thinking">Pensando</string>
+    <string name="taskmonitor_stage_tool">Llamada a herramienta</string>
+    <string name="taskmonitor_stage_approval">Esperando aprobación</string>
+    <string name="taskmonitor_stage_loading">Cargando</string>
+    <string name="taskmonitor_stage_answering">Respondiendo</string>
+    <string name="monitoring_stat_inference_time">TIEMPO DE INFERENCIA</string>
+    <string name="monitoring_stat_tokens_per_second">TOKENS/S</string>
+    <string name="monitoring_stat_total_tokens">TOKENS EN TOTAL</string>
+    <string name="monitoring_unit_ms">%1$d ms</string>
+</resources>
