@@ -25,6 +25,7 @@ import mockwebserver3.MockWebServer
 import mockwebserver3.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -300,8 +301,8 @@ class KoogProviderConnectionCheckerTest {
     @Test
     fun `given listeners on the next loopback ports when a closed port is drawn then none of theirs is handed out`() {
         // macOS hands out ephemeral ports in order, so these are the ports the next draws reach first.
-        val start = closedLoopbackPort()
-        val listeners = (start + 1..start + HELD_LISTENERS).mapNotNull { port ->
+        val start = startBelowHighestPort(::closedLoopbackPort)
+        val listeners = portsAfter(start).mapNotNull { port ->
             try {
                 ServerSocket(port, 0, LOOPBACK)
             } catch (_: BindException) {
@@ -320,6 +321,36 @@ class KoogProviderConnectionCheckerTest {
             listeners.forEach { it.close() }
         }
     }
+
+    @Test
+    fun `given a draw near the highest port when the ports after it are listed then none is past the highest port`() {
+        // A draw of 65530 once listed 65536, and ServerSocket refused it with an IllegalArgumentException.
+        assertEquals(65531..65535, portsAfter(65530))
+        assertEquals(1, portsAfter(HIGHEST_PORT - 1).count())
+    }
+
+    @Test
+    fun `given the highest port is drawn when a start is picked then the next draw is taken`() {
+        val draws = ArrayDeque(listOf(HIGHEST_PORT, 49_152))
+
+        val start = startBelowHighestPort(draws::removeFirst)
+
+        assertEquals(49_152, start)
+        assertFalse("a start must leave a port after it", portsAfter(start).isEmpty())
+    }
+
+    /**
+     * The [HELD_LISTENERS] ports just past [start], cut at [HIGHEST_PORT]: macOS hands out
+     * ephemeral ports up to 65535, and `ServerSocket` refuses a larger number outright.
+     */
+    private fun portsAfter(start: Int): IntRange = start + 1..minOf(start + HELD_LISTENERS, HIGHEST_PORT)
+
+    /**
+     * The first of [draw]'s ports with a port after it. The highest port has none, so the premise
+     * test would hold nothing; macOS wraps to the bottom of its range on the next draw.
+     */
+    private fun startBelowHighestPort(draw: () -> Int): Int =
+        generateSequence(draw).take(MAX_START_DRAWS).first { it < HIGHEST_PORT }
 
     @Test
     fun `given OpenRouter when checked then its key is checked first, and a rejected one stops the check`() = bounded {
@@ -429,6 +460,12 @@ class KoogProviderConnectionCheckerTest {
 
         /** Listeners the premise test holds on the ports just past a fresh draw. */
         const val HELD_LISTENERS = 20
+
+        /** The highest TCP port number. */
+        const val HIGHEST_PORT = 65_535
+
+        /** Draws the premise test makes for a start below [HIGHEST_PORT]; the second already wraps. */
+        const val MAX_START_DRAWS = 3
 
         /** A refused connect on loopback returns at once; anything slower is not a refusal. */
         const val PROBE_CONNECT_TIMEOUT_MS = 1_000
