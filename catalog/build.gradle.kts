@@ -77,6 +77,8 @@ android {
         // its own baseline is empty, and the root `check` runs its lint too, so
         // leaving it out would keep the mandatory gate non-deterministic.
         informational += LintBaselineGuard.DEMOTED_ISSUE_IDS
+        // `MissingTranslation` stays an error, as in `:app`, whose lint block says how a
+        // new language switches it off in both scripts while its translation lands.
     }
 }
 
