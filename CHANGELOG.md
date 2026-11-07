@@ -23,8 +23,9 @@ details.
 - **Save a chat straight to a file.** The chat's `⋮` menu and an archived
   chat's row menu now have *Save to file*: the system file picker opens and the
   chat is written where you choose, as the same JSON file *Export chat* shares.
-- **The app speaks Russian.** Every screen, the bundled pipelines and prompt
-  templates, the FAQ and the troubleshooting guide are translated.
+- **The app speaks Russian and Spanish.** Every screen, the bundled pipelines
+  and prompt templates, the FAQ and the troubleshooting guide are translated
+  into both; the Spanish is neutral, for Spain and Latin America alike.
   *Settings → About → Language* picks the language of the app's screens, or
   follows the phone's; your phone's per-app language setting is the same
   choice. What a model reads stays in English —
@@ -40,6 +41,10 @@ details.
 
 - **`$LANG` follows the language you read the app in**, when it differs from
   the phone's; `$LOCATION` still names the phone's region.
+- **Settings search ignores accents.** `configuracion` finds *Configuración*
+  and `tamano` finds *Tamaño*; the match is still highlighted in the setting's
+  own spelling. Cyrillic letters are matched as typed, so the Russian search
+  is unchanged.
 - **The on-device inference engine is LiteRT-LM 0.19.0** (was 0.17.1). Its
   GPU sampling for a given seed now matches the CPU's, so a run on the GPU can
   give a different answer than it did before the update.

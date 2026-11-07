@@ -626,7 +626,9 @@ Only Kotlin files appear inside the generated blocks.
   - `screenshots/` - Roborazzi baselines of app screens in a translation, drawn by the screens' own code without their ViewModels, and the guard on their comparison options.
     - `AppRoborazziOptions.kt` - Comparison options every screenshot of this module is captured with.
     - `AppSnapshotOptionsGuardTest.kt` - Fails a screenshot of this module captured without `AppRoborazziOptions`.
-    - `RussianScreensSnapshotTest.kt` - Screenshots of app screens in Russian, at font scale 200 % in the light theme.
+    - `RussianScreensSnapshotTest.kt` - The shared app-screen screenshots (`TranslatedScreensSnapshotTest`) in Russian, at font scale 200 %; baselines `src/test/snapshots/ru_*_fontscale200_light.png`.
+    - `SpanishScreensSnapshotTest.kt` - The shared app-screen screenshots (`TranslatedScreensSnapshotTest`) in Spanish, at font scale 200 %; baselines `src/test/snapshots/es_*_fontscale200_light.png`.
+    - `TranslatedScreensSnapshotTest.kt` - Screenshots of app screens in a translation, at font scale 200 % in the light theme.
   - `share/` - Tests for the share-target entry point: reading a caller's share extras without crashing.
     - `SharedIntentFieldsTest.kt` - Unit tests for `SharedIntentFields.read` — the only place `ShareReceiverActivity` touches a caller's extras.
   - `startup/` - Tests for the cold-start upkeep: every step failing in turn leaves the others running.

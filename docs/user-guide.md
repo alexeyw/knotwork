@@ -2577,7 +2577,7 @@ for the search results in action.
 
 ### Interface language
 
-The app is in English and Russian. **About → Language** picks the language of
+The app is in English, Russian and Spanish. **About → Language** picks the language of
 the app's screens: **Device language**, the default, follows your phone — the
 first of its languages the app is translated into, else English; the other
 entries are those languages, each named in itself. Your phone's per-app language
@@ -2589,7 +2589,8 @@ keeps the region of the phone's own language settings.
 
 The word you type to confirm what cannot be undone — **yes** before a
 destructive tool call runs or your data is erased — is the interface
-language's word; the field names it. Names the app gives — a new chat, a new
+language's word; the field names it. In Spanish it is **sí**, with its accent:
+*si* without one means "if" and does not confirm. Names the app gives — a new chat, a new
 pipeline and its first nodes, a copy — are written in the language of the
 moment and stay as written if you change it later; a new chat still takes its
 first message as its name. The lines the app adds to a chat — a tool call you

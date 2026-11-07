@@ -861,17 +861,21 @@ The catalog's screens show the design system's own words; most of what a screen
 says comes from `:app`. A translation therefore only shows whole where the app
 draws the screen, and a translation is where a label outgrows its English and
 erases the text beside it. `app/src/test/…/presentation/screenshots/` captures ten
-app screens in Russian at font scale 200 % in the light theme, each drawn by the
-screen's own state builder or `…ScreenContent` from a hand-made state, without
-its ViewModel (whose repositories open a database Robolectric cannot load). Build
-information, the clock, the time zone and the Help list's document sizes are
-fixed, so a baseline changes only when a screen does. The baselines
+app screens in each translation — Russian and Spanish — at font scale 200 % in
+the light theme, each drawn by the screen's own state builder or `…ScreenContent`
+from a hand-made state, without its ViewModel (whose repositories open a
+database Robolectric cannot load). Build information, the clock, the time zone
+and the Help list's document sizes are fixed, so a baseline changes only when a
+screen does. The baselines
 (`app/src/test/snapshots/`) are a declared test input, `check` runs the
 verification, and `AppSnapshotOptionsGuardTest` holds every capture to
 `AppRoborazziOptions` — the catalog's tolerance, repeated because test sources are
 not shared between modules.
 
-Re-record with `./gradlew :app:recordRoborazziFullDebug --tests '*RussianScreensSnapshotTest*'`,
+The screens and their states live in `TranslatedScreensSnapshotTest`; one subclass
+per language names its resource qualifier and the sample texts a user would have
+written in it, so every language is checked on the same ten screens. Re-record
+with `./gradlew :app:recordRoborazziFullDebug --tests '*ScreensSnapshotTest*'`,
 look at the PNGs, and commit them with the change that caused them. A change to a
 catalog component or to a translated string can need both modules re-recorded.
 Before calling a break in a render a translation defect, render the same screen in
