@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The language of this translation; picks assets/presets/l10n/es.json. -->
+    <string name="interface_language_tag">es</string>
+</resources>

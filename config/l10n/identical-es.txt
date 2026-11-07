@@ -1,0 +1,29 @@
+# Spanish strings that are rightly the same as the English text (brand names,
+# units, identifiers), one `module:kind/name` per line with the reason after `#`.
+# TranslationCoverageTest fails on any other Spanish string equal to its English.
+catalog:string/knotwork_run_sampler_value	# sampler parameter names
+catalog:string/knotwork_run_field_sha	# hash algorithm name
+catalog:string/knotwork_run_field_app	# same word in Spanish
+catalog:string/knotwork_node_type_lite_rt_name	# engine name
+catalog:string/knotwork_node_type_pipeline_name	# "pipeline" is kept in Spanish
+catalog:string/knotwork_chat_message_tool_ok	# status word used as is
+catalog:string/knotwork_chat_message_tool_error	# same word in Spanish
+catalog:string/knotwork_chat_message_token_count	# token unit, as in English
+catalog:string/knotwork_library_title	# "pipeline" is kept in Spanish
+catalog:string/knotwork_tools_add_form_placeholder	# example address
+catalog:string/knotwork_tools_detail_schema	# format name
+catalog:string/knotwork_tools_form_header_key_placeholder	# HTTP header name
+catalog:string/knotwork_tools_form_header_value_placeholder	# HTTP scheme name
+catalog:string/knotwork_allowed_domains_add_placeholder	# example host name
+catalog:string/knotwork_settings_providers_lan	# network term used as is
+catalog:string/knotwork_memory_sort_alphabetical	# letters of the alphabet
+catalog:string/knotwork_memory_badge_auto	# same word in Spanish
+catalog:string/knotwork_memory_badge_manual	# same word in Spanish
+catalog:string/knotwork_onboarding_brand_title	# brand name
+catalog:string/knotwork_onboarding_models_custom_url_placeholder	# example address
+catalog:string/knotwork_node_field_timeout_seconds_value	# unit symbol
+catalog:string/knotwork_chat_home_topbar_tokens	# token unit, as in English
+catalog:string/knotwork_status_error	# same word in Spanish
+catalog:string/knotwork_onboarding_model_size_gb	# unit symbol
+catalog:string/knotwork_mcp_auth_bearer	# HTTP scheme name
+catalog:string/knotwork_mcp_auth_basic	# HTTP scheme name

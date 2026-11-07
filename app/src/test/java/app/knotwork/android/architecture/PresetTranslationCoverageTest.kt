@@ -31,7 +31,10 @@ import java.io.File
  * test is what turns a reworded preset into a failing build instead of a
  * half-translated screen. It holds, for every language:
  * - the file exists and reads ([PresetTranslationsJson] refuses any member that
- *   is not a text a person reads, so a system prompt cannot get in);
+ *   is not a text a person reads, so a system prompt cannot get in) — required
+ *   once the language's interface is translated (it has no untranslated list in
+ *   `config/l10n/`); before that the presets may show in English, but a file that
+ *   exists is held whole;
  * - every name, description, node title and starter prompt of every bundled
  *   pipeline preset, and every name, description and tag of every bundled
  *   template, has a translation, written for its current English;
@@ -43,19 +46,27 @@ import java.io.File
  *   distinct, and carries the same title in the `nodeConfig` an export hands
  *   the browser editor.
  *
- * Reads `app/src/main/assets` and `app/src/main/res`; both are under `src/main`,
- * so the test task re-runs when they change.
+ * Reads `app/src/main/assets` and `app/src/main/res`, both under `src/main`, so
+ * the test task re-runs when they change, and `config/l10n/`, a declared input.
  */
 class PresetTranslationCoverageTest {
 
     @Test
-    fun `every shipped language has a preset translation, and every translation is a shipped language`() {
+    fun `every finished language has a preset translation, and every translation is a shipped language`() {
+        val finished = shippedLanguages().filterNot { File(listDirectory(), "untranslated-$it.txt").isFile }
+
         assertEquals(
-            "assets/presets/l10n must hold one <language>.json per values-<language> folder of app",
-            shippedLanguages(),
-            translationFiles().keys,
+            "assets/presets/l10n must hold a <language>.json for every values-<language> folder of app whose " +
+                "language has no untranslated list in config/l10n",
+            emptySet<String>(),
+            finished.toSet() - translationFiles().keys,
         )
-        assertTrue("ru" in shippedLanguages())
+        assertEquals(
+            "assets/presets/l10n holds a translation for a language the app does not ship",
+            emptySet<String>(),
+            translationFiles().keys - shippedLanguages(),
+        )
+        assertTrue("ru" in finished)
     }
 
     @Test
@@ -213,6 +224,8 @@ class PresetTranslationCoverageTest {
     }
 
     private fun assets(): File = File(ProductionSources.moduleDirectory(), "src/main/assets")
+
+    private fun listDirectory(): File = File(ProductionSources.moduleDirectory().parentFile, "config/l10n")
 
     private fun translationFiles(): Map<String, File> = File(assets(), "presets/l10n").listFiles().orEmpty()
         .filter { it.isFile && it.extension == "json" }
