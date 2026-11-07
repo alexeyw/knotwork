@@ -2089,9 +2089,9 @@ tasks.withType<Test>().configureEach {
         .withPropertyName("catalogBuildScript")
         .withPathSensitivity(PathSensitivity.RELATIVE)
     // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` (locale filters, language
-    // splits, `MissingTranslation`) read this very script. Editing it reconfigures the project but leaves this task's inputs as
-    // they were: measured, the signing assignment put back on two lines left the
-    // task UP-TO-DATE and green.
+    // splits, `MissingTranslation`) read this very script. Editing it reconfigures the
+    // project but leaves this task's inputs as they were: measured, the signing
+    // assignment put back on two lines left the task UP-TO-DATE and green.
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))
         .withPropertyName("appBuildScript")
         .withPathSensitivity(PathSensitivity.RELATIVE)

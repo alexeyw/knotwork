@@ -1432,8 +1432,9 @@ A pair applies only while the preset carries that English, so a reworded preset
 shows its new English rather than an old translation — and
 `PresetTranslationCoverageTest` fails the build until each language with a
 translation file has the new text (a language still being translated may not
-have a file yet; once its untranslated list in `config/l10n/` is gone, it must). The same test refuses a missing text, an entry naming a preset, node,
-prompt or tag that is not there, one tag translated two ways, and a translated
+have a file yet; once its untranslated list in `config/l10n/` is gone, it must).
+The same test refuses a missing text, an entry naming a preset, node, prompt or
+tag that is not there, one tag translated two ways, and a translated
 preset that would no longer validate or open in the editor; the reader
 (`PresetTranslationsJson`) refuses any member that is not one of the texts
 above, so a system prompt cannot be translated by accident.

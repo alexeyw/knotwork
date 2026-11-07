@@ -22,13 +22,13 @@
     <string name="knotwork_run_field_app">app</string>
     <string name="knotwork_run_app_value">%1$s · %2$s</string>
     <string name="knotwork_run_field_device">dispositivo</string>
-    <string name="knotwork_run_field_digest">resumen</string>
-    <string name="knotwork_run_field_digest_a11y">Resumen de la ejecución</string>
+    <string name="knotwork_run_field_digest">huella</string>
+    <string name="knotwork_run_field_digest_a11y">Huella de la ejecución</string>
     <string name="knotwork_run_digest_pending">cuando termine la ejecución</string>
     <string name="knotwork_run_now_tag">ahora %1$s</string>
     <string name="knotwork_run_copy_seed_cd">Copiar semilla</string>
     <string name="knotwork_run_copy_sha_cd">Copiar SHA-256 del modelo</string>
-    <string name="knotwork_run_copy_digest_cd">Copiar resumen de la ejecución</string>
+    <string name="knotwork_run_copy_digest_cd">Copiar huella de la ejecución</string>
     <string name="knotwork_run_hash_full_a11y">%1$s, 64 caracteres, empieza por %2$s</string>
     <string name="knotwork_run_hash_model_a11y">SHA-256 del modelo</string>
     <string name="knotwork_run_repro_head">Se repite byte a byte en este dispositivo</string>
@@ -63,7 +63,7 @@
     <string name="knotwork_run_action_seed">Ejecutar de nuevo con esta semilla</string>
     <string name="knotwork_run_action_seed_line">Misma semilla y muestreador; la respuesta solo se repite si todas las entradas son iguales.</string>
     <string name="knotwork_run_action_export">Exportar traza</string>
-    <string name="knotwork_run_action_export_line">JSON · encabezado, registros, hashes, resumen de la ejecución</string>
+    <string name="knotwork_run_action_export_line">JSON · encabezado, registros, hashes, huella de la ejecución</string>
     <string name="knotwork_run_action_export_line_pre">JSON · solo registros, sin semilla ni hashes</string>
     <string name="knotwork_run_action_busy">Disponible cuando termine la ejecución.</string>
     <string name="knotwork_run_kept_note">Verificar, Ejecutar de nuevo y Exportar funcionan mientras se conserve esta ejecución. Cuánto historial de ejecuciones se guarda se elige en Configuración → Privacidad.</string>

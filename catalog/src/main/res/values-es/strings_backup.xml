@@ -17,7 +17,7 @@
     <string name="knotwork_backup_pw2_label">Repite la contraseña</string>
     <string name="knotwork_backup_pw2_mismatch">No coincide con la contraseña de arriba.</string>
     <string name="knotwork_backup_secrets_label">Incluir claves de API y credenciales</string>
-    <string name="knotwork_backup_secrets_sub">Claves de API en la nube, el token de Hugging Face y las credenciales de MCP. Sin ellas, en un teléfono nuevo habrá que introducirlas de nuevo.</string>
+    <string name="knotwork_backup_secrets_sub">Claves de API en la nube, el token de Hugging Face y las credenciales de MCP. Sin ellas, en un teléfono nuevo habrá que volver a escribirlas.</string>
     <string name="knotwork_backup_choose_where">Elegir dónde guardar</string>
     <string name="knotwork_backup_working_title">Creando la copia de seguridad</string>
     <string name="knotwork_backup_step_password">Protegiendo la contraseña</string>
@@ -51,9 +51,9 @@
     <string name="knotwork_backup_choose_another">Elegir otro archivo</string>
     <string name="knotwork_backup_this_file">Este archivo</string>
     <string name="knotwork_backup_newer_title">Actualiza Knotwork primero</string>
-    <string name="knotwork_backup_newer_body">Esta copia se creó con Knotwork %1$s. Este teléfono tiene %2$s, que no puede leerla.</string>
+    <string name="knotwork_backup_newer_body">Esta copia se creó con Knotwork %1$s. Este teléfono tiene la versión %2$s, que no puede leerla.</string>
     <string name="knotwork_backup_made_with">Creada con Knotwork %1$s el %2$s</string>
-    <string name="knotwork_backup_restore_lead">Introduce la contraseña con la que se creó esta copia.</string>
+    <string name="knotwork_backup_restore_lead">Escribe la contraseña con la que se creó esta copia.</string>
     <string name="knotwork_backup_check">Comprobar</string>
     <string name="knotwork_backup_checking_title">Comprobando la copia</string>
     <string name="knotwork_backup_step_check_password">Comprobando la contraseña</string>
@@ -106,7 +106,7 @@
     <string name="knotwork_backup_download_failed">La descarga no terminó. Vuelve a intentarlo o busca el modelo en Explorar.</string>
     <string name="knotwork_backup_download_paused">En pausa: Android limita cuánto tiempo puede durar una descarga en segundo plano.</string>
     <string name="knotwork_backup_download_mismatch">El archivo no coincidía con la suma de comprobación que publicó Hugging Face, así que se eliminó.</string>
-    <string name="knotwork_backup_after_keys">Vuelve a introducir tus claves de API en Configuración, tu token de Hugging Face en Modelos y las credenciales de MCP en Herramientas.</string>
+    <string name="knotwork_backup_after_keys">Vuelve a escribir tus claves de API en Configuración, tu token de Hugging Face en Modelos y las credenciales de MCP en Herramientas.</string>
     <string name="knotwork_backup_after_tasks">Las tareas que programó el agente no se trasladaron. Pídele que las vuelva a crear.</string>
     <string name="knotwork_backup_cancel_download">Cancelar descarga</string>
     <plurals name="knotwork_backup_n_chats">

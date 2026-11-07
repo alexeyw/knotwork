@@ -60,7 +60,7 @@
     <string name="knotwork_composer_recording_discard">Descartar grabación</string>
     <string name="knotwork_composer_recording_stop">Detener grabación</string>
     <string name="knotwork_composer_recording_indicator">Grabando</string>
-    <string name="knotwork_composer_recording_limit_caption">cerca del límite de %1$s · se detiene y transcribe solo</string>
+    <string name="knotwork_composer_recording_limit_caption">cerca del límite de %1$s · se detendrá y se transcribirá sola</string>
     <string name="knotwork_composer_transcribing">Transcribiendo…</string>
     <string name="knotwork_composer_recording_timer">%1$s / %2$s</string>
     <string name="knotwork_voice_no_model_title">Este modelo no puede transcribir audio</string>
@@ -149,9 +149,9 @@
     <string name="knotwork_library_multi_select_archive">Archivar</string>
     <string name="knotwork_library_multi_select_delete">Eliminar</string>
     <plurals name="knotwork_library_topbar_subtitle">
-        <item quantity="one">%1$d guardado · %2$d principal</item>
-        <item quantity="many">%1$d guardados · %2$d principal</item>
-        <item quantity="other">%1$d guardados · %2$d principal</item>
+        <item quantity="one">%1$d guardado · principal: %2$d</item>
+        <item quantity="many">%1$d guardados · principal: %2$d</item>
+        <item quantity="other">%1$d guardados · principal: %2$d</item>
     </plurals>
     <string name="knotwork_library_section_library">BIBLIOTECA</string>
     <string name="knotwork_library_badge_default">PRINCIPAL</string>
@@ -222,7 +222,7 @@
     <string name="knotwork_tools_detail_schema">JSON Schema</string>
     <string name="knotwork_tools_detail_risk">Nivel de riesgo</string>
     <string name="knotwork_tools_detail_risk_fixed_note">Está integrada en la app, así que este nivel es fijo.</string>
-    <string name="knotwork_tools_detail_risk_editable_note">Solo tú sabes lo que hace realmente esta herramienta. Lectura quita la pregunta de aprobación; Peligro permite rechazarla sin más.</string>
+    <string name="knotwork_tools_detail_risk_editable_note">Solo tú sabes lo que hace realmente esta herramienta. Lectura quita la pregunta de aprobación; con Peligro, la herramienta se puede bloquear por completo.</string>
     <string name="knotwork_tools_detail_schema_error">Esquema no disponible: el servidor devolvió JSON mal formado.</string>
     <string name="knotwork_tools_expand_server_cd">Mostrar u ocultar la lista de herramientas MCP</string>
     <string name="knotwork_tools_row_overflow_cd">Acciones del servidor MCP</string>
@@ -267,7 +267,7 @@
     <string name="knotwork_allowed_domains_info_close">Entendido</string>
     <string name="knotwork_allowed_domains_empty_title">Aún no hay dominios</string>
     <string name="knotwork_allowed_domains_empty_body">La herramienta http_request permanece oculta para el agente hasta que permitas al menos un host. Agrega un dominio para activarla.</string>
-    <string name="knotwork_allowed_domains_empty_warn_title">Al agregar un host, aceptas el HTTP saliente</string>
+    <string name="knotwork_allowed_domains_empty_warn_title">Al agregar un host, aceptas el tráfico HTTP saliente</string>
     <string name="knotwork_allowed_domains_empty_warn_body">En cuanto un dominio está en esta lista, el agente puede enviarle datos de solicitudes. Agrega solo hosts de confianza.</string>
     <string name="knotwork_allowed_domains_explainer">El agente solo puede enviar solicitudes HTTP a los hosts de esta lista. Si quitas el último, la herramienta vuelve a ocultarse.</string>
     <string name="knotwork_allowed_domains_add_label">AGREGAR UN HOST</string>
@@ -275,7 +275,7 @@
     <string name="knotwork_allowed_domains_add_button">Agregar</string>
     <string name="knotwork_allowed_domains_add_helper">Solo el host: sin https://, ruta ni puerto.</string>
     <string name="knotwork_allowed_domains_add_normalized">Se agregará como %1$s</string>
-    <string name="knotwork_allowed_domains_add_invalid">No es un host válido. Introduce un dominio como api.example.com.</string>
+    <string name="knotwork_allowed_domains_add_invalid">No es un host válido. Escribe un dominio como api.example.com.</string>
     <string name="knotwork_allowed_domains_add_duplicate">%1$s ya está en la lista.</string>
     <plurals name="knotwork_allowed_domains_list_label">
         <item quantity="one">HOSTS PERMITIDOS · %1$d</item>
@@ -313,7 +313,7 @@
     <string name="knotwork_settings_cat_memory_title">Memoria</string>
     <string name="knotwork_settings_cat_memory_summary">Extracción · compactación · vectores</string>
     <string name="knotwork_settings_cat_pipelines_title">Límites de ejecución y salida estructurada</string>
-    <string name="knotwork_settings_cat_pipelines_summary">Topes de pasos · salida estructurada</string>
+    <string name="knotwork_settings_cat_pipelines_summary">Límites de pasos · salida estructurada</string>
     <string name="knotwork_settings_cat_tools_title">Herramientas y carpeta de trabajo</string>
     <string name="knotwork_settings_cat_tools_summary">Aprobaciones · límites · MCP</string>
     <string name="knotwork_settings_cat_background_title">Segundo plano y activadores</string>
@@ -328,7 +328,7 @@
     <string name="knotwork_usage_subtitle">Solo en este dispositivo</string>
     <string name="knotwork_usage_record_label">Registrar el uso en este dispositivo</string>
     <string name="knotwork_usage_record_hint">Cuenta localmente las ejecuciones y los disparos de activadores, para tu propio análisis.</string>
-    <string name="knotwork_usage_local_only">Todo lo que hay aquí se guarda solo en este dispositivo y nunca se envía a ningún sitio.</string>
+    <string name="knotwork_usage_local_only">Todo lo que hay aquí se guarda solo en este dispositivo y nunca se envía a ninguna parte.</string>
     <string name="knotwork_usage_empty">Aún no hay uso registrado. A medida que ejecutes pipelines y se disparen activadores, aquí aparecerán los recuentos locales.</string>
     <string name="knotwork_usage_section_runs">Ejecuciones</string>
     <string name="knotwork_usage_section_pipelines">Ejecuciones por pipeline</string>
@@ -351,7 +351,7 @@
     <string name="knotwork_settings_local_model_backend_title">Backend de inferencia</string>
     <string name="knotwork_settings_local_model_test_title">Probar backend</string>
     <string name="knotwork_settings_local_model_test_run">Ejecutar</string>
-    <string name="knotwork_settings_models_manage_subtitle">Descubre e instala modelos locales.</string>
+    <string name="knotwork_settings_models_manage_subtitle">Explora e instala modelos locales.</string>
     <string name="knotwork_settings_providers_add">Agregar proveedor</string>
     <string name="knotwork_settings_providers_lan">LAN</string>
     <string name="knotwork_settings_providers_not_configured">Sin configurar · toca para agregar una clave de API</string>
@@ -359,13 +359,13 @@
     <string name="knotwork_settings_providers_no_model">ningún modelo seleccionado</string>
     <string name="knotwork_node_provider_auto">Automático</string>
     <string name="knotwork_node_provider_not_configured">sin configurar en este dispositivo</string>
-    <string name="knotwork_node_provider_auto_line">el primero configurado de Google, Anthropic, OpenAI, DeepSeek</string>
+    <string name="knotwork_node_provider_auto_line">el primero configurado entre Google, Anthropic, OpenAI y DeepSeek</string>
     <string name="knotwork_node_provider_auto_resolved">en este dispositivo → %1$s</string>
     <string name="knotwork_node_provider_on_device_line">modelo local</string>
     <string name="knotwork_node_provider_picker_note">Los proveedores que no están configurados aquí también se guardan: un pipeline puede ejecutarse en otro dispositivo.</string>
     <string name="knotwork_node_provider_hint_cloud">Si %1$s no está configurado en el dispositivo que lo ejecuta, el nodo falla e indica el motivo.</string>
     <string name="knotwork_node_provider_hint_engine">Si %1$s no está configurado en el dispositivo que lo ejecuta, el nodo se ejecuta con el modelo local y escribe una línea en la consola.</string>
-    <string name="knotwork_node_provider_hint_auto">Usa el primero configurado de Google, Anthropic, OpenAI, DeepSeek; nunca OpenRouter, Groq ni tu propio servidor. Si no hay ninguno configurado, el nodo falla e indica el motivo.</string>
+    <string name="knotwork_node_provider_hint_auto">Usa el primero configurado entre Google, Anthropic, OpenAI y DeepSeek; nunca OpenRouter, Groq ni tu propio servidor. Si no hay ninguno configurado, el nodo falla e indica el motivo.</string>
     <string name="knotwork_node_provider_group_hosted">Alojados</string>
     <string name="knotwork_node_provider_group_own">Tu propio servidor</string>
     <string name="knotwork_model_sheet_title">Elige un modelo</string>
@@ -433,7 +433,7 @@
     <string name="knotwork_memory_category_compaction">Compactación</string>
     <string name="knotwork_memory_badge_auto">Auto</string>
     <string name="knotwork_memory_badge_manual">Manual</string>
-    <string name="knotwork_memory_badge_compact">Compacto</string>
+    <string name="knotwork_memory_badge_compact">Compactado</string>
     <string name="knotwork_memory_badge_unknown">Desconocido</string>
     <string name="knotwork_memory_detail_edit">Editar</string>
     <string name="knotwork_memory_detail_delete">Eliminar</string>
@@ -495,13 +495,13 @@
     <string name="knotwork_onboarding_skip">Omitir</string>
     <string name="knotwork_onboarding_continue">Continuar</string>
     <string name="knotwork_onboarding_welcome_headline">Un agente de IA privado que funciona en tu teléfono.</string>
-    <string name="knotwork_onboarding_welcome_body">Sin idas y vueltas a la nube. Sin telemetría. Tus conversaciones se quedan en el dispositivo. Los proveedores en la nube son opcionales: trae tu propia clave si los quieres.</string>
+    <string name="knotwork_onboarding_welcome_body">Sin pasar por la nube. Sin telemetría. Tus conversaciones se quedan en el dispositivo. Los proveedores en la nube son opcionales: trae tu propia clave si los quieres.</string>
     <string name="knotwork_onboarding_welcome_tile_litert">Inferencia LiteRT en el dispositivo</string>
     <string name="knotwork_onboarding_welcome_tile_appfunctions">Herramientas locales de AppFunctions</string>
     <string name="knotwork_onboarding_welcome_tile_storage">Almacenamiento cifrado (SQLCipher · Keystore)</string>
     <string name="knotwork_onboarding_scenario_headline">¿Qué quieres que haga tu agente?</string>
     <string name="knotwork_onboarding_scenario_body">Elige algo para empezar: prepararemos todo lo que necesita y descargaremos solo el modelo que requiere esa tarea.</string>
-    <string name="knotwork_onboarding_scenario_cta_empty">Elige un escenario</string>
+    <string name="knotwork_onboarding_scenario_cta_empty">Elegir un escenario</string>
     <string name="knotwork_onboarding_scenario_cta_setup">Configurar %1$s</string>
     <string name="knotwork_onboarding_scenario_cta_setting_up">Configurando…</string>
     <string name="knotwork_onboarding_scenario_featured_badge">Más popular</string>
@@ -541,23 +541,23 @@
     <string name="knotwork_onboarding_ready_surface_value">Escucha en el menú Compartir del sistema</string>
     <string name="knotwork_onboarding_ready_safety_label">Seguridad</string>
     <string name="knotwork_onboarding_ready_safety_value">Pide confirmación antes de escribir cada archivo (HITL)</string>
-    <string name="knotwork_onboarding_ready_scenario_headline">%1$s está listo.</string>
+    <string name="knotwork_onboarding_ready_scenario_headline">El escenario «%1$s» está listo.</string>
     <string name="knotwork_onboarding_ready_generic_headline">Todo listo.</string>
     <string name="knotwork_onboarding_ready_docs_label">¿Te atascas más adelante?</string>
     <string name="knotwork_onboarding_ready_docs_cta">Leer las preguntas frecuentes</string>
     <string name="knotwork_onboarding_ready_scenario_body">Esto es lo que preparamos para ti; puedes editarlo después desde Pipelines.</string>
     <plurals name="knotwork_onboarding_ready_preview_caption">
-        <item quantity="one">// predeterminado · %1$d nodo · %2$d conexiones</item>
-        <item quantity="many">// predeterminado · %1$d nodos · %2$d conexiones</item>
-        <item quantity="other">// predeterminado · %1$d nodos · %2$d conexiones</item>
+        <item quantity="one">// principal · %1$d nodo · %2$d conexiones</item>
+        <item quantity="many">// principal · %1$d nodos · %2$d conexiones</item>
+        <item quantity="other">// principal · %1$d nodos · %2$d conexiones</item>
     </plurals>
     <string name="knotwork_onboarding_ready_open_cta">Abrir %1$s</string>
     <string name="knotwork_onboarding_ready_open_generic_cta">Abrir el chat</string>
     <string name="knotwork_onboarding_ready_preparing_cta">Preparando…</string>
     <string name="knotwork_onboarding_ready_checking_acceleration_cta">Comprobando la aceleración…</string>
     <string name="knotwork_onboarding_ready_retry_cta">Reintentar</string>
-    <string name="knotwork_onboarding_exit_title">¿Salir de la configuración?</string>
-    <string name="knotwork_onboarding_exit_body">Puedes terminar la configuración la próxima vez que abras la app.</string>
+    <string name="knotwork_onboarding_exit_title">¿Salir de la configuración inicial?</string>
+    <string name="knotwork_onboarding_exit_body">Puedes terminar la configuración inicial la próxima vez que abras la app.</string>
     <string name="knotwork_onboarding_exit_confirm">Salir</string>
     <string name="knotwork_onboarding_exit_cancel">Cancelar</string>
     <string name="knotwork_editor_unsaved_changes">Sin guardar</string>
@@ -578,10 +578,10 @@
     <string name="knotwork_node_field_keywords">Palabras clave</string>
     <string name="knotwork_node_field_keywords_help">Opcional. Palabras separadas por comas. Si el texto entrante contiene alguna, se toma la rama True directamente, sin preguntar a un modelo.</string>
     <string name="knotwork_node_field_complexity_threshold">Umbral de longitud</string>
-    <string name="knotwork_node_field_complexity_threshold_help">Opcional. Un texto entrante de al menos estos caracteres toma la rama True sin preguntar a un modelo. 0 desactiva la comprobación.</string>
+    <string name="knotwork_node_field_complexity_threshold_help">Opcional. Un texto entrante con al menos este número de caracteres toma la rama True sin preguntar a un modelo. 0 desactiva la comprobación.</string>
     <string name="knotwork_node_input_no_settings">No hay nada que configurar. La entrada del pipeline toma el texto de la ejecución tal como llega.</string>
     <string name="knotwork_node_tool_arguments_help">El modelo construye los argumentos de la llamada a partir de la entrada de este nodo y del esquema propio de la herramienta.</string>
-    <string name="knotwork_node_queue_source_help">La cola es la lista que produjo el nodo anterior, un elemento cada vez, en orden.</string>
+    <string name="knotwork_node_queue_source_help">La cola es la lista que produjo el nodo anterior, un elemento tras otro, en orden.</string>
     <string name="knotwork_node_summary_shape_help">Pide en el prompt la forma y la longitud: viñetas, un párrafo, un número de palabras.</string>
     <string name="knotwork_node_field_branch_on_image">Rama True si la entrada tiene una imagen</string>
     <string name="knotwork_node_field_question">Plantilla de la pregunta</string>
@@ -614,7 +614,7 @@
     <string name="knotwork_node_field_target_pipeline">Pipeline de destino</string>
     <string name="knotwork_node_field_target_pipeline_none">Elige un pipeline…</string>
     <string name="knotwork_node_field_target_pipeline_help">El pipeline que este nodo ejecuta como subllamada anidada.</string>
-    <string name="knotwork_node_pipeline_picker_self">Un pipeline no puede apuntarse a sí mismo</string>
+    <string name="knotwork_node_pipeline_picker_self">Un pipeline no puede llamarse a sí mismo</string>
     <string name="knotwork_node_pipeline_picker_cycle">Bucle: %1$s ya llama a este</string>
     <string name="knotwork_node_pipeline_picker_depth" tools:ignore="PluralsCandidate">El anidamiento superaría el máximo de niveles: %1$d</string>
     <string name="knotwork_node_pipeline_picker_empty_title">No hay pipelines disponibles</string>
@@ -665,7 +665,7 @@
     <string name="knotwork_chat_home_archived_bar_title">Este chat está archivado</string>
     <string name="knotwork_chat_home_archived_bar_body">Restáuralo a tu lista para seguir chateando.</string>
     <string name="knotwork_chat_home_archived_bar_restore">Restaurar</string>
-    <string name="knotwork_chat_home_drawer_starred_cd">Destacado</string>
+    <string name="knotwork_chat_home_drawer_starred_cd">Favorito</string>
     <string name="knotwork_chat_home_drawer_running_cd">Tarea en curso</string>
     <string name="knotwork_chat_home_drawer_import_title">Importar chat</string>
     <string name="knotwork_chat_home_drawer_import_subtitle">Desde JSON o texto</string>
@@ -682,7 +682,7 @@
     <string name="knotwork_console_strip_close_cd">Cerrar la consola</string>
     <string name="knotwork_common_back">Atrás</string>
     <string name="knotwork_files_title">Archivos</string>
-    <string name="knotwork_files_subtitle">CARPETA DE TRABAJO DEL AGENTE</string>
+    <string name="knotwork_files_subtitle">CARPETA DEL AGENTE</string>
     <string name="knotwork_files_back_cd">Atrás</string>
     <string name="knotwork_files_refresh_cd">Volver a examinar la carpeta de trabajo</string>
     <plurals name="knotwork_files_count">
@@ -729,8 +729,8 @@
         <item quantity="many">¿Eliminar %1$d archivos?</item>
         <item quantity="other">¿Eliminar %1$d archivos?</item>
     </plurals>
-    <string name="knotwork_files_delete_body_one">Quita %1$s de la carpeta de trabajo de forma permanente. No se puede deshacer.</string>
-    <string name="knotwork_files_delete_body_many">Se quitan de la carpeta de trabajo de forma permanente. No se puede deshacer.</string>
+    <string name="knotwork_files_delete_body_one">Se eliminará %1$s de la carpeta de trabajo de forma permanente. No se puede deshacer.</string>
+    <string name="knotwork_files_delete_body_many">Se eliminarán de la carpeta de trabajo de forma permanente. No se puede deshacer.</string>
     <string name="knotwork_files_delete_confirm">Eliminar</string>
     <string name="knotwork_files_delete_cancel">Cancelar</string>
     <string name="knotwork_files_collision_title">El nombre ya existe</string>
@@ -743,7 +743,7 @@
     <string name="knotwork_discover_title">Explorar modelos</string>
     <string name="knotwork_discover_back_cd">Atrás</string>
     <string name="knotwork_discover_search_placeholder">Buscar modelos de litert-community</string>
-    <string name="knotwork_discover_gated_badge">Restringido</string>
+    <string name="knotwork_discover_gated_badge">Cerrado</string>
     <plurals name="knotwork_discover_file_count">
         <item quantity="one">%1$d archivo</item>
         <item quantity="many">%1$d archivos</item>
@@ -798,7 +798,7 @@
     <string name="knotwork_health_badge_cd">Estado: %1$s</string>
     <string name="knotwork_loading">Cargando</string>
     <string name="knotwork_input_chip_remove_cd">Quitar %1$s</string>
-    <string name="knotwork_chips_input_placeholder">Escribe y pulsa Enter…</string>
+    <string name="knotwork_chips_input_placeholder">Escribe y presiona Enter…</string>
     <plurals name="knotwork_chips_input_max">
         <item quantity="one">Máximo %1$d elemento</item>
         <item quantity="many">Máximo %1$d elementos</item>
@@ -820,8 +820,8 @@
     <string name="knotwork_mcp_auth_bearer">Bearer</string>
     <string name="knotwork_mcp_auth_basic">Basic</string>
     <string name="knotwork_mcp_auth_api_key">Clave de API</string>
-    <string name="knotwork_mcp_url_required">Introduce la URL de un servidor.</string>
-    <string name="knotwork_mcp_url_scheme_required">La URL debe empezar por http://, https:// o mcp://.</string>
+    <string name="knotwork_mcp_url_required">Escribe la URL de un servidor.</string>
+    <string name="knotwork_mcp_url_scheme_required">La URL debe empezar con http://, https:// o mcp://.</string>
     <string name="knotwork_mcp_url_host_required">La URL necesita un nombre de host.</string>
     <string name="knotwork_mcp_url_cleartext_unapproved">Aprueba arriba la conexión sin cifrar antes de guardar.</string>
     <string name="knotwork_mcp_url_collision">Ya existe un servidor con esta URL: «%1$s».</string>
