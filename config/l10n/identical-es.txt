@@ -45,3 +45,4 @@ app:string/unit_size_bytes	# unit symbol
 app:string/unit_size_gigabytes	# unit symbol
 app:string/unit_size_kilobytes	# unit symbol
 app:string/unit_size_megabytes	# unit symbol
+app:string/more_section_app	# same word in Spanish

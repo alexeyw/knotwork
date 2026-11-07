@@ -51,7 +51,7 @@
     <string name="orchestrator_context_chat_history_label">Historial del chat</string>
     <string name="orchestrator_context_chat_history_hint">Todos los mensajes anteriores de la sesión actual</string>
     <string name="orchestrator_context_long_term_memory_label">Memoria a largo plazo</string>
-    <string name="orchestrator_context_long_term_memory_hint">Entradas relevantes de la memoria a largo plazo del agente</string>
+    <string name="orchestrator_context_long_term_memory_hint">Recuerdos relevantes de la memoria a largo plazo del agente</string>
     <string name="orchestrator_context_tool_results_label">Resultados de herramientas</string>
     <string name="orchestrator_context_tool_results_hint">Datos que devolvieron las herramientas en el paso actual</string>
     <string name="orchestrator_context_hint">Menos entradas hacen el nodo más rápido y barato. Activa solo lo necesario.</string>
@@ -115,8 +115,8 @@
     <string name="orchestrator_library_import_collision_replace">Reemplazar</string>
     <string name="orchestrator_library_import_collision_copy">Importar como copia</string>
     <string name="orchestrator_library_import_orphan_title">Este archivo usa el ID de un pipeline que eliminaste</string>
-    <string name="orchestrator_library_import_orphan_body">El archivo lo llama «%1$s». Con Conservar el ID, lo que aún lo ejecuta ejecutará los pasos del archivo; Importar como copia no los toca.</string>
-    <string name="orchestrator_library_import_orphan_bindings_heading">Estos aún ejecutan ese ID. Con Conservar el ID, ejecutarán los pasos del archivo:</string>
+    <string name="orchestrator_library_import_orphan_body">El archivo lo llama «%1$s». Con «Conservar el ID», lo que aún lo ejecuta ejecutará los pasos del archivo; «Importar como copia» no lo toca.</string>
+    <string name="orchestrator_library_import_orphan_bindings_heading">Estos aún ejecutan ese ID. Con «Conservar el ID», ejecutarán los pasos del archivo:</string>
     <string name="orchestrator_library_import_orphan_keep">Conservar el ID</string>
     <string name="orchestrator_library_import_bundle_orphan_item">«%1$s» (el ID de un pipeline eliminado)</string>
     <string name="orchestrator_library_import_bundle_title">Importar paquete</string>

@@ -72,7 +72,7 @@
     <string name="external_automation_consent_any_app">Puede pedirlo cualquier app de este dispositivo que pueda enviar un broadcast. No hay una lista por app: el pipeline que elijas es todo el permiso.</string>
     <string name="external_automation_consent_one_pipeline">Solo se puede ejecutar ese pipeline. Una solicitud que nombre cualquier otro se rechaza; nunca se redirige al que elegiste.</string>
     <string name="external_automation_consent_approvals">Tu configuración de aprobaciones se sigue aplicando: una llamada a herramienta se detiene y te pregunta primero igual que en las ejecuciones en segundo plano de la propia app, y una peligrosa siempre lo hace.</string>
-    <string name="external_automation_consent_cost">Una ejecución iniciada así puede usar tu clave de API en la nube y cuesta lo que cueste esa ejecución.</string>
+    <string name="external_automation_consent_cost">Una ejecución iniciada así puede usar tu clave de API de un proveedor en la nube y cuesta lo que cueste esa ejecución.</string>
     <string name="external_automation_consent_reversible">Un toque en el mismo interruptor lo vuelve a desactivar.</string>
     <string name="external_automation_consent_confirm">Activar</string>
     <string name="external_automation_consent_cancel">Cancelar</string>

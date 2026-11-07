@@ -101,11 +101,11 @@
     <string name="chat_archive_save_to_file">Guardar en archivo</string>
     <string name="chat_archive_delete_forever">Eliminar para siempre</string>
     <string name="chat_archive_row_menu_cd">Más acciones</string>
-    <string name="chat_archive_ran_after_archiving">Una ejecución terminó después de archivarlo</string>
-    <string name="chat_archive_footer">Los chats archivados se conservan hasta que los eliminas</string>
+    <string name="chat_archive_ran_after_archiving">Ejecución terminada tras archivar</string>
+    <string name="chat_archive_footer">Los chats archivados se conservan hasta que los elimines</string>
     <string name="chat_archive_empty_title">No hay nada archivado</string>
     <string name="chat_archive_empty_body">Archivar saca un chat de tu lista sin eliminarlo. En la lista de chats, desliza un chat o abre su menú y elige Archivar: aquí espera, completo, hasta que lo restaures.</string>
-    <string name="chat_archive_error_title">No se pudo cargar el archivo de chats</string>
+    <string name="chat_archive_error_title">No se pudieron cargar los chats archivados</string>
     <string name="chat_archive_error_retry">Reintentar</string>
     <string name="chat_archive_delete_title">¿Eliminar este chat?</string>
     <string name="chat_archive_delete_body">«%1$s» y todos sus mensajes se eliminarán de este dispositivo. No se puede deshacer.</string>
@@ -160,6 +160,6 @@
     <string name="chat_import_reason_no_messages">el archivo no tiene una lista de mensajes</string>
     <string name="chat_import_reason_not_a_message">el mensaje %1$d del archivo no es un mensaje</string>
     <string name="chat_import_reason_unreadable">no se pudo leer el archivo</string>
-    <string name="chat_system_tool_denied">El usuario rechazó la herramienta «%1$s».</string>
+    <string name="chat_system_tool_denied">El usuario rechazó la llamada a la herramienta «%1$s».</string>
     <string name="chat_system_clarification_reply_not_delivered">La respuesta no se entregó: la aclaración ya se había resuelto con una respuesta predeterminada.</string>
 </resources>

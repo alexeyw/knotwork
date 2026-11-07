@@ -36,7 +36,7 @@
     <string name="more_section_automation">AUTOMATIZACIÓN</string>
     <string name="more_section_content">TU CONTENIDO</string>
     <string name="more_section_blocks">BLOQUES BÁSICOS</string>
-    <string name="more_section_app">APLICACIÓN</string>
+    <string name="more_section_app">APP</string>
     <string name="about_title">Acerca de</string>
     <string name="about_version">Versión %1$s</string>
     <string name="prompt_preview_title">Vista previa del prompt</string>

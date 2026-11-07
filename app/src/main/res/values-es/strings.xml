@@ -3,7 +3,7 @@
     <string name="app_name">Knotwork</string>
     <string name="approval_channel_sensitive_name">Aprobaciones del agente</string>
     <string name="approval_channel_sensitive_description">Confirmaciones para ejecutar herramientas sensibles.</string>
-    <string name="approval_channel_destructive_name">Aprobaciones del agente: peligrosas</string>
+    <string name="approval_channel_destructive_name">Aprobaciones del agente: acciones peligrosas</string>
     <string name="approval_channel_destructive_description">Confirmaciones para ejecutar herramientas irreversibles (p. ej., enviar, eliminar, comprar).</string>
     <string name="approval_notification_title_sensitive">Aprobación para ejecutar una herramienta</string>
     <string name="approval_notification_title_destructive">Una acción peligrosa necesita aprobación</string>
@@ -20,10 +20,10 @@
     <string name="shortcut_new_chat_short">Nuevo chat</string>
     <string name="shortcut_new_chat_long">Empezar un chat nuevo</string>
     <string name="shortcut_pipelines_short">Pipelines</string>
-    <string name="shortcut_pipelines_long">Abrir la biblioteca de pipelines</string>
+    <string name="shortcut_pipelines_long">Biblioteca de pipelines</string>
     <string name="share_not_configured">Elige un pipeline para compartir en Configuración → Segundo plano y activadores.</string>
     <string name="share_nothing_to_share">No hay nada que compartir.</string>
-    <string name="share_rate_limited">Demasiados envíos a Compartir en la última hora. Vuelve a intentarlo más tarde.</string>
+    <string name="share_rate_limited">Compartiste demasiadas veces en la última hora. Vuelve a intentarlo más tarde.</string>
     <string name="share_image_blocked_cloud">El pipeline para compartir empieza en la nube, y las imágenes se quedan en tu dispositivo.</string>
     <string name="share_image_blocked_model_no_vision">Este modelo no puede leer imágenes. Activa la compatibilidad con imágenes en Modelos.</string>
     <string name="share_image_blocked_no_vision_step">El pipeline para compartir no tiene ningún paso local que pueda leer imágenes.</string>
@@ -45,7 +45,7 @@
     <string name="more_settings_subtitle">prompt del sistema · parámetros del LLM · claves</string>
     <string name="more_about_version">v%1$s · compilación %2$d</string>
     <string name="more_library_none">no hay preajustes guardados</string>
-    <string name="more_files_empty">vacía</string>
+    <string name="more_files_empty">sin archivos</string>
     <string name="more_network_no_calls_yet">en el dispositivo · aún sin llamadas de red</string>
     <string name="more_network_just_now">en línea · llamada de red hace un momento</string>
     <string name="more_network_quiet">en el dispositivo · sin llamadas de red en los últimos %1$d min</string>

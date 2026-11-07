@@ -32,7 +32,7 @@
     <string name="skills_editor_subtitle_duplicated">copia editable · de una integrada</string>
     <string name="skills_editor_subtitle_readonly">integrada · solo lectura</string>
     <string name="skills_editor_close_cd">Cerrar</string>
-    <string name="skills_editor_required">obligatorio</string>
+    <string name="skills_editor_required">campo obligatorio</string>
     <string name="skills_editor_skill_kicker">HABILIDAD</string>
     <string name="skills_editor_skill_kicker_body">Instrucción · herramientas permitidas · contexto, reutilizados como un solo paquete.</string>
     <string name="skills_editor_name_label">NOMBRE</string>
