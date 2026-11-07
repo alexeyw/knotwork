@@ -2559,9 +2559,12 @@ tool calls**, **Block destructive tools** and **Send anonymous crash reports**.
 The magnifying-glass field at the top of the hub searches every setting by name,
 description, owning category and a set of synonyms — so typing `limit` surfaces
 *Run limits* (via its synonyms), and `max` surfaces *Max context length*,
-*Max memory chunks* and more. The matched text is highlighted in each result, and
-a result row shows its category **breadcrumb** and **Basic/Advanced** tier (plus
-a `≈ "synonym"` chip when a synonym is what matched). Tapping a result opens the
+*Max memory chunks* and more. Matching ignores case and the accents of Latin
+letters, so `configuracion` finds *Configuración* and `tamano` finds *Tamaño*;
+Cyrillic `ё` and `й` stay letters of their own. The matched text is highlighted
+in each result, and a result row shows its category **breadcrumb** and
+**Basic/Advanced** tier (plus a `≈ "synonym"` chip when a synonym is what
+matched). Tapping a result opens the
 owning category, expands its Advanced section when the target lives there, and
 scrolls to and briefly flashes the row (a static accent under reduced motion). A
 calm *"no settings match"* state offers a one-tap **Clear**. The index is built
