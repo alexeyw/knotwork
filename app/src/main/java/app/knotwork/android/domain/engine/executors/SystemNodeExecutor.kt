@@ -22,7 +22,6 @@ import app.knotwork.android.domain.models.NodeOutput
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.RouteLabels
-import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.RunSettings
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import kotlinx.coroutines.CancellationException
@@ -69,7 +68,6 @@ import javax.inject.Inject
 class SystemNodeExecutor @Inject constructor(
     private val llmEngine: LlmInferenceEngine,
     private val loadModelUseCase: LoadModelUseCase,
-    @Suppress("unused") private val chatRepository: ChatRepository,
     private val structuredOutputGate: StructuredOutputGate,
     private val runSettings: RunSettings,
     private val cloudStructuredFactory: CloudStructuredInferenceClientFactory,

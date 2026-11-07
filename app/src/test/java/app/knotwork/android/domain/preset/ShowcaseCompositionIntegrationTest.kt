@@ -336,7 +336,6 @@ class ShowcaseCompositionIntegrationTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory {

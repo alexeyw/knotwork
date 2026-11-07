@@ -211,7 +211,6 @@ class ShowcaseResearchToFilePresetIntegrationTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory {

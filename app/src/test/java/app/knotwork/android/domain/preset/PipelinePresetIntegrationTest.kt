@@ -200,7 +200,6 @@ class PipelinePresetIntegrationTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory {

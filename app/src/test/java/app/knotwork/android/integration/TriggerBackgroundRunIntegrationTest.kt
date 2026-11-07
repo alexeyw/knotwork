@@ -561,7 +561,6 @@ class TriggerBackgroundRunIntegrationTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory { _, _ -> null },

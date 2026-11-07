@@ -13,7 +13,6 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.Result
 import app.knotwork.android.domain.models.RunTreeContext
-import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.usecases.LoadModelUseCase
 import io.mockk.coEvery
@@ -36,7 +35,6 @@ class SystemNodeExecutorTest {
 
     private lateinit var llmEngine: LlmInferenceEngine
     private lateinit var loadModelUseCase: LoadModelUseCase
-    private lateinit var chatRepository: ChatRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var executor: SystemNodeExecutor
 
@@ -44,7 +42,6 @@ class SystemNodeExecutorTest {
     fun setup() {
         llmEngine = mockk()
         loadModelUseCase = mockk()
-        chatRepository = mockk(relaxed = true)
         settingsRepository = mockk()
         every { settingsRepository.structuredOutputMaxRepairs } returns flowOf(2)
         coEvery { loadModelUseCase(any()) } returns Result.Success(Unit)
@@ -52,7 +49,6 @@ class SystemNodeExecutorTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory {
@@ -72,7 +68,6 @@ class SystemNodeExecutorTest {
         val leaking = SystemNodeExecutor(
             llmEngine,
             loadModelUseCase,
-            chatRepository,
             StructuredOutputGate(),
             settingsRepository,
             CloudStructuredInferenceClientFactory { _, _ ->
@@ -235,7 +230,6 @@ class SystemNodeExecutorTest {
         val cloud = SystemNodeExecutor(
             llmEngine,
             loadModelUseCase,
-            chatRepository,
             StructuredOutputGate(),
             settingsRepository,
             CloudStructuredInferenceClientFactory { _, _ ->

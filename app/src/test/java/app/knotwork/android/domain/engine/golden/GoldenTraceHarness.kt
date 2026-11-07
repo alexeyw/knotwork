@@ -624,7 +624,6 @@ internal class GoldenTraceHarness(
             SystemNodeExecutor(
                 model.localEngine,
                 loadModel,
-                chatRepository,
                 structuredGate,
                 settings,
                 model.structuredFactory,
