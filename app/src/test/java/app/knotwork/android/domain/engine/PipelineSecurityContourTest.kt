@@ -209,7 +209,6 @@ class PipelineSecurityContourTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory {
