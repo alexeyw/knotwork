@@ -1,4 +1,4 @@
-<!-- translation of docs/troubleshooting.md, sha256 394254abdbe74f3f192b996c43e4fa5f7071d1410d36d110793ede8ccc5697a5 -->
+<!-- translation of docs/troubleshooting.md, sha256 b0f6df384e9e9b7d4967d3b674103bb633bf0b5264d966b3a14241405002f161 -->
 <!-- en: troubleshooting -->
 # Решение проблем
 
@@ -180,7 +180,7 @@ happens](user-guide.md#battery-settings-decide-whether-any-of-this-happens).
 
 Откройте триггер и прочитайте его **Журнал проверок** (см.
 [Triggers](user-guide.md#checking-what-a-trigger-has-been-doing)). Ответ почти
-всегда там, и от того, какой из двух видов он принимает, зависит, что делать
+всегда там, и от того, какой из трёх видов он принимает, зависит, что делать
 дальше:
 
 - **В журнале есть запись на ожидаемый момент, и в ней сказано, что прогона не

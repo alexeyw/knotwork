@@ -1,4 +1,4 @@
-<!-- translation of docs/faq.md, sha256 830b527e6c6446229dd54855bdcb0ceb95580d8223f4105e371915381de772ed -->
+<!-- translation of docs/faq.md, sha256 9014b36abf2b6d1e57c85e163f530c2b14450f44eaa327e0997a59b389ccb4c6 -->
 <!-- en: frequently-asked-questions -->
 # Preguntas frecuentes
 
