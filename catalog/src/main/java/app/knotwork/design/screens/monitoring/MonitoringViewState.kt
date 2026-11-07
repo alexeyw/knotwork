@@ -11,7 +11,13 @@ enum class MonitoringVisualState { Loading, Empty, Default, Error }
  */
 data class MonitoringStat(val label: String, val value: String)
 
-/** One row of the "Time per node type" breakdown. */
+/**
+ * One row of the "Time per node type" breakdown.
+ *
+ * @property nodeType the node type's name in the interface language (e.g. `"Intent Router"`),
+ *   never its code (`INTENT_ROUTER`).
+ * @property totalLabel formatted time the run's nodes of this type took (e.g. `"640 ms"`).
+ */
 data class NodeBreakdownRow(val nodeType: String, val totalLabel: String)
 
 /**

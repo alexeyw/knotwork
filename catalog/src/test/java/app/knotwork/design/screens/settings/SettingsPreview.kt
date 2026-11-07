@@ -18,7 +18,7 @@ internal object SettingsPreview {
         systemInstructionsPreview = "Be concise. Prefer bullet points over prose.",
         approveSelection = ApproveToolCallsOption.Sensitive,
         approveAllLabel = "All",
-        approveSensitiveLabel = "Sensitive",
+        approveSensitiveLabel = "Sensitive +",
         approveNeverLabel = "Never",
         blockDestructive = true,
         backendLabel = "GPU · falls back to CPU if it fails to start.",
@@ -277,7 +277,7 @@ internal object SettingsPreview {
     fun tools(): ToolsSettingsViewState = ToolsSettingsViewState(
         approveSelection = ApproveToolCallsOption.Sensitive,
         approveAllLabel = "All",
-        approveSensitiveLabel = "Sensitive",
+        approveSensitiveLabel = "Sensitive +",
         approveNeverLabel = "Never",
         blockDestructive = true,
         blockNetwork = true,
