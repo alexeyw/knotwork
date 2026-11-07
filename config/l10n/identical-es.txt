@@ -27,3 +27,22 @@ catalog:string/knotwork_status_error	# same word in Spanish
 catalog:string/knotwork_onboarding_model_size_gb	# unit symbol
 catalog:string/knotwork_mcp_auth_bearer	# HTTP scheme name
 catalog:string/knotwork_mcp_auth_basic	# HTTP scheme name
+app:string/app_name	# brand name
+app:string/chat_home_debug_state_error	# same word in Spanish
+app:string/default_name_chat_with_id	# "chat" is kept in Spanish
+app:string/external_automation_call_keys_label	# Android intent term
+app:string/nav_tab_chat	# "chat" is kept in Spanish
+app:string/nav_tab_pipelines	# "pipeline" is kept in Spanish
+app:string/orchestrator_preset_category_local	# same word in Spanish
+app:string/prompt_preset_picker_tokens_suffix	# token unit, as in English
+app:string/prompts_editor_category_placeholder	# node type code
+app:string/prompts_import_refused_asked_scripts	# same word in Spanish
+app:string/prompts_import_refused_scripts_format	# same word in Spanish
+app:string/shortcut_pipelines_short	# "pipeline" is kept in Spanish
+app:string/unit_age_days	# unit symbol
+app:string/unit_age_hours	# unit symbol
+app:string/unit_size_bytes	# unit symbol
+app:string/unit_size_gigabytes	# unit symbol
+app:string/unit_size_kilobytes	# unit symbol
+app:string/unit_size_megabytes	# unit symbol
+app:string/more_section_app	# same word in Spanish

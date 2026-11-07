@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="pipeline_editor_node_pipeline_target">→ %1$s</string>
+    <string name="pipeline_editor_node_pipeline_no_target">Sin pipeline de destino</string>
+    <string name="pipeline_editor_node_pipeline_missing">No se encontró el pipeline</string>
+    <string name="pipeline_editor_fab_add_node">Agregar nodo</string>
+    <string name="pipeline_editor_validation_clean">El pipeline es válido</string>
+    <plurals name="pipeline_editor_validation_count">
+        <item quantity="one">%1$d problema: no se puede ejecutar</item>
+        <item quantity="many">%1$d problemas: no se puede ejecutar</item>
+        <item quantity="other">%1$d problemas: no se puede ejecutar</item>
+    </plurals>
+    <string name="pipeline_editor_validation_auto_fix">Corregir</string>
+    <string name="pipeline_editor_validation_go">Ir</string>
+    <string name="pipeline_editor_validation_auto_fix_none">No hay ninguna corrección automática segura: resuelve los problemas a mano.</string>
+    <string name="pipeline_editor_validation_auto_fix_done">Se aplicó la corrección automática.</string>
+    <plurals name="pipeline_editor_multi_select_count">
+        <item quantity="one">%1$d seleccionado</item>
+        <item quantity="many">%1$d seleccionados</item>
+        <item quantity="other">%1$d seleccionados</item>
+    </plurals>
+    <string name="pipeline_editor_multi_select_cancel">Cancelar la selección</string>
+    <string name="pipeline_editor_multi_select_copy">Copiar los nodos seleccionados</string>
+    <string name="pipeline_editor_multi_select_delete">Eliminar los nodos seleccionados</string>
+    <string name="pipeline_editor_overflow_paste">Pegar</string>
+    <string name="pipeline_editor_overflow_paste_empty">El portapapeles está vacío: primero copia un nodo.</string>
+    <string name="pipeline_editor_overflow_rename">Cambiar nombre del nodo…</string>
+    <string name="pipeline_editor_rename_title">Cambiar nombre del nodo</string>
+    <string name="pipeline_editor_rename_field_label">Etiqueta del nodo</string>
+    <string name="pipeline_editor_rename_confirm">Cambiar nombre</string>
+    <string name="pipeline_editor_rename_cancel">Cancelar</string>
+    <string name="pipeline_editor_overflow_cookbook">Recetario de pipelines</string>
+    <string name="pipeline_editor_overflow_find">Buscar nodo…</string>
+    <string name="pipeline_editor_search_placeholder">Buscar nodos…</string>
+    <string name="pipeline_editor_search_close">Cerrar la búsqueda</string>
+    <plurals name="pipeline_editor_search_count">
+        <item quantity="one">%1$d coincidencia</item>
+        <item quantity="many">%1$d coincidencias</item>
+        <item quantity="other">%1$d coincidencias</item>
+    </plurals>
+    <string name="pipeline_editor_empty_title">Pipeline vacío</string>
+    <string name="pipeline_editor_empty_helper">Toca + para agregar tu primer nodo, o mantén presionado el lienzo donde lo quieras.</string>
+    <string name="pipeline_editor_empty_cta_start">Empezar con INPUT</string>
+    <string name="pipeline_editor_empty_cta_template">Desde una plantilla</string>
+    <string name="pipeline_editor_empty_info_pill">lienzo: %1$d × %2$d · cuadrícula de %3$d dp · %4$s</string>
+    <string name="pipeline_editor_zoom_rail_zoom_in">Acercar</string>
+    <string name="pipeline_editor_zoom_rail_zoom_out">Alejar</string>
+    <string name="pipeline_editor_zoom_rail_fit">Ajustar el pipeline a la vista</string>
+    <string name="pipeline_editor_mini_map_title">VISTA GENERAL</string>
+    <string name="pipeline_editor_mini_map_close">Cerrar el minimapa</string>
+    <string name="pipeline_editor_overflow_mini_map">Minimapa</string>
+    <string name="pipeline_editor_subtitle_overview">Vista general · %1$s · nodos: %2$d</string>
+    <string name="pipeline_editor_subtitle_editing">Edición · nodos: %1$d · conexiones: %2$d</string>
+    <plurals name="pipeline_editor_subtitle_issues">
+        <item quantity="one">%1$d problema · no se puede guardar</item>
+        <item quantity="many">%1$d problemas · no se puede guardar</item>
+        <item quantity="other">%1$d problemas · no se puede guardar</item>
+    </plurals>
+    <string name="pipeline_editor_overflow_undo">Deshacer</string>
+    <string name="pipeline_editor_overflow_redo">Rehacer</string>
+    <string name="pipeline_editor_overflow_delete">Eliminar la selección</string>
+    <string name="pipeline_editor_overflow_auto_layout">Organizar automáticamente</string>
+    <string name="pipeline_editor_overflow_save">Guardar pipeline</string>
+    <string name="pipeline_editor_overflow_save_as_preset">Guardar como preajuste…</string>
+    <string name="pipeline_editor_save_done">Pipeline guardado.</string>
+    <string name="pipeline_editor_overflow_toggle_grid_show">Mostrar cuadrícula</string>
+    <string name="pipeline_editor_overflow_toggle_grid_hide">Ocultar cuadrícula</string>
+    <string name="pipeline_editor_edge_selected_hint">Conexión seleccionada. Presiona 🗑 para quitarla.</string>
+    <string name="pipeline_editor_connection_dropped_hint">Para conectar nodos, arrastra desde el puerto inferior de un nodo hasta otro nodo.</string>
+    <string name="pipeline_editor_unsaved_title">¿Salir sin guardar?</string>
+    <string name="pipeline_editor_unsaved_text">Este pipeline tiene cambios que aún no se guardaron. Si sales ahora, se pierden.</string>
+    <string name="pipeline_editor_unsaved_save">Guardar y salir</string>
+    <string name="pipeline_editor_unsaved_discard">Descartar</string>
+    <string name="pipeline_editor_remove_connection_title">¿Quitar la conexión?</string>
+    <string name="pipeline_editor_remove_connection_text">Se eliminará el enlace entre los dos nodos. El cambio se puede deshacer desde la barra del editor.</string>
+    <string name="pipeline_editor_remove_connection_confirm">Quitar</string>
+    <string name="pipeline_editor_remove_connection_cancel">Cancelar</string>
+    <string name="pipeline_editor_skill_allowlist_all">Todas las herramientas</string>
+    <string name="pipeline_editor_skill_allowlist_none">Ninguna herramienta</string>
+    <plurals name="pipeline_editor_skill_allowlist_subset">
+        <item quantity="one">%d herramienta</item>
+        <item quantity="many">%d herramientas</item>
+        <item quantity="other">%d herramientas</item>
+    </plurals>
+</resources>

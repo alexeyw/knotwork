@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="errors_generic_unexpected">Se produjo un error inesperado</string>
+    <string name="errors_chat_pipeline_removed">Se eliminó el pipeline. Ahora se usa el pipeline principal.</string>
+    <string name="errors_orchestrator_cycle_detected">No se puede conectar: se detectó un ciclo</string>
+    <string name="errors_orchestrator_at_least_one_source">Debe quedar activada al menos una fuente de datos</string>
+    <string name="errors_orchestrator_pipeline_not_found">No se encontró el pipeline</string>
+    <string name="errors_orchestrator_validation_missing_input">Falta el nodo INPUT</string>
+    <string name="errors_orchestrator_validation_missing_output">Falta el nodo OUTPUT</string>
+    <string name="errors_orchestrator_validation_multiple_inputs">No se permiten varios nodos INPUT</string>
+    <string name="errors_orchestrator_validation_multiple_outputs">No se permiten varios nodos OUTPUT</string>
+    <string name="errors_orchestrator_validation_has_cycles">El pipeline contiene ciclos</string>
+    <string name="errors_orchestrator_validation_disconnected_input">El nodo INPUT no está conectado</string>
+    <string name="errors_orchestrator_validation_disconnected_output">El nodo OUTPUT no está conectado</string>
+    <string name="errors_orchestrator_validation_unreachable_node">Algunos nodos no se alcanzan desde INPUT</string>
+    <string name="errors_orchestrator_validation_dead_end">Algunos nodos no llegan a OUTPUT</string>
+    <string name="errors_orchestrator_validation_node_no_sources">El nodo «%1$s» no recibirá datos: activa al menos una fuente</string>
+    <string name="errors_orchestrator_validation_missing_target_pipeline">El nodo de pipeline «%1$s» no tiene un pipeline de destino seleccionado</string>
+    <string name="errors_orchestrator_validation_target_pipeline_not_found">El nodo de pipeline «%1$s» hace referencia a un pipeline que ya no existe</string>
+    <string name="errors_orchestrator_validation_pipeline_cycle">Los pipelines se llaman entre sí en un ciclo: %1$s</string>
+    <string name="errors_orchestrator_validation_pipeline_nesting_too_deep">El anidamiento de pipelines supera el límite de %1$d</string>
+    <string name="errors_orchestrator_validation_missing_skill">El nodo de habilidad «%1$s» no tiene una habilidad seleccionada</string>
+    <string name="errors_orchestrator_validation_skill_not_found">El nodo de habilidad «%1$s» hace referencia a una habilidad que ya no existe</string>
+    <string name="import_problem_too_deep" tools:ignore="PluralsCandidate">JSON no válido: anidado a más de %1$d niveles</string>
+    <string name="import_problem_not_json">JSON no válido: %1$s</string>
+    <string name="import_problem_malformed">Documento de pipeline mal formado: %1$s</string>
+    <string name="import_problem_missing_field">Falta un campo obligatorio: %1$s</string>
+    <string name="import_problem_invalid_pipeline_id" tools:ignore="PluralsCandidate">ID de pipeline no válido: debe ser una sola línea de %1$d caracteres como máximo</string>
+    <string name="import_problem_duplicate_node_id">ID de nodo duplicado «%1$s»</string>
+    <string name="import_problem_duplicate_connection_id">ID de conexión duplicado «%1$s»</string>
+    <string name="import_problem_node_without_id" tools:ignore="PluralsCandidate">Al nodo n.º %1$d le falta el ID</string>
+    <string name="import_problem_node_without_type">Al nodo «%1$s» le falta el tipo</string>
+    <string name="import_problem_unknown_node_type">El nodo «%1$s» tiene un tipo desconocido «%2$s»</string>
+    <string name="import_problem_connection_without_id" tools:ignore="PluralsCandidate">A la conexión n.º %1$d le falta el ID</string>
+    <string name="import_problem_connection_without_end">A la conexión «%1$s» le falta %2$s</string>
+    <string name="import_problem_connection_unknown_node">La conexión «%1$s» hace referencia a un nodo desconocido «%2$s»</string>
+    <string name="import_problem_label_not_a_branch">La conexión «%1$s» desde el nodo %2$s «%3$s» tiene la etiqueta «%4$s»; sus ramas son %5$s</string>
+    <string name="import_problem_context_flag">Nodo «%1$s»: contextConfig.%2$s debe ser true o false</string>
+    <string name="import_problem_unknown_provider">El nodo «%1$s» indica un proveedor en la nube desconocido «%2$s»</string>
+    <string name="import_problem_empty_bundle">El paquete no contiene pipelines</string>
+    <string name="import_problem_bundle_too_large" tools:ignore="PluralsCandidate">El paquete contiene %1$d pipelines y supera el límite de %2$d</string>
+    <string name="import_problem_bundle_entry_not_object">El pipeline n.º %1$d del paquete no es un objeto JSON</string>
+    <string name="import_problem_bundle_entry_invalid">El pipeline n.º %1$d del paquete no es válido: %2$s</string>
+    <string name="import_problem_duplicate_pipeline_ids">El paquete contiene ID de pipeline duplicados: %1$s</string>
+    <string name="import_problem_missing_pipelines">El paquete hace referencia a pipelines que no contiene: %1$s</string>
+    <string name="import_problem_pipeline_fails_checks">El pipeline «%1$s» no es válido: %2$s</string>
+    <string name="import_problem_too_many_memories" tools:ignore="PluralsCandidate">El archivo contiene %1$d fragmentos de memoria, más de los %2$d que admite la memoria</string>
+    <string name="import_problem_memory_entry_not_object">Fragmento mal formado en el índice %1$d</string>
+    <string name="import_problem_memory_entry_invalid" tools:ignore="PluralsCandidate">Al fragmento del índice %1$d le falta un campo obligatorio o está mal formado: text no puede estar vacío, embedding debe ser una matriz no vacía de números finitos y timestamp un valor positivo en milisegundos de época</string>
+    <string name="import_problem_memory_history_invalid" tools:ignore="PluralsCandidate">El fragmento del índice %1$d tiene una versión anterior mal formada: su text no puede estar vacío, y capturedAt y replacedAt deben ser valores positivos en milisegundos de época</string>
+    <string name="input_problem_blank_pipeline_name">El nombre del pipeline no puede estar vacío</string>
+    <string name="input_problem_blank_preset_name">El nombre del preajuste no puede estar vacío</string>
+    <string name="input_problem_long_pipeline_name" tools:ignore="PluralsCandidate">El nombre del pipeline debe tener %1$d caracteres como máximo</string>
+    <string name="input_problem_long_preset_name" tools:ignore="PluralsCandidate">El nombre del preajuste debe tener %1$d caracteres como máximo</string>
+    <string name="input_problem_blank_system_prompt">El prompt del sistema no puede estar vacío</string>
+    <string name="input_problem_long_system_prompt" tools:ignore="PluralsCandidate">El prompt del sistema debe tener %1$d caracteres como máximo</string>
+    <string name="input_problem_no_prompt_for_node">NodeType %1$s no usa un LLM y no puede tener un preajuste de prompt</string>
+    <string name="input_problem_pipeline_not_found">No se encontró el pipeline</string>
+    <string name="input_problem_preset_not_found">No se encontró el preajuste: %1$s</string>
+    <string name="input_problem_prompt_preset_not_found">No hay ningún preajuste de prompt con el ID %1$s</string>
+    <string name="input_problem_scenario_not_found">Escenario de configuración inicial desconocido: %1$s</string>
+    <string name="export_problem_root_not_found">No se encontró el pipeline raíz «%1$s».</string>
+    <string name="export_problem_reference_not_found">No se pudo resolver para la exportación el pipeline referenciado «%1$s».</string>
+    <string name="export_problem_too_many_pipelines" tools:ignore="PluralsCandidate">Las dependencias superan el límite de %1$d pipelines.</string>
+    <string name="import_problem_quoted_value">«%1$s»</string>
+    <string name="import_problem_and_more" tools:ignore="PluralsCandidate">%1$s y %2$d más</string>
+</resources>

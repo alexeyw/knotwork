@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="run_copied_seed">Semilla copiada</string>
+    <string name="run_copied_sha">SHA-256 del modelo copiado</string>
+    <string name="run_copied_digest">Huella de la ejecución copiada</string>
+    <string name="run_copied_hash">Se copió el hash (%1$s) del nodo «%2$s»</string>
+    <string name="run_hash_input">entrada</string>
+    <string name="run_hash_output">salida</string>
+    <string name="run_copied_verification_hash">Hash copiado</string>
+    <string name="run_again_snackbar">Ejecutando de nuevo con la semilla %1$s. La respuesta solo se repite si todas las entradas son iguales.</string>
+    <string name="run_trace_export_chooser_title">Compartir traza de la ejecución</string>
+    <string name="run_trace_export_save_failed">No se pudo guardar la traza de la ejecución</string>
+    <string name="run_trace_export_render_failed">No se pudo leer la traza de la ejecución</string>
+    <plurals name="run_trace_export_saved">
+        <item quantity="one">Se guardó %1$d registro</item>
+        <item quantity="many">Se guardaron %1$d registros</item>
+        <item quantity="other">Se guardaron %1$d registros</item>
+    </plurals>
+</resources>
