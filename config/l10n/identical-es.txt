@@ -46,3 +46,33 @@ app:string/unit_size_gigabytes	# unit symbol
 app:string/unit_size_kilobytes	# unit symbol
 app:string/unit_size_megabytes	# unit symbol
 app:string/more_section_app	# same word in Spanish
+app:string/memory_compact_seconds_approx	# unit symbol
+app:string/memory_detail_tokens	# token unit, as in English
+app:string/memory_segment_auto	# same word in Spanish
+app:string/memory_segment_manual	# same word in Spanish
+app:string/models_field_url_placeholder	# example address
+app:string/models_performance_total	# same word in Spanish
+app:string/models_performance_unit_ms	# unit symbol
+app:string/models_performance_unit_seconds	# unit symbol
+app:string/models_performance_unit_tokens_per_second	# token unit, as in English
+app:string/models_section_hf	# brand name
+app:string/monitoring_stat_tokens_per_second	# token unit, as in English
+app:string/monitoring_unit_ms	# unit symbol
+app:string/run_limits_group_tokens	# same word in Spanish
+app:string/settings_cloud_retry_delay_value	# unit symbol
+app:string/settings_identity_avatar_initials	# initials of the placeholder identity
+app:string/settings_memory_export_filename	# file name
+app:string/settings_memory_param_days_value	# unit symbol
+app:string/settings_ollama_base_url_placeholder	# example address
+app:string/settings_row_top_k_title	# sampling parameter name
+app:string/settings_row_top_p_title	# sampling parameter name
+app:string/settings_search_name_top_k	# sampling parameter name
+app:string/settings_search_name_top_p	# sampling parameter name
+app:string/settings_unit_hours	# unit symbol
+app:string/settings_unit_kilobytes	# unit symbol
+app:string/settings_unit_megabytes	# unit symbol
+app:string/settings_unit_seconds	# unit symbol
+app:string/settings_unit_tokens	# token unit, as in English
+app:string/settings_usage_export_filename	# file name
+app:string/settings_usage_runs_total	# same word in Spanish
+app:string/settings_usage_triggers_total	# same word in Spanish

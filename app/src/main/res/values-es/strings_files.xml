@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="files_share_chooser_title">Compartir archivo</string>
+    <string name="files_message_import_failed">No se importó el archivo: es demasiado grande o la carpeta de trabajo está llena.</string>
+    <string name="files_message_export_failed">No se pudo guardar el archivo.</string>
+    <string name="files_message_preview_failed">Este archivo no tiene vista previa.</string>
+    <string name="files_message_delete_partial">Algunos de esos archivos no se eliminaron.</string>
+    <string name="files_message_share_failed">No se pudo preparar nada para compartir.</string>
+    <plurals name="files_message_share_partial">
+        <item quantity="one">Preparados para compartir: solo %1$d de %2$d archivo.</item>
+        <item quantity="many">Preparados para compartir: solo %1$d de %2$d archivos.</item>
+        <item quantity="other">Preparados para compartir: solo %1$d de %2$d archivos.</item>
+    </plurals>
+    <string name="files_quota_full">llena</string>
+</resources>

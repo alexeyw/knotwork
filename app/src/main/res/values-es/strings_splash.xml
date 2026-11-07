@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="splash_starting">Iniciando…</string>
+    <string name="splash_data_locked_title">No se pueden desbloquear tus datos</string>
+    <string name="splash_data_locked_body">No se pudo leer la clave de cifrado que protege tus datos en el dispositivo. Suele ser temporal, por ejemplo justo después de actualizar Android. Primero vuelve a intentarlo. Si el problema continúa, la única forma de seguir usando la app es borrar tus datos y empezar de cero.</string>
+    <string name="splash_data_locked_reset">Borrar datos</string>
+    <string name="splash_reset_dialog_title">¿Borrar tus datos?</string>
+    <string name="splash_reset_dialog_body">Se eliminarán para siempre tus chats, la memoria a largo plazo, los pipelines, los preajustes, los archivos de la carpeta de trabajo, los adjuntos y las tareas programadas de este dispositivo. Tu configuración y las claves guardadas se conservan. No se puede deshacer. Escribe «%1$s» para confirmar.</string>
+    <string name="splash_reset_dialog_hint">Escribe «%1$s» para confirmar</string>
+    <string name="splash_reset_dialog_confirm">Borrar datos</string>
+    <string name="splash_stage_preparing">Preparando la app…</string>
+    <string name="splash_stage_models">Comprobando los modelos descargados…</string>
+    <string name="splash_stage_pipelines">Leyendo los pipelines…</string>
+    <string name="splash_stage_chats">Leyendo los chats…</string>
+    <string name="splash_stage_memory">Leyendo la memoria…</string>
+    <string name="splash_stage_ready">Listo</string>
+</resources>

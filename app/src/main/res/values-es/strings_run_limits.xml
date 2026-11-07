@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="run_limits_entry_label">Límites de ejecución</string>
+    <string name="run_limits_entry_value" tools:ignore="PluralsCandidate">%1$,d pasos · %2$,d tokens por ejecución</string>
+    <string name="run_limits_entry_search">Límites de una ejecución autónoma: pasos, tokens y lo que no se puede limitar.</string>
+    <string name="run_limits_number" tools:ignore="PluralsCandidate">%1$,d</string>
+    <string name="run_limits_intro">Una ejecución autónoma se detiene sola cuando alcanza uno de estos límites. Todo lo que inicia la ejecución cuenta para estos límites: los pipelines a los que llama y cada vez que se reanuda.</string>
+    <string name="run_limits_group_steps">Pasos</string>
+    <string name="run_limits_group_tokens">Tokens</string>
+    <string name="run_limits_group_spend">Gasto</string>
+    <string name="run_limits_steps_label">Pasos por ejecución</string>
+    <string name="run_limits_steps_desc">Cuántos pasos puede dar una ejecución antes de detenerse. Cada nodo que se ejecuta cuenta como un paso.</string>
+    <string name="run_limits_steps_background_label">Pasos por ejecución en segundo plano</string>
+    <string name="run_limits_steps_background_desc_set">Se aplica a las ejecuciones que no iniciaste tú: un activador, una programación, el mosaico de Configuración rápida u otra app.</string>
+    <string name="run_limits_steps_background_desc_inherited">No tiene valor propio, así que las ejecuciones que no iniciaste tú (un activador, una programación, el mosaico de Configuración rápida u otra app) usan el mismo límite que arriba.</string>
+    <string name="run_limits_tokens_label">Tokens por ejecución</string>
+    <string name="run_limits_tokens_desc">Cuántos tokens puede enviar y recibir una ejecución en total.</string>
+    <string name="run_limits_tokens_background_label">Tokens por ejecución en segundo plano</string>
+    <string name="run_limits_tokens_background_desc">Las ejecuciones que no iniciaste tú tienen por defecto un límite de tokens más bajo, porque nadie las ve terminar.</string>
+    <string name="run_limits_qualifier_inherited">Igual que arriba</string>
+    <string name="run_limits_spend_label">Límite de gasto</string>
+    <string name="run_limits_spend_state">No se mide</string>
+    <string name="run_limits_spend_body">La app funciona con tu propia clave de API, así que nunca ve tu factura y no puede medir ni limitar lo que cuesta una ejecución. Lo más parecido es el límite de tokens de arriba.</string>
+    <string name="run_limits_soft_note" formatted="false">Una ejecución en un chat abierto te avisa cuando supera el 75 % de un límite, mientras aún queda margen para terminar. El punto de aviso no se puede ajustar, y una ejecución que se reanuda tras una pausa puede volver a avisar.</string>
+    <string name="run_termination_tone_limit">Límite de seguridad</string>
+    <string name="run_termination_tone_stuck">Sin avance</string>
+    <string name="run_termination_tone_info">Ejecución terminada</string>
+    <string name="run_termination_title_ceiling">La detuvo un límite de seguridad</string>
+    <string name="run_termination_body_step_ceiling">Esta ejecución usó todos los pasos que tenía permitidos. Sube el límite de pasos o divide el trabajo en ejecuciones más pequeñas.</string>
+    <string name="run_termination_body_token_ceiling">Esta ejecución usó todos los tokens que tenía permitidos. Sube el límite de tokens o pide algo más concreto.</string>
+    <string name="run_termination_title_no_progress">Detenida: la ejecución no avanzaba</string>
+    <string name="run_termination_body_no_progress">El mismo trabajo se repetía sin hacer avanzar la tarea, así que la ejecución se terminó.</string>
+    <string name="run_termination_title_run_stalled">Detenida: la ejecución dejó de responder</string>
+    <string name="run_termination_body_run_stalled">La tarea dejó de responder y se terminó para que puedan ejecutarse otros mensajes. Un paso que esperaba (casi siempre una herramienta externa) nunca respondió.</string>
+    <string name="run_termination_title_hitl_expired">Detenida: tu aprobación no llegó a tiempo</string>
+    <string name="run_termination_body_hitl_expired">Un paso necesitaba tu aprobación y el plazo de espera se cerró antes de que llegara una respuesta.</string>
+    <string name="run_termination_title_graph_changed">El pipeline cambió mientras esta ejecución estaba en pausa</string>
+    <string name="run_termination_body_graph_changed">Esta ejecución se creó con la versión anterior del pipeline, así que no pudo continuar donde se quedó. Si la vuelves a ejecutar, se usará la versión actual.</string>
+    <string name="run_termination_title_process_died">La app se detuvo mientras esta ejecución trabajaba</string>
+    <string name="run_termination_body_process_died">En el siguiente inicio, la ejecución se encontró sin terminar y se cerró. No quedó nada a medio ejecutar.</string>
+    <string name="run_termination_title_discarded">Descartaste esta ejecución</string>
+    <string name="run_termination_body_discarded">Terminó porque lo pediste, y no quedó nada en curso.</string>
+    <string name="run_termination_title_not_resumable">Esta ejecución no se pudo reanudar</string>
+    <string name="run_termination_body_not_resumable">Tu respuesta llegó, pero la ejecución ya estaba cerrada. Si la vuelves a ejecutar, empezará desde el principio.</string>
+    <string name="run_termination_meter_steps_live" tools:ignore="PluralsCandidate">Pasos usados: %1$,d de %2$,d</string>
+    <string name="run_termination_meter_tokens_live" tools:ignore="PluralsCandidate">Tokens usados: %1$,d de %2$,d</string>
+    <string name="run_ceiling_pause_title">En pausa por un límite de seguridad</string>
+    <string name="run_ceiling_pause_body_steps" tools:ignore="PluralsCandidate">Esta ejecución usó todos los pasos que tenía permitidos. Puedes dejar que siga %1$,d pasos más o detenerla aquí.</string>
+    <string name="run_ceiling_pause_body_tokens" tools:ignore="PluralsCandidate">Esta ejecución usó todos los tokens que tenía permitidos. Puedes dejar que siga %1$,d tokens más o detenerla aquí.</string>
+    <string name="run_ceiling_pause_continue" tools:ignore="PluralsCandidate">Continuar (+%1$,d)</string>
+    <string name="run_ceiling_pause_stop">Detener la ejecución</string>
+    <string name="run_ceiling_pause_notification_title">Una ejecución espera tu decisión</string>
+    <string name="run_ceiling_pause_notification_text_steps" tools:ignore="PluralsCandidate">Pasos usados: %1$,d de %2$,d. Toca para decidir si sigue.</string>
+    <string name="run_ceiling_pause_notification_text_tokens" tools:ignore="PluralsCandidate">Tokens usados: %1$,d de %2$,d. Toca para decidir si sigue.</string>
+    <string name="run_ceiling_channel_name">Límites de ejecución</string>
+    <string name="run_ceiling_channel_description">Ejecuciones que alcanzaron un límite que configuraste y esperan a que decidas si siguen.</string>
+    <string name="run_termination_banner_step_ceiling" tools:ignore="PluralsCandidate">La detuvo un límite de seguridad: se usaron %1$,d de %2$,d pasos.</string>
+    <string name="run_termination_banner_token_ceiling" tools:ignore="PluralsCandidate">La detuvo un límite de seguridad: se usaron %1$,d de %2$,d tokens.</string>
+    <string name="run_termination_banner_no_progress">Detenida: la ejecución no avanzaba.</string>
+    <string name="run_termination_banner_run_stalled">Detenida: un paso nunca respondió.</string>
+    <string name="run_termination_banner_hitl_expired">Detenida: tu aprobación no llegó a tiempo.</string>
+    <string name="run_termination_banner_graph_changed">El pipeline cambió mientras esta ejecución estaba en pausa.</string>
+    <string name="run_termination_banner_process_died">La app se detuvo mientras esta ejecución trabajaba.</string>
+    <string name="run_termination_banner_discarded">Descartaste esta ejecución.</string>
+    <string name="run_termination_banner_not_resumable">Esta ejecución no se pudo reanudar.</string>
+    <string name="run_termination_action_adjust_limits">Ajustar límites</string>
+    <string name="run_termination_action_open_console">Abrir consola</string>
+    <string name="run_termination_action_run_again">Volver a ejecutar</string>
+    <string name="run_notice_soft_steps" tools:ignore="PluralsCandidate">Cerca del límite de pasos: usados %1$,d de %2$,d.</string>
+    <string name="run_notice_soft_tokens" tools:ignore="PluralsCandidate">Cerca del límite de tokens: usados %1$,d de %2$,d.</string>
+    <string name="run_notice_looks_stuck">Parece que esta ejecución se atascó: el mismo paso se repite. Se detendrá si nada cambia.</string>
+    <string name="run_termination_notification_body_step_ceiling" tools:ignore="PluralsCandidate">«%1$s» se detuvo en su límite de pasos, tras %2$,d pasos.</string>
+    <string name="run_termination_notification_body_token_ceiling" tools:ignore="PluralsCandidate">«%1$s» se detuvo en su límite de tokens, tras %2$,d tokens.</string>
+    <string name="run_outcome_chat_failed_with_diagnostic">Esta ejecución se detuvo antes de poder responder: %1$s</string>
+    <string name="run_outcome_chat_failed">Esta ejecución se detuvo antes de poder responder.</string>
+    <string name="run_outcome_chat_cancelled">Esta ejecución se canceló antes de que pudiera responder.</string>
+    <string name="run_outcome_chat_interrupted">Esta ejecución se interrumpió y no terminó.</string>
+</resources>

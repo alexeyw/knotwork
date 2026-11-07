@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="notifications_agent_status_initializing">Preparando…</string>
+    <string name="notifications_agent_status_idle">El agente está esperando</string>
+    <string name="notifications_agent_status_loading">Cargando el contexto…</string>
+    <string name="notifications_agent_status_queued">En cola detrás de otra ejecución</string>
+    <string name="notifications_agent_status_thinking">El agente está pensando…</string>
+    <string name="notifications_agent_status_executing_tool">Usando la herramienta %1$s…</string>
+    <string name="notifications_agent_status_approval">Esperando tu confirmación…</string>
+    <string name="notifications_agent_status_clarification">Esperando tu aclaración…</string>
+    <string name="notifications_agent_status_ceiling">En espera: la ejecución alcanzó un límite</string>
+    <string name="notifications_agent_status_suspended">Esperando tu respuesta en segundo plano</string>
+    <string name="notifications_agent_status_observation">Procesando el resultado de la herramienta…</string>
+    <string name="notifications_agent_status_answering">Respondiendo…</string>
+    <string name="notifications_agent_status_completed">Tarea completada</string>
+    <string name="notifications_agent_status_stopped">Ejecución detenida</string>
+    <string name="notifications_agent_status_stage">Paso del pipeline: %1$s</string>
+    <string name="notifications_agent_status_trace">Traza del pipeline actualizada</string>
+    <string name="notifications_agent_status_running">Pipeline en curso…</string>
+</resources>

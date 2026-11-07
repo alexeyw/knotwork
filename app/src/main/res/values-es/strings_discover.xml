@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="discover_error_network">No se pudo conectar con Hugging Face. Revisa tu conexión y vuelve a intentarlo.</string>
+    <string name="discover_detail_load_error">No se pudieron cargar los detalles de este modelo.</string>
+    <string name="discover_install_success">%1$s instalado</string>
+    <string name="discover_install_gated">El acceso a este modelo está restringido. Acepta su licencia en Hugging Face, agrega un token y vuelve a intentarlo.</string>
+    <string name="discover_install_failed">La descarga falló. Revisa tu conexión y vuelve a intentarlo.</string>
+</resources>
