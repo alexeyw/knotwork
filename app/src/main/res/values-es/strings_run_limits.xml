@@ -4,7 +4,7 @@
     <string name="run_limits_entry_value" tools:ignore="PluralsCandidate">%1$,d pasos · %2$,d tokens por ejecución</string>
     <string name="run_limits_entry_search">Límites de una ejecución autónoma: pasos, tokens y lo que no se puede limitar.</string>
     <string name="run_limits_number" tools:ignore="PluralsCandidate">%1$,d</string>
-    <string name="run_limits_intro">Una ejecución autónoma se detiene sola cuando alcanza uno de estos límites. Todo lo que inicia la ejecución cuenta para estos límites: los pipelines a los que llama y cada vez que se reanuda.</string>
+    <string name="run_limits_intro">Una ejecución autónoma se detiene sola cuando alcanza uno de estos límites. Todo lo que inicia la ejecución cuenta para ellos: los pipelines a los que llama y cada vez que se reanuda.</string>
     <string name="run_limits_group_steps">Pasos</string>
     <string name="run_limits_group_tokens">Tokens</string>
     <string name="run_limits_group_spend">Gasto</string>
