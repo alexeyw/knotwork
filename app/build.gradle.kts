@@ -532,15 +532,11 @@ android {
         // this does not depend on the API floor). ChromeOS support is not in
         // scope for v0.1 — disable the lint check that demands an x86 binary.
         disable += "ChromeOsAbiSupport"
-        // Off while a language's translation lands over several changes: until every
-        // string has its translation, each missing one would fail the build. Meanwhile
-        // `TranslationCoverageTest` (`:app`, over both modules) gates the same thing for
-        // every shipped language — a string missing from a language and not on that
-        // language's untranslated list (`config/l10n/untranslated-<lang>.txt`) fails it,
-        // and a language without a list must be complete. The change that deletes the
-        // last list turns this check back on; the test fails a build that leaves it
-        // off with no list, or turns it on while one remains.
-        disable += "MissingTranslation"
+        // `MissingTranslation` stays an error here and in `:catalog`. While a new
+        // language's translation lands over several changes, both scripts switch it off
+        // (`disable` of that id) and `TranslationCoverageTest` reads the language's
+        // untranslated list (`config/l10n/untranslated-<lang>.txt`) instead; the test
+        // fails a build where the switch and the lists disagree.
         // Version-freshness and deadline checks stay ENABLED, but are demoted to
         // INFORMATIONAL so they report instead of gating. Their verdict is a
         // function of an external version index (or of the calendar), not of the

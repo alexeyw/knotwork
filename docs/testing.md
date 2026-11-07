@@ -278,7 +278,7 @@ screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
 differs from its committed baseline beyond anti-aliasing fails the build; capture
 with `KnotworkRoborazziOptions`, which `SnapshotComparisonOptionsGuardTest`
 requires of every capture) and `:app`'s translated-screen snapshots
-(`verifyRoborazziFullDebug`: app screens in Russian at font scale 200 %, drawn by
+(`verifyRoborazziFullDebug`: app screens in Russian and Spanish at font scale 200 %, drawn by
 each screen's own state builder or `…ScreenContent` without its ViewModel, with
 `AppRoborazziOptions`, which `AppSnapshotOptionsGuardTest` requires), the documentation, version and store-listing gates,
 the supply-chain gates (pinned actions and Gradle distribution, the release
