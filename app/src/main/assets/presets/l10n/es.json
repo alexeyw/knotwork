@@ -1,0 +1,427 @@
+{
+  "formatVersion": 1,
+  "language": "es",
+  "pipelines": {
+    "clarify_then_act": {
+      "name": {"en": "Clarify, then act", "es": "Aclarar y actuar"},
+      "description": {"en": "Pauses to ask one clarifying question when the request is ambiguous, then answers locally with the disambiguated input. Useful when the user's intent is often underspecified.", "es": "Si la solicitud es ambigua, hace una sola pregunta para aclararla y luego responde de forma local con la solicitud ya aclarada. Útil cuando la intención del usuario a menudo no está del todo clara."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "clarify": {"en": "Clarify", "es": "Aclaración"},
+        "lite_rt": {"en": "Local LLM", "es": "Modelo local"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Help me plan my weekend", "es": "Ayúdame a planear mi fin de semana"},
+        {"en": "Help me choose a laptop", "es": "Ayúdame a elegir un portátil"},
+        {"en": "Summarise this for my team", "es": "Resume esto para mi equipo"}
+      ]
+    },
+    "cloud_assist": {
+      "name": {"en": "Cloud-assisted chat", "es": "Chat con un modelo en la nube"},
+      "description": {"en": "Cloud LLM with full conversation history and long-term memory. Use when you need broader knowledge, longer context, or stronger reasoning than the on-device model can offer.", "es": "Un modelo en la nube con todo el historial de la conversación y la memoria a largo plazo. Úsalo cuando necesites más conocimiento, un contexto más largo o un razonamiento más sólido del que ofrece el modelo local."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "cloud": {"en": "Cloud LLM", "es": "Modelo en la nube"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Compare two ways to learn a language as an adult", "es": "Compara dos formas de aprender un idioma de adulto"},
+        {"en": "Draft a polite follow-up email about an unanswered request", "es": "Redacta un correo cordial para insistir en una solicitud sin respuesta"},
+        {"en": "Explain what a database index does and when it hurts", "es": "Explica qué hace un índice en una base de datos y cuándo perjudica"}
+      ]
+    },
+    "local_only_qa": {
+      "name": {"en": "Local-only Q&A", "es": "Respuestas en el dispositivo"},
+      "description": {"en": "Single-turn answers handled entirely by the on-device model. No network, no tools. Best for quick factual questions when you want privacy and predictable latency.", "es": "Respuestas de un solo turno, generadas por completo por el modelo local. Sin red ni herramientas. Ideal para preguntas concretas y rápidas cuando importan la privacidad y una latencia previsible."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "lite_rt": {"en": "Local LLM", "es": "Modelo local"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Explain how a solar eclipse happens", "es": "Explica cómo ocurre un eclipse solar"},
+        {"en": "What is the difference between RAM and storage?", "es": "¿Qué diferencia hay entre la RAM y el almacenamiento?"},
+        {"en": "Give me three practical tips for sleeping better", "es": "Dame tres consejos prácticos para dormir mejor"}
+      ]
+    },
+    "multi_step_research": {
+      "name": {"en": "Multi-step research", "es": "Investigación en varios pasos"},
+      "description": {"en": "Decomposes the request into subtasks, then loops over each subtask through a cloud LLM via the queue processor. The Done branch leaves the loop and produces the final answer.", "es": "Divide la solicitud en subtareas y pasa cada una por un modelo en la nube con el procesador de cola. La rama Done sale del bucle y da la respuesta final."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "decomposition": {"en": "Decomposition", "es": "Descomposición"},
+        "queue": {"en": "Queue", "es": "Cola"},
+        "cloud": {"en": "Researcher", "es": "Investigador"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Compare electric and hybrid cars for city driving", "es": "Compara vehículos eléctricos e híbridos para moverse por la ciudad"},
+        {"en": "Research how coffee spread through Latin America", "es": "Investiga cómo se extendió el café por América Latina"},
+        {"en": "What are the trade-offs of fully remote work?", "es": "¿Qué ventajas y desventajas tiene el trabajo totalmente remoto?"}
+      ]
+    },
+    "routed_local_cloud": {
+      "name": {"en": "Routed local + cloud", "es": "Local o en la nube"},
+      "description": {"en": "An intent router classifies the request and sends simple queries to the on-device model and complex ones to the cloud. Balances latency and capability without the user having to choose.", "es": "Un enrutador de intención clasifica la solicitud: las consultas simples van al modelo local y las complejas, a la nube. Equilibra rapidez y capacidad sin que tengas que elegir."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "router": {"en": "Router", "es": "Enrutador"},
+        "lite_rt": {"en": "Local LLM", "es": "Modelo local"},
+        "cloud": {"en": "Cloud LLM", "es": "Modelo en la nube"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "What time zone is Santiago in?", "es": "¿En qué zona horaria está Santiago?"},
+        {"en": "Design a six-week plan to learn basic statistics", "es": "Diseña un plan de seis semanas para aprender estadística básica"},
+        {"en": "Why would the same query be fast on one machine and slow on another?", "es": "¿Por qué la misma consulta puede ser rápida en una máquina y lenta en otra?"}
+      ]
+    },
+    "share_handler": {
+      "name": {"en": "Share Handler", "es": "Gestor de Compartir"},
+      "description": {"en": "Share anything to the agent and it becomes a clean, structured note in your inbox. Asks before writing files.", "es": "Comparte cualquier cosa con el agente y se convertirá en una nota limpia y ordenada en tu bandeja de entrada. Pregunta antes de escribir archivos."},
+      "nodes": {
+        "node-1": {"en": "Shared content", "es": "Contenido compartido"},
+        "node-2": {"en": "Structure", "es": "Ordenar"},
+        "node-3": {"en": "Save capture", "es": "Guardar la nota"},
+        "node-4": {"en": "Confirm", "es": "Confirmar"}
+      },
+      "samplePrompts": [
+        {"en": "Save this: buy milk, call the dentist, renew the parking permit", "es": "Guarda esto: comprar leche, llamar al dentista, renovar el permiso de estacionamiento"},
+        {"en": "Capture this: the team sync moved to Thursday at 3pm", "es": "Anota esto: la reunión del equipo pasó al jueves a las 15:00"},
+        {"en": "Keep this for later: lentil soup with cumin and lemon", "es": "Guárdalo para después: sopa de lentejas con comino y limón"}
+      ]
+    },
+    "showcase_full_agent": {
+      "name": {"en": "Showcase — full agent", "es": "Demostración: agente completo"},
+      "description": {"en": "A vision intake step turns any attached image into text up front, then the full breadth of the on-device agent runs: intent routing (chat / factual / task), an IF-condition complexity gate, task and query decomposition feeding queue-processor loops, Wikipedia tool lookups, and research / task synthesis. Each subtask runs as a composed sub-pipeline (Clarify / Lookup / Act / Process) through PIPELINE nodes, including a human-in-the-loop clarification.", "es": "Primero, un paso de visión convierte en texto la imagen adjunta; luego trabaja todo el agente local: enrutamiento de intención (chat / factual / task), una comprobación de complejidad con un nodo de condición, descomposición de tareas y consultas con bucles del procesador de cola, búsquedas en Wikipedia y síntesis de la investigación o de la tarea. Cada subtarea se ejecuta como un pipeline anidado («Aclaración» / «Búsqueda» / «Acción» / «Procesamiento») mediante nodos Pipeline, incluida una pregunta de aclaración a la persona."},
+      "nodes": {
+        "node-1": {"en": "Input", "es": "Entrada"},
+        "node-23": {"en": "Vision intake", "es": "Lectura de la imagen"},
+        "node-2": {"en": "Output", "es": "Salida"},
+        "node-3": {"en": "Message Triage", "es": "Clasificación del mensaje"},
+        "node-4": {"en": "Chat Reply", "es": "Respuesta en el chat"},
+        "node-5": {"en": "Complexity Check", "es": "Comprobación de complejidad"},
+        "node-6": {"en": "Wikipedia Lookup (simple)", "es": "Búsqueda en Wikipedia (simple)"},
+        "node-7": {"en": "Query Builder", "es": "Creación de la consulta"},
+        "node-8": {"en": "Grounded Answer", "es": "Respuesta con fuentes"},
+        "node-9": {"en": "Query Decomposer", "es": "Desglose de la consulta"},
+        "node-10": {"en": "Topic Queue", "es": "Cola de temas"},
+        "node-11": {"en": "Wikipedia Lookup (research)", "es": "Búsqueda en Wikipedia (investigación)"},
+        "node-12": {"en": "Research Synthesis", "es": "Síntesis de la investigación"},
+        "node-13": {"en": "Task Planner", "es": "Planificador de tareas"},
+        "node-14": {"en": "Subtask Queue", "es": "Cola de subtareas"},
+        "node-15": {"en": "Subtask Router", "es": "Enrutador de subtareas"},
+        "node-16": {"en": "Task Synthesis", "es": "Síntesis de la tarea"},
+        "node-17": {"en": "Clarify", "es": "Aclaración"},
+        "node-18": {"en": "Lookup", "es": "Búsqueda"},
+        "node-20": {"en": "Act", "es": "Acción"},
+        "node-21": {"en": "Process", "es": "Procesamiento"},
+        "node-22": {"en": "Research Distiller", "es": "Destilado de la investigación"}
+      },
+      "samplePrompts": [
+        {"en": "What is the tallest mountain in South America?", "es": "¿Cuál es la montaña más alta de América del Sur?"},
+        {"en": "Compare two programming languages for a beginner", "es": "Compara dos lenguajes de programación para alguien que empieza"},
+        {"en": "Plan a three-day trip to Valparaíso", "es": "Planea un viaje de tres días a Valparaíso"}
+      ]
+    },
+    "showcase_research_to_file": {
+      "name": {"en": "Research to file", "es": "De la investigación al archivo"},
+      "description": {"en": "End-to-end showcase: the local model turns your question into a Wikipedia lookup, distils the raw extract into clean facts, writes a short Markdown report into the agent workspace under reports/, and replies with the saved path. A working 'research → file in your hands' loop out of the box.", "es": "Demostración de principio a fin: el modelo local convierte tu pregunta en una búsqueda en Wikipedia, destila el fragmento obtenido en datos limpios, escribe un informe breve en Markdown en la carpeta de trabajo del agente, en reports/, y responde con la ruta del archivo guardado. Un ciclo «investigación → archivo en tus manos» listo para usar."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "query_builder": {"en": "Query Builder", "es": "Creación de la consulta"},
+        "search": {"en": "Wikipedia Lookup", "es": "Búsqueda en Wikipedia"},
+        "distiller": {"en": "Research Distiller", "es": "Destilado de la investigación"},
+        "synthesis": {"en": "Synthesis", "es": "Síntesis"},
+        "write_report": {"en": "Save Report", "es": "Guardar el informe"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Write me a report on the Atacama Desert", "es": "Escríbeme un informe sobre el desierto de Atacama"},
+        {"en": "Research the history of the Santiago metro", "es": "Investiga la historia del metro de Santiago"},
+        {"en": "Explain what quantum computing is and save it", "es": "Explica qué es la computación cuántica y guárdalo"}
+      ]
+    },
+    "styled_translation": {
+      "name": {"en": "Styled Translation", "es": "Traducción con estilo"},
+      "description": {"en": "Translate messages while keeping their tone, register and dialect — not just the words. Runs entirely on-device.", "es": "Traduce mensajes conservando su tono, registro y variante, no solo las palabras. Funciona por completo en el dispositivo."},
+      "nodes": {
+        "node-1": {"en": "Text", "es": "Texto"},
+        "node-2": {"en": "Translate", "es": "Traducir"},
+        "node-3": {"en": "Translation", "es": "Traducción"}
+      },
+      "samplePrompts": [
+        {"en": "Hi, are we still meeting tomorrow?", "es": "Hola, ¿sigue en pie lo de mañana?"},
+        {"en": "Thank you for your help, I really appreciate it", "es": "Gracias por tu ayuda, de verdad te lo agradezco"},
+        {"en": "Could you send me the documents before Friday?", "es": "¿Me puedes mandar los documentos antes del viernes?"}
+      ]
+    },
+    "subtask_act": {
+      "name": {"en": "Subtask — Act", "es": "Subtarea: actuar"},
+      "description": {"en": "Sub-pipeline for a task subtask that performs an action through a tool (auto-selected from the available tools, behind the usual confirmation gate). Used by the Showcase agent's Subtask Router.", "es": "Pipeline anidado para una subtarea que realiza una acción con una herramienta (se elige automáticamente entre las disponibles, con la confirmación de siempre). Lo usa el «Enrutador de subtareas» del agente de demostración."},
+      "nodes": {
+        "node-1": {"en": "Input", "es": "Entrada"},
+        "node-2": {"en": "Tool Action", "es": "Acción con herramienta"},
+        "node-3": {"en": "Output", "es": "Salida"}
+      }
+    },
+    "subtask_clarify": {
+      "name": {"en": "Subtask — Clarify", "es": "Subtarea: aclarar"},
+      "description": {"en": "Sub-pipeline for a task subtask that needs the user's input: it asks one focused human-in-the-loop question and forwards the answer. Used by the Showcase agent's Subtask Router.", "es": "Pipeline anidado para una subtarea que necesita la respuesta del usuario: hace una pregunta concreta a la persona y pasa la respuesta. Lo usa el «Enrutador de subtareas» del agente de demostración."},
+      "nodes": {
+        "node-1": {"en": "Input", "es": "Entrada"},
+        "node-2": {"en": "Clarify", "es": "Aclaración"},
+        "node-3": {"en": "Output", "es": "Salida"}
+      }
+    },
+    "subtask_lookup": {
+      "name": {"en": "Subtask — Lookup", "es": "Subtarea: buscar"},
+      "description": {"en": "Sub-pipeline for a task subtask that needs a factual lookup: it turns the subtask into a Wikipedia search term and runs the search. Used by the Showcase agent's Subtask Router.", "es": "Pipeline anidado para una subtarea que necesita buscar datos: convierte la subtarea en un término de búsqueda para Wikipedia y hace la búsqueda. Lo usa el «Enrutador de subtareas» del agente de demostración."},
+      "nodes": {
+        "node-1": {"en": "Input", "es": "Entrada"},
+        "node-2": {"en": "Subtask Query Builder", "es": "Consulta de la subtarea"},
+        "node-3": {"en": "Wikipedia Lookup (subtask)", "es": "Búsqueda en Wikipedia (subtarea)"},
+        "node-4": {"en": "Output", "es": "Salida"}
+      }
+    },
+    "subtask_process": {
+      "name": {"en": "Subtask — Process", "es": "Subtarea: procesar"},
+      "description": {"en": "Sub-pipeline for a task subtask the model can complete on its own — reasoning, writing, transforming or calculating from what is already available. Used by the Showcase agent's Subtask Router.", "es": "Pipeline anidado para una subtarea que el modelo puede resolver solo: razonar, escribir, transformar o calcular a partir de lo que ya tiene. Lo usa el «Enrutador de subtareas» del agente de demostración."},
+      "nodes": {
+        "node-1": {"en": "Input", "es": "Entrada"},
+        "node-2": {"en": "Process", "es": "Procesamiento"},
+        "node-3": {"en": "Output", "es": "Salida"}
+      }
+    },
+    "tool_using_react": {
+      "name": {"en": "Tool-using agent", "es": "Agente con herramientas"},
+      "description": {"en": "An IF-condition decides whether the request needs an external lookup. If it does, the local model turns it into a search term, the tool runs (auto-selected from the registry) and a summariser folds the result into the answer. If it does not, the model answers directly. Good template for action-oriented tasks.", "es": "Un nodo de condición decide si la solicitud necesita una búsqueda externa. Si la necesita, el modelo local la convierte en un término de búsqueda, se ejecuta la herramienta (elegida automáticamente entre las disponibles) y un resumen incorpora el resultado a la respuesta. Si no, el modelo responde directamente. Buena plantilla para tareas que exigen actuar."},
+      "nodes": {
+        "input": {"en": "Input", "es": "Entrada"},
+        "needs_tool": {"en": "Needs a lookup?", "es": "¿Hace falta buscar?"},
+        "query_builder": {"en": "Query Builder", "es": "Creación de la consulta"},
+        "tool": {"en": "Tool", "es": "Herramienta"},
+        "summary": {"en": "Summariser", "es": "Resumen"},
+        "direct_answer": {"en": "Direct Answer", "es": "Respuesta directa"},
+        "output": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Look up the population of Chile", "es": "Busca la población de Chile"},
+        {"en": "When was the Eiffel Tower opened?", "es": "¿Cuándo se inauguró la Torre Eiffel?"},
+        {"en": "Who was Ada Lovelace?", "es": "¿Quién fue Ada Lovelace?"}
+      ]
+    },
+    "virtual_companion_mood_router": {
+      "name": {"en": "Virtual Companion (Mood Router)", "es": "Compañía virtual"},
+      "description": {"en": "A companion that senses your mood and shifts how it talks with you. Fully private, on-device.", "es": "Una compañía que percibe tu estado de ánimo y cambia su forma de hablarte. Totalmente privada, en el dispositivo."},
+      "nodes": {
+        "node-1": {"en": "Message", "es": "Mensaje"},
+        "node-2": {"en": "Relationship Memory", "es": "Memoria de la relación"},
+        "node-3": {"en": "Mood Triage", "es": "Lectura del ánimo"},
+        "node-4": {"en": "Casual", "es": "Informal"},
+        "node-5": {"en": "Affectionate", "es": "Cariñoso"},
+        "node-6": {"en": "Supportive", "es": "De apoyo"},
+        "node-7": {"en": "Playful", "es": "Juguetón"},
+        "node-8": {"en": "Intimate", "es": "Íntimo"},
+        "node-9": {"en": "Reply", "es": "Respuesta"}
+      },
+      "samplePrompts": [
+        {"en": "Hey, I just got home", "es": "Hola, ya estoy en casa"},
+        {"en": "Rough day at work today", "es": "Hoy fue un día duro en el trabajo"},
+        {"en": "Guess what happened to me!", "es": "¡Adivina qué me pasó!"}
+      ]
+    }
+  },
+  "prompts": {
+    "clarification_multiple_choice": {
+      "name": {"en": "Multiple-choice question", "es": "Pregunta con opciones"},
+      "description": {"en": "Emits a clarifying question with 2–4 concrete answer options for the user to tap.", "es": "Hace una pregunta para aclarar con 2 a 4 opciones de respuesta concretas que el usuario elige con un toque."},
+      "tags": [
+        {"en": "clarification", "es": "aclaración"},
+        {"en": "multiple-choice", "es": "opciones"},
+        {"en": "json", "es": "json"}
+      ]
+    },
+    "clarification_open_ended": {
+      "name": {"en": "Open-ended clarifier", "es": "Pregunta abierta"},
+      "description": {"en": "Asks a single open-ended clarifying question with no pre-baked answer options.", "es": "Hace una sola pregunta abierta para aclarar, sin opciones de respuesta preparadas."},
+      "tags": [
+        {"en": "clarification", "es": "aclaración"},
+        {"en": "open-ended", "es": "abierta"},
+        {"en": "json", "es": "json"}
+      ]
+    },
+    "cloud_capable_analyst": {
+      "name": {"en": "Capable analyst", "es": "Analista sólido"},
+      "description": {"en": "Cloud-grade analytical reasoning for multi-faceted questions and structured comparisons.", "es": "Razonamiento analítico propio de un modelo en la nube para preguntas con muchas facetas y comparaciones estructuradas."},
+      "tags": [
+        {"en": "analysis", "es": "análisis"},
+        {"en": "cloud", "es": "nube"},
+        {"en": "depth", "es": "profundidad"}
+      ]
+    },
+    "cloud_web_savvy_researcher": {
+      "name": {"en": "Web-savvy researcher", "es": "Investigador web"},
+      "description": {"en": "Cloud-grade researcher framing for tool-augmented pipelines and source-aware answers.", "es": "Papel de investigador propio de un modelo en la nube para pipelines con herramientas y respuestas que citan sus fuentes."},
+      "tags": [
+        {"en": "research", "es": "investigación"},
+        {"en": "cloud", "es": "nube"},
+        {"en": "sources", "es": "fuentes"}
+      ]
+    },
+    "decomposition_dependency_aware": {
+      "name": {"en": "Dependency-aware subtasks", "es": "Subtareas con dependencias"},
+      "description": {"en": "JSON array of subtasks, each prefixed with its prerequisites so downstream nodes can sequence them.", "es": "Array JSON de subtareas; cada una indica qué hace falta hacer antes, para que los nodos siguientes las ordenen."},
+      "tags": [
+        {"en": "decomposition", "es": "descomposición"},
+        {"en": "json", "es": "json"},
+        {"en": "dependencies", "es": "dependencias"}
+      ]
+    },
+    "decomposition_json_subtasks": {
+      "name": {"en": "JSON subtasks", "es": "Subtareas en JSON"},
+      "description": {"en": "Strict JSON array of subtask strings — drop-in default for the queue processor.", "es": "Array JSON estricto de subtareas en texto: la opción predeterminada lista para el procesador de cola."},
+      "tags": [
+        {"en": "decomposition", "es": "descomposición"},
+        {"en": "json", "es": "json"},
+        {"en": "strict", "es": "estricto"}
+      ]
+    },
+    "evaluation_pass_fail_judge": {
+      "name": {"en": "Pass/fail judge", "es": "Juez Pass/Fail"},
+      "description": {"en": "Binary verdict — Pass or Fail, never Retry. Routes through the node's matching output port.", "es": "Veredicto de dos opciones: Pass o Fail, nunca Retry. Sigue por la salida correspondiente del nodo."},
+      "tags": [
+        {"en": "evaluation", "es": "evaluación"},
+        {"en": "binary", "es": "binario"},
+        {"en": "routing", "es": "enrutamiento"}
+      ]
+    },
+    "evaluation_scored_critic": {
+      "name": {"en": "Scored critic", "es": "Crítico con puntuación"},
+      "description": {"en": "Pass / Retry / Fail verdict backed by a 0–10 score and one actionable improvement.", "es": "Veredicto Pass / Retry / Fail con una puntuación de 0 a 10 y una mejora concreta."},
+      "tags": [
+        {"en": "evaluation", "es": "evaluación"},
+        {"en": "scoring", "es": "puntuación"},
+        {"en": "routing", "es": "enrutamiento"}
+      ]
+    },
+    "if_destructive_intent": {
+      "name": {"en": "Destructive or sensitive action", "es": "Acción peligrosa o delicada"},
+      "description": {"en": "True when fulfilling the request would modify, delete, send, purchase, or otherwise mutate user data or external state.", "es": "True cuando cumplir la solicitud cambiaría, eliminaría, enviaría, compraría o de otro modo alteraría datos del usuario o el estado externo."},
+      "tags": [
+        {"en": "safety", "es": "seguridad"},
+        {"en": "destructive", "es": "peligrosa"},
+        {"en": "starter", "es": "inicial"}
+      ]
+    },
+    "if_needs_external_info": {
+      "name": {"en": "Needs external lookup", "es": "Necesita buscar fuera"},
+      "description": {"en": "True when answering the request requires live external information (web search, current events, fresh data) beyond the model's training cut-off.", "es": "True cuando la respuesta requiere información externa actual (búsqueda web, noticias, datos recientes) más allá de lo que el modelo aprendió."},
+      "tags": [
+        {"en": "routing", "es": "enrutamiento"},
+        {"en": "search", "es": "búsqueda"},
+        {"en": "tools", "es": "herramientas"}
+      ]
+    },
+    "if_question_vs_command": {
+      "name": {"en": "Is question, not command", "es": "Es una pregunta, no una orden"},
+      "description": {"en": "True when the upstream text is an information-seeking question rather than an instruction to perform an action.", "es": "True cuando el texto de entrada es una pregunta para saber algo y no una instrucción para hacer algo."},
+      "tags": [
+        {"en": "intent", "es": "intención"},
+        {"en": "question", "es": "pregunta"},
+        {"en": "starter", "es": "inicial"}
+      ]
+    },
+    "litert_concise_assistant": {
+      "name": {"en": "Concise assistant", "es": "Asistente conciso"},
+      "description": {"en": "Single-paragraph, no-preamble answers. Best for quick factual questions when latency matters.", "es": "Respuestas de un solo párrafo, sin preámbulos. Ideal para preguntas concretas cuando importa el tiempo de respuesta."},
+      "tags": [
+        {"en": "concise", "es": "conciso"},
+        {"en": "starter", "es": "inicial"},
+        {"en": "offline", "es": "sin conexión"}
+      ]
+    },
+    "litert_memory_aware_reply": {
+      "name": {"en": "Memory-aware reply", "es": "Respuesta con memoria"},
+      "description": {"en": "Personalises the answer using the agent's long-term memory summary.", "es": "Adapta la respuesta al usuario con el resumen de la memoria a largo plazo del agente."},
+      "tags": [
+        {"en": "memory", "es": "memoria"},
+        {"en": "personalised", "es": "personalizado"},
+        {"en": "offline", "es": "sin conexión"}
+      ]
+    },
+    "litert_step_by_step_reasoner": {
+      "name": {"en": "Step-by-step reasoner", "es": "Razonamiento paso a paso"},
+      "description": {"en": "Walks through the problem with numbered intermediate steps before delivering the final answer.", "es": "Resuelve el problema en pasos intermedios numerados antes de dar la respuesta final."},
+      "tags": [
+        {"en": "reasoning", "es": "razonamiento"},
+        {"en": "cot", "es": "cot"},
+        {"en": "offline", "es": "sin conexión"}
+      ]
+    },
+    "output_json_structured": {
+      "name": {"en": "JSON-structured", "es": "Respuesta en JSON"},
+      "description": {"en": "Emits the answer as a strict JSON object for downstream tooling.", "es": "Devuelve la respuesta como un objeto JSON estricto para las herramientas que vienen después."},
+      "tags": [
+        {"en": "json", "es": "json"},
+        {"en": "structured", "es": "estructurado"},
+        {"en": "tooling", "es": "para programas"}
+      ]
+    },
+    "output_markdown_with_sections": {
+      "name": {"en": "Markdown with sections", "es": "Markdown con secciones"},
+      "description": {"en": "Renders the answer as well-structured markdown with headings, lists, and emphasis.", "es": "Presenta la respuesta como Markdown bien estructurado, con encabezados, listas y énfasis."},
+      "tags": [
+        {"en": "markdown", "es": "markdown"},
+        {"en": "structured", "es": "estructurado"},
+        {"en": "long-form", "es": "extenso"}
+      ]
+    },
+    "output_plain_conversational": {
+      "name": {"en": "Plain conversational", "es": "Estilo conversacional"},
+      "description": {"en": "Friendly, paragraph-style reply with no markdown decoration.", "es": "Respuesta amable en párrafos, sin formato Markdown."},
+      "tags": [
+        {"en": "plain", "es": "simple"},
+        {"en": "conversational", "es": "conversacional"},
+        {"en": "starter", "es": "inicial"}
+      ]
+    },
+    "router_keyword_classifier": {
+      "name": {"en": "Keyword classifier", "es": "Clasificador por palabra clave"},
+      "description": {"en": "Strict single-keyword router for a node wired with Simple / Data / Complex / Task ports.", "es": "Enrutador estricto de una sola palabra clave para un nodo con las salidas Simple / Data / Complex / Task."},
+      "tags": [
+        {"en": "routing", "es": "enrutamiento"},
+        {"en": "classifier", "es": "clasificador"},
+        {"en": "strict", "es": "estricto"}
+      ]
+    },
+    "router_tool_first": {
+      "name": {"en": "Tool-first router", "es": "Enrutador «primero la herramienta»"},
+      "description": {"en": "Biases a Simple / Data / Complex / Task router toward Task whenever a tool could plausibly help.", "es": "Inclina un enrutador Simple / Data / Complex / Task hacia Task siempre que una herramienta pueda ayudar."},
+      "tags": [
+        {"en": "routing", "es": "enrutamiento"},
+        {"en": "tools", "es": "herramientas"},
+        {"en": "task-bias", "es": "sesgo a Task"}
+      ]
+    },
+    "summary_bullet_recap": {
+      "name": {"en": "Bullet recap", "es": "Resumen en viñetas"},
+      "description": {"en": "Condenses upstream outputs into a tight bullet list of the key points.", "es": "Condensa las salidas de los nodos anteriores en una lista breve de viñetas con lo esencial."},
+      "tags": [
+        {"en": "bullets", "es": "viñetas"},
+        {"en": "concise", "es": "conciso"},
+        {"en": "recap", "es": "resumen"}
+      ]
+    },
+    "summary_detailed_narrative": {
+      "name": {"en": "Detailed narrative", "es": "Relato detallado"},
+      "description": {"en": "Weaves the upstream subtask outputs into a coherent multi-paragraph narrative.", "es": "Entreteje las salidas de las subtareas en un relato coherente de varios párrafos."},
+      "tags": [
+        {"en": "narrative", "es": "relato"},
+        {"en": "long-form", "es": "extenso"},
+        {"en": "synthesis", "es": "síntesis"}
+      ]
+    }
+  }
+}
