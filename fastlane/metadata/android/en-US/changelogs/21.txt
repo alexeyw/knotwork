@@ -1,0 +1,5 @@
+Knotwork speaks Russian and Spanish.
+
+Every screen, the bundled pipelines and the in-app help are translated. Pick the language in Settings > About > Language, or follow the phone's.
+
+The on-device engine is now LiteRT-LM 0.19. Turn all of an MCP server's tools on or off at once, and save a chat straight to a file. The approval card shows arguments exactly as the call receives them, and very long text no longer freezes the screen.

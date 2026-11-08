@@ -13,6 +13,8 @@ details.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-08
+
 ### Added
 
 - **Turn all of an MCP server's tools on or off at once.** The `⋮` menu on a
@@ -7209,7 +7211,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/alexeyw/knotwork/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/alexeyw/knotwork/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/alexeyw/knotwork/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/alexeyw/knotwork/compare/v0.12.0...v0.12.1

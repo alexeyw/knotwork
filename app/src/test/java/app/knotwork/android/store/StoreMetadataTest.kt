@@ -223,7 +223,7 @@ class StoreMetadataTest {
 
     private companion object {
         const val METADATA_ROOT = "fastlane/metadata/android"
-        val LOCALES = listOf("en-US", "ru-RU")
+        val LOCALES = listOf("en-US", "ru-RU", "es-ES")
         val REQUIRED_FILES = listOf("title.txt", "short_description.txt", "full_description.txt")
 
         const val MAX_TITLE_CHARS = 30

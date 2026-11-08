@@ -1,0 +1,32 @@
+Knotwork es un agente de IA que ejecuta su modelo en el teléfono. En lugar de un cuadro de texto conectado a la API de otra empresa, cada conversación pasa por un pipeline que puedes abrir y editar: un grafo de nodos (entrada, modelo local, modelo en la nube opcional, llamada a herramienta, enrutamiento, descomposición, evaluación, aclaración, salida). Cuando un paso va a hacer algo peligroso o delicado, se detiene y te pregunta, incluso en segundo plano, con una notificación.
+
+QUÉ HACE
+
+- Funciona en tu dispositivo. Inferencia local con LiteRT-LM, con GPU opcional; solo con CPU funciona, pero más lento. Los proveedores en la nube (OpenAI, Anthropic, Google Gemini, DeepSeek, OpenRouter, Groq) y un servidor propio (Ollama o cualquiera compatible con OpenAI) son opcionales y usan tu clave.
+- El comportamiento lo construyes tú. Un editor de arrastrar y soltar con zoom, ajuste a la cuadrícula, organización automática, validación y traza de ejecución, con 14 tipos de nodos. Variables como $DATE, $TIME, $TOOLS, $MODEL y $MEMORY_SUMMARY se calculan en cada ejecución.
+- Herramientas bajo tu control. Herramientas integradas y servidores externos por Model Context Protocol (MCP). De forma predeterminada, cada llamada delicada o peligrosa espera tu confirmación, y la regla se aplica donde se ejecuta la herramienta, no como sugerencia al modelo.
+- Te alcanza desde fuera de la app. El menú Compartir, los accesos directos y un mosaico de Configuración rápida ejecutan el pipeline que elijas sobre texto o imágenes. Los activadores (hora, carga, Wi-Fi, red) inician un pipeline solos e informan del resultado. Ningún punto de entrada hace nada hasta que le asignas un pipeline.
+- Recuerda lo importante. Memoria a largo plazo con búsqueda semántica en conversaciones pasadas, extracción automática de datos, búsqueda y exportación.
+- En tu idioma. Las pantallas, los pipelines incluidos y la ayuda están en inglés, ruso y español. Lo que lee el modelo sigue en inglés.
+
+PARA QUIÉN ES
+
+Para quien ya usa Tasker, Obsidian, Home Assistant o un modelo local en su propio hardware y quiere saber qué hace su agente con sus datos.
+
+PRIVACIDAD
+
+No hay cuenta, ni inicio de sesión, ni servidor mío. La inferencia se hace en el teléfono: una conversación normal no sale de él. Los datos salen solo por las vías que enumera la política de privacidad, cada una desactivada hasta que la activas, salvo la búsqueda en Wikipedia, activa de forma predeterminada. Las estadísticas de uso nunca salen del dispositivo; la compilación falla si alguna dependencia de red llega a ese código. La base de datos (chats, memoria, trazas) está cifrada con SQLCipher y las claves de API están protegidas por Android Keystore. Los informes de fallos son opcionales, están desactivados de forma predeterminada y no existen en la versión FOSS.
+
+LIMITACIONES CONOCIDAS
+
+Versión preliminar: la superficie pública, la configuración y los formatos de almacenamiento aún pueden cambiar entre versiones.
+
+- Android 14 o posterior y unos 2 GB de RAM libre: la memoria es el verdadero límite.
+- En algunos teléfonos la pantalla se congela mientras el modelo se ejecuta en la GPU; cámbialo a CPU.
+- Los archivos de pipeline no garantizan compatibilidad antes de la 1.0. Guarda el original.
+- Las ejecuciones en segundo plano necesitan la batería en Sin restricciones. Sin eso, Android recupera el proceso en unos diez segundos: es una regla de la plataforma, no un error.
+- El comportamiento ante fallos de la nube depende del proveedor: la detección de una respuesta cortada a mitad solo está activada donde se midió.
+- Las AppFunctions de otras apps no están al alcance: Android reserva el permiso a las apps del sistema. La app incluye su catálogo local, más lo que conectes por MCP.
+- Un solo desarrollador, sin empresa detrás.
+
+Código abierto bajo la licencia Apache 2.0; el código, la documentación y las preguntas frecuentes están en el sitio del desarrollador.

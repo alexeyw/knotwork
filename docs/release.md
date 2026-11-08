@@ -866,14 +866,17 @@ fastlane/metadata/android/
 │       ├── icon.png                # 512 × 512
 │       ├── featureGraphic.jpg      # 1024 × 500 — required by Play
 │       └── phoneScreenshots/       # 1.png, 2.jpg, …
-└── ru-RU/                          # texts only; falls back to en-US graphics
+├── ru-RU/                          # texts only; falls back to en-US graphics
+└── es-ES/                          # the same, in neutral Spanish
 ```
 
 **Nothing uploads this directory to Google Play.** No workflow runs `supply`; the
 Play listing is filled in by hand in Play Console, from these files. Keeping the
 Play texts here anyway gives them the same length gate and the same review as
 the code, and one place to copy from — but a merged edit reaches Play only when
-someone pastes it there. `StoreMetadataTest` (in the `:app` unit-test suite, wired into `check`) enforces
+someone pastes it there. The Spanish texts are written for Spain and Latin
+America alike, so `es-ES` is also what goes into Play's `es-419` and `es-US`
+listings. `StoreMetadataTest` (in the `:app` unit-test suite, wired into `check`) enforces
 the limits, the presence of a changelog for the **current** `versionCode`, and
 the screenshot rules below. A version bump without a matching
 `changelogs/<versionCode>.txt` fails the build rather than shipping a release
