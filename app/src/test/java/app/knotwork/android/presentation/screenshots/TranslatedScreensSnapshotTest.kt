@@ -167,6 +167,8 @@ abstract class TranslatedScreensSnapshotTest {
             state = buildAboutViewState(state, LocalContext.current).copy(
                 versionLine = "v$FIXED_VERSION · $FIXED_CHANNEL · $FIXED_BUILD_DATE",
             ),
+            // Expanded: the reset row, whose button has the longest label on the screen, is inside.
+            advancedExpanded = true,
         )
     }
 

@@ -572,6 +572,7 @@ matters.
   - `files/` - the workspace Files screen.
     - `FilesContentSnapshotTest.kt` - Preview fixtures for the Files screen snapshot matrix.
   - `help/` - Fixtures and Roborazzi baselines for the Help list and the document reader, both themes and font scale 200 %.
+    - `HelpListContentTest.kt` - The Help list's top bar leaves the screen.
     - `HelpPreview.kt` - Fixtures for the Help snapshots.
     - `HelpSnapshotTest.kt` - Roborazzi baselines for the Help list and the document reader.
   - `LargeFontLayoutTest.kt` - At double font on a 360 dp phone, the texts of a row that sets a label beside a value or a control stay whole: each line ends between words and nothing is cut.

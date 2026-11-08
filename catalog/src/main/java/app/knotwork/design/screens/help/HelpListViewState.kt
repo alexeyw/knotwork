@@ -87,6 +87,7 @@ data class HelpRefusal(val title: String, val body: String, val copyLabel: Strin
  * @property onDismissRefusal The open refusal was dismissed.
  * @property onCopyLink The refused document's address was copied.
  * @property onOpenAlternative The offered bundled document was chosen.
+ * @property onBack The back arrow in the top bar was tapped.
  */
 @Immutable
 data class HelpListCallbacks(
@@ -94,4 +95,5 @@ data class HelpListCallbacks(
     val onDismissRefusal: () -> Unit = {},
     val onCopyLink: () -> Unit = {},
     val onOpenAlternative: () -> Unit = {},
+    val onBack: () -> Unit = {},
 )

@@ -150,7 +150,10 @@ For the broader layering rationale, see
   copies its English unless `config/l10n/identical-<lang>.txt` names it.
 - What a model reads is not translated: system prompts, tool descriptions and
   tool results stay in English, as do the tokens a model's output is matched
-  against (route labels, intent classes). The system rows a chat shows (a tool
+  against (route labels, intent classes). A built-in tool's description is
+  also shown to the person, so the screens take a translated copy from
+  `BUILT_IN_TOOL_DESCRIPTIONS`, whose English string a test holds equal to what
+  the model reads. The system rows a chat shows (a tool
   call you denied, how a run ended) are written in the interface language when
   saved, through `ChatSystemRows` or the run's own copy, and kept as written:
   the model reads them in the language of the conversation. The hidden rows the

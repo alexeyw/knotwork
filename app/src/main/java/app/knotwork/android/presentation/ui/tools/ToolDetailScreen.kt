@@ -83,7 +83,7 @@ fun ToolDetailScreen(
         ToolDetailViewState(
             visualState = tool?.parameters?.visualStateForSchema() ?: ToolDetailVisualState.Default,
             toolName = tool?.name ?: toolId,
-            description = tool?.description.orEmpty(),
+            description = BUILT_IN_TOOL_DESCRIPTIONS[toolId]?.let { stringResource(it) } ?: tool?.description.orEmpty(),
             serverDisplayName = stringResource(R.string.tool_detail_local_tool),
             schemaJson = remember(tool) { tool?.parameters?.takeIf { it.isNotBlank() }?.let(::laidOutSchema) ?: "{}" },
             lastUsed = null,

@@ -215,11 +215,29 @@ class SettingsViewModelTest {
         coVerify(exactly = 1) { identity.getIdentity(any()) }
 
         appLanguage.changeFromSystem("ru")
+        appLanguage.showIn("ru")
         advanceUntilIdle()
 
         assertEquals("ru", viewModel.uiState.value.appLanguage)
         // The label is a resource; the ViewModel outlives the screen re-created in Russian.
         coVerify(exactly = 2) { identity.getIdentity(any()) }
+    }
+
+    @Test
+    fun `given a pick the system has not applied yet then the identity label waits for the new language`() = runTest {
+        advanceUntilIdle()
+        coVerify(exactly = 1) { identity.getIdentity(any()) }
+
+        // `select` reports the pick at once; the resources follow with the configuration change.
+        viewModel.selectLanguage("ru")
+        advanceUntilIdle()
+        coVerify(exactly = 1) { identity.getIdentity(any()) }
+
+        every { context.getString(app.knotwork.android.R.string.settings_identity_display_name) } returns "аноним"
+        appLanguage.showIn("ru")
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { identity.getIdentity("аноним") }
     }
 
     @Test

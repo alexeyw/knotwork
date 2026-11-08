@@ -133,14 +133,19 @@ private fun IdentityCard(state: IdentityCardState?) {
     }
 }
 
+/**
+ * The reset action, with the button under its text. Beside the text it would take
+ * the width its label needs first, and a long label left the text a word per line.
+ *
+ * @param onResetClick The button was tapped.
+ */
 @Composable
 private fun ResetRow(onResetClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+    Column(
+        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column {
             Text(
                 text = stringResource(R.string.knotwork_settings_reset_button),
                 style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),

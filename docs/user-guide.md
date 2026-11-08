@@ -2583,7 +2583,8 @@ first of its languages the app is translated into, else English; the other
 entries are those languages, each named in itself. Your phone's per-app language
 setting is the same choice — change either and both change. What a model reads
 is not translated: system prompts, tool descriptions and tool results stay in
-English. The `$LANG` variable carries the language you read the app in, so a
+English, and the Tools screen shows a built-in tool's description in your
+language while the model is still given the English one. The `$LANG` variable carries the language you read the app in, so a
 prompt that asks for an answer "in `$LANG`" follows your choice; `$LOCATION`
 keeps the region of the phone's own language settings.
 

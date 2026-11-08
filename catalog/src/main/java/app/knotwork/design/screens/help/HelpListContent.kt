@@ -63,7 +63,7 @@ fun HelpListContent(
     // host happens to paint behind it — and rendered light-on-light in the dark
     // baseline, which is what caught it.
     Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        HelpListBar(state = state)
+        HelpListBar(state = state, strings = strings, onBack = callbacks.onBack)
         LazyColumn(modifier = Modifier.fillMaxSize().testTag(HELP_LIST_TEST_TAG)) {
             items(items = state.documents, key = { it.id }) { document ->
                 if (document != state.documents.first()) {
@@ -91,11 +91,13 @@ fun HelpListContent(
  * them disagree has no way to tell which is right.
  *
  * @param state The list's state.
+ * @param strings The screen's copy.
+ * @param onBack The back arrow was tapped.
  */
 @Composable
-private fun HelpListBar(state: HelpListViewState) {
+private fun HelpListBar(state: HelpListViewState, strings: HelpStrings, onBack: () -> Unit) {
     app.knotwork.design.components.topbar.KnotworkTopAppBarShell {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 // The shell scaffold zeroes its own content insets, so every
@@ -105,24 +107,36 @@ private fun HelpListBar(state: HelpListViewState) {
                 // explicitly — without it the title draws under the clock.
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(
-                    start = KnotworkTheme.spacing.sp4,
+                    start = KnotworkTheme.spacing.sp2,
                     end = KnotworkTheme.spacing.sp4,
-                    top = KnotworkTheme.spacing.sp3,
+                    top = KnotworkTheme.spacing.sp2,
                     bottom = KnotworkTheme.spacing.sp2,
                 ),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = state.title,
-                style = KnotworkTextStyles.TitleLg,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.semantics { heading() },
+            app.knotwork.design.components.buttons.KnotworkIconButton(
+                icon = AppIcons.Back,
+                contentDescription = strings.backDescription,
+                onClick = onBack,
             )
-            Text(
-                text = state.subtitle,
-                style = KnotworkTextStyles.MonoSm,
-                color = KnotworkTheme.extended.onSurfaceMuted,
-                modifier = Modifier.padding(top = KnotworkTheme.spacing.sp1),
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = KnotworkTheme.spacing.sp2),
+            ) {
+                Text(
+                    text = state.title,
+                    style = KnotworkTextStyles.TitleLg,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    text = state.subtitle,
+                    style = KnotworkTextStyles.MonoSm,
+                    color = KnotworkTheme.extended.onSurfaceMuted,
+                    modifier = Modifier.padding(top = KnotworkTheme.spacing.sp1),
+                )
+            }
         }
     }
 }

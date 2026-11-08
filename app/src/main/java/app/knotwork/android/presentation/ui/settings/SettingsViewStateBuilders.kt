@@ -14,6 +14,7 @@ import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.android.presentation.common.DisplayFormat
 import app.knotwork.android.presentation.common.rememberByteUnits
+import app.knotwork.android.presentation.ui.settings.provider.displayName
 import app.knotwork.design.screens.settings.AboutSettingsViewState
 import app.knotwork.design.screens.settings.ApproveToolCallsOption
 import app.knotwork.design.screens.settings.BackgroundSettingsViewState
@@ -142,7 +143,7 @@ internal fun buildModelsViewState(uiState: SettingsUiState, context: Context): M
         providers = uiState.providers.map { summary ->
             ProviderRowState(
                 id = summary.id.cloudProvider.id,
-                title = summary.displayName,
+                title = summary.id.displayName(context),
                 fingerprint = summary.keyFingerprint,
                 model = summary.model,
                 endpointHint = summary.endpointHint,

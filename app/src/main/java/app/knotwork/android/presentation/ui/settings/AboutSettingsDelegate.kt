@@ -61,9 +61,11 @@ class AboutSettingsDelegate(
         }
         // The identity card's label is resolved from resources, and the ViewModel
         // outlives the screen's re-creation in the new language: resolve it again
-        // on every change after the current one.
+        // when the interface language changes. Not on `selectedLanguage`: a pick
+        // changes that at once, before the system has applied the language, so the
+        // label would be read in the old one and nothing would read it again.
         scope.launch {
-            appLanguageRepository.selectedLanguage.drop(1).collect { loadIdentity() }
+            appLanguageRepository.interfaceLanguage.drop(1).collect { loadIdentity() }
         }
     }
 
