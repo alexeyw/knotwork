@@ -61,7 +61,9 @@ class ToolDetailScreenTest {
 
         composeTestRule.onNodeWithText("Web search served from MCP").assertIsDisplayed()
         composeTestRule.onNodeWithText(serverUrl).assertIsDisplayed()
-        composeTestRule.onNodeWithText(text = mcpTool.inputSchemaJson, substring = true).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(text = laidOutSchema(mcpTool.inputSchemaJson), substring = true)
+            .assertIsDisplayed()
     }
 
     @Test
