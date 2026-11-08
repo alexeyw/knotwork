@@ -157,8 +157,9 @@ interface Tool {
   the check connects a throwaway client with the form's values, lists the tools
   and disconnects. Through the pool it would replace the live connection of the
   server being edited with one built from unsaved values.
-- Connections are lazy: they open on first use and close when the agent
-  session ends.
+- Connections are lazy: they open on first use and stay in the pool between
+  runs, until the server's settings change, the server is removed or loading
+  its tool list fails.
 - **A session the server closed is replaced in the pool, once.** A
   Streamable-HTTP server answers a closed session's id with `404` (MCP
   2025-11-25, *Session Management*), and neither the SDK's client nor Koog opens

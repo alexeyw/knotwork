@@ -15,7 +15,7 @@ release cadence settles.
 
 ## Where the project is today
 
-The current pre-release line (`0.13.x`) already covers the core loop
+The current pre-release line (`0.14.x`) already covers the core loop
 end-to-end:
 
 - On-device LLM inference through LiteRT-LM, with optional
@@ -92,6 +92,12 @@ end-to-end:
 - Model lists for OpenAI, Anthropic, Google and DeepSeek held against the
   client library's own catalogue by a test, so a library upgrade that adds or
   drops a model fails the build until the list is sorted.
+- The app in English, Russian and Spanish: the screens, the bundled pipelines
+  and the in-app help. What a model reads stays in English.
+- A chat exports as one JSON file, shared or saved straight to a folder you
+  pick.
+- All of an MCP server's tools turned on or off at once, and a session the
+  server closed replaced without restarting the app.
 
 See [README.md](../README.md) for the full feature list and
 [architecture.md](architecture.md) for how the pieces fit together.
