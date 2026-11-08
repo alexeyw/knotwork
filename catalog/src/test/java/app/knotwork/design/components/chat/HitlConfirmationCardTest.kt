@@ -40,7 +40,7 @@ class HitlConfirmationCardTest {
                         risk = Risk.Sensitive,
                         toolName = TOOL_NAME,
                         summary = summary,
-                        arguments = mapOf("path" to "\"inbox/captures.md\""),
+                        arguments = "{\n  \"path\": \"inbox/captures.md\"\n}",
                         timestamp = "15:12",
                     ),
                     pendingTypedConfirm = "",

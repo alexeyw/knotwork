@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.repositories.PipelineRepository
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
@@ -37,11 +39,11 @@ class RenamePipelineUseCase @Inject constructor(private val pipelineRepository: 
     suspend operator fun invoke(pipelineId: String, newName: String): Result<Unit> {
         val trimmed = newName.trim()
         if (trimmed.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Pipeline name cannot be empty"))
+            return Result.failure(InvalidInputException(InputProblem.BlankName(InputProblem.Subject.PIPELINE)))
         }
         if (trimmed.length > MAX_NAME_LENGTH) {
             return Result.failure(
-                IllegalArgumentException("Pipeline name must be $MAX_NAME_LENGTH characters or fewer"),
+                InvalidInputException(InputProblem.NameTooLong(InputProblem.Subject.PIPELINE, MAX_NAME_LENGTH)),
             )
         }
         // Wrap both the read and the write in a single try/catch — a thrown
@@ -50,7 +52,7 @@ class RenamePipelineUseCase @Inject constructor(private val pipelineRepository: 
         // the use-case boundary.
         return try {
             val existing = pipelineRepository.getPipelineById(pipelineId)
-                ?: return Result.failure(IllegalStateException("Pipeline not found"))
+                ?: return Result.failure(InvalidInputException(InputProblem.NotFound(InputProblem.Subject.PIPELINE)))
             pipelineRepository.savePipeline(
                 existing.copy(name = trimmed, updatedAt = System.currentTimeMillis()),
             )

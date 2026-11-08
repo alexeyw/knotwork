@@ -8,14 +8,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.screens.triggers.TriggerHealthUi
 import app.knotwork.design.theme.KnotworkTheme
@@ -45,6 +47,7 @@ import app.knotwork.design.tokens.KnotworkTextStyles
 fun HealthBadge(state: TriggerHealthUi, label: String, modifier: Modifier = Modifier) {
     val color = healthColor(state)
     val iconOnly = KnotworkTheme.a11y.fontScale() >= ICON_ONLY_FONT_SCALE
+    val description = stringResource(R.string.knotwork_health_badge_cd, label)
     Surface(
         shape = KnotworkTheme.shapes.full,
         color = color.copy(alpha = FILL_ALPHA),
@@ -56,7 +59,7 @@ fun HealthBadge(state: TriggerHealthUi, label: String, modifier: Modifier = Modi
             // announces "Health: <label>" once, not the glyph-less label a second
             // time from the inner Text (and so the label survives the icon-only
             // collapse at font-scale ≥ 2.0).
-            .clearAndSetSemantics { contentDescription = "Health: $label" },
+            .clearAndSetSemantics { contentDescription = description },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

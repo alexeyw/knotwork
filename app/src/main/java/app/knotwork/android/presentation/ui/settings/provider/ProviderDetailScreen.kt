@@ -139,7 +139,7 @@ internal fun ProviderDetailUiState.toViewState(
     test: ConnectionTestState = ConnectionTestState.Idle,
     elapsedSeconds: Long = 0,
 ): ProviderDetailViewState {
-    val name = providerId.displayName()
+    val name = providerId.displayName(context)
     val provider = providerId.cloudProvider
     val subject = if (provider.usesBaseUrl) TestSubject.OwnServer(name) else TestSubject.Hosted(name)
     val listed = ((test as? ConnectionTestState.Finished)?.result as? ConnectionCheckResult.Reachable)?.items
@@ -217,7 +217,7 @@ private fun ProviderDetailUiState.keyUi(providerId: ProviderId, context: Context
         label = if (compat) {
             context.getString(R.string.settings_key_label_compat)
         } else {
-            context.getString(R.string.settings_provider_api_key_label, providerId.displayName())
+            context.getString(R.string.settings_provider_api_key_label, providerId.displayName(context))
         },
         value = apiKey,
         marker = when (providerId) {
@@ -249,7 +249,7 @@ private fun ProviderDetailUiState.modelUi(
 ): ProviderModelUi {
     offeredModels?.let { options ->
         return ProviderModelUi(
-            label = context.getString(R.string.settings_provider_model_label, providerId.displayName()),
+            label = context.getString(R.string.settings_provider_model_label, providerId.displayName(context)),
             value = model,
             options = options,
             note = modelInUse?.fallbackNote(context),

@@ -16,6 +16,7 @@ import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.text.ApprovalRequestText
 import app.knotwork.android.domain.text.toDisplaySafeExcerpt
+import app.knotwork.android.presentation.common.ApprovalArguments
 import app.knotwork.android.presentation.common.toHitlRequestContext
 import app.knotwork.android.presentation.receivers.AgentApprovalReceiver
 import app.knotwork.android.presentation.receivers.ApprovalAction
@@ -64,8 +65,8 @@ class ApprovalNotificationManager @Inject constructor(
         private const val REPOST_OFFSET = 2
 
         /**
-         * Longest argument string, in characters, a notification shows whole and
-         * lets the user approve from the shade.
+         * Longest argument text, in characters as laid out on one line, a
+         * notification shows whole and lets the user approve from the shade.
          *
          * One-tap Approve authorises the entire string, while the shade shows a
          * bounded part of it: the platform caps every text a notification holds
@@ -317,15 +318,16 @@ class ApprovalNotificationManager @Inject constructor(
      * What the shade shows of one request, and whether that is all of it.
      *
      * @property text The expanded text of the notification.
-     * @property whole `true` when [text] holds the complete argument string, so
+     * @property whole `true` when [text] holds every argument, laid out on one line, so
      *   an Approve in the shade authorises only what the user can read there.
      */
     private data class ShadeText(val text: String, val whole: Boolean)
 
     /**
-     * Renders a request's expanded text: the call, its arguments cut at
-     * [SHADE_ARGUMENT_BUDGET] with a note that says so, and — last, after a blank
-     * line — what the run was asked to do.
+     * Renders a request's expanded text: the call, its arguments laid out on one
+     * line ([ApprovalArguments.forNotification]) and cut at [SHADE_ARGUMENT_BUDGET]
+     * with a note that says so, and — last, after a blank line — what the run was
+     * asked to do.
      *
      * The request goes last because the expanded view shows a limited number of
      * lines: placed above the call it could push the arguments out of sight, and
@@ -339,16 +341,18 @@ class ApprovalNotificationManager @Inject constructor(
      * @return The text, and whether it carries the arguments whole.
      */
     private fun shadeText(toolName: String, arguments: String, requestContext: ApprovalRequestContext?): ShadeText {
-        val call = if (arguments.length <= SHADE_ARGUMENT_BUDGET) {
-            ShadeText(context.getString(R.string.approval_notification_big_text, toolName, arguments), true)
+        // The budget measures what the shade shows, laid out on one line, not the string as sent.
+        val laidOut = ApprovalArguments.forNotification(arguments)
+        val call = if (laidOut.length <= SHADE_ARGUMENT_BUDGET) {
+            ShadeText(context.getString(R.string.approval_notification_big_text, toolName, laidOut), true)
         } else {
             // Never split a surrogate pair: a lone high surrogate renders as a box.
-            val end = if (arguments[SHADE_ARGUMENT_BUDGET - 1].isHighSurrogate()) {
+            val end = if (laidOut[SHADE_ARGUMENT_BUDGET - 1].isHighSurrogate()) {
                 SHADE_ARGUMENT_BUDGET - 1
             } else {
                 SHADE_ARGUMENT_BUDGET
             }
-            val shown = context.getString(R.string.approval_notification_big_text, toolName, arguments.take(end) + "…")
+            val shown = context.getString(R.string.approval_notification_big_text, toolName, laidOut.take(end) + "…")
             ShadeText(shown + "\n\n" + context.getString(R.string.approval_notification_arguments_cut), false)
         }
         val asked = requestContext?.let(::requestLine) ?: return call

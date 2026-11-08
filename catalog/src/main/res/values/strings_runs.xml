@@ -50,7 +50,7 @@
     <string name="knotwork_run_repro_gpu">On GPU, with the same model file, seed, sampler, input and context window.</string>
     <string name="knotwork_run_repro_head_mixed">On-device calls repeat byte for byte on this device</string>
     <string name="knotwork_run_repro_mixed_cloud">Cloud answers are not repeatable.</string>
-    <string name="knotwork_run_repro_limit">Not promised on the NPU or on another device.</string>
+    <string name="knotwork_run_repro_limit">Not promised on the NPU, on another device or with another LiteRT-LM version.</string>
     <string name="knotwork_run_repro_npu_head">Not promised: this run used the NPU</string>
     <string name="knotwork_run_repro_npu_body">Answers on the NPU are not checked to repeat. For runs that repeat, choose CPU or GPU in Settings.</string>
     <string name="knotwork_run_repro_cloud_head">Not promised: every answer came from a cloud model</string>
@@ -85,6 +85,8 @@
     <string name="knotwork_run_action_dimmed_a11y">%1$s, dimmed. %2$s</string>
     <string name="knotwork_run_verify_no_local">Nothing to re-run: no answer in this run came from the on-device model.</string>
     <string name="knotwork_run_verify_pre_version">Not available: no seed was recorded.</string>
+    <!-- Each value is the engine and its version as the run header shows them, e.g. "LiteRT-LM 0.17.1". No button: nothing in Settings changes it. -->
+    <string name="knotwork_run_verify_mismatch_runtime">Recorded with %1$s; the app now runs %2$s. A run is verified only on the engine version that recorded it.</string>
     <!-- The backend is chosen on the Settings home and on the model's card; the window in Settings → Generation. -->
     <string name="knotwork_run_verify_mismatch_backend">Recorded on %1$s; the app now runs on %2$s. To verify, choose %1$s in Settings.</string>
     <string name="knotwork_run_verify_mismatch_window">Recorded with a %1$s window; the app now uses %2$s. To verify, set %1$s in Settings → Generation.</string>
@@ -196,4 +198,5 @@
     <string name="knotwork_run_export_body">The file holds everything the model read in this run: prompts, memory excerpts, and the chat history inside those prompts. It stays on this device unless you share it.</string>
     <string name="knotwork_run_export_share">Share</string>
     <string name="knotwork_run_export_save">Save to file</string>
+    <string name="knotwork_run_verify_failed_reason_unknown">unknown error</string>
 </resources>

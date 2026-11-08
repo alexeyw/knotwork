@@ -1,6 +1,7 @@
 package app.knotwork.design.components.chat
 
 import app.knotwork.design.components.chips.Risk
+import app.knotwork.design.components.dialogs.typedConfirmMatches
 
 /**
  * Pure-Kotlin state helpers backing [HitlConfirmationCard]. Extracted from the
@@ -9,26 +10,25 @@ import app.knotwork.design.components.chips.Risk
  */
 object HitlConfirmationState {
 
-    /** Canonical magic word the user must type to confirm a destructive action. */
-    const val DESTRUCTIVE_CONFIRM_WORD: String = "yes"
-
     /**
      * Resolves the enabled-state of the "Allow once" CTA. Mirrors the rules
      * for the HITL confirmation card:
      *  - `Readonly` is auto-approved upstream; the CTA is never shown — return
      *    `true` defensively so a misuse renders a tappable button.
      *  - `Sensitive` is always allow-able; the user just taps Allow.
-     *  - `Destructive` requires the user to type "yes" (case-insensitive,
-     *    surrounding whitespace ignored).
+     *  - `Destructive` requires the user to type [confirmWord] — the rule every
+     *    typed confirmation applies, [typedConfirmMatches].
      *
      * @param risk risk tier of the prompt.
      * @param pendingTypedConfirm raw value of the destructive type-confirm
      * `OutlinedTextField`.
+     * @param confirmWord the word to type, in the interface language — the
+     * `knotwork_typed_confirm_word` resource.
      * @return `true` if the Allow CTA should accept taps.
      */
-    fun isAllowOnceEnabled(risk: Risk, pendingTypedConfirm: String): Boolean = when (risk) {
+    fun isAllowOnceEnabled(risk: Risk, pendingTypedConfirm: String, confirmWord: String): Boolean = when (risk) {
         Risk.Readonly, Risk.Sensitive -> true
-        Risk.Destructive -> pendingTypedConfirm.trim().equals(DESTRUCTIVE_CONFIRM_WORD, ignoreCase = true)
+        Risk.Destructive -> typedConfirmMatches(input = pendingTypedConfirm, keyword = confirmWord)
     }
 
     /**

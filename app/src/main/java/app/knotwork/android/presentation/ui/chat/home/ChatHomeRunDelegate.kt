@@ -13,7 +13,6 @@ import app.knotwork.android.domain.verification.RunDescription
 import app.knotwork.android.domain.verification.VerificationPlan
 import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.domain.verification.VerifyRunUseCase
-import app.knotwork.android.presentation.common.DisplayFormat
 import app.knotwork.android.presentation.ui.common.JournalExportDelegate
 import app.knotwork.android.presentation.ui.common.journalExportFileName
 import app.knotwork.android.presentation.ui.common.journalGeneratedAtLabel
@@ -286,8 +285,11 @@ class ChatHomeRunDelegate(
             val fileName = journalExportFileName(RUN_TRACE_EXPORT_STEM)
             exportDocument = document
             exportFileName = fileName
-            val ui = RunExportUi(fileName = fileName, size = DisplayFormat.formatBytes(document.sizeBytes.toLong()))
-            state.update { it.withRun { run -> run.copy(export = ui) } }
+            // The size is written by the screen's mapping, in the language it renders in.
+            val ui = RunExportUi(fileName = fileName, size = "")
+            state.update {
+                it.withRun { run -> run.copy(export = ui) }.copy(runExportSizeBytes = document.sizeBytes.toLong())
+            }
         }
     }
 
@@ -299,7 +301,7 @@ class ChatHomeRunDelegate(
 
     /** Closes the export sheet; the rendered document stays for a save the picker is still finishing. */
     fun dismissExport() {
-        state.update { it.withRun { run -> run.copy(export = null) } }
+        state.update { it.withRun { run -> run.copy(export = null) }.copy(runExportSizeBytes = null) }
     }
 
     /** Re-reads the run [runId] and projects it onto the strip; `null` clears it. */

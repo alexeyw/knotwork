@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
-import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -111,25 +110,21 @@ class MoreViewModel @Inject constructor(
         // could say which session was waiting.
         val queuedCount = activeSessions.values.count { it is AgentOrchestratorState.Queued }
         return MoreUiState(
-            memorySubtitle = formatMemoryStats(memStats.chunkCount, memStats.totalBytes),
-            modelsSubtitle = if (active != null) "${active.name} · active" else "no model installed",
+            memory = MoreMemoryCount(chunks = memStats.chunkCount, bytes = memStats.totalBytes),
+            activeModelName = active?.name,
+            modelsLoaded = true,
             // Categories = distinct `NodeType`s present in the catalogue.
             // The Library renders all LLM-driven node types as tabs and shows
             // bundled + user presets under each, so this is the same shape.
-            promptsSubtitle = formatPromptsStats(prompts.map { it.nodeType }.distinct().size, prompts.size),
-            tasksSubtitle = if (runningCount == 0 && queuedCount == 0) {
-                "none"
-            } else {
-                "$runningCount running · $queuedCount queued"
-            },
+            prompts = MorePromptCount(categories = prompts.map { it.nodeType }.distinct().size, prompts = prompts.size),
+            tasks = MoreTaskCount(running = runningCount, queued = queuedCount),
             tasksBadge = runningCount,
-            aboutSubtitle = "v${BuildConfig.VERSION_NAME} · build ${BuildConfig.VERSION_CODE}",
-            librarySubtitle = formatLibraryStats(userPresets.size),
-            filesSubtitle = formatWorkspaceStats(workspace),
+            versionName = BuildConfig.VERSION_NAME,
+            versionCode = BuildConfig.VERSION_CODE,
+            savedPresets = userPresets.size,
+            files = workspaceStat(workspace),
             archivedChats = archivedChats.size,
-            networkStatusText = formatNetworkStatus(now, lastNetwork),
-            networkStatusOk = lastNetwork == null ||
-                (now - lastNetwork) > FRESH_NETWORK_WINDOW_MS,
+            network = networkStat(now, lastNetwork),
         )
     }
 
@@ -181,97 +176,41 @@ class MoreViewModel @Inject constructor(
 }
 
 /**
- * Format a memory-stats line for the More tab subtitle.
+ * The workspace listing as the Files row's counter.
  *
- * @param chunkCount total chunk count.
- * @param totalBytes approximate on-disk size in bytes.
+ * @param result The one-shot workspace listing.
+ * @return Unavailable on failure, Empty with no files, else the count and size.
  */
-internal fun formatMemoryStats(chunkCount: Int, totalBytes: Long): String {
-    val count = if (chunkCount > GROUPED_THRESHOLD) {
-        chunkCount.toString().reversed().chunked(size = GROUP_DIGITS).joinToString(separator = " ").reversed()
+internal fun workspaceStat(result: WorkspaceResult<WorkspaceListing>): MoreWorkspaceStat = when (result) {
+    is WorkspaceResult.Failure -> MoreWorkspaceStat.Unavailable
+    is WorkspaceResult.Success -> if (result.value.files.isEmpty()) {
+        MoreWorkspaceStat.Empty
     } else {
-        chunkCount.toString()
-    }
-    val size = when {
-        totalBytes <= 0L -> "0 MB"
-        totalBytes < MEGABYTE -> "${(totalBytes / KILOBYTE)} KB"
-        else -> String.format(Locale.US, "%.1f MB", totalBytes.toDouble() / MEGABYTE)
-    }
-    return "$count chunks · $size"
-}
-
-/**
- * Format a prompt-stats line for the More tab subtitle.
- *
- * @param categoriesCount number of distinct categories.
- * @param promptsCount total number of stored prompts.
- */
-internal fun formatPromptsStats(categoriesCount: Int, promptsCount: Int): String =
-    "$categoriesCount categories · $promptsCount prompts"
-
-/**
- * Format the Library row subtitle.
- *
- * @param userPresetCount Number of user-saved pipeline presets (bundled
- *   presets are not surfaced here because they are not user-owned).
- */
-internal fun formatLibraryStats(userPresetCount: Int): String = when (userPresetCount) {
-    0 -> "no saved presets"
-    1 -> "1 saved preset"
-    else -> "$userPresetCount saved presets"
-}
-
-/**
- * Format the Files row subtitle from a workspace listing.
- *
- * @param result The one-shot workspace listing; a failure yields a neutral dash.
- */
-internal fun formatWorkspaceStats(result: WorkspaceResult<WorkspaceListing>): String = when (result) {
-    is WorkspaceResult.Failure -> "—"
-    is WorkspaceResult.Success -> {
-        val count = result.value.files.size
-        if (count == 0) {
-            "empty"
-        } else {
-            val bytes = result.value.usage.usedBytes
-            val size = when {
-                bytes < MEGABYTE -> "${bytes / KILOBYTE} KB"
-                else -> String.format(Locale.US, "%.1f MB", bytes.toDouble() / MEGABYTE)
-            }
-            val noun = if (count == 1) "file" else "files"
-            "$count $noun · $size"
-        }
+        MoreWorkspaceStat.Files(count = result.value.files.size, bytes = result.value.usage.usedBytes)
     }
 }
 
 /**
- * Compute the network-status footer text from the [lastOutboundAt]
- * timestamp emitted by [NetworkActivityTracker].
+ * When the app last reached the network, from the [lastOutboundAt] timestamp
+ * emitted by [NetworkActivityTracker].
  *
- * - `null` → `on-device · no network calls yet`
- * - older than 60 s → `on-device · no network calls in last N m`
- * - newer than 60 s → `online · network call just now`
+ * - `null` → [MoreNetworkStat.NoCallsYet]
+ * - within the last 60 s → [MoreNetworkStat.JustNow]
+ * - older → [MoreNetworkStat.Quiet] with the whole minutes since
  *
- * @param now epoch milliseconds at which the message is computed.
+ * @param now epoch milliseconds at which the status is computed.
  * @param lastOutboundAt epoch milliseconds of the most recent outbound
  * call, or `null` if none has been recorded since process start.
  */
-internal fun formatNetworkStatus(now: Long, lastOutboundAt: Long?): String {
-    if (lastOutboundAt == null) {
-        return "on-device · no network calls yet"
-    }
+internal fun networkStat(now: Long, lastOutboundAt: Long?): MoreNetworkStat {
+    if (lastOutboundAt == null) return MoreNetworkStat.NoCallsYet
     val elapsedMs = (now - lastOutboundAt).coerceAtLeast(minimumValue = 0L)
     return if (elapsedMs < FRESH_WINDOW_MS) {
-        "online · network call just now"
+        MoreNetworkStat.JustNow
     } else {
-        val minutes = elapsedMs / MS_PER_MINUTE
-        "on-device · no network calls in last $minutes m"
+        MoreNetworkStat.Quiet(minutes = elapsedMs / MS_PER_MINUTE)
     }
 }
 
-private const val KILOBYTE = 1024L
-private const val MEGABYTE = KILOBYTE * 1024L
 private const val FRESH_WINDOW_MS = 60_000L
 private const val MS_PER_MINUTE = 60_000L
-private const val GROUPED_THRESHOLD = 999
-private const val GROUP_DIGITS = 3

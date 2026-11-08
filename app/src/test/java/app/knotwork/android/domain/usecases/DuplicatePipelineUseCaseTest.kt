@@ -1,10 +1,13 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.models.ConnectionModel
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,7 +22,7 @@ import org.junit.Test
 class DuplicatePipelineUseCaseTest {
 
     private val pipelineRepository: PipelineRepository = mockk(relaxed = true)
-    private val useCase = DuplicatePipelineUseCase(pipelineRepository)
+    private val useCase = DuplicatePipelineUseCase(pipelineRepository, EnglishDefaultNames)
 
     @Test
     fun `given missing pipeline when invoke then returns failure`() = runTest {
@@ -28,7 +31,10 @@ class DuplicatePipelineUseCaseTest {
         val result = useCase("missing")
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals(
+            InputProblem.NotFound(InputProblem.Subject.PIPELINE),
+            (result.exceptionOrNull() as InvalidInputException).problem,
+        )
         coVerify(exactly = 0) { pipelineRepository.savePipeline(any()) }
     }
 

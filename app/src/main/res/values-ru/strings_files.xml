@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Workspace quota line once full. -->
+    <string name="files_quota_full">заполнено</string>
+    <string name="files_share_chooser_title">Поделиться файлом</string>
+    <string name="files_message_import_failed">Файл не импортирован — он слишком большой или рабочая папка заполнена.</string>
+    <string name="files_message_export_failed">Не удалось сохранить файл.</string>
+    <string name="files_message_preview_failed">Для этого файла нет просмотра.</string>
+    <string name="files_message_delete_partial">Часть файлов не удалена.</string>
+    <string name="files_message_share_failed">Ничего не удалось подготовить, чтобы поделиться.</string>
+    <plurals name="files_message_share_partial">
+        <item quantity="one">Подготовлено, чтобы поделиться: %1$d из %2$d.</item>
+        <item quantity="few">Подготовлено, чтобы поделиться: %1$d из %2$d.</item>
+        <item quantity="many">Подготовлено, чтобы поделиться: %1$d из %2$d.</item>
+        <item quantity="other">Подготовлено, чтобы поделиться: %1$d из %2$d.</item>
+    </plurals>
+</resources>

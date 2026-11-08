@@ -12,16 +12,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.knotwork.design.R
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 
@@ -63,6 +65,8 @@ enum class Risk {
 @Composable
 fun RiskPill(risk: Risk, modifier: Modifier = Modifier) {
     val color = riskColor(risk)
+    val label = risk.label
+    val description = stringResource(R.string.knotwork_risk_pill_cd, label)
     Surface(
         shape = KnotworkTheme.shapes.full,
         color = Color.Transparent,
@@ -70,7 +74,7 @@ fun RiskPill(risk: Risk, modifier: Modifier = Modifier) {
         border = BorderStroke(width = 1.dp, color = color),
         modifier = modifier
             .height(RiskPillHeight)
-            .semantics { contentDescription = "Risk level: ${risk.label}" },
+            .semantics { contentDescription = description },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -83,7 +87,7 @@ fun RiskPill(risk: Risk, modifier: Modifier = Modifier) {
                     .background(color = color, shape = CircleShape),
             )
             Text(
-                text = risk.label,
+                text = label,
                 // JetBrains Mono 500, 11 px, +0.2 tracking.
                 style = KnotworkTextStyles.MonoSm.copy(
                     fontWeight = FontWeight.Medium,
@@ -105,11 +109,13 @@ private fun riskColor(risk: Risk): Color = when (risk) {
 
 /** Human-readable label rendered inside the pill (also used in `contentDescription`). */
 private val Risk.label: String
-    get() = when (this) {
-        Risk.Readonly -> "Read only"
-        Risk.Sensitive -> "Sensitive"
-        Risk.Destructive -> "Destructive"
-    }
+    @Composable get() = stringResource(
+        when (this) {
+            Risk.Readonly -> R.string.knotwork_tools_pill_readonly
+            Risk.Sensitive -> R.string.knotwork_tools_pill_sensitive
+            Risk.Destructive -> R.string.knotwork_tools_pill_destructive
+        },
+    )
 
 private val RiskPillHeight = 24.dp
 private val RiskDotSize = 6.dp

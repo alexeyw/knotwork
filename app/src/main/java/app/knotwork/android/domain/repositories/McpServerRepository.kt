@@ -12,18 +12,21 @@ import kotlinx.coroutines.flow.Flow
  *
  *  1. **Tool list caching.** `fetchToolList` returns cached `McpTool` entries
  *     for up to [TOOL_LIST_TTL_MS] (5 minutes), and only to a fetch with the
- *     config they were fetched with — an edited server is asked again;
- *     `forceRefresh = true` bypasses the cache (wired to the trailing refresh
- *     icon in `McpServerRow`).
+ *     config they were fetched with, while the connection they came from is
+ *     still the live one — an edited server, or one whose connection was
+ *     replaced or dropped, is asked again; `forceRefresh = true` bypasses the
+ *     cache (wired to the trailing refresh icon in `McpServerRow`). Asking
+ *     again is a real `tools/list` request over the live connection; a session
+ *     the server has closed is replaced by a new one on the way.
  *  2. **Per-server connection status.** Each URL has a hot `Flow<McpConnectionStatus>`
  *     that drives the status pill in the Tools screen. Transitions are emitted
  *     from inside `fetchToolList`: `Connecting → Connected` on success,
  *     `Connecting → Error` on handshake or JSON-RPC failure.
- *  3. **Lifecycle ownership.** The repository owns one `McpClient` per server
- *     URL (lazy connect, kept alive across `fetchToolList` calls); callers
- *     drop the connection through [disconnect] when a URL is removed from
- *     Settings, and the singleton's `dispose()`-equivalent is implicit (the
- *     repository is `@Singleton`).
+ *  3. **Lifecycle.** Connections are opened lazily and kept alive across
+ *     `fetchToolList` calls; callers drop one through [disconnect] when a URL
+ *     is removed from Settings. The implementation does not own them: they
+ *     live in the pool the agent's tool calls use too, so the status shown
+ *     here describes the connection the agent's next call would use.
  *
  * Implementations live in `data/repositories/McpServerRepositoryImpl`.
  */

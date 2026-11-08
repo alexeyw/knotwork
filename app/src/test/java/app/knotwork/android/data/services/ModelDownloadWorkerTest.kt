@@ -39,6 +39,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import java.io.File
 import java.security.MessageDigest
 import java.util.UUID
@@ -132,7 +133,7 @@ class ModelDownloadWorkerTest {
     fun `given a file that could not be checked when it finishes then another attempt is scheduled`() = runTest {
         coEvery { downloader.download(any(), any(), any(), any()) } returns downloadedPart(published = PUBLISHED)
         coEvery { installer.install(any(), any(), any()) } returns
-            DownloadedModelInstaller.Result.NotInstalled(UNREADABLE, DownloadedModelInstaller.Result.Cause.UNREADABLE)
+            DownloadedModelInstaller.Result.NotInstalled(DownloadedModelInstaller.Result.Cause.UNREADABLE)
 
         val result = worker().doWork()
 
@@ -149,10 +150,7 @@ class ModelDownloadWorkerTest {
             coEvery { downloader.download(any(), any(), any(), any()) } returns
                 downloadedPart(published = PUBLISHED).copy(bytesTransferred = 4_096L)
             coEvery { installer.install(any(), any(), any()) } returns
-                DownloadedModelInstaller.Result.NotInstalled(
-                    UNREADABLE,
-                    DownloadedModelInstaller.Result.Cause.UNREADABLE,
-                )
+                DownloadedModelInstaller.Result.NotInstalled(DownloadedModelInstaller.Result.Cause.UNREADABLE)
 
             val result = worker(runAttemptCount = 2).doWork()
 
@@ -166,7 +164,7 @@ class ModelDownloadWorkerTest {
         coEvery { downloader.download(any(), any(), any(), any()) } returns
             downloadedPart(published = null).copy(bytesTransferred = 4_096L)
         coEvery { installer.install(any(), any(), any()) } returns
-            DownloadedModelInstaller.Result.NotInstalled("not moved", DownloadedModelInstaller.Result.Cause.NOT_MOVED)
+            DownloadedModelInstaller.Result.NotInstalled(DownloadedModelInstaller.Result.Cause.NOT_MOVED)
 
         val result = worker(runAttemptCount = 2).doWork()
 
@@ -180,10 +178,7 @@ class ModelDownloadWorkerTest {
             // there counts against the attempts, so an unreadable file cannot loop forever.
             coEvery { downloader.download(any(), any(), any(), any()) } returns downloadedPart(published = PUBLISHED)
             coEvery { installer.install(any(), any(), any()) } returns
-                DownloadedModelInstaller.Result.NotInstalled(
-                    UNREADABLE,
-                    DownloadedModelInstaller.Result.Cause.UNREADABLE,
-                )
+                DownloadedModelInstaller.Result.NotInstalled(DownloadedModelInstaller.Result.Cause.UNREADABLE)
 
             val result = worker(runAttemptCount = 2).doWork()
 
@@ -285,6 +280,27 @@ class ModelDownloadWorkerTest {
         // An HTTP refusal comes at once, while the user is looking: nothing to keep or announce.
         verify(exactly = 0) { interruptions.record(any(), any(), any(), any()) }
         verify(exactly = 0) { notifier.notifyStopped(any(), any()) }
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `given the app in Russian when the server refuses the download then the failure reads in Russian`() = runTest {
+        coEvery { downloader.download(any(), any(), any(), any()) } returns
+            ResumableFileDownloader.Outcome.Failure("Server returned code: 404", httpCode = 404)
+
+        val failure = worker().doWork() as ListenableWorker.Result.Failure
+
+        assertEquals("Сервер вернул код 404", failure.outputData.getString(ModelDownloadWorker.KEY_ERROR))
+    }
+
+    @Test
+    fun `given a transport failure without text when it fails for good then it reads as unknown`() = runTest {
+        coEvery { downloader.download(any(), any(), any(), any()) } returns
+            ResumableFileDownloader.Outcome.Failure("", bytesTransferred = 0L)
+
+        val failure = worker(runAttemptCount = 2).doWork() as ListenableWorker.Result.Failure
+
+        assertEquals("Unknown download error", failure.outputData.getString(ModelDownloadWorker.KEY_ERROR))
     }
 
     @Test

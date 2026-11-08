@@ -239,7 +239,6 @@ class GraphExecutionEngineTest {
         val systemNodeExecutor = SystemNodeExecutor(
             llmEngine,
             loadModelUseCase,
-            chatRepository,
             StructuredOutputGate(),
             settingsRepository,
             CloudStructuredInferenceClientFactory { _, _ -> null },
@@ -1602,7 +1601,6 @@ class GraphExecutionEngineTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory {
@@ -1825,7 +1823,6 @@ class GraphExecutionEngineTest {
                 SystemNodeExecutor(
                     llmEngine,
                     loadModelUseCase,
-                    chatRepository,
                     StructuredOutputGate(),
                     settingsRepository,
                     CloudStructuredInferenceClientFactory { _, _ -> null },

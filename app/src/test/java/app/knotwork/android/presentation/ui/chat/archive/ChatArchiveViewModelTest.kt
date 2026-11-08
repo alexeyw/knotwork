@@ -1,10 +1,13 @@
 package app.knotwork.android.presentation.ui.chat.archive
 
+import app.knotwork.android.R
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
+import app.knotwork.android.presentation.ui.chat.ChatExportEvent
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.screens.chatarchive.ChatArchiveVisualState
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -16,7 +19,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -118,7 +120,7 @@ class ChatArchiveViewModelTest {
     }
 
     @Test
-    fun `given an unnamed session when observed then the default title is used`() = runTest(testDispatcher) {
+    fun `given an unnamed session when observed then the screen words its title`() = runTest(testDispatcher) {
         archivedFlow.value = listOf(
             ChatSession(id = "blank", name = "   ", updatedAt = 5L, isArchived = true, archivedAt = 5L),
         )
@@ -126,7 +128,9 @@ class ChatArchiveViewModelTest {
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
-        assertEquals(ChatArchiveViewModel.DEFAULT_CHAT_TITLE, viewModel.uiState.value.rows.single().title)
+        // The ViewModel keeps the stored name; the title in the interface language
+        // is the screen's, so it follows a change of language.
+        assertEquals(UNTITLED, viewModel.uiState.value.project(emptyMap(), subtitle = "").rows.single().title)
     }
 
     @Test
@@ -186,36 +190,55 @@ class ChatArchiveViewModelTest {
     }
 
     @Test
-    fun `given export when invoked then the document is raised for the share sheet`() = runTest(testDispatcher) {
+    fun `given share when invoked then the document is raised for the share sheet`() = runTest(testDispatcher) {
         val document = ChatExportDocument(sessionName = "Trip", json = "{}")
         coEvery { exportChatUseCase("session-1") } returns Result.success(document)
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
-        val received = async { viewModel.exportEvents.first() }
+        val received = async { viewModel.export.events.first() }
         runCurrent()
 
-        viewModel.export("session-1")
+        viewModel.shareChat("session-1")
         advanceUntilIdle()
 
-        assertEquals(document, received.await())
+        val share = received.await() as ChatExportEvent.Share
+        assertEquals(document, share.document)
+        assertTrue(share.fileName, share.fileName.startsWith("chat-Trip-"))
     }
 
     @Test
-    fun `given the export fails when invoked then nothing is raised`() = runTest(testDispatcher) {
+    fun `given save when invoked then the picker is asked for with the chat's file name`() = runTest(testDispatcher) {
+        coEvery { exportChatUseCase("session-1") } returns
+            Result.success(ChatExportDocument(sessionName = "Trip", json = "{}"))
+        val viewModel = buildViewModel()
+        advanceUntilIdle()
+
+        val received = async { viewModel.export.events.first() }
+        runCurrent()
+
+        viewModel.saveChat("session-1")
+        advanceUntilIdle()
+
+        val pick = received.await() as ChatExportEvent.PickDestination
+        assertTrue(pick.fileName, pick.fileName.startsWith("chat-Trip-"))
+    }
+
+    @Test
+    fun `given the export fails when shared then the failure is reported`() = runTest(testDispatcher) {
         coEvery { exportChatUseCase("session-1") } returns Result.failure(IllegalStateException("nope"))
         val viewModel = buildViewModel()
         advanceUntilIdle()
 
-        val received = mutableListOf<ChatExportDocument>()
-        val job = backgroundScope.launch(testDispatcher) { viewModel.exportEvents.collect { received += it } }
+        val received = async { viewModel.export.events.first() }
+        runCurrent()
+
+        viewModel.shareChat("session-1")
         advanceUntilIdle()
 
-        viewModel.export("session-1")
-        advanceUntilIdle()
-
-        assertTrue("A failed export must raise nothing", received.isEmpty())
-        job.cancel()
+        // Reported, no longer swallowed: an export that silently does nothing
+        // reads as a dead menu item.
+        assertEquals(ChatExportEvent.RenderFailed, received.await())
     }
 
     @Test
@@ -229,13 +252,24 @@ class ChatArchiveViewModelTest {
         // Dressing a read failure up as an empty archive would tell the user
         // their chats are gone.
         val state = viewModel.uiState.value
-        assertEquals("db unreadable", state.errorMessage)
+        assertEquals(UiText.Dynamic("db unreadable"), state.errorMessage)
         assertFalse(state.loading)
         assertEquals(
             ChatArchiveVisualState.Error,
-            state.toViewState(archivedLabels = emptyMap(), subtitle = "").visualState,
+            state.project(archivedLabels = emptyMap(), subtitle = "").visualState,
         )
     }
+
+    @Test
+    fun `given the archived flow fails without a message when observed then the app words it`() =
+        runTest(testDispatcher) {
+            every { chatRepository.getArchivedSessionsFlow() } returns flow { throw IllegalStateException() }
+
+            val viewModel = buildViewModel()
+            advanceUntilIdle()
+
+            assertEquals(UiText(R.string.chat_archive_error_read_failed), viewModel.uiState.value.errorMessage)
+        }
 
     @Test
     fun `given menu state when opened and dismissed then it round-trips`() = runTest(testDispatcher) {
@@ -253,7 +287,7 @@ class ChatArchiveViewModelTest {
 
     @Test
     fun `given loading when projected then the skeleton state is shown`() {
-        val state = ChatArchiveUiState(loading = true).toViewState(emptyMap(), subtitle = "ignored")
+        val state = ChatArchiveUiState(loading = true).project(emptyMap(), subtitle = "ignored")
 
         assertEquals(ChatArchiveVisualState.Loading, state.visualState)
         // The subtitle only makes sense over a real list.
@@ -262,7 +296,7 @@ class ChatArchiveViewModelTest {
 
     @Test
     fun `given no rows when projected then the teaching empty state is shown`() {
-        val state = ChatArchiveUiState(loading = false).toViewState(emptyMap(), subtitle = "ignored")
+        val state = ChatArchiveUiState(loading = false).project(emptyMap(), subtitle = "ignored")
 
         assertEquals(ChatArchiveVisualState.Empty, state.visualState)
     }
@@ -280,7 +314,7 @@ class ChatArchiveViewModelTest {
         )
         val uiState = ChatArchiveUiState(loading = false, rows = rows, deleteTargetId = "a1")
 
-        val state = uiState.toViewState(
+        val state = uiState.project(
             archivedLabels = mapOf("a1" to "Archived 2 h ago"),
             subtitle = "1 chat · newest first",
         )
@@ -299,8 +333,20 @@ class ChatArchiveViewModelTest {
         // The row vanished between the request and this frame (restored on
         // another surface); resolving to null closes the dialog rather than
         // confirming a delete against nothing.
-        assertNull(uiState.toViewState(emptyMap(), subtitle = "").deleteTarget)
+        assertNull(uiState.project(emptyMap(), subtitle = "").deleteTarget)
     }
 
     // endregion
+
+    /** Projects with fixed words: [UNTITLED] for an unnamed chat, a failure's own text as written. */
+    private fun ChatArchiveUiState.project(archivedLabels: Map<String, String>, subtitle: String) = toViewState(
+        archivedLabels = archivedLabels,
+        subtitle = subtitle,
+        untitled = UNTITLED,
+        resolveText = { text -> (text as? UiText.Dynamic)?.text ?: text.toString() },
+    )
+
+    private companion object {
+        const val UNTITLED = "Untitled chat"
+    }
 }

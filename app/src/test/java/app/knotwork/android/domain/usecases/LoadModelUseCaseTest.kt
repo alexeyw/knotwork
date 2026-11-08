@@ -9,6 +9,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -38,6 +39,9 @@ class LoadModelUseCaseTest {
         val result = loadModelUseCase()
 
         assertTrue(result is Result.Error)
+        // Typed for the screen to word; the message a run records stays as written.
+        assertEquals(ModelLoadError.NoActiveModel, (result as Result.Error).error)
+        assertTrue(result.message.orEmpty().startsWith("No active model found."))
         coVerify(exactly = 0) { llmInferenceEngine.initialize(any(), any(), any()) }
     }
 
@@ -64,6 +68,10 @@ class LoadModelUseCaseTest {
         val result = loadModelUseCase()
 
         assertTrue(result is Result.Error)
+        assertEquals(
+            ModelLoadError.FileMissing("/invalid/path/that/does/not/exist"),
+            (result as Result.Error).error,
+        )
         coVerify(exactly = 0) { llmInferenceEngine.initialize(any(), any(), any()) }
     }
 

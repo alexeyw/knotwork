@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.chat.home
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.knotwork.android.R
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.models.ChatMessage
@@ -27,6 +28,8 @@ import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
 import app.knotwork.android.domain.services.ChatHistoryCompressionCoordinator
+import app.knotwork.android.domain.services.ChatSystemRows
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.MemoryAutoExtractionCoordinator
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
@@ -45,6 +48,7 @@ import app.knotwork.android.domain.usecases.SubmitClarificationAnswerUseCase
 import app.knotwork.android.domain.usecases.TranscribeAudioUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
 import app.knotwork.android.presentation.state.ActiveSessionTracker
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessagePreview
 import app.knotwork.design.components.chat.ChatMessageStatus
@@ -119,7 +123,7 @@ class ChatHomeViewModel
 @Inject
 // Reason: the chat surface is one screen whose behaviour is already split into
 // nine delegates, and this constructor is where their collaborators arrive
-// before being handed on — 34 of them. Measured, not assumed: the core alone
+// before being handed on — 36 of them. Measured, not assumed: the core alone
 // reads 11 (orchestrator, chat, two settings sections, context window, engine,
 // models, model loading, two after-turn coordinators, session tracker), the
 // delegates share 6 more, and even one injected holder per remaining delegate
@@ -163,6 +167,8 @@ constructor(
     private val unarchiveChatUseCase: UnarchiveChatUseCase,
     private val runUseCases: ChatHomeRunUseCases,
     private val resolveApprovalRequestContext: ResolveApprovalRequestContextUseCase,
+    private val defaultNames: DefaultNames,
+    private val chatSystemRows: ChatSystemRows,
 ) : ViewModel() {
 
     private val _state: MutableStateFlow<ChatHomeScreenState> = MutableStateFlow(ChatHomeScreenState())
@@ -390,6 +396,7 @@ constructor(
         clearDraft = ::clearDraft,
         pipelineNameRefresher = pipelineBinding::pipelineNameRefreshed,
         onSessionsChanged = pipelineBinding::handleDeletedBoundPipeline,
+        defaultNames = defaultNames,
     )
 
     /**
@@ -429,6 +436,7 @@ constructor(
         scope = viewModelScope,
         state = _state,
         chatRepository = chatRepository,
+        systemRows = chatSystemRows,
         submitApprovalDecisionUseCase = submitApprovalDecisionUseCase,
         submitClarificationAnswerUseCase = submitClarificationAnswerUseCase,
         submitCeilingDecisionUseCase = submitCeilingDecisionUseCase,
@@ -666,7 +674,7 @@ constructor(
                 .catch { error ->
                     _state.update {
                         it.copy(
-                            visual = ChatHomeUiState.Error(error.message ?: UNKNOWN_ERROR_FALLBACK),
+                            visual = ChatHomeUiState.Error(failureText(error)),
                             sendingUserTurn = null,
                         )
                     }
@@ -769,12 +777,14 @@ constructor(
                         // Defensive: a reported success that somehow left the
                         // engine uninitialised must not loop back into another
                         // load attempt — surface the error instead.
-                        _state.update { it.copy(visual = ChatHomeUiState.Error(NO_ACTIVE_MODEL_MESSAGE)) }
+                        _state.update {
+                            it.copy(visual = ChatHomeUiState.Error(UiText(R.string.chat_error_no_active_model)))
+                        }
                     }
                 }
                 is Result.Error ->
                     _state.update {
-                        it.copy(visual = ChatHomeUiState.Error(outcome.message ?: NO_ACTIVE_MODEL_MESSAGE))
+                        it.copy(visual = ChatHomeUiState.Error(loadFailureText(outcome)))
                     }
             }
         }
@@ -818,7 +828,7 @@ constructor(
                 current.copy(
                     visual = when (outcome) {
                         is Result.Success -> current.restingVisual()
-                        is Result.Error -> ChatHomeUiState.Error(outcome.message ?: NO_ACTIVE_MODEL_MESSAGE)
+                        is Result.Error -> ChatHomeUiState.Error(loadFailureText(outcome))
                     },
                 )
             }
@@ -1018,7 +1028,7 @@ constructor(
                 chatRepository.saveSession(
                     ChatSession(
                         id = newId,
-                        name = ChatHomeThreadsDelegate.DEFAULT_NEW_CHAT_NAME,
+                        name = defaultNames.newChat(),
                         updatedAt = System.currentTimeMillis(),
                     ),
                 )
@@ -1049,7 +1059,7 @@ constructor(
                 _state.update {
                     it.copy(
                         model = ChatHomeModelState(
-                            name = active?.name ?: ChatHomeModelState.DEFAULT_NAME,
+                            name = active?.name,
                             installed = models,
                             activeId = active?.id,
                         ),
@@ -1216,7 +1226,7 @@ constructor(
                         // has already written this outcome into the thread. The
                         // tile must not repeat it — see `ChatHomeUiState.Error`.
                         visual = ChatHomeUiState.Error(
-                            state.message,
+                            UiText.Dynamic(state.message),
                             reason = state.reason,
                             announcedInThread = true,
                         ),
@@ -1280,7 +1290,7 @@ constructor(
             agentOrchestratorUseCase.observe(sessionId)
                 .catch { error ->
                     _state.update {
-                        it.copy(visual = ChatHomeUiState.Error(error.message ?: UNKNOWN_ERROR_FALLBACK))
+                        it.copy(visual = ChatHomeUiState.Error(failureText(error)))
                     }
                 }
                 .collect { orchestratorState -> handleOrchestratorState(orchestratorState) }
@@ -1308,19 +1318,6 @@ constructor(
     }
 
     companion object {
-        /** Fallback message for `Throwable` instances surfaced via [ChatHomeUiState.Error] without a cause. */
-        const val UNKNOWN_ERROR_FALLBACK: String = "Unknown error"
-
-        /**
-         * User-facing message surfaced when the auto load-and-send path
-         * ([loadModelThenSend]) or [retryAfterError] tries to load the model
-         * but `LoadModelUseCase` can't find an active one (no models installed,
-         * or the registered active model file is missing). At that point only
-         * Settings → Models can fix the problem, so the copy redirects there.
-         */
-        const val NO_ACTIVE_MODEL_MESSAGE: String =
-            "No active model. Open Settings → Models to install or activate one."
-
         /** Rough chars-per-token divisor used for the v0.1 token counter (`text.length / 4`). */
         const val TOKEN_CHARS_PER_TOKEN: Int = 4
 
@@ -1347,7 +1344,7 @@ constructor(
          */
         fun chatMessageToRow(
             message: ChatMessage,
-            activeModelName: String,
+            activeModelName: String?,
             attachmentModel: Any? = null,
             onImageTap: (() -> Unit)? = null,
             preview: ChatMessagePreview? = null,

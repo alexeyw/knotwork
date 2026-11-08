@@ -379,6 +379,11 @@ class ToolRepositoryImpl @Inject constructor(
      * decision for a different server, and could repeat a side effect: a call that
      * timed out may still be running where it was sent.
      *
+     * The one repeat is on the same server: when the server answers that it has closed
+     * the session, the pool opens a new one and the call runs once more there
+     * ([McpConnectionPool.withSessionRecovery]). The server refused the first attempt
+     * without running it, so nothing is doubled.
+     *
      * The resolution is still made twice — once for [getRisk], once here — and
      * the pool can reconnect a server in between, handing the name to a server
      * that was down a moment ago. [gatedRisk] closes that: when the server serving
@@ -413,7 +418,12 @@ class ToolRepositoryImpl @Inject constructor(
                 )
             }
         }
-        return server.client.executeTool(name, arguments)
+        // A session the server closed is replaced once and the call repeated on the new
+        // one — the server refused it unrun, so the repeat cannot double a side effect.
+        // Every other failure is the answer, as above.
+        return mcpConnectionPool.withSessionRecovery(serverUrl = server.config.url, client = server.client) { client ->
+            client.executeTool(name, arguments)
+        }
     }
 
     /**

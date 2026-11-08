@@ -39,7 +39,7 @@ Three sibling documents, and it is worth knowing which one you want:
 Local LLMs need a large block of contiguous memory. If loading a
 model fails:
 
-- Open **Models** and tap **Make Active** on a smaller model. Quad-
+- Open **Models** and tap **Activate** on a smaller model. Quad-
   or 4-bit-quantised variants tend to fit where full-precision ones
   do not.
 - If you have multiple models on the device, the previously active
@@ -162,7 +162,7 @@ may well work on a second try.
 
 Open the trigger and read its **Evaluation journal** (see
 [Triggers](user-guide.md#checking-what-a-trigger-has-been-doing)) — the answer is almost
-always there, and which of two shapes it takes decides what to do next:
+always there, and which of three shapes it takes decides what to do next:
 
 - **There is an entry for the moment you expected, saying it didn't run.**
   The reason is stated: the condition wasn't met, it had already fired for

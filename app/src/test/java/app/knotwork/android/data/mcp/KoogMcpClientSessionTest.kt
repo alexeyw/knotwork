@@ -1,5 +1,6 @@
 package app.knotwork.android.data.mcp
 
+import android.util.Log
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.McpTransport
@@ -24,6 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -70,6 +72,16 @@ class KoogMcpClientSessionTest {
     /** Released in [tearDown] so a stalled dispatcher thread never outlives the test. */
     private val stallRelease = CountDownLatch(1)
 
+    /** Counted down when a request for [stallMethod] reaches the stub and starts being held. */
+    private val stallArrived = CountDownLatch(1)
+
+    /** Names `tools/list` answers with; a test changes it to model a server whose catalogue changed. */
+    @Volatile
+    private var toolNames: List<String> = listOf("echo")
+
+    /** Status the stub answers a session-terminating `DELETE` with. */
+    private var deleteStatus = 200
+
     @After
     fun tearDown() {
         stallRelease.countDown()
@@ -83,7 +95,7 @@ class KoogMcpClientSessionTest {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 if (request.method == "DELETE") {
                     received += "DELETE sid=${request.headers["mcp-session-id"]}"
-                    return MockResponse.Builder().code(200).build()
+                    return MockResponse.Builder().code(deleteStatus).build()
                 }
                 if (request.method == "GET") {
                     received += "GET(sse) sid=${request.headers["mcp-session-id"]}"
@@ -108,6 +120,7 @@ class KoogMcpClientSessionTest {
                     // Hold the response the way an unresponsive server does. The
                     // ceiling only bounds the test if the client has no deadline
                     // of its own — which is exactly the defect under test.
+                    stallArrived.countDown()
                     stallRelease.await(STALL_CEILING_SECONDS, TimeUnit.SECONDS)
                 }
 
@@ -124,13 +137,12 @@ class KoogMcpClientSessionTest {
                     }
                     "notifications/initialized" -> MockResponse.Builder().code(202).build()
                     "tools/list" -> sse(
-                        """
-                        {"jsonrpc":"2.0","id":$id,"result":{"tools":[
-                          {"name":"echo","description":"Echoes back",
-                           "inputSchema":{"type":"object",
-                             "properties":{"message":{"type":"string"}},
-                             "required":["message"]}}]}}
-                        """.trimIndent(),
+                        """{"jsonrpc":"2.0","id":$id,"result":{"tools":[""" +
+                            toolNames.joinToString(",") { name ->
+                                """{"name":"$name","description":"Echoes back",""" +
+                                    """"inputSchema":{"type":"object",""" +
+                                    """"properties":{"message":{"type":"string"}},"required":["message"]}}"""
+                            } + "]}}",
                     )
                     "tools/call" -> callErrorMessage?.let { message ->
                         sse(
@@ -441,6 +453,114 @@ class KoogMcpClientSessionTest {
         assertTrue(result.endsWith("[... result truncated at $SMALL_BUDGET_BYTES bytes]"))
         assertTrue(result.toByteArray(Charsets.UTF_8).size < SMALL_BUDGET_BYTES + MARKER_ALLOWANCE)
         client.disconnect()
+    }
+
+    @Test
+    fun `given the server changed its catalogue when refreshTools then the new list is published and callable`() =
+        runTest {
+            // Given
+            start()
+            val client = KoogMcpClient()
+            client.connect(
+                McpServerConfig(url = server.url("/mcp").toString(), transport = McpTransport.STREAMABLE_HTTP),
+            )
+            assertEquals(listOf("echo"), client.getTools().map { it.name })
+            toolNames = listOf("echo", "added")
+
+            // When
+            val refreshed = client.refreshTools()
+
+            // Then — one more tools/list on the same session; no new session for it.
+            assertEquals(listOf("echo", "added"), refreshed.map { it.name })
+            assertEquals(listOf("echo", "added"), client.getTools().map { it.name })
+            assertEquals(1, received.count { it.startsWith("initialize ") })
+            assertEquals(
+                listOf("tools/list sid=session-1", "tools/list sid=session-1"),
+                received.filter {
+                    it.startsWith("tools/list")
+                },
+            )
+            callResultText = "added-ok"
+            assertTrue(client.executeTool(name = "added", arguments = """{"message":"hi"}""").contains("added-ok"))
+            client.disconnect()
+        }
+
+    @Test
+    fun `given a server that never lists its tools again when refreshTools then it fails on its own deadline`() =
+        runTest {
+            // Given
+            start()
+            val client = KoogMcpClient()
+            client.connect(
+                McpServerConfig(url = server.url("/mcp").toString(), transport = McpTransport.STREAMABLE_HTTP),
+            )
+            // Shortened after the handshake, which is held to the same deadline.
+            client.connectTimeoutMs = TEST_DEADLINE_MS
+            stallMethod = "tools/list"
+
+            // When — deliberately catching without re-throwing: the type IS the assertion.
+            @Suppress("SwallowedException", "TooGenericExceptionCaught")
+            val observed: Throwable? = try {
+                client.refreshTools()
+                null
+            } catch (e: Throwable) {
+                e
+            }
+
+            // Then
+            assertTrue("expected a deadline failure, got $observed", observed is IOException)
+            assertTrue(observed?.message.orEmpty().contains("did not list its tools within"))
+            assertEquals(listOf("echo"), client.getTools().map { it.name })
+        }
+
+    @Test
+    fun `given a tool call in flight when the tools are refreshed then the call still resolves`() = runTest {
+        // Given — a call the server holds until released.
+        start()
+        val client = KoogMcpClient()
+        client.connect(McpServerConfig(url = server.url("/mcp").toString(), transport = McpTransport.STREAMABLE_HTTP))
+        callResultText = "done"
+        stallMethod = "tools/call"
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val call = scope.async { client.executeTool(name = "echo", arguments = """{"message":"hi"}""") }
+        assertTrue("the call never reached the server", stallArrived.await(STALL_CEILING_SECONDS, TimeUnit.SECONDS))
+
+        // When — the list is refreshed underneath it, then the server answers the call.
+        toolNames = listOf("echo", "added")
+        client.refreshTools()
+        stallRelease.countDown()
+
+        // Then — same session on the wire, so the running call is not disturbed.
+        assertTrue(call.await().contains("done"))
+        scope.cancel()
+        client.disconnect()
+    }
+
+    @Test
+    fun `given the server already closed the session when disconnect then no failure is logged`() = runTest {
+        // Given — the server answers the session-terminating DELETE with 404: it closed the session itself.
+        start()
+        val client = KoogMcpClient()
+        client.connect(McpServerConfig(url = server.url("/mcp").toString(), transport = McpTransport.STREAMABLE_HTTP))
+        deleteStatus = 404
+        val warnings = CopyOnWriteArrayList<String>()
+        val tree = object : Timber.Tree() {
+            override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+                if (priority >= Log.WARN) warnings += message
+            }
+        }
+        Timber.plant(tree)
+
+        // When
+        try {
+            client.disconnect()
+        } finally {
+            Timber.uproot(tree)
+        }
+
+        // Then — it is the ordinary end of a session the pool replaces, not a failure.
+        assertTrue("DELETE never sent: $received", received.any { it.startsWith("DELETE") })
+        assertEquals(emptyList<String>(), warnings.toList())
     }
 
     private companion object {

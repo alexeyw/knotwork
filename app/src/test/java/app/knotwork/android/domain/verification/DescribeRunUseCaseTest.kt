@@ -10,6 +10,7 @@ import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.PipelineRepository
 import app.knotwork.android.domain.repositories.PipelineRunRepository
 import app.knotwork.android.domain.repositories.RunTraceRepository
+import app.knotwork.android.domain.verification.VerificationFixtures.ENVIRONMENT
 import app.knotwork.android.domain.verification.VerificationFixtures.MODEL_PATH
 import app.knotwork.android.domain.verification.VerificationFixtures.MODEL_SHA
 import app.knotwork.android.domain.verification.VerificationFixtures.ROOT
@@ -67,7 +68,7 @@ class DescribeRunUseCaseTest {
     private val readTree = ReadRecordedRunTreeUseCase(runs, traces)
     private val describe = DescribeRunUseCase(
         readTree,
-        PlanRunVerificationUseCase(readTree, models, pipelines, settings),
+        PlanRunVerificationUseCase(readTree, models, pipelines, settings, ENVIRONMENT),
         PlanRunAgainWithSeedUseCase(runs, pipelines),
         models,
     )

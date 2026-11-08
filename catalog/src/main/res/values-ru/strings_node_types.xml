@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="knotwork_node_type_input_name">Вход</string>
+    <string name="knotwork_node_type_input_description">Начало прогона: ваше сообщение, присланная страница или промпт триггера.</string>
+    <string name="knotwork_node_type_output_name">Выход</string>
+    <string name="knotwork_node_type_output_description">Конец прогона: отсюда ответ попадает к вам.</string>
+    <string name="knotwork_node_type_lite_rt_name">LiteRT</string>
+    <string name="knotwork_node_type_lite_rt_description">Один шаг генерации на локальной модели прямо на телефоне.</string>
+    <string name="knotwork_node_type_cloud_name">Облако</string>
+    <string name="knotwork_node_type_cloud_description">Один шаг генерации у настроенного облачного провайдера.</string>
+    <string name="knotwork_node_type_intent_router_name">Маршрутизатор намерений</string>
+    <string name="knotwork_node_type_intent_router_description">Относит входной текст к одному из ваших классов и ведёт прогон по его ветке.</string>
+    <string name="knotwork_node_type_if_condition_name">Условие</string>
+    <string name="knotwork_node_type_if_condition_description">Развилка на два пути: вопрос «да или нет» о входе или проверка вложенного изображения.</string>
+    <string name="knotwork_node_type_clarification_name">Уточнение</string>
+    <string name="knotwork_node_type_clarification_description">Ставит прогон на паузу, чтобы задать вам вопрос; ваш ответ становится выводом узла.</string>
+    <string name="knotwork_node_type_tool_name">Инструмент</string>
+    <string name="knotwork_node_type_tool_description">Вызывает инструмент — встроенный, другого приложения или MCP-сервера — и передаёт результат.</string>
+    <string name="knotwork_node_type_decomposition_name">Декомпозиция</string>
+    <string name="knotwork_node_type_decomposition_description">Превращает одну инструкцию в список подзадач.</string>
+    <string name="knotwork_node_type_queue_processor_name">Обработчик очереди</string>
+    <string name="knotwork_node_type_queue_processor_description">Проводит подзадачи по одной через ветку Item, затем идёт по ветке Done.</string>
+    <string name="knotwork_node_type_evaluation_name">Оценка</string>
+    <string name="knotwork_node_type_evaluation_description">Оценивает результат предыдущего шага и отвечает Pass, Retry или Fail.</string>
+    <string name="knotwork_node_type_summary_name">Сводка</string>
+    <string name="knotwork_node_type_summary_description">Сжимает результаты предыдущих шагов в один текст, часто после цикла.</string>
+    <string name="knotwork_node_type_pipeline_name">Пайплайн</string>
+    <string name="knotwork_node_type_pipeline_description">Запускает другой сохранённый пайплайн как один шаг и возвращает его ответ.</string>
+    <string name="knotwork_node_type_skill_name">Навык</string>
+    <string name="knotwork_node_type_skill_description">Запускает навык: готовую инструкцию и список инструментов, которые ему разрешены.</string>
+</resources>

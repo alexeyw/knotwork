@@ -30,6 +30,8 @@ Only Kotlin files appear inside the generated blocks.
       - `PromptTemplateDaoTest.kt` - Tests for `PromptTemplateDao`.
       - `TraceStepDaoTest.kt` - Tests for `TraceStepDao` — per-session ordering + FK cascade from `chat_sessions`.
     - `SqlCipherWrongKeyTest.kt` - The recovery screen's "wrong key" route, against the real SQLCipher library.
+  - `repositories/` - Repository implementations checked on a device, where the platform does what Robolectric cannot.
+    - `AppLanguageRepositoryInstrumentedTest.kt` - `AppLanguageRepositoryImpl` on a device: the picker's languages come from the `LocaleConfig` the build generated (Robolectric cannot read it), and a pick reaches the process — whose default locale follows it, which is why `$LOCATION` reads the device's languages instead.
 - `domain/` - Instrumented tests for the domain layer.
   - `usecases/` - Instrumented use-case coverage wired to real repositories.
     - `MemoryExtractionIntegrationTest.kt` - End-to-end integration coverage for `MemoryExtractionUseCase` wired to the real `MemoryRepositoryImpl` + `Converters` over an in-memory Room database.

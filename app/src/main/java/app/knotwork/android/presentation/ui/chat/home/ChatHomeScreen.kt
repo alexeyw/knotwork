@@ -37,7 +37,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,8 +62,9 @@ import app.knotwork.android.R
 import app.knotwork.android.domain.report.ContentReport
 import app.knotwork.android.domain.report.ContentReportComposer
 import app.knotwork.android.domain.report.ContentReportReason
+import app.knotwork.android.presentation.common.rememberByteUnits
 import app.knotwork.android.presentation.ui.chat.CHAT_EXPORT_MIME_JSON
-import app.knotwork.android.presentation.ui.chat.toShareChooser
+import app.knotwork.android.presentation.ui.chat.ChatExportEffects
 import app.knotwork.android.presentation.ui.common.JournalExportCopy
 import app.knotwork.android.presentation.ui.common.RunTerminationAction
 import app.knotwork.android.presentation.ui.common.RunTerminationCopyMapper
@@ -87,6 +87,7 @@ import app.knotwork.design.components.knotworkMarkdownColor
 import app.knotwork.design.components.knotworkMarkdownComponents
 import app.knotwork.design.components.knotworkMarkdownTypography
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.screens.chat.ChatHomeCallbacks
 import app.knotwork.design.screens.chat.ChatHomeContent
 import app.knotwork.design.screens.chat.ChatHomeRunCallbacks
@@ -98,6 +99,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import app.knotwork.design.R as DesignR
 
 /**
  * Redesigned Knotwork chat home — the user-facing surface that wires up:
@@ -229,7 +231,6 @@ fun ChatHomeScreen(
     val pipelineFallbackMessage = stringResource(R.string.errors_chat_pipeline_removed)
     // The catalog's string, which the console's value viewer and the message reader say too.
     val copyTooLargeMessage = stringResource(app.knotwork.design.R.string.knotwork_copy_too_long)
-    val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val importFailedTemplate = stringResource(R.string.chat_import_failed)
     val importUnreadableMessage = stringResource(R.string.chat_import_unreadable)
     val reportCopiedMessage = stringResource(R.string.chat_report_snackbar_copied)
@@ -300,14 +301,11 @@ fun ChatHomeScreen(
             snackbarHostState.showSnackbar(message = message)
         }
     }
-    LaunchedEffect(viewModel) {
-        viewModel.transfer.exportEvents.collect { document ->
-            context.startActivity(document.toShareChooser(exportChooserTitle))
-        }
-    }
+    // Export chat / Save to file: the share sheet, the document picker and their snackbars.
+    ChatExportEffects(delegate = viewModel.transfer.export, snackbarHostState = snackbarHostState)
     LaunchedEffect(viewModel) {
         viewModel.transfer.importErrorEvents.collect { reason ->
-            snackbarHostState.showSnackbar(message = importFailedTemplate.format(reason))
+            snackbarHostState.showSnackbar(message = importFailedTemplate.format(context.resolve(reason)))
         }
     }
     LaunchedEffect(viewModel) {
@@ -417,7 +415,8 @@ fun ChatHomeScreen(
     // `strings_chat.xml`.
     val fixtures = rememberChatHomeFixtures()
 
-    val viewState = screenState.toViewState(fixtures = fixtures) { context.resolve(it) }
+    val sizes = rememberByteUnits()
+    val viewState = screenState.toViewState(fixtures = fixtures, resolveText = { context.resolve(it) }, sizes = sizes)
 
     // A console copy that does not fit the clipboard says so; one that does is
     // confirmed by the system's own preview.
@@ -425,6 +424,7 @@ fun ChatHomeScreen(
         if (!clipboardManager.setClipboardText(text)) viewModel.console.signalConsoleCopyTooLarge()
     }
 
+    val confirmWord = stringResource(DesignR.string.knotwork_typed_confirm_word)
     val callbacks = ChatHomeCallbacks(
         onComposerValueChange = viewModel::onComposerValueChange,
         onSend = viewModel::sendMessage,
@@ -504,7 +504,7 @@ fun ChatHomeScreen(
             },
             onDismissExport = viewModel.run::dismissExport,
         ),
-        onHitlAllowOnce = viewModel.hitl::approveTool,
+        onHitlAllowOnce = { viewModel.hitl.approveTool(confirmWord) },
         onHitlReject = viewModel.hitl::rejectTool,
         onHitlTypedConfirmChange = viewModel.hitl::onTypedConfirmChange,
         onClarificationReply = viewModel.hitl::submitClarificationReply,
@@ -661,6 +661,13 @@ fun ChatHomeScreen(
                     onClick = {
                         overflowExpanded = false
                         viewModel.transfer.exportCurrentSession()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.chat_overflow_save_to_file)) },
+                    onClick = {
+                        overflowExpanded = false
+                        viewModel.transfer.saveCurrentSession()
                     },
                 )
                 DropdownMenuItem(

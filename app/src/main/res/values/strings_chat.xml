@@ -13,6 +13,11 @@
 
     <!-- Overflow menu -->
     <string name="chat_export_chooser_title">Export chat</string>
+    <!-- Outcomes of exporting a chat, shown in a snackbar. -->
+    <string name="chat_export_saved">Chat saved</string>
+    <string name="chat_export_save_failed">Couldn\'t save the chat</string>
+    <!-- Distinct from the save failure: nothing was produced to save or share. -->
+    <string name="chat_export_render_failed">Couldn\'t read the chat</string>
 
     <!-- Pipeline switch confirmation dialog -->
 
@@ -130,6 +135,7 @@
 
     <!-- Overflow menu -->
     <string name="chat_overflow_export">Export chat</string>
+    <string name="chat_overflow_save_to_file">Save to file</string>
     <string name="chat_overflow_delete">Delete chat</string>
 
     <!-- Delete chat confirmation -->
@@ -188,6 +194,7 @@
     </plurals>
     <string name="chat_archive_restore">Restore</string>
     <string name="chat_archive_export">Export chat</string>
+    <string name="chat_archive_save_to_file">Save to file</string>
     <string name="chat_archive_delete_forever">Delete forever</string>
     <string name="chat_archive_row_menu_cd">More actions</string>
     <string name="chat_archive_ran_after_archiving">Run finished after archiving</string>
@@ -229,4 +236,26 @@
         <item quantity="one">Archived %1$d y ago</item>
         <item quantity="other">Archived %1$d y ago</item>
     </plurals>
+    <!-- Chat error banner: failures the app words itself. -->
+    <string name="chat_image_blocked_model">This model can\'t read images. Turn on image support for it on the Models screen, or switch to a vision-capable model.</string>
+    <string name="chat_image_blocked_cloud">Images stay on your device and aren\'t sent to cloud models. Use a pipeline that starts with an on-device step to send a picture.</string>
+    <string name="chat_image_blocked_pipeline">This pipeline has no on-device step that can read an image. Pick a pipeline with an on-device model step to send a picture.</string>
+    <string name="chat_error_no_active_model">No active model. Open Settings → Models to install or activate one.</string>
+    <string name="chat_error_unknown">Unknown error</string>
+    <string name="chat_error_model_file_missing">Model file not found at: %1$s. Please download it again.</string>
+    <!-- Chat names and archive failures. -->
+    <string name="chat_untitled">New conversation</string>
+    <string name="chat_archive_error_read_failed">Your archived chats are still on the device — reading them failed. Try again.</string>
+    <string name="chat_model_placeholder">Local model</string>
+    <string name="chat_pipeline_placeholder">default</string>
+    <string name="chat_interrupted_unknown_step">unknown step</string>
+    <!-- Why a chat file could not be imported; each completes chat_import_failed. -->
+    <string name="chat_import_reason_not_json">the file is not valid JSON</string>
+    <string name="chat_import_reason_not_export">the file is not a chat export</string>
+    <string name="chat_import_reason_no_messages">the file has no list of messages</string>
+    <string name="chat_import_reason_not_a_message">message %1$d of the file is not a message</string>
+    <string name="chat_import_reason_unreadable">the file could not be read</string>
+    <!-- SYSTEM rows of the chat history, written in the interface language when saved; a model reads them in the language of the conversation (ChatSystemRows). -->
+    <string name="chat_system_tool_denied">Tool \'%1$s\' denied by user.</string>
+    <string name="chat_system_clarification_reply_not_delivered">Reply was not delivered — the clarification had already been resolved with a default answer.</string>
 </resources>

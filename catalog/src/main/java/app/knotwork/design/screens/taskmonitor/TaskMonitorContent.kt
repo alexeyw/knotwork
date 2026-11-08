@@ -26,7 +26,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -34,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +43,7 @@ import app.knotwork.design.components.chips.KnotworkFilterChip
 import app.knotwork.design.components.chips.Status
 import app.knotwork.design.components.chips.StatusPill
 import app.knotwork.design.components.misc.EmptyState
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -174,7 +175,7 @@ private fun FilterRow(filter: TaskFilterKind, callbacks: TaskMonitorCallbacks) {
     ) {
         items(TaskFilterKind.entries.toTypedArray()) { kind ->
             KnotworkFilterChip(
-                label = kind.displayName,
+                label = stringResource(kind.labelRes),
                 selected = filter == kind,
                 onClick = { callbacks.onFilterChanged(kind) },
             )

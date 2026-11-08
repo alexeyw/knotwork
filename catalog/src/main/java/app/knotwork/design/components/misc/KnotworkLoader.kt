@@ -11,16 +11,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -65,12 +67,13 @@ private const val LOADER_MAX_ALPHA = 1.0f
  */
 @Composable
 fun KnotworkLoader(modifier: Modifier = Modifier) {
+    val loading = stringResource(R.string.knotwork_loading)
     if (KnotworkTheme.a11y.reducedMotion()) {
         Text(
             text = "•••",
             style = KnotworkTextStyles.LabelLg,
             color = KnotworkTheme.extended.onSurfaceMuted,
-            modifier = modifier.semantics { contentDescription = "Loading" },
+            modifier = modifier.semantics { contentDescription = loading },
         )
         return
     }
@@ -78,7 +81,7 @@ fun KnotworkLoader(modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
-        modifier = modifier.semantics { contentDescription = "Loading" },
+        modifier = modifier.semantics { contentDescription = loading },
     ) {
         LoaderDot(transition = transition, color = KnotworkPalette.Accent300, delayMs = 0)
         LoaderDot(transition = transition, color = KnotworkPalette.Accent400, delayMs = LOADER_STAGGER_MS)

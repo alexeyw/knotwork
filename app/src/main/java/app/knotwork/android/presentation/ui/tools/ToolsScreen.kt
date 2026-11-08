@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.tools
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -9,11 +10,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.knotwork.android.R
+import app.knotwork.android.domain.connection.ConnectionCheckResult
 import app.knotwork.android.domain.constants.DocumentationLinks
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpTool
 import app.knotwork.android.domain.models.ToolRisk
 import app.knotwork.android.domain.services.McpToolRouting
+import app.knotwork.android.presentation.ui.common.TestSubject
+import app.knotwork.android.presentation.ui.common.failureText
 import app.knotwork.android.presentation.ui.common.openDocumentation
 import app.knotwork.design.screens.tools.BuiltInToolRow
 import app.knotwork.design.screens.tools.McpConnectionState
@@ -43,6 +48,7 @@ fun ToolsScreen(
     onOpenAllowedDomains: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val builtInTools by remember(uiState) {
         derivedStateOf {
@@ -64,7 +70,7 @@ fun ToolsScreen(
             }
         }
     }
-    val mcpServers by remember(uiState) {
+    val mcpServers by remember(uiState, context) {
         derivedStateOf {
             val shadowing = uiState.mcpShadowing
             val serverNames = uiState.mcpServers.associate { it.url to it.config.displayName }
@@ -73,7 +79,7 @@ fun ToolsScreen(
                     id = snapshot.url,
                     url = snapshot.config.displayName,
                     toolCount = snapshot.tools.size,
-                    latencyLabel = snapshot.status.toLabel(),
+                    latencyLabel = snapshot.status.toLabel(context),
                     state = snapshot.status.toCatalogState(),
                     tools = snapshot.tools.map {
                         it.toEntry(
@@ -100,7 +106,6 @@ fun ToolsScreen(
         mcpServers = mcpServers,
     )
 
-    val context = LocalContext.current
     val callbacks = ToolsCallbacks(
         onToolToggle = { id, enabled -> viewModel.toggleLocalTool(toolName = id, isEnabled = enabled) },
         onToolClick = onOpenToolDetail,
@@ -109,6 +114,9 @@ fun ToolsScreen(
         onServerExpandToggle = { serverId -> viewModel.toggleServerExpanded(serverUrl = serverId) },
         onServerRefresh = { serverId -> viewModel.refreshServer(serverUrl = serverId) },
         onMcpToolToggle = { id, enabled -> viewModel.toggleMcpTool(toolId = id, isEnabled = enabled) },
+        onServerToolsToggle = { serverId, enabled ->
+            viewModel.setServerToolsEnabled(serverUrl = serverId, enabled = enabled)
+        },
         onMcpToolClick = onOpenToolDetail,
         onAddServerOpen = onAddMcpServer,
         onOpenAllowedDomains = onOpenAllowedDomains,
@@ -126,13 +134,21 @@ fun ToolsScreen(
 private fun McpConnectionStatus.toCatalogState(): McpConnectionState = when (this) {
     McpConnectionStatus.Connecting -> McpConnectionState.Syncing
     McpConnectionStatus.Connected -> McpConnectionState.Connected
-    is McpConnectionStatus.Error -> McpConnectionState.Error
+    is McpConnectionStatus.Error, McpConnectionStatus.Interrupted -> McpConnectionState.Error
 }
 
-private fun McpConnectionStatus.toLabel(): String = when (this) {
-    McpConnectionStatus.Connecting -> "connecting…"
-    McpConnectionStatus.Connected -> "ok"
-    is McpConnectionStatus.Error -> reason
+/**
+ * The server row's status line in the interface language. A failure reads as the form's
+ * connection check words it.
+ *
+ * @param context Resource resolution.
+ * @return The line.
+ */
+internal fun McpConnectionStatus.toLabel(context: Context): String = when (this) {
+    McpConnectionStatus.Connecting -> context.getString(R.string.tools_mcp_status_connecting)
+    McpConnectionStatus.Connected -> context.getString(R.string.tools_mcp_status_ok)
+    is McpConnectionStatus.Error -> failureText(context, ConnectionCheckResult.Failed(host, failure), TestSubject.Mcp)
+    McpConnectionStatus.Interrupted -> context.getString(R.string.tools_mcp_status_interrupted)
 }
 
 /**

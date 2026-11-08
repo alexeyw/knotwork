@@ -5,7 +5,7 @@ agent for Android: what data the app handles, how it is protected, what is sent
 off-device when the user opts in to crash reporting, and how to report a
 vulnerability you discover.
 
-The project is currently a **pre-release (0.13.0)** and is published primarily
+The project is currently a **pre-release (0.14.0)** and is published primarily
 for review and experimentation. There are no stability guarantees for storage
 formats, APIs, or persisted data across versions.
 
@@ -15,12 +15,12 @@ formats, APIs, or persisted data across versions.
 
 Only the latest release line is supported. As a solo pre-release project there
 are no maintained back-release branches or long-term-support tags; fixes land on
-the current `0.13.x` line and on the latest commit on `main`.
+the current `0.14.x` line and on the latest commit on `main`.
 
 | Version            | Supported          |
 |--------------------|--------------------|
-| `0.13.x` (latest)  | :white_check_mark: |
-| `< 0.13.0`         | :x:                |
+| `0.14.x` (latest)  | :white_check_mark: |
+| `< 0.14.0`         | :x:                |
 
 ---
 
@@ -885,7 +885,12 @@ oversight — and it works as follows:
 - The backstop is the **human-in-the-loop gate**: before a `SENSITIVE` or
   `DESTRUCTIVE` tool executes, the chat surfaces a confirmation card showing
   the **tool name and the exact arguments** the model produced, and the run
-  suspends until the user approves or denies. Above the call the card shows
+  suspends until the user approves or denies. The arguments are laid out one
+  per line but otherwise shown as the call receives them — no escape, number
+  or key rewritten, and text that is not JSON shown as it came — and a
+  character that would not show (a direction override, a zero-width space)
+  appears as its `\uXXXX` escape, so an argument cannot reorder or hide part
+  of itself. Above the call the card shows
   the request the run was started with, labelled by where it came from — the
   user's message, shared text, a trigger's prompt, another app's request, or
   an instruction the agent scheduled, which is never labelled as the user's —

@@ -281,15 +281,14 @@ class ChatHomeReattachDelegate(
 
     /**
      * Resolves the display label of the node [PipelineRun.currentNodeId] points
-     * at by loading the run's pipeline graph. Falls back to
-     * [INTERRUPTED_UNKNOWN_NODE_LABEL] when the run never reached a node, the
-     * pipeline was deleted, or the node id no longer exists in the graph.
+     * at by loading the run's pipeline graph. `null` when the run never reached
+     * a node, the pipeline was deleted, or the node id no longer exists in the
+     * graph — the card words that case in the interface language.
      */
-    private suspend fun resolveNodeLabel(run: PipelineRun): String {
-        val nodeId = run.currentNodeId ?: return INTERRUPTED_UNKNOWN_NODE_LABEL
-        val graph = run.pipelineId?.let { pipelineRepository.getPipelineById(it) }
-            ?: return INTERRUPTED_UNKNOWN_NODE_LABEL
-        val node = graph.nodes.firstOrNull { it.id == nodeId } ?: return INTERRUPTED_UNKNOWN_NODE_LABEL
+    private suspend fun resolveNodeLabel(run: PipelineRun): String? {
+        val nodeId = run.currentNodeId ?: return null
+        val graph = run.pipelineId?.let { pipelineRepository.getPipelineById(it) } ?: return null
+        val node = graph.nodes.firstOrNull { it.id == nodeId } ?: return null
         return node.label.ifBlank { node.type.name }
     }
 
@@ -342,13 +341,6 @@ class ChatHomeReattachDelegate(
     }
 
     companion object {
-        /**
-         * Fallback node label rendered on the interrupted-run card when the run
-         * stopped before reaching any node, the pipeline was deleted, or the
-         * recorded node id no longer exists in the (since-edited) graph.
-         */
-        const val INTERRUPTED_UNKNOWN_NODE_LABEL: String = "unknown step"
-
         /** Milliseconds in one hour, for the resume-window pre-check on the interrupted card. */
         private const val MILLIS_PER_HOUR: Long = 3_600_000L
     }

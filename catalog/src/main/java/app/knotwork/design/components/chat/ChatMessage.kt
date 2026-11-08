@@ -26,7 +26,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
-import app.knotwork.design.components.splitAtUnbrokenRuns
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -469,17 +468,10 @@ private fun TextBubble(
 /** A plain-text body in the bubble's text colour. */
 @Composable
 private fun BubbleText(role: ChatRole, text: String) {
-    val textColor = chatBubbleTextColor(role)
-    // A run without whitespace lays out in time that grows with its square, so a long
-    // one is drawn as consecutive texts (see `unbrokenRunCuts`); other text stays whole.
-    val pieces = remember(text) { text.splitAtUnbrokenRuns() }
-    if (pieces.size == 1) {
-        Text(text = text, style = KnotworkTextStyles.BodyBase, color = textColor)
-    } else {
-        Column {
-            for (piece in pieces) Text(text = piece, style = KnotworkTextStyles.BodyBase, color = textColor)
-        }
-    }
+    // The app's text draws a run without whitespace longer than 2 000 characters as
+    // consecutive texts. A longer message shows its preview instead, so the app hands a
+    // bubble at most 6 000 characters, under the 10 000 a text shows.
+    Text(text = text, style = KnotworkTextStyles.BodyBase, color = chatBubbleTextColor(role))
 }
 
 /**

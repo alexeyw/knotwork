@@ -63,6 +63,13 @@ For the broader layering rationale, see
   clear of the system bars. A `SnackbarHostState` a screen shows messages
   into is rendered by a host in the same file. `SnackbarHostGuardTest` fails
   a raw Material3 host, an unrendered state and an unplaced host.
+- Text is drawn through the design system's `Text`
+  (`app.knotwork.design.components.text.Text`), never Material's: laying out
+  one text costs time in the square of its longest run without whitespace,
+  whatever its line limit, and that `Text` bounds what any text lays out. A
+  screen whose point is to show a long text whole uses `WholeText` and is
+  named, with the reason, in `BoundedTextGuardTest` — as is every file that
+  composes an input field, which can be neither cut nor drawn in pieces.
 
 ## Coroutines & Flow
 
@@ -120,6 +127,43 @@ For the broader layering rationale, see
   A value baked into the literal (`"… $path"`), or a message held in a
   variable, would be sent. `TimberMessageTemplateKonsistTest` fails any other
   shape.
+
+## Interface text
+
+- Every text the interface shows is a **string resource**, translated into each
+  language the app ships (`localeFilters` in `app/build.gradle.kts`). A sentence
+  written into Kotlin shows in English in every language.
+  `DisplayedLiteralGuardTest` fails a literal that reads like words in the code
+  that draws interface; `CatalogStringsWiringTest` fails a design-system English
+  default the app never replaces with a resource.
+- A ViewModel outlives the screen's re-creation in a new language, so text it
+  resolves once and keeps stays in the old one. Hand the screen a resource id or
+  a typed value and resolve it there; text a ViewModel must keep is rebuilt when
+  the configuration's locales change (`KeyedCache`).
+- A new string gets its translation in the same change. Lint's
+  `MissingTranslation`, an error in both modules, fails a string missing from a
+  shipped language — except while a language's translation lands over several
+  changes: then lint's check is off, `config/l10n/untranslated-<lang>.txt` names
+  what that language still misses, and `TranslationCoverageTest` fails a string
+  missing from any shipped language and not on its list (the list only shrinks;
+  a language without one must be complete). It also fails a translation that only
+  copies its English unless `config/l10n/identical-<lang>.txt` names it.
+- What a model reads is not translated: system prompts, tool descriptions and
+  tool results stay in English, as do the tokens a model's output is matched
+  against (route labels, intent classes). The system rows a chat shows (a tool
+  call you denied, how a run ended) are written in the interface language when
+  saved, through `ChatSystemRows` or the run's own copy, and kept as written:
+  the model reads them in the language of the conversation. The hidden rows the
+  tool gate records for the model (an observation, a denial, a blocked call)
+  are tool results and stay English.
+- A failure the app words itself travels as a type, not a sentence: `domain` and
+  `data` hand over what happened (`ModelLoadError`, `ConnectionFailure`,
+  `TestProbeFailure`), and the screen names it. Text an engine, a server or the
+  platform wrote is shown as it came.
+- A name the app gives what it creates — a new chat, a pipeline, its first
+  nodes, a copy — comes from `DefaultNames` and is stored as written, in the
+  language of the moment. Never compare a stored name with a literal: a new
+  chat is recognised by `DefaultNames.isNewChat`, in every shipped language.
 
 ## Dependency injection (Hilt)
 

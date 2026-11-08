@@ -8,11 +8,13 @@ import app.knotwork.android.data.mappers.toDomain
 import app.knotwork.android.data.mappers.toEntity
 import app.knotwork.android.domain.models.ChatHistorySummary
 import app.knotwork.android.domain.models.ChatImportException
+import app.knotwork.android.domain.models.ChatImportReason
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.services.AttachmentStore
+import app.knotwork.android.domain.services.DefaultNames
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -36,12 +38,15 @@ import javax.inject.Singleton
  *   the on-disk image when its owning message or session is removed. File
  *   deletion is best-effort: a failure is tolerated because the orphan-cleanup
  *   sweep reclaims any leftover file later.
+ * @property defaultNames The name of a chat this repository creates — one a message
+ *   arrives in first, or an imported file that names none — in the interface language.
  */
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
     private val chatDao: ChatDao,
     private val chatHistorySummaryDao: ChatHistorySummaryDao,
     private val attachmentStore: AttachmentStore,
+    private val defaultNames: DefaultNames,
 ) : ChatRepository {
 
     @Volatile
@@ -63,7 +68,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatDao.insertSession(
                     ChatSessionEntity(
                         id = message.sessionId,
-                        name = "Chat " + message.sessionId.take(NEW_SESSION_NAME_SUFFIX_LENGTH),
+                        name = defaultNames.chatWithId(message.sessionId.take(NEW_SESSION_NAME_SUFFIX_LENGTH)),
                         updatedAt = message.timestamp,
                     ),
                 )
@@ -174,28 +179,28 @@ class ChatRepositoryImpl @Inject constructor(
      * device's own notices and tool observations, which this app would never write for
      * a conversation it did not run.
      *
-     * @throws ChatImportException with an app-written reason; the file's text is never
-     *   part of it.
+     * @throws ChatImportException with a typed reason the screen words; the file's text
+     *   is never part of it.
      */
     private fun parseChatFile(json: String, now: Long): Pair<String, List<ImportedRow>> {
         val trimmed = json.trim()
-        var sessionName = DEFAULT_IMPORTED_CHAT_NAME
+        var sessionName = defaultNames.importedChat()
         val messagesArray: JSONArray = try {
             when {
                 trimmed.startsWith("{") -> {
                     val root = JSONObject(trimmed)
                     sessionName = root.optString("sessionName").takeIf { it.isNotBlank() } ?: sessionName
-                    root.optJSONArray("messages") ?: throw ChatImportException(NO_MESSAGES)
+                    root.optJSONArray("messages") ?: throw ChatImportException(ChatImportReason.NoMessages)
                 }
                 trimmed.startsWith("[") -> JSONArray(trimmed)
-                else -> throw ChatImportException(NOT_A_CHAT_EXPORT)
+                else -> throw ChatImportException(ChatImportReason.NotAChatFile)
             }
         } catch (e: JSONException) {
-            throw ChatImportException(NOT_VALID_JSON, e)
+            throw ChatImportException(ChatImportReason.NotJson, e)
         }
         val rows = (0 until messagesArray.length()).mapNotNull { i ->
             val item = messagesArray.optJSONObject(i)
-                ?: throw ChatImportException("message ${i + 1} of the file is not a message")
+                ?: throw ChatImportException(ChatImportReason.NotAMessage(position = i + 1))
             val roleStr = item.optString("role").ifBlank { Role.USER.name }
             val role = Role.entries.firstOrNull { it.name == roleStr } ?: Role.USER
             if (role !in IMPORTED_ROLES) return@mapNotNull null
@@ -249,20 +254,9 @@ class ChatRepositoryImpl @Inject constructor(
         const val NEW_SESSION_NAME_SUFFIX_LENGTH: Int = 6
 
         /**
-         * Default name assigned to a chat session created via [importChat] when the
-         * incoming document carries no `sessionName` field. Mirrors the legacy
-         * `ChatViewModel.DEFAULT_IMPORTED_CHAT_NAME` so behaviour is preserved.
-         */
-        const val DEFAULT_IMPORTED_CHAT_NAME: String = "Imported Chat"
-
-        /**
          * The roles a chat file may contribute. `SYSTEM` rows — the source device's
          * notices and tool observations — are left out.
          */
         val IMPORTED_ROLES: Set<Role> = setOf(Role.USER, Role.AGENT)
-
-        private const val NOT_VALID_JSON = "the file is not valid JSON"
-        private const val NOT_A_CHAT_EXPORT = "the file is not a chat export"
-        private const val NO_MESSAGES = "the file has no list of messages"
     }
 }

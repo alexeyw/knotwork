@@ -26,7 +26,7 @@ class ValidationAutoFixTest {
     @Test
     fun `given no errors when apply then graph is unchanged`() {
         val original = pipeline(nodes = listOf(node("n1", NodeType.INPUT)))
-        val outcome = ValidationAutoFix.apply(original, errors = emptyList())
+        val outcome = fix(original, errors = emptyList())
         assertTrue(outcome.unchanged)
         assertEquals(original, outcome.graph)
     }
@@ -34,7 +34,7 @@ class ValidationAutoFixTest {
     @Test
     fun `given MissingInput when apply then INPUT node is inserted`() {
         val original = pipeline(nodes = listOf(node("n1", NodeType.OUTPUT)))
-        val outcome = ValidationAutoFix.apply(original, errors = listOf(PipelineValidationError.MissingInput))
+        val outcome = fix(original, errors = listOf(PipelineValidationError.MissingInput))
         assertEquals(2, outcome.graph.nodes.size)
         assertNotNull(outcome.graph.nodes.firstOrNull { it.type == NodeType.INPUT })
         assertEquals(listOf("add-input"), outcome.appliedRecipes)
@@ -43,7 +43,7 @@ class ValidationAutoFixTest {
     @Test
     fun `given MissingOutput when apply then OUTPUT node is inserted below the lowest existing`() {
         val original = pipeline(nodes = listOf(node("n1", NodeType.INPUT, y = 50f)))
-        val outcome = ValidationAutoFix.apply(original, errors = listOf(PipelineValidationError.MissingOutput))
+        val outcome = fix(original, errors = listOf(PipelineValidationError.MissingOutput))
         val output = outcome.graph.nodes.firstOrNull { it.type == NodeType.OUTPUT }
         assertNotNull(output)
         assertTrue("OUTPUT y=${output!!.y} should be below INPUT y=50", output.y > 50f)
@@ -59,7 +59,7 @@ class ValidationAutoFixTest {
                 node("output", NodeType.OUTPUT),
             ),
         )
-        val outcome = ValidationAutoFix.apply(original, errors = listOf(PipelineValidationError.MultipleInputs))
+        val outcome = fix(original, errors = listOf(PipelineValidationError.MultipleInputs))
         val inputs = outcome.graph.nodes.filter { it.type == NodeType.INPUT }
         assertEquals(1, inputs.size)
         assertEquals("first", inputs.single().id)
@@ -74,7 +74,7 @@ class ValidationAutoFixTest {
                 node("high", NodeType.CLOUD, y = 50f),
             ),
         )
-        val outcome = ValidationAutoFix.apply(original, errors = listOf(PipelineValidationError.DisconnectedInput))
+        val outcome = fix(original, errors = listOf(PipelineValidationError.DisconnectedInput))
         assertEquals(1, outcome.graph.connections.size)
         val edge = outcome.graph.connections.single()
         assertEquals("input", edge.sourceNodeId)
@@ -91,7 +91,7 @@ class ValidationAutoFixTest {
                 node("high", NodeType.CLOUD, y = 50f),
             ),
         )
-        val outcome = ValidationAutoFix.apply(original, errors = listOf(PipelineValidationError.DisconnectedOutput))
+        val outcome = fix(original, errors = listOf(PipelineValidationError.DisconnectedOutput))
         val edge = outcome.graph.connections.singleOrNull()
         assertNotNull(edge)
         // Bottommost (largest y) peer that's not OUTPUT is "low" (y = 200).
@@ -104,7 +104,7 @@ class ValidationAutoFixTest {
         val original = pipeline(
             nodes = listOf(node("input", NodeType.INPUT), node("output", NodeType.OUTPUT)),
         )
-        val outcome = ValidationAutoFix.apply(original, errors = listOf(PipelineValidationError.HasCycles))
+        val outcome = fix(original, errors = listOf(PipelineValidationError.HasCycles))
         assertTrue(outcome.unchanged)
     }
 
@@ -117,7 +117,7 @@ class ValidationAutoFixTest {
             PipelineValidationError.MissingInput,
             PipelineValidationError.DisconnectedInput,
         )
-        val outcome = ValidationAutoFix.apply(original, errors = errors)
+        val outcome = fix(original, errors = errors)
         // The MissingInput recipe ran first (added the INPUT), then DisconnectedInput
         // saw the new INPUT and wired it up to the OUTPUT peer.
         assertEquals(listOf("add-input", "connect-input"), outcome.appliedRecipes)
@@ -143,4 +143,8 @@ class ValidationAutoFixTest {
         val graph = pipeline(nodes = listOf(node("the-input", NodeType.INPUT)))
         assertEquals("the-input", PipelineValidationError.DisconnectedInput.focusableNodeId(graph))
     }
+
+    /** Runs the auto-fix with the English labels of the nodes it adds. */
+    private fun fix(graph: PipelineGraph, errors: List<PipelineValidationError>): AutoFixOutcome =
+        ValidationAutoFix.apply(graph, errors, inputLabel = "Input", outputLabel = "Output")
 }

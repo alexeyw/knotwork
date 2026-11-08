@@ -56,6 +56,7 @@
     <string name="settings_help_resume_max_age_hours">How stale a parked run may be and still resume. Past it the run is dropped, because its gathered context no longer holds.</string>
     <string name="settings_help_background_approval_window_hours">How long a background run waits for you to approve a tool call. Unanswered past it, the run ends rather than waiting forever.</string>
     <string name="settings_help_crash_reporting_enabled">Off, nothing leaves the device. On, crashes plus warning and error log lines go out — never your messages, prompts or keys.</string>
+    <string name="settings_help_language">The language of the app\'s screens. What a model reads stays in English: system prompts, tool descriptions and tool results.</string>
     <string name="settings_help_trace_retention_runs_per_session">How many past runs keep their step-by-step trace in a chat. Older traces are dropped; the messages themselves stay.</string>
     <string name="settings_help_trace_retention_max_age_days">How long a trace is kept before it is dropped, whatever the per-chat count. Bounds what accumulates on disk.</string>
     <string name="settings_help_temperature">Higher values make the on-device model\'s answers more varied and surprising; lower values keep them predictable.</string>

@@ -5,12 +5,16 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolParameterDescriptor
 import ai.koog.agents.core.tools.ToolParameterType
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.mcp.metadata.McpServerInfo
 import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpServerConfig
 import io.ktor.client.HttpClient
 import io.mockk.every
 import io.mockk.mockk
+import io.modelcontextprotocol.kotlin.sdk.client.Client
+import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpError
 import io.modelcontextprotocol.kotlin.sdk.shared.Transport
+import io.modelcontextprotocol.kotlin.sdk.types.McpException
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -37,6 +41,8 @@ class KoogMcpClientTest {
         val session = constructor.newInstance(
             mockk<HttpClient>(relaxed = true),
             mockk<Transport>(relaxed = true),
+            mockk<Client>(relaxed = true),
+            McpServerInfo(url = "http://stub.invalid/mcp", command = ""),
             mockRegistry,
         )
         sessionField(client).set(client, session)
@@ -473,5 +479,29 @@ class KoogMcpClientTest {
 
         /** How much of the original text a clamped description must still start with. */
         const val DESCRIPTION_PREFIX_CHARS = 1_000
+    }
+
+    @Test
+    fun `given the transport's 404 wrapped by the SDK when checked then it is a closed-session answer`() {
+        val wrapped =
+            McpException(code = -32603, message = "Error while sending message", cause = StreamableHttpError(404, ""))
+
+        assertTrue(KoogMcpClient.isClosedSessionAnswer(wrapped))
+    }
+
+    @Test
+    fun `given another status or only text when checked then it is not a closed-session answer`() {
+        assertFalse(KoogMcpClient.isClosedSessionAnswer(McpException(code = -1, cause = StreamableHttpError(500, ""))))
+        // A server's 404 body is whatever it chose to send; the text never decides.
+        assertFalse(KoogMcpClient.isClosedSessionAnswer(IllegalStateException("HTTP 404 Session not found")))
+    }
+
+    @Test
+    fun `given a cause chain that loops when checked then the check ends`() {
+        val first = IllegalStateException("a")
+        val second = IllegalStateException("b", first)
+        first.initCause(second)
+
+        assertFalse(KoogMcpClient.isClosedSessionAnswer(first))
     }
 }

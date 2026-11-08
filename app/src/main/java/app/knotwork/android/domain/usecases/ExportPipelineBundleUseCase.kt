@@ -59,9 +59,9 @@ class ExportPipelineBundleUseCase @Inject constructor(
                 ?: return Result.failure(
                     PipelineBundleExportException(
                         if (id == rootPipelineId) {
-                            "Root pipeline \"$id\" was not found."
+                            BundleExportProblem.RootNotFound(id)
                         } else {
-                            "Referenced pipeline \"$id\" could not be resolved for export."
+                            BundleExportProblem.ReferenceNotFound(id)
                         },
                     ),
                 )
@@ -70,8 +70,7 @@ class ExportPipelineBundleUseCase @Inject constructor(
             if (collected.size > PipelineBundleJsonSerializer.MAX_BUNDLE_PIPELINES) {
                 return Result.failure(
                     PipelineBundleExportException(
-                        "Dependency closure exceeds the limit of " +
-                            "${PipelineBundleJsonSerializer.MAX_BUNDLE_PIPELINES} pipelines.",
+                        BundleExportProblem.TooManyPipelines(PipelineBundleJsonSerializer.MAX_BUNDLE_PIPELINES),
                     ),
                 )
             }
@@ -102,6 +101,31 @@ class ExportPipelineBundleUseCase @Inject constructor(
  * the root is missing, a `PIPELINE` dependency is unresolvable, or the closure
  * exceeds the pipeline limit.
  *
- * @param message Human-readable reason suitable for surfacing to the UI.
+ * @property problem Why, for the screen to word in the interface language.
  */
-class PipelineBundleExportException(message: String) : Exception(message)
+class PipelineBundleExportException(val problem: BundleExportProblem) : Exception(problem.toString())
+
+/** Why a pipeline bundle could not be exported. */
+sealed interface BundleExportProblem {
+
+    /**
+     * The pipeline being exported is gone.
+     *
+     * @property pipelineId Its id.
+     */
+    data class RootNotFound(val pipelineId: String) : BundleExportProblem
+
+    /**
+     * A pipeline the exported one calls is gone.
+     *
+     * @property pipelineId The called pipeline's id.
+     */
+    data class ReferenceNotFound(val pipelineId: String) : BundleExportProblem
+
+    /**
+     * The exported pipeline and the pipelines it calls are more than one bundle holds.
+     *
+     * @property limit How many one bundle holds.
+     */
+    data class TooManyPipelines(val limit: Int) : BundleExportProblem
+}

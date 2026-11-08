@@ -64,10 +64,10 @@ class DownloadedModelInstaller @Inject constructor(
          * another attempt finds the part complete and only repeats the check; from a host that
          * names no length, it downloads the file again.
          *
-         * @property message What went wrong, for the download's failure output.
-         * @property cause Which step stopped it.
+         * @property cause Which step stopped it — the download worker words it for the
+         *   failure output, in the interface language.
          */
-        data class NotInstalled(val message: String, val cause: Cause) : Result
+        data class NotInstalled(val cause: Cause) : Result
 
         /** The step that kept a file from being installed. */
         enum class Cause {
@@ -113,7 +113,7 @@ class DownloadedModelInstaller @Inject constructor(
                 Timber.w("Downloaded model file does not match the SHA-256 its source published; deleted")
                 Result.Rejected(publishedSha256 = check.publishedSha256, actualSha256 = check.actualSha256)
             }
-            DownloadedModelCheck.Unreadable -> Result.NotInstalled(UNREADABLE_MESSAGE, Result.Cause.UNREADABLE)
+            DownloadedModelCheck.Unreadable -> Result.NotInstalled(Result.Cause.UNREADABLE)
             is DownloadedModelCheck.Verified ->
                 place(part, File(downloaded.targetPath), fileName, sourceUrl, check.hash, verified = true)
             is DownloadedModelCheck.Unverified ->
@@ -140,7 +140,7 @@ class DownloadedModelInstaller @Inject constructor(
         hash: ModelFileHash?,
         verified: Boolean,
     ): Result {
-        if (!part.renameTo(target)) return Result.NotInstalled(MOVE_FAILED_MESSAGE, Result.Cause.NOT_MOVED)
+        if (!part.renameTo(target)) return Result.NotInstalled(Result.Cause.NOT_MOVED)
         registerDownloadedModel(
             fileName = fileName,
             path = target.absolutePath,
@@ -155,9 +155,4 @@ class DownloadedModelInstaller @Inject constructor(
     /** Whether this hash was computed over [file] as it is on disk now. */
     private fun ModelFileHash.describesFile(file: File): Boolean =
         file.isFile && describes(sizeBytes = file.length(), modifiedAtMs = file.lastModified())
-
-    private companion object {
-        const val UNREADABLE_MESSAGE = "The downloaded file could not be read to check it."
-        const val MOVE_FAILED_MESSAGE = "Could not move the downloaded file into place."
-    }
 }

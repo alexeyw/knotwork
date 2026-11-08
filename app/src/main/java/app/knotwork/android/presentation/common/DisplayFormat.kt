@@ -1,7 +1,5 @@
 package app.knotwork.android.presentation.common
 
-import java.util.Locale
-
 /**
  * Shared display formatters used by multiple screens, so byte sizes and token
  * estimates render identically across the app instead of drifting between
@@ -21,19 +19,20 @@ object DisplayFormat {
 
     /**
      * Formats a byte count as a human-readable size (`"512 B"` / `"1.4 KB"` /
-     * `"14.2 MB"` / `"2.1 GB"`) in the device locale.
+     * `"14.2 MB"` / `"2.1 GB"` in English) in the language of [units].
      *
      * @param bytes Non-negative byte count.
+     * @param units Unit names and number style of the interface language.
      * @return The largest sensible unit with one decimal place.
      */
-    fun formatBytes(bytes: Long): String {
-        if (bytes < BYTES_PER_KB) return "$bytes B"
+    fun formatBytes(bytes: Long, units: ByteUnits): String {
+        if (bytes < BYTES_PER_KB) return units.inBytes(bytes.toString())
         val kb = bytes / BYTES_PER_KB
-        if (kb < BYTES_PER_KB) return String.format(Locale.getDefault(), "%.1f KB", kb)
+        if (kb < BYTES_PER_KB) return units.inKilobytes(units.number(kb, decimals = 1))
         val mb = kb / BYTES_PER_KB
-        if (mb < BYTES_PER_KB) return String.format(Locale.getDefault(), "%.1f MB", mb)
+        if (mb < BYTES_PER_KB) return units.inMegabytes(units.number(mb, decimals = 1))
         val gb = mb / BYTES_PER_KB
-        return String.format(Locale.getDefault(), "%.1f GB", gb)
+        return units.inGigabytes(units.number(gb, decimals = 1))
     }
 
     /**

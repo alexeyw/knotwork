@@ -3,12 +3,12 @@ package app.knotwork.android.presentation.ui.splash
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.knotwork.android.R
 import app.knotwork.android.domain.models.InitFailureKind
 import app.knotwork.android.domain.models.InitProgress
 import app.knotwork.android.domain.models.InitStage
 import app.knotwork.android.domain.usecases.AppInitializationUseCase
 import app.knotwork.android.domain.usecases.ResetLockedDatabaseUseCase
+import app.knotwork.design.R
 import app.knotwork.design.components.dialogs.typedConfirmMatches
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -104,7 +104,7 @@ class SplashViewModel @Inject constructor(
     fun confirmReset() {
         val state = _uiState.value
         if (!state.isDataLocked || state.isResetting) return
-        val keyword = appContext.getString(R.string.destructive_typed_keyword)
+        val keyword = appContext.getString(R.string.knotwork_typed_confirm_word)
         if (!typedConfirmMatches(input = state.resetTypedInput, keyword = keyword)) return
 
         initJob?.cancel()
@@ -137,20 +137,20 @@ private fun SplashUiState.merge(progress: InitProgress): SplashUiState {
     }
     return when (val stage = progress.stage) {
         is InitStage.Done -> SplashUiState(
-            message = progress.message,
+            stage = stage,
             progressFraction = 1f,
             isDone = true,
             errorMessage = null,
         )
         is InitStage.Failed -> SplashUiState(
-            message = progress.message,
+            stage = stage.failedStage,
             progressFraction = fraction,
             isDone = false,
             errorMessage = stage.cause,
             isDataLocked = stage.failureKind == InitFailureKind.DB_PASSPHRASE_UNAVAILABLE,
         )
         else -> SplashUiState(
-            message = progress.message,
+            stage = stage,
             progressFraction = fraction,
             isDone = false,
             errorMessage = null,

@@ -1,5 +1,8 @@
 package app.knotwork.design.screens.tools
 
+import androidx.annotation.StringRes
+import app.knotwork.design.R
+
 /**
  * Visual variant of the tools surface:
  *  - `Empty` is reserved for the (rare) state where neither built-in
@@ -145,20 +148,46 @@ data class McpHeaderRow(val key: String = "", val value: String = "")
 /**
  * Authentication scheme selector surfaced in the MCP server form.
  *
- * @property label user-visible chip label.
+ * @property labelRes user-visible chip label. Bearer and Basic are the HTTP
+ *   scheme names and read the same in every language.
  */
-enum class McpAuthSelector(val label: String) {
+enum class McpAuthSelector(@StringRes val labelRes: Int) {
     /** No auth header sent. */
-    NONE(label = "None"),
+    NONE(labelRes = R.string.knotwork_mcp_auth_none),
 
     /** `Authorization: Bearer <token>`. */
-    BEARER(label = "Bearer"),
+    BEARER(labelRes = R.string.knotwork_mcp_auth_bearer),
 
     /** `Authorization: Basic <base64(username:password)>`. */
-    BASIC(label = "Basic"),
+    BASIC(labelRes = R.string.knotwork_mcp_auth_basic),
 
     /** Custom header carrying an API key (header name supplied by the user). */
-    API_KEY(label = "API key"),
+    API_KEY(labelRes = R.string.knotwork_mcp_auth_api_key),
+}
+
+/**
+ * What is wrong with the URL typed into the MCP server form. A value, not a
+ * sentence: the form writes it in the interface language.
+ */
+sealed interface McpUrlProblem {
+    /** The field is empty. */
+    data object Required : McpUrlProblem
+
+    /** The address does not start with http://, https:// or mcp://. */
+    data object MissingScheme : McpUrlProblem
+
+    /** Nothing follows the scheme. */
+    data object MissingHost : McpUrlProblem
+
+    /** An unencrypted address to a private host, not yet approved by the user. */
+    data object CleartextUnapproved : McpUrlProblem
+
+    /**
+     * Another saved server has this URL.
+     *
+     * @property label That server's name, or its URL when it has none.
+     */
+    data class Collision(val label: String) : McpUrlProblem
 }
 
 /**
@@ -170,7 +199,7 @@ enum class McpAuthSelector(val label: String) {
  * edited) flows.
  *
  * @property url the URL field (required).
- * @property urlError inline validation error for [url]; null when valid.
+ * @property urlError what is wrong with [url]; null when valid.
  * @property name optional display label; rendered alongside the URL.
  * @property transport active transport selection; a new server starts on
  * Streamable HTTP, the specification's current transport.
@@ -185,7 +214,7 @@ enum class McpAuthSelector(val label: String) {
  */
 data class AddMcpServerForm(
     val url: String = "",
-    val urlError: String? = null,
+    val urlError: McpUrlProblem? = null,
     val name: String = "",
     val transport: McpTransportOption = McpTransportOption.StreamableHttp,
     val authType: McpAuthSelector = McpAuthSelector.NONE,
@@ -233,6 +262,11 @@ class ToolsCallbacks(
     val onServerExpandToggle: (serverId: String) -> Unit = {},
     val onServerRefresh: (serverId: String) -> Unit = {},
     val onMcpToolToggle: (toolId: String, enabled: Boolean) -> Unit = { _, _ -> },
+    /**
+     * Invoked by the server row's menu to switch every tool the row lists on
+     * (`enabled = true`) or off at once. The host writes them as one change.
+     */
+    val onServerToolsToggle: (serverId: String, enabled: Boolean) -> Unit = { _, _ -> },
     val onMcpToolClick: (toolId: String) -> Unit = {},
     val onAddServerOpen: () -> Unit = {},
     val onOpenAllowedDomains: () -> Unit = {},

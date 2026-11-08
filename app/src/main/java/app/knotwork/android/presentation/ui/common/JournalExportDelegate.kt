@@ -155,7 +155,7 @@ class JournalExportDelegate(
                     withContext(ioDispatcher) { outputStream.close() }
                     JournalExportEvent.RenderFailed
                 }
-                writeJournalDocument(outputStream, document.json, ioDispatcher) ->
+                ExportDocumentHandOff.write(outputStream, document.json, ioDispatcher) ->
                     JournalExportEvent.Saved(document.entryCount)
                 else -> JournalExportEvent.SaveFailed
             }

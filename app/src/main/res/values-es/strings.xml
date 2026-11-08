@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Knotwork</string>
+    <string name="approval_channel_sensitive_name">Aprobaciones del agente</string>
+    <string name="approval_channel_sensitive_description">Confirmaciones para ejecutar herramientas sensibles.</string>
+    <string name="approval_channel_destructive_name">Aprobaciones del agente: acciones peligrosas</string>
+    <string name="approval_channel_destructive_description">Confirmaciones para ejecutar herramientas irreversibles (p. ej., enviar, eliminar, comprar).</string>
+    <string name="approval_notification_title_sensitive">Aprobación para ejecutar una herramienta</string>
+    <string name="approval_notification_title_destructive">Una acción peligrosa necesita aprobación</string>
+    <string name="approval_notification_text">El agente quiere usar %1$s. ¿Lo permites?</string>
+    <string name="approval_notification_big_text">El agente quiere usar %1$s con los argumentos:\n%2$s</string>
+    <string name="approval_notification_waiting_text">Esperando tu aprobación para usar %1$s.</string>
+    <string name="approval_notification_review_in_chat">Revisar en el chat</string>
+    <string name="approval_notification_arguments_cut">Los argumentos son más largos de lo que cabe en esta notificación. Abre el chat para leerlos completos antes de aprobar.</string>
+    <string name="approval_notification_request_line">%1$s: %2$s</string>
+    <string name="approval_notification_request_image_only">Enviaste una imagen sin texto.</string>
+    <string name="clarification_channel_name">Preguntas del agente</string>
+    <string name="clarification_channel_description">Preguntas que el agente necesita que respondas para continuar una tarea en pausa.</string>
+    <string name="clarification_notification_title">El agente necesita tu respuesta</string>
+    <string name="shortcut_new_chat_short">Nuevo chat</string>
+    <string name="shortcut_new_chat_long">Empezar un chat nuevo</string>
+    <string name="shortcut_pipelines_short">Pipelines</string>
+    <string name="shortcut_pipelines_long">Biblioteca de pipelines</string>
+    <string name="share_not_configured">Elige un pipeline para compartir en Configuración → Segundo plano y activadores.</string>
+    <string name="share_nothing_to_share">No hay nada que compartir.</string>
+    <string name="share_rate_limited">Compartiste demasiadas veces en la última hora. Vuelve a intentarlo más tarde.</string>
+    <string name="share_image_blocked_cloud">El pipeline para compartir empieza en la nube, y las imágenes se quedan en tu dispositivo.</string>
+    <string name="share_image_blocked_model_no_vision">Este modelo no puede leer imágenes. Activa la compatibilidad con imágenes en Modelos.</string>
+    <string name="share_image_blocked_no_vision_step">El pipeline para compartir no tiene ningún paso local que pueda leer imágenes.</string>
+    <string name="share_session_image_name">Imagen compartida</string>
+    <string name="share_session_content_name">Contenido compartido</string>
+    <string name="share_session_reused_name">Compartido</string>
+    <string name="tile_label">Ejecutar pipeline</string>
+    <string name="tile_duty_prompt">Ejecuta mi pipeline de guardia.</string>
+    <string name="tile_running">Ejecutando el pipeline en segundo plano…</string>
+    <string name="tile_not_configured">Elige un pipeline de Configuración rápida en Configuración → Segundo plano y activadores.</string>
+    <string name="tile_subtitle_ready">Listo</string>
+    <string name="tile_subtitle_unconfigured">Sin configurar</string>
+    <string name="more_models_active">%1$s · activo</string>
+    <string name="more_models_none">ningún modelo instalado</string>
+    <string name="more_prompts_counts" tools:ignore="PluralsCandidate">Categorías: %1$d · prompts: %2$d</string>
+    <string name="more_tasks_none">ninguna</string>
+    <string name="more_tasks_counts" tools:ignore="PluralsCandidate">En curso: %1$d · en cola: %2$d</string>
+    <string name="more_metrics_subtitle">tok/s · latencia · batería</string>
+    <string name="more_settings_subtitle">prompt del sistema · parámetros del LLM · claves</string>
+    <string name="more_about_version">v%1$s · compilación %2$d</string>
+    <string name="more_library_none">no hay preajustes guardados</string>
+    <string name="more_files_empty">sin archivos</string>
+    <string name="more_network_no_calls_yet">en el dispositivo · aún sin llamadas de red</string>
+    <string name="more_network_just_now">en línea · llamada de red hace un momento</string>
+    <string name="more_network_quiet">en el dispositivo · sin llamadas de red en los últimos %1$d min</string>
+    <plurals name="more_memory_counts">
+        <item quantity="one">%1$s fragmento · %2$s</item>
+        <item quantity="many">%1$s fragmentos · %2$s</item>
+        <item quantity="other">%1$s fragmentos · %2$s</item>
+    </plurals>
+    <plurals name="more_library_saved_presets">
+        <item quantity="one">%1$d preajuste guardado</item>
+        <item quantity="many">%1$d preajustes guardados</item>
+        <item quantity="other">%1$d preajustes guardados</item>
+    </plurals>
+    <plurals name="more_files_counts">
+        <item quantity="one">%1$d archivo · %2$s</item>
+        <item quantity="many">%1$d archivos · %2$s</item>
+        <item quantity="other">%1$d archivos · %2$s</item>
+    </plurals>
+    <string name="onboarding_skip_hint">Puedes instalar un modelo desde Configuración → Modelos</string>
+    <string name="onboarding_skip_download_continues">La descarga sigue en segundo plano</string>
+    <string name="tool_detail_server_error">Error del servidor: %1$s</string>
+    <string name="tool_detail_mcp_tool">Herramienta MCP</string>
+    <string name="tool_detail_local_tool">Herramienta local</string>
+    <string name="onboarding_error_download">La descarga falló.</string>
+    <string name="onboarding_error_load">No se pudo cargar el modelo.</string>
+    <string name="onboarding_error_setup">No se pudo configurar este escenario.</string>
+    <string name="onboarding_error_custom_url_required">Escribe la URL de un modelo para descargarlo.</string>
+    <string name="onboarding_error_custom_url_not_litertlm">Este enlace no es un archivo .litertlm. Solo los modelos .litertlm se ejecutan en el teléfono.</string>
+    <string name="tools_mcp_status_connecting">conectando…</string>
+    <string name="tools_mcp_status_ok" tools:ignore="Typos,ButtonCase">conectado</string>
+    <string name="tools_mcp_status_interrupted">Se interrumpió el intento de conexión</string>
+</resources>

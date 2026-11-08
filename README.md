@@ -3,7 +3,7 @@
 [![Check](https://github.com/alexeyw/knotwork/actions/workflows/check.yml/badge.svg)](https://github.com/alexeyw/knotwork/actions/workflows/check.yml)
 [![Instrumented](https://github.com/alexeyw/knotwork/actions/workflows/instrumented.yml/badge.svg?branch=main)](https://github.com/alexeyw/knotwork/actions/workflows/instrumented.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.13.0-orange.svg)
+![Version](https://img.shields.io/badge/version-0.14.0-orange.svg)
 ![Android API](https://img.shields.io/badge/Android-API%2034%2B-3DDC84.svg?logo=android)
 [![Google Play](https://img.shields.io/badge/Google%20Play-available-3DDC84.svg?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=app.knotwork.android)
 [![F-Droid](https://img.shields.io/f-droid/v/app.knotwork.android.svg?logo=fdroid&logoColor=white)](https://f-droid.org/packages/app.knotwork.android/)
@@ -111,8 +111,8 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   request naming any other pipeline is refused. Every request, accepted or
   refused, lands in a journal you can export.
 - The database is encrypted with SQLCipher, and API keys are sealed with AES-GCM
-  under an Android Keystore key. Usage statistics and journal exports have no
-  network path, and a build check keeps it that way. Images you attach never go
+  under an Android Keystore key. Usage statistics, journal and chat exports have
+  no network path, and a build check keeps it that way. Images you attach never go
   to a cloud model, and voice input is transcribed on the phone. The **FOSS
   build** has no proprietary dependencies.
 - Structured steps check the model's output and ask it to fix a malformed
@@ -130,8 +130,10 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   by meaning when a step reads memory, with a manager for search, provenance,
   compaction and JSON export and import. Memory search works in English — see
   [Known limitations](docs/faq.md#known-limitations).
-- Archiving a chat takes it out of the drawer without deleting it. It stays
-  readable and exportable on its own screen until you restore it.
+- A chat exports as one JSON file, to the share sheet or saved straight to a
+  folder you pick, and imports back as a new chat. Archiving a chat takes it out
+  of the drawer without deleting it. It stays readable and exportable on its own
+  screen until you restore it.
 - **Back up and restore** what you made — chats, memory, pipelines, run history,
   triggers, settings and files — as one file locked with a password you choose,
   saved wherever you pick; restore it on this phone or a new one. API keys go in
@@ -145,6 +147,10 @@ https://github.com/user-attachments/assets/2ea06de5-6832-4e0c-ad48-430f375d8b72
   and read offline; the rest open in a browser at the tag of the version you
   installed. The build fails if a link points at a heading that no longer
   exists.
+- In English, Russian and Spanish: the screens, the bundled pipelines and the
+  in-app help. Pick the language in *Settings → About → Language*, or follow the
+  phone's. What a model reads stays in English, and so do the documents that
+  open in a browser.
 
 The full feature tour lives in the [user guide](docs/user-guide.md).
 
@@ -380,7 +386,7 @@ open in a browser.
 
 ## Pre-release notice
 
-This project is currently at **version 0.13.0** and is published for review and
+This project is currently at **version 0.14.0** and is published for review and
 experimentation. Expect rough edges:
 
 - There are no stability guarantees for the public surface (Kotlin APIs,

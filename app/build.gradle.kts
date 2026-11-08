@@ -167,6 +167,10 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.kover)
+    // Screenshots of a few screens in a translation, where the app's own strings
+    // meet the design system's (`presentation/screenshots/`); every other
+    // baseline lives in `:catalog`.
+    alias(libs.plugins.roborazzi)
     // The `google-services` and `firebase-crashlytics` Gradle plugins are NOT
     // applied here unconditionally. They are proprietary and pull Google's
     // build-time tooling into the graph, which the F-Droid channel rejects.
@@ -201,8 +205,8 @@ android {
         applicationId = "app.knotwork.android"
         minSdk = 34
         targetSdk = 37
-        versionCode = 20
-        versionName = "0.13.0"
+        versionCode = 21
+        versionName = "0.14.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -342,7 +346,7 @@ android {
             signingConfig = releaseSigningConfig
             // Strip non-arm64 ABIs from the release APK. The reason is the
             // inference engine, not the API floor: `litertlm-android` ships
-            // `jni/arm64-v8a` and `jni/x86` only — it has no `armeabi-v7a`
+            // `jni/arm64-v8a` and `jni/x86_64` only — it has no `armeabi-v7a`
             // binary at all — so a 32-bit ARM device cannot run this app at any
             // `minSdk`. Shipping `armeabi-v7a` + `x86` + `x86_64` would inflate
             // the artefact by ~65 MB for zero benefit. (The earlier wording
@@ -392,6 +396,39 @@ android {
         compose = true
         buildConfig = true
         resValues = true
+    }
+
+    androidResources {
+        // The interface languages the app ships, and nothing else. Libraries carry
+        // their own translations into dozens of languages, and Android resolves a
+        // library's strings for the device's language even when the app around them
+        // is English — so a device in one of those languages could show library text
+        // (dialogs, accessibility announcements) in it; not observed in this app, it
+        // follows from resource resolution. The filter keeps the default (English)
+        // resources plus every language listed here, so a language the app is not
+        // translated into falls back to English throughout. A new interface
+        // language is added here AND gets its `values-<lang>` folders in `app` and
+        // `catalog`; `TranslationCoverageTest` reads this list.
+        localeFilters += listOf("en", "ru", "es")
+        // Lists the app's languages in the system's per-app language settings
+        // (Android 13+) and gives the in-app picker its choices, through the
+        // generated `LocaleConfig`. The default locale comes from
+        // `res/resources.properties`; the rest from the `values-<lang>` folders.
+        generateLocaleConfig = true
+    }
+
+    // Every language goes into every install. Google Play installs an app bundle's
+    // language resources by the phone's system language, so an app whose own
+    // picker chooses another language must either ship all of them or download
+    // them through Play Core ("Handling language changes", developer.android.com
+    // /guide/app-bundle/configure-base). Without this, Russian chosen in
+    // Settings → About → Language on a phone set to English finds no Russian
+    // resources in a Play install and stays English. The cost is the translations
+    // of every language in every APK; `TranslationCoverageTest` holds the line.
+    bundle {
+        language {
+            enableSplit = false
+        }
     }
 
     // AGP stamps a Google-encrypted blob of the dependency list into every
@@ -495,6 +532,11 @@ android {
         // this does not depend on the API floor). ChromeOS support is not in
         // scope for v0.1 — disable the lint check that demands an x86 binary.
         disable += "ChromeOsAbiSupport"
+        // `MissingTranslation` stays an error here and in `:catalog`. While a new
+        // language's translation lands over several changes, both scripts switch it off
+        // (`disable` of that id) and `TranslationCoverageTest` reads the language's
+        // untranslated list (`config/l10n/untranslated-<lang>.txt`) instead; the test
+        // fails a build where the switch and the lists disagree.
         // Version-freshness and deadline checks stay ENABLED, but are demoted to
         // INFORMATIONAL so they report instead of gating. Their verdict is a
         // function of an external version index (or of the calendar), not of the
@@ -1120,8 +1162,9 @@ val scanGitMetadataVocabulary by tasks.registering(ScanGitMetadataVocabularyTask
 
 // Dialog inventory gate.
 //
-// A dialog composed in `:app` cannot be photographed: Roborazzi runs in
-// `:catalog`. That is not theory — `SaveAsPresetDialog` shipped with its
+// A dialog composed in `:app` is not photographed: the design system's baselines are
+// in `:catalog`, and `:app` photographs only a few whole screens, in a translation
+// (`presentation/screenshots/`). That is not theory — `SaveAsPresetDialog` shipped with its
 // selected category chip visually indistinguishable from the unselected ones,
 // and reached a manual device run before anyone noticed, because nothing could
 // compare it against anything.
@@ -1796,12 +1839,18 @@ val bundledDocsSources: FileCollection = files(
 
 val bundledDocsAssetDirectory = layout.projectDirectory.dir("src/main/assets/docs")
 
+// The hand-written translations of the bundled documents, one directory per
+// language (`docs/<language>/<file>.md`). Sources, not outputs: the tasks read
+// them and write only each language's index beside them.
+val bundledDocsTranslations: FileCollection = fileTree(bundledDocsAssetDirectory) { include("*/*.md") }
+
 val syncBundledDocs by tasks.registering(SyncBundledDocsTask::class) {
     group = "build"
     description = "Copies the bundled documents into the app's assets and regenerates their reader index."
     repositoryRoot.set(rootProject.layout.projectDirectory)
     documents.from(bundledDocsSources)
     assetDirectory.set(bundledDocsAssetDirectory)
+    translations.from(bundledDocsTranslations)
 }
 
 val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
@@ -1810,12 +1859,18 @@ val verifyBundledDocs by tasks.registering(VerifyBundledDocsTask::class) {
     repositoryRoot.set(rootProject.layout.projectDirectory)
     documents.from(bundledDocsSources)
     assetDirectory.set(bundledDocsAssetDirectory)
+    translations.from(bundledDocsTranslations)
     committedAssets.from(fileTree(bundledDocsAssetDirectory) { include("**/*") })
     stampFile.set(layout.buildDirectory.file("reports/bundled-docs/verified.txt"))
 }
 
 verifyBundledDocs { mustRunAfter(syncBundledDocs) }
 tasks.named("check") { dependsOn(verifyBundledDocs) }
+
+// The translated-screen baselines are a gate, as `:catalog`'s are: `check` compares
+// every capture with its committed baseline instead of only rendering it. One
+// variant is enough — both flavours draw the same screens from the same sources.
+tasks.named("check") { dependsOn("verifyRoborazziFullDebug") }
 
 // Public documentation hygiene guard — moved.
 //
@@ -1924,7 +1979,13 @@ tasks.withType<Test>().configureEach {
     inputs.dir(rootProject.file("fastlane/metadata"))
         .withPropertyName("storeMetadata")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-    // `TopBarInsetGuardTest` and `SnackbarHostGuardTest` read the design system's
+    // The Roborazzi baselines of `presentation/screenshots/` live on no classpath;
+    // without this a replaced baseline leaves the test task UP-TO-DATE and the
+    // verification green (measured in `:catalog`, which declares the same).
+    inputs.dir(layout.projectDirectory.dir("src/test/snapshots"))
+        .withPropertyName("roborazziBaselines")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `TopBarInsetGuardTest`, `SnackbarHostGuardTest` and `BoundedTextGuardTest` read the design system's
     // sources as text. A `:catalog` edit usually re-runs this task through the
     // compiled classpath anyway, but an edit that leaves the bytecode as it was (a
     // modifier reordered into the same calls) would not — declared, not assumed.
@@ -1990,6 +2051,17 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/extending.md"))
         .withPropertyName("extendingGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `TranslationCoverageTest` reads the design system's string resources and the
+    // interface-text lists (it, `DisplayedLiteralGuardTest`, `CatalogStringsWiringTest`
+    // and `PresetTranslationCoverageTest`) — none on a classpath of this module, and an
+    // edit to a list changes no compiled byte. It reads this script's `localeFilters` too,
+    // declared below.
+    inputs.dir(rootProject.file("catalog/src/main/res"))
+        .withPropertyName("catalogResources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(rootProject.file("config/l10n"))
+        .withPropertyName("interfaceTextLists")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     // `ExportedComponentInventoryTest` reads every source set's manifest. A variant's
     // test task sees only its own overlays, so an export added to `src/full` left
     // `testFossDebugUnitTest` UP-TO-DATE and green — measured, with the guard wrong
@@ -2007,8 +2079,14 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/static-analysis.md"))
         .withPropertyName("staticAnalysisGuide")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-    // `FdroidSigningStripGuardTest` reads this very script. Editing it reconfigures
-    // the project but leaves this task's inputs as they were: measured, the signing
+    // `TranslationCoverageTest` holds lint's `MissingTranslation` in the catalog's build
+    // script to the untranslated lists; a build script is on no classpath.
+    inputs.file(rootProject.file("catalog/build.gradle.kts"))
+        .withPropertyName("catalogBuildScript")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `FdroidSigningStripGuardTest` and `TranslationCoverageTest` (locale filters, language
+    // splits, `MissingTranslation`) read this very script. Editing it reconfigures the
+    // project but leaves this task's inputs as they were: measured, the signing
     // assignment put back on two lines left the task UP-TO-DATE and green.
     inputs.file(layout.projectDirectory.file("build.gradle.kts"))
         .withPropertyName("appBuildScript")
@@ -2231,6 +2309,14 @@ dependencies {
     // when Clean Architecture layer boundaries regress (e.g. a `domain`
     // class importing `data`/`presentation` or the Android SDK).
     testImplementation(libs.konsist)
+    // Compose under Robolectric and Roborazzi for the translated-screen baselines
+    // in `presentation/screenshots/`, as `:catalog` takes them.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

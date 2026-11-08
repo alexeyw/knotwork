@@ -156,7 +156,7 @@ shows it or the download starts again.
 ### 3. Activate the model
 
 After the download finishes, the model shows up in the **Downloaded**
-list below the presets. Tap **Make Active** on the row you want to
+list below the presets. Tap **Activate** on the row you want to
 use. The active model is highlighted and labelled **Active**. Only
 one model can be active at a time.
 
@@ -342,15 +342,24 @@ to API keys, sampling parameters, or appearance toggles.
 ### Exporting and importing chat history
 
 The app uses standard Android share and file-picker intents, so chat
-history is portable to any app that handles JSON or plain text.
+history is portable to any app that accepts a JSON file.
 
 - **Export** — from the chat screen's top-bar overflow menu (`⋮`)
-  choose **Export chat**. The Android **Share Sheet** opens with a
-  JSON payload containing the full message history. Choose any
-  destination that accepts JSON (Files, email, a messenger, a
-  cloud-drive app, and so on). Archived chats export the same way, from
-  their own row menu on the archive screen — putting a chat away never
-  puts it out of reach.
+  choose **Export chat**. The Android **Share Sheet** opens with the
+  chat as one JSON file holding the full message history. Choose any
+  destination that accepts a file (Files, email, a messenger, a
+  cloud-drive app, and so on). The file goes as an attachment, not as
+  message text, so a chat of any length can be shared.
+- **Save to file** — the same menu's **Save to file** skips the Share
+  Sheet: the system file picker opens, you choose a folder, and the chat
+  is written there. The file is the same one **Export chat** shares,
+  byte for byte. Its suggested name is `chat-<chat name>-<date>-<time>.json`;
+  you can change it in the picker. A snackbar says when the file is
+  saved, or that it could not be.
+
+  Archived chats export and save the same way, from their own row menu
+  on the archive screen — putting a chat away never puts it out of
+  reach.
 
   The file also carries an `unfinishedRuns` list: any run of that chat
   that failed, was cancelled or was interrupted, with the error text and
@@ -361,7 +370,7 @@ history is portable to any app that handles JSON or plain text.
   produced is already there.
 - **Import** — open the drawer and tap **Import chat**. The system
   file picker opens, filtered to `application/json`. Selecting a
-  previously exported file creates a new chat session with the
+  previously exported or saved file creates a new chat session with the
   imported messages and switches to it immediately. A chat file can
   come from anyone, so the import keeps only the conversation — your
   turns and the assistant's — and leaves out the app notices and tool
@@ -398,6 +407,21 @@ headings — how far down you are, such as *42%*.
 
 The long-press menu works on the whole message, not on what the bubble
 shows.
+
+### Very long text elsewhere in the app
+
+A tool's output, an error or a memory entry can run to hundreds of
+thousands of characters. Wherever the app shows such a text in a row or a
+line — Monitoring, the console's logs, the memory list, an error message —
+it shows its first 10 000 characters and then *… 40,000 more characters*
+(the count of the rest), or, in a row of a few lines, as much as fits
+before the ellipsis. In the console, **Copy line** still copies the whole
+line.
+
+A few places show every character, however long: the arguments of a tool
+call waiting for your approval once you expand them (you approve exactly
+what will run), a question the agent asks you, a memory entry you open, a
+file preview in Files, the prompt preview, and the message reader.
 
 ### Copying a message
 
@@ -698,9 +722,10 @@ hashes have a copy button; copying always takes the full value.
 Below the fields, one sentence says what is promised: a run on **CPU** repeats
 byte for byte on this device with the same model file, seed, sampler and input;
 on **GPU** the context window must also be the same. Nothing is promised on the
-NPU, for a run that read an image, for a cloud model's answer, or on another
-device. Under each node in **Traces** and **Vars**, two chips show the first 8
-characters of its input and output hash; a tap copies all 64.
+NPU, for a run that read an image, for a cloud model's answer, on another
+device, or after an update brings another version of the on-device engine
+(LiteRT-LM). Under each node in **Traces** and **Vars**, two chips show the
+first 8 characters of its input and output hash; a tap copies all 64.
 
 Three actions follow:
 
@@ -709,7 +734,9 @@ Three actions follow:
   Tools are never run again — their recorded output stands — and cloud calls are
   skipped. A check with more than 3 calls, or 30 s or more of model time, asks
   first. If the backend, the GPU window or the model file differs from the run,
-  Verify stays off and says what to change, and where.
+  Verify stays off and says what to change, and where. A run recorded on
+  another LiteRT-LM version is not verified at all: Verify stays off and names
+  both versions, since no setting brings the old engine back.
 - **Run again with this seed** starts a new run of the same message on the same
   pipeline with the recorded seed and sampler. Memory, chat history and tool
   results are read again and tools run with the usual approvals, so the answer
@@ -770,6 +797,13 @@ a colour-coded risk pill (`READ` / `SENS` / `DEST`), and **Approve** /
 **Deny** buttons. Destructive tools also require typing **yes** into a
 confirmation field before the **Approve** button is enabled.
 
+The arguments are laid out one per line, with nested values indented, and
+each value is shown exactly as the call will receive it — no character
+escaped differently, no number rounded. Tap them to read every character.
+Arguments that are not valid JSON are shown as they arrived. A character
+that would not show — a zero-width space, a direction override — appears as
+its `\uXXXX` code, so an argument cannot hide or reorder part of itself.
+
 Above the tool call the card shows what the run was asked to do, so you
 can check the call against it — the agent may have understood you
 differently. A label says whose words they are: **You asked** for your
@@ -788,7 +822,8 @@ arrives as a notification. For read-only and sensitive tools it offers
 notification — it offers **Deny** and a **Review in chat** link to the
 regular typed-confirm card. The same goes for a call whose arguments are
 longer than a notification can show: its text is cut with a note, and it is
-approved in the chat, where the card shows every argument. The request the
+approved in the chat, where the card shows every argument. The notification
+puts the arguments on one line, laid out the same way. The request the
 run was asked is the notification's last line, after the call — shortened if
 it is long, and never in the way of the arguments.
 
@@ -1593,8 +1628,8 @@ Built-in variables:
 | `$TOOLS`           | The active tools list, one `name — description` per line.|
 | `$MODEL`           | The display name of the currently active local model.    |
 | `$MEMORY_SUMMARY`  | A numbered list of recent long-term memory entries. The default upper bound is configurable from **Settings → Memory → Memory summary default limit** (1–50). |
-| `$LANG`            | The device locale as a BCP-47 language tag (e.g. `en-US`). |
-| `$LOCATION`        | The device's coarse region — the locale country code (e.g. `US`). |
+| `$LANG`            | The language you read the app in, as a BCP-47 language tag (e.g. `en-US`): the language chosen for the app when there is one, otherwise the device's. |
+| `$LOCATION`        | The device's coarse region — the country code of the device's language settings (e.g. `US`), whatever language the app is shown in. |
 | `$USER`            | The display name from your identity card (currently the literal `Anonymous`). |
 | `$DEVICE`          | A short `manufacturer model · Android <version>` descriptor. |
 
@@ -1812,6 +1847,10 @@ still reports `⚠ 1 disconnected`. The `+` in the top bar adds an MCP
 server from anywhere on the screen; when you have none yet, the empty
 **MCP servers** group carries a labelled **Add server** button instead.
 
+Tap a tool to open its detail page: what it does, whether it is on, its
+risk level (see below) and the JSON Schema of its parameters, laid out one
+key per line — a server sends its schema on a single line.
+
 ### Built-in tools
 
 The app ships with the following tools:
@@ -1891,7 +1930,7 @@ Two things bound this. The app refuses to schedule anything more once
 too many scheduled runs have already started within the last hour, and
 tells the agent so instead of failing silently — a legitimate schedule
 (hourly or slower, which is all background work honours anyway) never
-comes close to that. And **More → Active tasks → Stop all scheduled
+comes close to that. And **More → Tasks → Stop all scheduled
 tasks** ends the chain outright, which cancelling the one queued item by
 hand cannot do while the run that will enqueue the next one is still
 going.
@@ -1992,7 +2031,16 @@ from the built-in catalogue. To add one:
    earlier keeps the transport it was saved with.
 
 The server's tools become available to the agent on the next run.
-Remove a server by tapping the trash icon next to its row.
+Remove a server with **Remove** in its row's `⋮` menu.
+
+**All of a server's tools at once.** The same `⋮` menu offers **Turn all
+tools off** while any of the server's tools is on, and **Turn all tools on**
+while any is off. To use one tool from a server that publishes many, turn them
+all off, then switch that one back on — the list opens for it. This covers the
+tools the row lists and does exactly what switching each by hand would: their
+risk levels stay as you set them, and while a tool is off, its name passes to
+the next server down that has it switched on (see *When two tools share a
+name*).
 
 **Unencrypted addresses need your approval.** If the URL starts with
 `http://` rather than `https://` and points at a machine on your own
@@ -2021,6 +2069,24 @@ a tool from it is needed — and they are wrapped in error-handling
 so an unreachable server does not crash the chat. If a tool that
 relied on an MCP server stops responding, you will see an error
 event in the console rather than a silent failure.
+
+#### When a server ends the session
+
+A server on the Streamable HTTP transport may end the session the app opened
+with it, and many do after a while without requests — servers built on the
+MCP Kotlin SDK 0.16 and later, for example, after 30 minutes. The app then opens a new
+session and makes the call once more. It does that only for this answer: the
+server turned the first attempt away without running it, so nothing runs
+twice. A call that fails for any other reason is not repeated, because it may
+already have run.
+
+The server row's refresh button asks the server for its tools over the
+connection the agent uses. So does the Tools screen when it loads a server's
+list and the copy it holds is more than five minutes old, or comes from a
+connection the app has since replaced. What the row shows is therefore that
+connection's state: *Connected* when the server answered, an error when it did
+not. Tools the server added or removed since the app connected appear after a
+refresh.
 
 #### What the tool count on a server row means
 
@@ -2083,6 +2149,7 @@ queue behind it.
 | *MCP tool … did not respond within 60s* | The call hit the deadline above. The server may still be working on it; nothing was cancelled on its side. |
 | *Tool … not found across active providers* | No connected server publishes a tool by that name. Read the tool-count note above before concluding the server is broken. |
 | *MCP client is not connected; cannot execute …* | The connection dropped between planning the call and making it. This is deliberately worded differently from *not found*, because the tool does exist — trying again normally reconnects. |
+| *The MCP server closed the session (HTTP 404 for its session id). The request was not run.* | The server ended the session, the app opened a new one, and the server ended that one too before the call got through. Nothing ran on the server. Try again; if it keeps happening, the server is ending sessions as soon as they open. |
 | *Tool … is disabled* | The tool exists but its switch is off on the Tools screen — on every server that offers it. |
 | *MCP tool … now resolves to risk level …, not the … its approval check used* | Between the approval check and the call, a server came back and took the tool's name over (see *When two tools share a name*), or the tool's risk level was changed on the Tools screen. The call was not made. Run it again: the check is repeated for the server that serves it now. |
 
@@ -2492,9 +2559,12 @@ tool calls**, **Block destructive tools** and **Send anonymous crash reports**.
 The magnifying-glass field at the top of the hub searches every setting by name,
 description, owning category and a set of synonyms — so typing `limit` surfaces
 *Run limits* (via its synonyms), and `max` surfaces *Max context length*,
-*Max memory chunks* and more. The matched text is highlighted in each result, and
-a result row shows its category **breadcrumb** and **Basic/Advanced** tier (plus
-a `≈ "synonym"` chip when a synonym is what matched). Tapping a result opens the
+*Max memory chunks* and more. Matching ignores case and the accents of Latin
+letters, so `configuracion` finds *Configuración* and `tamano` finds *Tamaño*;
+Cyrillic `ё` and `й` stay letters of their own. The matched text is highlighted
+in each result, and a result row shows its category **breadcrumb** and
+**Basic/Advanced** tier (plus a `≈ "synonym"` chip when a synonym is what
+matched). Tapping a result opens the
 owning category, expands its Advanced section when the target lives there, and
 scrolls to and briefly flashes the row (a static accent under reduced motion). A
 calm *"no settings match"* state offers a one-tap **Clear**. The index is built
@@ -2504,6 +2574,34 @@ automatically.
 See [`docs/images/settings-search.png`](images/settings-search.png)
 (dark variant: [`settings-search-dark.png`](images/settings-search-dark.png))
 for the search results in action.
+
+### Interface language
+
+The app is in English, Russian and Spanish. **About → Language** picks the language of
+the app's screens: **Device language**, the default, follows your phone — the
+first of its languages the app is translated into, else English; the other
+entries are those languages, each named in itself. Your phone's per-app language
+setting is the same choice — change either and both change. What a model reads
+is not translated: system prompts, tool descriptions and tool results stay in
+English. The `$LANG` variable carries the language you read the app in, so a
+prompt that asks for an answer "in `$LANG`" follows your choice; `$LOCATION`
+keeps the region of the phone's own language settings.
+
+The word you type to confirm what cannot be undone — **yes** before a
+destructive tool call runs or your data is erased — is the interface
+language's word; the field names it. In Spanish it is **sí**, with its accent:
+*si* without one means "if" and does not confirm. Names the app gives — a new chat, a new
+pipeline and its first nodes, a copy — are written in the language of the
+moment and stay as written if you change it later; a new chat still takes its
+first message as its name. The lines the app adds to a chat — a tool call you
+denied, how a run ended — are written the same way, and a model reads them as
+written.
+
+The bundled pipelines and prompt templates follow the interface language too:
+their names, descriptions, node titles, starter prompts and tags — never their
+prompts. A pipeline made from one keeps the words it was made with.
+Troubleshooting and the FAQ open in the interface language; the documents that
+open in the browser are in English.
 
 ### What every setting means
 
@@ -2630,6 +2728,7 @@ repeated here.
 | Setting | What it means |
 |---|---|
 | **Identity** | *(no explanation — shows a value, decides nothing)* |
+| **Language** | The language of the app's screens. What a model reads stays in English: system prompts, tool descriptions and tool results. |
 | **App version & licenses** | *(no explanation — opens a screen that explains itself)* |
 | **Reset all settings** | *(no explanation — does what its name says)* |
 <!-- /AUTO-GEN:SETTINGS_HELP -->
@@ -3472,8 +3571,8 @@ lowers a tool's risk or skips a confirmation.
 
 ## Active tasks
 
-**More → Active tasks** lists everything the agent is running right
-now plus completed history. Filter chips at the top scope the list
+**More → Tasks** opens this screen. It lists everything the agent is
+running right now plus completed history. Filter chips at the top scope the list
 to `All`, `Active`, `Background`, or `Completed`. Each row shows
 the task title, a mono subtitle with the pipeline stage, a status
 pill (Queued / Running / Success / Failed / Cancelled), and an
@@ -3501,9 +3600,10 @@ which cancelling the one queued row by hand cannot end.
 counters and the most recent system log lines. The header three-cell
 grid shows last inference time (ms), tokens-per-second, and the
 total tokens processed since process start. Under it sit the
-session-wide totals and a per-node-type breakdown. When the device
-enters power-saving mode, a warning banner appears above the grid
-to flag that the agent has paused background work.
+session-wide totals and the time spent per node type, each type by
+the name the pipeline editor gives it. When the device enters
+power-saving mode, a warning banner appears above the grid to flag
+that the agent has paused background work.
 
 ## About
 
@@ -3558,6 +3658,11 @@ reader, not a browser:
 
 The **Open in browser** action in the top bar is always available, for
 when you want the web version of what you are reading.
+
+Both documents are translated into each language the app ships, and the reader
+opens the one in the interface language; a link into a section lands on the same
+section in either. The web version, and every document that opens in the
+browser, is in English.
 
 ### The documents that stay on the web
 

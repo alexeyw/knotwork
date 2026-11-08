@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="backup_snack_cancelled">Резервное копирование отменено. Незавершённый файл удалён.</string>
+    <string name="backup_snack_cancelled_left">Резервное копирование отменено. Удалите незавершённый файл %1$s сами.</string>
+    <string name="backup_snack_restored">Восстановлено</string>
+</resources>

@@ -11,17 +11,19 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 
 /**
@@ -64,6 +66,7 @@ fun KnotworkPrimaryButton(
     loading: Boolean = false,
     leadingIcon: ImageVector? = null,
 ) {
+    val loadingDescription = stringResource(R.string.knotwork_loading)
     val effectiveEnabled = enabled && !loading
     val visualHeight = KnotworkButtonDefaults.heightFor(size)
     Button(
@@ -88,7 +91,7 @@ fun KnotworkPrimaryButton(
             .minimumInteractiveComponentSize()
             .defaultMinSize(minHeight = visualHeight)
             .height(visualHeight)
-            .semantics { if (loading) stateDescription = "Loading" },
+            .semantics { if (loading) stateDescription = loadingDescription },
     ) {
         Box(contentAlignment = Alignment.Center) {
             Row(

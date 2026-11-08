@@ -36,4 +36,43 @@
     <!-- Performance card / benchmark. -->
     <string name="models_benchmark_failed">Couldn\'t run the benchmark</string>
     <string name="models_benchmark_share_subject">Model benchmark</string>
+    <!-- Model capabilities and the Performance card. -->
+    <string name="models_vision_label">Image support</string>
+    <string name="models_vision_description">Let this model read attached photos</string>
+    <string name="models_audio_label">Audio support</string>
+    <string name="models_audio_description">Record or pick a clip to transcribe</string>
+    <string name="models_performance_title">Performance</string>
+    <string name="models_performance_ttft">Time to first token</string>
+    <string name="models_performance_decode">Decode speed</string>
+    <string name="models_performance_peak_memory">Peak memory</string>
+    <string name="models_performance_total">Total</string>
+    <string name="models_performance_unknown">—</string>
+    <string name="models_performance_memory_note">Peak memory is the approx. process-wide native heap — not the model\'s exact footprint.</string>
+    <string name="models_performance_memory_report_note">native heap · approx.</string>
+    <string name="models_performance_benchmark_badge">BENCHMARK</string>
+    <string name="models_performance_run_benchmark">Run benchmark</string>
+    <string name="models_performance_share">Share</string>
+    <string name="models_performance_done">Done</string>
+    <string name="models_performance_warming_up_title">Warming up…</string>
+    <string name="models_performance_warming_up_sub">warm-up run · not counted</string>
+    <string name="models_performance_measuring_title">Measuring…</string>
+    <string name="models_performance_measuring_sub">measured run · fixed prompt</string>
+    <string name="models_performance_empty_title">No runs yet</string>
+    <string name="models_performance_empty_body">Send a message or run a benchmark to see how this model performs on your device.</string>
+    <string name="models_performance_busy_title">Busy with a task</string>
+    <string name="models_performance_busy_body">A benchmark runs once the current task finishes — the engine handles one run at a time.</string>
+    <string name="models_performance_no_model_body">Select a model first — performance is measured per model.</string>
+    <string name="models_performance_unit_ms">%1$s ms</string>
+    <string name="models_performance_unit_seconds">%1$s s</string>
+    <string name="models_performance_unit_tokens_per_second">%1$s tok/s</string>
+    <plurals name="models_performance_sample_caption">
+        <item quantity="one">avg · last %1$d run</item>
+        <item quantity="other">avg · last %1$d runs</item>
+    </plurals>
+    <!-- Why a model download failed, worded by the download worker in the language of the moment. -->
+    <string name="model_download_failed_request">Download request was missing its URL or file name.</string>
+    <string name="model_download_failed_unreadable">The downloaded file could not be read to check it.</string>
+    <string name="model_download_failed_not_moved">Could not move the downloaded file into place.</string>
+    <string name="model_download_failed_http">Server returned code: %1$d</string>
+    <string name="model_download_failed_unknown">Unknown download error</string>
 </resources>

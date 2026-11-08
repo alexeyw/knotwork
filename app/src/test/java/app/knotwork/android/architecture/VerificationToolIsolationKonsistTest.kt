@@ -66,9 +66,11 @@ class VerificationToolIsolationKonsistTest {
         /**
          * What a class of the check may take: the run record and its trace, the
          * model registry and pipelines (for names and checksums), the generation
-         * settings (the backend and window a load would use), the model loader and
-         * the on-device engine — the one thing the check runs — and the package's
-         * own readers and renderer, which read the record and format it.
+         * settings (the backend and window a load would use), the run environment
+         * (three build and device constants — the engine version a run's header is
+         * compared with; it runs nothing), the model loader and the on-device
+         * engine — the one thing the check runs — and the package's own readers
+         * and renderer, which read the record and format it.
          */
         val ALLOWED = setOf(
             "PipelineRunRepository",
@@ -76,6 +78,7 @@ class VerificationToolIsolationKonsistTest {
             "LocalModelRepository",
             "PipelineRepository",
             "GenerationSettings",
+            "RunEnvironment",
             "LoadModelUseCase",
             "LlmInferenceEngine",
             "ReadRecordedRunTreeUseCase",

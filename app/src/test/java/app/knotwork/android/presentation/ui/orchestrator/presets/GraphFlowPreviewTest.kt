@@ -6,6 +6,7 @@ import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class GraphFlowPreviewTest {
@@ -13,7 +14,7 @@ class GraphFlowPreviewTest {
     @Test
     fun `given empty graph when render then returns placeholder`() {
         val graph = PipelineGraph(id = "p", name = "n")
-        assertEquals("empty graph", GraphFlowPreview.render(graph))
+        assertNull(GraphFlowPreview.render(graph))
     }
 
     @Test
@@ -112,7 +113,7 @@ class GraphFlowPreviewTest {
 
         val rendered = GraphFlowPreview.render(graph)
         // 6 tokens, 5 arrows
-        val tokenCount = rendered.split(" → ").size
+        val tokenCount = checkNotNull(rendered).split(" → ").size
         assertEquals(6, tokenCount)
     }
 

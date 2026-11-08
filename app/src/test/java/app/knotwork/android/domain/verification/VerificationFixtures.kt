@@ -10,6 +10,7 @@ import app.knotwork.android.domain.models.RunHeader
 import app.knotwork.android.domain.models.RunOrigin
 import app.knotwork.android.domain.models.RunSampler
 import app.knotwork.android.domain.models.RunTraceRecord
+import app.knotwork.android.domain.services.RunEnvironment
 
 /**
  * Records for the verification tests: a finished run with a header, and model
@@ -29,6 +30,13 @@ internal object VerificationFixtures {
         runtimeVersion = "LiteRT-LM test",
         device = "Test Device · Android 16",
     )
+
+    /** This build as the check sees it: the engine version [HEADER] was recorded with. */
+    val ENVIRONMENT: RunEnvironment = object : RunEnvironment {
+        override val appVersion = HEADER.appVersion
+        override val runtimeVersion = HEADER.runtimeVersion
+        override val device = HEADER.device
+    }
 
     /** A run record, finished and with [HEADER] unless told otherwise. */
     fun run(

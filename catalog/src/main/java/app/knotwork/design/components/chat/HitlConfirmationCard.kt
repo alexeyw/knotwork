@@ -8,12 +8,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,7 +19,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -41,6 +40,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
@@ -48,6 +48,8 @@ import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.chips.RiskPill
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkPalette
@@ -120,7 +122,7 @@ private const val UNNAMED_TRIGGER_GLYPH_ALPHA = 0.6f
  * @param onTypedConfirmChange invoked with each keystroke in the type-confirm
  * field. No-op for Readonly / Sensitive.
  * @param allowOnceEnabled gates the Allow CTA. Default policy:
- * `HitlConfirmationState.isAllowOnceEnabled(model.risk, pendingTypedConfirm)`.
+ * `HitlConfirmationState.isAllowOnceEnabled(model.risk, pendingTypedConfirm, confirmWord)`.
  * Callers may override (e.g. while a previous Allow request is still pending
  * server-side).
  * @param onAllowOnce invoked when the user taps Allow.
@@ -145,28 +147,32 @@ fun HitlConfirmationCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // IntrinsicSize.Min sizes the Row to its content's intrinsic height before
-            // the accent-strip Spacer measures. Without this, `Spacer.fillMaxHeight()`
-            // would consume the parent's full available height and the card would
-            // balloon to fill any unbounded vertical container.
-            .height(IntrinsicSize.Min)
             .clip(KnotworkTheme.shapes.md)
             .background(color = KnotworkTheme.extended.surface1)
+            // The accent strip is drawn, not laid out, at the start edge — the right one
+            // in a right-to-left layout. A strip that filled the card's height made the card
+            // measure its content's intrinsic height first, and an expanded argument taller
+            // than a constraint can hold (about 262 000 px: 500 000 characters) threw
+            // instead of drawing.
+            .drawBehind {
+                val strip = AccentStripWidth.toPx()
+                val left = if (layoutDirection == LayoutDirection.Rtl) size.width - strip else 0f
+                drawRect(
+                    color = riskColor,
+                    topLeft = Offset(x = left, y = 0f),
+                    size = Size(width = strip, height = size.height),
+                )
+            }
             .border(
                 border = BorderStroke(width = CardBorderWidth, color = riskColor),
                 shape = KnotworkTheme.shapes.md,
             ),
     ) {
-        Spacer(
-            modifier = Modifier
-                .width(AccentStripWidth)
-                .fillMaxHeight()
-                .background(color = riskColor),
-        )
         Column(
             verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(start = AccentStripWidth)
                 .padding(KnotworkTheme.spacing.sp4),
         ) {
             RiskPillRow(model = model)
@@ -346,21 +352,13 @@ private val HitlRequestContext.glyph: ImageVector
         }
     }
 
-/** Collapsible mono JSON args block — surface2 background, 1 dp outlineVariant border. */
+/**
+ * Collapsible mono JSON args block — surface2 background, 1 dp outlineVariant border.
+ * Draws [arguments] exactly as the host laid them out; the card never parses them.
+ */
 @Composable
-private fun JsonArgsBlock(arguments: Map<String, String>) {
+private fun JsonArgsBlock(arguments: String) {
     var expanded by remember { mutableStateOf(false) }
-    val rendered = remember(arguments) {
-        if (arguments.isEmpty()) {
-            "{}"
-        } else {
-            arguments.entries.joinToString(
-                separator = ",\n",
-                prefix = "{\n",
-                postfix = "\n}",
-            ) { (k, v) -> "  \"$k\": $v" }
-        }
-    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -377,14 +375,25 @@ private fun JsonArgsBlock(arguments: Map<String, String>) {
             .padding(KnotworkTheme.spacing.sp3),
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            Text(
-                text = rendered,
-                style = KnotworkTextStyles.MonoSm,
-                color = KnotworkTheme.extended.onSurface2,
-                maxLines = if (expanded) Int.MAX_VALUE else JSON_COLLAPSED_MAX_LINES,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            if (expanded) {
+                // What the user approves is what runs (`api-conventions.md` § AppFunctions):
+                // the expanded block shows every character, however long.
+                WholeText(
+                    text = arguments,
+                    style = KnotworkTextStyles.MonoSm,
+                    color = KnotworkTheme.extended.onSurface2,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Text(
+                    text = arguments,
+                    style = KnotworkTextStyles.MonoSm,
+                    color = KnotworkTheme.extended.onSurface2,
+                    maxLines = JSON_COLLAPSED_MAX_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             Icon(
                 imageVector = if (expanded) AppIcons.ArrowUp else AppIcons.ArrowDown,
                 contentDescription = stringResource(
@@ -397,7 +406,7 @@ private fun JsonArgsBlock(arguments: Map<String, String>) {
     }
 }
 
-/** Destructive "type yes" row. */
+/** Destructive type-to-confirm row: the user types the confirmation word. */
 @Composable
 private fun TypedConfirmRow(value: String, onChange: (String) -> Unit) {
     OutlinedTextField(
@@ -407,7 +416,7 @@ private fun TypedConfirmRow(value: String, onChange: (String) -> Unit) {
             Text(
                 text = stringResource(
                     R.string.knotwork_hitl_typed_confirm_placeholder,
-                    HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD,
+                    stringResource(R.string.knotwork_typed_confirm_word),
                 ),
                 style = KnotworkTextStyles.MonoBase,
                 color = KnotworkTheme.extended.onSurfaceDim,

@@ -5,10 +5,12 @@ import app.knotwork.android.data.local.dao.ChatHistorySummaryDao
 import app.knotwork.android.data.local.models.ChatMessageEntity
 import app.knotwork.android.data.local.models.ChatSessionEntity
 import app.knotwork.android.domain.models.ChatImportException
+import app.knotwork.android.domain.models.ChatImportReason
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.Role
 import app.knotwork.android.domain.services.AttachmentStore
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -37,7 +39,7 @@ class ChatRepositoryImplTest {
         chatDao = mockk(relaxed = true)
         chatHistorySummaryDao = mockk(relaxed = true)
         attachmentStore = mockk(relaxed = true)
-        repository = ChatRepositoryImpl(chatDao, chatHistorySummaryDao, attachmentStore)
+        repository = ChatRepositoryImpl(chatDao, chatHistorySummaryDao, attachmentStore, EnglishDefaultNames)
     }
 
     /**
@@ -423,7 +425,7 @@ class ChatRepositoryImplTest {
             thrown = e
         }
 
-        assertEquals("message 2 of the file is not a message", thrown?.message)
+        assertEquals(ChatImportReason.NotAMessage(position = 2), thrown?.reason)
         coVerify(exactly = 0) { chatDao.insertImportedChat(any(), any()) }
         coVerify(exactly = 0) { chatDao.upsertSession(any()) }
         coVerify(exactly = 0) { chatDao.insertMessage(any()) }
@@ -437,18 +439,16 @@ class ChatRepositoryImplTest {
                 repository.importChat(it)
                 null
             } catch (e: ChatImportException) {
-                e.message
+                e.reason
             }
         }
 
+        // Typed reasons carry nothing from the file; the screen words them.
         assertEquals(
-            listOf(
-                "the file is not a chat export",
-                "the file is not valid JSON",
-                "the file has no list of messages",
-            ),
+            listOf(ChatImportReason.NotAChatFile, ChatImportReason.NotJson, ChatImportReason.NoMessages),
             reasons,
         )
+        assertTrue(reasons.none { it.toString().contains("OpenAI") })
     }
 
     @Test

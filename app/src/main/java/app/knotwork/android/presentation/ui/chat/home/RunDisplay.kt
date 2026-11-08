@@ -146,7 +146,11 @@ private fun VerifyMismatch.nowTag(): String? = when (this) {
     is VerifyMismatch.Backend -> current.name
     is VerifyMismatch.Window -> RunDisplay.grouped(current)
     is VerifyMismatch.BackendAndWindow -> currentBackend.name
-    is VerifyMismatch.ModelMissing, is VerifyMismatch.ModelChanged, is VerifyMismatch.HashPending -> null
+    is VerifyMismatch.Runtime,
+    is VerifyMismatch.ModelMissing,
+    is VerifyMismatch.ModelChanged,
+    is VerifyMismatch.HashPending,
+    -> null
 }
 
 /** The promise block's case. */
@@ -205,6 +209,7 @@ private fun VerificationPlan.toAction(localCalls: Int): RunVerifyActionUi = if (
  * @return Its catalog form.
  */
 internal fun VerifyMismatch.toUi(): RunMismatchUi = when (this) {
+    is VerifyMismatch.Runtime -> RunMismatchUi.Runtime(recorded, current)
     is VerifyMismatch.Backend -> RunMismatchUi.Backend(recorded.name, current.name)
     is VerifyMismatch.Window -> RunMismatchUi.Window(RunDisplay.grouped(recorded), RunDisplay.grouped(current))
     is VerifyMismatch.BackendAndWindow ->

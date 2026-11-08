@@ -53,7 +53,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:verifyFileMap`                          | Fails if a generated `FILE_MAP.md` drifts from the Kotlin sources, or an undocumented-file count grows past its ratchet (see below). |
 | `:app:verifyDocLinks`                         | Fails if a relative link, an `#anchor` or an inline-code repository path anywhere in the documentation leads nowhere (see below). External `http` links are reported, not gated. |
 | `:app:verifyMermaidDiagrams`                  | Fails if an embedded Mermaid diagram is structurally broken (see below). |
-| `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline (see below). |
+| `:app:verifyBundledDocs`                      | Fails if a document bundled into the app drifted from `docs/`, carries something the in-app renderer cannot show, or holds a link that would not resolve offline — or a translation of it no longer matches its English (see below). |
 | `:app:verifyDocumentationLinks`               | Fails if the app's registry of documentation links drifts from its build-side list, names a document or heading that does not resolve, or points at a heading that is not unique (see below). |
 | `:app:verifyVersionSources`                   | Fails if any hand-written copy of the version — README badge and prose, the CHANGELOG heading and links, `SECURITY.md`, the roadmap's release line — disagrees with the declared `versionName` (see below). |
 | `:app:verifySupplyChainPins`                  | Fails if a GitHub Action is referenced by anything but a full commit SHA with a version comment, the Gradle wrapper loses its distribution checksum, or dependency verification is switched off, holds an ignored key, or trusts a non-organisation key across a namespace (see below). |
@@ -70,6 +70,7 @@ means a document is being generated from a rule nobody is checking.
 | `:app:testFullDebugUnitTest` (`ShippedPipelineLayoutTest`) | Fails if two node cards overlap in a bundled pipeline preset or a cookbook recipe (see below). |
 | `:app:testFullDebugUnitTest` (`GoldenTraceTest`, `GoldenTraceCatalogueTest`) | Fails if running a bundled preset, a cookbook recipe or a test fixture through the real engine produces a trace that differs from its committed golden file, or a pipeline file, a node type or a golden file falls out of the catalogue (see below). |
 | `:catalog:verifyRoborazziDebug`               | Fails if a design-system screenshot differs from its committed baseline (see below). |
+| `:app:verifyRoborazziFullDebug`               | Fails if a screenshot of an app screen in a translation differs from its committed baseline (see below). |
 
 Pre-flight tip: run `./gradlew :app:ktlintFormat` first to auto-fix the
 safely-correctable subset before invoking `check`.
@@ -482,6 +483,7 @@ flag them with spurious, environment-dependent violations.
 | `PromptPackNoNetworkKonsistTest`   | No file on the prompt-pack path imports a network client — a pack is imported from a file the user picked, never fetched (see below). |
 | `JournalExportNoNetworkKonsistTest` | No file on the journal-export path imports a network client — the trigger and external-request journals leave the device only through the share sheet or a file the user picked (see below). |
 | `RunTraceExportNoNetworkKonsistTest` | No file on the run-trace-export path imports a network client — a run's trace (every prompt the on-device model read, with its answers and hashes) leaves the device only through the share sheet or a file the user picked. Same three instruments as the journal-export rule (see below). |
+| `ChatExportNoNetworkKonsistTest` | No file on the chat-export path imports a network client — a chat leaves the device only through the share sheet or a file the user picked. Same three instruments as the journal-export rule, and a fourth test: the chat document's text is read only where it is passed to the shared hand-off (`ExportDocumentHandOff.kt`), so a shared file and a saved file cannot be encoded two ways (`ChatExportHandOffTest` holds them byte for byte). |
 | `VerificationToolIsolationKonsistTest` | The check of a finished run cannot run a tool. Every class of `domain/verification/` takes only types on an allowlist — the run record and its trace, the model registry and the pipelines, the generation settings, the model loader, the on-device engine and the package's own use cases — and no file there names a tool, the approval gate, a node executor, the graph engine, the task queue, the MCP connection pool, the AppFunctions manager or the cloud client factory. A tool's recorded output stands, and the tool is never run again. |
 | `LocalInferenceSeamKonsistTest`    | Inside a pipeline run, a node reaches the on-device model only through its `NodeInference`, which runs the call on the run's sampler with a seed derived from the run seed and records it. The direct callers of `generateResponseStream` are an exact list — the two `NodeInference` implementations; chat-history compression, memory compaction, the backend test in Settings and the benchmark on the Models screen; `search_tool`, whose model use is part of the tool's recorded output; and the check of a finished run — and no node executor is on it. A listed caller that disappears fails too. |
 | `HitlDispatchKonsistTest`          | Nothing reaches a tool around the approval gate. Across every production source set the call sites are an exact list: `executeTool` — the gate, and the tool repository's dispatch to an MCP server; `invokeByName`, which runs an AppFunction — the repository; `resumeWithApproval` — only the chain that starts at `SubmitApprovalDecisionUseCase`, which settles only the request an answer names. A built-in tool executor is named only by its own file, the module that binds it and the repository, and a cross-check against Konsist keeps that list of executors complete. A new call site fails, and so does one that disappeared. |
@@ -515,7 +517,13 @@ flag them with spurious, environment-dependent violations.
 | `SurfaceBindingReadersTest`        | A share-target or Quick Settings tile binding is an id in settings and can outlive its pipeline. Only the callers that need it afterwards read the raw resolver, `ResolveSurfacePipelineUseCase` — the bindings census, the pipeline library and the resolver built on it; the share and tile launch paths read `ResolveLaunchableSurfacePipelineUseCase`, which checks the pipeline still exists. Reading the raw id once handed a missing pipeline to the run queue, which ran the default one from a surface showing "Not set". |
 | `TabRootEntryGuardTest`            | A bottom-nav tab root is entered as a tab switch, never pushed onto another subtree's back stack. |
 | `SnackbarHostGuardTest`            | Every snackbar in `:app` and `:catalog` renders through `KnotworkSnackbarHost`, never Material3's raw host; every `SnackbarHostState` a file creates is rendered by a host in that file; and every host sits in a `snackbarHost` slot that reaches a `Scaffold` or an aligned container, or aligns itself. Twelve screens once wrote their own host — three looks, four placements, the settings screens' over the top bar — and the Models screen rendered none, so its download failures never appeared. |
-| `ComposeTestRuleV2GuardTest`       | No instrumented test builds its Compose rule with a deprecated v1 factory (`junit4.createComposeRule` and the rest); the v2 ones run the composition's coroutines on a `StandardTestDispatcher`, as `runTest` does. A twin in `:catalog` holds its screenshot tests to the same rule. |
+| `BoundedTextGuardTest`             | Every text in `:app` and `:catalog` is drawn through the design system's `Text` (`components/text/Text.kt`), never Material's, Material 2's or the foundation's own — imported, wildcard-imported or called by name. That `Text` hands a text with a line limit only as many characters as its lines can hold, draws a run without whitespace longer than 2 000 characters in pieces, and shows a text without a line limit up to 10 000 characters with a count of the rest. The screens that show a long text whole (`WholeText`) and every file composing an input field are named in a census with the reason; one file draws with Material's text on purpose and is named too. Laying out one text costs time in the square of its longest run without whitespace, whatever its line limit: a tool's or a model's 200 000-character string held the main thread for 5–10 s in a single text, on screens found one at a time. |
+| `JsonDisplayGuardTest`             | Every file of `:app`'s presentation layer or of `:catalog` that uses `org.json` — imported, wildcard-imported or called by name — is named in a census with the reason, and no catalog file may appear: the catalog never parses a value. JSON a person reads goes through `presentation/common/JsonLayout.kt`, which changes only the whitespace between tokens (`JsonLayoutLosslessTest` holds it over generated documents: a layout parses to the same value, keeps every token as written, leaves no hidden character raw, and returns text that is not JSON unchanged). `org.json` rewrites what it reads — on Android it writes `/` as `\/`, and it reads `1.50` as `1.5` — and the approval card once rebuilt a call's arguments with it, showing a different text from the one the tool received. |
+| `PresetTranslationCoverageTest`    | Every bundled pipeline preset's name, description, node titles and starter prompts, and every bundled prompt template's name, description and tags, has a translation in each shipped language's `assets/presets/l10n/<lang>.json`, written for the English the preset carries now; the file exists for every shipped language without an untranslated list in `config/l10n/` (one still being translated may not have it yet), for no language the app does not ship, and reads (the reader refuses any member that is not such a text, so a system prompt cannot get in); no entry names a preset, node, starter prompt or tag that is not there, or one twice; one English tag has one translation and one translation one English tag; and a translated preset keeps its name and starter prompts within their limits, validates, opens in the editor with distinct node titles, and carries each node's title in its `nodeConfig` as well, which an export hands the browser editor. |
+| `TranslationCoverageTest`          | Every translatable string and plural of `:app` and `:catalog` exists in every language the app ships, or is named on that language's untranslated list (`config/l10n/untranslated-<lang>.txt`); a list entry that is translated by now, or names no string, fails too, so the list only shrinks, and a language without a list must be complete. A list exists only for a shipped language, and lint's `MissingTranslation` is off in both modules exactly while a list exists: with it on, the first translated string of a new language failed the build for each of the ~2 600 not yet translated, and the change that deletes the last list must turn it back on. The build's `localeFilters` names exactly the default language plus every language with a `values-<lang>` folder, in both modules alike; the default resources are English, the language the picker puts first; the app bundle keeps every language in every install (`bundle.language.enableSplit = false` — Play installs languages by the system's, and the in-app picker chooses its own); a translation equal to its English text fails unless `config/l10n/identical-<lang>.txt` names it; each language's `interface_language_tag` names that language (it picks the bundled presets' translation); and every shipped language without an untranslated list has the bundled help documents translated (`app/src/main/assets/docs/<lang>/index.json`). |
+| `DisplayedLiteralGuardTest`        | Interface text comes from string resources. A string literal that reads like words (two words with a space, or one capitalised word) in `:app`'s `presentation` or `data/services`, or in `:catalog` without its showcase, fails unless `config/l10n/displayed-literals.txt` names it; arguments of calls that never show text (logging, preconditions, exceptions, test tags, patterns, intents), URLs, date patterns and a catalog class's constructor defaults are left out. The list only shrinks. A sentence written into code shows in English in every language — about 300 did when the interface was first translated. A single lowercase word ("untitled") or a count with one word ("$n nodes") looks like a key or a route to a text census and is not counted; review finds those. |
+| `CatalogStringsWiringTest`         | Every English default a `:catalog` class gives a `String` constructor parameter (`val title: String = "Performance"`) is passed from a resource by some call of that constructor in `:app` or `:catalog`, or named in `config/l10n/unwired-strings.txt`, which only shrinks. The defaults keep previews free of resources; one the app never replaces ships in English in every language — the Models screen's Performance card kept 21 such defaults, because `:app` never built `PerformanceStrings`. |
+| `ComposeTestRuleV2GuardTest`       | No instrumented test, and no JVM Compose test of `:app` (`presentation/screenshots/`), builds its Compose rule with a deprecated v1 factory (`junit4.createComposeRule` and the rest); the v2 ones run the composition's coroutines on a `StandardTestDispatcher`, as `runTest` does. A twin in `:catalog` holds its screenshot tests to the same rule. |
 | `InstrumentedTestExclusionGuardTest` | The roster of device-only instrumented tests, and the annotation the emulator workflow excludes by, stay in step. |
 | `FdroidSigningStripGuardTest`      | The release signing assignment in `app/build.gradle.kts` keeps a shape F-Droid's build server removes whole. Before building, fdroidserver strips signing configuration line by line; the test runs a port of its rules over the real script and fails when a signing assignment survives — F-Droid's release build would come out debug-signed — or when a kept line continues a statement whose first line was removed, as the two-line `findByName("release") ?: getByName("debug")` did, its second half gluing onto the line above. Fixtures show the port reproduces both. |
 | `ArchitectureGuardsDocumentedTest` | Every test class of this suite is named in this guide — as a row of this table or in the heading of its own section — and every row names a test that exists. Seventeen rows were once missing at the same time, each found by hand. |
@@ -534,10 +542,10 @@ catch: reintroducing a `domain -> data` import (or an `android.*` import in
 `domain`) turns both `LayerDependencyKonsistTest` and
 `DomainPurityKonsistTest` red — verified during the suite's introduction.
 
-**The four no-network rules, and the trap they share.**
+**The five no-network rules, and the trap they share.**
 `UsageTelemetryNoNetworkKonsistTest`, `PromptPackNoNetworkKonsistTest`,
-`JournalExportNoNetworkKonsistTest` and `RunTraceExportNoNetworkKonsistTest`
-select their files by name and path, and a filter of that shape goes stale in
+`JournalExportNoNetworkKonsistTest`, `RunTraceExportNoNetworkKonsistTest` and
+`ChatExportNoNetworkKonsistTest` select their files by name and path, and a filter of that shape goes stale in
 silence: a new file on the same logical path, named something the filter does
 not match, is simply unguarded and nothing says so. The prompt-pack rule closes
 that with a **second instrument** — it also treats a file as in-scope when it
@@ -555,7 +563,12 @@ them carries the export token in its own name. The filter now also matches on
 *imports* containing that token, and a third test pins the token to the real
 declarations' names — so a rename fails loudly instead of quietly emptying the
 guarded set. The run-trace-export rule was written with all three from its first
-day, keyed off the `RunTraceExport` token.
+day, keyed off the `RunTraceExport` token, and so was the chat-export rule, keyed
+off `ChatExport` (and the renderer `ExportChatUseCase`, whose name has the words
+the other way round — its coverage test caught the chat ViewModel, which only
+injects it). The share-and-write file both the journal and chat exports go
+through, `ExportDocumentHandOff.kt`, carries neither token, so both rules name it
+in, and the chat rule pins what it declares.
 
 **The allow-list rule, and the question the four deny-lists cannot answer.**
 The four rules above each say "this surface must never reach the network".
@@ -839,7 +852,36 @@ and commit them with the change that caused them. On a CI failure the diffs are
 uploaded as the `roborazzi-report` artefact.
 
 **What it cannot see:** anything Robolectric does not render — system insets
-above all (see the top-bar inset guard) — and screens outside `:catalog`.
+above all (see the top-bar inset guard) — and screens outside `:catalog`, but
+for the few `:app` photographs in a translation below.
+
+### App screens in a translation (`:app:verifyRoborazziFullDebug`)
+
+The catalog's screens show the design system's own words; most of what a screen
+says comes from `:app`. A translation therefore only shows whole where the app
+draws the screen, and a translation is where a label outgrows its English and
+erases the text beside it. `app/src/test/…/presentation/screenshots/` captures ten
+app screens in each translation — Russian and Spanish — at font scale 200 % in
+the light theme, each drawn by the screen's own state builder or `…ScreenContent`
+from a hand-made state, without its ViewModel (whose repositories open a
+database Robolectric cannot load). Build information, the clock, the time zone
+and the Help list's document sizes are fixed, so a baseline changes only when a
+screen does. The baselines
+(`app/src/test/snapshots/`) are a declared test input, `check` runs the
+verification, and `AppSnapshotOptionsGuardTest` holds every capture to
+`AppRoborazziOptions` — the catalog's tolerance, repeated because test sources are
+not shared between modules.
+
+The screens and their states live in `TranslatedScreensSnapshotTest`; one subclass
+per language names its resource qualifier and the sample texts a user would have
+written in it, so every language is checked on the same ten screens. Re-record
+with `./gradlew :app:recordRoborazziFullDebug --tests '*ScreensSnapshotTest*'`,
+look at the PNGs, and commit them with the change that caused them. A change to a
+catalog component or to a translated string can need both modules re-recorded.
+Before calling a break in a render a translation defect, render the same screen in
+English at the same scale: several screens break at 200 % in English as well. One
+cost: the Roborazzi plugin makes the verify mode an input of the test task, so a
+local `testFullDebugUnitTest` run is not reused by `check`.
 
 ### Observed failing
 
@@ -1619,6 +1661,31 @@ while headings are recognised in the **masked** ones. Masking blanks a fenced
 block's lines, which preserves their count — that is what makes the two readings
 line up — but not their lengths, so an offset taken from masked text would drift
 by the width of every code block above it.
+
+### Translations of the bundled documents
+
+Each bundled document is translated into every language the app ships, by hand,
+at `app/src/main/assets/docs/<language>/<file>.md`; the reader opens the
+translation in that interface language. The sync writes one more index per
+language, `docs/<language>/index.json`, and the gate holds each translation to
+the rules above plus three of its own:
+
+1. **It names the English it was translated from.** Its first line is
+   `<!-- translation of docs/faq.md, sha256 … -->`, the hash of the English file.
+   When the English changes the hash no longer matches and the gate fails,
+   printing the new line: a change to a bundled document is translated in the
+   same change, as a new string is.
+2. **Every heading carries its English anchor** on the line above,
+   `<!-- en: slug -->`, and the anchors are exactly the English ones, in the
+   English order. The app and the documents link to sections by English anchor,
+   and the translation's index maps each one to the translated heading — so no
+   link changes with the language.
+3. **Its links resolve against the English anchors**, for the same reason.
+
+Both kinds of line are HTML comments, which the renderer drops; rule 3 above
+counts no comment as HTML. `TranslationCoverageTest` fails a shipped language
+with no translated documents once its interface is translated (it has no
+untranslated list in `config/l10n/`).
 
 ## In-app documentation link guard (`verifyDocumentationLinks`)
 
@@ -2434,7 +2501,7 @@ is not.**
   plugins, and the instrumented suite failed verification on CI. The census now
   comes from a bootstrap dry run, which resolves every resolvable configuration,
   and each configuration was then resolved in strict mode.
-- **Unsigned artifacts are pinned by SHA-256**, per version (145 files) — part of
+- **Unsigned artifacts are pinned by SHA-256**, per version (155 files) — part of
   Firebase's transitive graph and older `androidx` releases, for example, are
   published without a signature.
 - **The keys are committed** (`gradle/verification-keyring.keys`, armored) **and

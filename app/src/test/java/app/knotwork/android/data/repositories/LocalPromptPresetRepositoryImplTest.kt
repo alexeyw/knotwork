@@ -7,6 +7,7 @@ import app.knotwork.android.data.local.models.PromptPresetEntity
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.promptio.PromptPresetJsonSerializer
+import app.knotwork.android.presentation.ui.settings.FakeAppLanguageRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -14,6 +15,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,6 +32,7 @@ class LocalPromptPresetRepositoryImplTest {
     private lateinit var context: Context
     private lateinit var assets: AssetManager
     private lateinit var dao: PromptPresetDao
+    private lateinit var language: FakeAppLanguageRepository
     private lateinit var repository: LocalPromptPresetRepositoryImpl
 
     private fun preset(
@@ -53,7 +57,60 @@ class LocalPromptPresetRepositoryImplTest {
         assets = mockk()
         dao = mockk(relaxed = true)
         every { context.assets } returns assets
-        repository = LocalPromptPresetRepositoryImpl(context, dao)
+        language = FakeAppLanguageRepository()
+        val translations = BundledPresetTranslations(context).apply { dispatcher = UnconfinedTestDispatcher() }
+        repository = LocalPromptPresetRepositoryImpl(context, dao, language, translations)
+    }
+
+    /** One bundled template, "p" tagged "a", "b", and a Russian translation of its name and first tag. */
+    private fun givenOneBundledTemplateTranslatedIntoRussian() {
+        val bundled = preset(id = "bundled_one", isBundled = true)
+        every { assets.list("presets/prompts") } returns arrayOf("bundled_one.json")
+        every { assets.open("presets/prompts/bundled_one.json") } answers {
+            PromptPresetJsonSerializer.serialize(bundled).byteInputStream()
+        }
+        every { assets.open("presets/l10n/ru.json") } answers {
+            """{"formatVersion": 1, "language": "ru", "prompts": {"bundled_one": {
+               "name": {"en": "p", "ru": "шаблон"}, "tags": [{"en": "a", "ru": "а"}]}}}""".byteInputStream()
+        }
+    }
+
+    @Test
+    fun `given the interface in Russian when getBundledPresets then a template comes translated, its prompt not`() =
+        runTest {
+            givenOneBundledTemplateTranslatedIntoRussian()
+            language.showIn("ru")
+
+            val template = repository.getBundledPresets().first().single()
+
+            assertEquals("шаблон", template.name)
+            assertEquals(listOf("а", "b"), template.tags)
+            assertEquals("You are concise.", template.systemPrompt)
+        }
+
+    @Test
+    fun `when the interface language changes then the templates are emitted again in it`() = runTest {
+        givenOneBundledTemplateTranslatedIntoRussian()
+
+        // The first read of the assets runs on Dispatchers.IO; after it, the catalogue
+        // comes from the cache and every emission below is immediate.
+        repository.getBundledPresets().first()
+        val names = mutableListOf<String>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            repository.getBundledPresets().collect { names += it.single().name }
+        }
+
+        language.showIn("ru")
+
+        assertEquals(listOf("p", "шаблон"), names)
+    }
+
+    @Test
+    fun `given the interface in Russian when getPresetById then a bundled template comes translated`() = runTest {
+        givenOneBundledTemplateTranslatedIntoRussian()
+        language.showIn("ru")
+
+        assertEquals("шаблон", repository.getPresetById("bundled_one")?.name)
     }
 
     @Test

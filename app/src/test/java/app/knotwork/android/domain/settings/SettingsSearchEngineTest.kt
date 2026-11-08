@@ -106,6 +106,72 @@ class SettingsSearchEngineTest {
     }
 
     @Test
+    fun `given query without accents when search then finds the accented name and highlights it`() {
+        val spanish = listOf(entry("TILE", "Pipeline de Configuración rápida"))
+
+        val hit = SettingsSearchEngine.search("configuracion rapida", spanish).single()
+
+        assertEquals(SettingsSearchField.NAME, hit.matchedField)
+        assertEquals("Configuración rápida", hit.entry.name.substring(hit.nameMatchRange!!))
+    }
+
+    @Test
+    fun `given accented query when search then finds the text without accents`() {
+        val hit = SettingsSearchEngine.search("MÁX", index).first()
+
+        assertEquals("MAX_CONTEXT_LENGTH", hit.entry.anchorKey)
+        assertEquals(0 until 3, hit.nameMatchRange)
+    }
+
+    @Test
+    fun `given n or ñ when search then each finds the other`() {
+        val names = listOf(entry("SIZE", "Tamaño máximo"), entry("SIGNAL", "Senal"))
+
+        assertEquals(listOf("SIZE"), SettingsSearchEngine.search("tamano", names).map { it.entry.anchorKey })
+        assertEquals(listOf("SIGNAL"), SettingsSearchEngine.search("señal", names).map { it.entry.anchorKey })
+    }
+
+    @Test
+    fun `given query without accents when search then folds synonyms, category titles and descriptions`() {
+        val folded = listOf(
+            entry("CRASH", "Informes de fallos", synonyms = listOf("telemetría")),
+            entry("TOP_K", "Top-K", categoryTitle = "Generación"),
+            entry("THRESHOLD", "Umbral", description = "Similitud mínima de la búsqueda."),
+        )
+
+        val synonym = SettingsSearchEngine.search("telemetria", folded).single()
+        assertEquals(SettingsSearchField.SYNONYM, synonym.matchedField)
+        assertEquals("telemetría", synonym.synonymHit)
+        assertEquals(
+            SettingsSearchField.CATEGORY,
+            SettingsSearchEngine.search("generacion", folded).single().matchedField,
+        )
+        assertEquals(
+            SettingsSearchField.DESCRIPTION,
+            SettingsSearchEngine.search("busqueda", folded).single().matchedField,
+        )
+    }
+
+    @Test
+    fun `given Cyrillic when search then ё and й stay letters of their own`() {
+        val russian = listOf(entry("HEDGEHOG", "Мой ёж"))
+
+        assertTrue(SettingsSearchEngine.search("мои", russian).isEmpty())
+        assertTrue(SettingsSearchEngine.search("еж", russian).isEmpty())
+        assertEquals(0 until 6, SettingsSearchEngine.search("МОЙ ЁЖ", russian).single().nameMatchRange)
+    }
+
+    @Test
+    fun `foldForSearch keeps every character in its place`() {
+        val text = "Ñandú Ærø Ǿ İstanbul × ёй Ạ ß"
+
+        val folded = SettingsSearchEngine.foldForSearch(text)
+
+        assertEquals(text.length, folded.length)
+        assertEquals("nandu ærø ø istanbul × ёй a ß", folded)
+    }
+
+    @Test
     fun `anchorKey returns the key for a persisted setting`() {
         val keyed = SettingEntry(
             key = "TEMPERATURE",

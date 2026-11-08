@@ -1,8 +1,11 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.PipelineConstants
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.services.DefaultNames
 import kotlinx.coroutines.CancellationException
 import java.util.UUID
 import javax.inject.Inject
@@ -15,15 +18,20 @@ import javax.inject.Inject
  * in the library without primary-key collisions on the Room side. Connection
  * source / target references are remapped to the new node ids.
  *
- * The duplicate's name is the source name suffixed with `" (copy)"`. We keep
- * the suffix even when the source name already ends with `(copy)` — repeated
- * duplication then yields `"X (copy) (copy)"`, which is intentional: it
- * surfaces accidental double-clicks instead of silently collapsing them into a
- * single name shared by multiple pipelines.
+ * The duplicate's name is the source name marked as a copy in the interface
+ * language ([DefaultNames.copyOf] — `"X (copy)"` in English). We keep the
+ * mark even when the source name already carries one — repeated duplication
+ * then yields `"X (copy) (copy)"`, which is intentional: it surfaces
+ * accidental double-clicks instead of silently collapsing them into a single
+ * name shared by multiple pipelines.
  *
  * @property pipelineRepository Source of the original graph and the persistence sink.
+ * @property defaultNames How a copy is named.
  */
-class DuplicatePipelineUseCase @Inject constructor(private val pipelineRepository: PipelineRepository) {
+class DuplicatePipelineUseCase @Inject constructor(
+    private val pipelineRepository: PipelineRepository,
+    private val defaultNames: DefaultNames,
+) {
     /**
      * Duplicates the pipeline identified by [pipelineId].
      *
@@ -39,7 +47,7 @@ class DuplicatePipelineUseCase @Inject constructor(private val pipelineRepositor
         // instead of escaping the use-case boundary as an uncaught exception.
         return try {
             val source = pipelineRepository.getPipelineById(pipelineId)
-                ?: return Result.failure(IllegalStateException("Pipeline not found"))
+                ?: return Result.failure(InvalidInputException(InputProblem.NotFound(InputProblem.Subject.PIPELINE)))
 
             val nodeIdMapping: Map<String, String> =
                 source.nodes.associate { it.id to UUID.randomUUID().toString() }
@@ -95,8 +103,9 @@ class DuplicatePipelineUseCase @Inject constructor(private val pipelineRepositor
     }
 
     /**
-     * Composes the duplicate's display name as `"<source> (copy)"`, truncating
-     * the base name when the concatenation would exceed [MAX_NAME_LENGTH].
+     * Composes the duplicate's display name as `"<source> (copy)"` in the
+     * interface language, truncating the base name when the whole would exceed
+     * [MAX_NAME_LENGTH].
      * The limit is shared with [CreatePipelineUseCase] / [RenamePipelineUseCase]
      * so a duplicate is never longer than what those flows accept — without
      * the truncation, repeated duplication or already-long names would
@@ -107,20 +116,18 @@ class DuplicatePipelineUseCase @Inject constructor(private val pipelineRepositor
      * suffix.
      */
     private fun buildDuplicateName(sourceName: String): String {
-        val maxBase = MAX_NAME_LENGTH - COPY_SUFFIX.length
+        // What the copy mark adds, wherever the language puts it.
+        val maxBase = MAX_NAME_LENGTH - defaultNames.copyOf("").length
         val base = if (sourceName.length > maxBase) {
             sourceName.substring(0, maxBase).trimEnd()
         } else {
             sourceName
         }
-        return "$base$COPY_SUFFIX"
+        return defaultNames.copyOf(base)
     }
 
     private companion object {
         /** The shared pipeline-name ceiling ([PipelineConstants.MAX_NAME_LENGTH]). */
         const val MAX_NAME_LENGTH = PipelineConstants.MAX_NAME_LENGTH
-
-        /** Suffix appended to the source name to mark a duplicate. */
-        const val COPY_SUFFIX = " (copy)"
     }
 }

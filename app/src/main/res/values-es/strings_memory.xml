@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="memory_msg_load_error">No se pudo actualizar la memoria</string>
+    <string name="memory_msg_add_error">No se pudo guardar en la memoria</string>
+    <string name="memory_msg_edit_error">No se pudo guardar el cambio</string>
+    <string name="memory_segment_auto">AUTO</string>
+    <string name="memory_segment_compaction">COMPACTADO</string>
+    <string name="memory_segment_manual">MANUAL</string>
+    <string name="memory_header_compacted_ago">compactada hace %1$s</string>
+    <string name="memory_header_compacted_just_now">compactada hace un momento</string>
+    <string name="memory_section_pinned">Fijados</string>
+    <string name="memory_section_today">Hoy</string>
+    <string name="memory_section_this_week">Esta semana</string>
+    <string name="memory_section_earlier">Antes</string>
+    <string name="memory_detail_learned_from_chat">Chat «%1$s»</string>
+    <string name="memory_detail_last_used_ago">la última hace %1$s</string>
+    <string name="memory_detail_last_used_just_now">la última hace un momento</string>
+    <string name="memory_source_auto">Extraído automáticamente</string>
+    <string name="memory_source_manual">Guardado manualmente</string>
+    <string name="memory_source_compaction">Compactado</string>
+    <string name="memory_source_unknown">Desconocido</string>
+    <string name="memory_detail_tokens" tools:ignore="PluralsCandidate">%1$d tok</string>
+    <string name="memory_compact_seconds_approx">~%1$d s</string>
+    <plurals name="memory_used_in_runs">
+        <item quantity="one">%1$d ejecución</item>
+        <item quantity="many">%1$d ejecuciones</item>
+        <item quantity="other">%1$d ejecuciones</item>
+    </plurals>
+</resources>

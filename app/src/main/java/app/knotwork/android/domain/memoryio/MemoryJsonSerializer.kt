@@ -1,6 +1,7 @@
 package app.knotwork.android.domain.memoryio
 
 import app.knotwork.android.domain.constants.SettingsDefaults
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.MemoryChunk
 import app.knotwork.android.domain.models.MemoryExportDocument
 import app.knotwork.android.domain.models.MemoryImportOutcome
@@ -166,31 +167,35 @@ object MemoryJsonSerializer {
      */
     @Suppress("ReturnCount")
     fun parse(jsonText: String, nowMillis: Long = System.currentTimeMillis()): MemoryImportOutcome {
-        if (JsonNesting.exceeds(jsonText)) return MemoryImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
+        if (JsonNesting.exceeds(jsonText)) {
+            return MemoryImportOutcome.Failure(ImportProblem.TooDeep(JsonNesting.MAX_DEPTH))
+        }
         val root: JSONObject = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
             // Clamped: on Android the message quotes the entire input.
-            return MemoryImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
+            return MemoryImportOutcome.Failure(ImportProblem.NotJson(e.message.orEmpty().toDisplaySafe()))
         }
 
         val foundVersion = root.optInt(KEY_SCHEMA_VERSION, -1)
         if (foundVersion == -1) {
-            return MemoryImportOutcome.Failure("Missing schemaVersion field")
+            return MemoryImportOutcome.Failure(ImportProblem.MissingField(KEY_SCHEMA_VERSION))
         }
         val providerId = root.optString(KEY_PROVIDER_ID).takeIf { it.isNotBlank() }
-            ?: return MemoryImportOutcome.Failure("Missing or blank embeddingProviderId field")
+            ?: return MemoryImportOutcome.Failure(ImportProblem.MissingField(KEY_PROVIDER_ID))
         val exportedAt = root.optLong(KEY_EXPORTED_AT, 0L)
 
         val chunksJson = root.optJSONArray(KEY_CHUNKS)
-            ?: return MemoryImportOutcome.Failure("Missing chunks array")
+            ?: return MemoryImportOutcome.Failure(ImportProblem.MissingField(KEY_CHUNKS))
         // Counted before any chunk is decoded: a file holding more memories than
         // the store can ever keep is refused whole, the way a bundle over its
         // pipeline ceiling is, rather than imported and compacted away.
         if (chunksJson.length() > SettingsDefaults.MAX_MEMORY_CHUNKS_MAX) {
             return MemoryImportOutcome.Failure(
-                "File contains ${chunksJson.length()} memory chunks, more than the " +
-                    "${SettingsDefaults.MAX_MEMORY_CHUNKS_MAX} the memory can hold",
+                ImportProblem.TooManyMemories(
+                    count = chunksJson.length(),
+                    limit = SettingsDefaults.MAX_MEMORY_CHUNKS_MAX,
+                ),
             )
         }
 
@@ -199,18 +204,14 @@ object MemoryJsonSerializer {
         var pinnedInFile = 0
         for (i in 0 until chunksJson.length()) {
             val chunkJson = chunksJson.optJSONObject(i)
-                ?: return MemoryImportOutcome.Failure("Malformed chunk at index $i")
+                ?: return MemoryImportOutcome.Failure(ImportProblem.MemoryEntryNotObject(i))
             if (chunkJson.optBoolean(KEY_IS_PINNED, false)) pinnedInFile++
-            val chunk = parseChunk(chunkJson, nowMillis) ?: return MemoryImportOutcome.Failure(
-                "Chunk at index $i has a missing or malformed required field: text must be non-blank, " +
-                    "embedding a non-empty array of finite numbers, and timestamp a positive epoch-millis value",
-            )
+            val chunk = parseChunk(chunkJson, nowMillis)
+                ?: return MemoryImportOutcome.Failure(ImportProblem.MemoryEntryInvalid(i))
             chunks.add(chunk)
             histories.add(
-                parseHistory(chunkJson, nowMillis) ?: return MemoryImportOutcome.Failure(
-                    "Chunk at index $i has a malformed earlier version: its text must be non-blank and " +
-                        "capturedAt and replacedAt positive epoch-millis values",
-                ),
+                parseHistory(chunkJson, nowMillis)
+                    ?: return MemoryImportOutcome.Failure(ImportProblem.MemoryHistoryInvalid(i)),
             )
         }
 

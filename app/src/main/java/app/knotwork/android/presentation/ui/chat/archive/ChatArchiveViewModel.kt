@@ -2,11 +2,13 @@ package app.knotwork.android.presentation.ui.chat.archive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.knotwork.android.R
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.repositories.ChatRepository
-import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.domain.usecases.UnarchiveChatUseCase
+import app.knotwork.android.presentation.ui.chat.ChatExportDelegate
+import app.knotwork.android.presentation.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -35,8 +37,9 @@ import javax.inject.Inject
  * @property chatRepository Source of the archived sessions; sink for the
  *   irreversible delete.
  * @property unarchiveChatUseCase Puts a chat back into the drawer list.
- * @property exportChatUseCase Serialises an archived chat for the share sheet —
- *   archiving must not put a conversation out of reach of the transfer path.
+ * @property exportChatUseCase Serialises an archived chat for the share sheet or
+ *   a file — archiving must not put a conversation out of reach of the transfer
+ *   path.
  */
 @HiltViewModel
 class ChatArchiveViewModel @Inject constructor(
@@ -50,13 +53,12 @@ class ChatArchiveViewModel @Inject constructor(
     /** Single source of truth rendered by `ChatArchiveScreen`. */
     val uiState: StateFlow<ChatArchiveUiState> = _uiState.asStateFlow()
 
-    private val _exportEvents = MutableSharedFlow<ChatExportDocument>(extraBufferCapacity = 1)
-
     /**
-     * One-shot stream of export documents. The screen dispatches the system
-     * share sheet, because Hilt ViewModels stay free of `Context`.
+     * Shares or saves an archived chat — the same delegate, and so the same file,
+     * as the open chat's. The screen renders its events through
+     * `ChatExportEffects`, because Hilt ViewModels stay free of `Context`.
      */
-    val exportEvents: SharedFlow<ChatExportDocument> = _exportEvents.asSharedFlow()
+    val export: ChatExportDelegate = ChatExportDelegate(scope = viewModelScope, exportChat = exportChatUseCase)
 
     private val _restoreEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
@@ -126,14 +128,23 @@ class ChatArchiveViewModel @Inject constructor(
         }
     }
 
-    /** Serialises [sessionId] and raises it on [exportEvents] for the share sheet. */
-    fun export(sessionId: String) {
-        if (sessionId.isBlank()) return
-        viewModelScope.launch {
-            exportChatUseCase(sessionId)
-                .onSuccess { document -> _exportEvents.tryEmit(document) }
-                .onFailure { e -> Timber.w(e, "Exporting archived chat %s failed", sessionId) }
-        }
+    /**
+     * Hands an archived chat to the share sheet (the row menu's `Export chat`).
+     *
+     * @param sessionId The archived chat.
+     */
+    fun shareChat(sessionId: String) {
+        export.share(sessionId)
+    }
+
+    /**
+     * Saves an archived chat to a file the user picks (the row menu's
+     * `Save to file`).
+     *
+     * @param sessionId The archived chat.
+     */
+    fun saveChat(sessionId: String) {
+        export.save(sessionId)
     }
 
     /** Re-subscribes after a read failure (the error state's "Try again"). */
@@ -158,7 +169,11 @@ class ChatArchiveViewModel @Inject constructor(
                 .catch { e ->
                     Timber.e(e, "Reading the chat archive failed")
                     _uiState.update {
-                        it.copy(loading = false, errorMessage = e.localizedMessage ?: GENERIC_READ_FAILURE)
+                        it.copy(
+                            loading = false,
+                            errorMessage = e.localizedMessage?.let(UiText::Dynamic)
+                                ?: UiText(R.string.chat_archive_error_read_failed),
+                        )
                     }
                 }
                 .collect { sessions ->
@@ -177,7 +192,7 @@ class ChatArchiveViewModel @Inject constructor(
     /** Projects one archived session onto its row. */
     private fun ChatSession.toRow(now: Long): ChatArchiveRow = ChatArchiveRow(
         id = id,
-        title = name.ifBlank { DEFAULT_CHAT_TITLE },
+        title = name,
         archivedAt = archivedAtLabel(archivedAt = archivedAt, now = now),
         starred = isStarred,
         // A background run is allowed to write into an archived chat without
@@ -185,13 +200,4 @@ class ChatArchiveViewModel @Inject constructor(
         // conversation changed after the user put it away.
         ranAfterArchiving = archivedAt != null && updatedAt > archivedAt,
     )
-
-    companion object {
-        /** Title shown for an archived chat that was never named. */
-        const val DEFAULT_CHAT_TITLE: String = "New conversation"
-
-        /** Fallback error copy when the read failure carries no message. */
-        const val GENERIC_READ_FAILURE: String =
-            "Your archived chats are still on the device — reading them failed. Try again."
-    }
 }

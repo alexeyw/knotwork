@@ -132,6 +132,16 @@ class VerifyRunUseCaseTest {
     }
 
     @Test
+    fun `given the model cannot load and says nothing when verified then the reason is left to the sheet`() = runTest {
+        coEvery { load(any(), any(), any()) } returns Result.Error(object : AppError.System {})
+
+        val events = verify(planOf(visit("a", repeating(localCall(0, "a"))))).toList()
+
+        // No English placeholder: the sheet words a missing reason in the interface language.
+        assertEquals(listOf(VerificationEvent.Failed("gemma.litertlm", null, done = 0, total = 1)), events)
+    }
+
+    @Test
     fun `given the engine fell back to another backend when verified then the check stops before the call`() = runTest {
         backend = LocalBackend.GPU
 

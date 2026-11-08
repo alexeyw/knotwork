@@ -140,7 +140,7 @@ class AgentForegroundService : Service() {
         // (a notification must appear within a few seconds of the start). The
         // state collector below demotes as soon as the agent settles to idle,
         // so the notification is only present while there is active work.
-        promoteForeground("Initializing…")
+        promoteForeground(getString(R.string.notifications_agent_status_initializing))
 
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG)
@@ -216,18 +216,21 @@ class AgentForegroundService : Service() {
     }
 
     private fun getStatusTextForState(state: AgentOrchestratorState): String = when (state) {
-        is AgentOrchestratorState.Idle -> "Agent is waiting"
-        is AgentOrchestratorState.Loading -> "Loading context..."
-        is AgentOrchestratorState.Queued -> "Queued behind another run"
-        is AgentOrchestratorState.Thinking -> "Agent is thinking..."
-        is AgentOrchestratorState.ExecutingTool -> "Using tool: ${state.toolName}..."
-        is AgentOrchestratorState.WaitingForApproval -> "Awaiting user confirmation..."
-        is AgentOrchestratorState.AwaitingClarification -> "Awaiting user clarification..."
-        is AgentOrchestratorState.WaitingForCeilingRaise -> "Waiting: the run reached a limit"
-        is AgentOrchestratorState.SuspendedInBackground -> "Waiting for user response in background"
-        is AgentOrchestratorState.ObservationResult -> "Processing tool result..."
-        is AgentOrchestratorState.Answering -> "Answering..."
-        is AgentOrchestratorState.Completed -> "Task completed"
+        is AgentOrchestratorState.Idle -> getString(R.string.notifications_agent_status_idle)
+        is AgentOrchestratorState.Loading -> getString(R.string.notifications_agent_status_loading)
+        is AgentOrchestratorState.Queued -> getString(R.string.notifications_agent_status_queued)
+        is AgentOrchestratorState.Thinking -> getString(R.string.notifications_agent_status_thinking)
+        is AgentOrchestratorState.ExecutingTool ->
+            getString(R.string.notifications_agent_status_executing_tool, state.toolName)
+        is AgentOrchestratorState.WaitingForApproval -> getString(R.string.notifications_agent_status_approval)
+        is AgentOrchestratorState.AwaitingClarification ->
+            getString(R.string.notifications_agent_status_clarification)
+        is AgentOrchestratorState.WaitingForCeilingRaise -> getString(R.string.notifications_agent_status_ceiling)
+        is AgentOrchestratorState.SuspendedInBackground ->
+            getString(R.string.notifications_agent_status_suspended)
+        is AgentOrchestratorState.ObservationResult -> getString(R.string.notifications_agent_status_observation)
+        is AgentOrchestratorState.Answering -> getString(R.string.notifications_agent_status_answering)
+        is AgentOrchestratorState.Completed -> getString(R.string.notifications_agent_status_completed)
         // Unreachable in practice, and deliberately says nothing about the
         // cause. `Error` is not active work, so `updateForegroundPresence`
         // demotes the notification rather than promoting it with this text.
@@ -237,14 +240,15 @@ class AgentForegroundService : Service() {
         // background-run notification. A foreground status line must not be a
         // third place to word it — and reaching into presentation from `data`
         // to do so would invert the dependency direction.
-        is AgentOrchestratorState.Error -> "Run stopped"
-        is AgentOrchestratorState.PipelineStage -> "Pipeline stage: ${state.stepInfo.nodeName}"
-        is AgentOrchestratorState.PipelineTrace -> "Pipeline trace updated"
-        is AgentOrchestratorState.ConsoleLog -> "Pipeline running..."
-        is AgentOrchestratorState.NodeIO -> "Pipeline running..."
+        is AgentOrchestratorState.Error -> getString(R.string.notifications_agent_status_stopped)
+        is AgentOrchestratorState.PipelineStage ->
+            getString(R.string.notifications_agent_status_stage, state.stepInfo.nodeName)
+        is AgentOrchestratorState.PipelineTrace -> getString(R.string.notifications_agent_status_trace)
+        is AgentOrchestratorState.ConsoleLog -> getString(R.string.notifications_agent_status_running)
+        is AgentOrchestratorState.NodeIO -> getString(R.string.notifications_agent_status_running)
         // An advisory is not a change of activity: the run carries on, and the
         // strip above the composer is where the notice is worded.
-        is AgentOrchestratorState.RunNotice -> "Pipeline running..."
+        is AgentOrchestratorState.RunNotice -> getString(R.string.notifications_agent_status_running)
     }
 
     private fun createNotificationChannel() {

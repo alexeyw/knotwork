@@ -1,0 +1,7 @@
+# Design-system text defaults the app does not replace with a resource, one
+# `Class.parameter` per line — read by CatalogStringsWiringTest. Each shows its
+# English default in every language.
+#
+# The list only shrinks: pass the text from a string resource where the class is
+# built and delete its line; a new default is wired in the change that adds it.
+SkillLibraryStrings.toolsCountFormat	# never shown: every row arrives with its own plural label (SkillLibraryScreen)

@@ -1,0 +1,79 @@
+# Interface text written as string literals in code, one `path<TAB>literal` per
+# line — read by DisplayedLiteralGuardTest. A literal here shows in English in
+# every language.
+#
+# The list only shrinks: move a text to a string resource and delete its line in
+# the same change; new interface text goes into a resource from the start. A
+# literal that is rightly the same in every language (a brand name) stays, with
+# its reason after a TAB and `#`.
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Accepted	# wire value of the callback another app reads
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Blocked	# wire value of the callback another app reads
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Completed	# wire value of the callback another app reads
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Failed	# wire value of the callback another app reads
+app/src/main/java/app/knotwork/android/data/services/ExternalAutomationCallbackSender.kt	Rejected	# wire value of the callback another app reads
+app/src/main/java/app/knotwork/android/data/services/embedding/CloudEmbeddingProvider.kt	OpenAI (text-embedding-3-small)	# product and model name
+app/src/main/java/app/knotwork/android/data/services/embedding/CloudEmbeddingProvider.kt	OpenAI API key is not configured	# exception text: a run records it, a screen words the failure itself (decisions §113 R1)
+app/src/main/java/app/knotwork/android/data/services/embedding/CloudEmbeddingProvider.kt	OpenAI embedding request failed	# exception text: a run records it, a screen words the failure itself (decisions §113 R1)
+app/src/main/java/app/knotwork/android/data/services/embedding/OllamaEmbeddingProvider.kt	Ollama (nomic-embed-text)	# product and model name
+app/src/main/java/app/knotwork/android/data/services/embedding/OllamaEmbeddingProvider.kt	Ollama base URL is not configured	# exception text: a run records it, a screen words the failure itself (decisions §113 R1)
+app/src/main/java/app/knotwork/android/data/services/embedding/OllamaEmbeddingProvider.kt	Ollama embedding request failed	# exception text: a run records it, a screen words the failure itself (decisions §113 R1)
+app/src/main/java/app/knotwork/android/data/services/embedding/UseEmbeddingProvider.kt	On-device (Universal Sentence Encoder)	# the provider's own name; settings show settings_memory_embedding_on_device
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	attachment orphan cleanup	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	launcher shortcuts	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	memory compaction	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	memory re-embed re-arm	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	model file hash re-arm	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	pending-interaction expiry	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	run retention	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	trigger sync	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/startup/StartupMaintenance.kt	unfinished backup	# log label of a startup step, never shown
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	AndroidX Jetpack	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Firebase Crashlytics	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Gson	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Hilt	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Inter	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	JetBrains Mono	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Jetpack Compose	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Koog	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Kotlin Coroutines	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Ktor	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Multiplatform Markdown Renderer	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Room	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	SIL OFL 1.1	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Timber	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/about/AboutScreen.kt	Universal Sentence Encoder	# proper name of a library, font or licence
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeFixtures.kt	stub card 1	# test fixture, never shown
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeFixtures.kt	stub card 2	# test fixture, never shown
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Add a 30-minute meeting \"Rollout sync\" to your work calendar tomorrow at 10:00.	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Family	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Permanently remove /Users/me/old-notes.md (4.2 KB).	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Personal	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Read tomorrow's events from your work calendar.	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Summarise	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Which calendar should I add the meeting to?	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	Work	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ChatHomeStateMapping.kt	{"title":"Rollout sync","duration":30,"calendar":"work"}	# sample row of the debug-build state picker, never in a release
+app/src/main/java/app/knotwork/android/presentation/ui/chat/home/ContentReportIssueUrl.kt	\n\n_[report truncated to fit the link — copy the full report instead]_	# report to the developer: stays in English (decisions §113 R3)
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	$it (native heap, approx.)	# shared benchmark text: exports stay in English (decisions §113 R3)
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Measured on-device · 1 warm-up + 1 measured run.	# shared benchmark text: exports stay in English (decisions §113 R3)
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Peak memory  $peak	# shared benchmark text: exports stay in English (decisions §113 R3)
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Anthropic	# product name
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Google	# product name
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Groq	# product name
+app/src/main/java/app/knotwork/android/presentation/ui/settings/provider/ProviderDisplayName.kt	Ollama	# product name
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Done	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Fail	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	False	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Item	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Pass	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	Retry	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodePorts.kt	True	# route label: the token a model's output is matched against (decisions §113 R1)
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/NodeTypeColors.kt	INTENT ROUTER	# node-type code, as in pipeline JSON
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Anthropic	# product name
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Google	# product name
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Groq	# product name
+catalog/src/main/java/app/knotwork/design/components/pipelineeditor/ProviderChoices.kt	Ollama	# product name
+catalog/src/main/java/app/knotwork/design/screens/tools/ToolsViewState.kt	Streamable HTTP	# transport name from the MCP specification
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Decode       ${decode(report.decodeTokensPerSec, units)}	# shared benchmark text: exports stay in English (decisions §113 R3)
+app/src/main/java/app/knotwork/android/presentation/ui/models/PerformanceFormatting.kt	Total        ${totalSeconds(report.totalMs, units)}	# shared benchmark text: exports stay in English (decisions §113 R3)
+app/src/main/java/app/knotwork/android/presentation/common/DefaultNamesImpl.kt	New Chat	# marker: the name earlier releases stored for a new chat, still renamed on its first message

@@ -163,6 +163,9 @@ Paths below are relative to `src/main/java/app/knotwork/design/`.
   - `prompt/` - prompt-facing components: the preview sheet that shows a rendered prompt with its placeholders resolved, and its unresolved ones marked as errors.
     - `PromptPreviewPreview.kt` - Preview fixtures for the prompt-preview sheet.
     - `PromptPreviewSheet.kt` - Bottom sheet displaying a prompt with its `$VARIABLES` already substituted.
+  - `text/` - The app's bounded text: `Text` and `WholeText`, and the rules for what one text lays out.
+    - `ShownText.kt` - What one text lays out (`shownText`): a line-limited text cut to what its lines hold, a run over 2 000 characters in pieces, at most 10 000 characters of an unlimited text and the count of the rest.
+    - `Text.kt` - The app's text: Material 3's `Text`, with the same parameters, that never lays out more than the main thread can afford however long the string it is given.
   - `topbar/` - top-app-bar chrome.
     - `JournalExportActions.kt` - The pair of top-bar actions that hands a journal to the user: **share it** and **save it to a file**.
     - `KnotworkTopAppBarShell.kt` - wraps a `TopAppBar` in a column with an attached hairline divider so it never bleeds into scrolled content.
@@ -467,6 +470,7 @@ matters.
     - `ChatReaderScrollThumbTest.kt` - How the reader's scroll thumb maps onto its items, and when it shows.
     - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
     - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
+    - `HitlConfirmationCardStripTest.kt` - The approval card's risk strip runs along its start edge — the left in a left-to-right layout, the right in a right-to-left one.
     - `HitlConfirmationCardTest.kt` - Pins both halves of `HitlConfirmationCard`'s summary contract: a blank summary drops the line entirely, a real one still renders alongside the tool id.
     - `HitlConfirmationStateTest.kt` - Pure-JVM tests for `HitlConfirmationState` — the gating logic behind `HitlConfirmationCard`'s Allow CTA, Always-Allow visibility, and destructive typed-confirm row.
     - `HitlRequestContextTest.kt` - `label` — the one place that names whose words a request is.
@@ -498,11 +502,13 @@ matters.
     - `RunHeaderAffordanceTest.kt` - What the run strip, the hash chips and the check's sheet do when used: the line toggles, each copy button hands over the whole value, a disabled action does nothing yet stays readable, and a mismatch's button names where it is fixed.
   - `controls/` - Behaviour tests for the input controls.
     - `KnotworkPasswordFieldTest.kt` - `KnotworkPasswordField`: TalkBack hears what the eye does, and a password manager hears a password — a new one where the caller says one is being chosen.
+    - `KnotworkSegmentedControlLayoutTest.kt` - The segmented control keeps its options in one row while each fits its share of the width, and stacks them when they do not — so a larger font never cuts an option's label.
   - `dialogs/` - the shared dialog shapes, currently the outcome family.
     - `DialogsSnapshotTest.kt` - Roborazzi baselines for the two field-free dialogs that moved out of the settings screen.
     - `OutcomeDialogSnapshotTest.kt` - Roborazzi baselines for the `OutcomeDialog` family — the four import outcomes and the re-import question, in one shape.
     - `SingleFieldDialogSnapshotTest.kt` - Roborazzi baselines for the shared single-field dialog.
     - `SingleFieldDialogTest.kt` - Behaviour of the shared single-field dialog — the part a baseline cannot show.
+  - `KnotworkMarkdownLongRunTest.kt` - Every Markdown element the chat draws, holding a run without whitespace longer than `UNBROKEN_RUN_MAX`, is drawn by `knotworkMarkdownComponents` without one text holding more of the run than that — the renderer draws headings and table cells with its own text, which the app's bounded text never sees.
   - `KnotworkMarkdownTableTest.kt` - A table cell longer than its column wraps onto more lines instead of ending in an ellipsis — in a chat bubble, which draws tables with `knotworkMarkdownComponents`, and in the message reader, whole and cut into chunks.
   - `lists/` - list rows and their status mapping.
     - `ConnectionStatusTest.kt` - Pure-JVM mapping test for `ConnectionStatus.toStatus`.
@@ -525,6 +531,13 @@ matters.
     - `PipelineEditorCatalogPageSnapshotTest.kt` - Roborazzi snapshot baseline for `PipelineEditorCatalogContent` in both themes plus a reduced-motion variant that pins `FixedKnotworkA11y` so the NodeCard running pulse renders deterministically.
   - `prompt/` - baselines for the prompt-facing components.
     - `PromptPreviewSheetSnapshotTest.kt` - Roborazzi baselines for the prompt-preview sheet.
+  - `TallTextLayoutTest.kt` - A text taller than a layout constraint can hold — about 262 000 px — is drawn, not thrown.
+  - `text/` - Tests of the bounded text: its rules, its look, and the screens it bounds.
+    - `LongTextSurfacesTest.kt` - The screens that showed a model's, a tool's or a user's text of any length in one text, drawn with such a text: the ones that may cut keep each text node to what its lines can hold or to the cap, and the ones that must show the text whole show every character of it, with no text node holding a run without whitespace longer than 2 000 characters.
+    - `ShownTextTest.kt` - What `shownText` hands a text to lay out, for each of its three rules.
+    - `TextBreakAssertions.kt` - Checks that a laid-out text is whole: its lines end only between words, and none of it is cut by its line limit or its box.
+    - `TextSnapshotTest.kt` - Roborazzi baselines of the end of a text longer than a text shows: its last lines and the *… N more characters* line under them, at 100 % and 200 % font scale.
+    - `TextTest.kt` - The app's `Text` and `WholeText` as drawn: ordinary text exactly as Material draws it, and a long text bounded by the rule `shownText` picks.
   - `topbar/` - top-bar actions whose behaviour outruns their appearance.
     - `JournalExportActionsBehaviourTest.kt` - Behaviour of the journal-export actions on both journal surfaces — the parts a Roborazzi baseline cannot show.
   - `UnbrokenRunCutsTest.kt` - Where `unbrokenRunCuts` cuts a text, and what the pieces keep.
@@ -561,6 +574,7 @@ matters.
   - `help/` - Fixtures and Roborazzi baselines for the Help list and the document reader, both themes and font scale 200 %.
     - `HelpPreview.kt` - Fixtures for the Help snapshots.
     - `HelpSnapshotTest.kt` - Roborazzi baselines for the Help list and the document reader.
+  - `LargeFontLayoutTest.kt` - At double font on a 360 dp phone, the texts of a row that sets a label beside a value or a control stay whole: each line ends between words and nothing is cut.
   - `memory/` - long-term memory — the stats header, grouped list, detail sheet and compaction dialog, plus which states may offer which affordances.
     - `MemoryAccessibilityTest.kt` - Memory-screen a11y audit.
     - `MemoryAffordanceTest.kt` - Pins which Memory states are allowed to offer which affordances.
@@ -604,6 +618,7 @@ matters.
     - `SettingsHubSearchTest.kt` - Behavioural tests for the settings-hub search surface: result rows render and route on tap, and the no-match empty state offers a working clear action.
     - `SettingsHubSnapshotTest.kt` - Roborazzi baseline for the redesigned settings **hub** (category list + inline Basic controls): Default / Loading / RestartRequired × Light/Dark, plus a font-scale 200% variant.
     - `SettingsPreview.kt` - Internal preview fixtures backing the settings hub + category snapshot suites.
+    - `ToolApprovalRowLayoutTest.kt` - The "Approve tool calls" row keeps its control beside the label while the options fit there on one row, and puts the label above the control when they do not.
   - `skills/` - the skill library, its full-screen editor and the delete dialog.
     - `SkillLibraryContentSnapshotTest.kt` - Roborazzi snapshot baselines for the Skill Library surfaces — the list (`SkillLibraryContent`), the full-screen editor (`SkillEditorContent`) and the delete dialog (`SkillDeleteDialogContent`) across their documented states in both themes.
   - `splash/` - the splash surface.
@@ -617,6 +632,7 @@ matters.
     - `ToolsContentSnapshotTest.kt` - Roborazzi baseline for `ToolsContent` across its documented states in both themes.
     - `ToolsGroupAffordanceTest.kt` - Pins the three rules the Tools surface gained from the closed test.
     - `ToolsGroupsSnapshotTest.kt` - Roborazzi baseline for the collapsible tool groups.
+    - `ToolsServerMenuTest.kt` - The bulk switches in an MCP server row's menu.
   - `triggers/` - the trigger list, editor and delete dialog.
     - `TriggersContentSnapshotTest.kt` - Roborazzi snapshot baselines for the Triggers surfaces — the list (`TriggersContent`), the full-screen editor (`TriggerEditorContent`) and the delete dialog (`TriggerDeleteDialogContent`) across their documented states in both themes.
 - `SnapshotComparisonOptionsGuardTest.kt` - Fails a screenshot captured without `KnotworkRoborazziOptions`.

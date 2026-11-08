@@ -19,14 +19,16 @@ import org.junit.Test
  * An importer's error is the only text a failed import produces, and it quotes
  * the file. A value carrying line breaks turns a one-line error into a
  * paragraph the file wrote, and on Android a JSON parser's own message
- * quotes the whole document. So each refusal below must come out as one line,
+ * quotes the whole document. So every value a refusal carries — read here
+ * through the problem's `toString`, which lists them all — must be one line,
  * free of control and bidi characters, quoting no more of the file than
- * [ImportedText.MAX_QUOTED_VALUE_LENGTH] characters at a time.
+ * [ImportedText.MAX_QUOTED_VALUE_LENGTH] characters at a time. The sentence
+ * the screen builds from it is checked in `ImportProblemTextTest`.
  *
  * The cases are one per refusal branch of [PipelineJsonSerializer],
  * [PipelineBundleJsonSerializer] and [MemoryJsonSerializer]. A new branch that
- * quotes the file belongs here; the screens also apply [toDisplaySafe] to the
- * whole message, so a branch left out cannot add lines — only length.
+ * quotes the file belongs here; the wording also applies [toDisplaySafe] to
+ * every value, so a branch left out cannot add lines — only length.
  */
 class ImportMessageSafetyTest {
 
@@ -74,7 +76,10 @@ class ImportMessageSafetyTest {
             nodes = arrayOf(node("a").put("config", JSONObject().put("conditionComplexity", HOSTILE))),
         ),
         "invalid JSON" to duplicateKeyDocument(),
-    ).map { (case, json) -> case to (PipelineJsonSerializer.parse(json) as PipelineImportOutcome.Failure).message }
+    ).map { (case, json) ->
+        case to
+            (PipelineJsonSerializer.parse(json) as PipelineImportOutcome.Failure).problem.toString()
+    }
 
     private fun bundleRefusals(): List<Pair<String, String>> {
         val good = JSONObject(pipeline(nodes = arrayOf(node("a"))))
@@ -91,12 +96,13 @@ class ImportMessageSafetyTest {
             "duplicate pipeline ids" to bundle(*Array(8) { withId(HOSTILE + it) }, *Array(8) { withId(HOSTILE + it) }),
             "dangling reference" to bundle(dangling),
         ).map { (case, json) ->
-            case to (PipelineBundleJsonSerializer.parse(json) as PipelineBundleImportOutcome.Failure).message
+            case to (PipelineBundleJsonSerializer.parse(json) as PipelineBundleImportOutcome.Failure).problem.toString()
         }
     }
 
     private fun memoryRefusals(): List<Pair<String, String>> = listOf(
-        "invalid JSON" to (MemoryJsonSerializer.parse(duplicateKeyDocument()) as MemoryImportOutcome.Failure).message,
+        "invalid JSON" to (MemoryJsonSerializer.parse(duplicateKeyDocument()) as MemoryImportOutcome.Failure).problem
+            .toString(),
     )
 
     private fun node(id: String) = JSONObject().put("id", id).put("type", "INPUT")

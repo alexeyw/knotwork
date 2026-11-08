@@ -1,21 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Russian (ru) localization placeholder.
-
-    The initial UI-strings-to-resources pass lands the English baseline only;
-    every user-facing string lives under `res/values/strings_*.xml`. This
-    file marks the entry point for the first translation. To translate:
-
-      1. Mirror entries from `res/values/strings.xml` and per-feature
-         `res/values/strings_<feature>.xml` files here (and create the
-         matching `res/values-ru/strings_<feature>.xml` siblings).
-      2. Translate the `<string>` bodies; preserve the keys verbatim and
-         the positional argument markers (`%1$s`, `%1$d`).
-      3. Add `defaultConfig.resourceConfigurations += setOf("en", "ru")`
-         to `app/build.gradle.kts` once the translations are reviewed.
-
-    Empty file by design — the initial strings pass ships English-only. Removing this
-    file later is fine; keeping it now documents the intended path.
--->
 <resources>
+    <!-- More tab: row counters and the network footer. -->
+    <string name="more_models_active">%1$s · активна</string>
+    <string name="more_models_none">модель не установлена</string>
+    <string name="more_prompts_counts">категорий: %1$d · промптов: %2$d</string>
+    <string name="more_tasks_none">нет</string>
+    <string name="more_tasks_counts">выполняется: %1$d · в очереди: %2$d</string>
+    <string name="more_metrics_subtitle">ток/с · задержка · батарея</string>
+    <string name="more_settings_subtitle">системный промпт · параметры LLM · ключи</string>
+    <string name="more_about_version">v%1$s · сборка %2$d</string>
+    <string name="more_library_none">сохранённых пресетов нет</string>
+    <string name="more_files_empty">пусто</string>
+    <string name="more_network_no_calls_yet">на устройстве · обращений к сети не было</string>
+    <string name="more_network_just_now">в сети · обращение к сети только что</string>
+    <string name="more_network_quiet">на устройстве · без обращений к сети %1$d мин</string>
+    <plurals name="more_memory_counts">
+        <item quantity="one">%1$s фрагмент · %2$s</item>
+        <item quantity="few">%1$s фрагмента · %2$s</item>
+        <item quantity="many">%1$s фрагментов · %2$s</item>
+        <item quantity="other">%1$s фрагмента · %2$s</item>
+    </plurals>
+    <plurals name="more_library_saved_presets">
+        <item quantity="one">%1$d сохранённый пресет</item>
+        <item quantity="few">%1$d сохранённых пресета</item>
+        <item quantity="many">%1$d сохранённых пресетов</item>
+        <item quantity="other">%1$d сохранённого пресета</item>
+    </plurals>
+    <plurals name="more_files_counts">
+        <item quantity="one">%1$d файл · %2$s</item>
+        <item quantity="few">%1$d файла · %2$s</item>
+        <item quantity="many">%1$d файлов · %2$s</item>
+        <item quantity="other">%1$d файла · %2$s</item>
+    </plurals>
+    <!-- Onboarding skip hints, shown after the screen closes. -->
+    <string name="onboarding_skip_hint">Модель можно установить в Настройки → Модели</string>
+    <string name="onboarding_skip_download_continues">Загрузка продолжится в фоне</string>
+    <!-- Tool detail: where a tool comes from. -->
+    <string name="tool_detail_server_error">Ошибка сервера: %1$s</string>
+    <string name="tool_detail_mcp_tool">Инструмент MCP</string>
+    <string name="tool_detail_local_tool">Локальный инструмент</string>
+    <!-- Onboarding Download step: why it cannot go on. -->
+    <string name="onboarding_error_download">Не удалось загрузить.</string>
+    <string name="onboarding_error_load">Не удалось загрузить модель в память.</string>
+    <string name="onboarding_error_setup">Не удалось настроить этот сценарий.</string>
+    <string name="onboarding_error_custom_url_required">Введите адрес модели для загрузки.</string>
+    <string name="onboarding_error_custom_url_not_litertlm">Эта ссылка ведёт не на файл .litertlm. На телефоне работают только модели .litertlm.</string>
+    <!-- An MCP server row's connection status on the Tools screen. -->
+    <string name="tools_mcp_status_connecting">подключение…</string>
+    <string name="tools_mcp_status_ok">работает</string>
+    <string name="tools_mcp_status_interrupted">Попытка подключения прервана</string>
+    <string name="app_name">Knotwork</string>
+    <string name="approval_channel_sensitive_name">Подтверждения агента</string>
+    <string name="approval_channel_sensitive_description">Запросы подтверждения для вызовов инструментов уровня «Осторожно».</string>
+    <string name="approval_channel_destructive_name">Подтверждения агента — опасные действия</string>
+    <string name="approval_channel_destructive_description">Запросы подтверждения для необратимых вызовов инструментов (например, отправка, удаление, покупка).</string>
+    <string name="approval_notification_title_sensitive">Подтверждение вызова инструмента</string>
+    <string name="approval_notification_title_destructive">Опасное действие требует подтверждения</string>
+    <string name="approval_notification_text">Агент хочет использовать %1$s. Разрешить?</string>
+    <string name="approval_notification_big_text">Агент хочет использовать %1$s с аргументами:\n%2$s</string>
+    <string name="approval_notification_waiting_text">Ждём вашего подтверждения, чтобы использовать %1$s.</string>
+    <string name="approval_notification_review_in_chat">Проверить в чате</string>
+    <string name="approval_notification_arguments_cut">Аргументы длиннее, чем помещается в уведомление. Прежде чем подтверждать, откройте чат и прочитайте их полностью.</string>
+    <string name="approval_notification_request_line">%1$s: %2$s</string>
+    <string name="approval_notification_request_image_only">Вы отправили изображение без текста.</string>
+    <string name="clarification_channel_name">Вопросы агента</string>
+    <string name="clarification_channel_description">Вопросы, на которые агенту нужен ответ, чтобы продолжить приостановленную задачу.</string>
+    <string name="clarification_notification_title">Агенту нужен ваш ответ</string>
+    <string name="shortcut_new_chat_short">Новый чат</string>
+    <string name="shortcut_new_chat_long">Начать новый чат</string>
+    <string name="shortcut_pipelines_short">Пайплайны</string>
+    <string name="shortcut_pipelines_long">Открыть библиотеку пайплайнов</string>
+    <string name="share_not_configured">Выберите пайплайн для «Поделиться» в «Настройки» → «Фон и триггеры».</string>
+    <string name="share_nothing_to_share">Нечем поделиться.</string>
+    <string name="share_rate_limited">Слишком много отправок за последний час. Попробуйте позже.</string>
+    <string name="share_image_blocked_cloud">Пайплайн для «Поделиться» начинается в облаке, а изображения остаются на устройстве.</string>
+    <string name="share_image_blocked_model_no_vision">Эта модель не читает изображения. Включите поддержку изображений на экране «Модели».</string>
+    <string name="share_image_blocked_no_vision_step">В пайплайне для «Поделиться» нет локального шага, который может прочитать изображение.</string>
+    <string name="share_session_image_name">Присланное изображение</string>
+    <string name="share_session_content_name">Присланное содержимое</string>
+    <string name="share_session_reused_name">Присланное</string>
+    <string name="tile_label">Запустить пайплайн</string>
+    <string name="tile_duty_prompt">Запусти мой дежурный пайплайн.</string>
+    <string name="tile_running">Пайплайн выполняется в фоне…</string>
+    <string name="tile_not_configured">Выберите пайплайн для плитки быстрых настроек в «Настройки» → «Фон и триггеры».</string>
+    <string name="tile_subtitle_ready">Готово</string>
+    <string name="tile_subtitle_unconfigured">Не настроено</string>
 </resources>

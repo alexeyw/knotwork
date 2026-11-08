@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Preset export outcome. -->
+    <string name="orchestrator_preset_exported">Пресет экспортирован</string>
+    <string name="orchestrator_preset_export_failed">Не удалось экспортировать</string>
+    <!-- Pipeline rows: node count and empty-graph words. -->
+    <string name="pipeline_flow_empty">пустой граф</string>
+    <string name="pipeline_library_unbound">не привязан</string>
+    <string name="pipeline_library_untitled">без названия</string>
+    <plurals name="pipeline_library_node_count">
+        <item quantity="one">%1$d узел</item>
+        <item quantity="few">%1$d узла</item>
+        <item quantity="many">%1$d узлов</item>
+        <item quantity="other">%1$d узла</item>
+    </plurals>
+    <string name="orchestrator_library_export_bundle_failed">Не удалось экспортировать пакет: %1$s</string>
+    <string name="orchestrator_library_new_pipeline_title">Новый пайплайн</string>
+    <string name="orchestrator_library_rename_pipeline_title">Переименовать пайплайн</string>
+    <string name="orchestrator_library_delete_pipeline_title">Удалить пайплайн</string>
+    <string name="orchestrator_library_delete_confirm">Удалить пайплайн «%1$s»? Отменить это нельзя.</string>
+    <plurals name="orchestrator_library_delete_dependents_warning">
+        <item quantity="one">%1$d пайплайн запускает этот через узел PIPELINE. После удаления у таких узлов не останется цели, и пайплайны с ними будут показывать ошибку проверки, пока вы не укажете другую цель или не уберёте узел.</item>
+        <item quantity="few">%1$d пайплайна запускают этот через узел PIPELINE. После удаления у таких узлов не останется цели, и пайплайны с ними будут показывать ошибку проверки, пока вы не укажете другую цель или не уберёте узел.</item>
+        <item quantity="many">%1$d пайплайнов запускают этот через узел PIPELINE. После удаления у таких узлов не останется цели, и пайплайны с ними будут показывать ошибку проверки, пока вы не укажете другую цель или не уберёте узел.</item>
+        <item quantity="other">%1$d пайплайна запускают этот через узел PIPELINE. После удаления у таких узлов не останется цели, и пайплайны с ними будут показывать ошибку проверки, пока вы не укажете другую цель или не уберёте узел.</item>
+    </plurals>
+    <string name="orchestrator_library_delete_dependents_header" tools:ignore="PluralsCandidate">СЛОМАЮТСЯ · %1$d</string>
+    <string name="orchestrator_library_delete_anyway">Всё равно удалить</string>
+    <string name="orchestrator_library_delete_keep">Оставить</string>
+    <string name="orchestrator_library_name_field_label">Название</string>
+    <string name="orchestrator_feedback_default_pipeline_updated">Пайплайн по умолчанию обновлён</string>
+    <string name="orchestrator_feedback_share_pipeline_bound">Пайплайн назначен для «Поделиться»</string>
+    <string name="orchestrator_feedback_tile_pipeline_bound">Пайплайн назначен для плитки быстрых настроек</string>
+    <string name="orchestrator_feedback_pipeline_renamed">Пайплайн переименован</string>
+    <string name="orchestrator_feedback_pipeline_duplicated">Создана копия пайплайна</string>
+    <string name="orchestrator_feedback_pipeline_deleted">Пайплайн удалён</string>
+    <string name="orchestrator_feedback_pipeline_created">Пайплайн создан</string>
+    <string name="prompt_preset_picker_title">Пресеты промптов</string>
+    <string name="prompt_preset_picker_subtitle">%1$s · выберите пресет для этого узла</string>
+    <string name="prompt_preset_picker_tab_bundled">Встроенные</string>
+    <string name="prompt_preset_picker_tab_mine">Мои</string>
+    <string name="prompt_preset_picker_all_chip">Все</string>
+    <string name="prompt_preset_picker_current_badge">ТЕКУЩИЙ</string>
+    <string name="prompt_preset_picker_tokens_suffix">ток</string>
+    <string name="prompt_preset_picker_empty_bundled">Для этого типа узла нет встроенных пресетов.</string>
+    <string name="prompt_preset_picker_empty_mine">Вы ещё не сохранили пресетов для этого типа узла.</string>
+    <string name="prompt_preset_picker_empty_filtered">Под текущий фильтр не подходит ни один пресет.</string>
+    <string name="prompt_preset_picker_action_preview">Посмотреть</string>
+    <string name="prompt_preset_picker_action_use_prompt">Использовать промпт</string>
+    <string name="prompt_preset_picker_action_cancel">Отменить</string>
+    <string name="prompt_preset_save_dialog_title">Сохранить как пресет</string>
+    <string name="prompt_preset_save_dialog_subtitle">Тип узла: %1$s</string>
+    <string name="prompt_preset_save_field_name">Название</string>
+    <string name="prompt_preset_save_field_description">Описание (необязательно)</string>
+    <string name="prompt_preset_save_field_tags">Теги (через запятую, необязательно)</string>
+    <string name="prompt_preset_save_field_tags_hint">например: кратко, рассуждение, json</string>
+    <string name="prompt_preset_save_action_save">Сохранить</string>
+    <string name="prompt_preset_save_action_cancel">Отменить</string>
+    <string name="prompt_preset_save_error_blank_prompt">Нельзя сохранить пустой системный промпт.</string>
+    <string name="prompt_preset_save_error_name_too_long" tools:ignore="PluralsCandidate">Название — не длиннее %1$d символов</string>
+    <string name="orchestrator_context_section_title">Входные данные</string>
+    <string name="orchestrator_context_previous_node_output_label">Вывод предыдущего узла</string>
+    <string name="orchestrator_context_previous_node_output_hint">Результат предыдущего шага (включён всегда)</string>
+    <string name="orchestrator_context_original_task_label">Исходная задача пользователя</string>
+    <string name="orchestrator_context_original_task_hint">Сообщение в чате, с которого начался этот прогон</string>
+    <string name="orchestrator_context_chat_history_label">История чата</string>
+    <string name="orchestrator_context_chat_history_hint">Все предыдущие сообщения текущего сеанса</string>
+    <string name="orchestrator_context_long_term_memory_label">Долговременная память</string>
+    <string name="orchestrator_context_long_term_memory_hint">Подходящие записи из долговременной памяти агента</string>
+    <string name="orchestrator_context_tool_results_label">Результаты инструментов</string>
+    <string name="orchestrator_context_tool_results_hint">Данные, которые вернули инструменты на текущем шаге</string>
+    <string name="orchestrator_context_hint">Чем меньше входных данных, тем быстрее и дешевле работает узел. Включайте только нужное.</string>
+    <string name="orchestrator_context_inherited_tag">унаследовано</string>
+    <string name="orchestrator_context_overridden_tag">переопределено</string>
+    <string name="orchestrator_library_speed_dial_new">Создать</string>
+    <string name="orchestrator_library_speed_dial_new_pipeline">Новый пайплайн</string>
+    <string name="orchestrator_library_speed_dial_from_preset">Из пресета</string>
+    <string name="orchestrator_preset_picker_title">Выберите пресет</string>
+    <string name="orchestrator_preset_picker_tab_bundled">Встроенные</string>
+    <string name="orchestrator_preset_picker_tab_mine">Мои</string>
+    <string name="orchestrator_preset_picker_chip_all">Все</string>
+    <string name="orchestrator_preset_picker_empty">Под этот фильтр не подходит ни один пресет.</string>
+    <string name="orchestrator_preset_picker_use">Использовать пресет</string>
+    <string name="orchestrator_preset_picker_loaded">Пресет загружен в редактор</string>
+    <string name="orchestrator_preset_save_title">Сохранить как пресет</string>
+    <string name="orchestrator_preset_save_name_label">Название</string>
+    <string name="orchestrator_preset_save_description_label">Описание</string>
+    <string name="orchestrator_preset_save_category_label">Категория</string>
+    <string name="orchestrator_preset_save_tags_label">Теги (через запятую)</string>
+    <string name="orchestrator_preset_save_success">Пресет сохранён</string>
+    <string name="orchestrator_prompt_preset_save_success">Пресет промпта сохранён</string>
+    <string name="orchestrator_preset_category_local">Локальные</string>
+    <string name="orchestrator_preset_category_cloud">Облачные</string>
+    <string name="orchestrator_preset_category_hybrid">Гибридные</string>
+    <string name="orchestrator_preset_category_tool">Инструменты</string>
+    <string name="orchestrator_preset_category_research">Исследования</string>
+    <string name="orchestrator_preset_category_other">Другое</string>
+    <string name="orchestrator_preset_manager_title">Пресеты пайплайнов</string>
+    <string name="orchestrator_preset_manager_subtitle" tools:ignore="PluralsCandidate">встроенных: %1$d · сохранённых: %2$d</string>
+    <string name="orchestrator_preset_manager_bundled_empty">Встроенных пресетов нет.</string>
+    <string name="orchestrator_preset_manager_user_empty">Вы ещё не сохранили ни одного пресета. Сохранить пайплайн как пресет можно в редакторе или в меню библиотеки.</string>
+    <string name="orchestrator_preset_manager_action_rename">Переименовать</string>
+    <string name="orchestrator_preset_manager_action_export">Экспортировать JSON</string>
+    <string name="orchestrator_preset_manager_action_delete">Удалить</string>
+    <string name="orchestrator_preset_manager_rename_title">Переименовать пресет</string>
+    <string name="orchestrator_preset_manager_rename_blank">Название пресета не может быть пустым</string>
+    <string name="orchestrator_preset_manager_renamed">Пресет переименован</string>
+    <string name="orchestrator_preset_manager_deleted">Пресет удалён</string>
+    <string name="orchestrator_preset_manager_delete_title">Удалить пресет?</string>
+    <string name="orchestrator_preset_manager_delete_confirm">Удалить пресет «%1$s»? Отменить это нельзя.</string>
+    <string name="orchestrator_library_import_unreadable">Не удалось прочитать выбранный файл.</string>
+    <string name="orchestrator_library_import_too_large">Файл больше %1$s — это наибольший размер, который читает импорт пайплайна.</string>
+    <string name="orchestrator_library_import_schema_title">Несовпадение схемы</string>
+    <string name="orchestrator_library_import_schema_body" tools:ignore="PluralsCandidate">Этот пайплайн записан для схемы v%1$d, а эта сборка ожидает v%2$d. Часть настроек может импортироваться не полностью.</string>
+    <string name="orchestrator_library_import_dropped_heading">Эти настройки есть в файле, но эта версия не может их импортировать — они будут потеряны:</string>
+    <plurals name="orchestrator_library_import_dropped_more">
+        <item quantity="one">…и ещё %1$d</item>
+        <item quantity="few">…и ещё %1$d</item>
+        <item quantity="many">…и ещё %1$d</item>
+        <item quantity="other">…и ещё %1$d</item>
+    </plurals>
+    <plurals name="orchestrator_library_import_dropped_feedback">
+        <item quantity="one">Импортировано. Настроек из файла, которые эта версия не прочитала и не сохранила: %1$d.</item>
+        <item quantity="few">Импортировано. Настроек из файла, которые эта версия не прочитала и не сохранила: %1$d.</item>
+        <item quantity="many">Импортировано. Настроек из файла, которые эта версия не прочитала и не сохранила: %1$d.</item>
+        <item quantity="other">Импортировано. Настроек из файла, которые эта версия не прочитала и не сохранила: %1$d.</item>
+    </plurals>
+    <string name="orchestrator_library_import_anyway">Всё равно импортировать</string>
+    <string name="orchestrator_library_import_collision_title_format">«%1$s» уже есть в вашей библиотеке</string>
+    <string name="orchestrator_library_import_collision_single_body">В файле он называется «%1$s». «Заменить» подставит шаги из файла; «Импортировать копией» сохранит оба.</string>
+    <string name="orchestrator_library_import_collision_bindings_heading">«Заменить» сохраняет всё, что его запускает. После замены шаги из файла будут выполнять:</string>
+    <string name="orchestrator_library_import_collision_replace">Заменить</string>
+    <string name="orchestrator_library_import_collision_copy">Импортировать копией</string>
+    <string name="orchestrator_library_import_orphan_title">Файл использует id пайплайна, который вы удалили</string>
+    <string name="orchestrator_library_import_orphan_body">В файле он называется «%1$s». Если оставить id, всё, что его ещё запускает, будет выполнять шаги из файла; «Импортировать копией» этого не трогает.</string>
+    <string name="orchestrator_library_import_orphan_bindings_heading">Этот id ещё запускают. Если оставить id, они будут выполнять шаги из файла:</string>
+    <string name="orchestrator_library_import_orphan_keep">Оставить id</string>
+    <string name="orchestrator_library_import_bundle_orphan_item">«%1$s» (id удалённого пайплайна)</string>
+    <string name="orchestrator_library_import_bundle_title">Импорт пакета</string>
+    <plurals name="orchestrator_library_import_bundle_collision_title">
+        <item quantity="one">Уже есть в вашей библиотеке: %1$d из %2$d</item>
+        <item quantity="few">Уже есть в вашей библиотеке: %1$d из %2$d</item>
+        <item quantity="many">Уже есть в вашей библиотеке: %1$d из %2$d</item>
+        <item quantity="other">Уже есть в вашей библиотеке: %1$d из %2$d</item>
+    </plurals>
+    <string name="orchestrator_library_import_bundle_collision_body">«Заменить» подставит шаги из этого файла. «Импортировать копиями» сохранит оба варианта.</string>
+    <string name="orchestrator_library_import_bundle_collision_heading">«Заменить» сохраняет всё, что их запускает. Уже в вашей библиотеке:</string>
+    <plurals name="orchestrator_library_import_bundle_taken_title">
+        <item quantity="one">Id уже занят: %1$d из %2$d</item>
+        <item quantity="few">Id уже заняты: %1$d из %2$d</item>
+        <item quantity="many">Id уже заняты: %1$d из %2$d</item>
+        <item quantity="other">Id уже заняты: %1$d из %2$d</item>
+    </plurals>
+    <string name="orchestrator_library_import_bundle_taken_heading">«Заменить» сохраняет всё, что их запускает. Уже занято — в вашей библиотеке или ещё упоминается в чатах, триггерах или вызовах удалённого пайплайна:</string>
+    <string name="orchestrator_library_import_bundle_collision_item">«%1$s»</string>
+    <string name="orchestrator_library_binding_default">Пайплайн по умолчанию для чатов</string>
+    <string name="orchestrator_library_binding_share">Цель «Поделиться»</string>
+    <string name="orchestrator_library_binding_tile">Плитка быстрых настроек</string>
+    <string name="orchestrator_library_binding_external">Запросы из других приложений</string>
+    <plurals name="orchestrator_library_binding_triggers">
+        <item quantity="one">%1$d триггер автоматизации</item>
+        <item quantity="few">%1$d триггера автоматизации</item>
+        <item quantity="many">%1$d триггеров автоматизации</item>
+        <item quantity="other">%1$d триггера автоматизации</item>
+    </plurals>
+    <plurals name="orchestrator_library_binding_chats">
+        <item quantity="one">%1$d чат</item>
+        <item quantity="few">%1$d чата</item>
+        <item quantity="many">%1$d чатов</item>
+        <item quantity="other">%1$d чата</item>
+    </plurals>
+    <string name="orchestrator_library_binding_caller">Вызывается из «%1$s»</string>
+    <string name="orchestrator_library_import_bundle_schema_body">Часть пайплайнов в этом пакете записана для другой версии схемы. Часть настроек может импортироваться не полностью.</string>
+    <string name="orchestrator_library_import_bundle_replace">Заменить</string>
+    <string name="orchestrator_library_import_bundle_copies">Импортировать копиями</string>
+    <plurals name="orchestrator_library_import_bundle_success">
+        <item quantity="one">Импортирован %d пайплайн</item>
+        <item quantity="few">Импортировано %d пайплайна</item>
+        <item quantity="many">Импортировано %d пайплайнов</item>
+        <item quantity="other">Импортировано %d пайплайна</item>
+    </plurals>
+    <string name="orchestrator_library_export_bundle_success">Экспортировано: %1$s</string>
+</resources>

@@ -231,9 +231,9 @@ does, so such a coroutine runs when the test lets the clock move. A gesture
 themselves; before a non-Compose assertion — a MockK `verify`, a captured
 value — that follows a semantics action such as `performTextInput`, call
 `waitForIdle()` or assert inside `runOnIdle { }`. Every instrumented test and
-every `:catalog` test is on v2. `ComposeTestRuleV2GuardTest` — one in `:app` over
-`src/androidTest`, one in `:catalog` over its tests — fails a v1 factory,
-imported or written out.
+every Compose test of `:app` and `:catalog` is on v2. `ComposeTestRuleV2GuardTest`
+— one in `:app` over `src/androidTest` and `src/test`, one in `:catalog` over its
+tests — fails a v1 factory, imported or written out.
 
 ### Naming
 
@@ -277,7 +277,10 @@ ktlint, Android lint, the unit-test suite for both flavours
 screenshot tests **in verify mode** (`verifyRoborazziDebug` — a render that
 differs from its committed baseline beyond anti-aliasing fails the build; capture
 with `KnotworkRoborazziOptions`, which `SnapshotComparisonOptionsGuardTest`
-requires of every capture), the documentation, version and store-listing gates,
+requires of every capture) and `:app`'s translated-screen snapshots
+(`verifyRoborazziFullDebug`: app screens in Russian and Spanish at font scale 200 %, drawn by
+each screen's own state builder or `…ScreenContent` without its ViewModel, with
+`AppRoborazziOptions`, which `AppSnapshotOptionsGuardTest` requires), the documentation, version and store-listing gates,
 the supply-chain gates (pinned actions and Gradle distribution, the release
 manifests' entry surfaces), and `koverVerifyFullDebug`. Every build also verifies
 each dependency against `gradle/verification-metadata.xml`. Lint must pass with no new warnings. The full list,
@@ -478,8 +481,8 @@ GRADLE_TASK=:app:connectedFullDebugAndroidTest EXCLUDE_ANNOTATION=app.knotwork.a
 ## What the automated gate does NOT cover
 
 `./gradlew check` is **JVM-based**: plain JUnit + MockK unit tests,
-Robolectric-driven Compose tests, and Roborazzi screenshot tests (in the
-`:catalog` module). It runs on `ubuntu-latest` with **no emulator and no
+Robolectric-driven Compose tests, and Roborazzi screenshot tests (the design
+system's in `:catalog`, a few translated app screens in `:app`). It runs on `ubuntu-latest` with **no emulator and no
 physical device attached** — deliberately, so that its verdict depends on
 nothing but the repository. The instrumented suite covers part of the
 remaining gap on emulators (see [The instrumented

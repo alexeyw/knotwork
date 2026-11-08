@@ -21,7 +21,7 @@ see [`docs/user-guide.md`](user-guide.md).
 4. [Add a new prompt variable](#4-add-a-new-prompt-variable)
 5. [Add a bundled preset](#5-add-a-bundled-preset) — pipeline (§5.1),
    prompt (§5.2) and skill (§5.3); §5.4 documents the portable
-   prompt-pack file format
+   prompt-pack file format, §5.5 a preset's translations
 6. [Add a new `EmbeddingProvider`](#6-add-a-new-embeddingprovider)
 7. [Use input atoms and chip atoms](#7-use-input-atoms-and-chip-atoms)
 8. [Synchronization table — "if you change X, also touch Y"](#8-synchronization-table)
@@ -712,8 +712,13 @@ pure-domain registry. Every user-facing setting is declared once as a
 [`SettingsRegistry`](../app/src/main/java/app/knotwork/android/domain/settings/SettingsRegistry.kt)
 — that single declaration stamps its category (Generation, Models,
 Memory, Pipelines, Tools, Background, Privacy, About), its Basic/Advanced
-tier, its control type and its search synonyms, so the control lands in
-the right sub-screen and becomes searchable automatically. Each category
+tier and its control type, so the control lands in the right sub-screen.
+Its search text lives in
+[`SettingsSearchCatalog`](../app/src/main/java/app/knotwork/android/presentation/ui/settings/SettingsSearchCatalog.kt),
+keyed by the row's anchor: a name, a one-line description and a
+`settings_search_syn_*` resource of comma-separated synonyms, each in every
+language the app ships — `SettingsSearchCatalogTest` fails a row without
+them. Each category
 renders through a catalog `*SettingsContent` composable
 (`catalog/src/main/java/app/knotwork/design/screens/settings/`) fed by a
 per-category delegate
@@ -925,7 +930,8 @@ Both are read-only once shipped; the user can also save their own
 (`SavePipelineAsPresetUseCase` / `SavePromptAsPresetUseCase`), which land
 in the `pipeline_presets` / `prompt_presets` Room tables. Adding a new
 bundled preset is a single JSON file, one line in the catalogue validation
-test, and — for pipeline presets — a mirror entry in the browser editor.
+test, its texts in each translation (§5.5), and — for pipeline presets — a
+mirror entry in the browser editor.
 
 ### 5.1. Add a bundled pipeline preset
 
@@ -1398,6 +1404,44 @@ Best-effort parsing is deliberately absent here. The file ends up in the
 system prompt of an agent holding tools; a guess about what the author meant
 is a guess about the contents of an instruction.
 
+### 5.5. Translate a bundled preset
+
+A bundled pipeline or prompt preset is written in English, and what a model
+reads in it stays English: system prompts, route labels, intent classes. What a
+person reads comes from `assets/presets/l10n/<language>.json`, one file per
+language the app ships, and is applied as the preset is read
+(`PresetTranslations`, from `LocalPipelinePresetRepositoryImpl` and
+`LocalPromptPresetRepositoryImpl`) in the language the interface is shown in:
+
+| Preset              | Texts translated                                                                              |
+|---------------------|-----------------------------------------------------------------------------------------------|
+| **Pipeline preset** | `name`, `description`, every node's title (by node id), every starter prompt (`samplePrompts`) |
+| **Prompt preset**   | `name`, `description`, every tag                                                              |
+
+Every text is a pair — the English it translates and the translation:
+
+```json
+"local_only_qa": {
+  "name": {"en": "Local-only Q&A", "ru": "Ответы на устройстве"},
+  "nodes": {"input": {"en": "Input", "ru": "Вход"}},
+  "samplePrompts": [{"en": "Explain how a solar eclipse happens", "ru": "Объясни, как происходит солнечное затмение"}]
+}
+```
+
+A pair applies only while the preset carries that English, so a reworded preset
+shows its new English rather than an old translation — and
+`PresetTranslationCoverageTest` fails the build until each language with a
+translation file has the new text (a language still being translated may not
+have a file yet; once its untranslated list in `config/l10n/` is gone, it must).
+The same test refuses a missing text, an entry naming a preset, node, prompt or
+tag that is not there, one tag translated two ways, and a translated
+preset that would no longer validate or open in the editor; the reader
+(`PresetTranslationsJson`) refuses any member that is not one of the texts
+above, so a system prompt cannot be translated by accident.
+
+A pipeline made from a preset keeps the words of the moment it was made, like
+every name the app gives. The browser editor carries the presets in English.
+
 ## 6. Add a new `EmbeddingProvider`
 
 An embedding provider turns text into a dense vector for long-term-memory
@@ -1576,8 +1620,9 @@ double-check it for every recipe in this guide.**
 | A new callee-side AppFunction | an injectable logic class under `data/tools/local/appfunctions/` · a one-line `@AppFunction(isDescribedByKDoc = true)` method on `AgentAppFunctionService` (KDoc written for the calling agent) · logic-class unit test · scenario in `AppFunctionsEndToEndTest` |
 | A new cloud provider         | `domain/models/CloudProvider.kt` · `data/engine/KoogClientFactory.kt` · `data/engine/KoogCloudLlmModelResolver.kt` · `data/engine/KoogModelMapper.kt` (a provider Koog lists) · `data/local/ApiKeyManager.kt` · `domain/models/ProviderSummary.kt` (`ProviderId` — the Settings provider list and picker) · **`domain/engine/CloudStreamEnd.kt`** (`reportsFinishReason` — exhaustive `when`, decide it by measurement per §3.6) · `docs/user-guide.md` (the truncated-answer table under Settings → Models) · factory / resolver unit tests · `CloudStreamEndTest` |
 | A new prompt variable        | a new `PromptVariableProvider` implementation · `di/PromptTemplateModule.kt` (`@Binds @IntoSet`) · **`pipeline-editor.html`** (`PROMPT_VARIABLES`) · `docs/user-guide.md` (variables table) · provider unit test · `PromptTemplateEngine` round-trip test           |
-| A new bundled pipeline preset | a JSON file under `assets/presets/pipelines/` · `PipelinePresetCatalogValidationTest.expectedFileNames` · `BundledPresetCatalog.DISPLAY_ORDER` (unless `internal`) · run `./gradlew :app:generateBrowserEditorConstants` (`BUILTIN_PIPELINE_PRESETS` is generated) · catalogue + `PipelinePresetIntegrationTest` already cover the directory |
-| A new bundled prompt preset  | a JSON file under `assets/presets/prompts/` · `PromptPresetCatalogValidationTest.expectedFileNames` · run `./gradlew :app:generateBrowserEditorConstants` (`BUILTIN_PROMPT_TEMPLATES` is generated) · catalogue + `PromptPresetIntegrationTest` already cover the directory |
+| A new bundled pipeline preset | a JSON file under `assets/presets/pipelines/` · `PipelinePresetCatalogValidationTest.expectedFileNames` · `BundledPresetCatalog.DISPLAY_ORDER` (unless `internal`) · its texts in every `assets/presets/l10n/<language>.json` (§5.5) · run `./gradlew :app:generateBrowserEditorConstants` (`BUILTIN_PIPELINE_PRESETS` is generated) · catalogue + `PipelinePresetIntegrationTest` already cover the directory |
+| A new bundled prompt preset  | a JSON file under `assets/presets/prompts/` · `PromptPresetCatalogValidationTest.expectedFileNames` · its texts in every `assets/presets/l10n/<language>.json` (§5.5) · run `./gradlew :app:generateBrowserEditorConstants` (`BUILTIN_PROMPT_TEMPLATES` is generated) · catalogue + `PromptPresetIntegrationTest` already cover the directory |
+| A bundled preset's name, description, node title, starter prompt or tag reworded | the same pair in every `assets/presets/l10n/<language>.json`, English and translation (§5.5; `PresetTranslationCoverageTest`) |
 | A new **composed** bundled pipeline preset (its `PIPELINE` nodes target other bundled presets) | the parent JSON + one JSON per sub-pipeline under `assets/presets/pipelines/` (each sub-pipeline's **filename stem = the `targetPipelineId` the parent references**) · `PipelinePresetCatalogValidationTest.expectedFileNames` (every file) · run `./gradlew :app:generateBrowserEditorConstants` (the parent *and* every sub-pipeline are generated into `BUILTIN_PIPELINE_PRESETS`) · `LoadPipelineFromPresetUseCase` seeds the sub-pipelines under stable ids on demand (no edit needed unless the resolution policy changes) |
 | The **pipeline bundle** envelope (`{ bundleVersion, exportedAt, pipelines: [...] }`) | `domain/pipelineio/PipelineBundleJsonSerializer.kt` (envelope + `looksLikeBundle` + limits) · **`pipeline-editor.html`** (`CURRENT_BUNDLE_VERSION`, `MAX_BUNDLE_PIPELINES`, `collectBundleClosure` / `parseBundleDoc`, the 📦 Export/Import bundle buttons — all hand-maintained, NOT auto-generated) · `PipelineBundleJsonSerializerTest`. The per-pipeline element format is owned by `PipelineJsonSerializer` (delegation), so a single-pipeline schema change flows through automatically |
 | A new bundled skill          | a JSON file under `assets/presets/skills/` (filename stem = id) · no registration (seed is a directory scan, idempotent upsert) · `SkillJsonSerializerTest` round-trip already covers the format; add a `SkillNodeExecutorTest` allowlist case if the skill allows tools |
@@ -1606,7 +1651,8 @@ The aggregated `check` task runs, among others:
 - `testFullDebugUnitTest` + `testFossDebugUnitTest` — JVM unit tests, including
   the architecture and source guards.
 - `:catalog:verifyRoborazziDebug` — design-system screenshots against their
-  baselines.
+  baselines; `:app:verifyRoborazziFullDebug` — app screens in a translation
+  against theirs.
 - the generated-document gates this guide's recipes touch —
   `verifyBrowserEditorConstants`, `verifyCookbookDocs`, `verifyFileMap`,
   `verifyDocLinks` and the rest.

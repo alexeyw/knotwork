@@ -1,6 +1,7 @@
 package app.knotwork.android.presentation.ui.chat.home
 
 import app.knotwork.android.domain.models.RunTerminationReason
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chips.Risk
 
 /**
@@ -95,9 +96,11 @@ sealed interface ChatHomeUiState {
      *     `RunTerminationCopyMapper`, so the same event is worded identically
      *     in the chat, the notification and the trigger journal.
      *
-     * @property message The failure description for an ordinary failure, or the
-     *   terse diagnostic form for a typed termination. Never the user-facing
-     *   sentence in the second case — see [reason].
+     * @property message The failure description for an ordinary failure — a
+     *   string resource for the failures the app words itself, the engine's or a
+     *   provider's own text otherwise — or the terse diagnostic form for a typed
+     *   termination. Never the user-facing sentence in the second case — see
+     *   [reason].
      * @property reason The typed cause, or `null` for an ordinary failure.
      * @property announcedInThread Whether a settled run already wrote this
      *   outcome into the conversation as a `SYSTEM` message. True only for the
@@ -107,7 +110,7 @@ sealed interface ChatHomeUiState {
      *   the thread, so their text is the only account the user gets.
      */
     data class Error(
-        val message: String,
+        val message: UiText,
         val reason: RunTerminationReason? = null,
         val announcedInThread: Boolean = false,
     ) : ChatHomeUiState

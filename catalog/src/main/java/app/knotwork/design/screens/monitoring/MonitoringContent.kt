@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import app.knotwork.design.components.misc.EmptyState
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -205,10 +206,18 @@ private fun PowerSavingBanner(strings: MonitoringStrings) {
     }
 }
 
+/**
+ * The stat cells, in equal parts of one line while each fits its part. A flow, not a
+ * row: three fixed thirds left a cell less width than its longest word at a larger
+ * font, and "INFERENCE TIME" broke inside the word. The flow moves a cell to the next
+ * line once its longest word would not fit, and the cells of a line share it equally.
+ */
 @Composable
 private fun StatsGrid(stats: List<MonitoringStat>) {
-    Row(
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+        maxItemsInEachRow = stats.size,
         modifier = Modifier.fillMaxWidth(),
     ) {
         stats.forEach { stat ->
@@ -269,9 +278,16 @@ private fun SectionHeader(label: String) {
     )
 }
 
+/**
+ * A node type's name and the time its nodes took. The name is words and reads in the
+ * body font; the duration is a figure and keeps the monospaced one. A flow, so a long
+ * name at a larger font moves the duration to the next line instead of breaking a word.
+ */
 @Composable
 private fun NodeBreakdownRow(row: NodeBreakdownRow) {
-    Row(
+    FlowRow(
+        itemVerticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
         modifier = Modifier
             .fillMaxWidth()
             .clip(KnotworkTheme.shapes.sm)
@@ -280,7 +296,7 @@ private fun NodeBreakdownRow(row: NodeBreakdownRow) {
     ) {
         Text(
             text = row.nodeType,
-            style = KnotworkTextStyles.MonoBase,
+            style = KnotworkTextStyles.BodySm,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )

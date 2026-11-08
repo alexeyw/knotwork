@@ -27,7 +27,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -44,7 +44,9 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.get
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkIconSizes
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -140,10 +142,11 @@ fun AppShellScaffold(
     // so messages emitted from a screen that pops itself off the
     // back-stack (today: onboarding's skip-flow hint) still render
     // *after* navigation settles on the next destination.
+    val shellContext = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(transientMessageRelay) {
         transientMessageRelay.messages.collect { message ->
-            snackbarHostState.showSnackbar(message = message)
+            snackbarHostState.showSnackbar(message = shellContext.resolve(message))
         }
     }
 

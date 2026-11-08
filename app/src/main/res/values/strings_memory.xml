@@ -1,7 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Transient snackbar messages surfaced by the Memory screen. -->
     <string name="memory_msg_load_error">Couldn\'t refresh memory</string>
     <string name="memory_msg_add_error">Couldn\'t save to memory</string>
     <string name="memory_msg_edit_error">Couldn\'t save the edit</string>
+    <!-- Memory list: breakdown, sections, detail lines. -->
+    <string name="memory_segment_auto">AUTO</string>
+    <string name="memory_segment_compaction">COMPACT</string>
+    <string name="memory_segment_manual">MANUAL</string>
+    <string name="memory_header_compacted_ago">compacted %1$s ago</string>
+    <string name="memory_header_compacted_just_now">compacted just now</string>
+    <string name="memory_section_pinned">Pinned</string>
+    <string name="memory_section_today">Today</string>
+    <string name="memory_section_this_week">This week</string>
+    <string name="memory_section_earlier">Earlier</string>
+    <string name="memory_detail_learned_from_chat">Chat \"%1$s\"</string>
+    <string name="memory_detail_last_used_ago">last %1$s ago</string>
+    <string name="memory_detail_last_used_just_now">last just now</string>
+    <string name="memory_source_auto">Auto-extracted</string>
+    <string name="memory_source_manual">Saved manually</string>
+    <string name="memory_source_compaction">Compacted</string>
+    <string name="memory_source_unknown">Unknown</string>
+    <string name="memory_detail_tokens" tools:ignore="PluralsCandidate">%1$d tok</string>
+    <string name="memory_compact_seconds_approx">~%1$d s</string>
+    <plurals name="memory_used_in_runs">
+        <item quantity="one">%1$d run</item>
+        <item quantity="other">%1$d runs</item>
+    </plurals>
 </resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="backup_snack_cancelled">Copia de seguridad cancelada. Se eliminó el archivo incompleto.</string>
+    <string name="backup_snack_cancelled_left">Copia de seguridad cancelada. Elimina a mano el archivo incompleto %1$s.</string>
+    <string name="backup_snack_restored">Restauración completada</string>
+</resources>

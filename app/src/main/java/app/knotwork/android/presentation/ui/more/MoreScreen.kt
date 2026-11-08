@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -40,7 +41,9 @@ fun MoreScreen(
     viewModel: MoreViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val subtitles = MoreSubtitles.of(uiState, LocalContext.current)
     val state = uiState.toViewState(
+        subtitles = subtitles,
         titleSectionAutomation = stringResource(R.string.more_section_automation),
         titleSectionContent = stringResource(R.string.more_section_content),
         titleSectionBlocks = stringResource(R.string.more_section_blocks),
@@ -94,9 +97,14 @@ fun MoreScreen(
     )
 }
 
-/** Build the catalog view state from the live UI state + localized labels. */
+/**
+ * Build the catalog view state from the live UI state + localized labels.
+ *
+ * @param subtitles The rows' counters, already worded in the interface language.
+ */
 @Suppress("LongParameterList") // Mapper bundles localised strings + navigation lambdas.
 internal fun MoreUiState.toViewState(
+    subtitles: MoreSubtitles,
     titleSectionAutomation: String,
     titleSectionContent: String,
     titleSectionBlocks: String,
@@ -152,14 +160,14 @@ internal fun MoreUiState.toViewState(
                 MoreRow(
                     id = "library",
                     title = titleLibrary,
-                    subtitle = librarySubtitle,
+                    subtitle = subtitles.library,
                     icon = AppIcons.Bookmark,
                     onClick = onLibrary,
                 ),
                 MoreRow(
                     id = "tasks",
                     title = titleTasks,
-                    subtitle = tasksSubtitle,
+                    subtitle = subtitles.tasks,
                     icon = AppIcons.History,
                     badge = tasksBadge,
                     onClick = onTasks,
@@ -173,14 +181,14 @@ internal fun MoreUiState.toViewState(
                 MoreRow(
                     id = "memory",
                     title = titleMemory,
-                    subtitle = memorySubtitle,
+                    subtitle = subtitles.memory,
                     icon = AppIcons.Brain,
                     onClick = onMemory,
                 ),
                 MoreRow(
                     id = "files",
                     title = titleFiles,
-                    subtitle = filesSubtitle,
+                    subtitle = subtitles.files,
                     icon = AppIcons.Folder,
                     onClick = onFiles,
                 ),
@@ -203,7 +211,7 @@ internal fun MoreUiState.toViewState(
                 MoreRow(
                     id = "prompts",
                     title = titlePrompts,
-                    subtitle = promptsSubtitle,
+                    subtitle = subtitles.prompts,
                     icon = AppIcons.Sliders,
                     onClick = onPrompts,
                 ),
@@ -218,7 +226,7 @@ internal fun MoreUiState.toViewState(
                 MoreRow(
                     id = "models",
                     title = titleModels,
-                    subtitle = modelsSubtitle,
+                    subtitle = subtitles.models,
                     icon = AppIcons.Ram,
                     onClick = onModels,
                 ),
@@ -227,21 +235,21 @@ internal fun MoreUiState.toViewState(
         appSection(
             title = titleSectionApp,
             titleSettings = titleSettings,
-            settingsSubtitle = settingsSubtitle,
+            settingsSubtitle = subtitles.settings,
             titleHelp = titleHelp,
             helpSubtitle = helpSubtitle,
             titleMetrics = titleMetrics,
-            metricsSubtitle = metricsSubtitle,
+            metricsSubtitle = subtitles.metrics,
             titleAbout = titleAbout,
-            aboutSubtitle = aboutSubtitle,
+            aboutSubtitle = subtitles.about,
             onSettings = onSettings,
             onHelp = onHelp,
             onMetrics = onMetrics,
             onAbout = onAbout,
         ),
     ),
-    networkStatus = networkStatusText.takeIf { it.isNotEmpty() },
-    networkStatusOk = networkStatusOk,
+    networkStatus = subtitles.network.takeIf { it.isNotEmpty() },
+    networkStatusOk = subtitles.networkOk,
 )
 
 /** Stable test tag for the More screen root — used by instrumented tests. */

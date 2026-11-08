@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -335,7 +335,11 @@ private fun summaryBody(stage: VerificationStageUi): String? = when (stage) {
         },
     )
     is VerificationStageUi.Stopped -> mismatchText(stage.reason)
-    is VerificationStageUi.Failed -> stringResource(R.string.knotwork_run_verify_failed_body, stage.model, stage.reason)
+    is VerificationStageUi.Failed -> stringResource(
+        R.string.knotwork_run_verify_failed_body,
+        stage.model,
+        stage.reason ?: stringResource(R.string.knotwork_run_verify_failed_reason_unknown),
+    )
     is VerificationStageUi.Running -> null
 }
 

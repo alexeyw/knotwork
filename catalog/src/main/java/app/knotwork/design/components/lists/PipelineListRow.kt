@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -38,8 +37,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import app.knotwork.design.R
 import app.knotwork.design.components.chips.Status
 import app.knotwork.design.components.chips.StatusPill
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -261,21 +262,21 @@ private fun SwipeActionStrip(onAction: (PipelineSwipeAction) -> Unit, modifier: 
     Row(modifier = modifier) {
         SwipeActionButton(
             icon = AppIcons.Copy,
-            label = "Duplicate",
+            label = stringResource(R.string.knotwork_library_menu_duplicate),
             tintBackground = KnotworkTheme.extended.surface4,
             tintForeground = KnotworkTheme.extended.onSurface2,
             onClick = { onAction(PipelineSwipeAction.Duplicate) },
         )
         SwipeActionButton(
             icon = AppIcons.Archive,
-            label = "Archive",
+            label = stringResource(R.string.knotwork_library_multi_select_archive),
             tintBackground = KnotworkTheme.extended.signalWarn,
             tintForeground = MaterialTheme.colorScheme.onPrimary,
             onClick = { onAction(PipelineSwipeAction.Archive) },
         )
         SwipeActionButton(
             icon = AppIcons.Trash,
-            label = "Delete",
+            label = stringResource(R.string.knotwork_library_menu_delete),
             tintBackground = KnotworkTheme.extended.signalError,
             tintForeground = MaterialTheme.colorScheme.onPrimary,
             onClick = { onAction(PipelineSwipeAction.Delete) },

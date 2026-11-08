@@ -10,6 +10,7 @@ import app.knotwork.android.domain.models.PromptPackImportNotes
 import app.knotwork.android.domain.prompt.PromptTemplateEngine
 import app.knotwork.android.domain.prompt.PromptVariableProvider
 import app.knotwork.android.domain.repositories.PromptPresetRepository
+import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.usecases.SavePromptAsPresetUseCase
 import app.knotwork.android.domain.usecases.promptpack.ExportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.ImportPromptPackUseCase
@@ -17,6 +18,7 @@ import app.knotwork.android.domain.usecases.promptpack.PromptPackCollisionChoice
 import app.knotwork.android.domain.usecases.promptpack.PromptPackImportResult
 import app.knotwork.android.domain.usecases.promptpack.ResolvePromptPackCollisionUseCase
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.orchestrator.OrchestratorErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +49,7 @@ class PromptLibraryViewModel @Inject constructor(
     private val importPromptPackUseCase: ImportPromptPackUseCase,
     private val resolvePromptPackCollisionUseCase: ResolvePromptPackCollisionUseCase,
     private val exportPromptPackUseCase: ExportPromptPackUseCase,
+    private val defaultNames: DefaultNames,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -321,7 +324,7 @@ class PromptLibraryViewModel @Inject constructor(
     /** Routes an unexpected throwable to the screen's error channel. */
     private fun surfaceError(error: Throwable) {
         _uiState.update {
-            it.copy(errorMessage = error.message?.let(UiText::Dynamic) ?: UiText(R.string.errors_generic_unexpected))
+            it.copy(errorMessage = OrchestratorErrorText.forThrowable(error))
         }
     }
 
@@ -418,12 +421,8 @@ class PromptLibraryViewModel @Inject constructor(
                     _uiState.update { it.copy(editorDraft = null) }
                 },
                 onFailure = { e ->
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = e.message?.let(UiText::Dynamic)
-                                ?: UiText(R.string.errors_generic_unexpected),
-                        )
-                    }
+                    // A refused name or prompt is a typed problem; its words come from resources.
+                    _uiState.update { it.copy(errorMessage = OrchestratorErrorText.forThrowable(e)) }
                 },
             )
         }
@@ -441,7 +440,7 @@ class PromptLibraryViewModel @Inject constructor(
         viewModelScope.launch {
             val result = savePromptAsPresetUseCase(
                 systemPrompt = source.systemPrompt,
-                name = source.name + " (copy)",
+                name = defaultNames.copyOf(source.name),
                 description = source.description,
                 nodeType = source.nodeType,
                 tags = source.tags,
@@ -449,7 +448,7 @@ class PromptLibraryViewModel @Inject constructor(
             if (result.isFailure) {
                 _uiState.update {
                     it.copy(
-                        errorMessage = result.exceptionOrNull()?.message?.let(UiText::Dynamic)
+                        errorMessage = result.exceptionOrNull()?.let(OrchestratorErrorText::forThrowable)
                             ?: UiText(R.string.errors_generic_unexpected),
                     )
                 }

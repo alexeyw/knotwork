@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -23,6 +22,7 @@ import app.knotwork.design.components.ScrollThumbTarget
 import app.knotwork.design.components.THUMB_MIN_SCREENS
 import app.knotwork.design.components.ThumbBubbleDrop
 import app.knotwork.design.components.ThumbBubbleOverlap
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 import java.text.NumberFormat

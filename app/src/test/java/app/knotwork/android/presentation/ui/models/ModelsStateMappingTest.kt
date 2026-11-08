@@ -29,7 +29,7 @@ class ModelsStateMappingTest {
         val model = LocalModel(id = 7, name = "gemma.litertlm", path = "/x", size = 1_400_000_000L, isActive = true)
         val state = ModelsUiState(downloadedModels = listOf(model), activeModel = model, verifiedModelIds = setOf(7L))
 
-        val result = state.toViewState(subtitleFormat, labels)
+        val result = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
 
         assertEquals("1.3 GB · CPU · LiteRT · Verified", result.active?.meta)
     }
@@ -40,7 +40,7 @@ class ModelsStateMappingTest {
         val model = LocalModel(id = 1, name = "gemma-4-E2B-it.litertlm", path = "/x", size = 0L, isActive = false)
         val state = ModelsUiState(downloadedModels = listOf(model))
 
-        val result = state.toViewState(subtitleFormat, labels)
+        val result = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
 
         val preset = result.presets.first { it.id == "gemma-4-E2B-it" }.status as PresetStatus.OnDisk
         assertEquals("CPU · LiteRT · Not verified", preset.sizeMeta)
@@ -48,7 +48,7 @@ class ModelsStateMappingTest {
 
     @Test
     fun `given empty state when mapped then subtitle reads 0 active 0 on disk 0 GB`() {
-        val result = ModelsUiState().toViewState(subtitleFormat, labels)
+        val result = ModelsUiState().toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
 
         assertEquals("0 active · 0 on disk · 0 GB", result.subtitle)
         assertNull(result.active)
@@ -59,7 +59,7 @@ class ModelsStateMappingTest {
         val model = LocalModel(id = 7, name = "gemma.litertlm", path = "/x", size = 1_400_000_000L, isActive = true)
         val state = ModelsUiState(downloadedModels = listOf(model), activeModel = model)
 
-        val result = state.toViewState(subtitleFormat, labels)
+        val result = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
 
         assertNotNull(result.active)
         assertEquals(7L, result.active?.id)
@@ -75,7 +75,7 @@ class ModelsStateMappingTest {
             activeDownloadFileName = "gemma-4-E4B-it.litertlm",
         )
 
-        val result = state.toViewState(subtitleFormat, labels)
+        val result = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
 
         val target = result.presets.first { it.id == "gemma-4-E4B-it" }
         assertTrue(target.status is PresetStatus.Downloading)
@@ -93,7 +93,7 @@ class ModelsStateMappingTest {
         )
         val state = ModelsUiState(downloadedModels = listOf(onDisk))
 
-        val result = state.toViewState(subtitleFormat, labels)
+        val result = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
 
         val target = result.presets.first { it.id == "gemma-4-E2B-it" }
         assertTrue(target.status is PresetStatus.OnDisk)
@@ -101,19 +101,19 @@ class ModelsStateMappingTest {
 
     @Test
     fun `given pristine state when mapped then visualState is Default`() {
-        val result = ModelsUiState().toViewState(subtitleFormat, labels)
+        val result = ModelsUiState().toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
         assertEquals(ModelsVisualState.Default, result.visualState)
     }
 
     @Test
     fun `given no active model when mapped then performance card is NoModel`() {
-        val result = ModelsUiState().toViewState(subtitleFormat, labels)
+        val result = ModelsUiState().toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
         assertEquals(PerformanceCardState.NoModel, result.performance)
     }
 
     @Test
     fun `given active model with no history when mapped then performance card is Empty`() {
-        val result = activeState().toViewState(subtitleFormat, labels)
+        val result = activeState().toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS)
         assertEquals(PerformanceCardState.Empty, result.performance)
     }
 
@@ -128,7 +128,7 @@ class ModelsStateMappingTest {
             ),
         )
 
-        val card = state.toViewState(subtitleFormat, labels).performance
+        val card = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS).performance
         assertTrue(card is PerformanceCardState.Populated)
         card as PerformanceCardState.Populated
         assertEquals("420 ms", card.ttft)
@@ -140,7 +140,10 @@ class ModelsStateMappingTest {
     @Test
     fun `given engine busy when mapped then performance card is EngineBusy`() {
         val state = activeState().copy(engineBusy = true)
-        assertEquals(PerformanceCardState.EngineBusy, state.toViewState(subtitleFormat, labels).performance)
+        assertEquals(
+            PerformanceCardState.EngineBusy,
+            state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS).performance,
+        )
     }
 
     @Test
@@ -148,7 +151,7 @@ class ModelsStateMappingTest {
         val state = activeState().copy(benchmark = BenchmarkUiState.Running(BenchmarkRunPhase.MEASURING))
         assertEquals(
             PerformanceCardState.Running(BenchmarkPhase.Measuring),
-            state.toViewState(subtitleFormat, labels).performance,
+            state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS).performance,
         )
     }
 
@@ -157,7 +160,7 @@ class ModelsStateMappingTest {
         val report = BenchmarkReport("m", 390, 13.1f, 2_600, (1.8 * 1024 * 1024 * 1024).toLong())
         val state = activeState().copy(benchmark = BenchmarkUiState.Result(report))
 
-        val card = state.toViewState(subtitleFormat, labels).performance
+        val card = state.toViewState(subtitleFormat, labels, ENGLISH_CARD_UNITS).performance
         assertTrue(card is PerformanceCardState.Result)
         card as PerformanceCardState.Result
         assertEquals("390 ms", card.ttft)
@@ -169,3 +172,8 @@ class ModelsStateMappingTest {
         return ModelsUiState(downloadedModels = listOf(model), activeModel = model)
     }
 }
+
+/** The card's English units, with the caption its plural resource gives in English. */
+private val ENGLISH_CARD_UNITS = PerformanceUnits.ENGLISH.copy(
+    sampleCaption = { count -> if (count == 1) "avg · last 1 run" else "avg · last $count runs" },
+)

@@ -1,6 +1,6 @@
 # Privacy Policy — Knotwork
 
-**Effective date:** 16 October 2026
+**Effective date:** 8 November 2026
 **Applies to:** the Knotwork Android application (package `app.knotwork.android`),
 both published distributions — `full` and `foss` — from version `0.7.1` onward.
 
@@ -21,8 +21,8 @@ request from one of the two built-in tools that reach the network, or (in the
 configure them except one: the built-in Wikipedia lookup is on from the first
 launch, and section 3.4 says so and says how to turn it off. Each path is
 listed below with what it sends, where, and how to stop it. Files you
-export yourself — a journal, a run trace, a backup — go wherever you send them
-(sections 3.7–3.9).
+export yourself — a journal, a run trace, a backup, a chat — go wherever you
+send them (sections 3.7–3.10).
 
 This document is the privacy policy. The engineering-level threat model, the
 attack surfaces the app defends against, and what is explicitly *out* of scope
@@ -334,6 +334,28 @@ model files on this phone stay. So do its API keys, Hugging Face token and MCP
 sign-ins, except those the backup carries, which replace them — a restore is not
 a way to clear them. MCP servers come from the backup, so a sign-in for a server
 it does not list is kept but goes unused. The app opens no connection to do it.
+
+### 3.10 Chat export (you share or save the file)
+
+A chat can be exported from its `⋮` menu, or from its row on the archive
+screen, by an explicit action: **Export chat** hands it to the system share
+sheet, **Save to file** writes it to a place you pick in the system's file
+picker. Both produce the same file. There is no network on either path; a
+build-time architecture check fails the build if any network dependency reaches
+the export code.
+
+The file holds the whole conversation: the chat's name and id, every message
+with who wrote it and when, and every run of the chat that did not complete —
+failed, cancelled, interrupted, or still running or waiting for you — with its
+status, timing, error text and the message it was started with. It holds no
+attachment and no memory. Share it as you would share the conversation itself.
+Where it goes after the share sheet is decided by the app you pick; if you pick
+a cloud drive in the file picker, that drive's app uploads the file under its
+own policy.
+
+To hand the file to the share sheet, the app first writes a copy into its own
+cache. The next chat export replaces it, and the app's periodic clean-up, which
+runs while the phone is charging and idle, deletes it once it is an hour old.
 
 ---
 

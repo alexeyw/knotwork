@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.R
+import app.knotwork.android.domain.constants.TransientCacheDirectory
 import timber.log.Timber
 import java.io.IOException
 
@@ -148,10 +149,12 @@ fun rememberJournalExportHandlers(
         delegate.events.collect { event ->
             val text = when (event) {
                 is JournalExportEvent.Share -> {
-                    val shared = shareJournalDocument(
+                    val shared = ExportDocumentHandOff.share(
                         context = context,
                         json = event.document.json,
                         fileName = event.fileName,
+                        mimeType = JOURNAL_EXPORT_MIME,
+                        stagingDirectory = TransientCacheDirectory.JOURNAL_EXPORT,
                         chooserTitle = chooserTitle,
                     )
                     // A share sheet that opened needs no confirmation — the user is

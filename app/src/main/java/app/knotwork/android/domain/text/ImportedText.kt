@@ -14,18 +14,6 @@ object ImportedText {
      * so a quoted value is never longer than a name the user could have typed.
      */
     const val MAX_QUOTED_VALUE_LENGTH: Int = 60
-
-    /**
-     * Longest import error the app shows, whole.
-     *
-     * The backstop behind [toDisplaySafe] at each value: the screens that show
-     * an importer's failure apply it to the entire message, so an error message
-     * that quotes a file-supplied value without making it display-safe still
-     * reaches the user as one bounded line. Generous on purpose — a bundle error
-     * names up to five ids — because it exists to stop a file from writing
-     * paragraphs, not to shorten the app's own sentences.
-     */
-    const val MAX_MESSAGE_LENGTH: Int = 400
 }
 
 /**

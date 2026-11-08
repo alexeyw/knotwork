@@ -8,12 +8,12 @@ import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PromptPreset
 import app.knotwork.android.domain.models.PromptPresetImportOutcome
 import app.knotwork.android.domain.promptio.PromptPresetJsonSerializer
+import app.knotwork.android.domain.repositories.AppLanguageRepository
 import app.knotwork.android.domain.repositories.PromptPresetRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -37,10 +37,22 @@ import javax.inject.Inject
  * files are logged and skipped rather than failing the whole catalogue
  * load, so a single corrupt file cannot hide the rest of the starter set
  * from the user.
+ *
+ * A bundled template is handed out in the language the interface is shown in:
+ * its name, description and tags come from [translations], never its system
+ * prompt (decisions §113, R1). The cache holds the templates as written, so a
+ * change of language re-emits the catalogue in the new one.
+ *
+ * @property context Application context the assets are opened from.
+ * @property dao The user's saved templates.
+ * @property appLanguage The language the interface is shown in.
+ * @property translations The bundled templates' texts in that language.
  */
 class LocalPromptPresetRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dao: PromptPresetDao,
+    private val appLanguage: AppLanguageRepository,
+    private val translations: BundledPresetTranslations,
 ) : PromptPresetRepository {
 
     private val bundledCacheMutex = Mutex()
@@ -48,8 +60,9 @@ class LocalPromptPresetRepositoryImpl @Inject constructor(
     @Volatile
     private var bundledCache: List<PromptPreset>? = null
 
-    override fun getBundledPresets(): Flow<List<PromptPreset>> = flow {
-        emit(loadBundledOnce())
+    override fun getBundledPresets(): Flow<List<PromptPreset>> = appLanguage.interfaceLanguage.map { language ->
+        val translation = translations.forLanguage(language)
+        loadBundledOnce().map(translation::translate)
     }
 
     override fun getUserPresets(): Flow<List<PromptPreset>> =
@@ -63,7 +76,9 @@ class LocalPromptPresetRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getPresetById(id: String): PromptPreset? {
-        loadBundledOnce().firstOrNull { it.id == id }?.let { return it }
+        loadBundledOnce().firstOrNull { it.id == id }?.let { bundled ->
+            return translations.forLanguage(appLanguage.interfaceLanguage.value).translate(bundled)
+        }
         return dao.getById(id)?.toDomainModelOrNull()
     }
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Status line of the running-agent notification. -->
+    <string name="notifications_agent_status_initializing">Подготовка…</string>
+    <string name="notifications_agent_status_idle">Агент ждёт</string>
+    <string name="notifications_agent_status_loading">Загрузка контекста…</string>
+    <string name="notifications_agent_status_queued">В очереди за другим прогоном</string>
+    <string name="notifications_agent_status_thinking">Агент думает…</string>
+    <string name="notifications_agent_status_executing_tool">Инструмент: %1$s…</string>
+    <string name="notifications_agent_status_approval">Ждёт вашего подтверждения…</string>
+    <string name="notifications_agent_status_clarification">Ждёт вашего уточнения…</string>
+    <string name="notifications_agent_status_ceiling">Ожидание: прогон упёрся в лимит</string>
+    <string name="notifications_agent_status_suspended">Ждёт вашего ответа в фоне</string>
+    <string name="notifications_agent_status_observation">Обработка результата инструмента…</string>
+    <string name="notifications_agent_status_answering">Отвечает…</string>
+    <string name="notifications_agent_status_completed">Задача выполнена</string>
+    <string name="notifications_agent_status_stopped">Прогон остановлен</string>
+    <string name="notifications_agent_status_stage">Шаг пайплайна: %1$s</string>
+    <string name="notifications_agent_status_trace">Трасса пайплайна обновлена</string>
+    <string name="notifications_agent_status_running">Пайплайн выполняется…</string>
+</resources>

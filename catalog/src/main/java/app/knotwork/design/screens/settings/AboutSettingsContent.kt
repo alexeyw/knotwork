@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,14 +22,15 @@ import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkButtonSize
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.misc.StripedPlaceholder
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
 
 /**
- * About category sub-screen. Basic tier surfaces the read-only identity card and
- * the version/licenses link; the Advanced disclosure holds the destructive
- * "Reset all settings" action.
+ * About category sub-screen. Basic tier surfaces the read-only identity card,
+ * the interface-language picker row and the version/licenses link; the Advanced
+ * disclosure holds the destructive "Reset all settings" action.
  *
  * @param state Immutable About state.
  * @param modifier Layout modifier.
@@ -56,6 +56,14 @@ fun AboutSettingsContent(
     ) {
         SettingsAnchor(anchorKey = SettingsRowAnchors.IDENTITY) {
             IdentityCard(state.identity)
+        }
+        SettingsAnchor(anchorKey = SettingsRowAnchors.LANGUAGE) {
+            NavLinkRow(
+                icon = AppIcons.Globe,
+                title = stringResource(R.string.knotwork_settings_about_language_title),
+                state = state.languageLine,
+                onClick = callbacks.onLanguageClick,
+            )
         }
         SettingsAnchor(anchorKey = SettingsRowAnchors.LINK_LICENSES) {
             NavLinkRow(

@@ -23,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,9 +42,9 @@ import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkButtonSize
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
-import app.knotwork.design.components.controls.KnotworkSegmentedControl
 import app.knotwork.design.components.controls.KnotworkTextField
 import app.knotwork.design.components.misc.StripedPlaceholder
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.components.topbar.KnotworkTopAppBarShell
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -400,7 +399,6 @@ private fun HubTopBar(state: SettingsHubViewState, onBack: () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HubBasicBlock(state: SettingsHubViewState, callbacks: SettingsCallbacks) {
     Column(
@@ -423,32 +421,11 @@ private fun HubBasicBlock(state: SettingsHubViewState, callbacks: SettingsCallba
             )
         }
         SettingsAnchor(anchorKey = SettingsRowAnchors.TOOL_APPROVAL_POLICY) {
-            val approveTitle = stringResource(R.string.knotwork_settings_restrictions_approve)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                // Row, not FlowRow: the label already wraps to two lines here,
-                // and a FlowRow put the glyph on a third of its own, reading as
-                // a stray control rather than as part of the label.
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = approveTitle,
-                        style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    SettingsHintGlyph(settingName = approveTitle)
-                }
-                KnotworkSegmentedControl(
-                    options = listOf(state.approveAllLabel, state.approveSensitiveLabel, state.approveNeverLabel),
-                    selectedIndex = state.approveSelection.toIndex(),
-                    onSelect = { callbacks.onApproveSelectionChange(approveOptionFromIndex(it)) },
-                    modifier = Modifier.weight(SEGMENTED_TRAILING_WEIGHT),
-                )
-            }
+            ToolApprovalRow(
+                options = listOf(state.approveAllLabel, state.approveSensitiveLabel, state.approveNeverLabel),
+                selectedIndex = state.approveSelection.toIndex(),
+                onSelect = { callbacks.onApproveSelectionChange(approveOptionFromIndex(it)) },
+            )
             SettingsHintBody()
         }
         SettingsAnchor(anchorKey = SettingsRowAnchors.BLOCK_DESTRUCTIVE_TOOLS) {

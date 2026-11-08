@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -67,6 +66,8 @@ import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.chips.KnotworkFilterChip
 import app.knotwork.design.components.misc.EmptyState
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -397,7 +398,16 @@ private fun MemoryStatsCard(header: MemoryStatsHeader, callbacks: MemoryCallback
             .padding(KnotworkTheme.spacing.sp4),
         verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        // A flow, not a row: a row measured the Compact button first and left the counts
+        // what remained, so a larger font broke "memories" inside the word. The flow moves
+        // the button under the counts once their longest word would not fit beside it. No
+        // gap between the two, as in the row: at the default font the meta line already
+        // runs up to the button, and a gap would wrap its last word.
+        FlowRow(
+            itemVerticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -497,11 +507,18 @@ private fun MemoryCategoryRow(
     }
 }
 
+/**
+ * The sort label and the two dropdowns. A flow rather than a row: in a row the
+ * last dropdown was measured last and, when the three did not fit — Russian at
+ * 200 % font scale — got no width at all, its label wrapping a letter per line
+ * into a column taller than the screen. A flow moves it to the next line instead.
+ */
 @Composable
 private fun MemorySortRow(state: MemoryViewState, callbacks: MemoryCallbacks) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    FlowRow(
+        itemVerticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
+        verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
         modifier = Modifier.padding(horizontal = KnotworkTheme.spacing.sp4, vertical = KnotworkTheme.spacing.sp1),
     ) {
         Text(
@@ -800,7 +817,8 @@ private fun MemoryDetailSheet(detail: MemoryEntryDetail, editing: Boolean, callb
                         )
                         if (detail.history.isNotEmpty()) MemoryEditHistoryNote()
                     } else {
-                        Text(
+                        // The detail is where an entry is read: all of it, however long.
+                        WholeText(
                             text = detail.body,
                             style = MemoryType.detailBody,
                             color = KnotworkTheme.extended.onSurface2,

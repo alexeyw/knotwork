@@ -1,11 +1,15 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
 import app.knotwork.android.R
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.models.PipelineValidationError
 import app.knotwork.android.domain.models.PipelineValidationException
 import app.knotwork.android.domain.text.ImportedText
 import app.knotwork.android.domain.text.toDisplaySafe
+import app.knotwork.android.domain.usecases.PipelineBundleExportException
+import app.knotwork.android.presentation.common.bundleExportProblemText
+import app.knotwork.android.presentation.common.inputProblemText
 import app.knotwork.android.presentation.ui.common.UiText
 
 /**
@@ -33,7 +37,7 @@ internal object OrchestratorErrorText {
      */
     fun forSave(e: Throwable, graph: PipelineGraph): UiText? {
         if (e !is PipelineValidationException) {
-            return e.message?.let { UiText.Dynamic(it) }
+            return typedText(e) ?: e.message?.let { UiText.Dynamic(it) }
         }
         val parts = e.errors.map { err -> forValidation(err, graph) }
         return when (parts.size) {
@@ -90,14 +94,23 @@ internal object OrchestratorErrorText {
     }
 
     /**
-     * Lifts a thrown exception into a `UiText`, falling back to the generic
-     * "unexpected error" resource when the throwable carries no message.
+     * Lifts a thrown exception into a `UiText`: a refusal the app words itself
+     * ([InvalidInputException], [PipelineBundleExportException]) in the interface
+     * language, any other exception by its message, and the generic "unexpected
+     * error" resource when it carries none.
      *
      * @param e What was thrown.
-     * @return Its message, or the generic text.
+     * @return The words for it.
      */
     fun forThrowable(e: Throwable): UiText =
-        e.message?.let { UiText.Dynamic(it) } ?: UiText(R.string.errors_generic_unexpected)
+        typedText(e) ?: e.message?.let { UiText.Dynamic(it) } ?: UiText(R.string.errors_generic_unexpected)
+
+    /** The app's own words for a refusal it types, or `null` for any other exception. */
+    private fun typedText(e: Throwable): UiText? = when (e) {
+        is InvalidInputException -> inputProblemText(e.problem)
+        is PipelineBundleExportException -> bundleExportProblemText(e.problem)
+        else -> null
+    }
 
     /**
      * The name a validation error calls a node by: its label, or its id when

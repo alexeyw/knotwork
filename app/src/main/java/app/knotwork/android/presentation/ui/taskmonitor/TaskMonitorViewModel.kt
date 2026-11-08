@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkQuery
+import app.knotwork.android.R
 import app.knotwork.android.domain.engine.TaskQueueManager
 import app.knotwork.android.domain.models.AgentOrchestratorState
 import app.knotwork.android.domain.repositories.AppStateSettings
@@ -12,6 +13,8 @@ import app.knotwork.android.domain.repositories.BackgroundPromptRepository
 import app.knotwork.android.domain.repositories.ChatRepository
 import app.knotwork.android.domain.services.ScheduledTaskTag
 import app.knotwork.android.domain.usecases.CancelScheduledTasksUseCase
+import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.nodeTypeName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -81,18 +84,18 @@ class TaskMonitorViewModel @Inject constructor(
 
             // Map Orchestrator State to Pipeline Stage
             val stage = when (orchestratorState) {
-                is AgentOrchestratorState.PipelineStage -> orchestratorState.stepInfo.nodeName
-                is AgentOrchestratorState.Thinking -> "Thinking"
-                is AgentOrchestratorState.ExecutingTool -> "Tool Execution"
-                is AgentOrchestratorState.WaitingForApproval -> "Waiting Approval"
-                is AgentOrchestratorState.Loading -> "Loading"
-                is AgentOrchestratorState.Answering -> "Answering"
+                is AgentOrchestratorState.PipelineStage -> nodeTypeName(orchestratorState.stepInfo.nodeName)
+                is AgentOrchestratorState.Thinking -> UiText(R.string.taskmonitor_stage_thinking)
+                is AgentOrchestratorState.ExecutingTool -> UiText(R.string.taskmonitor_stage_tool)
+                is AgentOrchestratorState.WaitingForApproval -> UiText(R.string.taskmonitor_stage_approval)
+                is AgentOrchestratorState.Loading -> UiText(R.string.taskmonitor_stage_loading)
+                is AgentOrchestratorState.Answering -> UiText(R.string.taskmonitor_stage_answering)
                 else -> null
             }
 
             TaskItem(
                 id = session.id,
-                title = "Chat Session: ${session.name}",
+                title = UiText.of(R.string.taskmonitor_title_session, session.name),
                 status = status,
                 progress = null,
                 type = TaskType.SESSION,
@@ -113,7 +116,10 @@ class TaskMonitorViewModel @Inject constructor(
 
             TaskItem(
                 id = info.id.toString(),
-                title = "Background Task (${info.tags.firstOrNull() ?: "AgentWorker"})",
+                title = UiText.of(
+                    R.string.taskmonitor_title_background,
+                    info.tags.firstOrNull() ?: WORKER_TAG_FALLBACK,
+                ),
                 status = when {
                     isPassedOutput -> TaskStatus.COMPLETED
                     info.state == WorkInfo.State.RUNNING -> TaskStatus.RUNNING
@@ -125,7 +131,9 @@ class TaskMonitorViewModel @Inject constructor(
                 },
                 progress = if (info.state == WorkInfo.State.RUNNING) -1f else 1f,
                 type = TaskType.BACKGROUND_WORK,
-                pipelineStage = stage,
+                // A background worker reports the current node's id or the run's status code
+                // (AgentWorker.KEY_CURRENT_STAGE) — identifiers, shown as they are.
+                pipelineStage = stage?.let(UiText::Dynamic),
                 scheduled = scheduled,
                 boundSessionName = scheduled?.sessionId?.let(sessionNamesById::get),
             )
@@ -264,3 +272,6 @@ class TaskMonitorViewModel @Inject constructor(
         )
     }
 }
+
+/** What a background task's title names when the work carries no tag — the worker's class. */
+private const val WORKER_TAG_FALLBACK = "AgentWorker"

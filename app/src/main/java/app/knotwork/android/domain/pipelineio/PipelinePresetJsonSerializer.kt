@@ -112,7 +112,8 @@ object PipelinePresetJsonSerializer {
         // top-level fields it does not recognise, so the preset-only
         // `category` / `tags` / `description` slots survive untouched.
         return when (val graphOutcome = PipelineJsonSerializer.parse(jsonText)) {
-            is PipelineImportOutcome.Failure -> PipelinePresetImportOutcome.Failure(graphOutcome.message)
+            // Logged, never shown: a bundled or stored preset that fails is skipped.
+            is PipelineImportOutcome.Failure -> PipelinePresetImportOutcome.Failure(graphOutcome.problem.toString())
 
             is PipelineImportOutcome.Success -> PipelinePresetImportOutcome.Success(
                 preset = buildPreset(root = root, graph = graphOutcome.graph, isBundled = isBundled),

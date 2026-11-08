@@ -1,5 +1,6 @@
 package app.knotwork.android.domain.pipelineio
 
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineBundleImportOutcome
 import app.knotwork.android.domain.models.PipelineGraph
@@ -137,26 +138,28 @@ object PipelineBundleJsonSerializer {
     // extracting them would scatter the contract without removing a return.
     @Suppress("ReturnCount")
     fun parse(jsonText: String): PipelineBundleImportOutcome {
-        if (JsonNesting.exceeds(jsonText)) return PipelineBundleImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
+        if (JsonNesting.exceeds(jsonText)) {
+            return PipelineBundleImportOutcome.Failure(ImportProblem.TooDeep(JsonNesting.MAX_DEPTH))
+        }
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
             // Clamped: on Android the message quotes the entire input.
-            return PipelineBundleImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
+            return PipelineBundleImportOutcome.Failure(ImportProblem.NotJson(e.message.orEmpty().toDisplaySafe()))
         }
 
         if (!root.has("bundleVersion")) {
-            return PipelineBundleImportOutcome.Failure("Missing required field: bundleVersion")
+            return PipelineBundleImportOutcome.Failure(ImportProblem.MissingField("bundleVersion"))
         }
 
         val pipelinesJson = root.optJSONArray("pipelines")
-            ?: return PipelineBundleImportOutcome.Failure("Missing required field: pipelines")
+            ?: return PipelineBundleImportOutcome.Failure(ImportProblem.MissingField("pipelines"))
         if (pipelinesJson.length() == 0) {
-            return PipelineBundleImportOutcome.Failure("Bundle contains no pipelines")
+            return PipelineBundleImportOutcome.Failure(ImportProblem.EmptyBundle)
         }
         if (pipelinesJson.length() > MAX_BUNDLE_PIPELINES) {
             return PipelineBundleImportOutcome.Failure(
-                "Bundle contains ${pipelinesJson.length()} pipelines, exceeding the limit of $MAX_BUNDLE_PIPELINES",
+                ImportProblem.BundleTooLarge(count = pipelinesJson.length(), limit = MAX_BUNDLE_PIPELINES),
             )
         }
 
@@ -164,10 +167,10 @@ object PipelineBundleJsonSerializer {
         val mismatches = mutableListOf<PipelineBundleImportOutcome.SchemaMismatch>()
         for (i in 0 until pipelinesJson.length()) {
             val element = pipelinesJson.optJSONObject(i)
-                ?: return PipelineBundleImportOutcome.Failure("Bundle pipeline #$i is not a JSON object")
+                ?: return PipelineBundleImportOutcome.Failure(ImportProblem.BundleEntryNotObject(i))
             when (val outcome = PipelineJsonSerializer.parse(element.toString())) {
                 is PipelineImportOutcome.Failure ->
-                    return PipelineBundleImportOutcome.Failure("Bundle pipeline #$i is invalid: ${outcome.message}")
+                    return PipelineBundleImportOutcome.Failure(ImportProblem.BundleEntryInvalid(i, outcome.problem))
 
                 is PipelineImportOutcome.Success -> graphs.add(outcome.graph)
 
@@ -187,15 +190,19 @@ object PipelineBundleJsonSerializer {
         val duplicateIds = graphs.map { it.id }.groupingBy { it }.eachCount()
             .filterValues { it > 1 }.keys
         if (duplicateIds.isNotEmpty()) {
+            val sorted = duplicateIds.sorted()
             return PipelineBundleImportOutcome.Failure(
-                "Bundle contains duplicate pipeline ids: ${quoteSome(duplicateIds.sorted())}",
+                ImportProblem.DuplicatePipelineIds(ids = someIds(sorted), more = moreThanShown(sorted)),
             )
         }
 
         val danglingReferences = danglingTargets(graphs)
         if (danglingReferences.isNotEmpty()) {
             return PipelineBundleImportOutcome.Failure(
-                "Bundle references pipelines not contained in it: ${quoteSome(danglingReferences)}",
+                ImportProblem.MissingPipelines(
+                    ids = someIds(danglingReferences),
+                    more = moreThanShown(danglingReferences),
+                ),
             )
         }
 
@@ -207,16 +214,15 @@ object PipelineBundleJsonSerializer {
     }
 
     /**
-     * Quotes at most [MAX_QUOTED_IDS] file-supplied ids for an error message,
-     * each made display-safe, and says how many more there were. A bundle holds
-     * up to [MAX_BUNDLE_PIPELINES] pipelines, so an unbounded list would let
-     * the file decide how long the error is.
+     * At most [MAX_QUOTED_IDS] file-supplied ids for an error, each made
+     * display-safe; the error counts the rest. A bundle holds up to
+     * [MAX_BUNDLE_PIPELINES] pipelines, so an unbounded list would let the file
+     * decide how long the error is.
      */
-    private fun quoteSome(ids: List<String>): String {
-        val quoted = ids.take(MAX_QUOTED_IDS).joinToString { "\"${it.toDisplaySafe()}\"" }
-        val more = ids.size - MAX_QUOTED_IDS
-        return if (more > 0) "$quoted and $more more" else quoted
-    }
+    private fun someIds(ids: List<String>): List<String> = ids.take(MAX_QUOTED_IDS).map { it.toDisplaySafe() }
+
+    /** How many of [ids] [someIds] leaves out. */
+    private fun moreThanShown(ids: List<String>): Int = (ids.size - MAX_QUOTED_IDS).coerceAtLeast(0)
 
     /** Most ids an error message quotes before summarising the rest. */
     private const val MAX_QUOTED_IDS = 5

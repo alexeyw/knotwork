@@ -29,6 +29,12 @@ import java.io.File
  * and `../PRIVACY.md`, so a gate that declared only the `docs` tree would
  * resolve those links against files it had not declared — and go green after one
  * of them was deleted.
+ *
+ * The translations of the bundled documents are read the same way, through
+ * [translations]: hand-written files at `<asset directory>/<language>/<file>`,
+ * each holding the English anchors and the hash of the English it was made from
+ * ([BundledDocTranslations]). The build writes one index per language beside
+ * them; the translations themselves are sources, never written here.
  */
 abstract class AbstractBundledDocsTask : DefaultTask() {
 
@@ -50,6 +56,11 @@ abstract class AbstractBundledDocsTask : DefaultTask() {
     @get:Internal
     abstract val assetDirectory: DirectoryProperty
 
+    /** The translations of the bundled documents, `<asset directory>/<language>/<file>.md`. */
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val translations: ConfigurableFileCollection
+
     /**
      * Reads every declared document, keyed the way the registry spells it.
      *
@@ -63,14 +74,38 @@ abstract class AbstractBundledDocsTask : DefaultTask() {
     }
 
     /**
-     * Refuses to proceed while any bundled document would not survive the
-     * in-app renderer.
+     * Reads every declared translation.
+     *
+     * @return Language to English document path to the translation's text. A
+     *   file whose name matches no bundled document is keyed by the path it
+     *   would translate, `docs/<file>`, so the check can name it.
+     */
+    protected fun readTranslations(): Map<String, Map<String, String>> {
+        val root = assetDirectory.get().asFile
+        val bundled = BundledDocs.bundledDocuments().associateBy { it.path.substringAfterLast('/') }
+        return translations.files
+            .filter { it.isFile }
+            .groupBy { it.relativeTo(root).invariantSeparatorsPath.substringBefore('/') }
+            .mapValues { (_, files) ->
+                files.associate { file -> (bundled[file.name]?.path ?: "docs/${file.name}") to file.readText() }
+            }
+            .toSortedMap()
+    }
+
+    /**
+     * Refuses to proceed while any bundled document, or any of its
+     * translations, would not survive the in-app renderer — or a translation
+     * no longer matches its English.
      *
      * @param documents Every document the task read.
+     * @param translations Every translation the task read, by language.
      * @throws VerificationException listing every construct and dead link found.
      */
-    protected fun requireDocumentsAreReadable(documents: Map<String, String>) {
-        val violations = BundledDocs.violationsOf(documents)
+    protected fun requireDocumentsAreReadable(
+        documents: Map<String, String>,
+        translations: Map<String, Map<String, String>>,
+    ) {
+        val violations = BundledDocs.violationsOf(documents) + translationViolations(documents, translations)
         if (violations.isEmpty()) return
         throw VerificationException(
             "Documentation bundled into the app would not render correctly (${violations.size}):\n" +
@@ -82,29 +117,77 @@ abstract class AbstractBundledDocsTask : DefaultTask() {
     }
 
     /**
-     * The file name to full text of everything that belongs in the asset
-     * directory.
+     * Everything that keeps a translation from matching its English.
      *
      * @param documents Every document the task read.
-     * @return Asset-relative file name to content.
+     * @param translations Every translation the task read, by language.
+     * @return One line per violation, empty when every translation holds.
      */
-    protected fun assetContents(documents: Map<String, String>): Map<String, String> {
+    protected fun translationViolations(
+        documents: Map<String, String>,
+        translations: Map<String, Map<String, String>>,
+    ): List<String> = translations.flatMap { (language, texts) ->
+        BundledDocTranslations.violationsOf(language, texts, documents)
+    }
+
+    /**
+     * The path to full text of everything the build writes into the asset
+     * directory: the English copies and their index, and one index per
+     * translated language.
+     *
+     * @param documents Every document the task read.
+     * @param translations Every translation the task read, by language.
+     * @return Asset-directory-relative path to content.
+     */
+    protected fun assetContents(
+        documents: Map<String, String>,
+        translations: Map<String, Map<String, String>>,
+    ): Map<String, String> {
         val contents = linkedMapOf<String, String>()
         for (entry in BundledDocs.bundledDocuments()) {
             contents[BundledDocs.assetPathOf(entry.path).substringAfterLast('/')] =
                 documents.getValue(entry.path)
         }
         contents[BundledDocs.INDEX_FILE_NAME] = BundledDocs.renderIndex(documents)
+        val bundled = BundledDocs.bundledDocuments().map { it.path }
+        // A language missing one of the documents has no index to write; the
+        // gate reports the missing translation.
+        translations.filterValues { texts -> bundled.all { it in texts } }.forEach { (language, texts) ->
+            contents["$language/${BundledDocTranslations.INDEX_FILE_NAME}"] =
+                BundledDocTranslations.renderIndex(language, texts)
+        }
         return contents
+    }
+
+    /**
+     * The files the build wrote into the asset directory earlier: the top-level
+     * copies and index, and each language's index — not the translations, which
+     * are sources.
+     *
+     * @return Asset-directory-relative path to content.
+     */
+    protected fun writtenAssets(): Map<String, String> {
+        val directory = assetDirectory.get().asFile
+        val topLevel = directory.listFiles().orEmpty().filter { it.isFile }
+        val indexes = directory.listFiles().orEmpty().filter { it.isDirectory }
+            .mapNotNull { File(it, BundledDocTranslations.INDEX_FILE_NAME).takeIf(File::isFile) }
+        return (topLevel + indexes).associate { it.relativeTo(directory).invariantSeparatorsPath to it.readText() }
     }
 }
 
 /**
  * Copies the bundled documents into the APK's assets and writes their index.
  *
- * Refuses to write while any document fails the pre-checks: producing copies of
- * a document the renderer cannot show would ship the defect and leave the
- * verification task to report it afterwards, against files already committed.
+ * Refuses to write while any English document fails the pre-checks: producing
+ * copies of a document the renderer cannot show would ship the defect and leave
+ * the verification task to report it afterwards, against files already
+ * committed.
+ *
+ * A translation that no longer matches its English does **not** stop the sync —
+ * it is reported as a warning and left to `verifyBundledDocs`. Someone who edits
+ * an English document and cannot write the translation still gets the English
+ * copy and its index written; the gate then names the one thing left for whoever
+ * translates.
  */
 @UntrackedTask(
     because = "it writes into app/src/main/assets, which must not become a declared build output",
@@ -131,27 +214,37 @@ abstract class SyncBundledDocsTask : AbstractBundledDocsTask() {
     @TaskAction
     fun sync() {
         val documents = readDocuments()
-        requireDocumentsAreReadable(documents)
+        val translations = readTranslations()
+        requireDocumentsAreReadable(documents, translations = emptyMap())
+        val stale = translationViolations(documents, translations)
+        if (stale.isNotEmpty()) {
+            logger.warn(
+                "Translations of the bundled documentation need updating — verifyBundledDocs fails until they " +
+                    "are:\n" + stale.joinToString("\n") { "  $it" },
+            )
+        }
         val directory = assetDirectory.get().asFile
         directory.mkdirs()
-        val expected = assetContents(documents)
+        val expected = assetContents(documents, translations)
         var written = 0
         for ((name, content) in expected) {
             val file = File(directory, name)
             if (!file.isFile || file.readText() != content) {
+                file.parentFile.mkdirs()
                 file.writeText(content)
                 written++
             }
         }
         // A document that stops being bundled leaves its copy behind, and a
         // stale copy is worse than a missing one: it is a document the reader
-        // can still open and that nothing checks any more.
-        val removed = directory.listFiles().orEmpty()
-            .filter { it.isFile && it.name !in expected }
-            .onEach { it.delete() }
+        // can still open and that nothing checks any more. The same holds for
+        // the index of a language whose translations are gone.
+        val removed = writtenAssets().keys
+            .filter { it !in expected }
+            .onEach { File(directory, it).delete() }
         logger.lifecycle(
-            "Bundled documentation: ${expected.size - 1} document(s) + index, " +
-                "$written written, ${removed.size} stale file(s) removed.",
+            "Bundled documentation: ${BundledDocs.bundledDocuments().size} document(s) + index, " +
+                "${translations.size} translation(s); $written written, ${removed.size} stale file(s) removed.",
         )
     }
 }
@@ -185,15 +278,15 @@ abstract class VerifyBundledDocsTask : AbstractBundledDocsTask() {
     @TaskAction
     fun verify() {
         val documents = readDocuments()
+        val translations = readTranslations()
         // Renderability before drift, and the order is the message. Editing a
         // bundled document makes the committed copy stale *as well as*
         // possibly unrenderable, and "re-sync" is unhelpful advice for a
         // document that has just grown a Mermaid diagram — the sync would
         // refuse for the real reason one command later.
-        requireDocumentsAreReadable(documents)
-        val directory = assetDirectory.get().asFile
-        val expected = assetContents(documents)
-        val actual = directory.listFiles().orEmpty().filter { it.isFile }.associate { it.name to it.readText() }
+        requireDocumentsAreReadable(documents, translations)
+        val expected = assetContents(documents, translations)
+        val actual = writtenAssets()
         val missing = expected.keys - actual.keys
         val stale = actual.keys - expected.keys
         val changed = expected.filter { (name, content) -> actual[name] != null && actual[name] != content }.keys
@@ -211,6 +304,9 @@ abstract class VerifyBundledDocsTask : AbstractBundledDocsTask() {
         val stamp = stampFile.get().asFile
         stamp.parentFile.mkdirs()
         stamp.writeText("ok\n")
-        logger.lifecycle("Verified ${BundledDocs.bundledDocuments().size} bundled document(s) and their index.")
+        logger.lifecycle(
+            "Verified ${BundledDocs.bundledDocuments().size} bundled document(s), their index and " +
+                "${translations.size} translation(s).",
+        )
     }
 }

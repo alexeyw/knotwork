@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,6 +37,7 @@ import app.knotwork.design.components.buttons.KnotworkButtonSize
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -141,13 +141,23 @@ private fun PerformanceHeader(title: String, accent: Boolean, trailing: @Composa
             tint = if (accent) MaterialTheme.colorScheme.primary else KnotworkTheme.extended.onSurface2,
             modifier = Modifier.size(HeaderGlyphSize),
         )
-        Text(
-            text = title,
-            style = KnotworkTextStyles.LabelLg,
-            color = MaterialTheme.colorScheme.onSurface,
+        // A flow, not a row: a row measured the caption first and handed the title what was
+        // left, so a larger font broke "Performance" inside the word. The flow moves the
+        // caption under the title once the title's longest word would not fit beside it.
+        FlowRow(
+            itemVerticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+            verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp1),
             modifier = Modifier.weight(1f),
-        )
-        trailing()
+        ) {
+            Text(
+                text = title,
+                style = KnotworkTextStyles.LabelLg,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            trailing()
+        }
     }
 }
 

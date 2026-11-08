@@ -20,6 +20,7 @@ import app.knotwork.android.domain.repositories.MetricsRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.EmbeddingProvider
 import app.knotwork.android.domain.services.EmbeddingProviderResolver
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.MemorySearchStatsTracker
 import app.knotwork.android.domain.services.MemorySupersedeFixture
 import app.knotwork.android.domain.services.MemorySupersedeJudge
@@ -474,7 +475,7 @@ class MemoryExtractionUseCaseTest {
         val dao = mockk<ChatDao>(relaxed = true)
         val stored = slot<List<ChatMessageEntity>>()
         coEvery { dao.insertImportedChat(any(), capture(stored)) } returns Unit
-        ChatRepositoryImpl(dao, mockk(relaxed = true), mockk(relaxed = true)).importChat(json)
+        ChatRepositoryImpl(dao, mockk(relaxed = true), mockk(relaxed = true), EnglishDefaultNames).importChat(json)
         return stored.captured.map { it.toDomain() }
     }
 

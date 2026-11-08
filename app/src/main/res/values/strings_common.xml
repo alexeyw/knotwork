@@ -20,11 +20,11 @@
          "Web search, Fetch a URL"). Separate from a bullet list so a
          translation can carry its language's own spacing. -->
     <string name="common_list_separator">", "</string>
-
-    <!-- Keyword the user must type to arm a destructive typed-confirm dialog.
-         Shared by every destructive confirmation surface (Settings, splash data
-         recovery) so the convention cannot drift between screens. -->
-    <string name="destructive_typed_keyword">yes</string>
+    <!-- The language these strings are written in, as a BCP-47 tag. Not shown:
+         it names the language the interface is in, which picks the bundled
+         presets' translation (assets/presets/l10n/<tag>.json). Each translation
+         writes its own tag here; TranslationCoverageTest holds the two equal. -->
+    <string name="interface_language_tag">en</string>
 
     <!-- Bottom navigation tab labels -->
     <string name="nav_tab_chat">Chat</string>
@@ -85,4 +85,24 @@
         <item quantity="one">Saved %1$d entry</item>
         <item quantity="other">Saved %1$d entries</item>
     </plurals>
+    <!-- Size units; %1$s is the number, already written in the language. -->
+    <string name="unit_size_bytes">%1$s B</string>
+    <string name="unit_size_kilobytes">%1$s KB</string>
+    <string name="unit_size_megabytes">%1$s MB</string>
+    <string name="unit_size_gigabytes">%1$s GB</string>
+    <!-- Short ages in lists; %1$d is the count. -->
+    <string name="unit_age_now">now</string>
+    <string name="unit_age_minutes">%1$d m</string>
+    <string name="unit_age_hours">%1$d h</string>
+    <string name="unit_age_days">%1$d d</string>
+    <string name="unit_age_weeks">%1$d w</string>
+    <!-- Names the app gives what it creates before a person names it (DefaultNames). Stored as written, in the language of the moment. -->
+    <string name="default_name_chat">New Chat</string>
+    <string name="default_name_imported_chat">Imported Chat</string>
+    <string name="default_name_chat_with_id">Chat %1$s</string>
+    <string name="default_name_trigger_chat">Trigger</string>
+    <string name="default_name_pipeline">New Pipeline</string>
+    <string name="default_name_input_node">Input</string>
+    <string name="default_name_output_node">Output</string>
+    <string name="default_name_copy">%1$s (copy)</string>
 </resources>

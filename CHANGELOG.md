@@ -13,13 +13,137 @@ details.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-08
+
+### Added
+
+- **Turn all of an MCP server's tools on or off at once.** The `⋮` menu on a
+  server's row on the Tools screen now has *Turn all tools off* and *Turn all
+  tools on*. To use one tool from a server that publishes many, turn them all
+  off and switch that one back on, instead of switching the rest off one by
+  one.
+- **Save a chat straight to a file.** The chat's `⋮` menu and an archived
+  chat's row menu now have *Save to file*: the system file picker opens and the
+  chat is written where you choose, as the same JSON file *Export chat* shares.
+- **The app speaks Russian and Spanish.** Every screen, the bundled pipelines
+  and prompt templates, the FAQ and the troubleshooting guide are translated
+  into both; the Spanish is neutral, for Spain and Latin America alike.
+  *Settings → About → Language* picks the language of the app's screens, or
+  follows the phone's; your phone's per-app language setting is the same
+  choice. What a model reads stays in English —
+  system prompts, tool descriptions and tool results; the lines the app adds to
+  a chat, such as a tool call you denied, are written in the app's language.
+  The bundled pipelines and prompt templates show their names, descriptions,
+  node titles, starter prompts and tags in the app's language too; a pipeline
+  made from one keeps the words it was made with. *Help* opens the FAQ and the
+  troubleshooting guide in the app's language; the documents that open in the
+  browser are in English, and the Help screen says so.
+
+### Changed
+
+- **`$LANG` follows the language you read the app in**, when it differs from
+  the phone's; `$LOCATION` still names the phone's region.
+- **Settings search ignores accents.** `configuracion` finds *Configuración*
+  and `tamano` finds *Tamaño*; the match is still highlighted in the setting's
+  own spelling. Cyrillic letters are matched as typed, so the Russian search
+  is unchanged.
+- **The on-device inference engine is LiteRT-LM 0.19.0** (was 0.17.1). Its
+  GPU sampling for a given seed now matches the CPU's, so a run on the GPU can
+  give a different answer than it did before the update.
+- **An MCP server that cannot connect says why in words.** Its row on the
+  Tools screen used to show the raw error; it now reads like the server form's
+  *Test* — what happened and what to do — and a tool's detail page says the
+  same. The task monitor names a running step by its node type's name
+  (*Intent Router*) instead of its code (`INTENT_ROUTER`).
+- **A pipeline bundle refused for a pipeline that would not run names what
+  is wrong with it** — the same findings the editor shows — instead of only
+  counting them.
+- **Names the app gives are written in the app's language** — a new chat, a
+  new pipeline and its first nodes, a copy — and stay as written if the
+  language changes later. A new chat still takes its first message as its name,
+  whichever language it was created in.
+- **Verify checks a run only on the engine version that recorded it.** Equal
+  answers were measured within one LiteRT-LM version, and an update can change
+  them, so for a run recorded before the update Verify stays off and names both
+  versions. The run's promise now says so as well.
+- **Building the app gives the Gradle daemon 4 GiB** (was 2 GiB). A daemon
+  kept across several `./gradlew check` runs or a release build used to stop
+  because its garbage collector was thrashing. Plan on 16 GB of memory to
+  build — `CONTRIBUTING.md` lists what takes it.
+
 ### Fixed
 
+- **Large fonts no longer break words or cut labels** on the settings
+  hub, the Tools settings, the performance card, Live metrics and the
+  Memory overview. At 200 % a word such as *Approve* or *memories* used
+  to split across two lines, or a label ended cut off; the options of
+  *Approve tool calls* now
+  stack when they do not fit side by side, and a row's value or button
+  moves under its label. *Sensitive +* was cut even at the default size.
+- **Live metrics names node types** (*Intent Router*, *Tool*) in the
+  time-per-node-type rows, as the task monitor does, instead of their
+  codes (`INTENT_ROUTER`).
+- **The help names three controls as the app shows them**: **Activate** on the
+  Models screen (it said *Make Active*), Memory's **Compact** (it said
+  *Compact Memory*) and the More tab's **Tasks** row (it said *Active tasks*,
+  the title of the screen that row opens). The troubleshooting section on a
+  trigger that did not fire now counts its three cases as three. The Russian
+  and Spanish help follow.
+- **Exporting a long chat no longer closes the app.** *Export chat* handed the
+  whole chat to the share sheet as text, and a chat over about 350 000
+  characters is more than Android lets an app pass that way. It now shares the
+  chat as a JSON file, of any length; a receiving app gets an attachment where
+  it used to get message text.
+- **The approval card shows the arguments exactly as the call receives
+  them.** On Android it showed every `/` in an argument as `\/` and
+  rewrote numbers — `1.50` as `1.5`, a long integer rounded — so the text you
+  approved was not quite the one sent. The arguments are now laid out one per
+  line with nested values indented, the way the console shows a value, and
+  every value appears as written. Arguments that are not JSON are shown as
+  they came instead of under a made-up `args` key, and a character that would
+  not show — a zero-width space, a direction override — appears as its
+  `\uXXXX` code on the card and in the notification, which shows the
+  arguments on one line.
+- **A tool's parameter schema is laid out one key per line** on its detail
+  page; a server's schema used to show as a single line to scroll through.
+- **Very long text without spaces no longer freezes the screen.** A tool's
+  output, an error or a memory entry of hundreds of thousands of characters
+  without a space — base64, minified JSON — held the app for seconds in
+  Monitoring, the console's logs, the memory list, the approval card, a
+  heading or table cell of the agent's answer and elsewhere, because laying
+  out such a line grows with the square of its length. Every text now lays out only what it can show: a row of a few lines
+  takes what fits before its ellipsis, and a longer text shows its first
+  10,000 characters and how many more there are. The approval card's
+  expanded arguments, a question the agent asks, an opened memory entry, a
+  file preview, the prompt preview and the message reader still show every
+  character.
+- **A very tall text no longer closes the app.** A table header cell of a
+  few hundred thousand characters, or a tool argument that long expanded on
+  the approval card, was taller than a layout can size and threw while being
+  drawn. Both now draw in full.
 - **Table cells show all their text.** A cell longer than its column was cut
   to one line ending in an ellipsis — in a chat message and in the message
   reader alike — so the rest of it could be read only in a copy. A cell now
   wraps onto as many lines as it needs, and the cells of a row start level at
   its top.
+- **A tool call to an MCP server that closed its session now goes through.**
+  A Streamable HTTP server may end a session at any time — servers built on
+  the MCP Kotlin SDK 0.16 do after 30 minutes without requests — and every
+  later call to it failed until the app was restarted. The app now opens a new
+  session and repeats the call once: the server refused the first attempt
+  without running it, so nothing runs twice. Any other failure is still not
+  repeated.
+- **Refreshing a server on the Tools screen asks the server.** It used to
+  repeat the tool list from the moment the app connected, so the row could
+  read *Connected* while the agent's calls failed. A refresh — and the
+  screen's own reload of a list more than five minutes old — now asks the
+  server for its tools over the live connection and picks up tools it added
+  or removed. A list kept from a connection the app has since replaced or
+  dropped is not shown as current: the server is asked again.
+- **Two tool switches flipped in quick succession both stay.** On the Tools
+  screen, a switch flipped before the previous one had been saved could undo
+  it, because each saved the whole list of switched-off tools as the screen
+  last saw it. Each switch now changes only its own tool.
 
 ## [0.13.0] - 2026-11-02
 
@@ -7087,7 +7211,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/alexeyw/knotwork/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/alexeyw/knotwork/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/alexeyw/knotwork/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/alexeyw/knotwork/compare/v0.12.0...v0.12.1

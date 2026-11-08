@@ -31,4 +31,6 @@
         <item quantity="one">Only %1$d of %2$d file was prepared for sharing.</item>
         <item quantity="other">Only %1$d of %2$d files were prepared for sharing.</item>
     </plurals>
+    <!-- Workspace quota line once full. -->
+    <string name="files_quota_full">full</string>
 </resources>

@@ -71,9 +71,9 @@ internal object MonitoringPreview {
         stats = stats(),
         totalExecutionLine = "1 240 ms",
         perNodeBreakdown = listOf(
-            NodeBreakdownRow(nodeType = "LITE_RT", totalLabel = "640 ms"),
-            NodeBreakdownRow(nodeType = "TOOL", totalLabel = "412 ms"),
-            NodeBreakdownRow(nodeType = "OUTPUT", totalLabel = "188 ms"),
+            NodeBreakdownRow(nodeType = "LiteRT", totalLabel = "640 ms"),
+            NodeBreakdownRow(nodeType = "Tool", totalLabel = "412 ms"),
+            NodeBreakdownRow(nodeType = "Output", totalLabel = "188 ms"),
         ),
         logs = listOf(
             MonitoringLogLine(id = "row:1", timestamp = "12:04:01", message = "Pipeline 'Travel planner' started"),

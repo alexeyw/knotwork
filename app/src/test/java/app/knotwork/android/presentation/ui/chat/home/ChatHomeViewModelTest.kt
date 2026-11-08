@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.chat.home
 
+import app.knotwork.android.R
 import app.knotwork.android.domain.constants.DefaultPrompts
 import app.knotwork.android.domain.constants.SettingsDefaults
 import app.knotwork.android.domain.engine.LlmInferenceEngine
@@ -8,6 +9,7 @@ import app.knotwork.android.domain.models.AppError
 import app.knotwork.android.domain.models.ApprovalRequestContext
 import app.knotwork.android.domain.models.ApprovalRequestSource
 import app.knotwork.android.domain.models.ChatImportException
+import app.knotwork.android.domain.models.ChatImportReason
 import app.knotwork.android.domain.models.ChatMessage
 import app.knotwork.android.domain.models.ChatSession
 import app.knotwork.android.domain.models.ClarificationRequest
@@ -42,6 +44,8 @@ import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.services.AttachmentStore
 import app.knotwork.android.domain.services.AudioCaptureStore
 import app.knotwork.android.domain.services.AudioRecorder
+import app.knotwork.android.domain.services.ChatSystemRows
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.ImageCaptureStore
 import app.knotwork.android.domain.services.RecordingState
 import app.knotwork.android.domain.usecases.AgentOrchestratorUseCase
@@ -72,7 +76,8 @@ import app.knotwork.android.domain.verification.RunAgainRequest
 import app.knotwork.android.domain.verification.RunDescription
 import app.knotwork.android.domain.verification.VerifyAvailability
 import app.knotwork.android.presentation.state.ActiveSessionTracker
-import app.knotwork.android.presentation.ui.common.ImageAttachmentBlockCopy
+import app.knotwork.android.presentation.ui.chat.ChatExportEvent
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessagePreview
 import app.knotwork.design.components.chat.ChatMessageStatus
@@ -134,6 +139,16 @@ import org.junit.Test
 class ChatHomeViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+
+    /**
+     * Rows unlike any sentence the delegate could hold itself, so a test sees the
+     * row came through [ChatSystemRows] rather than from a literal.
+     */
+    private val systemRows = object : ChatSystemRows {
+        override fun toolDenied(toolName: String): String = "row:denied:$toolName"
+
+        override fun clarificationReplyNotDelivered(): String = "row:reply-not-delivered"
+    }
 
     private lateinit var agentOrchestratorUseCase: AgentOrchestratorUseCase
     private lateinit var chatRepository: ChatRepository
@@ -322,6 +337,8 @@ class ChatHomeViewModelTest {
         unarchiveChatUseCase,
         runUseCases,
         resolveApprovalRequestContext,
+        EnglishDefaultNames,
+        systemRows,
     ).also { vm ->
         // Keep the replay projection on the test scheduler so
         // advanceUntilIdle() deterministically covers it.
@@ -696,7 +713,7 @@ class ChatHomeViewModelTest {
                     ChatMessage(sessionId = sessionId, role = Role.USER, content = "the failed turn", timestamp = 1L),
                 ),
             )
-            viewModel.forceState(ChatHomeUiState.Error("boom"))
+            viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
             viewModel.onComposerValueChange("typed while reading the error")
 
             viewModel.retryAfterError()
@@ -855,7 +872,7 @@ class ChatHomeViewModelTest {
                 ),
             ),
         )
-        viewModel.forceState(ChatHomeUiState.Error("boom"))
+        viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
 
         viewModel.retryAfterError()
         advanceUntilIdle()
@@ -880,7 +897,7 @@ class ChatHomeViewModelTest {
             advanceUntilIdle()
             val sessionId = viewModel.state.value.thread.currentSessionId
             every { chatRepository.getMessagesForSession(sessionId) } returns flowOf(emptyList())
-            viewModel.forceState(ChatHomeUiState.Error("boom"))
+            viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
 
             viewModel.retryAfterError()
             advanceUntilIdle()
@@ -1283,7 +1300,7 @@ class ChatHomeViewModelTest {
 
         // The chat keeps its default name — the instruction text must not become the title.
         assertEquals(
-            ChatHomeThreadsDelegate.DEFAULT_NEW_CHAT_NAME,
+            EnglishDefaultNames.NEW_CHAT,
             sessionsFlow.value.first { it.id == sessionId }.name,
         )
     }
@@ -1308,7 +1325,7 @@ class ChatHomeViewModelTest {
 
             val visual = viewModel.state.value.visual
             assertTrue(visual is ChatHomeUiState.Error)
-            assertEquals(ImageAttachmentBlockCopy.MODEL_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
+            assertEquals(UiText(R.string.chat_image_blocked_model), (visual as ChatHomeUiState.Error).message)
             // The run never starts and the draft attachment is preserved.
             coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
             assertNotNull(viewModel.state.value.composer.attachment)
@@ -1333,7 +1350,7 @@ class ChatHomeViewModelTest {
 
         val visual = viewModel.state.value.visual
         assertTrue(visual is ChatHomeUiState.Error)
-        assertEquals(ImageAttachmentBlockCopy.PIPELINE_NO_VISION_MESSAGE, (visual as ChatHomeUiState.Error).message)
+        assertEquals(UiText(R.string.chat_image_blocked_pipeline), (visual as ChatHomeUiState.Error).message)
         coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
     }
 
@@ -1384,7 +1401,7 @@ class ChatHomeViewModelTest {
             val visual = viewModel.state.value.visual
             assertTrue(visual is ChatHomeUiState.Error)
             assertEquals(
-                ImageAttachmentBlockCopy.CLOUD_ATTACHMENT_BLOCKED_MESSAGE,
+                UiText(R.string.chat_image_blocked_cloud),
                 (visual as ChatHomeUiState.Error).message,
             )
             coVerify(exactly = 0) { agentOrchestratorUseCase(any(), any(), any(), any(), any()) }
@@ -1547,7 +1564,7 @@ class ChatHomeViewModelTest {
         coEvery {
             agentOrchestratorUseCase(sessionId, "the failed turn", any(), any(), any(), persistUserMessage = false)
         } returns flow { awaitCancellation() }
-        viewModel.forceState(ChatHomeUiState.Error("boom"))
+        viewModel.forceState(ChatHomeUiState.Error(UiText.Dynamic("boom")))
 
         viewModel.retryAfterError()
         advanceUntilIdle()
@@ -1652,7 +1669,7 @@ class ChatHomeViewModelTest {
 
         val state = viewModel.state.value.visual
         assertTrue("Expected Error, got $state", state is ChatHomeUiState.Error)
-        assertEquals("boom", (state as ChatHomeUiState.Error).message)
+        assertEquals(UiText.Dynamic("boom"), (state as ChatHomeUiState.Error).message)
     }
 
     @Test
@@ -1683,9 +1700,9 @@ class ChatHomeViewModelTest {
         viewModel = createViewModel()
         advanceUntilIdle()
         val sessionId = viewModel.state.value.thread.currentSessionId
-        // initializeSession() created a session named DEFAULT_NEW_CHAT_NAME
+        // initializeSession() created a session under the new-chat name
         assertEquals(
-            ChatHomeThreadsDelegate.DEFAULT_NEW_CHAT_NAME,
+            EnglishDefaultNames.NEW_CHAT,
             sessionsFlow.value.first { it.id == sessionId }.name,
         )
         coEvery { agentOrchestratorUseCase(sessionId, any(), any()) } returns flowOf(
@@ -2206,7 +2223,7 @@ class ChatHomeViewModelTest {
         viewModel.sendMessage()
         advanceUntilIdle()
 
-        viewModel.hitl.approveTool()
+        viewModel.hitl.approveTool(CONFIRM_WORD)
         advanceUntilIdle()
 
         coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
@@ -2241,9 +2258,7 @@ class ChatHomeViewModelTest {
         coVerify {
             chatRepository.saveMessage(
                 match { msg ->
-                    msg.role == Role.SYSTEM &&
-                        msg.content.contains("fs.delete_file") &&
-                        msg.content.contains("denied")
+                    msg.role == Role.SYSTEM && msg.content == "row:denied:fs.delete_file"
                 },
             )
         }
@@ -2274,18 +2289,51 @@ class ChatHomeViewModelTest {
         advanceUntilIdle()
 
         // Empty typed-confirm — Allow must be refused.
-        viewModel.hitl.approveTool()
+        viewModel.hitl.approveTool(CONFIRM_WORD)
         advanceUntilIdle()
         coVerify(exactly = 0) { submitApprovalDecisionUseCase(any(), any(), true) }
         assertTrue(viewModel.state.value.visual is ChatHomeUiState.HitlConfirm)
 
         // Typing the canonical magic word unlocks the gate.
         viewModel.hitl.onTypedConfirmChange("yes")
-        viewModel.hitl.approveTool()
+        viewModel.hitl.approveTool(CONFIRM_WORD)
         advanceUntilIdle()
         coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
         assertEquals(ChatHomeUiState.Generating(), viewModel.state.value.visual)
     }
+
+    @Test
+    fun `given the interface in Russian when a destructive call is approved then the gate takes the Russian word`() =
+        runTest(testDispatcher) {
+            viewModel = createViewModel()
+            advanceUntilIdle()
+            val sessionId = viewModel.state.value.thread.currentSessionId
+            coEvery { agentOrchestratorUseCase(sessionId, "hi", null) } returns flow {
+                emit(
+                    AgentOrchestratorState.WaitingForApproval(
+                        toolName = "fs.delete_file",
+                        arguments = "{}",
+                        risk = ToolRisk.DESTRUCTIVE,
+                        requestId = "request-1",
+                    ),
+                )
+                delay(10_000)
+            }
+            viewModel.onComposerValueChange("hi")
+            viewModel.sendMessage()
+            advanceUntilIdle()
+
+            // The card asks for the word of the interface language; the English one does not pass.
+            viewModel.hitl.onTypedConfirmChange("yes")
+            viewModel.hitl.approveTool("да")
+            advanceUntilIdle()
+            coVerify(exactly = 0) { submitApprovalDecisionUseCase(any(), any(), true) }
+
+            viewModel.hitl.onTypedConfirmChange(" Да ")
+            viewModel.hitl.approveTool("да")
+            advanceUntilIdle()
+            coVerify { submitApprovalDecisionUseCase(sessionId, "request-1", true) }
+        }
 
     @Test
     fun `AwaitingClarification emits Clarification state and captures the request`() = runTest(testDispatcher) {
@@ -2606,7 +2654,7 @@ class ChatHomeViewModelTest {
 
     @Test
     fun `importChatFromJson shows the import's own reason for a file it refused`() = runTest(testDispatcher) {
-        coEvery { chatRepository.importChat(any()) } throws ChatImportException("the file is not valid JSON")
+        coEvery { chatRepository.importChat(any()) } throws ChatImportException(ChatImportReason.NotJson)
         viewModel = createViewModel()
         advanceUntilIdle()
         val received = async { viewModel.transfer.importErrorEvents.first() }
@@ -2615,7 +2663,7 @@ class ChatHomeViewModelTest {
         viewModel.transfer.importChatFromJson("not json")
         advanceUntilIdle()
 
-        assertEquals("the file is not valid JSON", received.await())
+        assertEquals(UiText(R.string.chat_import_reason_not_json), received.await())
     }
 
     @Test
@@ -2637,7 +2685,7 @@ class ChatHomeViewModelTest {
         viewModel.transfer.importChatFromJson("not json")
         advanceUntilIdle()
 
-        assertEquals(ChatHomeTransferDelegate.IMPORT_GENERIC_FAILURE_MESSAGE, received.await())
+        assertEquals(UiText(R.string.chat_import_reason_unreadable), received.await())
     }
 
     @Test
@@ -2655,16 +2703,37 @@ class ChatHomeViewModelTest {
         viewModel = createViewModel()
         advanceUntilIdle()
 
-        val payload = async { viewModel.transfer.exportEvents.first() }
+        val payload = async { viewModel.transfer.export.events.first() }
         runCurrent()
         viewModel.transfer.exportCurrentSession()
         advanceUntilIdle()
 
-        val captured = payload.await()
+        val captured = (payload.await() as ChatExportEvent.Share).document
         assertEquals("Trip plan", captured.sessionName)
         assertTrue(captured.json.contains("\"role\""))
         assertTrue(captured.json.contains("\"USER\""))
     }
+
+    @Test
+    fun `saveCurrentSession renders the open chat and asks for a destination named after it`() =
+        runTest(testDispatcher) {
+            val sessionId = "save-id"
+            savedSessionIdFlow.value = sessionId
+            sessionsFlow.value = listOf(ChatSession(id = sessionId, name = "Trip plan", updatedAt = 0))
+            coEvery { chatRepository.getSessionById(sessionId) } returns
+                ChatSession(id = sessionId, name = "Trip plan", updatedAt = 0)
+            coEvery { chatRepository.getMessagesForSession(sessionId) } returns flowOf(emptyList())
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            val event = async { viewModel.transfer.export.events.first() }
+            runCurrent()
+            viewModel.transfer.saveCurrentSession()
+            advanceUntilIdle()
+
+            val fileName = (event.await() as ChatExportEvent.PickDestination).fileName
+            assertTrue(fileName, fileName.startsWith("chat-Trip-plan-") && fileName.endsWith(".json"))
+        }
 
     @Test
     fun `threadRows projects sessions with favorited at the top`() = runTest(testDispatcher) {
@@ -2841,7 +2910,7 @@ class ChatHomeViewModelTest {
 
             viewModel = createViewModel()
             advanceUntilIdle()
-            viewModel.hitl.approveTool()
+            viewModel.hitl.approveTool(CONFIRM_WORD)
             advanceUntilIdle()
 
             coVerify(exactly = 1) { submitApprovalDecisionUseCase(sessionId, "request-parked", true) }
@@ -2866,7 +2935,7 @@ class ChatHomeViewModelTest {
 
             viewModel = createViewModel()
             advanceUntilIdle()
-            viewModel.hitl.approveTool()
+            viewModel.hitl.approveTool(CONFIRM_WORD)
             advanceUntilIdle()
 
             coVerify(exactly = 1) { submitApprovalDecisionUseCase(sessionId, "run-parked", true) }
@@ -3074,10 +3143,10 @@ class ChatHomeViewModelTest {
             viewModel = createViewModel()
             advanceUntilIdle()
 
-            assertEquals(
-                ChatHomeReattachDelegate.INTERRUPTED_UNKNOWN_NODE_LABEL,
-                viewModel.state.value.pending.interrupted?.nodeLabel,
-            )
+            // The card words a node it cannot name; the pending record carries no label.
+            val interrupted = viewModel.state.value.pending.interrupted
+            assertNotNull(interrupted)
+            assertNull(interrupted?.nodeLabel)
         }
 
     @Test
@@ -3327,7 +3396,7 @@ class ChatHomeViewModelTest {
             chatRepository.saveMessage(
                 match {
                     it.role == Role.SYSTEM &&
-                        it.content == ChatHomeHitlDelegate.SYSTEM_MESSAGE_CLARIFICATION_REPLY_NOT_DELIVERED
+                        it.content == "row:reply-not-delivered"
                 },
             )
         }
@@ -3660,6 +3729,8 @@ class ChatHomeViewModelTest {
     // endregion
 
     private companion object {
+        /** The English value of `knotwork_typed_confirm_word`, which the screen passes. */
+        const val CONFIRM_WORD = "yes"
         const val EARLIER_INGEST_MS = 30L
         const val LATER_INGEST_MS = 60L
         const val DEFAULT_TOKENS_MAX: Int = 4096

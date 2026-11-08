@@ -28,6 +28,10 @@ interface PipelinePresetRepository {
      * contents do not change at runtime. Each emission contains
      * [PipelinePreset]s with `isBundled = true`.
      *
+     * The presets are in the language the interface is shown in — their
+     * names and the other texts a person reads; what a model reads stays as
+     * written — and the flow emits again when that language changes.
+     *
      * Malformed asset files are skipped (logged as warnings) rather than
      * failing the whole flow, so a single bad file does not hide the
      * remaining catalogue from the picker.
@@ -55,7 +59,8 @@ interface PipelinePresetRepository {
 
     /**
      * Resolves a single preset by id, looking in the bundled catalogue
-     * first and falling back to the user catalogue.
+     * first and falling back to the user catalogue. A bundled preset comes in
+     * the language the interface is shown in now.
      *
      * Used by `LoadPipelineFromPresetUseCase` to materialise the chosen
      * preset into a concrete [PipelinePreset] before id regeneration.

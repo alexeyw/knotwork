@@ -65,7 +65,7 @@ Outputs (the flavour name is part of the path):
 The release variant strips every ABI except `arm64-v8a`
 (`build.gradle.kts → buildTypes.release.ndk.abiFilters`). The reason is the
 inference engine rather than the API floor: `litertlm-android` ships
-`jni/arm64-v8a` and `jni/x86` only, with no `armeabi-v7a` binary, so a 32-bit
+`jni/arm64-v8a` and `jni/x86_64` only, with no `armeabi-v7a` binary, so a 32-bit
 ARM device cannot run the app at any `minSdk`. Shipping
 `armeabi-v7a` / `x86` / `x86_64` would add ~65 MB for zero benefit.
 Emulator-driven smoke-tests should use the `debug` variant instead, which
@@ -457,7 +457,8 @@ bundletool get-size total --apks=app.apks
 - `check` aggregates `detekt` and the type-resolution detekt tasks,
   `ktlintCheck`, lint, the unit-test suite for **both** flavours
   (`testFullDebugUnitTest` + `testFossDebugUnitTest`), the design-system
-  screenshot comparison (`:catalog:verifyRoborazziDebug`),
+  screenshot comparison (`:catalog:verifyRoborazziDebug`), the translated app
+  screens' (`:app:verifyRoborazziFullDebug`),
   `koverVerifyFullDebug` (coverage is measured on the representative `full`
   variant; the flavours share every measured source), and the documentation,
   version and store-listing gates, and the supply-chain gates — the actions and
@@ -865,14 +866,17 @@ fastlane/metadata/android/
 │       ├── icon.png                # 512 × 512
 │       ├── featureGraphic.jpg      # 1024 × 500 — required by Play
 │       └── phoneScreenshots/       # 1.png, 2.jpg, …
-└── ru-RU/                          # texts only; falls back to en-US graphics
+├── ru-RU/                          # texts only; falls back to en-US graphics
+└── es-ES/                          # the same, in neutral Spanish
 ```
 
 **Nothing uploads this directory to Google Play.** No workflow runs `supply`; the
 Play listing is filled in by hand in Play Console, from these files. Keeping the
 Play texts here anyway gives them the same length gate and the same review as
 the code, and one place to copy from — but a merged edit reaches Play only when
-someone pastes it there. `StoreMetadataTest` (in the `:app` unit-test suite, wired into `check`) enforces
+someone pastes it there. The Spanish texts are written for Spain and Latin
+America alike, so `es-ES` is also what goes into Play's `es-419` and `es-US`
+listings. `StoreMetadataTest` (in the `:app` unit-test suite, wired into `check`) enforces
 the limits, the presence of a changelog for the **current** `versionCode`, and
 the screenshot rules below. A version bump without a matching
 `changelogs/<versionCode>.txt` fails the build rather than shipping a release

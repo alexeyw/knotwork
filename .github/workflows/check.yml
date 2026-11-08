@@ -348,6 +348,8 @@ jobs:
           path: |
             catalog/build/outputs/roborazzi/
             catalog/build/reports/roborazzi/
+            app/build/outputs/roborazzi/
+            app/build/reports/roborazzi/
           if-no-files-found: ignore
 
       - name: Upload unit-test report

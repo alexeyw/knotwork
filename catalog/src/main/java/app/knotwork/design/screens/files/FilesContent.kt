@@ -36,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -60,6 +59,8 @@ import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.buttons.KnotworkTextButton
 import app.knotwork.design.components.misc.EmptyState
+import app.knotwork.design.components.text.Text
+import app.knotwork.design.components.text.WholeText
 import app.knotwork.design.components.topbar.KnotworkTopAppBarShell
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
@@ -731,7 +732,8 @@ private fun PreviewBody(preview: PreviewView, modifier: Modifier = Modifier) {
             .padding(KnotworkTheme.spacing.sp3)
             .verticalScroll(rememberScrollState()),
     ) {
-        Text(
+        // A preview is already the file's first 64 KiB; it shows all of them.
+        WholeText(
             text = preview.body,
             style = KnotworkTextStyles.MonoSm,
             color = KnotworkTheme.extended.consoleFg,

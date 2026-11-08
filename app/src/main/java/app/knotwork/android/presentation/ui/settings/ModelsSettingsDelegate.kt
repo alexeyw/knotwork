@@ -147,7 +147,7 @@ class ModelsSettingsDelegate(
         ) { credential, model ->
             ProviderSummary(
                 id = id,
-                displayName = id.displayName(),
+                displayName = id.displayName(appContext),
                 // Only its presence is read for an address-based provider — the row shows the
                 // address itself through `endpointHint`.
                 keyFingerprint = credential?.takeIf { it.isNotBlank() }?.let { maskKey(it) },
@@ -202,7 +202,7 @@ class ModelsSettingsDelegate(
                     String.format(Locale.getDefault(), "%.1f", result.tokensPerSecond),
                 )
             } else {
-                appContext.getString(R.string.settings_row_test_backend_failed, result.errorMessage.orEmpty())
+                appContext.getString(R.string.settings_row_test_backend_failed, probeFailureText(appContext, result))
             }
             state.update { it.copy(snackbarMessage = message) }
         }

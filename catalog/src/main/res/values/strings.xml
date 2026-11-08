@@ -75,8 +75,10 @@
     <!-- Always-allow text button — Sensitive variant only. -->
     <string name="knotwork_hitl_action_always_allow">Always allow</string>
 
-    <!-- Placeholder for the destructive type-confirm OutlinedTextField. The "%1$s" -->
-    <!-- token is replaced with HitlConfirmationState.DESTRUCTIVE_CONFIRM_WORD ("yes"). -->
+    <!-- The word a person types to confirm an action that cannot be undone: a destructive -->
+    <!-- tool call, erasing memory, erasing all data. Compared ignoring letter case. -->
+    <string name="knotwork_typed_confirm_word">yes</string>
+    <!-- Placeholder for the destructive type-confirm OutlinedTextField; "%1$s" is knotwork_typed_confirm_word. -->
     <string name="knotwork_hitl_typed_confirm_placeholder">Type \"%1$s\" to confirm</string>
 
     <!-- ContentDescription for the JSON-args expand/collapse chevron. -->
@@ -252,6 +254,11 @@
     <plurals name="knotwork_console_value_n_chars">
         <item quantity="one">%1$s character</item>
         <item quantity="other">%1$s characters</item>
+    </plurals>
+    <!-- Any text without a line limit longer than 10,000 characters: the line under its first 10,000 saying how many were not drawn. %1$s is the count, grouped for the locale. -->
+    <plurals name="knotwork_text_n_more_chars">
+        <item quantity="one">… %1$s more character</item>
+        <item quantity="other">… %1$s more characters</item>
     </plurals>
     <!-- Vars row, TalkBack: said after the key of a row whose value is empty ("reason, empty"). -->
     <string name="knotwork_console_value_a11y_empty">empty</string>
@@ -434,6 +441,10 @@
     <string name="knotwork_tools_expand_server_cd">Toggle MCP tool list</string>
     <!-- ContentDescription for the overflow menu trigger on an MCP server row. -->
     <string name="knotwork_tools_row_overflow_cd">MCP server actions</string>
+    <!-- MCP server row overflow menu item: switch on every tool the row lists. Shown while at least one is off. -->
+    <string name="knotwork_tools_row_action_enable_all">Turn all tools on</string>
+    <!-- MCP server row overflow menu item: switch off every tool the row lists. Shown while at least one is on. -->
+    <string name="knotwork_tools_row_action_disable_all">Turn all tools off</string>
     <!-- MCP server row overflow menu item: refresh the tool list. -->
     <string name="knotwork_tools_row_action_refresh">Refresh</string>
     <!-- MCP server row overflow menu item: edit the server configuration. -->
@@ -661,6 +672,7 @@
     <string name="knotwork_settings_tools_domains_title">Allowed HTTP domains</string>
     <string name="knotwork_settings_tools_domains_subtitle">Hosts the HTTP tool is allowed to reach.</string>
 
+    <string name="knotwork_settings_about_language_title">Language</string>
     <string name="knotwork_settings_about_version_title">App version &amp; licenses</string>
 
     <!-- ============ Memory screen ============ -->
@@ -1219,4 +1231,63 @@
     <!-- Password field: the eye toggle, read by TalkBack. -->
     <string name="knotwork_password_show">Show password</string>
     <string name="knotwork_password_hide">Hide password</string>
+    <!-- Shared components: status and risk pills, health badge, loading, chips, placeholder. -->
+    <string name="knotwork_status_pill_cd">Status: %1$s</string>
+    <string name="knotwork_status_queued">Queued</string>
+    <string name="knotwork_status_idle">Idle</string>
+    <string name="knotwork_status_running">Running</string>
+    <string name="knotwork_status_success">Success</string>
+    <string name="knotwork_status_warning">Warning</string>
+    <string name="knotwork_status_error">Error</string>
+    <string name="knotwork_status_cancelled">Cancelled</string>
+    <string name="knotwork_risk_pill_cd">Risk level: %1$s</string>
+    <string name="knotwork_health_badge_cd">Health: %1$s</string>
+    <string name="knotwork_loading">Loading</string>
+    <string name="knotwork_input_chip_remove_cd">Remove %1$s</string>
+    <string name="knotwork_chips_input_placeholder">Add and press Enter…</string>
+    <plurals name="knotwork_chips_input_max">
+        <item quantity="one">Max %1$d item</item>
+        <item quantity="other">Max %1$d items</item>
+    </plurals>
+    <string name="knotwork_placeholder_illustration_cd">Placeholder illustration</string>
+    <!-- Task monitor filter chips. -->
+    <string name="knotwork_task_filter_all">All</string>
+    <string name="knotwork_task_filter_active">Active</string>
+    <string name="knotwork_task_filter_background">Background</string>
+    <string name="knotwork_task_filter_completed">Completed</string>
+    <!-- Onboarding: step indicator and the model rows. -->
+    <string name="knotwork_onboarding_step_welcome">Welcome</string>
+    <string name="knotwork_onboarding_step_scenario">Choose a scenario</string>
+    <string name="knotwork_onboarding_step_download">Download</string>
+    <string name="knotwork_onboarding_step_ready">Ready</string>
+    <string name="knotwork_onboarding_model_custom_url">Custom URL…</string>
+    <string name="knotwork_onboarding_model_size_paste">paste</string>
+    <string name="knotwork_onboarding_model_size_gb">%1$s GB</string>
+    <!-- MCP server form: auth chips and URL problems. -->
+    <string name="knotwork_mcp_auth_none">None</string>
+    <string name="knotwork_mcp_auth_bearer">Bearer</string>
+    <string name="knotwork_mcp_auth_basic">Basic</string>
+    <string name="knotwork_mcp_auth_api_key">API key</string>
+    <string name="knotwork_mcp_url_required">Enter a server URL.</string>
+    <string name="knotwork_mcp_url_scheme_required">URL must start with http://, https:// or mcp://.</string>
+    <string name="knotwork_mcp_url_host_required">URL needs a host name.</string>
+    <string name="knotwork_mcp_url_cleartext_unapproved">Approve the unencrypted connection above before saving.</string>
+    <string name="knotwork_mcp_url_collision">A server with this URL already exists: \"%1$s\".</string>
+    <!-- Tools screen: error state, server rows, tool detail. -->
+    <string name="knotwork_tools_error_title">Couldn\'t load tools</string>
+    <string name="knotwork_tools_error_retry">Retry</string>
+    <string name="knotwork_tool_detail_enabled">Enabled</string>
+    <string name="knotwork_tool_detail_disabled">Disabled</string>
+    <plurals name="knotwork_tools_server_subtitle">
+        <item quantity="one">%1$d tool · %2$s</item>
+        <item quantity="other">%1$d tools · %2$s</item>
+    </plurals>
+    <!-- Provider names that describe rather than name. -->
+    <string name="knotwork_provider_openai_compatible">OpenAI-compatible server</string>
+    <string name="knotwork_provider_auto">Auto</string>
+    <!-- Splash recovery. -->
+    <string name="knotwork_splash_retry">Retry</string>
+    <!-- Trigger interval presets. -->
+    <string name="knotwork_trigger_interval_hours">%1$dh</string>
+    <string name="knotwork_trigger_interval_minutes">%1$dm</string>
 </resources>

@@ -46,6 +46,9 @@ object SettingsSearchCatalog {
      */
     private const val CRASH_REPORTING_ANCHOR = "CRASH_REPORTING_ENABLED"
 
+    /** Separates the terms of one row's synonyms resource. */
+    private const val SYNONYM_SEPARATOR = ','
+
     /**
      * Anchor → localized search strings. Authored from the ratified settings
      * information architecture; one entry per row returned by
@@ -252,6 +255,7 @@ object SettingsSearchCatalog {
         ),
         // ─── About ───────────────────────────────────────────────────────────
         "IDENTITY" to strings(R.string.settings_search_name_identity, R.string.settings_search_desc_identity),
+        "LANGUAGE" to strings(R.string.settings_search_name_language, R.string.settings_search_desc_language),
         "LINK_LICENSES" to strings(
             R.string.settings_search_name_link_licenses,
             R.string.settings_search_desc_link_licenses,
@@ -260,10 +264,74 @@ object SettingsSearchCatalog {
     )
 
     /**
+     * The search synonyms of every row, keyed by [anchorKey]: one string resource per row, the
+     * terms separated by commas, in the interface language. The matched synonym is shown under
+     * the result, so these are interface text — the Russian list carries the technical terms
+     * (`gpu`, `mcp`, `json`) too, as a person types them in either language.
+     */
+    internal val SEARCH_SYNONYMS: Map<String, Int> = mapOf(
+        "SYSTEM_PROMPT_PREFIX" to R.string.settings_search_syn_system_prompt_prefix,
+        "TEMPERATURE" to R.string.settings_search_syn_temperature,
+        "TOP_K" to R.string.settings_search_syn_top_k,
+        "TOP_P" to R.string.settings_search_syn_top_p,
+        "MAX_CONTEXT_LENGTH" to R.string.settings_search_syn_max_context_length,
+        "AUDIO_MAX_DURATION_SEC" to R.string.settings_search_syn_audio_max_duration_sec,
+        "LOCAL_MODEL_BACKEND" to R.string.settings_search_syn_local_model_backend,
+        "LINK_PROVIDER_LIST" to R.string.settings_search_syn_link_provider_list,
+        "DEFAULT_PIPELINE_ID" to R.string.settings_search_syn_default_pipeline_id,
+        "AUTO_EXTRACT_ENABLED" to R.string.settings_search_syn_auto_extract_enabled,
+        "MEMORY_COMPACTION_ENABLED" to R.string.settings_search_syn_memory_compaction_enabled,
+        "CHAT_HISTORY_COMPRESSION_ENABLED" to R.string.settings_search_syn_chat_history_compression_enabled,
+        "MEMORY_SEARCH_TOP_K" to R.string.settings_search_syn_memory_search_top_k,
+        "MEMORY_SEARCH_THRESHOLD" to R.string.settings_search_syn_memory_search_threshold,
+        "MEMORY_RECENCY_HALF_LIFE_DAYS" to R.string.settings_search_syn_memory_recency_half_life_days,
+        "MEMORY_COMPACTION_AGE_DAYS" to R.string.settings_search_syn_memory_compaction_age_days,
+        "MAX_MEMORY_CHUNKS" to R.string.settings_search_syn_max_memory_chunks,
+        "CHAT_HISTORY_COMPRESSION_THRESHOLD_TOKENS" to
+            R.string.settings_search_syn_chat_history_compression_threshold_tokens,
+        "CHAT_HISTORY_LIVE_WINDOW_SIZE" to R.string.settings_search_syn_chat_history_live_window_size,
+        "MEMORY_SUMMARY_DEFAULT_LIMIT" to R.string.settings_search_syn_memory_summary_default_limit,
+        "ACTIVE_EMBEDDING_PROVIDER_ID" to R.string.settings_search_syn_active_embedding_provider_id,
+        "VERBOSE_MEMORY_LOGGING_ENABLED" to R.string.settings_search_syn_verbose_memory_logging_enabled,
+        "MEMORY_ACTIONS" to R.string.settings_search_syn_memory_actions,
+        "LINK_RUN_LIMITS" to R.string.settings_search_syn_link_run_limits,
+        "PIPELINE_MAX_NESTING_DEPTH" to R.string.settings_search_syn_pipeline_max_nesting_depth,
+        "STRUCTURED_OUTPUT_MAX_REPAIRS" to R.string.settings_search_syn_structured_output_max_repairs,
+        "LINK_PROVIDER_DETAIL" to R.string.settings_search_syn_link_provider_detail,
+        "TOOL_APPROVAL_POLICY" to R.string.settings_search_syn_tool_approval_policy,
+        "BLOCK_DESTRUCTIVE_TOOLS" to R.string.settings_search_syn_block_destructive_tools,
+        "BLOCK_NETWORK_FROM_LOCAL_MODEL" to R.string.settings_search_syn_block_network_from_local_model,
+        "LINK_TOOLS_SCREEN" to R.string.settings_search_syn_link_tools_screen,
+        "TOOL_CALL_TIMEOUT_MS" to R.string.settings_search_syn_tool_call_timeout_ms,
+        "WORKSPACE_MAX_FILE_SIZE_BYTES" to R.string.settings_search_syn_workspace_max_file_size_bytes,
+        "WORKSPACE_MAX_TOTAL_BYTES" to R.string.settings_search_syn_workspace_max_total_bytes,
+        "WORKSPACE_READ_TOKEN_BUDGET" to R.string.settings_search_syn_workspace_read_token_budget,
+        "HTTP_TOOL_MAX_RESPONSE_BYTES" to R.string.settings_search_syn_http_tool_max_response_bytes,
+        "LINK_FILES_DOMAINS" to R.string.settings_search_syn_link_files_domains,
+        "SCHEDULED_TASK_NOTIFICATIONS" to R.string.settings_search_syn_scheduled_task_notifications,
+        "SHARE_TARGET_PIPELINE_ID" to R.string.settings_search_syn_share_target_pipeline_id,
+        "SHARE_REUSE_SESSION" to R.string.settings_search_syn_share_reuse_session,
+        "QUICK_SETTINGS_TILE_PIPELINE_ID" to R.string.settings_search_syn_quick_settings_tile_pipeline_id,
+        "EXTERNAL_AUTOMATION_ENABLED" to R.string.settings_search_syn_external_automation_enabled,
+        "EXTERNAL_AUTOMATION_PIPELINE_ID" to R.string.settings_search_syn_external_automation_pipeline_id,
+        "LINK_EXTERNAL_AUTOMATION_JOURNAL" to R.string.settings_search_syn_link_external_automation_journal,
+        "RESUME_MAX_AGE_HOURS" to R.string.settings_search_syn_resume_max_age_hours,
+        "BACKGROUND_APPROVAL_WINDOW_HOURS" to R.string.settings_search_syn_background_approval_window_hours,
+        CRASH_REPORTING_ANCHOR to R.string.settings_search_syn_crash_reporting_enabled,
+        "TRACE_RETENTION_RUNS_PER_SESSION" to R.string.settings_search_syn_trace_retention_runs_per_session,
+        "TRACE_RETENTION_MAX_AGE_DAYS" to R.string.settings_search_syn_trace_retention_max_age_days,
+        "LINK_BACKUP_RESTORE" to R.string.settings_search_syn_link_backup_restore,
+        "IDENTITY" to R.string.settings_search_syn_identity,
+        "LANGUAGE" to R.string.settings_search_syn_language,
+        "LINK_LICENSES" to R.string.settings_search_syn_link_licenses,
+        "RESET" to R.string.settings_search_syn_reset,
+    )
+
+    /**
      * Resolves the registry into the localized search index the engine consumes.
      *
-     * @param context Used to resolve the name / description / category-title
-     *   string resources.
+     * @param context Used to resolve the name / description / category-title /
+     *   synonyms string resources.
      * @return One [SettingsSearchableEntry] per registry row, in display order.
      */
     fun buildIndex(context: Context): List<SettingsSearchableEntry> = SettingsRegistry.allEntries()
@@ -281,11 +349,17 @@ object SettingsSearchCatalog {
                 name = context.getString(copy.nameRes),
                 description = context.getString(copy.descRes),
                 categoryTitle = context.getString(categoryTitleRes(entry.categoryId)),
-                synonyms = entry.synonyms,
+                synonyms = synonymsOf(context, anchor),
             )
         }
 
     private fun strings(@StringRes nameRes: Int, @StringRes descRes: Int) = SettingsSearchStrings(nameRes, descRes)
+
+    /** The row's synonyms in the interface language, from its comma-separated resource. */
+    private fun synonymsOf(context: Context, anchor: String): List<String> {
+        val res = requireNotNull(SEARCH_SYNONYMS[anchor]) { "Missing search synonyms for anchor '$anchor'" }
+        return context.getString(res).split(SYNONYM_SEPARATOR).map(String::trim).filter(String::isNotEmpty)
+    }
 
     /** Localized category-title resource (reuses the hub's category titles). */
     @StringRes

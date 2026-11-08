@@ -60,7 +60,7 @@ Each layer maps onto concrete packages:
 | Layer          | Packages                                                                                          |
 |----------------|---------------------------------------------------------------------------------------------------|
 | `presentation` | `presentation/ui/{about,automation,chat,common,components,discover,files,help,memory,models,monitoring,more,navigation,onboarding,orchestrator,pipeline,prompts,settings,skills,splash,taskmonitor,tools,triggers}`, `presentation/{common,notifications,receivers,run,share,shortcuts,state,theme,tile}` |
-| `domain`       | `domain/{constants,engine,memoryio,models,pipelineio,prompt,promptio,promptpack,report,repositories,services,settings,skillio,text,triggerio,usecases}` |
+| `domain`       | `domain/{constants,engine,memoryio,models,pipelineio,presetl10n,prompt,promptio,promptpack,report,repositories,services,settings,skillio,text,triggerio,usecases}` |
 | `data`         | `data/{audio,engine,local,logging,mappers,mcp,network,prompt,repositories,services,testing,tools}` |
 
 Cross-layer wiring is handled by **Hilt**. Modules in `di/` provide
@@ -168,6 +168,37 @@ save, an import and a preset save word the same failure alike. Each delegate
 takes its collaborators as one injected holder (`Orchestrator…UseCases` /
 `…Sources`), so the view model's constructor names five things rather than
 twenty-three.
+
+### 1.3. Interface language
+
+The screens come in English, Russian and Spanish (`localeFilters` in
+`app/build.gradle.kts`). The choice is Android's per-app language:
+`AppLanguageRepository` in `domain`, on `LocaleManager` in `data`, so
+*Settings → About → Language* and the phone's own per-app language page
+read and write one value. The App Bundle ships every language to every
+install (`bundle.language.enableSplit = false`): Play would otherwise
+install only the phone's language.
+
+Android re-creates the screens in the new language and the process lives
+on, which sets where words may live:
+
+- `domain` and `data` hold no displayed wording of their own. A failure the
+  app words itself travels as a type (`ModelLoadError`, `ConnectionFailure`)
+  and the screen names it. A name the app gives and a row it saves in a chat
+  come through a `domain` port (`DefaultNames`, `ChatSystemRows`) and are
+  stored as written, in the language of the moment.
+- A ViewModel outlives the re-creation, so it hands its screen a resource
+  id or a typed value, and the screen resolves it.
+- What a model reads — system prompts, tool descriptions, tool results —
+  stays in English.
+
+Two kinds of text live outside string resources. A bundled preset keeps
+its English JSON; `domain/presetl10n` lays over it the translation from
+`assets/presets/l10n/<lang>.json`, and applies each text only to the
+English it was written for. The FAQ and the troubleshooting guide have a
+translated copy in `assets/docs/<lang>/`, each with its own heading index.
+
+The rules are in [code-style.md](code-style.md#interface-text).
 
 ---
 
@@ -944,6 +975,7 @@ flowchart LR
     Tree --> Plan["PlanRunVerificationUseCase<br/>record only"]
     Plan -- "Available(plan)" --> Verify["VerifyRunUseCase<br/>repeat each call"]
     Plan -. reads .-> Registry[("local_models<br/>checksum + stamp")]
+    Plan -. "engine version" .-> Env["RunEnvironment<br/>LiteRT-LM of this build"]
     Verify --> Load["LoadModelUseCase"]
     Verify --> Engine["LlmInferenceEngine<br/>recorded prompt · sampler · seed"]
     Tree --> Digest["RunDigest<br/>SHA-256 chain"]
@@ -960,11 +992,14 @@ failed and wrote no record included. The check, the digest and the export all wa
 it, so they cannot disagree about the shape of a run.
 
 1. **Plan.** `PlanRunVerificationUseCase` reads the run tree, its traces, the model
-   registry and the generation settings, and loads nothing. It refuses a run that
-   is still going (`Busy`), one recorded before seeds (`PreVersion`), one with no
-   on-device call (`NoLocalCalls`), and — naming both values — a model file that
-   is gone, unhashed or replaced, or a backend or GPU window that differs from what
-   the next load would use (`Mismatch`). Otherwise it lists every node visit in
+   registry, the generation settings and the engine version of this build
+   (`RunEnvironment`), and loads nothing. It refuses a run that is still going
+   (`Busy`), one recorded before seeds (`PreVersion`), one with no on-device call
+   (`NoLocalCalls`), and — naming both values — one whose header holds another
+   LiteRT-LM version (equal answers are measured only within one version; checked
+   first, since no setting changes it), a model file that is gone, unhashed or
+   replaced, or a backend or GPU window that differs from what the next load would
+   use (`Mismatch`). Otherwise it lists every node visit in
    run order, sub-pipelines in place, each either repeated or not with its reason
    (`RunReproducibilityPolicy`: tool, cloud, no model call, NPU, image, model not
    recorded).
@@ -1198,7 +1233,12 @@ the agent's real calls. That sharing is load-bearing: while each kept its
 own pool, the health indicator could describe a session the next tool
 call would not use, so the screen read "ok" against a session that was
 already dead for execution. Connections are **lazy**: they open on first
-use and close when the agent session ends. The pool's lock is per server
+use and stay in the pool between runs, until the server's settings change,
+the server is removed or loading its tool list fails. A Streamable HTTP
+server may close a session at any time and then answers its id with `404`;
+the pool replaces that connection and repeats the request once, which
+cannot double a side effect because the server refused the request unrun.
+The pool's lock is per server
 URL and is held only across connect / invalidate, never while a caller
 uses the client — an MCP tool call can run for a minute, and serialising
 concurrent calls behind the connect lock would be a silent throughput

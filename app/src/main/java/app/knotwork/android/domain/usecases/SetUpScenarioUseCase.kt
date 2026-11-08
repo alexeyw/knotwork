@@ -1,6 +1,8 @@
 package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.constants.OnboardingScenarioCatalog
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.repositories.EntryPointSettings
 import app.knotwork.android.domain.repositories.PipelineRepository
 import kotlinx.coroutines.CancellationException
@@ -51,7 +53,9 @@ class SetUpScenarioUseCase @Inject constructor(
      */
     suspend operator fun invoke(scenarioId: String): Result<ScenarioSetup> = try {
         val spec = OnboardingScenarioCatalog.byId(scenarioId)
-            ?: return Result.failure(IllegalArgumentException("Unknown onboarding scenario: $scenarioId"))
+            ?: return Result.failure(
+                InvalidInputException(InputProblem.NotFound(InputProblem.Subject.SCENARIO, scenarioId)),
+            )
 
         val pipelineId = loadPipelineFromPresetUseCase(spec.presetId)
             .getOrElse { return Result.failure(it) }

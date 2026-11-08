@@ -39,25 +39,7 @@ fun HelpScreen(
     val alternativeId = viewModel.alternativeDocumentId()
 
     HelpListContent(
-        state = HelpListViewState(
-            title = stringResource(R.string.help_title),
-            subtitle = pluralStringResource(
-                R.plurals.help_subtitle,
-                uiState.documents.size,
-                uiState.documents.size,
-                uiState.documents.count { it.delivery == DocumentationLinks.Delivery.BUNDLED },
-            ),
-            documents = uiState.documents.map { it.toRow() },
-            refusedDocumentId = uiState.refusedDocumentId,
-            refusal = refusedEntry?.let { entry ->
-                HelpRefusal(
-                    title = stringResource(R.string.help_offline_title),
-                    body = stringResource(R.string.help_offline_body, entry.id.titleOf()),
-                    copyLabel = stringResource(R.string.help_offline_copy),
-                    alternativeLabel = alternativeId?.let { stringResource(R.string.help_offline_alternative) },
-                )
-            },
-        ),
+        state = helpListViewState(uiState, alternativeId),
         strings = helpStrings(),
         callbacks = HelpListCallbacks(
             onOpen = { id ->
@@ -86,6 +68,38 @@ fun HelpScreen(
             },
         ),
         modifier = modifier,
+    )
+}
+
+/**
+ * The Help list's state in the interface language: title, document rows and the
+ * offline refusal, if one is open.
+ *
+ * @param uiState The list's state.
+ * @param alternativeId The bundled document a refusal offers instead, or `null`.
+ * @return The state the design module renders.
+ */
+@Composable
+internal fun helpListViewState(uiState: HelpUiState, alternativeId: String?): HelpListViewState {
+    val refusedEntry = uiState.refusedDocumentId?.let { DocumentationLinks.byId(it) }
+    return HelpListViewState(
+        title = stringResource(R.string.help_title),
+        subtitle = pluralStringResource(
+            R.plurals.help_subtitle,
+            uiState.documents.size,
+            uiState.documents.size,
+            uiState.documents.count { it.delivery == DocumentationLinks.Delivery.BUNDLED },
+        ),
+        documents = uiState.documents.map { it.toRow() },
+        refusedDocumentId = uiState.refusedDocumentId,
+        refusal = refusedEntry?.let { entry ->
+            HelpRefusal(
+                title = stringResource(R.string.help_offline_title),
+                body = stringResource(R.string.help_offline_body, entry.id.titleOf()),
+                copyLabel = stringResource(R.string.help_offline_copy),
+                alternativeLabel = alternativeId?.let { stringResource(R.string.help_offline_alternative) },
+            )
+        },
     )
 }
 

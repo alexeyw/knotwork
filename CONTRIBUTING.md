@@ -67,6 +67,10 @@ Required toolchain:
   build needs the version named by `ndk` in `gradle/libs.versions.toml`, whose
   `llvm-strip` strips the prebuilt native libraries; it fails without it
   (`sdkmanager "ndk;<version>"`, see [`docs/release.md`](docs/release.md) §2).
+- **Memory** — plan on 16 GB. `./gradlew check` gives the Gradle daemon
+  4 GiB, the Kotlin compile daemon 4 GiB and the unit-test JVM up to 2 GiB
+  (`gradle.properties`, `app/build.gradle.kts`), as on the GitHub-hosted
+  runner that gates every PR.
 
 Debug and release install side by side:
 
@@ -124,7 +128,8 @@ running `check` alone is a narrower gate than the one that decides the merge.
   [`docs/testing.md`](docs/testing.md#golden-run-traces) for how to rewrite one
   on purpose).
 - **Screenshot tests** — the design-system renders compared with their
-  committed baselines (`:catalog:verifyRoborazziDebug`).
+  committed baselines (`:catalog:verifyRoborazziDebug`), and a few app screens
+  in a translation with theirs (`:app:verifyRoborazziFullDebug`).
 - **Kover** coverage verification (`koverVerifyFullDebug`).
 - **Documentation gates** — dead internal links and `#anchors`
   (`verifyDocLinks`), Mermaid diagram structure (`verifyMermaidDiagrams`), the
@@ -257,6 +262,13 @@ Before requesting review, please confirm:
       was run — the Help screen shows each document's size, so a changed line
       count is drift — and, when `docs/faq.md` or `docs/troubleshooting.md`
       changed, `./gradlew :app:syncBundledDocs`, with both results committed.
+      Those two are also translated, in `app/src/main/assets/docs/<language>/`,
+      and so are the names, descriptions, node titles, starter prompts and
+      tags of the bundled presets (`app/src/main/assets/presets/l10n/`): the
+      change updates each translation — for a document, with the hash on its
+      first line, which `verifyBundledDocs` prints. If you cannot write a
+      translation, `check` stays red on exactly that; say so in the PR and the
+      maintainer adds it before merging.
 - [ ] `./gradlew :app:generateFileMap` was run and its result committed
       when Kotlin files or directories were added, moved, or removed. The
       task also owns the `catalog/` and test maps; the root `FILE_MAP.md`

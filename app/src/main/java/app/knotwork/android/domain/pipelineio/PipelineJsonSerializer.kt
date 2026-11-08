@@ -3,6 +3,7 @@ package app.knotwork.android.domain.pipelineio
 import app.knotwork.android.domain.constants.PipelineConstants
 import app.knotwork.android.domain.models.CloudProvider
 import app.knotwork.android.domain.models.ConnectionModel
+import app.knotwork.android.domain.models.ImportProblem
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
 import app.knotwork.android.domain.models.NodeType
@@ -302,18 +303,20 @@ object PipelineJsonSerializer {
      */
     @Suppress("ReturnCount") // One early return per refusal; collapsing them would hide which check fired.
     fun parse(jsonText: String): PipelineImportOutcome {
-        if (JsonNesting.exceeds(jsonText)) return PipelineImportOutcome.Failure(JsonNesting.FAILURE_MESSAGE)
+        if (JsonNesting.exceeds(jsonText)) {
+            return PipelineImportOutcome.Failure(ImportProblem.TooDeep(JsonNesting.MAX_DEPTH))
+        }
         val root = try {
             JSONObject(jsonText)
         } catch (e: JSONException) {
             // Clamped, not echoed: on Android the parser's message ends with
             // " at character N of <the entire input>", so an unbounded echo put
             // the whole picked file into the error the user reads.
-            return PipelineImportOutcome.Failure("Invalid JSON: ${e.message.orEmpty().toDisplaySafe()}")
+            return PipelineImportOutcome.Failure(ImportProblem.NotJson(e.message.orEmpty().toDisplaySafe()))
         }
 
         if (!root.has("schemaVersion")) {
-            return PipelineImportOutcome.Failure("Missing required field: schemaVersion")
+            return PipelineImportOutcome.Failure(ImportProblem.MissingField("schemaVersion"))
         }
         val schemaVersion = root.optInt("schemaVersion", -1)
         val supported = schemaVersion in SUPPORTED_SCHEMA_VERSIONS
@@ -325,9 +328,9 @@ object PipelineJsonSerializer {
         val graph = try {
             buildGraph(root)
         } catch (e: PipelineParseException) {
-            return PipelineImportOutcome.Failure(e.message ?: "Parse failed")
+            return PipelineImportOutcome.Failure(e.problem)
         } catch (e: JSONException) {
-            return PipelineImportOutcome.Failure("Malformed pipeline document: ${e.message.orEmpty().toDisplaySafe()}")
+            return PipelineImportOutcome.Failure(ImportProblem.Malformed(e.message.orEmpty().toDisplaySafe()))
         }
 
         return if (supported) {
@@ -402,14 +405,12 @@ object PipelineJsonSerializer {
     @Suppress("ThrowsCount")
     private fun buildGraph(root: JSONObject): PipelineGraph {
         val id = root.optString("id").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Missing required field: id")
+            ?: throw PipelineParseException(ImportProblem.MissingField("id"))
         // Refused, not rewritten: other pipelines, triggers and bindings refer
         // to the id, and validation errors quote it, so it is stored only if it
         // already reads as one bounded line. Not quoted — it is the bad value.
         if (id != id.toDisplaySafe(maxLength = PipelineConstants.MAX_ID_LENGTH, ellipsis = "")) {
-            throw PipelineParseException(
-                "Invalid pipeline id: it must be one line of at most ${PipelineConstants.MAX_ID_LENGTH} characters",
-            )
+            throw PipelineParseException(ImportProblem.InvalidPipelineId(PipelineConstants.MAX_ID_LENGTH))
         }
         // Normalised, not just checked: the name comes from a file the user did
         // not write and is rendered in the library list, the editor toolbar and
@@ -418,11 +419,11 @@ object PipelineJsonSerializer {
         val name = root.optString("name")
             .toDisplaySafe(maxLength = PipelineConstants.MAX_NAME_LENGTH, ellipsis = "")
             .takeIf { it.isNotEmpty() }
-            ?: throw PipelineParseException("Missing required field: name")
+            ?: throw PipelineParseException(ImportProblem.MissingField("name"))
         val updatedAt = root.optLong("updatedAt", System.currentTimeMillis())
 
         val nodesJson = root.optJSONArray("nodes")
-            ?: throw PipelineParseException("Missing required field: nodes")
+            ?: throw PipelineParseException(ImportProblem.MissingField("nodes"))
         val nodes = (0 until nodesJson.length()).map { i ->
             buildNode(nodesJson.getJSONObject(i), index = i)
         }
@@ -431,7 +432,7 @@ object PipelineJsonSerializer {
         // id when stored, and one silently replaced the other — the graph that
         // was checked was not the graph that was saved.
         firstDuplicate(nodes.map { it.id })?.let { duplicate ->
-            throw PipelineParseException("Duplicate node id \"${duplicate.toDisplaySafe()}\"")
+            throw PipelineParseException(ImportProblem.DuplicateNodeId(duplicate.toDisplaySafe()))
         }
 
         val connectionsJson = root.optJSONArray("connections") ?: JSONArray()
@@ -440,7 +441,7 @@ object PipelineJsonSerializer {
             buildConnection(connectionsJson.getJSONObject(i), index = i, nodeTypes = nodeTypes)
         }
         firstDuplicate(connections.map { it.id })?.let { duplicate ->
-            throw PipelineParseException("Duplicate connection id \"${duplicate.toDisplaySafe()}\"")
+            throw PipelineParseException(ImportProblem.DuplicateConnectionId(duplicate.toDisplaySafe()))
         }
 
         // Optional + additive: documents from older builds simply lack the key,
@@ -466,15 +467,13 @@ object PipelineJsonSerializer {
 
     private fun buildNode(json: JSONObject, index: Int): NodeModel {
         val id = json.optString("id").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Node #$index missing id")
+            ?: throw PipelineParseException(ImportProblem.NodeWithoutId(index))
         val typeRaw = json.optString("type").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Node \"${id.toDisplaySafe()}\" missing type")
+            ?: throw PipelineParseException(ImportProblem.NodeWithoutType(id.toDisplaySafe()))
         val type = try {
             NodeType.valueOf(typeRaw)
         } catch (e: IllegalArgumentException) {
-            throw PipelineParseException(
-                "Node \"${id.toDisplaySafe()}\" has unknown type \"${typeRaw.toDisplaySafe()}\"",
-            )
+            throw PipelineParseException(ImportProblem.UnknownNodeType(id.toDisplaySafe(), typeRaw.toDisplaySafe()))
         }
 
         val position = json.optJSONObject("position")
@@ -546,17 +545,17 @@ object PipelineJsonSerializer {
     @Suppress("ThrowsCount")
     private fun buildConnection(json: JSONObject, index: Int, nodeTypes: Map<String, NodeType>): ConnectionModel {
         val id = json.optString("id").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Connection #$index missing id")
+            ?: throw PipelineParseException(ImportProblem.ConnectionWithoutId(index))
         val quotedId = id.toDisplaySafe()
         val from = json.optString("fromNodeId").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Connection \"$quotedId\" missing fromNodeId")
+            ?: throw PipelineParseException(ImportProblem.ConnectionWithoutEnd(quotedId, "fromNodeId"))
         val to = json.optString("toNodeId").takeIf { it.isNotBlank() }
-            ?: throw PipelineParseException("Connection \"$quotedId\" missing toNodeId")
+            ?: throw PipelineParseException(ImportProblem.ConnectionWithoutEnd(quotedId, "toNodeId"))
         if (from !in nodeTypes) {
-            throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${from.toDisplaySafe()}\"")
+            throw PipelineParseException(ImportProblem.ConnectionToUnknownNode(quotedId, from.toDisplaySafe()))
         }
         if (to !in nodeTypes) {
-            throw PipelineParseException("Connection \"$quotedId\" references unknown node \"${to.toDisplaySafe()}\"")
+            throw PipelineParseException(ImportProblem.ConnectionToUnknownNode(quotedId, to.toDisplaySafe()))
         }
         // Drawn on the canvas beside the edge, so it gets the node label's rule.
         // Router and condition labels are single words, which this leaves alone.
@@ -591,8 +590,13 @@ object PipelineJsonSerializer {
         val branches = RouteLabels.fixedBranches(type)
         if (label == null || branches == null) return label
         return RouteLabels.canonical(type, label) ?: throw PipelineParseException(
-            "Connection \"$quotedId\" from ${type.name} node \"${from.toDisplaySafe()}\" is labelled \"$label\"; " +
-                "its branches are ${branches.joinToString(", ")}",
+            ImportProblem.LabelNotABranch(
+                connectionId = quotedId,
+                nodeType = type.name,
+                nodeId = from.toDisplaySafe(),
+                label = label,
+                branches = branches,
+            ),
         )
     }
 
@@ -614,9 +618,7 @@ object PipelineJsonSerializer {
             is Boolean -> value
             is String -> value.lowercase().toBooleanStrictOrNull()
             else -> null
-        } ?: throw PipelineParseException(
-            "Node \"${nodeId.toDisplaySafe()}\": contextConfig.$name must be true or false",
-        )
+        } ?: throw PipelineParseException(ImportProblem.ContextFlagNotBoolean(nodeId.toDisplaySafe(), name))
     }
 
     /**
@@ -631,13 +633,13 @@ object PipelineJsonSerializer {
             CloudProvider.fromId(providerId) != null
         if (!known) {
             throw PipelineParseException(
-                "Node \"${nodeId.toDisplaySafe()}\" names an unknown cloud provider " +
-                    "\"${providerId.toDisplaySafe()}\"",
+                ImportProblem.UnknownCloudProvider(nodeId.toDisplaySafe(), providerId.toDisplaySafe()),
             )
         }
     }
 
-    private class PipelineParseException(message: String) : RuntimeException(message)
+    /** A refusal while building the graph; [problem] is what the screen words. */
+    private class PipelineParseException(val problem: ImportProblem) : RuntimeException(problem.toString())
 }
 
 /* ----------------------------------------------------------------- *

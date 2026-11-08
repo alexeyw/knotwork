@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.tools
 
+import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpServerConfig
@@ -9,6 +10,7 @@ import app.knotwork.android.domain.models.ToolSource
 import app.knotwork.android.domain.repositories.McpServerRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.services.McpToolRouting
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -16,6 +18,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -165,12 +168,13 @@ class ToolsViewModelTest {
         mcpServersFlow.value = listOf(McpServerConfig(url = url))
         advanceUntilIdle()
 
-        statusFlowFor(url).value = McpConnectionStatus.Error(reason = "boom")
+        statusFlowFor(url).value =
+            McpConnectionStatus.Error(host = "broken.example", failure = ConnectionFailure.UnknownHost)
         advanceUntilIdle()
 
         val snapshot = viewModel.uiState.value.mcpServers.first()
         assertTrue(snapshot.status is McpConnectionStatus.Error)
-        assertEquals("boom", (snapshot.status as McpConnectionStatus.Error).reason)
+        assertEquals(ConnectionFailure.UnknownHost, (snapshot.status as McpConnectionStatus.Error).failure)
     }
 
     @Test
@@ -239,7 +243,7 @@ class ToolsViewModelTest {
         viewModel.toggleLocalTool(toolName = "get_system_time", isEnabled = true)
         advanceUntilIdle()
 
-        coVerify { settingsRepository.setDisabledAppFunctions(functions = emptySet()) }
+        coVerify { settingsRepository.setAppFunctionsEnabled(functions = setOf("get_system_time"), enabled = true) }
     }
 
     @Test
@@ -248,7 +252,135 @@ class ToolsViewModelTest {
         viewModel.toggleMcpTool(toolId = id, isEnabled = false)
         advanceUntilIdle()
 
-        coVerify { settingsRepository.setDisabledMcpTools(toolIds = setOf(id)) }
+        coVerify { settingsRepository.setMcpToolsEnabled(toolIds = setOf(id), enabled = false) }
+    }
+
+    @Test
+    fun `given two MCP switches flipped before the store answers when both land then both are kept`() = runTest {
+        // Given — the screen's copy of the set lags a write behind, as it does on a device
+        storeAppliesSwitchesAtomically()
+        advanceUntilIdle()
+
+        // When
+        viewModel.toggleMcpTool(toolId = "mcp:abcd1234:a", isEnabled = false)
+        viewModel.toggleMcpTool(toolId = "mcp:abcd1234:b", isEnabled = false)
+        advanceUntilIdle()
+
+        // Then — a set computed from the screen's copy kept only the second
+        assertEquals(setOf("mcp:abcd1234:a", "mcp:abcd1234:b"), disabledMcpToolsFlow.value)
+    }
+
+    @Test
+    fun `given two local switches flipped before the store answers when both land then both are kept`() = runTest {
+        // Given
+        storeAppliesSwitchesAtomically()
+        advanceUntilIdle()
+
+        // When
+        viewModel.toggleLocalTool(toolName = "com.x/a", isEnabled = false)
+        viewModel.toggleLocalTool(toolName = "com.x/b", isEnabled = false)
+        advanceUntilIdle()
+
+        // Then
+        assertEquals(setOf("com.x/a", "com.x/b"), disabledAppFunctionsFlow.value)
+    }
+
+    @Test
+    fun `given two servers when one server's tools are switched off then one write carries exactly its tools`() =
+        runTest {
+            // Given
+            val first = givenServer(url = FIRST_URL, hash = "aaaa1111", "search", "fetch", "list")
+            givenServer(url = SECOND_URL, hash = "bbbb2222", "search")
+            storeAppliesSwitchesAtomically()
+            advanceUntilIdle()
+
+            // When
+            viewModel.setServerToolsEnabled(serverUrl = FIRST_URL, enabled = false)
+            advanceUntilIdle()
+
+            // Then
+            val firstIds = first.mapTo(mutableSetOf()) { it.id }
+            coVerify(exactly = 1) { settingsRepository.setMcpToolsEnabled(any(), any()) }
+            coVerify(exactly = 1) { settingsRepository.setMcpToolsEnabled(toolIds = firstIds, enabled = false) }
+            assertEquals(firstIds, disabledMcpToolsFlow.value)
+        }
+
+    @Test
+    fun `given a server when all its tools are switched off or on then the set equals switching each alone`() =
+        runTest {
+            // Given — another server's tool and a tool this server no longer lists are already off
+            val tools = givenServer(url = FIRST_URL, hash = "aaaa1111", "search", "fetch", "list")
+            val before = setOf("mcp:bbbb2222:search", "mcp:aaaa1111:gone")
+            storeAppliesSwitchesAtomically()
+            disabledMcpToolsFlow.value = before
+            advanceUntilIdle()
+
+            // When — one by one
+            tools.forEach { viewModel.toggleMcpTool(toolId = it.id, isEnabled = false) }
+            advanceUntilIdle()
+            val oneByOne = disabledMcpToolsFlow.value
+            disabledMcpToolsFlow.value = before
+            advanceUntilIdle()
+            // When — all at once
+            viewModel.setServerToolsEnabled(serverUrl = FIRST_URL, enabled = false)
+            advanceUntilIdle()
+            val allOff = disabledMcpToolsFlow.value
+            viewModel.setServerToolsEnabled(serverUrl = FIRST_URL, enabled = true)
+            advanceUntilIdle()
+
+            // Then — the tool the server no longer lists keeps its state either way
+            assertEquals(oneByOne, allOff)
+            assertEquals(before + tools.map { it.id }, allOff)
+            assertEquals(before, disabledMcpToolsFlow.value)
+        }
+
+    @Test
+    fun `given a collapsed server when all its tools are switched then its row expands`() = runTest {
+        // Given
+        givenServer(url = FIRST_URL, hash = "aaaa1111", "search")
+        advanceUntilIdle()
+
+        // When
+        viewModel.setServerToolsEnabled(serverUrl = FIRST_URL, enabled = false)
+
+        // Then
+        assertEquals(setOf(FIRST_URL), viewModel.uiState.value.expandedServerUrls)
+    }
+
+    @Test
+    fun `given a server that lists no tools when all its tools are switched then nothing changes`() = runTest {
+        // Given — fetchToolList answers an empty list by default
+        mcpServersFlow.value = listOf(McpServerConfig(url = FIRST_URL))
+        advanceUntilIdle()
+
+        // When — the listed server, and one the screen does not know
+        viewModel.setServerToolsEnabled(serverUrl = FIRST_URL, enabled = false)
+        viewModel.setServerToolsEnabled(serverUrl = "https://unknown.example/mcp", enabled = false)
+        advanceUntilIdle()
+
+        // Then
+        coVerify(exactly = 0) { settingsRepository.setMcpToolsEnabled(any(), any()) }
+        assertTrue(viewModel.uiState.value.expandedServerUrls.isEmpty())
+    }
+
+    @Test
+    fun `given two servers sharing a name when the first switches all off then the second serves the name`() = runTest {
+        // Given — the second server's `search` is shadowed by the first's
+        givenServer(url = FIRST_URL, hash = "aaaa1111", "search")
+        val second = givenServer(url = SECOND_URL, hash = "bbbb2222", "search").single()
+        storeAppliesSwitchesAtomically()
+        advanceUntilIdle()
+        assertEquals(
+            McpToolRouting.Shadow.EarlierServer(serverUrl = FIRST_URL),
+            viewModel.uiState.value.mcpShadowing[second.id],
+        )
+
+        // When
+        viewModel.setServerToolsEnabled(serverUrl = FIRST_URL, enabled = false)
+        advanceUntilIdle()
+
+        // Then — as when the first server's `search` is switched off alone
+        assertNull(viewModel.uiState.value.mcpShadowing[second.id])
     }
 
     @Test
@@ -297,5 +429,41 @@ class ToolsViewModelTest {
         coVerify {
             settingsRepository.setToolRiskOverride(toolKey = "mcp:deadbeef:search", risk = ToolRisk.DESTRUCTIVE)
         }
+    }
+
+    /**
+     * Makes the settings mock apply each switch to the set it holds, as the
+     * DataStore transaction does, and publish the result through the flow the
+     * view model observes.
+     */
+    private fun storeAppliesSwitchesAtomically() {
+        coEvery { settingsRepository.setMcpToolsEnabled(any(), any()) } answers {
+            val ids = firstArg<Set<String>>()
+            disabledMcpToolsFlow.update { if (secondArg<Boolean>()) it - ids else it + ids }
+        }
+        coEvery { settingsRepository.setAppFunctionsEnabled(any(), any()) } answers {
+            val names = firstArg<Set<String>>()
+            disabledAppFunctionsFlow.update { if (secondArg<Boolean>()) it - names else it + names }
+        }
+    }
+
+    /**
+     * Adds a server whose `tools/list` answers [names], after any servers
+     * already added, and returns its tools.
+     */
+    private fun givenServer(url: String, hash: String, vararg names: String): List<McpTool> {
+        val config = McpServerConfig(url = url)
+        val tools = names.map { name ->
+            McpTool(id = "mcp:$hash:$name", serverUrl = url, name = name, description = "", inputSchemaJson = "{}")
+        }
+        coEvery { mcpServerRepository.fetchToolList(config = config, forceRefresh = false) } returns
+            Result.success(tools)
+        mcpServersFlow.update { it + config }
+        return tools
+    }
+
+    private companion object {
+        const val FIRST_URL = "https://first.example/mcp"
+        const val SECOND_URL = "https://second.example/mcp"
     }
 }

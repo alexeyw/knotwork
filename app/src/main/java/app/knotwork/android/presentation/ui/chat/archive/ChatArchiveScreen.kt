@@ -15,7 +15,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
-import app.knotwork.android.presentation.ui.chat.toShareChooser
+import app.knotwork.android.presentation.ui.chat.ChatExportEffects
+import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.resolve
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
 import app.knotwork.design.screens.chatarchive.ChatArchiveCallbacks
 import app.knotwork.design.screens.chatarchive.ChatArchiveContent
@@ -27,8 +29,8 @@ import app.knotwork.design.screens.chatarchive.ChatArchiveVisualState
 /**
  * App-side chat-archive surface: folds [ChatArchiveViewModel.uiState] into the
  * catalog [ChatArchiveViewState], localises every string, and owns the two
- * things a Hilt ViewModel cannot — the share-sheet `Intent` and the snackbar
- * host.
+ * things a Hilt ViewModel cannot — the export's platform side
+ * ([ChatExportEffects]: share sheet and document picker) and the snackbar host.
  *
  * Tapping a row **opens** the archived chat (read-only, via [onOpenChat]); it
  * never un-archives it. Archive state changes only on an explicit Restore.
@@ -46,22 +48,18 @@ fun ChatArchiveScreen(
     viewModel: ChatArchiveViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val exportChooserTitle = stringResource(R.string.chat_export_chooser_title)
     val restoredMessage = stringResource(R.string.chat_snackbar_restored)
 
-    LaunchedEffect(viewModel) {
-        viewModel.exportEvents.collect { document ->
-            context.startActivity(document.toShareChooser(exportChooserTitle))
-        }
-    }
+    // Export chat / Save to file: the share sheet, the document picker and their snackbars.
+    ChatExportEffects(delegate = viewModel.export, snackbarHostState = snackbarHostState)
     LaunchedEffect(viewModel) {
         viewModel.restoreEvents.collect {
             snackbarHostState.showSnackbar(message = restoredMessage)
         }
     }
 
+    val context = LocalContext.current
     Box(modifier = modifier.fillMaxSize()) {
         ChatArchiveContent(
             state = uiState.toViewState(
@@ -73,6 +71,8 @@ fun ChatArchiveScreen(
                     uiState.rows.size,
                     uiState.rows.size,
                 ),
+                untitled = stringResource(R.string.chat_untitled),
+                resolveText = { context.resolve(it) },
             ),
             modifier = Modifier.fillMaxSize().testTag(CHAT_ARCHIVE_ROOT_TEST_TAG),
             strings = chatArchiveStrings(),
@@ -82,7 +82,8 @@ fun ChatArchiveScreen(
                 onRowMenuOpen = viewModel::openRowMenu,
                 onRowMenuDismiss = viewModel::dismissRowMenu,
                 onRestore = viewModel::restore,
-                onExport = viewModel::export,
+                onExport = viewModel::shareChat,
+                onSaveToFile = viewModel::saveChat,
                 onDeleteRequest = viewModel::requestDelete,
                 onDeleteConfirm = viewModel::confirmDelete,
                 onDeleteDismiss = viewModel::dismissDelete,
@@ -100,6 +101,7 @@ private fun chatArchiveStrings(): ChatArchiveStrings = ChatArchiveStrings(
     back = stringResource(R.string.chat_archive_back_cd),
     restore = stringResource(R.string.chat_archive_restore),
     export = stringResource(R.string.chat_archive_export),
+    saveToFile = stringResource(R.string.chat_archive_save_to_file),
     deleteForever = stringResource(R.string.chat_archive_delete_forever),
     rowMenuCd = stringResource(R.string.chat_archive_row_menu_cd),
     ranAfterArchiving = stringResource(R.string.chat_archive_ran_after_archiving),
@@ -148,10 +150,14 @@ internal fun archivedAtText(label: ArchivedAtLabel): String = when (label) {
  * @param archivedLabels row id → localised archived-at sentence. Resolved by
  *   the caller because plural forms live in resources.
  * @param subtitle pre-formatted TopAppBar subtitle.
+ * @param untitled the title of a chat never named, in the interface language.
+ * @param resolveText words the read failure.
  */
 internal fun ChatArchiveUiState.toViewState(
     archivedLabels: Map<String, String>,
     subtitle: String,
+    untitled: String,
+    resolveText: (UiText) -> String,
 ): ChatArchiveViewState {
     val visualState = when {
         errorMessage != null -> ChatArchiveVisualState.Error
@@ -162,7 +168,7 @@ internal fun ChatArchiveUiState.toViewState(
     val mappedRows = rows.map { row ->
         ChatArchiveRowUi(
             id = row.id,
-            title = row.title,
+            title = row.title.ifBlank { untitled },
             archivedLabel = archivedLabels[row.id].orEmpty(),
             starred = row.starred,
             ranAfterArchiving = row.ranAfterArchiving,
@@ -174,7 +180,7 @@ internal fun ChatArchiveUiState.toViewState(
         subtitle = if (visualState == ChatArchiveVisualState.Default) subtitle else "",
         openMenuRowId = openMenuRowId,
         deleteTarget = deleteTargetId?.let { id -> mappedRows.firstOrNull { it.id == id } },
-        errorMessage = errorMessage,
+        errorMessage = errorMessage?.let(resolveText),
     )
 }
 

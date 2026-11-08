@@ -41,4 +41,17 @@
         <item quantity="other">This stops all %1$d scheduled tasks, including any running right now. Automations
             and their triggers are not affected, and nothing is deleted — a task can be scheduled again.</item>
     </plurals>
+    <!-- Task monitor: row titles and stages. -->
+    <string name="taskmonitor_title_session">Chat Session: %1$s</string>
+    <string name="taskmonitor_title_background">Background Task (%1$s)</string>
+    <string name="taskmonitor_stage_thinking">Thinking</string>
+    <string name="taskmonitor_stage_tool">Tool Execution</string>
+    <string name="taskmonitor_stage_approval">Waiting Approval</string>
+    <string name="taskmonitor_stage_loading">Loading</string>
+    <string name="taskmonitor_stage_answering">Answering</string>
+    <!-- Monitoring stats. -->
+    <string name="monitoring_stat_inference_time">INFERENCE TIME</string>
+    <string name="monitoring_stat_tokens_per_second">TOKENS/S</string>
+    <string name="monitoring_stat_total_tokens">TOTAL TOKENS</string>
+    <string name="monitoring_unit_ms">%1$d ms</string>
 </resources>

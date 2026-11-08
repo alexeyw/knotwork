@@ -132,7 +132,7 @@ the **Tools** screen, or with **Block network from local model**, which
 withholds it along with the cloud paths.
 
 Nothing else has a way out — apart from files you export yourself, such as a
-journal, a run trace or a backup, which go where you send them. See [PRIVACY §
+chat, a journal, a run trace or a backup, which go where you send them. See [PRIVACY §
 What can leave your device](../PRIVACY.md#3-what-can-leave-your-device),
 and [SECURITY § Outbound HTTP and the exfiltration
 chain](../SECURITY.md#outbound-http-and-the-exfiltration-chain) for the layered
@@ -194,7 +194,7 @@ Five steps, start to finish:
    downloads the model that scenario needs.
 2. **Chat → type a message** once the model has landed. That is the whole loop;
    everything below is optional. (Chose *Start from scratch* instead? Open
-   **Models**, download a preset and tap **Make Active** first —
+   **Models**, download a preset and tap **Activate** first —
    [how](user-guide.md#2-download-a-model).)
 3. **Pipelines → open the one marked DEFAULT** to see the graph that produced that
    answer ([how](user-guide.md#visual-editor)).
@@ -410,7 +410,7 @@ cancelled the same way. Switching to another chat does **not** stop anything —
 the run keeps going, which is why you can come back to it.
 
 Two more controls end a run: **Stop the run** on a limit pause, and — for a
-chain of tasks the agent scheduled for itself — **More → Active tasks → Stop all
+chain of tasks the agent scheduled for itself — **More → Tasks → Stop all
 scheduled tasks**, which also cancels one that is executing.
 
 ### My run stopped by itself. Which limit was it?
@@ -433,7 +433,7 @@ when](user-guide.md#what-the-agent-recalls-and-when).
 
 ### Can I add or delete a memory myself?
 
-Yes, both, by hand — plus **Compact Memory** to fold redundant entries together,
+Yes, both, by hand — plus **Compact** to fold redundant entries together,
 which verifies before it deletes. See [Browsing long-term
 memory](user-guide.md#browsing-long-term-memory).
 

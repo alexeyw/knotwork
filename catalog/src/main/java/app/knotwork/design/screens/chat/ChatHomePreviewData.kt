@@ -300,9 +300,11 @@ internal object ChatHomePreview {
                         risk = risk,
                         toolName = toolName,
                         summary = "",
-                        arguments = mapOf(
-                            "calendar" to "\"work\"",
-                        ),
+                        arguments = """
+                            {
+                              "calendar": "work"
+                            }
+                        """.trimIndent(),
                         timestamp = "09:16",
                         request = HitlRequestContext(
                             source = HitlRequestSource.Chat,

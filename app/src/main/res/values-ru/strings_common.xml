@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The language of this translation; picks assets/presets/l10n/ru.json. -->
+    <string name="interface_language_tag">ru</string>
+    <!-- Size units; %1$s is the number, already written in the language. -->
+    <string name="unit_size_bytes">%1$s Б</string>
+    <string name="unit_size_kilobytes">%1$s КБ</string>
+    <string name="unit_size_megabytes">%1$s МБ</string>
+    <string name="unit_size_gigabytes">%1$s ГБ</string>
+    <!-- Short ages in lists; %1$d is the count. -->
+    <string name="unit_age_now">сейчас</string>
+    <string name="unit_age_minutes">%1$d мин</string>
+    <string name="unit_age_hours">%1$d ч</string>
+    <string name="unit_age_days">%1$d д</string>
+    <string name="unit_age_weeks">%1$d нед</string>
+    <!-- Names the app gives what it creates before a person names it (DefaultNames). Stored as written, in the language of the moment. -->
+    <string name="default_name_chat">Новый чат</string>
+    <string name="default_name_imported_chat">Импортированный чат</string>
+    <string name="default_name_chat_with_id">Чат %1$s</string>
+    <string name="default_name_trigger_chat">Триггер</string>
+    <string name="default_name_pipeline">Новый пайплайн</string>
+    <string name="default_name_input_node">Вход</string>
+    <string name="default_name_output_node">Выход</string>
+    <string name="default_name_copy">%1$s (копия)</string>
+    <string name="common_cancel">Отменить</string>
+    <string name="common_save">Сохранить</string>
+    <string name="common_delete">Удалить</string>
+    <string name="common_create">Создать</string>
+    <string name="common_close">Закрыть</string>
+    <string name="common_back">Назад</string>
+    <string name="common_retry">Повторить</string>
+    <string name="common_ok">ОК</string>
+    <string name="common_list_separator">", "</string>
+    <string name="nav_tab_chat">Чат</string>
+    <string name="nav_tab_pipelines">Пайплайны</string>
+    <string name="nav_tab_tools">Инструменты</string>
+    <string name="nav_tab_more">Ещё</string>
+    <string name="more_row_memory">Память</string>
+    <string name="more_row_models">Модели</string>
+    <string name="more_row_prompts">Библиотека промптов</string>
+    <string name="more_row_task_monitor">Задачи</string>
+    <string name="more_row_monitoring">Метрики в реальном времени</string>
+    <string name="more_row_settings">Настройки</string>
+    <string name="more_row_about">О приложении</string>
+    <string name="more_row_library">Библиотека пресетов пайплайнов</string>
+    <string name="more_row_files">Файлы</string>
+    <string name="more_row_chat_archive">Архив чатов</string>
+    <string name="more_chat_archive_subtitle_empty">В архиве пока пусто</string>
+    <string name="more_row_triggers">Триггеры</string>
+    <string name="more_triggers_subtitle">Запуск пайплайнов по расписанию или по событию на устройстве</string>
+    <string name="more_subtitle">Всё остальное</string>
+    <string name="more_section_automation">АВТОМАТИЗАЦИЯ</string>
+    <string name="more_section_content">ВАШИ ДАННЫЕ</string>
+    <string name="more_section_blocks">КОМПОНЕНТЫ</string>
+    <string name="more_section_app">ПРИЛОЖЕНИЕ</string>
+    <string name="about_title">О приложении</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="prompt_preview_title">Предпросмотр промпта</string>
+    <string name="prompt_preview_variable_not_found">Переменная не найдена</string>
+    <string name="journal_export_chooser_title">Поделиться журналом</string>
+    <string name="journal_export_share_failed">На телефоне нет приложения, которое может принять файл</string>
+    <string name="journal_export_save_failed">Не удалось сохранить журнал</string>
+    <string name="journal_export_render_failed">Не удалось прочитать журнал</string>
+    <plurals name="more_chat_archive_subtitle">
+        <item quantity="one">%1$d чат</item>
+        <item quantity="few">%1$d чата</item>
+        <item quantity="many">%1$d чатов</item>
+        <item quantity="other">%1$d чата</item>
+    </plurals>
+    <plurals name="journal_export_saved">
+        <item quantity="one">Сохранена %1$d запись</item>
+        <item quantity="few">Сохранено %1$d записи</item>
+        <item quantity="many">Сохранено %1$d записей</item>
+        <item quantity="other">Сохранено %1$d записи</item>
+    </plurals>
+</resources>

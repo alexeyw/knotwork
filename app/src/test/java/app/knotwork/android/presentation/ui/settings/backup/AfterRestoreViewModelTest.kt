@@ -14,6 +14,7 @@ import app.knotwork.android.domain.repositories.InterruptedDownload
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.ModelDownloadManager
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.screens.settings.backup.AfterRestoreDownloadFailure
 import app.knotwork.design.screens.settings.backup.AfterRestoreModel
 import app.knotwork.design.screens.settings.backup.AfterRestoreState
@@ -110,7 +111,7 @@ class AfterRestoreViewModelTest {
             advanceUntilIdle()
 
             assertNull(viewModel.state.value)
-            verify { relay.post("Restored") }
+            verify { relay.post(UiText.Dynamic("Restored")) }
             coVerify { restorer.dismissReport() }
         }
 
@@ -139,7 +140,7 @@ class AfterRestoreViewModelTest {
             advanceUntilIdle()
 
             assertNull(viewModel.state.value)
-            verify { relay.post("Restored") }
+            verify { relay.post(UiText.Dynamic("Restored")) }
         }
 
     @Test
@@ -256,7 +257,7 @@ class AfterRestoreViewModelTest {
             advanceUntilIdle()
 
             assertNull(viewModel.state.value)
-            verify { relay.post("Restored") }
+            verify { relay.post(UiText.Dynamic("Restored")) }
             coVerify { restorer.dismissReport() }
         }
 

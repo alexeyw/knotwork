@@ -97,6 +97,25 @@ class App :
         }
     }
 
+    /**
+     * Re-registers the task-results notification channel after a configuration
+     * change, so its name and description follow a new interface language.
+     *
+     * Registering an existing channel again updates only its name and
+     * description; the user's own choices for it stay. The other channels are
+     * registered right before each notification they post, so they follow by
+     * themselves; this one is registered once at start, and without this a
+     * language picked for the app would leave its name in the old language until
+     * the next process start.
+     *
+     * @param newConfig The configuration now in force.
+     */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (ProcessPhoenix.isPhoenixProcess(this)) return
+        scheduledTaskNotifier.registerChannel()
+    }
+
     private fun isMainProcess(): Boolean = Application.getProcessName() == packageName
 
     /**

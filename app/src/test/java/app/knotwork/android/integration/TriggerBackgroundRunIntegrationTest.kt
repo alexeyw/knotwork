@@ -67,6 +67,7 @@ import app.knotwork.android.domain.repositories.UsageTelemetryRepository
 import app.knotwork.android.domain.services.ApprovalNotifier
 import app.knotwork.android.domain.services.CeilingNotifier
 import app.knotwork.android.domain.services.ClarificationNotifier
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.NativeMemorySampler
 import app.knotwork.android.domain.services.ScheduledTaskConstraints
 import app.knotwork.android.domain.services.ScheduledTaskNotifier
@@ -473,6 +474,7 @@ class TriggerBackgroundRunIntegrationTest {
         triggerScheduler = triggerScheduler,
         usageTelemetry = usageTelemetry,
         recordTriggerEvaluation = RecordTriggerEvaluationUseCase(process.triggerJournal),
+        defaultNames = EnglishDefaultNames,
     )
 
     /**
@@ -559,7 +561,6 @@ class TriggerBackgroundRunIntegrationTest {
             SystemNodeExecutor(
                 llmEngine,
                 loadModelUseCase,
-                chatRepository,
                 StructuredOutputGate(),
                 settingsRepository,
                 CloudStructuredInferenceClientFactory { _, _ -> null },

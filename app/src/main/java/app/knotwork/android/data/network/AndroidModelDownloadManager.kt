@@ -184,10 +184,11 @@ class AndroidModelDownloadManager @Inject constructor(
         )
         WorkInfo.State.SUCCEEDED -> outputData.getString(ModelDownloadWorker.KEY_OUTPUT_PATH)
             ?.let { DownloadState.Success(it) }
-            ?: DownloadState.Error(DownloadError("Download finished without a file path."))
+            // Blank: a screen words a failure without text in the interface language.
+            ?: DownloadState.Error(DownloadError(""))
         WorkInfo.State.FAILED -> DownloadState.Error(
             DownloadError(
-                message = outputData.getString(ModelDownloadWorker.KEY_ERROR) ?: "Unknown download error",
+                message = outputData.getString(ModelDownloadWorker.KEY_ERROR).orEmpty(),
                 code = outputData
                     .getInt(ModelDownloadWorker.KEY_ERROR_CODE, ModelDownloadWorker.NO_HTTP_CODE)
                     .takeIf { it != ModelDownloadWorker.NO_HTTP_CODE },
@@ -202,7 +203,9 @@ class AndroidModelDownloadManager @Inject constructor(
     /**
      * A simple implementation of [AppError.Network] for download failures.
      *
-     * @property message The error message detailing the failure.
+     * @property message The failure as the download worker worded it, in the interface
+     *   language of the moment, or blank when nothing worded it — a screen then shows its
+     *   own sentence for an unknown failure.
      * @property code The HTTP status code when the failure was a non-2xx
      *   response, or `null` for transport/IO failures. Carried as a typed
      *   field so consumers can branch on the status (e.g. an access-gated

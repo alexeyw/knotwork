@@ -13,12 +13,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.WorkspaceFile
+import app.knotwork.android.presentation.common.AgeUnits
+import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.android.presentation.common.DisplayFormat
+import app.knotwork.android.presentation.common.rememberAgeUnits
+import app.knotwork.android.presentation.common.rememberByteUnits
 import app.knotwork.design.screens.files.CollisionView
 import app.knotwork.design.screens.files.DeleteDialogView
 import app.knotwork.design.screens.files.FileKind
@@ -83,7 +88,11 @@ fun FilesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: Fi
     }
 
     FilesContent(
-        state = uiState.toViewState(),
+        state = uiState.toViewState(
+            sizes = rememberByteUnits(),
+            ages = rememberAgeUnits(),
+            quotaFull = stringResource(R.string.files_quota_full),
+        ),
         modifier = modifier.testTag(FILES_ROOT_TEST_TAG),
         callbacks = FilesCallbacks(
             onBack = onBack,
@@ -110,8 +119,14 @@ fun FilesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: Fi
     )
 }
 
-/** Projects the app-side UI state to the catalog view state. */
-internal fun FilesUiState.toViewState(): FilesViewState {
+/**
+ * Projects the app-side UI state to the catalog view state.
+ *
+ * @param sizes Size units of the interface language.
+ * @param ages Short-age units of the interface language.
+ * @param quotaFull The word the quota line ends with once the workspace is full.
+ */
+internal fun FilesUiState.toViewState(sizes: ByteUnits, ages: AgeUnits, quotaFull: String): FilesViewState {
     val visual = when {
         loadFailed -> FilesVisualState.Error
         files.isEmpty() -> FilesVisualState.Empty
@@ -119,12 +134,12 @@ internal fun FilesUiState.toViewState(): FilesViewState {
     }
     return FilesViewState(
         visualState = visual,
-        quota = toQuotaView(),
-        files = files.map { it.toRowItem() },
+        quota = toQuotaView(sizes, quotaFull),
+        files = files.map { it.toRowItem(sizes, ages) },
         selectionMode = selectionMode,
         selectedPaths = selectedPaths,
         refreshing = refreshing,
-        preview = preview?.toPreviewView(),
+        preview = preview?.toPreviewView(sizes),
         deleteDialog = pendingDelete?.let { paths ->
             DeleteDialogView(names = paths.map { it.basename() }, count = paths.size)
         },
@@ -132,16 +147,19 @@ internal fun FilesUiState.toViewState(): FilesViewState {
     )
 }
 
-private fun FilesUiState.toQuotaView(): QuotaView {
+private fun FilesUiState.toQuotaView(sizes: ByteUnits, quotaFull: String): QuotaView {
     val pct = (usage.fraction * PERCENT).roundToInt()
     val tone = when {
         usage.limitBytes > 0L && usage.usedBytes >= usage.limitBytes -> QuotaTone.Over
         pct >= WARN_PERCENT -> QuotaTone.Warn
         else -> QuotaTone.Normal
     }
-    val base = "${DisplayFormat.formatBytes(usage.usedBytes)} / ${DisplayFormat.formatBytes(usage.limitBytes)}"
+    val base = "${DisplayFormat.formatBytes(
+        usage.usedBytes,
+        sizes,
+    )} / ${DisplayFormat.formatBytes(usage.limitBytes, sizes)}"
     val usageText = when (tone) {
-        QuotaTone.Over -> "$base · full"
+        QuotaTone.Over -> "$base · $quotaFull"
         QuotaTone.Warn -> "$base · $pct%"
         QuotaTone.Normal -> base
     }
@@ -154,7 +172,7 @@ private fun FilesUiState.toQuotaView(): QuotaView {
     )
 }
 
-private fun WorkspaceFile.toRowItem(): FileRowItem {
+private fun WorkspaceFile.toRowItem(sizes: ByteUnits, ages: AgeUnits): FileRowItem {
     val dot = relativePath.lastIndexOf('/')
     val dir = if (dot < 0) "" else relativePath.substring(0, dot + 1)
     val name = if (dot < 0) relativePath else relativePath.substring(dot + 1)
@@ -162,14 +180,14 @@ private fun WorkspaceFile.toRowItem(): FileRowItem {
         path = relativePath,
         dir = dir,
         name = name,
-        sizeLabel = DisplayFormat.formatBytes(sizeBytes),
-        dateLabel = relativeShort(System.currentTimeMillis() - lastModified),
+        sizeLabel = DisplayFormat.formatBytes(sizeBytes, sizes),
+        dateLabel = ages.short(System.currentTimeMillis() - lastModified),
         kind = if (isText) FileKind.Text else FileKind.Binary,
         isFresh = lastModified > 0L && System.currentTimeMillis() - lastModified < FRESH_WINDOW_MS,
     )
 }
 
-private fun FilePreviewState.toPreviewView(): PreviewView {
+private fun FilePreviewState.toPreviewView(sizes: ByteUnits): PreviewView {
     val dot = path.lastIndexOf('/')
     val dir = if (dot < 0) "" else path.substring(0, dot + 1)
     val name = if (dot < 0) path else path.substring(dot + 1)
@@ -177,26 +195,14 @@ private fun FilePreviewState.toPreviewView(): PreviewView {
         path = path,
         dir = dir,
         name = name,
-        sizeLabel = DisplayFormat.formatBytes(preview.totalBytes),
+        sizeLabel = DisplayFormat.formatBytes(preview.totalBytes, sizes),
         body = preview.text,
         truncated = preview.truncated,
-        shownBytesLabel = DisplayFormat.formatBytes(preview.text.toByteArray(Charsets.UTF_8).size.toLong()),
+        shownBytesLabel = DisplayFormat.formatBytes(preview.text.toByteArray(Charsets.UTF_8).size.toLong(), sizes),
     )
 }
 
 private fun String.basename(): String = substringAfterLast('/')
-
-/** Compact relative-age label (`"now"`, `"2 m"`, `"3 h"`, `"5 d"`, `"2 w"`). */
-private fun relativeShort(elapsedMs: Long): String {
-    val mins = (elapsedMs.coerceAtLeast(0L)) / MS_PER_MINUTE
-    return when {
-        mins < 1L -> "now"
-        mins < MINUTES_PER_HOUR -> "$mins m"
-        mins < MINUTES_PER_DAY -> "${mins / MINUTES_PER_HOUR} h"
-        mins < MINUTES_PER_WEEK -> "${mins / MINUTES_PER_DAY} d"
-        else -> "${mins / MINUTES_PER_WEEK} w"
-    }
-}
 
 /** Resolves a content [uri]'s display name, falling back to its last path segment. */
 private fun Context.queryDisplayName(uri: Uri): String {
@@ -247,7 +253,3 @@ private const val SHARE_MIME = "*/*"
 private const val PERCENT = 100f
 private const val WARN_PERCENT = 90
 private const val FRESH_WINDOW_MS = 60L * 60L * 1000L
-private const val MS_PER_MINUTE = 60_000L
-private const val MINUTES_PER_HOUR = 60L
-private const val MINUTES_PER_DAY = 60L * 24
-private const val MINUTES_PER_WEEK = 60L * 24 * 7

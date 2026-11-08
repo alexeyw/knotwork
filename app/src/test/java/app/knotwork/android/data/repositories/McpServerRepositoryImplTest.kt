@@ -3,11 +3,14 @@ package app.knotwork.android.data.repositories
 import app.knotwork.android.data.mcp.McpClient
 import app.knotwork.android.data.mcp.McpClientFactory
 import app.knotwork.android.data.mcp.McpConnectionPool
+import app.knotwork.android.data.mcp.McpSessionExpiredException
+import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.McpAuth
 import app.knotwork.android.domain.models.McpConnectionStatus
 import app.knotwork.android.domain.models.McpServerConfig
 import app.knotwork.android.domain.models.ToolRisk
+import app.knotwork.android.domain.repositories.McpServerRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -23,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -36,7 +40,9 @@ import org.junit.Test
  *     succeeds;
  *  3. emitting `Connecting → Error` (and returning `Result.failure`) when
  *     the client throws;
- *  4. caching the tool list for 5 minutes — and bypassing the cache when
+ *  4. caching the tool list for 5 minutes, only while the connection it came
+ *     from is still pooled — and asking the live connection again
+ *     (`McpClient.refreshTools`) when the cache does not answer or
  *     `forceRefresh = true`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -89,7 +95,8 @@ class McpServerRepositoryImplTest {
         assertTrue(result.isFailure)
         val status = repo.observeConnectionStatus(url).first()
         assertTrue("expected Error status, was $status", status is McpConnectionStatus.Error)
-        assertEquals("handshake failed", (status as McpConnectionStatus.Error).reason)
+        // Classified as the form's check classifies it, so the screen words it the same way.
+        assertEquals(ConnectionFailure.Other("handshake failed"), (status as McpConnectionStatus.Error).failure)
     }
 
     @Test
@@ -115,6 +122,7 @@ class McpServerRepositoryImplTest {
     fun `fetchToolList forceRefreshBypassesCache`() = runTest {
         val client = mockk<McpClient>(relaxed = true)
         coEvery { client.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+        coEvery { client.refreshTools() } returns listOf(AgentTool("a", "d", "{}"), AgentTool("b", "d", "{}"))
         val factory = mockk<McpClientFactory>()
         coEvery { factory.create() } returns client
         val repo = McpServerRepositoryImpl(pool = pool(factory))
@@ -123,18 +131,43 @@ class McpServerRepositoryImplTest {
         repo.fetchToolList(config = config)
         val refreshed = repo.fetchToolList(config = config, forceRefresh = true)
 
-        assertTrue(refreshed.isSuccess)
-        coVerify(exactly = 2) { client.getTools() }
+        // The refresh asks the server again over the live connection — `getTools` only
+        // repeats the list the handshake got, which is how a refresh used to send nothing.
+        assertEquals(listOf("a", "b"), refreshed.getOrThrow().map { it.name })
+        coVerify(exactly = 1) { client.getTools() }
+        coVerify(exactly = 1) { client.refreshTools() }
+    }
+
+    @Test
+    fun `given the TTL has passed when fetched then the server is asked again over the live connection`() = runTest {
+        val client = mockk<McpClient>(relaxed = true)
+        coEvery { client.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+        coEvery { client.refreshTools() } returns listOf(AgentTool("a", "d", "{}"))
+        val factory = mockk<McpClientFactory>()
+        coEvery { factory.create() } returns client
+        val repo = McpServerRepositoryImpl(pool = pool(factory))
+        var time = 1_000L
+        repo.clockMs = { time }
+
+        repo.fetchToolList(config = config)
+        time += McpServerRepository.TOOL_LIST_TTL_MS + 1
+        val result = repo.fetchToolList(config = config)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { client.connect(config) }
+        coVerify(exactly = 1) { client.refreshTools() }
     }
 
     @Test
     fun `given a list cached with one config when another config fetches within the TTL then the server is asked`() =
         runTest {
-            // Given
-            val client = mockk<McpClient>(relaxed = true)
-            coEvery { client.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+            // Given — two clients, as the factory hands out a new one per connection
+            val first = mockk<McpClient>(relaxed = true)
+            coEvery { first.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+            val second = mockk<McpClient>(relaxed = true)
+            coEvery { second.getTools() } returns listOf(AgentTool("a", "d", "{}"))
             val factory = mockk<McpClientFactory>()
-            coEvery { factory.create() } returns client
+            coEvery { factory.create() } returnsMany listOf(first, second)
             val repo = McpServerRepositoryImpl(pool = pool(factory))
             repo.clockMs = { 1_000L }
             repo.fetchToolList(config = config)
@@ -145,8 +178,8 @@ class McpServerRepositoryImplTest {
 
             // Then — the list fetched with the old sign-in does not stand in for the new one
             assertTrue(result.isSuccess)
-            coVerify(exactly = 1) { client.connect(reconfigured) }
-            coVerify(exactly = 2) { client.getTools() }
+            coVerify(exactly = 1) { second.connect(reconfigured) }
+            coVerify(exactly = 1) { second.getTools() }
         }
 
     @Test
@@ -163,9 +196,11 @@ class McpServerRepositoryImplTest {
         // the abandoned ones live on the server, while the in-place transport
         // swap could break a tool call running concurrently on the same client
         // (found by a directed on-device MCP test). A refresh re-lists tools; it
-        // does not re-establish the connection.
+        // does not re-establish the connection. The first fetch connects, and the
+        // handshake lists the tools; the two after it ask the live session again.
         coVerify(exactly = 1) { client.connect(any()) }
-        coVerify(exactly = 3) { client.getTools() }
+        coVerify(exactly = 1) { client.getTools() }
+        coVerify(exactly = 2) { client.refreshTools() }
     }
 
     @Test
@@ -251,28 +286,82 @@ class McpServerRepositoryImplTest {
     }
 
     @Test
-    fun `cache fast-path clears a previous Error status`() = runTest {
-        // After a failed force-refresh has put the status flow in Error, a follow-up
-        // cached-tool fetch must reconcile the flow back to Connected so the UI doesn't
-        // leave a stale red pill on a server whose tools are still available from cache.
-        val client = mockk<McpClient>(relaxed = true)
-        coEvery { client.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+    fun `given a failed refresh when fetched again within the TTL then the server is asked and the status clears`() =
+        runTest {
+            // A failed refresh must not leave a stale red pill on a server that works again —
+            // and must not let the list cached before it answer as Connected either: the
+            // failure dropped the connection that list came from.
+            val first = mockk<McpClient>(relaxed = true)
+            coEvery { first.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+            coEvery { first.refreshTools() } throws IllegalStateException("transient")
+            val second = mockk<McpClient>(relaxed = true)
+            coEvery { second.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+            val factory = mockk<McpClientFactory>()
+            coEvery { factory.create() } returnsMany listOf(first, second)
+            val repo = McpServerRepositoryImpl(pool = pool(factory))
+            repo.clockMs = { 1_000L }
+
+            // 1) First fetch succeeds → cache populated, status = Connected.
+            repo.fetchToolList(config = config)
+            // 2) Force-refresh fails → status flips to Error and the connection is dropped.
+            repo.fetchToolList(config = config, forceRefresh = true)
+            assertTrue(repo.observeConnectionStatus(url).first() is McpConnectionStatus.Error)
+            coVerify(exactly = 1) { first.disconnect() }
+
+            // 3) Non-forced fetch within TTL → no cache answer: a new connection is asked.
+            val fetched = repo.fetchToolList(config = config, forceRefresh = false)
+            assertTrue(fetched.isSuccess)
+            coVerify(exactly = 1) { second.connect(config) }
+            assertEquals(McpConnectionStatus.Connected, repo.observeConnectionStatus(url).first())
+        }
+
+    @Test
+    fun `given the pool replaced the connection when fetched within the TTL then the cached list does not answer`() =
+        runTest {
+            // The agent's path replaces a connection whose session the server closed; the
+            // list cached from the old connection describes a session that no longer exists.
+            val first = mockk<McpClient>(relaxed = true)
+            coEvery { first.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+            val second = mockk<McpClient>(relaxed = true)
+            coEvery { second.getTools() } returns listOf(AgentTool("b", "d", "{}"))
+            coEvery { second.refreshTools() } returns listOf(AgentTool("b", "d", "{}"))
+            val factory = mockk<McpClientFactory>()
+            coEvery { factory.create() } returnsMany listOf(first, second)
+            val pool = pool(factory)
+            val repo = McpServerRepositoryImpl(pool = pool)
+            repo.clockMs = { 1_000L }
+            repo.fetchToolList(config = config)
+            pool.withServer(url) {
+                invalidate()
+                client(config)
+            }
+
+            val fetched = repo.fetchToolList(config = config)
+
+            assertEquals(listOf("b"), fetched.getOrThrow().map { it.name })
+            coVerify(exactly = 1) { second.refreshTools() }
+        }
+
+    @Test
+    fun `given the server closed the session when refreshed then a new connection answers`() = runTest {
+        val first = mockk<McpClient>(relaxed = true)
+        coEvery { first.getTools() } returns listOf(AgentTool("a", "d", "{}"))
+        coEvery { first.refreshTools() } throws McpSessionExpiredException()
+        val second = mockk<McpClient>(relaxed = true)
+        coEvery { second.getTools() } returns listOf(AgentTool("a", "d", "{}"), AgentTool("b", "d", "{}"))
         val factory = mockk<McpClientFactory>()
-        coEvery { factory.create() } returns client
-        val repo = McpServerRepositoryImpl(pool = pool(factory))
-        repo.clockMs = { 1_000L }
-
-        // 1) First fetch succeeds → cache populated, status = Connected.
+        coEvery { factory.create() } returnsMany listOf(first, second)
+        val pool = pool(factory)
+        val repo = McpServerRepositoryImpl(pool = pool)
         repo.fetchToolList(config = config)
-        // 2) Force-refresh fails → status flips to Error, but cache remains.
-        coEvery { client.getTools() } throws IllegalStateException("transient")
-        repo.fetchToolList(config = config, forceRefresh = true)
-        assertTrue(repo.observeConnectionStatus(url).first() is McpConnectionStatus.Error)
 
-        // 3) Non-forced fetch within TTL → cache hit → status must reconcile to Connected.
-        val cached = repo.fetchToolList(config = config, forceRefresh = false)
-        assertTrue(cached.isSuccess)
+        val refreshed = repo.fetchToolList(config = config, forceRefresh = true)
+
+        assertEquals(listOf("a", "b"), refreshed.getOrThrow().map { it.name })
         assertEquals(McpConnectionStatus.Connected, repo.observeConnectionStatus(url).first())
+        assertSame(second, pool.peek(url))
+        // The new connection's handshake listed the tools; it is not asked a second time.
+        coVerify(exactly = 0) { second.refreshTools() }
     }
 
     @Test

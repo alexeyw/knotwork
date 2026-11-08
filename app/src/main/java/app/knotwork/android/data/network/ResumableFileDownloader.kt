@@ -95,7 +95,8 @@ class ResumableFileDownloader @Inject constructor(
         /**
          * The attempt did not finish.
          *
-         * @property message Human-readable failure text.
+         * @property message The transport's own failure text, or blank when it has none — the
+         *   download worker words that case.
          * @property httpCode The HTTP status when the server answered with one,
          *   or `null` for transport/IO failures. Callers use the distinction to
          *   decide whether retrying can possibly help: a `404` or `401` will
@@ -142,7 +143,8 @@ class ResumableFileDownloader @Inject constructor(
             throw e
         } catch (e: Exception) {
             Timber.w(e, "Model download failed after %d byte(s)", transferred.bytes)
-            Outcome.Failure(e.message ?: "Unknown download error", bytesTransferred = transferred.bytes)
+            // The transport's own text, or nothing: the worker words a failure without one.
+            Outcome.Failure(e.message.orEmpty(), bytesTransferred = transferred.bytes)
         }
     }
 

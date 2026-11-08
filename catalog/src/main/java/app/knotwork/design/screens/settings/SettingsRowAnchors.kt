@@ -86,6 +86,9 @@ object SettingsRowAnchors {
     /** About · identity card. */
     const val IDENTITY = "IDENTITY"
 
+    /** About · interface-language picker. */
+    const val LANGUAGE = "LANGUAGE"
+
     /** About · version/licenses link. */
     const val LINK_LICENSES = "LINK_LICENSES"
 
@@ -122,6 +125,7 @@ object SettingsRowAnchors {
         CRASH_REPORTING_ENABLED,
         LINK_BACKUP_RESTORE,
         IDENTITY,
+        LANGUAGE,
         LINK_LICENSES,
         RESET,
     )

@@ -583,13 +583,23 @@ internal object ToolsPreview {
         toolName = "shell.run",
         description = "Run a shell command on the MCP server.",
         serverDisplayName = "example.com",
-        schemaJson = """{
-  "name": "shell.run",
-  "type": "object",
-  "properties": {
-    "command": { "type": "string" }
-  }
-}""",
+        // What the app shows for a server's minified
+        // {"type":"object","properties":{"command":{"type":"string","description":"…"}},"required":["command"]}:
+        // laid out by JsonLayout.indented, one key or item per line.
+        schemaJson = """
+            {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Shell command to run on the server."
+                }
+              },
+              "required": [
+                "command"
+              ]
+            }
+        """.trimIndent(),
         lastUsed = "2 hours ago",
         enabled = true,
         risk = ToolRiskUi.Editable(BuiltInToolRisk.Sensitive),
@@ -627,7 +637,7 @@ internal object ToolsPreview {
 
     fun addMcpInvalid(): AddMcpServerForm = AddMcpServerForm(
         url = "server.example.com",
-        urlError = "URL must start with http:// or https://.",
+        urlError = McpUrlProblem.MissingScheme,
     )
 
     fun editMcpWithHeaders(): AddMcpServerForm = AddMcpServerForm(

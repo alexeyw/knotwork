@@ -9,6 +9,10 @@ import app.knotwork.android.domain.models.BundledDocument
  * *which* documents are bundled before the user has chosen one, and it must be
  * able to say so with the radio off and without paying to read two files that
  * may never be opened; the reader then needs exactly one document's text.
+ *
+ * Both answer in the language the interface is shown in when the documents are
+ * translated into it, and in English otherwise. Anchors are the English ones in
+ * every language, so a link by anchor lands on the same section either way.
  */
 interface BundledDocumentationRepository {
 

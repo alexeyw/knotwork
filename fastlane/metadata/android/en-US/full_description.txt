@@ -7,6 +7,7 @@ WHAT IT DOES
 - Tools, gated by you. Built-in tools and external servers through the Model Context Protocol (MCP). By default every sensitive or destructive call stops for explicit confirmation, enforced where the tool executes, not merely suggested to the model.
 - Reaches you from outside the app. A share target, launcher shortcuts and a Quick Settings tile run your chosen pipeline over shared text or images. Triggers (time, charging, Wi-Fi, network) fire a pipeline on their own and report back. Every entry surface stays inert until you bind a pipeline to it.
 - Remembers what matters. Long-term memory with semantic retrieval over past conversations, automatic fact extraction, search and export.
+- In your language. The screens, the bundled pipelines and the help come in English, Russian and Spanish. What a model reads stays in English.
 
 WHO IT IS FOR
 
@@ -20,7 +21,6 @@ KNOWN LIMITATIONS
 
 This is a pre-release. The public surface, the settings layout and the on-device storage formats can still change between versions.
 
-- English interface only.
 - Android 14+ and about 2 GB of free RAM - the memory is the real constraint.
 - On some phones the screen freezes while the model runs on the GPU; switch it to CPU.
 - Shared pipeline files are not a compatibility contract before 1.0. Keep the original.

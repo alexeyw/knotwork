@@ -50,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -76,14 +75,15 @@ import app.knotwork.design.components.buttons.KnotworkSecondaryButton
 import app.knotwork.design.components.chat.ChatComposer
 import app.knotwork.design.components.chat.ChatContent
 import app.knotwork.design.components.chat.ChatMessage
+import app.knotwork.design.components.chat.HitlConfirmationState
 import app.knotwork.design.components.chips.KnotworkSuggestionChip
-import app.knotwork.design.components.chips.Risk
 import app.knotwork.design.components.console.ConsoleEntryStrip
 import app.knotwork.design.components.console.ConsolePane
 import app.knotwork.design.components.console.ConsoleSnap
 import app.knotwork.design.components.console.ConsoleValueViewer
 import app.knotwork.design.components.console.RunHeaderStrip
 import app.knotwork.design.components.misc.KnotworkLoader
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -705,6 +705,7 @@ private fun ChatHomeMessageList(
         // under it.
         bottom = padding.calculateBottomPadding() + KnotworkTheme.spacing.sp2 + ChatConsoleClearance,
     )
+    val confirmWord = stringResource(R.string.knotwork_typed_confirm_word)
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -718,7 +719,7 @@ private fun ChatHomeMessageList(
                 metadata = row.metadata,
                 pendingTypedConfirm = state.pendingTypedConfirm,
                 onTypedConfirmChange = callbacks.onHitlTypedConfirmChange,
-                allowOnceEnabled = allowOnceEnabledFor(row.content, state.pendingTypedConfirm),
+                allowOnceEnabled = allowOnceEnabledFor(row.content, state.pendingTypedConfirm, confirmWord),
                 onAllowOnce = callbacks.onHitlAllowOnce,
                 onAllowAlways = callbacks.onHitlAllowAlways,
                 onReject = callbacks.onHitlReject,
@@ -1152,15 +1153,12 @@ internal fun Modifier.absorbClicks(): Modifier {
  * [ChatMessage] for HITL confirmations. By rule:
  *  - Readonly → auto-allowed (CTA hidden by the card).
  *  - Sensitive → always enabled.
- *  - Destructive → enabled only when the typed confirmation reads "yes".
+ *  - Destructive → enabled only when the typed confirmation is [confirmWord].
  *
  * Non-confirmation content rows return `true` since the value is ignored by
  * the card dispatch in [ChatMessage].
  */
-internal fun allowOnceEnabledFor(content: ChatContent, pendingTypedConfirm: String): Boolean {
+internal fun allowOnceEnabledFor(content: ChatContent, pendingTypedConfirm: String, confirmWord: String): Boolean {
     val confirmation = content as? ChatContent.Confirmation ?: return true
-    return when (confirmation.model.risk) {
-        Risk.Readonly, Risk.Sensitive -> true
-        Risk.Destructive -> pendingTypedConfirm.trim().equals("yes", ignoreCase = true)
-    }
+    return HitlConfirmationState.isAllowOnceEnabled(confirmation.model.risk, pendingTypedConfirm, confirmWord)
 }

@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
+import app.knotwork.android.R
 import app.knotwork.android.data.engine.KoogCloudModelCatalog
 import app.knotwork.android.domain.engine.DefaultPipelineFactory
 import app.knotwork.android.domain.models.AgentTool
@@ -28,6 +29,7 @@ import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.repositories.SettingsRepository
 import app.knotwork.android.domain.repositories.SkillRepository
 import app.knotwork.android.domain.repositories.ToolRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import app.knotwork.android.domain.services.PipelineCompositionValidator
 import app.knotwork.android.domain.text.ImportedText
 import app.knotwork.android.domain.usecases.CreatePipelineUseCase
@@ -182,6 +184,7 @@ class OrchestratorViewModelTest {
             resolveSurfacePipeline = mockk<ResolveSurfacePipelineUseCase>(relaxed = true),
             setSurfacePipeline = mockk<SetSurfacePipelineUseCase>(relaxed = true),
             entryPointSettings = settingsRepository,
+            defaultNames = EnglishDefaultNames,
         ),
         transferUseCases = OrchestratorTransferUseCases(
             importPipeline = importPipelineUseCase,
@@ -625,8 +628,8 @@ class OrchestratorViewModelTest {
         viewModel.transfer.importJson("{ invalid json }")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val err = viewModel.uiState.value.errorMessage as UiText.Dynamic
-        assertTrue(err.text.contains("Invalid JSON"))
+        val err = viewModel.uiState.value.errorMessage as UiText.Resource
+        assertEquals(R.string.import_problem_not_json, err.id)
     }
 
     @Test

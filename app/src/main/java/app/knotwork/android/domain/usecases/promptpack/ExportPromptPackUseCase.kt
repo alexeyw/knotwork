@@ -1,5 +1,7 @@
 package app.knotwork.android.domain.usecases.promptpack
 
+import app.knotwork.android.domain.models.InputProblem
+import app.knotwork.android.domain.models.InvalidInputException
 import app.knotwork.android.domain.promptpack.PromptPackMarkdownSerializer
 import app.knotwork.android.domain.repositories.PromptPresetRepository
 import kotlinx.coroutines.CancellationException
@@ -45,7 +47,9 @@ class ExportPromptPackUseCase @Inject constructor(private val promptPresetReposi
             // `viewModelScope` and reads the `Result`, so a raw throw here
             // would take the process down instead of showing a message.
             return Result.failure(e)
-        } ?: return Result.failure(NoSuchElementException("No prompt preset with id $presetId"))
+        } ?: return Result.failure(
+            InvalidInputException(InputProblem.NotFound(InputProblem.Subject.PROMPT_PRESET, presetId)),
+        )
         return Result.success(
             ExportedPromptPack(
                 fileName = PromptPackMarkdownSerializer.suggestFileName(preset),

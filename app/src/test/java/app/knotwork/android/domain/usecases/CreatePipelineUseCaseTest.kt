@@ -3,6 +3,7 @@ package app.knotwork.android.domain.usecases
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.domain.repositories.PipelineRepository
+import app.knotwork.android.domain.services.EnglishDefaultNames
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -16,7 +17,7 @@ import org.junit.Test
 class CreatePipelineUseCaseTest {
 
     private val pipelineRepository: PipelineRepository = mockk(relaxed = true)
-    private val useCase = CreatePipelineUseCase(pipelineRepository)
+    private val useCase = CreatePipelineUseCase(pipelineRepository, EnglishDefaultNames)
 
     @Test
     fun `given blank name when invoke then returns failure`() = runTest {

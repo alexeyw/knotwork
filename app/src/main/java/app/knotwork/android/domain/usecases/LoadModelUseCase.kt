@@ -19,9 +19,7 @@ class LoadModelUseCase @Inject constructor(
     private val llmInferenceEngine: LlmInferenceEngine,
 ) {
 
-    /**
-     * Internal error mapping implementation for system/unknown errors.
-     */
+    /** The error of a load that failed for a reason with no type of its own. */
     private object LlmSystemError : AppError.System
 
     /**
@@ -61,7 +59,7 @@ class LoadModelUseCase @Inject constructor(
             val requestedPath = modelPath?.takeIf { it.isNotBlank() }
             val pathToLoad = requestedPath ?: localModelRepository.getActiveModel()?.path
                 ?: return@withContext Result.Error(
-                    error = LlmSystemError,
+                    error = ModelLoadError.NoActiveModel,
                     message = "No active model found. Please select a model in settings or provide a path.",
                 )
 
@@ -85,7 +83,7 @@ class LoadModelUseCase @Inject constructor(
             val file = File(pathToLoad)
             if (!file.exists()) {
                 return@withContext Result.Error(
-                    error = LlmSystemError,
+                    error = ModelLoadError.FileMissing(pathToLoad),
                     message = "Model file not found at: $pathToLoad. Please download it again.",
                 )
             }
@@ -115,4 +113,24 @@ class LoadModelUseCase @Inject constructor(
             )
         }
     }
+}
+
+/**
+ * Why [LoadModelUseCase] could not load a model, for the failures a person can act on.
+ *
+ * The error's `message` keeps the English sentence a run records; a screen words these
+ * types in the interface language instead. Every other failure — the engine refusing the
+ * file, an exception — carries an error of no type of its own and its message as written.
+ */
+sealed interface ModelLoadError : AppError.System {
+
+    /** No path was given and no model is active: only installing or activating one helps. */
+    data object NoActiveModel : ModelLoadError
+
+    /**
+     * The model's file is gone from the device.
+     *
+     * @property path Where the file was expected.
+     */
+    data class FileMissing(val path: String) : ModelLoadError
 }

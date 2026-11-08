@@ -1,0 +1,5 @@
+Knotwork ahora está en ruso y español.
+
+Todas las pantallas, los pipelines incluidos y la ayuda están traducidos. Elige el idioma en Configuración > Acerca de > Idioma o usa el del teléfono.
+
+Motor local: LiteRT-LM 0.19. Activa o desactiva a la vez todas las herramientas de un servidor MCP y guarda un chat directamente en un archivo. La tarjeta de aprobación muestra los argumentos tal como los recibe la llamada, y un texto muy largo ya no congela la pantalla.

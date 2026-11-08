@@ -33,8 +33,10 @@ import app.knotwork.android.domain.models.TriggerHitlResolution
 import app.knotwork.android.domain.models.TriggerRunOutcome
 import app.knotwork.android.domain.models.TriggerSkipReason
 import app.knotwork.android.domain.usecases.ClockTime
+import app.knotwork.android.domain.usecases.DEFAULT_FAILURE_MESSAGE
 import app.knotwork.android.domain.usecases.JournalDayHeader
 import app.knotwork.android.domain.usecases.JournalTimestamp
+import app.knotwork.android.domain.usecases.NO_PROGRESS_JOURNAL_MESSAGE
 import app.knotwork.android.domain.usecases.TriggerHealthEvaluator
 import app.knotwork.android.domain.usecases.TriggerJournalGrouper
 import app.knotwork.android.domain.usecases.TriggerJournalView
@@ -443,6 +445,8 @@ private fun TriggersUiState.toDetailViewState(trigger: Trigger, nowMillis: Long)
         minutesAgoFormat = stringResource(R.string.triggers_journal_time_minutes_ago),
         today = stringResource(R.string.triggers_journal_day_today),
         yesterday = stringResource(R.string.triggers_journal_day_yesterday),
+        runFailed = stringResource(R.string.triggers_journal_run_failed),
+        noProgress = stringResource(R.string.run_termination_body_no_progress),
     )
     val dayGroups = if (journalState == TriggerJournalVisualState.Populated) {
         triggerJournalGrouper.group(journal.orEmpty(), nowMillis, zone).toDayGroupsUi(labels, dayFormatter)
@@ -466,13 +470,34 @@ private fun TriggersUiState.toDetailViewState(trigger: Trigger, nowMillis: Long)
 /**
  * The format-dependent journal labels, pre-resolved once in composable context so
  * the per-entry projection ([toDayGroupsUi]) can stay a plain function.
+ *
+ * @property runFailed The words for a run that failed without a reason.
+ * @property noProgress The words for a run the stuck-detector ended.
  */
-private data class JournalLabels(
+internal data class JournalLabels(
     val justNow: String,
     val minutesAgoFormat: String,
     val today: String,
     val yesterday: String,
+    val runFailed: String,
+    val noProgress: String,
 )
+
+/**
+ * A failed run's reason as the journal shows it. The two sentences the app stores
+ * itself — no reason, and the stuck-detector's — are recognised by their stored
+ * English and shown in the interface language, rows written before included; any
+ * other reason is the run's diagnostic, which stays as written.
+ *
+ * @param error The reason the journal row stores.
+ * @param labels The interface-language words.
+ * @return What the row shows.
+ */
+internal fun journalRunError(error: String, labels: JournalLabels): String = when (error) {
+    DEFAULT_FAILURE_MESSAGE -> labels.runFailed
+    NO_PROGRESS_JOURNAL_MESSAGE -> labels.noProgress
+    else -> error
+}
 
 /** Resolves the grouped journal view into localized catalog day groups. */
 private fun TriggerJournalView.toDayGroupsUi(
@@ -492,7 +517,8 @@ private fun TriggerJournalView.toDayGroupsUi(
                 } else {
                     null
                 },
-                outcomeError = (entry.evaluation.outcome as? TriggerRunOutcome.Failure)?.error,
+                outcomeError = (entry.evaluation.outcome as? TriggerRunOutcome.Failure)?.error
+                    ?.let { journalRunError(it, labels) },
                 skipReason = (verdict as? TriggerEvaluationVerdict.Skipped)?.reason?.toSkipReasonUi(),
                 skipMomentLabel = clockLabel(entry.momentTime),
                 timestampLabel = entry.timestamp.label(labels),

@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.knotwork.design.R
+import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
 import app.knotwork.design.tokens.KnotworkTextStyles
@@ -662,6 +662,8 @@ private fun verifyLine(verify: RunVerifyActionUi): String = when (verify) {
  */
 @Composable
 internal fun mismatchText(reason: RunMismatchUi): String = when (reason) {
+    is RunMismatchUi.Runtime ->
+        stringResource(R.string.knotwork_run_verify_mismatch_runtime, reason.recorded, reason.now)
     is RunMismatchUi.Backend ->
         stringResource(R.string.knotwork_run_verify_mismatch_backend, reason.recorded, reason.now)
     is RunMismatchUi.Window ->

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="knotwork_node_type_input_name">Entrada</string>
+    <string name="knotwork_node_type_input_description">Inicio de la ejecución: tu mensaje, una página compartida o un prompt de activador.</string>
+    <string name="knotwork_node_type_output_name">Salida</string>
+    <string name="knotwork_node_type_output_description">Donde termina la ejecución y te llega la respuesta.</string>
+    <string name="knotwork_node_type_lite_rt_name">LiteRT</string>
+    <string name="knotwork_node_type_lite_rt_description">Un paso de inferencia con el modelo local que se ejecuta en el teléfono.</string>
+    <string name="knotwork_node_type_cloud_name">Nube</string>
+    <string name="knotwork_node_type_cloud_description">Un paso de inferencia con un proveedor en la nube configurado.</string>
+    <string name="knotwork_node_type_intent_router_name">Enrutador de intención</string>
+    <string name="knotwork_node_type_intent_router_description">Clasifica el texto entrante en una de tus clases y envía la ejecución por su rama.</string>
+    <string name="knotwork_node_type_if_condition_name">Condición</string>
+    <string name="knotwork_node_type_if_condition_description">Dos ramas: una pregunta de sí o no sobre la entrada, o si hay una imagen adjunta.</string>
+    <string name="knotwork_node_type_clarification_name">Aclaración</string>
+    <string name="knotwork_node_type_clarification_description">Pausa la ejecución para preguntarte algo; tu respuesta pasa a ser la salida del nodo.</string>
+    <string name="knotwork_node_type_tool_name">Herramienta</string>
+    <string name="knotwork_node_type_tool_description">Llama a una herramienta, integrada o de otra app o servidor MCP, y pasa el resultado.</string>
+    <string name="knotwork_node_type_decomposition_name">Descomposición</string>
+    <string name="knotwork_node_type_decomposition_description">Convierte una instrucción en una lista de subtareas.</string>
+    <string name="knotwork_node_type_queue_processor_name">Procesador de cola</string>
+    <string name="knotwork_node_type_queue_processor_description">Recorre las subtareas de una en una por la rama Item y luego sigue por la rama Done.</string>
+    <string name="knotwork_node_type_evaluation_name">Evaluación</string>
+    <string name="knotwork_node_type_evaluation_description">Juzga lo que produjo el paso anterior y responde Pass, Retry o Fail.</string>
+    <string name="knotwork_node_type_summary_name">Resumen</string>
+    <string name="knotwork_node_type_summary_description">Une en un solo texto lo que produjeron los pasos anteriores, a menudo tras un bucle.</string>
+    <string name="knotwork_node_type_pipeline_name">Pipeline</string>
+    <string name="knotwork_node_type_pipeline_description">Ejecuta otro pipeline guardado como un solo paso y devuelve su respuesta.</string>
+    <string name="knotwork_node_type_skill_name">Habilidad</string>
+    <string name="knotwork_node_type_skill_description">Ejecuta una habilidad: una instrucción fija y las herramientas que puede usar.</string>
+</resources>

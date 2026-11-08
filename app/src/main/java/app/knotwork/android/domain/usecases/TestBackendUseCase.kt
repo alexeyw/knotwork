@@ -2,6 +2,7 @@ package app.knotwork.android.domain.usecases
 
 import app.knotwork.android.domain.engine.LlmInferenceEngine
 import app.knotwork.android.domain.models.Result
+import app.knotwork.android.domain.models.TestProbeFailure
 import app.knotwork.android.domain.models.TestProbeResult
 import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
@@ -58,7 +59,7 @@ class TestBackendUseCase @Inject constructor(
                     durationMs = 0L,
                     timestampMs = started,
                     success = false,
-                    errorMessage = "No active model selected.",
+                    failure = TestProbeFailure.NO_ACTIVE_MODEL,
                 ),
             )
         }
@@ -71,7 +72,12 @@ class TestBackendUseCase @Inject constructor(
                     durationMs = System.currentTimeMillis() - started,
                     timestampMs = started,
                     success = false,
-                    errorMessage = loadResult.message ?: "Failed to load model.",
+                    errorMessage = loadResult.message.takeUnless { loadResult.error is ModelLoadError },
+                    failure = when (loadResult.error) {
+                        ModelLoadError.NoActiveModel -> TestProbeFailure.NO_ACTIVE_MODEL
+                        is ModelLoadError.FileMissing -> TestProbeFailure.MODEL_FILE_MISSING
+                        else -> TestProbeFailure.LOAD_FAILED.takeIf { loadResult.message == null }
+                    },
                 ),
             )
         }
@@ -98,7 +104,8 @@ class TestBackendUseCase @Inject constructor(
                     durationMs = System.currentTimeMillis() - started,
                     timestampMs = started,
                     success = false,
-                    errorMessage = e.message ?: "Unknown error",
+                    errorMessage = e.message,
+                    failure = TestProbeFailure.UNKNOWN.takeIf { e.message == null },
                 ),
             )
         }

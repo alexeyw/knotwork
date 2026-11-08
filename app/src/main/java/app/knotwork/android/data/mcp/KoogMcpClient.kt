@@ -21,9 +21,13 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.sse.SSE
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
+import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpError
 import io.modelcontextprotocol.kotlin.sdk.client.mcpStreamableHttpTransport
 import io.modelcontextprotocol.kotlin.sdk.shared.Transport
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -65,6 +69,14 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * A tool that is not published cannot be executed either.
  *
+ * ### A session the server closed
+ *
+ * A Streamable-HTTP server may close a session at any time and must then answer its id with
+ * `404 Not Found`. A request refused that way fails with [McpSessionExpiredException] — only
+ * when it was sent with a session id, since a 404 from a server that issued none means a wrong
+ * address. Opening the new session the specification asks for is [McpConnectionPool]'s job,
+ * not this client's: the pool is what every caller shares.
+ *
  * @param networkActivityTracker feeds the privacy indicator; `null` in tests.
  * @param resultByteBudget reads the current result budget, in UTF-8 bytes, on
  *   every call, so a change to the setting applies to the next call.
@@ -90,18 +102,36 @@ class KoogMcpClient(
      * @property httpClient Ktor client owning the socket pool; closed on teardown.
      * @property transport MCP transport, retained so the session can be
      *   terminated server-side on teardown rather than merely dropped.
+     * @property sdkClient The MCP SDK client speaking over [transport], retained so
+     *   [refreshTools] can ask the server for its list again on the same session.
+     * @property serverInfo What Koog records about the server on each tool.
      * @property registry Koog tool registry discovered from the server.
      */
-    private class Session(val httpClient: HttpClient, val transport: Transport, val registry: ToolRegistry) {
+    private class Session(
+        val httpClient: HttpClient,
+        val transport: Transport,
+        val sdkClient: Client,
+        val serverInfo: McpServerInfo,
+        val registry: ToolRegistry,
+    ) {
         /**
          * The registry's tools with the catalogue limits applied, computed on first
-         * use. The registry is fixed for the life of a session (Koog lists the tools
-         * once, at connect), so the published set is too — and a hostile catalogue's
-         * warnings are logged once per session instead of on every prompt render.
-         * Two readers racing on the first use both compute the same list.
+         * use. A registry never changes (Koog lists the tools once when it builds one;
+         * [refreshTools] builds a new [Session] around a new registry), so the published
+         * set is fixed too — and a hostile catalogue's warnings are logged once per
+         * listing instead of on every prompt render. Two readers racing on the first
+         * use both compute the same list.
          */
         @Volatile
         var published: List<AgentTool>? = null
+
+        /**
+         * Whether requests on this session carry a session id — the condition under
+         * which a 404 means "this session is closed" (see [McpSessionExpiredException]).
+         * Only Streamable HTTP has session ids; the server assigns one at `initialize`
+         * and it never changes afterwards.
+         */
+        fun sendsSessionId(): Boolean = (transport as? StreamableHttpClientTransport)?.sessionId != null
     }
 
     /** [Session.published], computing it on first use. */
@@ -227,8 +257,23 @@ class KoogMcpClient(
                             McpTransport.STREAMABLE_HTTP -> client.mcpStreamableHttpTransport(url = config.url)
                         }
                         val serverInfo = McpServerInfo(url = config.url, command = "")
-                        val toolRegistry = McpToolRegistryProvider.fromTransport(transport, serverInfo)
-                        Session(httpClient = client, transport = transport, registry = toolRegistry)
+                        // What Koog's `fromTransport` does, with the SDK client kept: it is
+                        // what `refreshTools` asks again, on the same session.
+                        val sdkClient = Client(
+                            clientInfo = Implementation(
+                                name = McpToolRegistryProvider.DEFAULT_MCP_CLIENT_NAME,
+                                version = McpToolRegistryProvider.DEFAULT_MCP_CLIENT_VERSION,
+                            ),
+                        )
+                        sdkClient.connect(transport)
+                        val toolRegistry = McpToolRegistryProvider.fromClient(sdkClient, serverInfo)
+                        Session(
+                            httpClient = client,
+                            transport = transport,
+                            sdkClient = sdkClient,
+                            serverInfo = serverInfo,
+                            registry = toolRegistry,
+                        )
                     } ?: throw McpHandshakeTimeoutException(config.url, connectTimeoutMs.milliseconds)
                     // Publish the session only after the transport has been attached
                     // successfully — failure paths must close the client locally.
@@ -268,7 +313,9 @@ class KoogMcpClient(
      * single run.
      *
      * Termination is best-effort — an unreachable or already-forgetful server
-     * must not prevent the local teardown that follows in [finally].
+     * must not prevent the local teardown that follows in [finally]. A 404 is the
+     * server saying the session is already closed — the ordinary case when the pool
+     * replaces a session the server closed — so it is not logged as a failure.
      *
      * @param current session to release; `null` is a no-op so callers need no guard.
      */
@@ -278,6 +325,12 @@ class KoogMcpClient(
             (current.transport as? StreamableHttpClientTransport)?.terminateSession()
         } catch (e: CancellationException) {
             throw e
+        } catch (e: StreamableHttpError) {
+            if (e.code == HttpStatusCode.NotFound.value) {
+                Timber.d("MCP session was already closed by the server")
+            } else {
+                Timber.w(e, "MCP session termination failed; closing the transport anyway")
+            }
         } catch (e: Exception) {
             Timber.w(e, "MCP session termination failed; closing the transport anyway")
         } finally {
@@ -296,6 +349,56 @@ class KoogMcpClient(
     override suspend fun getTools(): List<AgentTool> = withContext(Dispatchers.IO) {
         val current = sessionMutex.withLock { session } ?: return@withContext emptyList()
         current.publishedTools()
+    }
+
+    /**
+     * Asks the server for its tool list again on the live session and publishes it,
+     * with the catalogue limits applied (see the class KDoc).
+     *
+     * The new list is installed as a new [Session] around the same transport and SDK
+     * client, under [sessionMutex], so a reader sees the old list or the new one, never
+     * half of each. A tool call already running keeps the snapshot it took — the same
+     * session on the wire, so it is not disturbed. The request runs outside the lock,
+     * like a tool call, so a slow server does not hold up the Tools screen's readers.
+     *
+     * The round-trip carries the [connectTimeoutMs] deadline: like the handshake, it is
+     * what a person on the Tools screen waits for.
+     *
+     * @return The tools the server publishes now.
+     * @throws McpSessionExpiredException when the server answers that the session is closed.
+     * @throws IllegalStateException when not connected, or when the connection was replaced
+     *   or closed while the list was being fetched.
+     * @throws IOException when the server does not answer within [connectTimeoutMs].
+     */
+    override suspend fun refreshTools(): List<AgentTool> = withContext(Dispatchers.IO) {
+        networkActivityTracker?.recordOutbound()
+        val current = sessionMutex.withLock { session }
+            ?: throw IllegalStateException("MCP client is not connected; cannot list tools")
+        val withSessionId = current.sendsSessionId()
+        val registry = try {
+            withTimeoutOrNull(connectTimeoutMs) {
+                McpToolRegistryProvider.fromClient(current.sdkClient, current.serverInfo)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (withSessionId && isClosedSessionAnswer(e)) throw McpSessionExpiredException()
+            throw e
+        } ?: throw IOException("MCP server did not list its tools within ${connectTimeoutMs / MILLIS_PER_SECOND}s")
+        val refreshed = Session(
+            httpClient = current.httpClient,
+            transport = current.transport,
+            sdkClient = current.sdkClient,
+            serverInfo = current.serverInfo,
+            registry = registry,
+        )
+        val installed = sessionMutex.withLock {
+            // A connect or disconnect that landed meanwhile owns the field now, and this
+            // list describes the session it replaced.
+            (session === current).also { same -> if (same) session = refreshed }
+        }
+        check(installed) { "MCP connection changed while its tools were being listed" }
+        refreshed.publishedTools()
     }
 
     /**
@@ -402,11 +505,15 @@ class KoogMcpClient(
      * @throws IllegalStateException if the client is not connected.
      * @throws IllegalArgumentException if the server does not publish [name] (see [getTools]).
      * @throws IOException if the server does not answer within [toolCallTimeoutMs].
+     * @throws McpSessionExpiredException if the server answers that the session is closed —
+     *   recognised before the message is bounded, since bounding can drop the cause it is
+     *   recognised by.
      */
     override suspend fun executeTool(name: String, arguments: String): String = withContext(Dispatchers.IO) {
         networkActivityTracker?.recordOutbound()
         val current = sessionMutex.withLock { session }
             ?: throw IllegalStateException("MCP client is not connected; cannot execute $name")
+        val withSessionId = current.sendsSessionId()
         // A tool the catalogue limits left out is not callable either: otherwise a
         // name the model learnt elsewhere would reach a tool nobody reviewed.
         val tool = current.registry.getToolOrNull(name)
@@ -430,6 +537,7 @@ class KoogMcpClient(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (withSessionId && isClosedSessionAnswer(e)) throw McpSessionExpiredException()
             // A server can answer with a protocol error instead of a result, and the
             // gate turns its message into the tool's observation — the same sinks a
             // result reaches, so the same budget applies.
@@ -578,6 +686,29 @@ class KoogMcpClient(
          */
         internal fun isPublishableName(name: String): Boolean =
             name.length <= MAX_NAME_CHARS && PUBLISHABLE_NAME.matches(name)
+
+        /**
+         * How many causes [isClosedSessionAnswer] walks. The SDK nests the transport's
+         * error one level deep (`McpException` → `StreamableHttpError`); the bound only
+         * guards against a cause chain that loops.
+         */
+        private const val MAX_CAUSE_DEPTH = 8
+
+        /**
+         * Whether [failure] is the server answering `404 Not Found` to a Streamable-HTTP
+         * request. Recognised by the status code the SDK's transport error carries — the
+         * SDK wraps it as the cause of an `McpException` — and never by message text: a
+         * server's 404 body is whatever it chose to send, or nothing.
+         *
+         * On its own this is not "the session is closed": the caller also needs the request
+         * to have carried a session id (see [McpSessionExpiredException]).
+         *
+         * @param failure what the request threw.
+         * @return `true` when a 404 from the transport is in [failure]'s cause chain.
+         */
+        internal fun isClosedSessionAnswer(failure: Throwable): Boolean = generateSequence(failure) { it.cause }
+            .take(MAX_CAUSE_DEPTH)
+            .any { it is StreamableHttpError && it.code == HttpStatusCode.NotFound.value }
 
         /**
          * [failure] with its message held to [maxBytes], for a failure raised inside
