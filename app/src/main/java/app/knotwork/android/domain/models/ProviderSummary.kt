@@ -41,8 +41,8 @@ enum class ProviderId(
  * folds to a single tappable nav-row with fingerprint + model name +
  * chevron.
  *
- * @property id Stable identifier for the provider.
- * @property displayName Localized provider name shown as the row title.
+ * @property id Stable identifier for the provider; the screen names the row from it, in the
+ *   interface language of the moment.
  * @property keyFingerprint Masked fingerprint of the configured API key
  *   (e.g. `sk-…3a9f`). `null` when no key is configured — the UI then
  *   renders "Not configured · tap to add API key".
@@ -61,7 +61,6 @@ enum class ProviderId(
  */
 data class ProviderSummary(
     val id: ProviderId,
-    val displayName: String,
     val keyFingerprint: String?,
     val model: String?,
     val isLanLocal: Boolean,

@@ -505,6 +505,7 @@ fun AppNavGraph(
         composable(NavRoutes.HELP) {
             HelpScreen(
                 onOpenDocument = { id -> navController.navigate(NavRoutes.helpDocumentRoute(id)) },
+                onBack = { navController.popBackStack() },
             )
         }
 

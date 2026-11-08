@@ -31,7 +31,9 @@ details.
   *Settings → About → Language* picks the language of the app's screens, or
   follows the phone's; your phone's per-app language setting is the same
   choice. What a model reads stays in English —
-  system prompts, tool descriptions and tool results; the lines the app adds to
+  system prompts, tool descriptions and tool results; the Tools screen shows a
+  built-in tool's description in the app's language while the model is still
+  given the English one, and the lines the app adds to
   a chat, such as a tool call you denied, are written in the app's language.
   The bundled pipelines and prompt templates show their names, descriptions,
   node titles, starter prompts and tags in the app's language too; a pipeline
@@ -73,6 +75,10 @@ details.
 
 ### Fixed
 
+- **The Help list has a back arrow**, as its documents and the other screens
+  under More do.
+- ***Reset all settings* keeps its description readable.** The button now sits
+  under the text; beside it, a long label left the text a word per line.
 - **Large fonts no longer break words or cut labels** on the settings
   hub, the Tools settings, the performance card, Live metrics and the
   Memory overview. At 200 % a word such as *Approve* or *memories* used

@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,13 +51,16 @@ fun ToolsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val builtInTools by remember(uiState) {
+    val resources = LocalResources.current
+
+    val builtInTools by remember(uiState, resources) {
         derivedStateOf {
             uiState.localTools.map { tool ->
                 BuiltInToolRow(
                     id = tool.name,
                     name = tool.name.toFriendlyToolName(),
-                    description = tool.description,
+                    description = BUILT_IN_TOOL_DESCRIPTIONS[tool.name]?.let { resources.getString(it) }
+                        ?: tool.description,
                     risk = ToolRiskResolution.forLocalTool(tool, uiState.toolRiskOverrides),
                     enabled = tool.name !in uiState.disabledAppFunctions,
                     // http_request owns a domain allowlist; surface the editor sub-row

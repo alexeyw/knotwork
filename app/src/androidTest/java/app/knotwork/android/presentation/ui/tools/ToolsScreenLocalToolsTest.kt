@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
+import app.knotwork.android.R
+import app.knotwork.android.domain.models.AgentTool
 import app.knotwork.android.domain.models.ToolRisk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
@@ -26,6 +28,26 @@ class ToolsScreenLocalToolsTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun builtInTool_rowShowsTheInterfaceStringAndNotWhatTheModelReads() {
+        val (vm, _) = mockToolsViewModel(
+            initialUiState = ToolsUiState(
+                localTools = listOf(AgentTool("search_tool", "What the model reads", "{}")),
+            ),
+        )
+
+        composeTestRule.setContent {
+            MaterialTheme { ToolsScreen(viewModel = vm) }
+        }
+
+        // The start of the text: a row's description is limited to its lines.
+        val shown = InstrumentationRegistry.getInstrumentation().targetContext
+            .getString(R.string.tool_description_search_tool)
+            .take(DESCRIPTION_START)
+        composeTestRule.onNodeWithText(text = shown, substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText(text = "What the model reads").assertDoesNotExist()
+    }
 
     @Test
     fun localTools_rendersNamesAndRiskPillsForEachRisk() {
@@ -115,5 +137,9 @@ class ToolsScreenLocalToolsTest {
             listOf("search_tool"),
             opened,
         )
+    }
+
+    private companion object {
+        const val DESCRIPTION_START = 24
     }
 }

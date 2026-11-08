@@ -12,6 +12,7 @@ import app.knotwork.android.R
 import app.knotwork.android.domain.models.Skill
 import app.knotwork.android.domain.models.SkillToolRestriction
 import app.knotwork.android.presentation.ui.common.asString
+import app.knotwork.android.presentation.ui.tools.BUILT_IN_TOOL_DESCRIPTIONS
 import app.knotwork.design.screens.skills.SkillContextFlagUi
 import app.knotwork.design.screens.skills.SkillDeleteDialogContent
 import app.knotwork.design.screens.skills.SkillDeleteStrings
@@ -190,7 +191,7 @@ private fun SkillLibraryUiState.toEditorUi(draft: SkillEditorDraft): SkillEditor
         SkillToolOptionUi(
             id = tool.id,
             risk = tool.risk,
-            description = tool.description,
+            description = BUILT_IN_TOOL_DESCRIPTIONS[tool.id]?.let { stringResource(it) } ?: tool.description,
             selected = tool.id in draft.selectedToolIds,
         )
     },

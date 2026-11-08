@@ -24,12 +24,14 @@ import java.text.NumberFormat
  * The Help screen: every document the app can open.
  *
  * @param onOpenDocument Navigates to the reader for a bundled document.
+ * @param onBack Leaves the screen.
  * @param modifier Layout modifier applied to the screen.
  * @param viewModel Screen's view model.
  */
 @Composable
 fun HelpScreen(
     onOpenDocument: (String) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HelpViewModel = hiltViewModel(),
 ) {
@@ -66,6 +68,7 @@ fun HelpScreen(
                 viewModel.dismissRefusal()
                 alternativeId?.let(onOpenDocument)
             },
+            onBack = onBack,
         ),
         modifier = modifier,
     )

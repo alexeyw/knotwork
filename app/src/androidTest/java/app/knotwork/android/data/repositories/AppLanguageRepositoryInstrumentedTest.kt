@@ -4,6 +4,15 @@ import android.app.LocaleManager
 import android.os.LocaleList
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.knotwork.android.R
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,6 +54,32 @@ class AppLanguageRepositoryInstrumentedTest {
             repository.select(null)
         }
         assertEquals(LocaleList.getEmptyLocaleList(), localeManager.applicationLocales)
+    }
+
+    /**
+     * What a ViewModel keeping resolved text relies on: read at the moment
+     * `interfaceLanguage` changes, the application context already answers in the new
+     * language. Read when `selectedLanguage` changes, it would still answer in the old one.
+     */
+    @Test
+    fun whenTheInterfaceLanguageChangesTheApplicationContextAlreadyAnswersInIt() = runBlocking {
+        val repository = AppLanguageRepositoryImpl(context)
+        val resolved = CompletableDeferred<String>()
+        // Unconfined: the read runs inside the emission, on the thread that made it.
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        scope.launch {
+            repository.interfaceLanguage.drop(1).collect {
+                resolved.complete(context.getString(R.string.interface_language_tag))
+            }
+        }
+        try {
+            repository.select("es")
+
+            assertEquals("es", withTimeout(WAIT_MS) { resolved.await() })
+        } finally {
+            scope.cancel()
+            repository.select(null)
+        }
     }
 
     private fun waitFor(condition: () -> Boolean) {

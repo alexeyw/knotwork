@@ -3,6 +3,8 @@ package app.knotwork.android.presentation.ui.tools
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.platform.app.InstrumentationRegistry
+import app.knotwork.android.R
 import app.knotwork.android.data.repositories.McpServerRepositoryImpl
 import app.knotwork.android.domain.connection.ConnectionFailure
 import app.knotwork.android.domain.models.AgentTool
@@ -111,5 +113,21 @@ class ToolDetailScreenTest {
 
         composeTestRule.onNodeWithText("Reads the device clock").assertIsDisplayed()
         composeTestRule.onNodeWithText(text = "timezone", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun builtInTool_showsTheInterfaceStringAndNotWhatTheModelReads() {
+        val tool = AgentTool(name = "edit_file", description = "What the model reads", parameters = "{}")
+        val viewModel = mockk<ToolsViewModel>(relaxed = true)
+        every { viewModel.uiState } returns MutableStateFlow(ToolsUiState(localTools = listOf(tool)))
+
+        composeTestRule.setContent {
+            ToolDetailScreen(toolId = tool.name, onBack = {}, viewModel = viewModel)
+        }
+
+        val shown = InstrumentationRegistry.getInstrumentation().targetContext
+            .getString(R.string.tool_description_edit_file)
+        composeTestRule.onNodeWithText(shown).assertIsDisplayed()
+        composeTestRule.onNodeWithText("What the model reads").assertDoesNotExist()
     }
 }

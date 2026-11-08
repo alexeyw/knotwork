@@ -17,8 +17,8 @@ import androidx.compose.runtime.Immutable
  * @property offlineBarCopy Label of its copy action.
  * @property opensInBrowser What a screen reader announces after the name of a
  *   row that leaves the app.
- * @property backDescription Content description of the reader's back
- *   affordance.
+ * @property backDescription Content description of the back arrow in the list's
+ *   and the reader's top bars.
  * @property dismissDescription Content description of the in-body refusal's
  *   dismissal.
  */

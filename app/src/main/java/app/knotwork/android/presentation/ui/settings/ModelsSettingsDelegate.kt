@@ -11,7 +11,6 @@ import app.knotwork.android.domain.repositories.GenerationSettings
 import app.knotwork.android.domain.repositories.LocalModelRepository
 import app.knotwork.android.domain.repositories.requiredCredential
 import app.knotwork.android.domain.usecases.TestBackendUseCase
-import app.knotwork.android.presentation.ui.settings.provider.displayName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -147,7 +146,6 @@ class ModelsSettingsDelegate(
         ) { credential, model ->
             ProviderSummary(
                 id = id,
-                displayName = id.displayName(appContext),
                 // Only its presence is read for an address-based provider — the row shows the
                 // address itself through `endpointHint`.
                 keyFingerprint = credential?.takeIf { it.isNotBlank() }?.let { maskKey(it) },
