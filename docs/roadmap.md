@@ -185,10 +185,11 @@ migrations.
 
 ### Localization
 
-All user-visible strings are currently English-only. Once the UI surface
-stabilises, externalising strings for translation and accepting
-community-contributed locales is a natural, well-bounded direction — and
-a good area for first-time contributors.
+The app ships in English, Russian and Spanish. Another language is a
+natural, well-bounded addition and a good area for first-time
+contributors: it takes a translation of the interface strings, the
+bundled presets and the in-app help, and the build checks that none of
+them is missing.
 
 ## How to get involved
 
