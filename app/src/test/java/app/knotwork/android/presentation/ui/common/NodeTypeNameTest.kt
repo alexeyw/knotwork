@@ -1,15 +1,14 @@
-package app.knotwork.android.presentation.ui.taskmonitor
+package app.knotwork.android.presentation.ui.common
 
 import app.knotwork.android.domain.models.NodeType
-import app.knotwork.android.presentation.ui.common.UiText
 import app.knotwork.design.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * A running step is named by its node type in the interface language: the run
- * reports the type's code, and the task monitor used to show the code itself.
+ * A node type is named in the interface language: a run reports the type's code, and
+ * the task monitor and the metrics screen used to show the code itself.
  */
 class NodeTypeNameTest {
 

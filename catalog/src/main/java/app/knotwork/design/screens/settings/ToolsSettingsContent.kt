@@ -2,21 +2,13 @@ package app.knotwork.design.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import app.knotwork.design.R
-import app.knotwork.design.components.controls.KnotworkSegmentedControl
-import app.knotwork.design.components.text.Text
 import app.knotwork.design.icons.AppIcons
 import app.knotwork.design.theme.KnotworkTheme
-import app.knotwork.design.tokens.KnotworkTextStyles
 
 /**
  * Tools-&-workspace category sub-screen. Basic tier surfaces the tool-approval
@@ -28,7 +20,6 @@ import app.knotwork.design.tokens.KnotworkTextStyles
  * @param modifier Layout modifier.
  * @param callbacks Interaction callbacks.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ToolsSettingsContent(
     state: ToolsSettingsViewState,
@@ -46,33 +37,11 @@ fun ToolsSettingsContent(
         modifier = modifier,
     ) {
         SettingsAnchor(anchorKey = SettingsRowAnchors.TOOL_APPROVAL_POLICY) {
-            val approveTitle = stringResource(R.string.knotwork_settings_restrictions_approve)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp3),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                // FlowRow, like every other glyph site: a plain Row measures the
-                // unweighted label against the whole 1f column and leaves the
-                // 28 dp glyph nothing — and this label already fills both lines
-                // at 1x, so the glyph would have been squeezed to zero width.
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = approveTitle,
-                        style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    SettingsHintGlyph(settingName = approveTitle)
-                }
-                KnotworkSegmentedControl(
-                    options = listOf(state.approveAllLabel, state.approveSensitiveLabel, state.approveNeverLabel),
-                    selectedIndex = state.approveSelection.toIndex(),
-                    onSelect = { callbacks.onApproveSelectionChange(approveOptionFromIndex(it)) },
-                    modifier = Modifier.weight(SEGMENTED_TRAILING_WEIGHT),
-                )
-            }
+            ToolApprovalRow(
+                options = listOf(state.approveAllLabel, state.approveSensitiveLabel, state.approveNeverLabel),
+                selectedIndex = state.approveSelection.toIndex(),
+                onSelect = { callbacks.onApproveSelectionChange(approveOptionFromIndex(it)) },
+            )
             SettingsHintBody()
         }
         SettingsAnchor(anchorKey = SettingsRowAnchors.BLOCK_DESTRUCTIVE_TOOLS) {

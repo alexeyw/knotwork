@@ -398,7 +398,16 @@ private fun MemoryStatsCard(header: MemoryStatsHeader, callbacks: MemoryCallback
             .padding(KnotworkTheme.spacing.sp4),
         verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        // A flow, not a row: a row measured the Compact button first and left the counts
+        // what remained, so a larger font broke "memories" inside the word. The flow moves
+        // the button under the counts once their longest word would not fit beside it. No
+        // gap between the two, as in the row: at the default font the meta line already
+        // runs up to the button, and a gap would wrap its last word.
+        FlowRow(
+            itemVerticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(KnotworkTheme.spacing.sp2),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(

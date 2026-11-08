@@ -668,6 +668,7 @@ Only Kotlin files appear inside the generated blocks.
       - `ConnectionTestTest.kt` - Unit tests for `ConnectionTest`, the state of a Test connection row.
       - `JournalExportDelegateTest.kt` - Behaviour of the shared journal-export half of the two journal ViewModels.
       - `JournalExportShareTest.kt` - The share half of the journal export — the part that touches the platform and therefore cannot be reached from the delegate's own tests.
+      - `NodeTypeNameTest.kt` - A node type is named in the interface language: a run reports the type's code, and the task monitor and the metrics screen used to show the code itself.
       - `RunTerminationCopyMapperTest.kt` - Guards the single vocabulary of a stopped run.
       - `TestSubjectTest.kt` - Every state of a test row resolved into its words — the copy the design hand-off fixed, per subject: a hosted provider, a server the user runs, an MCP server.
       - `UiTextTest.kt` - Unit tests for `UiText`.
@@ -770,7 +771,6 @@ Only Kotlin files appear inside the generated blocks.
       - `SplashStateMappingTest.kt` - Verifies the `SplashUiState.toViewState(...)` mapper that bridges the app-side cold-start projection to the catalog `SplashViewState` consumed by `SplashContent`.
       - `SplashViewModelTest.kt` - Verifies that `SplashViewModel` folds `InitProgress` emissions into the UI state correctly across the success path, the failed path, the retry path, and the data-locked recovery flow (typed-confirm full reset).
     - `taskmonitor/` - Tests for the task monitor.
-      - `NodeTypeNameTest.kt` - A running step is named by its node type in the interface language: the run reports the type's code, and the task monitor used to show the code itself.
       - `TaskMonitorViewModelTest.kt` - Tests for TaskMonitorViewModel.
     - `tools/` - Tests for the Tools surface, the MCP server editor and the domain allowlist.
       - `AllowedDomainsViewModelTest.kt` - Unit tests for `AllowedDomainsViewModel` — the add-field feedback computation (delegated to `HttpRequestPolicy.normalizeDomain`) and the add / remove persistence gestures.

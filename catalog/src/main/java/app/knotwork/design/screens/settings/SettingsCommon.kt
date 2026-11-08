@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
@@ -64,12 +65,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.chips.ChipStyle
 import app.knotwork.design.components.chips.KnotworkChip
+import app.knotwork.design.components.controls.KnotworkSegmentedControl
 import app.knotwork.design.components.dialogs.TypedConfirmDialog
 import app.knotwork.design.components.dialogs.TypedConfirmDialogState
 import app.knotwork.design.components.misc.KnotworkLoader
@@ -954,6 +957,73 @@ internal fun SettingSliderList(
     }
 }
 
+// ─── Tool approval row ───────────────────────────────────────────────────────
+
+/**
+ * The "Approve tool calls" row of the hub and of the Tools screen: its label with
+ * the help glyph, and the segmented control choosing which calls ask first.
+ *
+ * The control sits beside the label while its options fit there on one row and
+ * the label keeps its longest word whole; the control then takes its trailing
+ * share of the width ([SEGMENTED_TRAILING_WEIGHT]), more if its options need it.
+ * Otherwise the label goes above and the control takes the full width, where it
+ * stacks its options itself if they still do not fit. A plain `Row` measured the
+ * control's fixed share first and a larger font cut the options and broke the
+ * label inside a word.
+ *
+ * @param options Labels of the options, in the order of [ApproveToolCallsOption].
+ * @param selectedIndex Index of the selected option.
+ * @param onSelect Called with the index of the option the user picks.
+ */
+@Composable
+internal fun ToolApprovalRow(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    val title = androidx.compose.ui.res.stringResource(R.string.knotwork_settings_restrictions_approve)
+    val gap = KnotworkTheme.spacing.sp3
+    val stackedGap = KnotworkTheme.spacing.sp2
+    Layout(
+        content = {
+            // The glyph follows the label's last line instead of claiming a column of its own.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = KnotworkTextStyles.BodySm.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                SettingsHintGlyph(settingName = title)
+            }
+            KnotworkSegmentedControl(options = options, selectedIndex = selectedIndex, onSelect = onSelect)
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val (label, control) = measurables
+        val width = constraints.maxWidth
+        val gapPx = gap.roundToPx()
+        val labelLeast = label.minIntrinsicWidth(Constraints.Infinity)
+        val controlRow = control.maxIntrinsicWidth(Constraints.Infinity)
+        if (labelLeast + gapPx + controlRow <= width) {
+            val share = ((width - gapPx) * SEGMENTED_TRAILING_WEIGHT / (1f + SEGMENTED_TRAILING_WEIGHT)).toInt()
+            val controlWidth = maxOf(share, controlRow).coerceAtMost(width - gapPx - labelLeast)
+            val labelWidth = width - gapPx - controlWidth
+            val labelPlaceable = label.measure(Constraints(maxWidth = labelWidth))
+            val controlPlaceable = control.measure(Constraints.fixedWidth(controlWidth))
+            val height = maxOf(labelPlaceable.height, controlPlaceable.height)
+            layout(width, height) {
+                labelPlaceable.placeRelative(0, (height - labelPlaceable.height) / 2)
+                controlPlaceable.placeRelative(labelWidth + gapPx, (height - controlPlaceable.height) / 2)
+            }
+        } else {
+            val labelPlaceable = label.measure(Constraints(maxWidth = width))
+            val controlPlaceable = control.measure(Constraints.fixedWidth(width))
+            val controlTop = labelPlaceable.height + stackedGap.roundToPx()
+            layout(width, controlTop + controlPlaceable.height) {
+                labelPlaceable.placeRelative(0, 0)
+                controlPlaceable.placeRelative(0, controlTop)
+            }
+        }
+    }
+}
+
 // ─── Search deep-link highlight ──────────────────────────────────────────────
 
 /**
@@ -1117,10 +1187,10 @@ private val SETTINGS_ANCHOR_PADDING = 2.dp
 private const val SETTINGS_ANCHOR_FILL_ALPHA = 0.07f
 
 /**
- * Relative weight of the trailing segmented control inside the "Approve tool
- * calls" row so each option fits its longest label at the default font scale.
+ * Share of the "Approve tool calls" row the segmented control takes beside the
+ * label, against the label's 1 ([ToolApprovalRow]).
  */
-internal const val SEGMENTED_TRAILING_WEIGHT = 2.5f
+private const val SEGMENTED_TRAILING_WEIGHT = 2.5f
 
 /** Visual scale of the Material3 Switch so it stays balanced against 14 sp titles. */
 private const val SWITCH_SCALE = 0.78f

@@ -71,6 +71,16 @@ details.
 
 ### Fixed
 
+- **Large fonts no longer break words or cut labels** on the settings
+  hub, the Tools settings, the performance card, Live metrics and the
+  Memory overview. At 200 % a word such as *Approve* or *memories* used
+  to split across two lines, or a label ended cut off; the options of
+  *Approve tool calls* now
+  stack when they do not fit side by side, and a row's value or button
+  moves under its label. *Sensitive +* was cut even at the default size.
+- **Live metrics names node types** (*Intent Router*, *Tool*) in the
+  time-per-node-type rows, as the task monitor does, instead of their
+  codes (`INTENT_ROUTER`).
 - **The help names three controls as the app shows them**: **Activate** on the
   Models screen (it said *Make Active*), Memory's **Compact** (it said
   *Compact Memory*) and the More tab's **Tasks** row (it said *Active tasks*,
