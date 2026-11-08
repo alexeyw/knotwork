@@ -182,9 +182,11 @@ install only the phone's language.
 Android re-creates the screens in the new language and the process lives
 on, which sets where words may live:
 
-- `domain` and `data` carry none a person reads. A failure the app words
-  itself travels as a type (`ModelLoadError`, `ConnectionFailure`) and the
-  screen names it.
+- `domain` and `data` hold no displayed wording of their own. A failure the
+  app words itself travels as a type (`ModelLoadError`, `ConnectionFailure`)
+  and the screen names it. A name the app gives and a row it saves in a chat
+  come through a `domain` port (`DefaultNames`, `ChatSystemRows`) and are
+  stored as written, in the language of the moment.
 - A ViewModel outlives the re-creation, so it hands its screen a resource
   id or a typed value, and the screen resolves it.
 - What a model reads — system prompts, tool descriptions, tool results —
