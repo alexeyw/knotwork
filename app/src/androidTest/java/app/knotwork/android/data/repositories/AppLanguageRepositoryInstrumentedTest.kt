@@ -9,7 +9,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -68,8 +67,9 @@ class AppLanguageRepositoryInstrumentedTest {
         // Unconfined: the read runs inside the emission, on the thread that made it.
         val scope = CoroutineScope(Dispatchers.Unconfined)
         scope.launch {
-            repository.interfaceLanguage.drop(1).collect {
-                resolved.complete(context.getString(R.string.interface_language_tag))
+            // By value, not `drop(1)`: an earlier test's undo may still be on its way.
+            repository.interfaceLanguage.collect { language ->
+                if (language == "es") resolved.complete(context.getString(R.string.interface_language_tag))
             }
         }
         try {
