@@ -22,9 +22,12 @@ class AppLanguageRepositoryInstrumentedTest {
 
     @Test
     fun theLanguagesOfferedAreTheBuildsDefaultFirst() {
-        // The order the build's generated `LocaleConfig` lists them in (read from the
-        // generated resource: en, es, ru).
-        assertEquals(listOf("en", "es", "ru"), AppLanguageRepositoryImpl(context).supportedLanguages())
+        val languages = AppLanguageRepositoryImpl(context).supportedLanguages()
+
+        assertEquals(AppLanguageRepositoryImpl.DEFAULT_LANGUAGE, languages.first())
+        // Only the first place is ours: `LocaleConfig` gathers the generated file's names into a
+        // `HashSet`, so the rest come in that set's order, not the file's.
+        assertEquals(listOf("en", "es", "ru"), languages.sorted())
     }
 
     @Test
