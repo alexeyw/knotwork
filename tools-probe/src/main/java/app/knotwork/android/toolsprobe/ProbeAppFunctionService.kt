@@ -1,7 +1,7 @@
 package app.knotwork.android.toolsprobe
 
 import androidx.annotation.RequiresApi
-import androidx.appfunctions.AppFunction
+import androidx.appfunctions.AppFunctionDeclaration
 import androidx.appfunctions.AppFunctionService
 import androidx.appfunctions.AppFunctionServiceEntryPoint
 
@@ -9,7 +9,7 @@ import androidx.appfunctions.AppFunctionServiceEntryPoint
  * Single-function AppFunction surface shipped by the `:tools-probe` debug app for the
  * end-to-end test harness.
  *
- * The class declares one `@AppFunction`: [echo], which returns its `message` argument
+ * The class declares one `@AppFunctionDeclaration`: [echo], which returns its `message` argument
  * verbatim. Its sole purpose is to give the agent's caller-side path (`LocalAppFunctionManager`
  * → `ToolRepository.executeTool` → system `AppFunctionManager`) a deterministic remote
  * target installed on the device under test.
@@ -39,6 +39,6 @@ abstract class ProbeAppFunctionService : AppFunctionService() {
      * @param message Free-form text to reflect back. Empty text is accepted.
      * @return Exactly the text passed as the message.
      */
-    @AppFunction(isDescribedByKDoc = true)
+    @AppFunctionDeclaration(isDescribedByKDoc = true)
     suspend fun echo(message: String): String = message
 }

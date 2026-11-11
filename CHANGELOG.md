@@ -20,6 +20,10 @@ details.
   GPT-5, GPT-5 mini, GPT-5 nano and o3 on 11 December. A saved choice of one of
   them runs on the provider's default, Claude Sonnet 4.6 or GPT-5.4, and the
   provider's screen says so.
+- **The AppFunctions library is 1.0.0-rc01** (was 1.0.0-alpha12). The
+  `search` function Knotwork publishes to other apps on Android 16 and later
+  keeps its id, description and parameters, and who may call it is unchanged:
+  any caller Android allows to call app functions.
 
 ## [0.14.0] - 2026-11-08
 

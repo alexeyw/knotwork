@@ -1,7 +1,7 @@
 package app.knotwork.android.data.tools.local.appfunctions
 
 import androidx.annotation.RequiresApi
-import androidx.appfunctions.AppFunction
+import androidx.appfunctions.AppFunctionDeclaration
 import androidx.appfunctions.AppFunctionService
 import androidx.appfunctions.AppFunctionServiceEntryPoint
 import dagger.hilt.android.AndroidEntryPoint
@@ -10,8 +10,9 @@ import javax.inject.Inject
 /**
  * The AppFunctions Knotwork publishes to other apps — today one, `search`.
  *
- * Every `@AppFunction` of the app is declared here and nowhere else: the AppFunctions
- * compiler reads this entry point, generates the concrete service named in
+ * Every function the app publishes is declared here, with `@AppFunctionDeclaration`, and
+ * nowhere else: the AppFunctions compiler reads this entry point, generates the concrete
+ * service named in
  * [AppFunctionServiceEntryPoint.serviceName] (`KnotworkAppFunctionService`, same package)
  * with the dispatch code, and writes the function inventory to
  * `assets/knotwork_app_functions.xml`. The app registers that generated service in its
@@ -29,6 +30,12 @@ import javax.inject.Inject
  * it that way. Each method only delegates: the logic lives in injectable
  * classes ([SearchAppFunction]) that share caches and limits with the in-agent path and
  * are tested without a service.
+ *
+ * **No `@AppFunctionAccessLevel`, on purpose.** Without it a function takes the library's
+ * default, `ACCESS_LEVEL_ANDROID_TRUSTED`: any caller Android lets hold
+ * `EXECUTE_APP_FUNCTIONS` may call it — the system assistants the publication is for.
+ * `search` only reads public data and stops on either of its two switches, so a narrower
+ * level would cut those callers off and protect nothing.
  */
 @RequiresApi(36)
 @AndroidEntryPoint
@@ -58,6 +65,6 @@ abstract class AgentAppFunctionService : AppFunctionService() {
     // The KDoc above is published: `isDescribedByKDoc` turns it into the description the
     // calling agent reads, so it is written for that agent and names parameters in plain
     // words — KDoc links would reach it as literal brackets.
-    @AppFunction(isDescribedByKDoc = true)
+    @AppFunctionDeclaration(isDescribedByKDoc = true)
     suspend fun search(query: String, lang: String): String = searchAppFunction.search(query, lang)
 }

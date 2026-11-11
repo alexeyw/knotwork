@@ -149,8 +149,8 @@ class LocalAppFunctionManager(private val context: Context, private val codec: A
         // Take one snapshot of the published functions, build the fresh discovery map, and
         // publish it atomically: the new immutable map replaces the @Volatile reference in
         // a single write, so concurrent readers cannot observe a partially-mutated cache.
-        // (`observeAppFunctions(spec)`, the stream this read the first value of, is
-        // restricted to the library itself from AppFunctions alpha11 on.)
+        // (`observeAppFunctions(spec)`, the stream this read the first value of, was
+        // restricted to the library itself in AppFunctions alpha11 and is gone by 1.0.0-rc01.)
         val fresh = mutableMapOf<String, DiscoveredAppFunction>()
         val tools = manager.searchAppFunctions(searchSpec).map { metadata ->
             val qualified = qualify(metadata.packageName, metadata.id)

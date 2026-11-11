@@ -262,7 +262,7 @@ Only Kotlin files appear inside the generated blocks.
   - `tools/` - Tests for the tool layer.
     - `local/` - Tests for the local tool catalogue, the AppFunction manager and the argument codec.
       - `AppFunctionDataCodecTest.kt` - Unit tests for `AppFunctionDataCodec`.
-      - `appfunctions/` - Tests for the callee-side `@AppFunction` wrappers.
+      - `appfunctions/` - Tests for the callee-side `@AppFunctionDeclaration` wrappers.
         - `SearchAppFunctionTest.kt` - Unit tests for `SearchAppFunction`.
       - `DelegateTaskToolTest.kt` - Tests for DelegateTaskTool.
       - `executors/` - Tests for the `LocalToolExecutor` implementations.
