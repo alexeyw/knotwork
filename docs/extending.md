@@ -409,11 +409,11 @@ can never diverge. An unparsable call must fall back to the strictest risk.
 
 If you want a third-party app to be able to call your tool through the
 system [`AppFunctionManager`](https://developer.android.com/reference/android/app/appfunctions/AppFunctionManager),
-add an `@AppFunction` method to the app's one entry point,
+add an `@AppFunctionDeclaration` method to the app's one entry point,
 [`AgentAppFunctionService`](../app/src/main/java/app/knotwork/android/data/tools/local/appfunctions/AgentAppFunctionService.kt)
 — an abstract `AppFunctionService` annotated `@AppFunctionServiceEntryPoint`
 ([`androidx.appfunctions`](https://developer.android.com/ai/appfunctions/add-appfunctions),
-still alpha). The AppFunctions compiler generates the concrete
+not yet stable). The AppFunctions compiler generates the concrete
 `KnotworkAppFunctionService` and its dispatch from it; you do **not** add a
 second entry point or write a manual router. Android 16 and later only.
 
@@ -424,6 +424,13 @@ system apps only — so in practice the caller that reaches your function
 is a system assistant, not an arbitrary app from the store. Publish the
 function anyway if it belongs in that catalogue, but do not expect a
 peer app to invoke it.
+
+A function declared without `@AppFunctionAccessLevel` takes the broadest
+level, `ACCESS_LEVEL_ANDROID_TRUSTED`: any caller allowed to hold
+`EXECUTE_APP_FUNCTIONS`. The annotation (still experimental) narrows it to
+`ACCESS_LEVEL_SYSTEM` or `ACCESS_LEVEL_SELF`. `search` keeps the default on
+purpose, and a new function does the same unless narrowing it is decided
+for a reason.
 
 Only expose tools that are safe to run on behalf of an unknown caller —
 typically `READ_ONLY` operations. `schedule_task` and `delegate_task`
@@ -460,7 +467,7 @@ of them at once without touching trigger or Quick-Settings work.
    }
    ```
 2. **Declare the function on the entry point.** Inject the class into
-   `AgentAppFunctionService` and add a one-line `@AppFunction` method that
+   `AgentAppFunctionService` and add a one-line `@AppFunctionDeclaration` method that
    delegates to it. With `isDescribedByKDoc = true` the method's KDoc
    becomes the description the calling agent reads — write it for that
    agent, and name parameters in plain words (a KDoc link reaches it as
@@ -475,7 +482,7 @@ of them at once without touching trigger or Quick-Settings work.
     * @param arg What to do it to. Must not be blank.
     * @return The result, as plain text.
     */
-   @AppFunction(isDescribedByKDoc = true)
+   @AppFunctionDeclaration(isDescribedByKDoc = true)
    suspend fun doThing(arg: String): String = myAppFunction.run(arg)
    ```
 3. **The compiler does the rest.** The
@@ -1617,7 +1624,7 @@ double-check it for every recipe in this guide.**
 | A new field on a `NodeConfig` (catalog) | `catalog/.../pipelineeditor/NodeConfig.kt` · the type's form body (`NodeConfigModelForms.kt`, `NodeConfigFlowForms.kt` or `NodeConfigTargetForms.kt`) + `NodeConfigValidation.kt` if it is edited · `presentation/ui/pipeline/editor/config/NodeConfigCodec.kt` (encode/decode, and `apply` if it must reach the runtime) · `buildtools/CookbookDocsGenerator.kt` (`FIELD_REACH` — generation fails without it) + run `./gradlew :app:generateCookbookDocs` · `CookbookRuntimeReachTest` checks the published verdict against the codec · **`pipeline-editor.html`** envelope encode/decode so the field round-trips — and, if its verdict is `RoundTripOnly`, **no** control in `renderFormFields`: `verifyBrowserEditorConstants` fails on a form control for a field no run reads. A `Runtime` field needs the whole chain instead — read from the flat `config` in `importFromJson`, set in `deriveRichFromFlat`, a control in `renderFormFields`, written by `encodeRichEnvelope` and `richToFlat`, exported by `exportToJson`, and never read from the envelope in `decodeRichEnvelope` (the one exception is the closed `LEGACY_ENVELOPE_FALLBACK` list in `BrowserEditorRuntimeFieldGuard`, for files older editors wrote); the same task names the missing link. The browser's import may read only `config` keys the app's importer reads (`CONFIG_KEYS` in `PipelineJsonSerializer`) — `BrowserEditorImportParityGuard` |
 | A new `Tool`                 | a new `LocalToolExecutor` implementation · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · declare `ToolRisk` correctly · its description in `res/values*/strings_tool_descriptions.xml` and `BUILT_IN_TOOL_DESCRIPTIONS` (`BuiltInToolDescriptionsTest`) · executor unit test · optional Compose test if new UI |
 | A new **workspace tool**     | a new `LocalToolExecutor` that goes through `AgentWorkspace` (never raw `File`) · `di/LocalToolsModule.kt` (`@Binds @IntoMap @StringKey`) · risk tier in `ToolRepositoryImpl` built-in list · its description in `res/values*/strings_tool_descriptions.xml` and `BUILT_IN_TOOL_DESCRIPTIONS` · `docs/user-guide.md` (built-in-tools table) · executor unit test against a `@TempDir`-backed `AgentWorkspace` (happy path + `../` traversal + quota/not-found) |
-| A new callee-side AppFunction | an injectable logic class under `data/tools/local/appfunctions/` · a one-line `@AppFunction(isDescribedByKDoc = true)` method on `AgentAppFunctionService` (KDoc written for the calling agent) · logic-class unit test · scenario in `AppFunctionsEndToEndTest` |
+| A new callee-side AppFunction | an injectable logic class under `data/tools/local/appfunctions/` · a one-line `@AppFunctionDeclaration(isDescribedByKDoc = true)` method on `AgentAppFunctionService` (KDoc written for the calling agent) · logic-class unit test · scenario in `AppFunctionsEndToEndTest` |
 | A new cloud provider         | `domain/models/CloudProvider.kt` · `data/engine/KoogClientFactory.kt` · `data/engine/KoogCloudLlmModelResolver.kt` · `data/engine/KoogModelMapper.kt` (a provider Koog lists) · `data/local/ApiKeyManager.kt` · `domain/models/ProviderSummary.kt` (`ProviderId` — the Settings provider list and picker) · **`domain/engine/CloudStreamEnd.kt`** (`reportsFinishReason` — exhaustive `when`, decide it by measurement per §3.6) · `docs/user-guide.md` (the truncated-answer table under Settings → Models) · factory / resolver unit tests · `CloudStreamEndTest` |
 | A new prompt variable        | a new `PromptVariableProvider` implementation · `di/PromptTemplateModule.kt` (`@Binds @IntoSet`) · **`pipeline-editor.html`** (`PROMPT_VARIABLES`) · `docs/user-guide.md` (variables table) · provider unit test · `PromptTemplateEngine` round-trip test           |
 | A new bundled pipeline preset | a JSON file under `assets/presets/pipelines/` · `PipelinePresetCatalogValidationTest.expectedFileNames` · `BundledPresetCatalog.DISPLAY_ORDER` (unless `internal`) · its texts in every `assets/presets/l10n/<language>.json` (§5.5) · run `./gradlew :app:generateBrowserEditorConstants` (`BUILTIN_PIPELINE_PRESETS` is generated) · catalogue + `PipelinePresetIntegrationTest` already cover the directory |

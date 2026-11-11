@@ -1115,7 +1115,7 @@ The agent talks to AppFunctions in two directions:
   `knotwork_app_functions.xml` asset; the manifest registers that service,
   guarded by `BIND_APP_FUNCTION_SERVICE`, and names the inventory
   (`AppFunctionServiceManifestGuardTest` keeps the three in step). Each
-  `@AppFunction` delegates to a Hilt-injected class, so the callee path
+  `@AppFunctionDeclaration` delegates to a Hilt-injected class, so the callee path
   shares caches and rate limits with the caller path. The one published
   function is `search`, whose body is `SearchAppFunction`, a thin shell over
   the built-in `search_tool` (READ_ONLY). Because it calls `SearchTool` directly, the checks

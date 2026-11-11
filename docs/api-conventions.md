@@ -67,8 +67,11 @@ interface LiteRtRepository {
   concrete service and its dispatch; the app registers that service in its
   manifest (`AppFunctionServiceManifestGuardTest` holds the two in step).
   Do **not** write a manual router or a second entry point, and keep each
-  `@AppFunction` a one-line delegation to an injectable class that holds the
-  logic. Android 16+ only. The recipe for a new function lives in
+  `@AppFunctionDeclaration` a one-line delegation to an injectable class that
+  holds the logic. A function carries no `@AppFunctionAccessLevel`: it keeps
+  the library's default, `ACCESS_LEVEL_ANDROID_TRUSTED` (any caller allowed to
+  hold `EXECUTE_APP_FUNCTIONS`), and a narrower level is a decision of its
+  own. Android 16+ only. The recipe for a new function lives in
   [`extending.md`](extending.md) §2.5.
 - **`AppFunctionDataCodec` is the single point of serialization.** Every
   conversion between the LLM-emitted JSON argument string and the typed

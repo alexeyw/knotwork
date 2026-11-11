@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
                         "Verify the agent APK still ships the inventory with: " +
                         "`unzip -p <agent-apk> assets/knotwork_app_functions.xml`. If the " +
                         "entry is missing, confirm AgentAppFunctionService.search is annotated " +
-                        "with @AppFunction so KSP regenerates it.",
+                        "with @AppFunctionDeclaration so KSP regenerates it.",
                 )
                 error("Agent AppFunctions are not visible to this probe on this device.")
             }

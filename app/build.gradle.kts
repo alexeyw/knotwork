@@ -2383,7 +2383,7 @@ val r8ProtectedPackages: List<String> = listOf("com.google.common.flogger.")
 // the on-device embedding path — and therefore all of long-term memory.
 //
 // The AppFunctions service is KSP output of this app that the platform binds BY
-// NAME, from the manifest, to dispatch every `@AppFunction` call. The manifest
+// NAME, from the manifest, to dispatch every AppFunction call. The manifest
 // reference keeps it today; a renamed or abstractified class would leave the
 // function listed and every call to it failing to bind. Being in the dex under its
 // own name, concrete, is exactly what this check asserts. (Until the entry-point

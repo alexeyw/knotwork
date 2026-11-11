@@ -143,10 +143,11 @@
 # What the platform loads BY NAME is the service KSP generates from the entry point
 # (`data.tools.local.appfunctions.KnotworkAppFunctionService`), bound through the
 # manifest — which is what keeps it. The service reaches its inventory and the
-# `@AppFunction` methods by ordinary calls, so R8 may rename those. The rule below
-# keeps the library's whole package as well: it still ships the older auto-merged
-# services and their name-loaded aggregated classes, unused here, and its consumer
-# rules keep `@AppFunctionSerializable` types by annotation. `verify<Variant>Instantiable`
+# `@AppFunctionDeclaration` methods by ordinary calls, so R8 may rename those. The rule
+# below keeps the library's whole package as well. It was written while the library
+# shipped older auto-merged services and their name-loaded aggregated classes; 1.0.0-rc01
+# ships neither, and whether the rule can narrow now has not been measured. The library's
+# consumer rules keep `@AppFunctionSerializable` types by annotation. `verify<Variant>Instantiable`
 # checks the generated service is in the dex under its own name. (Four rules here
 # once named the interfaces and the annotation in packages the library does not
 # use, and matched nothing.)
