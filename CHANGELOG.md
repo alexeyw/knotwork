@@ -13,6 +13,14 @@ details.
 
 ## [Unreleased]
 
+### Changed
+
+- **Five cloud models their providers switch off are gone from the lists.**
+  Anthropic retires Claude Sonnet 4.5 on 30 November 2026; OpenAI shuts down
+  GPT-5, GPT-5 mini, GPT-5 nano and o3 on 11 December. A saved choice of one of
+  them runs on the provider's default, Claude Sonnet 4.6 or GPT-5.4, and the
+  provider's screen says so.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added
