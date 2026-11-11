@@ -12,9 +12,8 @@ import javax.inject.Inject
  *
  * Every function the app publishes is declared here, with `@AppFunctionDeclaration`, and
  * nowhere else: the AppFunctions compiler reads this entry point, generates the concrete
- * service named in
- * [AppFunctionServiceEntryPoint.serviceName] (`KnotworkAppFunctionService`, same package)
- * with the dispatch code, and writes the function inventory to
+ * service named in [AppFunctionServiceEntryPoint.serviceName] (`KnotworkAppFunctionService`,
+ * same package) with the dispatch code, and writes the function inventory to
  * `assets/knotwork_app_functions.xml`. The app registers that generated service in its
  * manifest; `AppFunctionServiceManifestGuardTest` keeps the two in step, because a
  * mismatch compiles and runs and only shows on a device, as a function nobody can find.
