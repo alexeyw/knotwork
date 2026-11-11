@@ -37,7 +37,7 @@ class CloudModelListGuardTest {
      * The chat constants the app deliberately does not offer, each with its reason. "Retired" is the
      * provider's own deprecation page or a request with a real key answering "not found"; "shutdown
      * announced" is a date on that page — the app adds no model already scheduled to go, and a release
-     * drops an offered model whose date falls within a week of it.
+     * drops an offered model whose date falls within a week of it or before the next planned release.
      */
     private val notOffered: Map<CloudProvider, Map<LLModel, String>> = mapOf(
         CloudProvider.OPENAI to mapOf(
@@ -49,6 +49,10 @@ class CloudModelListGuardTest {
             OpenAIModels.Chat.GPT5_1Codex to "retired 2026-07-23 (OpenAI deprecations page)",
             OpenAIModels.Chat.GPT5_1CodexMax to "retired 2026-07-23 (OpenAI deprecations page)",
             OpenAIModels.Chat.GPT5_2Codex to "retired 2026-07-23 (OpenAI deprecations page)",
+            OpenAIModels.Chat.O3 to "shutdown announced for 2026-12-11 (OpenAI deprecations page)",
+            OpenAIModels.Chat.GPT5 to "shutdown announced for 2026-12-11 (OpenAI deprecations page)",
+            OpenAIModels.Chat.GPT5Mini to "shutdown announced for 2026-12-11 (OpenAI deprecations page)",
+            OpenAIModels.Chat.GPT5Nano to "shutdown announced for 2026-12-11 (OpenAI deprecations page)",
             OpenAIModels.Chat.GPT5Pro to "shutdown announced for 2026-12-11",
             OpenAIModels.Chat.GPT5_4Nano to "shutdown announced for 2027-04-01",
             OpenAIModels.Chat.GPT5_5Pro to "Responses API only, and no request to it has been measured",
@@ -57,6 +61,7 @@ class CloudModelListGuardTest {
             AnthropicModels.Sonnet_4 to "retired 2026-06-15 (Anthropic model deprecations page)",
             AnthropicModels.Opus_4 to "retired 2026-06-15 (Anthropic model deprecations page)",
             AnthropicModels.Opus_4_1 to "retired 2026-08-05 (Anthropic model deprecations page)",
+            AnthropicModels.Sonnet_4_5 to "shutdown announced for 2026-11-30 (Anthropic model deprecations page)",
         ),
         CloudProvider.GOOGLE to mapOf(
             GoogleModels.Gemini2_5Pro to "answers 404 to a key that had not used it (measured 2026-10-12)",

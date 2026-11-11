@@ -98,9 +98,9 @@ internal object ProviderPreview {
         apiKey = ProviderKeyUi(label = "Anthropic API key", value = "sk-ant-api03-7c1d"),
         model = ProviderModelUi(
             label = "Anthropic model",
-            value = "claude-opus-4-1",
-            options = listOf("claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-6"),
-            note = "claude-opus-4-1 is no longer offered — runs use claude-sonnet-4-5. Choose a model above.",
+            value = "claude-sonnet-4-5",
+            options = listOf("claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-6"),
+            note = "claude-sonnet-4-5 is no longer offered — runs use claude-sonnet-4-6. Choose a model above.",
         ),
     )
 

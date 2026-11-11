@@ -86,6 +86,25 @@ class KoogCloudModelCatalogTest {
     }
 
     @Test
+    fun `given a model shut down on 30 November or 11 December saved then runs use the default and say why`() {
+        // The ids as 0.14.0 saved them: a choice kept in settings or carried in a backup.
+        val retiring = mapOf(
+            CloudProvider.ANTHROPIC to listOf("claude-sonnet-4-5"),
+            CloudProvider.OPENAI to listOf("gpt-5", "gpt-5-mini", "gpt-5-nano", "o3"),
+        )
+        val defaults = mapOf(CloudProvider.ANTHROPIC to "claude-sonnet-4-6", CloudProvider.OPENAI to "gpt-5.4")
+
+        retiring.forEach { (provider, ids) ->
+            ids.forEach { saved ->
+                assertEquals(
+                    CloudModelInUse(defaults.getValue(provider), CloudModelFallback.NoLongerOffered(saved)),
+                    catalog.modelInUse(provider, saved),
+                )
+            }
+        }
+    }
+
+    @Test
     fun `given Ollama then a typed model is used as it is and nothing typed means its default`() {
         assertEquals(CloudModelInUse("qwen3:8b"), catalog.modelInUse(CloudProvider.OLLAMA, "qwen3:8b"))
         assertEquals(
