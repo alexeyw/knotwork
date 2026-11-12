@@ -19,6 +19,7 @@ Only Kotlin files appear inside the generated blocks.
   - `BackedUpSecretsGuardTest.kt` - Every owner of entries in a Keystore-backed store tells the backup what it holds.
   - `BoundedTextGuardTest.kt` - Census of how production code draws text: every text goes through the design system's bounded `Text`; the screens that show a text whole, and every input field, are named here with the reason.
   - `BundledDocumentationRoutingGuardTest.kt` - Keeps a document that ships in the app from opening in the browser.
+  - `BundledFontCoverageTest.kt` - Every character the interface shows is in the bundled fonts — or named, with its reason, on `config/fonts/uncovered-characters.txt`.
   - `CatalogStringsWiringTest.kt` - Every English default the design system gives a piece of interface text is replaced by the app with a resource.
   - `ChatExportNoNetworkKonsistTest.kt` - Konsist guard on the chat export: **a chat leaves the device only in the user's own hands, and only as the one file.**
   - `CloudStreamEndCallersGuardTest.kt` - Census of the code that turns a cloud model's stream into an answer — every caller of `executeStreaming` — and the rule that each asks `CloudStreamEnd` whether the stream was cut off.
