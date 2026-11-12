@@ -136,8 +136,18 @@ class BundledFontCoverageTest {
 
     @Test
     fun `escapes in resources, json and literals are read as the characters they stand for`() {
-        assertEquals("→ ' \" é", unescape("""→ \' \" é"""))
-        assertEquals(listOf(WASTEBASKET), unescape("""🗑""").codePoints().toArray().toList())
+        // The backslash is joined at run time: an editor or tool that resolves `\u` escapes in
+        // source would otherwise turn the input into the character it should decode to.
+        val slash = "\\"
+        assertEquals(
+            listOf(RIGHTWARDS_ARROW, ' '.code, '\''.code, ' '.code, '"'.code),
+            unescape(slash + "u2192 " + slash + "' " + slash + "\"").codePoints().toArray().toList(),
+        )
+        assertEquals(
+            listOf(WASTEBASKET),
+            unescape(slash + "uD83D" + slash + "uDDD1").codePoints().toArray().toList(),
+        )
+        assertEquals(listOf('n'.code), unescape(slash + "n").codePoints().toArray().toList())
     }
 
     /**
@@ -241,6 +251,7 @@ class BundledFontCoverageTest {
         const val SOURCES_SHOWN = 3
         const val HEX = 16
         const val WASTEBASKET = 0x1F5D1
+        const val RIGHTWARDS_ARROW = 0x2192
         const val ALL = "all"
         val FAMILIES = listOf("inter", "jetbrains_mono")
         val TEXT_ASSETS = setOf("json", "md")
