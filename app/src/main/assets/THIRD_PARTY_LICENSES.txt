@@ -18,25 +18,32 @@ Upstream: https://github.com/rsms/inter (v4.0)
 Copyright (c) 2016 The Inter Project Authors.
 License: SIL Open Font License, Version 1.1 — see `license_inter_ofl.txt`.
 
-Modifications: the upstream static TTFs have been subset to the Latin-1
-range plus a small set of typographic punctuation glyphs (en/em dash,
-curly quotes, bullet, ellipsis, trademark, euro). No glyph shapes were
-modified; the Inter reserved font name is preserved.
+Modifications: the upstream static TTFs (`extras/ttf/` of the 4.0 release)
+have been subset to Latin-1, typographic punctuation (en/em dash, curly
+quotes, bullet, ellipsis, trademark, euro), Cyrillic (U+0400-045F,
+U+0490-0491, U+04B0-04B1, the numero sign and the combining acute accent)
+and a few arrows and symbols; hinting was removed. The character list and
+the script that cuts the files are `config/fonts/` in the source
+repository. No glyph shapes were modified; the Inter reserved font name is
+preserved.
 
 
 JetBrains Mono font family
 --------------------------
 
 Files: `res/font/jetbrains_mono_regular.ttf`,
-       `res/font/jetbrains_mono_medium.ttf`
+       `res/font/jetbrains_mono_medium.ttf`,
+       `res/font/jetbrains_mono_semibold.ttf`,
+       `res/font/jetbrains_mono_bold.ttf`
 Upstream: https://github.com/JetBrains/JetBrainsMono (v2.304)
 Copyright (c) 2020 The JetBrains Mono Project Authors.
 License: SIL Open Font License, Version 1.1 — see
          `license_jetbrainsmono_ofl.txt`.
 
-Modifications: same Latin-1 + typographic punctuation subset as Inter.
-No glyph shapes were modified; the JetBrains Mono reserved font name is
-preserved.
+Modifications: the upstream static TTFs (`fonts/ttf/` of the 2.304
+release) have been subset to the same character list as Inter, without the
+code ligatures; hinting was removed. No glyph shapes were modified; the
+JetBrains Mono reserved font name is preserved.
 
 
 Universal Sentence Encoder (text-embedding model)

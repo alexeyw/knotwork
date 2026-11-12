@@ -15,6 +15,13 @@ details.
 
 ### Changed
 
+- **Russian text is drawn in the app's own fonts.** The bundled Inter and
+  JetBrains Mono now carry Cyrillic — Russian, Ukrainian, Belarusian,
+  Bulgarian, Serbian and Macedonian letters — and the arrows and symbols the
+  interface uses (`→`, `≈`, `№`, `▶`). Until now these fell back to the
+  system font in the middle of a line, beside the app's own digits and Latin
+  letters. The app grows by about 46 KB.
+
 - **Five cloud models their providers switch off are gone from the lists.**
   Anthropic retires Claude Sonnet 4.5 on 30 November 2026; OpenAI shuts down
   GPT-5, GPT-5 mini, GPT-5 nano and o3 on 11 December. A saved choice of one of

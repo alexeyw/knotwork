@@ -1,0 +1,37 @@
+# Characters kept in the bundled fonts (app/src/main/res/font/), read by subset_fonts.py.
+#
+# One code point (U+XXXX) or range (U+XXXX..U+YYYY) per line; `#` starts a comment.
+# Both families are cut from this one list; a character a typeface does not have is
+# simply absent from that family (JetBrains Mono 2.304 has no U+0000, U+0400, U+040D,
+# U+0450, U+045D, U+21B5, U+21BB, U+2665; Inter 4.0 has no U+000D, U+00AD).
+# BundledFontCoverageTest holds every font's character map inside this list.
+
+# Latin-1 and typographic punctuation — the original subset.
+U+0000
+U+000D
+U+0020..U+007E
+U+00A0..U+00FF
+U+2013..U+2014           # en and em dash
+U+2018..U+201D           # curly quotes
+U+2022                   # bullet
+U+2026                   # ellipsis
+U+20AC                   # euro sign
+U+2122                   # trade mark sign
+
+# Cyrillic — Google Fonts' `cyrillic` subset: Russian, Ukrainian, Belarusian,
+# Bulgarian, Serbian, Macedonian.
+U+0301                   # combining acute accent (stress mark)
+U+0400..U+045F
+U+0490..U+0491           # Ghe with upturn (Ukrainian)
+U+04B0..U+04B1           # straight U with stroke (Kazakh)
+U+2116                   # numero sign
+
+# Symbols the interface shows.
+U+2192                   # rightwards arrow
+U+2193                   # downwards arrow (download counts)
+U+21B5                   # downwards arrow with corner leftwards (console line breaks)
+U+21BB                   # clockwise open circle arrow (console: replayed node)
+U+2248                   # almost equal to
+U+25B6                   # black right-pointing triangle (console: node started)
+U+2665                   # black heart suit (like counts)
+U+2713                   # check mark
