@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.util.IdentityHashMap
 
 /**
  * Structural guard: **a bar at the top of a screen applies the status-bar inset,
@@ -43,6 +44,9 @@ import java.io.File
  * inputs through its compiled classes, so a change to a bar's code re-runs it.
  */
 class TopBarInsetGuardTest {
+
+    /** One index of composable definitions per source map a test reads (see [definitionIndex]). */
+    private val definitionIndexes = IdentityHashMap<Map<String, String>, Map<String, List<Definition>>>()
 
     @Test
     fun `given every Scaffold topBar slot when scanned then each bar it calls owns the status-bar inset`() {
@@ -147,6 +151,56 @@ class TopBarInsetGuardTest {
         assertTrue(slotViolations(sources).isEmpty())
     }
 
+    @Test
+    fun `given two files that define the same bar when a slot calls it then the file of the slot decides`() {
+        // The other file comes first, so only the preference for the slot's own file finds the bare bar.
+        val sources = mapOf(
+            "other/SelectionBar.kt" to """
+                @Composable
+                fun SelectionBar() {
+                    TopAppBar(title = { })
+                }
+            """.trimIndent(),
+            "screens/FilesContent.kt" to """
+                @Composable
+                fun FilesContent() {
+                    Scaffold(topBar = { SelectionBar() }) { }
+                }
+
+                @Composable
+                private fun SelectionBar() {
+                    Row(modifier = Modifier.fillMaxWidth()) { }
+                }
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("SelectionBar (FilesContent.kt)"), slotViolations(sources))
+    }
+
+    @Test
+    fun `given a plain function after a composable when a slot calls it then it is not taken for a bar`() {
+        // The annotation of `Title` sits before its closing `)`, and `Header` has none of its own.
+        val sources = mapOf(
+            "HeaderContent.kt" to """
+                @Composable
+                fun HeaderContent() {
+                    Scaffold(topBar = { Header() }) { }
+                }
+
+                @Composable
+                fun Title() = Text(
+                    "Files",
+                )
+
+                fun Header(): Int {
+                    return 0
+                }
+            """.trimIndent(),
+        )
+
+        assertTrue(slotViolations(sources).isEmpty())
+    }
+
     private data class Slot(val path: String, val text: String)
 
     private data class Definition(val path: String, val signature: String, val body: String)
@@ -181,34 +235,52 @@ class TopBarInsetGuardTest {
             .filter { it !in TEXT_LEAVES && definitionsOf(sources, it).isNotEmpty() }
             .toList()
 
+    /**
+     * The composable definitions of [name] in [sources], in source order — those in
+     * [preferPath] alone when that file defines it.
+     */
     private fun definitionsOf(
         sources: Map<String, String>,
         name: String,
         preferPath: String? = null,
     ): List<Definition> {
-        val all = sources.flatMap { (path, text) ->
-            Regex("""\bfun\s+$name\s*\(""").findAll(text)
-                .filter { isComposableAt(text, it.range.first) }
-                .map { match ->
-                    val bodyOpen = text.indexOf('{', match.range.last)
-                    // From `fun`, not from the annotation: a preceding declaration's
-                    // `content: @Composable` parameter must not make this one a container.
-                    val signature = text.substring(match.range.first, maxOf(bodyOpen, match.range.last))
-                    val body = if (bodyOpen < 0) "" else text.substring(bodyOpen, closingBrace(text, bodyOpen))
-                    Definition(path, signature, body)
-                }.toList()
-        }
+        val all = definitionIndex(sources)[name].orEmpty()
         return all.filter { it.path == preferPath }.ifEmpty { all }
     }
 
     /**
+     * Every composable function of [sources] whose name starts with a capital letter, by
+     * name, in source order — the only names the rules ask about. Built in one pass and kept
+     * per source map: looking each name up with its own pattern over every file made this
+     * guard take 12 s of each unit-test suite (`decisions.md §125`).
+     */
+    private fun definitionIndex(sources: Map<String, String>): Map<String, List<Definition>> =
+        definitionIndexes.getOrPut(sources) {
+            sources.flatMap { (path, text) ->
+                FUN_NAME.findAll(text)
+                    .filter { isComposableAt(text, it.range.first) }
+                    .map { match ->
+                        val bodyOpen = text.indexOf('{', match.range.last)
+                        // From `fun`, not from the annotation: a preceding declaration's
+                        // `content: @Composable` parameter must not make this one a container.
+                        val signature = text.substring(match.range.first, maxOf(bodyOpen, match.range.last))
+                        val body = if (bodyOpen < 0) "" else text.substring(bodyOpen, closingBrace(text, bodyOpen))
+                        match.groupValues[1] to Definition(path, signature, body)
+                    }.toList()
+            }.groupBy({ it.first }, { it.second })
+        }
+
+    /**
      * Whether the declaration starting at [funIndex] is annotated `@Composable`: the
-     * annotation must sit between the end of the previous declaration and `fun`.
+     * annotation must sit between the end of the previous declaration and `fun`. Searches
+     * back from `fun` in place — copying the text before every declaration made the census
+     * quadratic in the size of a file.
      */
     private fun isComposableAt(text: String, funIndex: Int): Boolean {
-        val preamble = text.substring(0, funIndex)
-        val previousEnd = maxOf(preamble.lastIndexOf("}\n"), preamble.lastIndexOf(")\n"))
-        return preamble.substring(maxOf(previousEnd, 0)).contains("@Composable")
+        // A two-character end mark must lie wholly before `fun`.
+        val lastStart = funIndex - 2
+        val previousEnd = maxOf(text.lastIndexOf("}\n", lastStart), text.lastIndexOf(")\n", lastStart))
+        return text.substring(maxOf(previousEnd, 0), funIndex).contains("@Composable")
     }
 
     /** Index just past the brace that closes the one at [open]. */

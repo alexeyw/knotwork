@@ -31,6 +31,11 @@ details.
   `search` function Knotwork publishes to other apps on Android 16 and later
   keeps its id, description and parameters, and who may call it is unchanged:
   any caller Android allows to call app functions.
+- **Two source guards in the test suite take about a second instead of 18.**
+  The top-bar inset guard and the design-system string guard searched every
+  source file once for each name they checked; they now read the sources once.
+  They report exactly what they reported before, and `./gradlew check` is about
+  half a minute shorter, as both unit-test suites run them.
 
 ## [0.14.0] - 2026-11-08
 
