@@ -237,13 +237,17 @@ class TopBarInsetGuardTest {
 
     /**
      * The composable definitions of [name] in [sources], in source order — those in
-     * [preferPath] alone when that file defines it.
+     * [preferPath] alone when that file defines it. [name] starts with a capital letter:
+     * the index holds no other, and a rule asking about one would pass on nothing.
      */
     private fun definitionsOf(
         sources: Map<String, String>,
         name: String,
         preferPath: String? = null,
     ): List<Definition> {
+        require(name.firstOrNull()?.isUpperCase() == true) {
+            "the definition index holds capitalised names only: $name"
+        }
         val all = definitionIndex(sources)[name].orEmpty()
         return all.filter { it.path == preferPath }.ifEmpty { all }
     }
