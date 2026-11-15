@@ -99,7 +99,8 @@ end-to-end:
 - All of an MCP server's tools turned on or off at once, and a session the
   server closed replaced without restarting the app.
 - Russian and other Cyrillic text drawn in the app's own fonts, with a build
-  check that every character the interface shows is in them.
+  check that every character the interface shows is in them or named, with
+  the reason, as an exception.
 
 See [README.md](../README.md) for the full feature list and
 [architecture.md](architecture.md) for how the pieces fit together.

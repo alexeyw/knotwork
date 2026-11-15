@@ -1,4 +1,4 @@
-<!-- translation of docs/faq.md, sha256 8442e03f5d9af2fa9d5d51ecf69849390820cb3234b15a394578afbc461df896 -->
+<!-- translation of docs/faq.md, sha256 b52e85ec787f2d9d3adeb1a2af0f76f5f2ca991058531e2a0557ee870ad73c31 -->
 <!-- en: frequently-asked-questions -->
 # Preguntas frecuentes
 
@@ -566,7 +566,7 @@ Lo que la app no hace hoy. Cada punto dice qué lo cambiaría.
   una búsqueda en memoria conserva uno de ellos por ejecución y descarta el
   resto como duplicados. Los datos fijados nunca se descartan así. El español,
   medido fuera del teléfono con el mismo modelo, sale mejor que el ruso y peor
-  que el inglés: 10 de 89 pares de datos sin relación parecen casi copias, y una
+  que el inglés: 10 de 89 pares de datos distintos parecen casi copias, y una
   búsqueda puso primero el dato correcto en 2 de 10 casos, frente a 9 en inglés.
   Otros idiomas no se han medido. OpenAI como **Modelo de embeddings** es
   multilingüe según su fabricante (no se ha medido aquí) y envía a OpenAI el

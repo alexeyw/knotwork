@@ -482,7 +482,7 @@ What the app does not do today. Each item says what would change it.
   search keeps one of them per run and drops the rest as duplicates. Pinned
   facts are never dropped this way. Spanish, measured off the phone with the
   same model, fares better than Russian and worse than English: 10 of 89 pairs
-  of unrelated facts read as near-copies, and a search put the right fact first
+  of different facts read as near-copies, and a search put the right fact first
   in 2 of 10 cases, against 9 in English. Other languages have not been
   measured. OpenAI as the **Embedding model** is multilingual by its maker's
   account — not measured here — and sends the text of your memories to OpenAI.
