@@ -44,6 +44,17 @@ class FilesMessenger @Inject constructor(
     }
 
     /**
+     * Surfaces a save-as that wrote nothing into the document the user picked and
+     * whose provider would not delete it: the empty file is still there, and the user
+     * needs its name to remove it.
+     *
+     * @param fileName The left document's name.
+     */
+    fun fileLeft(fileName: String) {
+        relay.post(UiText.Dynamic(context.getString(R.string.export_empty_file_left, fileName)))
+    }
+
+    /**
      * Reports the outcome of staging files for the system share sheet.
      *
      * Staging silently drops a file it cannot write, so a partial failure opened

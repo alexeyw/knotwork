@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.prompts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
+import app.knotwork.android.di.IoDispatcher
 import app.knotwork.android.domain.constants.PromptPresetConstants
 import app.knotwork.android.domain.models.NodeType
 import app.knotwork.android.domain.models.PromptPackCandidate
@@ -13,14 +14,20 @@ import app.knotwork.android.domain.repositories.PromptPresetRepository
 import app.knotwork.android.domain.services.DefaultNames
 import app.knotwork.android.domain.usecases.SavePromptAsPresetUseCase
 import app.knotwork.android.domain.usecases.promptpack.ExportPromptPackUseCase
+import app.knotwork.android.domain.usecases.promptpack.ExportedPromptPack
 import app.knotwork.android.domain.usecases.promptpack.ImportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.PromptPackCollisionChoice
 import app.knotwork.android.domain.usecases.promptpack.PromptPackImportResult
 import app.knotwork.android.domain.usecases.promptpack.ResolvePromptPackCollisionUseCase
+import app.knotwork.android.presentation.ui.common.ExportDocumentHandOff
+import app.knotwork.android.presentation.ui.common.PickedDocument
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.UnwrittenDocument
+import app.knotwork.android.presentation.ui.common.discardUnwritten
 import app.knotwork.android.presentation.ui.orchestrator.OrchestratorErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +35,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -50,7 +58,17 @@ class PromptLibraryViewModel @Inject constructor(
     private val resolvePromptPackCollisionUseCase: ResolvePromptPackCollisionUseCase,
     private val exportPromptPackUseCase: ExportPromptPackUseCase,
     private val defaultNames: DefaultNames,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
+
+    /**
+     * The rendered prompt the document picker is open for, from the picker's launch
+     * ([consumePendingExport]) until the picked document arrives ([exportTo]) or the
+     * pick is cancelled. Held here so a rotation while the picker is open keeps it: the
+     * screen used to keep it in composition, lost it, and left the file the picker had
+     * created empty.
+     */
+    private var awaitingExport: ExportedPromptPack? = null
 
     private val _uiState = MutableStateFlow(
         PromptLibraryUiState(availableVariables = computeAvailableVariables(promptVariableProviders)),
@@ -211,12 +229,56 @@ class PromptLibraryViewModel @Inject constructor(
     }
 
     /**
-     * Clears the parked export the moment the picker is launched, so a
-     * recomposition or configuration change cannot fire it twice for the
-     * same payload.
+     * Takes the parked export out of [PromptLibraryUiState.pendingExport] the moment
+     * the picker is launched, so a recomposition or configuration change cannot fire
+     * it twice for the same payload, and holds it until the picked document arrives
+     * ([exportTo]) or the pick is cancelled ([cancelExport]).
      */
     fun consumePendingExport() {
+        awaitingExport = _uiState.value.pendingExport
         _uiState.update { it.copy(pendingExport = null) }
+    }
+
+    /** Drops the held export: the user backed out of the document picker. */
+    fun cancelExport() {
+        awaitingExport = null
+    }
+
+    /**
+     * Writes the held export into [picked], the document the user picked, and confirms
+     * it ([onExported]) or reports the failure ([onExportFailed]).
+     *
+     * The picker has already created the document, so an export that cannot write a
+     * byte removes it again: the rendered prompt did not survive a process death while
+     * the picker was open, or the document would not open. When its provider will not
+     * delete it, the message names the empty file.
+     *
+     * @param picked The document the picker created.
+     */
+    fun exportTo(picked: PickedDocument) {
+        val export = awaitingExport
+        awaitingExport = null
+        viewModelScope.launch {
+            val outputStream = if (export == null) null else withContext(ioDispatcher) { picked.openOutput() }
+            when {
+                export == null || outputStream == null -> when (val outcome = picked.discardUnwritten(ioDispatcher)) {
+                    UnwrittenDocument.Removed -> onExportFailed()
+                    is UnwrittenDocument.Left -> _uiState.update {
+                        it.copy(
+                            snackbar = PromptLibrarySnackbar(
+                                UiText.of(R.string.export_empty_file_left, outcome.fileName),
+                            ),
+                        )
+                    }
+                }
+                ExportDocumentHandOff.write(
+                    outputStream,
+                    export.content,
+                    ioDispatcher,
+                ) -> onExported(export.displayName)
+                else -> onExportFailed()
+            }
+        }
     }
 
     /** Reports a completed export. */

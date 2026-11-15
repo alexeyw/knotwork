@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.OutputStream
 import java.util.Date
 
 /**
@@ -56,6 +55,16 @@ sealed interface JournalExportEvent {
      * failure this whole surface exists to avoid.
      */
     data object RenderFailed : JournalExportEvent
+
+    /**
+     * Nothing could be written to the picked file — the journal could not be
+     * rendered, or the file would not open — and its provider would not delete it:
+     * an empty file is left where the user chose to save, and they are told its name.
+     * When the provider does delete it, the outcome is [RenderFailed] or [SaveFailed].
+     *
+     * @property fileName The left file's name.
+     */
+    data class FileLeft(val fileName: String) : JournalExportEvent
 }
 
 /**
@@ -134,27 +143,23 @@ class JournalExportDelegate(
     }
 
     /**
-     * Renders the journal into [outputStream] — the document the user picked
-     * through the Storage Access Framework — and reports the outcome.
+     * Renders the journal into [picked] — the document the user picked through the
+     * Storage Access Framework — and reports the outcome.
      *
-     * The stream is always closed, including on the failure path: the picker has
-     * already created the file, so abandoning the stream would leave a zero-byte
-     * document behind with nothing said about it.
+     * The picker has already created the file, so a save that cannot write a byte
+     * removes it again: a journal read that threw despite its best-effort contract,
+     * or a document its provider would not open. A zero-byte file left behind would
+     * look like a saved journal. The stream, once opened, is closed on every path.
      *
-     * @param outputStream Destination document stream; owned here.
+     * @param picked The document the picker created.
      */
-    fun saveTo(outputStream: OutputStream) {
+    fun saveTo(picked: PickedDocument) {
         scope.launch {
             val document = renderOrNull()
+            val outputStream = if (document == null) null else withContext(ioDispatcher) { picked.openOutput() }
             val outcome = when {
-                // A journal read that threw despite its best-effort contract. The
-                // picker has already created the file, so its stream is closed here
-                // rather than stranded — off the main thread, like the write it
-                // replaces, and outside the catch so the cancellation gate holds.
-                document == null -> {
-                    withContext(ioDispatcher) { outputStream.close() }
-                    JournalExportEvent.RenderFailed
-                }
+                document == null -> unwritten(picked, removed = JournalExportEvent.RenderFailed)
+                outputStream == null -> unwritten(picked, removed = JournalExportEvent.SaveFailed)
                 ExportDocumentHandOff.write(outputStream, document.json, ioDispatcher) ->
                     JournalExportEvent.Saved(document.entryCount)
                 else -> JournalExportEvent.SaveFailed
@@ -162,6 +167,17 @@ class JournalExportDelegate(
             _events.tryEmit(outcome)
         }
     }
+
+    /**
+     * Removes [picked], which holds nothing, and names the outcome.
+     *
+     * @param removed What to report when the file is gone.
+     */
+    private suspend fun unwritten(picked: PickedDocument, removed: JournalExportEvent): JournalExportEvent =
+        when (val outcome = picked.discardUnwritten(ioDispatcher)) {
+            UnwrittenDocument.Removed -> removed
+            is UnwrittenDocument.Left -> JournalExportEvent.FileLeft(outcome.fileName)
+        }
 
     /**
      * Renders the journal, absorbing a failure into `null`.

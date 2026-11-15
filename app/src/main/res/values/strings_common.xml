@@ -76,6 +76,7 @@
     <string name="journal_export_chooser_title">Share journal</string>
     <string name="journal_export_share_failed">No app on this phone can receive the file</string>
     <string name="journal_export_save_failed">Couldn\'t save the journal</string>
+    <string name="export_empty_file_left">Not saved. Delete the empty file %1$s yourself.</string>
     <!-- Distinct from the two above: nothing was produced to save or share. -->
     <string name="journal_export_render_failed">Couldn\'t read the journal</string>
     <!-- The count is in the message on purpose: an export of an empty journal

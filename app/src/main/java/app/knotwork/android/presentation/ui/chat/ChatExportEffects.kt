@@ -5,13 +5,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.R
+import app.knotwork.android.presentation.ui.common.ContentResolverPickedDocument
 import kotlinx.coroutines.launch
-import timber.log.Timber
-import java.io.IOException
 
 /**
  * Wires a [ChatExportDelegate] to the platform: the share sheet for
@@ -38,11 +36,12 @@ import java.io.IOException
 @Composable
 fun ChatExportEffects(delegate: ChatExportDelegate, snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val chooserTitle = stringResource(R.string.chat_export_chooser_title)
     val shareFailed = stringResource(R.string.journal_export_share_failed)
     val saved = stringResource(R.string.chat_export_saved)
     val saveFailed = stringResource(R.string.chat_export_save_failed)
+    // A template: the file's name is known only when the event arrives, outside composition.
+    val fileLeftTemplate = stringResource(R.string.export_empty_file_left)
     val renderFailed = stringResource(R.string.chat_export_render_failed)
 
     val saveLauncher = rememberLauncherForActivityResult(
@@ -54,24 +53,9 @@ fun ChatExportEffects(delegate: ChatExportDelegate, snackbarHostState: SnackbarH
             delegate.cancelSave()
             return@rememberLauncherForActivityResult
         }
-        val stream = try {
-            context.contentResolver.openOutputStream(uri)
-        } catch (e: SecurityException) {
-            // A provider that offered the document and then refused to open it.
-            Timber.w(e, "Could not open the picked chat-export document")
-            null
-        } catch (e: IOException) {
-            // `openOutputStream` declares FileNotFoundException; a provider that
-            // created the document and then lost it must not crash the screen.
-            Timber.w(e, "The picked chat-export document could not be opened")
-            null
-        }
-        if (stream != null) {
-            delegate.saveTo(stream)
-        } else {
-            delegate.cancelSave()
-            coroutineScope.launch { snackbarHostState.showSnackbar(saveFailed) }
-        }
+        // The delegate writes the held chat into it, or removes the file when it has
+        // nothing to write or the document will not open.
+        delegate.saveTo(ContentResolverPickedDocument(context.contentResolver, uri))
     }
 
     LaunchedEffect(delegate) {
@@ -94,6 +78,7 @@ fun ChatExportEffects(delegate: ChatExportDelegate, snackbarHostState: SnackbarH
                 }
                 ChatExportEvent.Saved -> saved
                 ChatExportEvent.SaveFailed -> saveFailed
+                is ChatExportEvent.SaveFailedFileLeft -> fileLeftTemplate.format(event.fileName)
                 ChatExportEvent.RenderFailed -> renderFailed
             }
             // Launched beside the collector, not inside it: a snackbar stays up for

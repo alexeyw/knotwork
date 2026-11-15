@@ -1,5 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator.presets
 
+import app.knotwork.android.R
 import app.knotwork.android.domain.models.ConnectionModel
 import app.knotwork.android.domain.models.NodeContextConfig
 import app.knotwork.android.domain.models.NodeModel
@@ -10,6 +11,8 @@ import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.repositories.PipelinePresetRepository
 import app.knotwork.android.domain.usecases.LoadPipelineFromPresetUseCase
 import app.knotwork.android.domain.usecases.SavePipelineAsPresetUseCase
+import app.knotwork.android.presentation.ui.common.FakePickedDocument
+import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -18,13 +21,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -67,7 +73,76 @@ class PipelinePresetsViewModelTest {
         loadPipelineFromPresetUseCase,
         savePipelineAsPresetUseCase,
         mockk(relaxed = true),
+        ioDispatcher = testDispatcher,
     )
+
+    @Test
+    fun `given a preset held for the picker when the document arrives then the preset is written into it`() = runTest {
+        val vm = newVm()
+        val exported = preset("p1", isBundled = false, category = PresetCategory.LOCAL)
+        val picked = FakePickedDocument()
+
+        vm.holdForExport(exported)
+        vm.exportTo(picked)
+        advanceUntilIdle()
+
+        assertEquals(vm.exportPresetToJson(exported), picked.bytes.toString(Charsets.UTF_8))
+        assertTrue("the picked stream must be closed", picked.stream.closed)
+        assertFalse(picked.deleteAsked)
+        assertEquals(UiText(R.string.orchestrator_preset_exported), vm.uiState.value.feedbackMessage)
+    }
+
+    @Test
+    fun `given no held preset when the document arrives then the empty file is removed and the failure said`() =
+        runTest {
+            // A process death while the picker was open: the new view model holds nothing.
+            val vm = newVm()
+            val picked = FakePickedDocument()
+
+            vm.exportTo(picked)
+            advanceUntilIdle()
+
+            assertTrue("the empty file the picker created must be removed", picked.deleteAsked)
+            assertEquals(0, picked.openCount)
+            assertEquals(UiText(R.string.orchestrator_preset_export_failed), vm.uiState.value.errorMessage)
+        }
+
+    @Test
+    fun `given no held preset and a file that cannot be deleted when it arrives then its name is said`() = runTest {
+        val vm = newVm()
+
+        vm.exportTo(FakePickedDocument(name = "preset.json", deletes = false))
+        advanceUntilIdle()
+
+        assertEquals(UiText.of(R.string.export_empty_file_left, "preset.json"), vm.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `given a cancelled pick when a document later arrives then the dropped preset is not written`() = runTest {
+        val vm = newVm()
+        val picked = FakePickedDocument()
+
+        vm.holdForExport(preset("p1", isBundled = false, category = PresetCategory.LOCAL))
+        vm.cancelExport()
+        vm.exportTo(picked)
+        advanceUntilIdle()
+
+        assertEquals(0, picked.bytes.size)
+        assertTrue(picked.deleteAsked)
+    }
+
+    @Test
+    fun `given a document that will not open when the preset is exported then it is removed`() = runTest {
+        val vm = newVm()
+        val picked = FakePickedDocument(opens = false)
+
+        vm.holdForExport(preset("p1", isBundled = false, category = PresetCategory.LOCAL))
+        vm.exportTo(picked)
+        advanceUntilIdle()
+
+        assertTrue(picked.deleteAsked)
+        assertEquals(UiText(R.string.orchestrator_preset_export_failed), vm.uiState.value.errorMessage)
+    }
 
     @Test
     fun `given bundled and user emissions when subscribed then state mirrors both lists`() = runTest {

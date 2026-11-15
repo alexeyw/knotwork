@@ -15,10 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -26,7 +24,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.PromptPresetConstants
 import app.knotwork.android.domain.models.PromptPreset
-import app.knotwork.android.domain.usecases.promptpack.ExportedPromptPack
+import app.knotwork.android.presentation.ui.common.ContentResolverPickedDocument
 import app.knotwork.android.presentation.ui.common.asString
 import app.knotwork.android.presentation.ui.components.PromptPreviewBottomSheet
 import app.knotwork.design.components.misc.KnotworkSnackbarHost
@@ -178,16 +176,18 @@ private const val MIME_MARKDOWN = "text/markdown"
 private const val MIME_TEXT_ANY = "text/*"
 
 /**
- * Launches the create-document picker whenever an export has been rendered,
- * writes the payload to the chosen destination, and confirms it.
+ * Launches the create-document picker whenever an export has been rendered and
+ * hands the chosen document to the view model, which writes the payload into it
+ * (or removes it when it has nothing to write) and confirms the outcome.
  *
  * The parked payload is consumed the moment the picker launches, so a
  * recomposition or a configuration change cannot fire the picker twice for
- * one tap.
+ * one tap; the view model holds it until the document arrives, so a rotation
+ * while the picker is open keeps it.
  *
  * @param uiState Current screen state; its `pendingExport` drives the picker.
- * @param viewModel Sink for the consume / confirm / failure callbacks.
- * @param resolver Used to write the chosen document.
+ * @param viewModel Holds, writes and confirms the export.
+ * @param resolver Resolver of the chosen document's provider.
  */
 @Composable
 private fun PromptExportLauncher(
@@ -195,23 +195,18 @@ private fun PromptExportLauncher(
     viewModel: PromptLibraryViewModel,
     resolver: ContentResolver,
 ) {
-    val scope = rememberCoroutineScope()
-    var payload by remember { mutableStateOf<ExportedPromptPack?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(MIME_MARKDOWN),
     ) { uri ->
-        val pending = payload
-        payload = null
-        if (uri == null || pending == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            val written = withContext(Dispatchers.IO) { writeText(resolver, uri, pending.content) }
-            if (written) viewModel.onExported(pending.displayName) else viewModel.onExportFailed()
+        if (uri == null) {
+            viewModel.cancelExport()
+        } else {
+            viewModel.exportTo(ContentResolverPickedDocument(resolver, uri))
         }
     }
     val pendingExport = uiState.pendingExport
     LaunchedEffect(pendingExport) {
         if (pendingExport != null) {
-            payload = pendingExport
             viewModel.consumePendingExport()
             exportLauncher.launch(pendingExport.fileName)
         }
@@ -263,17 +258,6 @@ private fun readText(resolver: ContentResolver, uri: Uri): String? = try {
     resolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
 } catch (_: Exception) {
     null
-}
-
-/**
- * Writes [content] to a chosen document.
- *
- * @return `true` when the bytes were written.
- */
-private fun writeText(resolver: ContentResolver, uri: Uri, content: String): Boolean = try {
-    resolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) } != null
-} catch (_: Exception) {
-    false
 }
 
 /**

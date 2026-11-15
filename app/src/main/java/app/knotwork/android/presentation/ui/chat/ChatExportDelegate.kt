@@ -3,6 +3,9 @@ package app.knotwork.android.presentation.ui.chat
 import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
 import app.knotwork.android.presentation.ui.common.ExportDocumentHandOff
+import app.knotwork.android.presentation.ui.common.PickedDocument
+import app.knotwork.android.presentation.ui.common.UnwrittenDocument
+import app.knotwork.android.presentation.ui.common.discardUnwritten
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,8 +15,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.IOException
-import java.io.OutputStream
 import java.util.Date
 
 /**
@@ -35,7 +36,7 @@ sealed interface ChatExportEvent {
 
     /**
      * The chat is rendered and held; the screen opens the document picker with
-     * this suggested name and hands back the stream the user picks
+     * this suggested name and hands back the document the user picks
      * ([ChatExportDelegate.saveTo]).
      *
      * @property fileName Name the picker suggests.
@@ -45,8 +46,20 @@ sealed interface ChatExportEvent {
     /** The chat was written to the file the user picked. */
     data object Saved : ChatExportEvent
 
-    /** The picked file could not be written, or the rendered chat was no longer held. */
+    /**
+     * The picked file could not be written, or the rendered chat was no longer held
+     * and the empty file the picker created was removed.
+     */
     data object SaveFailed : ChatExportEvent
+
+    /**
+     * Nothing could be written, and the provider of the picked file would not delete
+     * it: an empty file is left where the user chose to save, and they are told its
+     * name.
+     *
+     * @property fileName The left file's name.
+     */
+    data class SaveFailedFileLeft(val fileName: String) : ChatExportEvent
 
     /** The chat could not be read, so there is nothing to share or save. */
     data object RenderFailed : ChatExportEvent
@@ -64,11 +77,12 @@ sealed interface ChatExportEvent {
  * bytes; `ChatExportHandOffTest` holds that.
  *
  * **The chat is rendered before the picker opens**, and the very document is held
- * until the picked stream arrives. The suggested name comes from the document
+ * until the picked document arrives. The suggested name comes from the document
  * itself, and what is written is what was rendered at the tap. A configuration
  * change while the picker is open keeps the ViewModel, so the document survives
- * it; a process death does not, and the save then reports [ChatExportEvent.SaveFailed]
- * instead of writing nothing in silence.
+ * it; a process death does not, and the save then removes the empty file the
+ * picker created and reports [ChatExportEvent.SaveFailed] — or, when the file's
+ * provider will not delete it, [ChatExportEvent.SaveFailedFileLeft] with its name.
  *
  * **No network anywhere on this path** — the chat is read from the local database
  * and handed to the system share sheet or a file the user picked, on an explicit
@@ -92,7 +106,7 @@ class ChatExportDelegate(
     /** One-shot export outcomes; the screen turns each into a share sheet, a picker or a snackbar. */
     val events: SharedFlow<ChatExportEvent> = _events.asSharedFlow()
 
-    /** The chat rendered for the picker that is open, until its stream arrives. */
+    /** The chat rendered for the picker that is open, until its document arrives. */
     private var pendingSave: ChatExportDocument? = null
 
     /**
@@ -134,31 +148,30 @@ class ChatExportDelegate(
     }
 
     /**
-     * Writes the held chat into [outputStream] — the document the user picked — and
-     * reports the outcome. The stream is closed on every path: the picker has
-     * already created the file, and a stranded stream would leave it empty with
-     * nothing said.
+     * Writes the held chat into [picked] — the document the user picked — and reports
+     * the outcome. The picker has already created the file, so a save that cannot
+     * write a byte removes it again: the render did not survive a process death
+     * while the picker was open, or the provider would not open the document. An
+     * empty file left where the user chose to save would look like a saved chat.
+     * The stream, once opened, is closed on every path.
      *
-     * @param outputStream Destination document stream; owned here.
+     * @param picked The document the picker created.
      */
-    fun saveTo(outputStream: OutputStream) {
+    fun saveTo(picked: PickedDocument) {
         val document = pendingSave
         pendingSave = null
         scope.launch {
-            val saved = if (document == null) {
-                // Nothing left to write: the render lived in memory and did not
-                // survive a process death while the picker was open. Saying so
-                // lets the user try again rather than find an empty file later.
-                closeQuietly(outputStream)
-                false
-            } else {
-                ExportDocumentHandOff.write(outputStream, document.json, ioDispatcher)
+            val outputStream = if (document == null) null else withContext(ioDispatcher) { picked.openOutput() }
+            val event = when {
+                document == null || outputStream == null -> unwritten(picked)
+                ExportDocumentHandOff.write(outputStream, document.json, ioDispatcher) -> ChatExportEvent.Saved
+                else -> ChatExportEvent.SaveFailed
             }
-            _events.tryEmit(if (saved) ChatExportEvent.Saved else ChatExportEvent.SaveFailed)
+            _events.tryEmit(event)
         }
     }
 
-    /** Drops the held chat: the user backed out of the picker, or the picked file could not be opened. */
+    /** Drops the held chat: the user backed out of the picker. */
     fun cancelSave() {
         pendingSave = null
     }
@@ -172,14 +185,10 @@ class ChatExportDelegate(
         .onFailure { e -> Timber.w(e, "Chat export could not be rendered") }
         .getOrNull()
 
-    /** Closes [outputStream] off the main thread; a failure to close changes nothing the user can act on. */
-    private suspend fun closeQuietly(outputStream: OutputStream) {
-        withContext(ioDispatcher) {
-            try {
-                outputStream.close()
-            } catch (e: IOException) {
-                Timber.w(e, "The picked chat-export document could not be closed")
-            }
+    /** Removes [picked], which holds nothing, and names the outcome. */
+    private suspend fun unwritten(picked: PickedDocument): ChatExportEvent =
+        when (val outcome = picked.discardUnwritten(ioDispatcher)) {
+            UnwrittenDocument.Removed -> ChatExportEvent.SaveFailed
+            is UnwrittenDocument.Left -> ChatExportEvent.SaveFailedFileLeft(outcome.fileName)
         }
-    }
 }

@@ -2,6 +2,7 @@ package app.knotwork.android.presentation.ui.chat
 
 import app.knotwork.android.domain.usecases.ChatExportDocument
 import app.knotwork.android.domain.usecases.ExportChatUseCase
+import app.knotwork.android.presentation.ui.common.FakePickedDocument
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -14,11 +15,9 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Date
@@ -28,8 +27,8 @@ import java.util.Date
  *
  * What it promises: a render failure is reported on both actions, never
  * swallowed; a save writes **the document it rendered before the picker opened**,
- * byte for byte; the picked stream is closed on every path; and a save whose
- * render is gone says so instead of leaving an empty file in silence.
+ * byte for byte; the picked stream is closed on every path; and a save that
+ * cannot write a byte removes the empty file the picker created and says so.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatExportDelegateTest {
@@ -44,29 +43,6 @@ class ChatExportDelegateTest {
     private val at: Date = Date.from(
         LocalDateTime.of(2026, 11, 5, 14, 30, 0).atZone(ZoneId.systemDefault()).toInstant(),
     )
-
-    /** A stream that records its bytes and whether it was closed, and can be made to fail. */
-    private class RecordingStream(private val failOnWrite: Boolean = false, private val failOnClose: Boolean = false) :
-        OutputStream() {
-        val bytes = ByteArrayOutputStream()
-        var closed = false
-            private set
-
-        override fun write(b: Int) {
-            if (failOnWrite) throw IOException("no space left on device")
-            bytes.write(b)
-        }
-
-        override fun write(b: ByteArray, off: Int, len: Int) {
-            if (failOnWrite) throw IOException("no space left on device")
-            bytes.write(b, off, len)
-        }
-
-        override fun close() {
-            closed = true
-            if (failOnClose) throw IOException("provider went away")
-        }
-    }
 
     /** A delegate on the test scope, its write driven by the test scheduler and its clock pinned. */
     private fun TestScope.delegate() = ChatExportDelegate(
@@ -128,7 +104,7 @@ class ChatExportDelegateTest {
     }
 
     @Test
-    fun `given a save when the stream arrives then the document rendered before the picker is written`() = runTest {
+    fun `given a save when the document arrives then the render made before the picker is written`() = runTest {
         coEvery { exportChat("s1") } returns Result.success(document)
         val delegate = delegate()
         val events = eventsOf(delegate)
@@ -138,8 +114,8 @@ class ChatExportDelegateTest {
         // The chat changes while the picker is open: the file must still be the
         // render the picker was opened for, not a second one.
         coEvery { exportChat("s1") } returns Result.success(document.copy(json = "{\"changed\": true}"))
-        val stream = RecordingStream()
-        delegate.saveTo(stream)
+        val picked = FakePickedDocument()
+        delegate.saveTo(picked)
         advanceUntilIdle()
 
         assertEquals(
@@ -149,8 +125,9 @@ class ChatExportDelegateTest {
             ),
             events,
         )
-        assertArrayEquals(document.json.toByteArray(Charsets.UTF_8), stream.bytes.toByteArray())
-        assertTrue("the picked stream must be closed", stream.closed)
+        assertArrayEquals(document.json.toByteArray(Charsets.UTF_8), picked.bytes)
+        assertTrue("the picked stream must be closed", picked.stream.closed)
+        assertFalse("a written file is kept", picked.deleteAsked)
         coVerify(exactly = 1) { exportChat("s1") }
     }
 
@@ -174,31 +151,59 @@ class ChatExportDelegateTest {
 
         delegate.save("s1")
         advanceUntilIdle()
-        val stream = RecordingStream(failOnWrite = true)
-        delegate.saveTo(stream)
+        val picked = FakePickedDocument(failOnWrite = true)
+        delegate.saveTo(picked)
         advanceUntilIdle()
 
         assertEquals(ChatExportEvent.SaveFailed, events.last())
-        assertTrue("the picked stream must be closed", stream.closed)
+        assertTrue("the picked stream must be closed", picked.stream.closed)
     }
 
     @Test
-    fun `given no held render when a stream arrives then the save fails and the stream is closed`() = runTest {
+    fun `given no held render when a document arrives then the empty file is removed and the save fails`() = runTest {
         // A process death while the picker was open: the new delegate holds nothing.
         val delegate = delegate()
         val events = eventsOf(delegate)
 
-        val stream = RecordingStream(failOnClose = true)
-        delegate.saveTo(stream)
+        val picked = FakePickedDocument()
+        delegate.saveTo(picked)
         advanceUntilIdle()
 
         assertEquals(listOf(ChatExportEvent.SaveFailed), events)
-        assertTrue("the picked stream must be closed", stream.closed)
-        assertEquals(0, stream.bytes.size())
+        assertTrue("the empty file the picker created must be removed", picked.deleteAsked)
+        assertEquals("nothing is written into it", 0, picked.openCount)
     }
 
     @Test
-    fun `given a cancelled pick when a stream later arrives then the dropped render is not written`() = runTest {
+    fun `given no held render and a file that cannot be deleted when a document arrives then its name is given`() =
+        runTest {
+            val delegate = delegate()
+            val events = eventsOf(delegate)
+
+            delegate.saveTo(FakePickedDocument(name = "chat-Trip-plan.json", deletes = false))
+            advanceUntilIdle()
+
+            assertEquals(listOf(ChatExportEvent.SaveFailedFileLeft("chat-Trip-plan.json")), events)
+        }
+
+    @Test
+    fun `given a document that will not open when saved then it is removed and the save fails`() = runTest {
+        coEvery { exportChat("s1") } returns Result.success(document)
+        val delegate = delegate()
+        val events = eventsOf(delegate)
+
+        delegate.save("s1")
+        advanceUntilIdle()
+        val picked = FakePickedDocument(opens = false)
+        delegate.saveTo(picked)
+        advanceUntilIdle()
+
+        assertEquals(ChatExportEvent.SaveFailed, events.last())
+        assertTrue("the empty file the picker created must be removed", picked.deleteAsked)
+    }
+
+    @Test
+    fun `given a cancelled pick when a document later arrives then the dropped render is not written`() = runTest {
         coEvery { exportChat("s1") } returns Result.success(document)
         val delegate = delegate()
         val events = eventsOf(delegate)
@@ -206,30 +211,34 @@ class ChatExportDelegateTest {
         delegate.save("s1")
         advanceUntilIdle()
         delegate.cancelSave()
-        val stream = RecordingStream()
-        delegate.saveTo(stream)
+        val picked = FakePickedDocument()
+        delegate.saveTo(picked)
         advanceUntilIdle()
 
         assertEquals(ChatExportEvent.SaveFailed, events.last())
-        assertEquals(0, stream.bytes.size())
+        assertEquals(0, picked.bytes.size)
+        assertTrue(picked.deleteAsked)
     }
 
     @Test
-    fun `given one save when a second stream arrives then the render is written only once`() = runTest {
+    fun `given one save when a second document arrives then the render is written only once`() = runTest {
         coEvery { exportChat("s1") } returns Result.success(document)
         val delegate = delegate()
         val events = eventsOf(delegate)
 
         delegate.save("s1")
         advanceUntilIdle()
-        val first = RecordingStream()
-        val second = RecordingStream()
+        val first = FakePickedDocument()
+        val second = FakePickedDocument()
         delegate.saveTo(first)
         delegate.saveTo(second)
         advanceUntilIdle()
 
-        assertEquals(listOf(ChatExportEvent.Saved, ChatExportEvent.SaveFailed), events.drop(1))
-        assertArrayEquals(document.json.toByteArray(Charsets.UTF_8), first.bytes.toByteArray())
-        assertEquals(0, second.bytes.size())
+        // Both outcomes are reported; their order follows the I/O each needed, not the arrival.
+        assertEquals(2, events.drop(1).size)
+        assertEquals(setOf(ChatExportEvent.Saved, ChatExportEvent.SaveFailed), events.drop(1).toSet())
+        assertArrayEquals(document.json.toByteArray(Charsets.UTF_8), first.bytes)
+        assertEquals(0, second.bytes.size)
+        assertTrue("the second, empty file is removed", second.deleteAsked)
     }
 }

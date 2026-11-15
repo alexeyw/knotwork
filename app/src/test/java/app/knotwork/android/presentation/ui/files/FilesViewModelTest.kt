@@ -17,6 +17,7 @@ import app.knotwork.android.domain.usecases.workspace.PreviewWorkspaceFileUseCas
 import app.knotwork.android.domain.usecases.workspace.StageWorkspaceFileForShareUseCase
 import app.knotwork.android.domain.usecases.workspace.WorkspaceDeleteSummary
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.FakePickedDocument
 import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -43,6 +44,7 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FilesViewModelTest {
@@ -277,6 +279,67 @@ class FilesViewModelTest {
     }
 
     @Test
+    fun `given a save-as when the picked document arrives then the file is written into it and closed`() = runTest {
+        coEvery { exportUseCase("reports/x.md", any()) } answers {
+            secondArg<OutputStream>().write("data".toByteArray())
+            WorkspaceResult.Success(Unit)
+        }
+        val vm = build()
+        advanceUntilIdle()
+        val picked = FakePickedDocument(name = "x.md")
+
+        vm.requestSaveAs("reports/x.md")
+        vm.completeSaveAs(picked)
+
+        assertEquals("data", picked.bytes.toString(Charsets.UTF_8))
+        assertTrue("the picked stream must be closed", picked.stream.closed)
+        assertFalse("a written file is kept", picked.deleteAsked)
+        verify(exactly = 0) { relay.post(any()) }
+    }
+
+    @Test
+    fun `given no chosen file when the picked document arrives then the empty file is removed and the failure said`() =
+        runTest {
+            // A process death while the picker was open: the new ViewModel holds no path.
+            val vm = build()
+            advanceUntilIdle()
+            val picked = FakePickedDocument(name = "x.md")
+
+            vm.completeSaveAs(picked)
+
+            assertTrue("the empty file the picker created must be removed", picked.deleteAsked)
+            assertEquals("nothing is opened", 0, picked.openCount)
+            assertEquals(R.string.files_message_export_failed, resolvedRes.captured)
+            verify { relay.post(UiText.Dynamic(SNACKBAR_TEXT)) }
+            coVerify(exactly = 0) { exportUseCase(any(), any()) }
+        }
+
+    @Test
+    fun `given no chosen file and a document that cannot be deleted when it arrives then its name is said`() = runTest {
+        every { appContext.getString(R.string.export_empty_file_left, "x.md") } returns LEFT_TEXT
+        val vm = build()
+        advanceUntilIdle()
+
+        vm.completeSaveAs(FakePickedDocument(name = "x.md", deletes = false))
+
+        verify { relay.post(UiText.Dynamic(LEFT_TEXT)) }
+    }
+
+    @Test
+    fun `given a picked document that will not open when saved then it is removed and the failure said`() = runTest {
+        val vm = build()
+        advanceUntilIdle()
+        val picked = FakePickedDocument(opens = false)
+
+        vm.requestSaveAs("reports/x.md")
+        vm.completeSaveAs(picked)
+
+        assertTrue(picked.deleteAsked)
+        assertEquals(R.string.files_message_export_failed, resolvedRes.captured)
+        coVerify(exactly = 0) { exportUseCase(any(), any()) }
+    }
+
+    @Test
     fun `given share requested then the workspace stages the copy and the event carries it`() = runTest {
         coEvery { stageForShareUseCase("a.txt") } returns WorkspaceResult.Success("/cache/shared/k-1/a.txt")
         val vm = build()
@@ -391,5 +454,6 @@ class FilesViewModelTest {
          * the string file's business, not this test's.
          */
         const val SNACKBAR_TEXT = "resolved-snackbar-text"
+        const val LEFT_TEXT = "resolved-file-left-text"
     }
 }

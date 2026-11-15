@@ -12,11 +12,18 @@ import app.knotwork.android.domain.usecases.ImportPipelineUseCase
 import app.knotwork.android.domain.usecases.PipelineBundlePrepareResult
 import app.knotwork.android.domain.usecases.SavePipelineUseCase
 import app.knotwork.android.presentation.common.importProblemText
+import app.knotwork.android.presentation.ui.common.ExportDocumentHandOff
+import app.knotwork.android.presentation.ui.common.PickedDocument
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.UnwrittenDocument
+import app.knotwork.android.presentation.ui.common.discardUnwritten
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -45,12 +52,24 @@ class OrchestratorTransferUseCases @Inject constructor(
  * @property scope The view model's `viewModelScope`.
  * @property uiState The view model's single source-of-truth state flow.
  * @property useCases The import and export use cases.
+ * @property ioDispatcher Dispatcher carrying a bundle's write into the picked
+ *   document; injected so a test can drive it on the test scheduler.
  */
 class OrchestratorTransferDelegate(
     private val scope: CoroutineScope,
     private val uiState: MutableStateFlow<OrchestratorUiState>,
     private val useCases: OrchestratorTransferUseCases,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
+
+    /**
+     * The bundle the library screen's document picker is open for, from the picker's
+     * launch until the picked document arrives ([saveBundleTo]) or the pick is
+     * cancelled. Held here, in the view model, so a rotation while the picker is open
+     * keeps it; the screen used to keep it in composition, lost it, and left the file
+     * the picker had created empty.
+     */
+    private var awaitingDestination: PendingBundleExport? = null
 
     /**
      * Entry point for the shared "Import JSON" affordance. Detects whether
@@ -308,11 +327,55 @@ class OrchestratorTransferDelegate(
     }
 
     /**
-     * Clears the pending bundle-export payload once the library screen has
-     * written it (or the user cancelled the file picker).
+     * Takes the pending bundle out of [OrchestratorUiState.pendingBundleExport] as the
+     * library screen launches the document picker for it, so a recomposition cannot
+     * launch a second picker, and holds it until the picked document arrives
+     * ([saveBundleTo]) or the pick is cancelled ([cancelBundleSave]).
      */
     fun consumeBundleExport() {
+        awaitingDestination = uiState.value.pendingBundleExport
         uiState.update { it.copy(pendingBundleExport = null) }
+    }
+
+    /** Drops the held bundle: the user backed out of the document picker. */
+    fun cancelBundleSave() {
+        awaitingDestination = null
+    }
+
+    /**
+     * Writes the held bundle into [picked], the document the user picked, and confirms
+     * it with the name the document got; a failure surfaces through
+     * [OrchestratorUiState.errorMessage].
+     *
+     * The picker has already created the document, so a save that cannot write a byte
+     * removes it again: the bundle did not survive a process death while the picker
+     * was open, or the document would not open. When its provider will not delete it,
+     * the message names the empty file.
+     *
+     * @param picked The document the picker created.
+     */
+    fun saveBundleTo(picked: PickedDocument) {
+        val export = awaitingDestination
+        awaitingDestination = null
+        scope.launch {
+            val outputStream = if (export == null) null else withContext(ioDispatcher) { picked.openOutput() }
+            val message = when {
+                export == null || outputStream == null -> when (val outcome = picked.discardUnwritten(ioDispatcher)) {
+                    UnwrittenDocument.Removed -> UiText.of(R.string.errors_generic_unexpected)
+                    is UnwrittenDocument.Left -> UiText.of(R.string.export_empty_file_left, outcome.fileName)
+                }
+                ExportDocumentHandOff.write(outputStream, export.content, ioDispatcher) -> null
+                else -> UiText.of(R.string.errors_generic_unexpected)
+            }
+            if (message != null) {
+                uiState.update { it.copy(errorMessage = message) }
+            } else {
+                val name = withContext(ioDispatcher) { picked.displayName() }
+                uiState.update {
+                    it.copy(feedbackMessage = UiText.of(R.string.orchestrator_library_export_bundle_success, name))
+                }
+            }
+        }
     }
 
     /**
