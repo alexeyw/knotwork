@@ -24,6 +24,7 @@ import app.knotwork.android.presentation.common.ByteUnits
 import app.knotwork.android.presentation.common.DisplayFormat
 import app.knotwork.android.presentation.common.rememberAgeUnits
 import app.knotwork.android.presentation.common.rememberByteUnits
+import app.knotwork.android.presentation.ui.common.ContentResolverPickedDocument
 import app.knotwork.design.screens.files.CollisionView
 import app.knotwork.design.screens.files.DeleteDialogView
 import app.knotwork.design.screens.files.FileKind
@@ -72,7 +73,8 @@ fun FilesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: Fi
         uri ?: return@rememberLauncherForActivityResult
         scope.launch {
             withContext(Dispatchers.IO) {
-                context.contentResolver.openOutputStream(uri)?.use { viewModel.completeSaveAs(it) }
+                // Writes the chosen file into it, or removes it when there is nothing to write.
+                viewModel.completeSaveAs(ContentResolverPickedDocument(context.contentResolver, uri))
             }
         }
     }

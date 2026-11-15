@@ -39,6 +39,15 @@ details.
 
 ### Fixed
 
+- **A save to a file no longer leaves an empty file behind.** The system
+  picker creates the file before Knotwork writes to it. When Android closed
+  the app while the picker was open — or, for a pipeline bundle, a preset or
+  a prompt, when the screen turned — the save wrote nothing and left that
+  empty file, mostly without a word. Now the content waits through the
+  picker; a save that still cannot write removes the file and says so, and
+  names it when the file manager will not let Knotwork delete it. This covers
+  the chat, the journals and run traces, a workspace file, a pipeline bundle,
+  a preset and a prompt.
 - **A long argument on the approval card wraps under its own line.** With the
   arguments expanded, the part of a line that does not fit continues where the
   line's text starts, not at the left edge of the block, where it read as a key

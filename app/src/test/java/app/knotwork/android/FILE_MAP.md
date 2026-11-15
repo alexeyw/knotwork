@@ -52,6 +52,7 @@ Only Kotlin files appear inside the generated blocks.
   - `OutboundBroadcastCensusTest.kt` - Census of the places the app sends a broadcast.
   - `PathContainmentGuardTest.kt` - A path prefix test lives in exactly one production file: `PathContainment`.
   - `PersistentStorageInventoryGuardTest.kt` - Every place the app keeps data between runs is in `StorageRoot`, with two decisions written down: nothing of it leaves the device through Android backup or device transfer, and whether the recovery wipe (*Erase data*) erases it.
+  - `PickedDocumentCensusTest.kt` - Census of every production file that launches the system's create-document picker: each answers the pick through a `PickedDocument`, or is named here with why it does not.
   - `PipelineBindingCensusTest.kt` - Census of every place the domain stores a pipeline id, each with a decision: is it a binding the Replace confirmation must list, or not, and why.
   - `PolicyDocumentClaimsTest.kt` - Sentences of the privacy policy, the threat model and the bundled FAQ that the code once contradicted, pinned to what the code does now.
   - `PreferenceKeyCensus.kt` - Every preference key the production code declares, read from the sources: the name and value type of each `<type>PreferencesKey("name")` call (`ProductionSources`, comments removed).
@@ -667,9 +668,11 @@ Only Kotlin files appear inside the generated blocks.
         - `VerificationProgressTest.kt` - `VerificationProgress`: the check's sheet frame by frame — the first repeated visit checking, calls advancing within a visit, a settled visit handing over to the next, the time left shrinking, and each ending leaving the visits it never reached as "not checked".
     - `common/` - Tests for the shared presentation helpers.
       - `ConnectionTestTest.kt` - Unit tests for `ConnectionTest`, the state of a Test connection row.
+      - `FakePickedDocument.kt` - A `PickedDocument` for tests of the save-to-file points: it records what was written into it, whether its stream was closed, and whether it was asked to delete itself.
       - `JournalExportDelegateTest.kt` - Behaviour of the shared journal-export half of the two journal ViewModels.
       - `JournalExportShareTest.kt` - The share half of the journal export — the part that touches the platform and therefore cannot be reached from the delegate's own tests.
       - `NodeTypeNameTest.kt` - A node type is named in the interface language: a run reports the type's code, and the task monitor and the metrics screen used to show the code itself.
+      - `PickedDocumentTest.kt` - `ContentResolverPickedDocument` and `discardUnwritten`: a provider's refusal to open or to delete is an answer, never a crash; a document already gone counts as removed; and a document the provider will not delete is named, so the user can find the empty file.
       - `RunTerminationCopyMapperTest.kt` - Guards the single vocabulary of a stopped run.
       - `TestSubjectTest.kt` - Every state of a test row resolved into its words — the copy the design hand-off fixed, per subject: a hosted provider, a server the user runs, an MCP server.
       - `UiTextTest.kt` - Unit tests for `UiText`.
@@ -708,6 +711,7 @@ Only Kotlin files appear inside the generated blocks.
     - `orchestrator/` - Tests for the pipeline-library surface.
       - `components/` - Tests for the pipeline-library components.
         - `PromptPresetPickerDialogTest.kt` - Pure-logic tests for the filter helper backing `PromptPresetPickerDialog`.
+      - `OrchestratorTransferDelegateTest.kt` - How the library's "Export bundle" answers the document the user picked.
       - `OrchestratorViewModelTest.kt` - Tests for OrchestratorViewModel.
       - `PipelineBindingsTextTest.kt` - The Replace confirmation's lines for what is bound to a pipeline.
       - `presets/` - Tests for the preset gallery and its graph-flow preview.

@@ -44,6 +44,7 @@
     <string name="journal_export_chooser_title">Compartir registro</string>
     <string name="journal_export_share_failed">Ninguna app de este teléfono puede recibir el archivo</string>
     <string name="journal_export_save_failed">No se pudo guardar el registro</string>
+    <string name="export_empty_file_left">No se guardó. Elimina a mano el archivo vacío %1$s.</string>
     <string name="journal_export_render_failed">No se pudo leer el registro</string>
     <plurals name="journal_export_saved">
         <item quantity="one">Se guardó %1$d entrada</item>

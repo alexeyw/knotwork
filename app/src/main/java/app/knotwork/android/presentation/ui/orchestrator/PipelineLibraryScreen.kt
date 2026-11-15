@@ -1,9 +1,6 @@
 package app.knotwork.android.presentation.ui.orchestrator
 
-import android.content.ContentResolver
 import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -38,6 +35,7 @@ import app.knotwork.android.domain.models.ImportCollisionResolution
 import app.knotwork.android.domain.models.PipelineGraph
 import app.knotwork.android.presentation.common.BoundedText
 import app.knotwork.android.presentation.common.readTextWithin
+import app.knotwork.android.presentation.ui.common.ContentResolverPickedDocument
 import app.knotwork.android.presentation.ui.common.asString
 import app.knotwork.android.presentation.ui.orchestrator.presets.GraphFlowPreview
 import app.knotwork.android.presentation.ui.orchestrator.presets.PipelineLibrarySpeedDial
@@ -136,61 +134,24 @@ fun PipelineLibraryScreen(
         }
     }
 
-    val exportFailedMessage = stringResource(R.string.errors_generic_unexpected)
-    // Pre-resolved format template ("Exported %1$s") — the file name is only
-    // known at write time, so we format this in the (non-composable) launcher
-    // callback rather than calling stringResource there.
-    val exportSuccessTemplate = stringResource(R.string.orchestrator_library_export_bundle_success)
-
-    // Holds the bundle content + requested file name between launching the
-    // create-document picker and the picker returning. The VM's
-    // `pendingBundleExport` is consumed the moment we launch (below), so a
-    // configuration change / recomposition can't re-fire the picker for the
-    // same payload. The file name is retained as a fallback label for the
-    // success snackbar when the chosen document's display name can't be read.
-    var pendingExportContent by remember { mutableStateOf<String?>(null) }
-    var pendingExportFileName by remember { mutableStateOf<String?>(null) }
-
-    // SAF launcher for "Export bundle" — writes the already-computed payload to
-    // the chosen file and confirms the result to the user. A null uri means the
-    // user dismissed the picker: nothing was written, so we stay silent.
+    // SAF launcher for "Export bundle". The view model holds the bundle from the
+    // picker's launch until the picked document arrives, so a rotation while the
+    // picker is open keeps it; it writes the bundle into the document (or removes the
+    // document when it has nothing to write) and reports through its feedback and
+    // error messages. A null uri means the user dismissed the picker: nothing was
+    // created, so we stay silent.
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(mimeType = "application/json"),
     ) { uri ->
-        val content = pendingExportContent
-        val fallbackName = pendingExportFileName
-        pendingExportContent = null
-        pendingExportFileName = null
-        if (uri == null || content == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            // Write, then read back the document's display name — both are
-            // blocking I/O, so they share one IO hop. Success yields the name
-            // to confirm (falling back to the requested file name); failure
-            // yields the throwable.
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver.openOutputStream(uri)?.use { out ->
-                        out.write(content.toByteArray())
-                    }
-                    resolveDisplayName(context.contentResolver, uri) ?: fallbackName
-                }
-            }
-            result.fold(
-                onSuccess = { name ->
-                    val label = name ?: fallbackName.orEmpty()
-                    snackbarHostState.showSnackbar(message = exportSuccessTemplate.format(label))
-                },
-                onFailure = { failure ->
-                    snackbarHostState.showSnackbar(message = failure.message ?: exportFailedMessage)
-                },
-            )
+        if (uri == null) {
+            viewModel.transfer.cancelBundleSave()
+        } else {
+            viewModel.transfer.saveBundleTo(ContentResolverPickedDocument(context.contentResolver, uri))
         }
     }
 
     LaunchedEffect(uiState.pendingBundleExport) {
         val export = uiState.pendingBundleExport ?: return@LaunchedEffect
-        pendingExportContent = export.content
-        pendingExportFileName = export.fileName
         // Consume before launching so the picker fires exactly once per payload.
         viewModel.transfer.consumeBundleExport()
         exportLauncher.launch(export.fileName)
@@ -660,21 +621,3 @@ internal const val DELETE_DEPENDENTS_TEST_TAG = "pipeline_delete_dependents_warn
 
 /** TestTag on the delete-dialog confirm button. */
 internal const val DELETE_CONFIRM_TEST_TAG = "pipeline_delete_confirm"
-
-/**
- * Reads the human-readable display name of the document at [uri] — the file
- * name shown in the system "Save file" picker — via
- * [OpenableColumns.DISPLAY_NAME]. Returns `null` when the backing provider
- * exposes no such column so the caller can fall back to the requested name.
- *
- * Runs a blocking cursor query, so it must be called off the main thread.
- *
- * @param resolver The content resolver used to query the document provider.
- * @param uri The document uri returned by the create-document picker.
- * @return The document's display name, or `null` if it cannot be resolved.
- */
-private fun resolveDisplayName(resolver: ContentResolver, uri: Uri): String? =
-    resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
-    }
