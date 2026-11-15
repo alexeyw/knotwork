@@ -37,6 +37,13 @@ details.
   They report exactly what they reported before, and `./gradlew check` is about
   half a minute shorter, as both unit-test suites run them.
 
+### Fixed
+
+- **A long argument on the approval card wraps under its own line.** With the
+  arguments expanded, the part of a line that does not fit continues where the
+  line's text starts, not at the left edge of the block, where it read as a key
+  one level up. It showed most at large font sizes.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added
