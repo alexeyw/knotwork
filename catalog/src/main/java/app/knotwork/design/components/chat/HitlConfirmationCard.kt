@@ -38,10 +38,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.LineHeightStyle.Trim
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import app.knotwork.design.R
 import app.knotwork.design.components.buttons.KnotworkPrimaryButton
 import app.knotwork.design.components.buttons.KnotworkSecondaryButton
@@ -69,6 +80,9 @@ private const val SUMMARY_MAX_LINES = 3
 
 /** Collapsed line count for the JSON args block. */
 private const val JSON_COLLAPSED_MAX_LINES = 2
+
+/** A character of the arguments' monospace font, measured for the width of one column of indent. */
+private const val INDENT_PROBE = "0"
 
 /** Collapsed line count of the request block. */
 private const val REQUEST_COLLAPSED_MAX_LINES = 3
@@ -355,10 +369,17 @@ private val HitlRequestContext.glyph: ImageVector
 /**
  * Collapsible mono JSON args block — surface2 background, 1 dp outlineVariant border.
  * Draws [arguments] exactly as the host laid them out; the card never parses them.
+ *
+ * Expanded, a line wider than the block wraps with a hanging indent ([withHangingIndent]):
+ * the wrapped part starts where the line's text starts, after its leading spaces, as the
+ * console's value window draws a long line — not at the block's edge, where it would read
+ * as a key one level up. Collapsed, the arguments stay one paragraph: a line limit that
+ * falls on a paragraph boundary cuts the text without the ellipsis that says more follows.
  */
 @Composable
 private fun JsonArgsBlock(arguments: String) {
     var expanded by remember { mutableStateOf(false) }
+    val style = KnotworkTextStyles.MonoSm
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -379,15 +400,15 @@ private fun JsonArgsBlock(arguments: String) {
                 // What the user approves is what runs (`api-conventions.md` § AppFunctions):
                 // the expanded block shows every character, however long.
                 WholeText(
-                    text = arguments,
-                    style = KnotworkTextStyles.MonoSm,
+                    text = rememberHangingIndent(arguments, style),
+                    style = style,
                     color = KnotworkTheme.extended.onSurface2,
                     modifier = Modifier.weight(1f),
                 )
             } else {
                 Text(
                     text = arguments,
-                    style = KnotworkTextStyles.MonoSm,
+                    style = style,
                     color = KnotworkTheme.extended.onSurface2,
                     maxLines = JSON_COLLAPSED_MAX_LINES,
                     overflow = TextOverflow.Ellipsis,
@@ -405,6 +426,87 @@ private fun JsonArgsBlock(arguments: String) {
         }
     }
 }
+
+/**
+ * [text] in [style] with a hanging indent ([withHangingIndent]), built once per text. Only
+ * the expanded block calls it, so a card answered collapsed measures and builds nothing.
+ *
+ * The indent is in `em` of [style], not `sp`: Android scales large text sizes less than
+ * small ones (non-linear font scaling), so `sp` for one character times the indent is not
+ * the width of the indent at a large font scale, while an `em` is the font's own size.
+ */
+@Composable
+private fun rememberHangingIndent(text: String, style: TextStyle): AnnotatedString {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val charWidth = remember(measurer, style, density) {
+        val advance = measurer.measure(INDENT_PROBE, style).multiParagraph.intrinsics.maxIntrinsicWidth
+        (advance / with(density) { style.fontSize.toPx() }).em
+    }
+    return remember(text, charWidth, style) {
+        withHangingIndent(text, charWidth, style.lineHeightStyle ?: LineHeightStyle.Default)
+    }
+}
+
+/**
+ * [text] with a hanging indent: the rows a long line wraps onto start under the line's
+ * text, its leading spaces in, instead of at the block's edge.
+ *
+ * Compose indents wrapped rows per paragraph ([TextIndent.restLine]), so consecutive lines
+ * with the same leading spaces become one paragraph, indented by that many [charWidth].
+ * Within a paragraph the line breaks stay as they came; between two paragraphs the break
+ * is the paragraph boundary itself, because a paragraph that ends in a line break is laid
+ * out with one more, empty row after it. Those boundary breaks are therefore not in the
+ * returned text — every other character is, in order, and a blank line stays a blank row
+ * (an empty paragraph). A text with no indented line comes back unstyled, as it was.
+ *
+ * Every paragraph also trims its line height the way the whole text did: Compose trims at
+ * each paragraph's edges, so a [lineHeightStyle] that trims the first line's top and the
+ * last line's bottom keeps the top on the first paragraph only and the bottom on the last
+ * one. Rows between two paragraphs are then as far apart as rows inside one.
+ *
+ * @param text the arguments as the host laid them out, one key or item per line.
+ * @param charWidth the advance of one character of the block's monospace style, in `em`.
+ * @param lineHeightStyle how the block's style places a line in its line height.
+ * @return the lines of [text], each run of equally indented lines one paragraph.
+ */
+internal fun withHangingIndent(text: String, charWidth: TextUnit, lineHeightStyle: LineHeightStyle): AnnotatedString {
+    val lines = text.split('\n')
+    if (lines.none { indentOf(it) > 0 }) return AnnotatedString(text)
+    val runs = buildList {
+        var first = 0
+        while (first < lines.size) {
+            var last = first
+            while (last + 1 < lines.size && indentOf(lines[last + 1]) == indentOf(lines[first])) last++
+            add(first..last)
+            first = last + 1
+        }
+    }
+    val trimsTop = lineHeightStyle.trim == Trim.Both || lineHeightStyle.trim == Trim.FirstLineTop
+    val trimsBottom = lineHeightStyle.trim == Trim.Both || lineHeightStyle.trim == Trim.LastLineBottom
+    return buildAnnotatedString {
+        runs.forEachIndexed { index, run ->
+            val paragraph = ParagraphStyle(
+                textIndent = TextIndent(restLine = charWidth * indentOf(lines[run.first])),
+                lineHeightStyle = lineHeightStyle.copy(
+                    trim = trimOf(top = trimsTop && index == 0, bottom = trimsBottom && index == runs.lastIndex),
+                ),
+            )
+            withStyle(paragraph) { append(lines.subList(run.first, run.last + 1).joinToString("\n")) }
+        }
+    }
+}
+
+/** The [Trim] that trims the first line's top when [top] and the last line's bottom when [bottom]. */
+private fun trimOf(top: Boolean, bottom: Boolean): Trim = when {
+    top && bottom -> Trim.Both
+    top -> Trim.FirstLineTop
+    bottom -> Trim.LastLineBottom
+    else -> Trim.None
+}
+
+/** The leading spaces of [line] — none for a line of nothing but spaces, which never wraps under text. */
+private fun indentOf(line: String): Int = line.indexOfFirst { it != ' ' }.coerceAtLeast(0)
 
 /** Destructive type-to-confirm row: the user types the confirmation word. */
 @Composable

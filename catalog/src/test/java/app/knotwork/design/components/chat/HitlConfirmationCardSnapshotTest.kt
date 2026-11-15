@@ -150,7 +150,11 @@ class HitlConfirmationCardSnapshotTest {
         expandArguments = true,
     )
 
-    @Test fun arguments_nested_expanded_font_scale_2x() = card(
+    // Taller screen: at 200 % the wrapped rows of the expanded arguments, each continuation under its
+    // line's text, make the card taller than the class's 1 200 dp.
+    @Config(qualifiers = "w360dp-h1600dp-xhdpi")
+    @Test
+    fun arguments_nested_expanded_font_scale_2x() = card(
         "arguments_nested_expanded_font_scale_2x",
         request = null,
         scale = 2f,

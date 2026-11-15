@@ -468,6 +468,7 @@ matters.
     - `ChatMessageReaderTest.kt` - What the chat's message reader shows and does while a message is prepared and once it is.
     - `ChatReaderItemTest.kt` - How the message reader cuts a message into list items, and which keys the items carry.
     - `ChatReaderScrollThumbTest.kt` - How the reader's scroll thumb maps onto its items, and when it shows.
+    - `HitlConfirmationCardArgumentsWrapTest.kt` - How `HitlConfirmationCard` wraps a line of its arguments that is wider than the card.
     - `HitlConfirmationCardRequestTest.kt` - Behaviour of the request block of `HitlConfirmationCard`: one TalkBack node that says whose words these are and what they were, a Show all / Show less action only when there is more to show, the request as literal text, and the call described as what the agent wants to do.
     - `HitlConfirmationCardSnapshotTest.kt` - Roborazzi baselines for the request block of `HitlConfirmationCard` — what the run was asked to do, above the call — in every state the design draws: each source, a long request collapsed and expanded, the destructive card with its typed confirmation, a trigger that can no longer be named, an image with and without text, right-to-left and mixed scripts, and the card without a request.
     - `HitlConfirmationCardStripTest.kt` - The approval card's risk strip runs along its start edge — the left in a left-to-right layout, the right in a right-to-left one.
