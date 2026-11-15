@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -399,12 +401,14 @@ private fun JsonArgsBlock(arguments: String) {
             if (expanded) {
                 // What the user approves is what runs (`api-conventions.md` § AppFunctions):
                 // the expanded block shows every character, however long.
-                WholeText(
-                    text = rememberHangingIndent(arguments, style),
-                    style = style,
-                    color = KnotworkTheme.extended.onSurface2,
-                    modifier = Modifier.weight(1f),
-                )
+                BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                    WholeText(
+                        text = rememberHangingIndent(arguments, style, rowWidthPx = constraints.maxWidth),
+                        style = style,
+                        color = KnotworkTheme.extended.onSurface2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             } else {
                 Text(
                     text = arguments,
@@ -428,23 +432,31 @@ private fun JsonArgsBlock(arguments: String) {
 }
 
 /**
- * [text] in [style] with a hanging indent ([withHangingIndent]), built once per text. Only
- * the expanded block calls it, so a card answered collapsed measures and builds nothing.
+ * [text] in [style] with a hanging indent ([withHangingIndent]), built once per text and
+ * row width. Only the expanded block calls it, so a card answered collapsed measures and
+ * builds nothing.
  *
  * The indent is in `em` of [style], not `sp`: Android scales large text sizes less than
  * small ones (non-linear font scaling), so `sp` for one character times the indent is not
  * the width of the indent at a large font scale, while an `em` is the font's own size.
+ *
+ * A continuation is indented by half a row at most: an indent as wide as the row leaves
+ * it no room, and Android then lays it out one character per row. A line indented deeper
+ * (text that is not JSON, or a narrow window at a large font) continues at half the row.
+ *
+ * @param rowWidthPx the width the text is laid out in, in px.
  */
 @Composable
-private fun rememberHangingIndent(text: String, style: TextStyle): AnnotatedString {
+private fun rememberHangingIndent(text: String, style: TextStyle, rowWidthPx: Int): AnnotatedString {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val charWidth = remember(measurer, style, density) {
-        val advance = measurer.measure(INDENT_PROBE, style).multiParagraph.intrinsics.maxIntrinsicWidth
-        (advance / with(density) { style.fontSize.toPx() }).em
+    val advance = remember(measurer, style, density) {
+        measurer.measure(INDENT_PROBE, style).multiParagraph.intrinsics.maxIntrinsicWidth
     }
-    return remember(text, charWidth, style) {
-        withHangingIndent(text, charWidth, style.lineHeightStyle ?: LineHeightStyle.Default)
+    val charWidth = remember(advance, style, density) { (advance / with(density) { style.fontSize.toPx() }).em }
+    val maxIndent = if (rowWidthPx == Constraints.Infinity) Int.MAX_VALUE else (rowWidthPx / advance / 2).toInt()
+    return remember(text, charWidth, style, maxIndent) {
+        withHangingIndent(text, charWidth, style.lineHeightStyle ?: LineHeightStyle.Default, maxIndent)
     }
 }
 
@@ -468,9 +480,16 @@ private fun rememberHangingIndent(text: String, style: TextStyle): AnnotatedStri
  * @param text the arguments as the host laid them out, one key or item per line.
  * @param charWidth the advance of one character of the block's monospace style, in `em`.
  * @param lineHeightStyle how the block's style places a line in its line height.
+ * @param maxIndent the most characters a continuation is indented by; a deeper line's
+ *   continuation stops there, so its rows still hold text.
  * @return the lines of [text], each run of equally indented lines one paragraph.
  */
-internal fun withHangingIndent(text: String, charWidth: TextUnit, lineHeightStyle: LineHeightStyle): AnnotatedString {
+internal fun withHangingIndent(
+    text: String,
+    charWidth: TextUnit,
+    lineHeightStyle: LineHeightStyle,
+    maxIndent: Int,
+): AnnotatedString {
     val lines = text.split('\n')
     if (lines.none { indentOf(it) > 0 }) return AnnotatedString(text)
     val runs = buildList {
@@ -487,7 +506,7 @@ internal fun withHangingIndent(text: String, charWidth: TextUnit, lineHeightStyl
     return buildAnnotatedString {
         runs.forEachIndexed { index, run ->
             val paragraph = ParagraphStyle(
-                textIndent = TextIndent(restLine = charWidth * indentOf(lines[run.first])),
+                textIndent = TextIndent(restLine = charWidth * minOf(indentOf(lines[run.first]), maxIndent)),
                 lineHeightStyle = lineHeightStyle.copy(
                     trim = trimOf(top = trimsTop && index == 0, bottom = trimsBottom && index == runs.lastIndex),
                 ),

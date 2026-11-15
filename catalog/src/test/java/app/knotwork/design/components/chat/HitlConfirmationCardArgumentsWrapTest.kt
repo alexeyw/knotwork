@@ -35,7 +35,8 @@ import org.robolectric.annotation.GraphicsMode
  * block — under the braces, where it read as a new key one level up (seen at font scale
  * 200 %). The continuation now starts where the line's own text starts, as the console's
  * value window draws it ([withHangingIndent]); every line still gets exactly one row
- * before it wraps, and the characters are the host's.
+ * before it wraps, and the characters are the host's. A continuation moves in by half a
+ * row at most, so a deeply indented line never wraps one character per row.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -59,6 +60,23 @@ class HitlConfirmationCardArgumentsWrapTest {
             layout.getBoundingBox(value).left,
             PIXEL_TOLERANCE,
         )
+    }
+
+    @Test
+    fun `given an indent wider than half a row when expanded then the continuation keeps half a row`() {
+        setExpandedCard(DEEP, scale = 2f)
+        val layout = argumentsLayout()
+        val drawn = layout.layoutInput.text.text
+        val value = drawn.indexOf("word")
+        val rowWidth = layout.size.width.toFloat()
+
+        // An indent as wide as the row would leave the continuation one character per row.
+        assertTrue(layout.lineCount < DEEP.length / 4)
+        val continuation = layout.getLineForOffset(drawn.lastIndexOf("word"))
+        // `getLineLeft` leaves the paragraph indent out; the first character's box does not.
+        val left = layout.getBoundingBox(layout.getLineStart(continuation)).left
+        assertNotEquals(layout.getLineForOffset(value), continuation)
+        assertTrue("continuation at $left of $rowWidth", left > 0f && left <= rowWidth / 2 + PIXEL_TOLERANCE)
     }
 
     @Test
@@ -121,7 +139,7 @@ class HitlConfirmationCardArgumentsWrapTest {
     fun `given laid-out text when indented then every line comes back in order, each run under its indent`() {
         val charWidth = 0.6.em
         listOf(NESTED, WITH_BLANK_LINE, MIXED, "  only one indented line", "{\n  \"a\": 1\n}\n").forEach { text ->
-            val shown = withHangingIndent(text, charWidth, LineHeightStyle.Default)
+            val shown = withHangingIndent(text, charWidth, LineHeightStyle.Default, maxIndent = Int.MAX_VALUE)
             val paragraphs = shown.paragraphStyles.sortedBy { it.start }
 
             assertEquals(text, 0, paragraphs.first().start)
@@ -151,15 +169,25 @@ class HitlConfirmationCardArgumentsWrapTest {
     @Test
     fun `given a style that trims nothing when indented then no paragraph trims`() {
         val none = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
-        val trims = withHangingIndent(NESTED, 0.6.em, none).paragraphStyles.map { it.item.lineHeightStyle }
+        val trims = withHangingIndent(NESTED, 0.6.em, none, maxIndent = Int.MAX_VALUE).paragraphStyles.map {
+            it.item.lineHeightStyle
+        }
 
         assertTrue(trims.all { it == none })
     }
 
     @Test
+    fun `given an indent over the limit when indented then the continuation stops at the limit`() {
+        val shown = withHangingIndent(DEEP, 0.6.em, LineHeightStyle.Default, maxIndent = 5)
+
+        assertEquals(listOf(0.em, 0.6.em * 5, 0.em), shown.paragraphStyles.map { it.item.textIndent?.restLine })
+        assertEquals(DEEP, shown.paragraphStyles.joinToString("\n") { shown.text.substring(it.start, it.end) })
+    }
+
+    @Test
     fun `given text without an indented line when indented then it comes back unstyled`() {
         listOf(PLAIN, "line one\nline two", "", "\n").forEach { text ->
-            val shown = withHangingIndent(text, 0.6.em, LineHeightStyle.Default)
+            val shown = withHangingIndent(text, 0.6.em, LineHeightStyle.Default, maxIndent = Int.MAX_VALUE)
 
             assertEquals(text, shown.text)
             assertTrue(text, shown.paragraphStyles.isEmpty())
@@ -199,11 +227,11 @@ class HitlConfirmationCardArgumentsWrapTest {
         }
     }
 
-    /** The layout of the arguments text: the one text of the card in the monospace block that is not the tool id. */
+    /** The layout of the arguments text: the card's one text with a brace in it, or the plain sample. */
     private fun argumentsLayout(): TextLayoutResult {
         val layouts = mutableListOf<TextLayoutResult>()
         composeTestRule.onNode(
-            hasText(ARGUMENTS_MARKER, substring = true) or hasText(PLAIN),
+            hasText("{", substring = true) or hasText(PLAIN),
             useUnmergedTree = true,
         ).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         return layouts.single()
@@ -212,9 +240,6 @@ class HitlConfirmationCardArgumentsWrapTest {
     private companion object {
         const val PIXEL_TOLERANCE = 1f
         const val TOOL_NAME = "calendar.create_event"
-
-        /** A key every indented sample carries, to find the arguments text among the card's. */
-        const val ARGUMENTS_MARKER = "\"when\""
 
         /** `{"when":{"start":"2026-11-06T10:00","minutes":30}}` as the host lays it out. */
         val NESTED = """
@@ -231,6 +256,9 @@ class HitlConfirmationCardArgumentsWrapTest {
 
         /** Text that is not JSON: indents that come and go, a line of spaces, unindented lines in a row. */
         const val MIXED = "first\nsecond\n    deep\n  half\n   \n  half again\nlast\n"
+
+        /** Text that is not JSON, shown as it came: a line indented by more than a row holds at 200 %. */
+        val DEEP = "{\n" + " ".repeat(40) + "\"text\": \"" + "word ".repeat(30).trim() + "\"\n}"
 
         /** Text that is not JSON, shown as it came: one long line with no indent. */
         const val PLAIN = "not json: a call whose arguments the model wrote as a sentence"
