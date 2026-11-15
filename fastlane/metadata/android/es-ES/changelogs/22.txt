@@ -1,0 +1,5 @@
+El texto en ruso ya se dibuja con las fuentes de la propia app, no con la del sistema a mitad de línea.
+
+Se quitan de las listas cinco modelos en la nube que sus proveedores apagan: Claude Sonnet 4.5, GPT-5, GPT-5 mini, GPT-5 nano y o3. Si elegiste uno, las ejecuciones usan el modelo predeterminado del proveedor.
+
+Guardar en un archivo ya no deja un archivo vacío, y un argumento largo en la tarjeta de aprobación continúa bajo el inicio de su línea.

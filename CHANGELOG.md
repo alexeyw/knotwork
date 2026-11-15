@@ -13,6 +13,8 @@ details.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-15
+
 ### Changed
 
 - **Russian text is drawn in the app's own fonts.** The bundled Inter and
@@ -21,7 +23,6 @@ details.
   interface uses (`→`, `≈`, `№`, `▶`). Until now these fell back to the
   system font in the middle of a line, beside the app's own digits and Latin
   letters. The app grows by about 46 KB.
-
 - **Five cloud models their providers switch off are gone from the lists.**
   Anthropic retires Claude Sonnet 4.5 on 30 November 2026; OpenAI shuts down
   GPT-5, GPT-5 mini, GPT-5 nano and o3 on 11 December. A saved choice of one of
@@ -36,6 +37,9 @@ details.
   source file once for each name they checked; they now read the sources once.
   They report exactly what they reported before, and `./gradlew check` is about
   half a minute shorter, as both unit-test suites run them.
+- **The FAQ says how memory search does in Spanish.** It said only English
+  and Russian had been measured. Spanish, measured off the phone with the same
+  model, fares between the two.
 
 ### Fixed
 
@@ -7257,7 +7261,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/alexeyw/knotwork/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/alexeyw/knotwork/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/alexeyw/knotwork/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/alexeyw/knotwork/compare/v0.12.1...v0.12.2
