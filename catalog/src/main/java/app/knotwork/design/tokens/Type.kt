@@ -10,9 +10,10 @@ import androidx.compose.ui.unit.sp
 /**
  * Knotwork typography — bundled-TTF Inter (sans) + JetBrains Mono (mono).
  *
- * Font files live in `:app/src/main/res/font/` (subset to Latin-1 to keep the
- * APK delta predictable). The `:app` module is responsible for instantiating
- * the [FontFamily] from `R.font.*` IDs and pushing them into [KnotworkFonts]
+ * Font files live in `:app/src/main/res/font/` (cut to Latin-1, Cyrillic and
+ * the symbols the interface shows, to keep the APK delta predictable). The
+ * `:app` module is responsible for instantiating the [FontFamily] from
+ * `R.font.*` IDs and pushing them into [KnotworkFonts]
  * via [KnotworkFonts.install] from `Application.onCreate()`. Until that wiring
  * lands the family pointers fall back to system sans/mono so previews and
  * tests render without crashing.
@@ -59,7 +60,7 @@ object KnotworkFonts {
      * ([knotworkTypography]) read the families lazily.
      *
      * @param inter Inter family (Regular / Medium / SemiBold / Bold).
-     * @param mono JetBrains Mono family (Regular / Medium).
+     * @param mono JetBrains Mono family (Regular / Medium / SemiBold / Bold).
      */
     fun install(inter: FontFamily, mono: FontFamily) {
         interFamilyState = inter

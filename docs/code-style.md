@@ -167,6 +167,13 @@ For the broader layering rationale, see
   nodes, a copy — comes from `DefaultNames` and is stored as written, in the
   language of the moment. Never compare a stored name with a literal: a new
   chat is recognised by `DefaultNames.isNewChat`, in every shipped language.
+- Every character the interface shows is in the bundled fonts, Inter and
+  JetBrains Mono — cut to the characters of `config/fonts/characters.txt` by
+  `config/fonts/subset_fonts.py` — or `config/fonts/uncovered-characters.txt`
+  names it with the reason; a character outside the fonts is drawn by the
+  system font in the middle of a line. A new symbol or a language in another
+  script goes into the list and the fonts are cut again, from the same upstream
+  versions. `BundledFontCoverageTest` holds it.
 
 ## Dependency injection (Hilt)
 

@@ -205,8 +205,8 @@ android {
         applicationId = "app.knotwork.android"
         minSdk = 34
         targetSdk = 37
-        versionCode = 21
-        versionName = "0.14.0"
+        versionCode = 22
+        versionName = "0.15.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -2055,12 +2055,18 @@ tasks.withType<Test>().configureEach {
     // interface-text lists (it, `DisplayedLiteralGuardTest`, `CatalogStringsWiringTest`
     // and `PresetTranslationCoverageTest`) — none on a classpath of this module, and an
     // edit to a list changes no compiled byte. It reads this script's `localeFilters` too,
-    // declared below.
+    // declared below. `BundledFontCoverageTest` reads the design system's string
+    // resources as well.
     inputs.dir(rootProject.file("catalog/src/main/res"))
         .withPropertyName("catalogResources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(rootProject.file("config/l10n"))
         .withPropertyName("interfaceTextLists")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // `BundledFontCoverageTest` reads the list the bundled fonts are cut from and the
+    // characters they are allowed to miss; neither is on a classpath.
+    inputs.dir(rootProject.file("config/fonts"))
+        .withPropertyName("bundledFontLists")
         .withPathSensitivity(PathSensitivity.RELATIVE)
     // `ExportedComponentInventoryTest` reads every source set's manifest. A variant's
     // test task sees only its own overlays, so an export added to `src/full` left
@@ -2383,7 +2389,7 @@ val r8ProtectedPackages: List<String> = listOf("com.google.common.flogger.")
 // the on-device embedding path — and therefore all of long-term memory.
 //
 // The AppFunctions service is KSP output of this app that the platform binds BY
-// NAME, from the manifest, to dispatch every `@AppFunction` call. The manifest
+// NAME, from the manifest, to dispatch every AppFunction call. The manifest
 // reference keeps it today; a renamed or abstractified class would leave the
 // function listed and every call to it failing to bind. Being in the dex under its
 // own name, concrete, is exactly what this check asserts. (Until the entry-point

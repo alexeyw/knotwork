@@ -97,12 +97,17 @@ internal object KotlinStringLiterals {
      * as the list of its top-level argument texts. A declaration of the class
      * (`class Name(`) is not a call.
      *
+     * A file that never names the class is skipped before the pattern is built: a call
+     * names it, and the census asks hundreds of classes about every production file
+     * (`decisions.md §125`).
+     *
      * @param code Kotlin source with comments removed.
      * @param className The class whose constructor calls to find.
      * @return The argument lists, in order.
      */
-    fun constructorCalls(code: String, className: String): List<List<String>> =
-        Regex("""(?<![\w.])${Regex.escape(className)}\(""").findAll(code)
+    fun constructorCalls(code: String, className: String): List<List<String>> {
+        if (className !in code) return emptyList()
+        return Regex("""(?<![\w.])${Regex.escape(className)}\(""").findAll(code)
             .filterNot {
                 DECLARATION_BEFORE.containsMatchIn(
                     code.substring(maxOf(0, it.range.first - LOOKBEHIND), it.range.first),
@@ -114,6 +119,7 @@ internal object KotlinStringLiterals {
                 topLevelArguments(code.substring(open + 1, close))
             }
             .toList()
+    }
 
     /**
      * Offset of the parenthesis closing the one at [open], skipping literals and

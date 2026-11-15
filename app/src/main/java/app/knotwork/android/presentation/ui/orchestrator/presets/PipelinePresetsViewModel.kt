@@ -3,6 +3,7 @@ package app.knotwork.android.presentation.ui.orchestrator.presets
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.knotwork.android.R
+import app.knotwork.android.di.IoDispatcher
 import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PresetCategory
 import app.knotwork.android.domain.pipelineio.PipelinePresetJsonSerializer
@@ -10,16 +11,22 @@ import app.knotwork.android.domain.repositories.PipelinePresetRepository
 import app.knotwork.android.domain.usecases.LoadPipelineFromPresetUseCase
 import app.knotwork.android.domain.usecases.SavePipelineAsPresetUseCase
 import app.knotwork.android.presentation.state.TransientMessageRelay
+import app.knotwork.android.presentation.ui.common.ExportDocumentHandOff
+import app.knotwork.android.presentation.ui.common.PickedDocument
 import app.knotwork.android.presentation.ui.common.UiText
+import app.knotwork.android.presentation.ui.common.UnwrittenDocument
+import app.knotwork.android.presentation.ui.common.discardUnwritten
 import app.knotwork.android.presentation.ui.orchestrator.OrchestratorErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -50,7 +57,17 @@ class PipelinePresetsViewModel @Inject constructor(
     private val loadPipelineFromPresetUseCase: LoadPipelineFromPresetUseCase,
     @Suppress("unused") private val savePipelineAsPresetUseCase: SavePipelineAsPresetUseCase,
     private val transientMessageRelay: TransientMessageRelay,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
+
+    /**
+     * The preset the manager's document picker is open for, from the picker's launch
+     * ([holdForExport]) until the picked document arrives ([exportTo]) or the pick is
+     * cancelled. Held here so a rotation while the picker is open keeps it: the screen
+     * used to keep it in composition, lost it, and left the file the picker had
+     * created empty.
+     */
+    private var awaitingExport: PipelinePreset? = null
 
     private val _uiState = MutableStateFlow(PipelinePresetsUiState())
 
@@ -190,10 +207,76 @@ class PipelinePresetsViewModel @Inject constructor(
 
     /**
      * Renders [preset] as a JSON document suitable for sharing or for
-     * dropping into `assets/presets/pipelines/`. Pure synchronous call —
-     * the heavy lifting is the surrounding SAF flow on the screen.
+     * dropping into `assets/presets/pipelines/`. Pure synchronous call;
+     * [exportTo] writes it into the document the user picked.
      */
     fun exportPresetToJson(preset: PipelinePreset): String = PipelinePresetJsonSerializer.serialize(preset)
+
+    /**
+     * Holds [preset] while the manager's document picker is open for it.
+     *
+     * @param preset The preset the user chose to export.
+     */
+    fun holdForExport(preset: PipelinePreset) {
+        awaitingExport = preset
+    }
+
+    /** Drops the held preset: the user backed out of the document picker. */
+    fun cancelExport() {
+        awaitingExport = null
+    }
+
+    /**
+     * Writes the held preset into [picked], the document the user picked, and confirms
+     * it; a failure surfaces through [PipelinePresetsUiState.errorMessage].
+     *
+     * The picker has already created the document, so an export that cannot write a
+     * byte removes it again: the preset did not survive a process death while the
+     * picker was open, or the document would not open. When its provider will not
+     * delete it, the message names the empty file.
+     *
+     * @param picked The document the picker created.
+     */
+    fun exportTo(picked: PickedDocument) {
+        val preset = awaitingExport
+        awaitingExport = null
+        viewModelScope.launch {
+            val outputStream = if (preset == null) null else withContext(ioDispatcher) { picked.openOutput() }
+            val outcome = when {
+                preset == null || outputStream == null -> when (val left = picked.discardUnwritten(ioDispatcher)) {
+                    UnwrittenDocument.Removed -> ExportOutcome.Failed
+                    is UnwrittenDocument.Left -> ExportOutcome.FileLeft(left.fileName)
+                }
+                ExportDocumentHandOff.write(outputStream, exportPresetToJson(preset), ioDispatcher) ->
+                    ExportOutcome.Exported
+                else -> ExportOutcome.Failed
+            }
+            _uiState.update { state ->
+                when (outcome) {
+                    ExportOutcome.Exported -> state.copy(
+                        feedbackMessage = UiText(R.string.orchestrator_preset_exported),
+                    )
+                    ExportOutcome.Failed -> state.copy(
+                        errorMessage = UiText(R.string.orchestrator_preset_export_failed),
+                    )
+                    is ExportOutcome.FileLeft ->
+                        state.copy(errorMessage = UiText.of(R.string.export_empty_file_left, outcome.fileName))
+                }
+            }
+        }
+    }
+
+    /** How a preset export into a picked document ended. */
+    private sealed interface ExportOutcome {
+        /** The preset was written. */
+        data object Exported : ExportOutcome
+
+        /** Nothing usable was written; the picked file is gone or partly written. */
+        data object Failed : ExportOutcome
+
+        /** Nothing was written and the empty file is left. */
+        data class FileLeft(val fileName: String) : ExportOutcome
+    }
 
     /**
      * Looks up a preset (bundled or user-owned) by id without touching

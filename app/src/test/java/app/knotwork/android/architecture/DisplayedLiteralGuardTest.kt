@@ -123,7 +123,7 @@ class DisplayedLiteralGuardTest {
 
     // ─── The census ──────────────────────────────────────────────────────────
 
-    private fun displayedLiterals(): Set<String> = interfaceSources().flatMap { (path, code) ->
+    private fun displayedLiterals(): Set<String> = InterfaceTextScope.sources().flatMap { (path, code) ->
         displayedIn(code, catalog = path.startsWith("catalog/")).map { "$path\t$it" }
     }.toSet()
 
@@ -162,20 +162,6 @@ class DisplayedLiteralGuardTest {
         val lineStart = code.lastIndexOf('\n', offset - 1) + 1
         val name = TECHNICAL_CONSTANT.find(code.substring(lineStart, offset))?.groupValues?.get(1) ?: return false
         return TECHNICAL_SUFFIXES.any { name.endsWith(it) }
-    }
-
-    private fun interfaceSources(): Map<String, String> {
-        val app = ProductionSources.code
-            .filterKeys { path -> APP_SCOPES.any { it in path } }
-            .mapKeys { (path, _) -> "app/src/$path" }
-        val root = File(ProductionSources.moduleDirectory().parentFile, "catalog/src/main/java")
-        val catalog = root.walkTopDown()
-            .filter { it.isFile && it.extension == "kt" && !InterfaceTextScope.isShowcase(it.name) }
-            .associate {
-                "catalog/src/main/java/${it.relativeTo(root).invariantSeparatorsPath}" to
-                    ProductionSources.stripComments(it.readText())
-            }
-        return app + catalog
     }
 
     /** Whether the literal at [offset] is an argument of a call that never shows its text. */
@@ -241,7 +227,6 @@ class DisplayedLiteralGuardTest {
         const val CALL_LOOKBACK = 400
         const val CALLEE_LOOKBACK = 80
         val LIST = File(ProductionSources.moduleDirectory().parentFile, "config/l10n/displayed-literals.txt")
-        val APP_SCOPES = listOf("/presentation/", "/data/services/")
 
         // Kotlin templates (`${…}`, `$name`) and format specifiers, written in source as `%1\$s`.
         val TEMPLATE = Regex("""\$\{[^}]*}|(?<!\\)\$[A-Za-z_]\w*|%\d*(?:\\?\$)?[-#+ 0,(]*\d*(?:\.\d+)?[a-zA-Z]""")

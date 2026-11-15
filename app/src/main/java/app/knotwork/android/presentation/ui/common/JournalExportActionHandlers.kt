@@ -16,8 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.knotwork.android.R
 import app.knotwork.android.domain.constants.TransientCacheDirectory
-import timber.log.Timber
-import java.io.IOException
 
 /**
  * One outcome message waiting to be shown, tagged with the emission that produced
@@ -126,23 +124,9 @@ fun rememberJournalExportHandlers(
         // A null uri is the user backing out of the picker. Not a failure, and
         // deliberately not reported as one.
         uri ?: return@rememberLauncherForActivityResult
-        val stream = try {
-            context.contentResolver.openOutputStream(uri)
-        } catch (e: SecurityException) {
-            // A provider that offered the document and then refused to open it.
-            Timber.w(e, "Could not open the picked journal-export document")
-            null
-        } catch (e: IOException) {
-            // `openOutputStream` declares FileNotFoundException; a provider that
-            // created the document and then lost it must not crash the screen.
-            Timber.w(e, "The picked journal-export document could not be opened")
-            null
-        }
-        if (stream != null) {
-            delegate.saveTo(stream)
-        } else {
-            pending = PendingExportMessage(++emitted, UiText(copy.saveFailed))
-        }
+        // The delegate writes the journal into it, or removes the file when the
+        // journal cannot be rendered or the document will not open.
+        delegate.saveTo(ContentResolverPickedDocument(context.contentResolver, uri))
     }
 
     LaunchedEffect(delegate) {
@@ -171,6 +155,8 @@ fun rememberJournalExportHandlers(
                 JournalExportEvent.SaveFailed -> UiText(copy.saveFailed)
 
                 JournalExportEvent.RenderFailed -> UiText(copy.renderFailed)
+
+                is JournalExportEvent.FileLeft -> UiText.of(R.string.export_empty_file_left, event.fileName)
             }
             if (text != null) pending = PendingExportMessage(++emitted, text)
         }

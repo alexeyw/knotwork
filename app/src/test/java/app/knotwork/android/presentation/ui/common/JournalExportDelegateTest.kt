@@ -8,47 +8,24 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.io.OutputStream
 
 /**
  * Behaviour of the shared journal-export half of the two journal ViewModels.
  *
  * The cases worth pinning are the ones the screen cannot recover from on its own:
  * that a save reports **something** whatever happens (including the empty-journal
- * success and both failure shapes), and that the stream the document picker
- * handed over is closed on every path — an abandoned stream leaves a zero-byte
- * file the user believes is their journal.
+ * success and both failure shapes), that a stream once opened is closed on every
+ * path, and that a save which cannot write a byte removes the file the picker
+ * created — a zero-byte file left behind is one the user believes is their journal.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class JournalExportDelegateTest {
 
     private val document = JournalExportDocument(json = """{"schemaVersion": 3}""", entryCount = 12)
-
-    /** A stream that records whether it was closed, and can be made to fail on write. */
-    private class RecordingStream(private val failOnWrite: Boolean = false) : OutputStream() {
-        val bytes = ByteArrayOutputStream()
-        var closed = false
-            private set
-
-        override fun write(b: Int) {
-            if (failOnWrite) throw IOException("no space left on device")
-            bytes.write(b)
-        }
-
-        override fun write(b: ByteArray, off: Int, len: Int) {
-            if (failOnWrite) throw IOException("no space left on device")
-            bytes.write(b, off, len)
-        }
-
-        override fun close() {
-            closed = true
-        }
-    }
 
     /**
      * Builds a delegate hosted on the test scope, with the document write driven by
@@ -97,15 +74,16 @@ class JournalExportDelegateTest {
         val delegate = delegate()
         val received = mutableListOf<JournalExportEvent>()
         val collector = collectInto(received, delegate)
-        val stream = RecordingStream()
+        val picked = FakePickedDocument()
 
-        delegate.saveTo(stream)
+        delegate.saveTo(picked)
         advanceUntilIdle()
         collector.cancel()
 
-        assertEquals(document.json, stream.bytes.toString(Charsets.UTF_8.name()))
+        assertEquals(document.json, picked.bytes.toString(Charsets.UTF_8))
         assertEquals(JournalExportEvent.Saved(12), received.single())
-        assertTrue(stream.closed)
+        assertTrue(picked.stream.closed)
+        assertFalse("a written file is kept", picked.deleteAsked)
     }
 
     @Test
@@ -115,7 +93,7 @@ class JournalExportDelegateTest {
         val received = mutableListOf<JournalExportEvent>()
         val collector = collectInto(received, delegate)
 
-        delegate.saveTo(RecordingStream())
+        delegate.saveTo(FakePickedDocument())
         advanceUntilIdle()
         collector.cancel()
 
@@ -129,35 +107,64 @@ class JournalExportDelegateTest {
         val delegate = delegate()
         val received = mutableListOf<JournalExportEvent>()
         val collector = collectInto(received, delegate)
-        val stream = RecordingStream(failOnWrite = true)
+        val picked = FakePickedDocument(failOnWrite = true)
 
-        delegate.saveTo(stream)
+        delegate.saveTo(picked)
         advanceUntilIdle()
         collector.cancel()
 
         assertEquals(JournalExportEvent.SaveFailed, received.single())
-        assertTrue(stream.closed)
+        assertTrue(picked.stream.closed)
     }
 
     @Test
-    fun `given a journal read that throws when saved then the failure is reported and the stream is closed`() =
+    fun `given a journal read that throws when saved then the empty file is removed and the failure reported`() =
         runTest {
             val delegate = delegate { error("the database is unreadable") }
             val received = mutableListOf<JournalExportEvent>()
             val collector = collectInto(received, delegate)
-            val stream = RecordingStream()
+            val picked = FakePickedDocument()
 
-            delegate.saveTo(stream)
+            delegate.saveTo(picked)
             advanceUntilIdle()
             collector.cancel()
 
-            // The picker already created the file. Leaving its stream open would
-            // strand a zero-byte document with nothing said about it. Reported as
-            // RenderFailed, not SaveFailed: nothing was produced to save, and the
-            // two need different words.
+            // The picker already created the file; a zero-byte document left behind
+            // would read as the journal. Reported as RenderFailed, not SaveFailed:
+            // nothing was produced to save, and the two need different words.
             assertEquals(JournalExportEvent.RenderFailed, received.single())
-            assertTrue(stream.closed)
+            assertTrue("the empty file the picker created must be removed", picked.deleteAsked)
+            assertEquals("nothing is opened", 0, picked.openCount)
         }
+
+    @Test
+    fun `given a journal read that throws and a file that cannot be deleted when saved then its name is given`() =
+        runTest {
+            val delegate = delegate { error("the database is unreadable") }
+            val received = mutableListOf<JournalExportEvent>()
+            val collector = collectInto(received, delegate)
+
+            delegate.saveTo(FakePickedDocument(name = "trigger-journal.json", deletes = false))
+            advanceUntilIdle()
+            collector.cancel()
+
+            assertEquals(JournalExportEvent.FileLeft("trigger-journal.json"), received.single())
+        }
+
+    @Test
+    fun `given a document that will not open when saved then it is removed and the save fails`() = runTest {
+        val delegate = delegate()
+        val received = mutableListOf<JournalExportEvent>()
+        val collector = collectInto(received, delegate)
+        val picked = FakePickedDocument(opens = false)
+
+        delegate.saveTo(picked)
+        advanceUntilIdle()
+        collector.cancel()
+
+        assertEquals(JournalExportEvent.SaveFailed, received.single())
+        assertTrue(picked.deleteAsked)
+    }
 
     @Test
     fun `given a journal read that throws when shared then the failure is reported rather than thrown`() = runTest {

@@ -480,11 +480,14 @@ What the app does not do today. Each item says what would change it.
 - **Memory search works in English.** The on-device embedding model sees
   unrelated facts written in Russian as near-copies of each other, so a memory
   search keeps one of them per run and drops the rest as duplicates. Pinned
-  facts are never dropped this way. Other languages have not been measured.
-  OpenAI as the **Embedding model** is multilingual by its maker's account —
-  not measured here — and sends the text of your memories to OpenAI. Changing
-  the on-device model means shipping a multilingual one, which has not been
-  decided.
+  facts are never dropped this way. Spanish, measured off the phone with the
+  same model, fares better than Russian and worse than English: 10 of 89 pairs
+  of different facts read as near-copies, and a search put the right fact first
+  in 2 of 10 cases, against 9 in English. Other languages have not been
+  measured. OpenAI as the **Embedding model** is multilingual by its maker's
+  account — not measured here — and sends the text of your memories to OpenAI.
+  Changing the on-device model means shipping a multilingual one, which has not
+  been decided.
 - **Pipeline files are not a compatibility contract before 1.0.** The version
   stamp is a marker, not a promise, and no import-time migration exists. See
   [README § Pre-release notice](../README.md#pre-release-notice).

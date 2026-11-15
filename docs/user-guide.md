@@ -355,7 +355,10 @@ history is portable to any app that accepts a JSON file.
   is written there. The file is the same one **Export chat** shares,
   byte for byte. Its suggested name is `chat-<chat name>-<date>-<time>.json`;
   you can change it in the picker. A snackbar says when the file is
-  saved, or that it could not be.
+  saved, or that it could not be. The picker creates the file before
+  Knotwork writes to it, so a save that cannot write removes it again;
+  if your file manager does not let Knotwork delete it, the snackbar
+  names the empty file for you to delete.
 
   Archived chats export and save the same way, from their own row menu
   on the archive screen — putting a chat away never puts it out of

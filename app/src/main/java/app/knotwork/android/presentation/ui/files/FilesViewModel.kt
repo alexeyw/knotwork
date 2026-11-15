@@ -11,6 +11,9 @@ import app.knotwork.android.domain.usecases.workspace.ImportMode
 import app.knotwork.android.domain.usecases.workspace.ListWorkspaceUseCase
 import app.knotwork.android.domain.usecases.workspace.PreviewWorkspaceFileUseCase
 import app.knotwork.android.domain.usecases.workspace.StageWorkspaceFileForShareUseCase
+import app.knotwork.android.presentation.ui.common.PickedDocument
+import app.knotwork.android.presentation.ui.common.UnwrittenDocument
+import app.knotwork.android.presentation.ui.common.discardUnwritten
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -304,14 +307,29 @@ class FilesViewModel @Inject constructor(
     }
 
     /**
-     * Completes a save-as by streaming the previously-chosen file into [sink].
-     * Suspends until the export finishes so the caller can keep [sink] open
-     * (and close it) for the whole write. The caller owns and closes [sink].
+     * Completes a save-as by streaming the previously-chosen file into [picked], the
+     * document the user picked, and closes its stream. Blocks on the document's
+     * provider: call it off the main thread.
+     *
+     * The picker has already created the document, so a save-as that cannot write a
+     * byte removes it again and says so: the chosen path did not survive a process
+     * death while the picker was open, or the document would not open. It used to
+     * return in silence and leave an empty file where the user chose to save.
+     *
+     * @param picked The document the picker created.
      */
-    suspend fun completeSaveAs(sink: OutputStream) {
-        val path = pendingSavePath ?: return
+    suspend fun completeSaveAs(picked: PickedDocument) {
+        val path = pendingSavePath
         pendingSavePath = null
-        if (!exportTo(path, sink)) messages.failure(R.string.files_message_export_failed)
+        val sink = if (path == null) null else picked.openOutput()
+        if (path == null || sink == null) {
+            when (val outcome = picked.discardUnwritten()) {
+                UnwrittenDocument.Removed -> messages.failure(R.string.files_message_export_failed)
+                is UnwrittenDocument.Left -> messages.fileLeft(outcome.fileName)
+            }
+            return
+        }
+        if (!sink.use { exportTo(path, it) }) messages.failure(R.string.files_message_export_failed)
     }
 
     /** Stage a single file and ask the screen to offer it to the share sheet. */

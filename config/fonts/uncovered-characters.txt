@@ -1,0 +1,12 @@
+# Characters the interface shows that a bundled font does not have: the system font
+# draws them. BundledFontCoverageTest fails a shown character missing from a font and
+# not named here, and a line here that no longer applies.
+#
+# One per line: `U+XXXX <families>  # reason`; families are `inter`, `jetbrains_mono`
+# (comma-separated) or `all`.
+
+U+21B5 jetbrains_mono   # not in JetBrains Mono 2.304 — the console's line-break mark
+U+21BB jetbrains_mono   # not in JetBrains Mono 2.304 — the console's "replayed" mark
+U+23F8 all              # in neither typeface — the console's "parked" mark
+U+2665 jetbrains_mono   # not in JetBrains Mono 2.304 — Discover's like count
+U+1F5D1 all             # an emoji — the system emoji font draws it

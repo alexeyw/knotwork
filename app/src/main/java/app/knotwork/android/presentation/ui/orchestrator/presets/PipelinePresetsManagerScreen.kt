@@ -8,15 +8,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.knotwork.android.R
 import app.knotwork.android.domain.models.PipelinePreset
 import app.knotwork.android.domain.models.PresetCategory
+import app.knotwork.android.presentation.ui.common.ContentResolverPickedDocument
 import app.knotwork.android.presentation.ui.common.asString
 import app.knotwork.design.screens.pipelines.PresetCategoryToneUi
 import app.knotwork.design.screens.pipelines.PresetChipUi
@@ -28,9 +27,6 @@ import app.knotwork.design.screens.pipelines.PresetRenameDialogUi
 import app.knotwork.design.screens.pipelines.PresetRowActionLabels
 import app.knotwork.design.screens.pipelines.PresetRowUi
 import app.knotwork.design.screens.pipelines.PresetTabUi
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /**
  * Full-screen manager for bundled and user-saved pipeline presets.
@@ -46,12 +42,10 @@ import timber.log.Timber
 @Composable
 fun PipelinePresetsManagerScreen(viewModel: PipelinePresetsViewModel = hiltViewModel(), onBack: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     var renameTarget by remember { mutableStateOf<PipelinePreset?>(null) }
     var deleteTarget by remember { mutableStateOf<PipelinePreset?>(null) }
-    var pendingExportPreset by remember { mutableStateOf<PipelinePreset?>(null) }
 
     // The VM's one-shot messages go to the activity-level host, the same route
     // the Files screen takes: it renders above the NavGraph, so a message
@@ -71,28 +65,17 @@ fun PipelinePresetsManagerScreen(viewModel: PipelinePresetsViewModel = hiltViewM
         }
     }
 
-    // Resolved in composition: the launcher's callback runs outside it.
-    val exportedText = stringResource(R.string.orchestrator_preset_exported)
-    val exportFailedText = stringResource(R.string.orchestrator_preset_export_failed)
+    // The view model holds the preset from the picker's launch until the picked
+    // document arrives, so a rotation while the picker is open keeps it; it writes the
+    // preset into the document (or removes the document when it has nothing to write)
+    // and reports through its feedback and error messages, announced above.
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(mimeType = EXPORT_MIME_TYPE),
     ) { uri ->
-        val preset = pendingExportPreset
-        pendingExportPreset = null
-        if (uri == null || preset == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            val message = try {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(viewModel.exportPresetToJson(preset).toByteArray())
-                }
-                exportedText
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Timber.w(e, "Preset export failed for %s", preset.id)
-                e.message ?: exportFailedText
-            }
-            viewModel.announce(message)
+        if (uri == null) {
+            viewModel.cancelExport()
+        } else {
+            viewModel.exportTo(ContentResolverPickedDocument(context.contentResolver, uri))
         }
     }
 
@@ -110,7 +93,7 @@ fun PipelinePresetsManagerScreen(viewModel: PipelinePresetsViewModel = hiltViewM
             onDelete = { id -> deleteTarget = state.filteredPresets.firstOrNull { it.id == id } },
             onExport = { id ->
                 state.filteredPresets.firstOrNull { it.id == id }?.let { preset ->
-                    pendingExportPreset = preset
+                    viewModel.holdForExport(preset)
                     exportLauncher.launch(defaultFileName(preset))
                 }
             },

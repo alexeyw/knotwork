@@ -40,7 +40,7 @@
         entry the system filters cross-package metadata out.
 
         The `<intent>` with the system AppFunctionService action makes the agent
-        visible to every package that publishes an `@AppFunction` (the agent does not
+        visible to every package that publishes an AppFunction (the agent does not
         know their applicationIds at compile time). The end-to-end test's target,
         `app.knotwork.android.toolsprobe`, is also named explicitly — in the debug
         overlay, since the test runs on debug builds and a release build has no

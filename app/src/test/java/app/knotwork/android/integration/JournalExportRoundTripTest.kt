@@ -19,6 +19,7 @@ import app.knotwork.android.domain.usecases.BuildTriggerJournalExportUseCase
 import app.knotwork.android.domain.usecases.ExportTriggerJournalUseCase
 import app.knotwork.android.domain.usecases.automation.BuildExternalAutomationJournalExportUseCase
 import app.knotwork.android.domain.usecases.automation.ExportExternalAutomationJournalUseCase
+import app.knotwork.android.presentation.ui.common.FakePickedDocument
 import app.knotwork.android.presentation.ui.common.JournalExportDelegate
 import app.knotwork.android.presentation.ui.common.TRIGGER_JOURNAL_EXPORT_STEM
 import io.mockk.coEvery
@@ -30,7 +31,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.ByteArrayOutputStream
 
 /**
  * The round-trip guarantee of the journal exports: **one document, one parse.**
@@ -192,7 +192,7 @@ class JournalExportRoundTripTest {
         // What the in-app save path writes into the picked document. The delegate
         // stamps its own label, so the comparison is made on the parsed bodies as
         // well as on the byte-for-byte header-stripped remainder.
-        val sink = ByteArrayOutputStream()
+        val sink = FakePickedDocument()
         val dispatcher = StandardTestDispatcher(testScheduler)
         val scope = TestScope(dispatcher)
         val delegate = JournalExportDelegate(
@@ -203,7 +203,7 @@ class JournalExportRoundTripTest {
         )
         delegate.saveTo(sink)
         scope.advanceUntilIdle()
-        val viaInAppSave = sink.toString(Charsets.UTF_8.name())
+        val viaInAppSave = sink.bytes.toString(Charsets.UTF_8)
 
         assertEquals(
             JournalExportReader.readTriggerJournal(viaReceiverSeam),

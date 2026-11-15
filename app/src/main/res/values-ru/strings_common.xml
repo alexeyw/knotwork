@@ -60,6 +60,7 @@
     <string name="journal_export_chooser_title">Поделиться журналом</string>
     <string name="journal_export_share_failed">На телефоне нет приложения, которое может принять файл</string>
     <string name="journal_export_save_failed">Не удалось сохранить журнал</string>
+    <string name="export_empty_file_left">Не сохранено. Удалите пустой файл %1$s сами.</string>
     <string name="journal_export_render_failed">Не удалось прочитать журнал</string>
     <plurals name="more_chat_archive_subtitle">
         <item quantity="one">%1$d чат</item>

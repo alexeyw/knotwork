@@ -16,8 +16,10 @@ import app.knotwork.design.tokens.KnotworkFonts
  * Called once from [app.knotwork.android.App.onCreate]. Idempotent — subsequent
  * invocations are harmless because [KnotworkFonts.install] is last-write-wins.
  *
- * Font asset inventory (subset to Latin-1 + a handful of punctuation glyphs,
- * total APK delta ≈ 186 KB, see `res/font/`):
+ * Font asset inventory (`res/font/`, about 258 KB in all). Each file is cut by
+ * `config/fonts/subset_fonts.py` to the characters of `config/fonts/characters.txt`:
+ * Latin-1 with typographic punctuation, Cyrillic, and the symbols the interface
+ * shows (`BundledFontCoverageTest` fails a shown character the fonts lack):
  *
  *  | Resource id                      | Weight                |
  *  |----------------------------------|-----------------------|
@@ -33,8 +35,8 @@ import app.knotwork.design.tokens.KnotworkFonts
  * JetBrains Mono SemiBold (600) and Bold (700) are load-bearing: the spec's
  * micro-caps tags (source / status tags, node-kind labels, badges, stat
  * numbers) render in Mono 700, and synthetic bold smears at 9.5–11 px. Both
- * weights ship as real Latin-subset files (SIL OFL 1.1, same family as the
- * existing 400 / 500 cuts) — covered by `assets/license_jetbrainsmono_ofl.txt`.
+ * weights ship as real files cut from the same release as the 400 / 500 ones
+ * (SIL OFL 1.1) — covered by `assets/license_jetbrainsmono_ofl.txt`.
  */
 internal object KnotworkFontsBootstrap {
 

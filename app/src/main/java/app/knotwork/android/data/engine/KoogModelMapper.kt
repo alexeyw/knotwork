@@ -38,10 +38,6 @@ object KoogModelMapper {
             OpenAIModels.Chat.GPT4oMini,
             OpenAIModels.Chat.GPT4_1,
             OpenAIModels.Chat.GPT4_1Mini,
-            OpenAIModels.Chat.O3,
-            OpenAIModels.Chat.GPT5,
-            OpenAIModels.Chat.GPT5Mini,
-            OpenAIModels.Chat.GPT5Nano,
             OpenAIModels.Chat.GPT5_1,
             OpenAIModels.Chat.GPT5_2,
             OpenAIModels.Chat.GPT5_2Pro,
@@ -60,7 +56,6 @@ object KoogModelMapper {
         default = AnthropicModels.Sonnet_4_6,
         offered = listOf(
             AnthropicModels.Haiku_4_5,
-            AnthropicModels.Sonnet_4_5,
             AnthropicModels.Sonnet_4_6,
             AnthropicModels.Sonnet_5,
             AnthropicModels.Opus_4_5,

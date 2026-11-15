@@ -13,6 +13,50 @@ details.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-15
+
+### Changed
+
+- **Russian text is drawn in the app's own fonts.** The bundled Inter and
+  JetBrains Mono now carry Cyrillic — Russian, Ukrainian, Belarusian,
+  Bulgarian, Serbian and Macedonian letters — and the arrows and symbols the
+  interface uses (`→`, `≈`, `№`, `▶`). Until now these fell back to the
+  system font in the middle of a line, beside the app's own digits and Latin
+  letters. The app grows by about 46 KB.
+- **Five cloud models their providers switch off are gone from the lists.**
+  Anthropic retires Claude Sonnet 4.5 on 30 November 2026; OpenAI shuts down
+  GPT-5, GPT-5 mini, GPT-5 nano and o3 on 11 December. A saved choice of one of
+  them runs on the provider's default, Claude Sonnet 4.6 or GPT-5.4, and the
+  provider's screen says so.
+- **The AppFunctions library is 1.0.0-rc01** (was 1.0.0-alpha12). The
+  `search` function Knotwork publishes to other apps on Android 16 and later
+  keeps its id, description and parameters, and who may call it is unchanged:
+  any caller Android allows to call app functions.
+- **Two source guards in the test suite take about a second instead of 18.**
+  The top-bar inset guard and the design-system string guard searched every
+  source file once for each name they checked; they now read the sources once.
+  They report exactly what they reported before, and `./gradlew check` is about
+  half a minute shorter, as both unit-test suites run them.
+- **The FAQ says how memory search does in Spanish.** It said only English
+  and Russian had been measured. Spanish, measured off the phone with the same
+  model, fares between the two.
+
+### Fixed
+
+- **A save to a file no longer leaves an empty file behind.** The system
+  picker creates the file before Knotwork writes to it. When Android closed
+  the app while the picker was open — or, for a pipeline bundle, a preset or
+  a prompt, when the screen turned — the save wrote nothing and left that
+  empty file, mostly without a word. Now the content waits through the
+  picker; a save that still cannot write removes the file and says so, and
+  names it when the file manager will not let Knotwork delete it. This covers
+  the chat, the journals and run traces, a workspace file, a pipeline bundle,
+  a preset and a prompt.
+- **A long argument on the approval card wraps under its own line.** With the
+  arguments expanded, the part of a line that does not fit continues where the
+  line's text starts, not at the left edge of the block, where it read as a key
+  one level up. It showed most at large font sizes.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added
@@ -7217,7 +7261,8 @@ that produced the initial 0.1.0 snapshot.
 - **Master key**: `EncryptedSharedPreferences` is rooted in the Android
   Keystore, so the master key is hardware-backed where available.
 
-[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/alexeyw/knotwork/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/alexeyw/knotwork/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/alexeyw/knotwork/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/alexeyw/knotwork/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/alexeyw/knotwork/compare/v0.12.1...v0.12.2

@@ -1,0 +1,5 @@
+Russian text is drawn in the app's own fonts now, not in the system font mid-line.
+
+Five cloud models their providers switch off are gone from the lists: Claude Sonnet 4.5, GPT-5, GPT-5 mini, GPT-5 nano and o3. If you picked one, runs use the provider's default.
+
+Saving to a file no longer leaves an empty file behind, and a long argument on the approval card wraps under its own line.

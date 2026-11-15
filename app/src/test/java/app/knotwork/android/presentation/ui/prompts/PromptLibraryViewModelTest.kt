@@ -17,6 +17,7 @@ import app.knotwork.android.domain.usecases.promptpack.ExportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.ImportPromptPackUseCase
 import app.knotwork.android.domain.usecases.promptpack.PromptPackCollisionChoice
 import app.knotwork.android.domain.usecases.promptpack.ResolvePromptPackCollisionUseCase
+import app.knotwork.android.presentation.ui.common.FakePickedDocument
 import app.knotwork.android.presentation.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -101,6 +103,7 @@ class PromptLibraryViewModelTest {
             resolvePromptPackCollisionUseCase,
             exportPromptPackUseCase,
             EnglishDefaultNames,
+            ioDispatcher = testDispatcher,
         )
     }
 
@@ -366,4 +369,67 @@ class PromptLibraryViewModelTest {
             viewModel.consumePendingExport()
             assertNull(viewModel.uiState.value.pendingExport)
         }
+
+    @Test
+    fun `given an export consumed for the picker when the document arrives then the prompt is written into it`() =
+        runTest {
+            coEvery { promptPresetRepository.getPresetById(userA.id) } returns userA
+            viewModel.requestExport(userA.id)
+            testDispatcher.scheduler.advanceUntilIdle()
+            val content = checkNotNull(viewModel.uiState.value.pendingExport).content
+            val picked = FakePickedDocument()
+
+            viewModel.consumePendingExport()
+            viewModel.exportTo(picked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(content, picked.bytes.toString(Charsets.UTF_8))
+            assertTrue("the picked stream must be closed", picked.stream.closed)
+            assertFalse(picked.deleteAsked)
+            assertEquals(
+                UiText.Resource(R.string.prompts_export_success_format, listOf(userA.name)),
+                viewModel.uiState.value.snackbar?.text,
+            )
+        }
+
+    @Test
+    fun `given no held export when the document arrives then the empty file is removed and the failure said`() =
+        runTest {
+            // A process death while the picker was open: the new view model holds nothing.
+            val picked = FakePickedDocument()
+
+            viewModel.exportTo(picked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertTrue("the empty file the picker created must be removed", picked.deleteAsked)
+            assertEquals(0, picked.openCount)
+            assertEquals(UiText(R.string.prompts_export_unwritable), viewModel.uiState.value.snackbar?.text)
+        }
+
+    @Test
+    fun `given no held export and a file that cannot be deleted when it arrives then its name is said`() = runTest {
+        viewModel.exportTo(FakePickedDocument(name = "prompt.md", deletes = false))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(
+            UiText.of(R.string.export_empty_file_left, "prompt.md"),
+            viewModel.uiState.value.snackbar?.text,
+        )
+    }
+
+    @Test
+    fun `given a cancelled pick when a document later arrives then the dropped export is not written`() = runTest {
+        coEvery { promptPresetRepository.getPresetById(userA.id) } returns userA
+        viewModel.requestExport(userA.id)
+        testDispatcher.scheduler.advanceUntilIdle()
+        val picked = FakePickedDocument()
+
+        viewModel.consumePendingExport()
+        viewModel.cancelExport()
+        viewModel.exportTo(picked)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, picked.bytes.size)
+        assertTrue(picked.deleteAsked)
+    }
 }
