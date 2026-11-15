@@ -1,4 +1,4 @@
-<!-- translation of docs/faq.md, sha256 9014b36abf2b6d1e57c85e163f530c2b14450f44eaa327e0997a59b389ccb4c6 -->
+<!-- translation of docs/faq.md, sha256 8442e03f5d9af2fa9d5d51ecf69849390820cb3234b15a394578afbc461df896 -->
 <!-- en: frequently-asked-questions -->
 # Preguntas frecuentes
 
@@ -563,9 +563,12 @@ Lo que la app no hace hoy. Cada punto dice qué lo cambiaría.
   instalación normal.
 - **La búsqueda en memoria funciona en inglés.** El modelo de embeddings local
   ve datos sin relación escritos en ruso como casi copias unos de otros, así que
-  una búsqueda en memoria conserva uno de ellos por ejecución y descarta el resto
-  como duplicados. Los datos fijados nunca se descartan así. Otros idiomas, el
-  español incluido, no se han medido. OpenAI como **Modelo de embeddings** es
+  una búsqueda en memoria conserva uno de ellos por ejecución y descarta el
+  resto como duplicados. Los datos fijados nunca se descartan así. El español,
+  medido fuera del teléfono con el mismo modelo, sale mejor que el ruso y peor
+  que el inglés: 10 de 89 pares de datos sin relación parecen casi copias, y una
+  búsqueda puso primero el dato correcto en 2 de 10 casos, frente a 9 en inglés.
+  Otros idiomas no se han medido. OpenAI como **Modelo de embeddings** es
   multilingüe según su fabricante (no se ha medido aquí) y envía a OpenAI el
   texto de tus recuerdos. Cambiar el modelo local significa incluir uno
   multilingüe, y eso no está decidido.

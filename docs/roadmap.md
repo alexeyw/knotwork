@@ -15,7 +15,7 @@ release cadence settles.
 
 ## Where the project is today
 
-The current pre-release line (`0.14.x`) already covers the core loop
+The current pre-release line (`0.15.x`) already covers the core loop
 end-to-end:
 
 - On-device LLM inference through LiteRT-LM, with optional
@@ -98,6 +98,8 @@ end-to-end:
   pick.
 - All of an MCP server's tools turned on or off at once, and a session the
   server closed replaced without restarting the app.
+- Russian and other Cyrillic text drawn in the app's own fonts, with a build
+  check that every character the interface shows is in them.
 
 See [README.md](../README.md) for the full feature list and
 [architecture.md](architecture.md) for how the pieces fit together.
@@ -189,7 +191,8 @@ The app ships in English, Russian and Spanish. Another language is a
 natural, well-bounded addition and a good area for first-time
 contributors: it takes a translation of the interface strings, the
 bundled presets and the in-app help, and the build checks that none of
-them is missing.
+them is missing. A language in another script also needs its letters
+cut into the bundled fonts; the build names every character they lack.
 
 ## How to get involved
 
