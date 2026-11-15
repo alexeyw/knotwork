@@ -293,7 +293,8 @@ class OrchestratorTransferDelegate(
      * Exports the pipeline identified by [pipelineId] together with the
      * transitive closure of its `PIPELINE` dependencies as a bundle document,
      * stashing the result in [OrchestratorUiState.pendingBundleExport] for the
-     * library screen to write to a user-picked file. A fail-fast export error
+     * library screen to open the document picker with; [saveBundleTo] writes it
+     * into the document the user picks. A fail-fast export error
      * (missing root, unresolvable dependency, or over-limit closure) surfaces
      * through [OrchestratorUiState.errorMessage].
      *

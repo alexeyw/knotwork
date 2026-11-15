@@ -78,7 +78,7 @@ fun ChatExportEffects(delegate: ChatExportDelegate, snackbarHostState: SnackbarH
                 }
                 ChatExportEvent.Saved -> saved
                 ChatExportEvent.SaveFailed -> saveFailed
-                is ChatExportEvent.SaveFailedFileLeft -> fileLeftTemplate.format(event.fileName)
+                is ChatExportEvent.FileLeft -> fileLeftTemplate.format(event.fileName)
                 ChatExportEvent.RenderFailed -> renderFailed
             }
             // Launched beside the collector, not inside it: a snackbar stays up for

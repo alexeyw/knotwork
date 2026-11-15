@@ -183,7 +183,7 @@ class ChatExportDelegateTest {
             delegate.saveTo(FakePickedDocument(name = "chat-Trip-plan.json", deletes = false))
             advanceUntilIdle()
 
-            assertEquals(listOf(ChatExportEvent.SaveFailedFileLeft("chat-Trip-plan.json")), events)
+            assertEquals(listOf(ChatExportEvent.FileLeft("chat-Trip-plan.json")), events)
         }
 
     @Test

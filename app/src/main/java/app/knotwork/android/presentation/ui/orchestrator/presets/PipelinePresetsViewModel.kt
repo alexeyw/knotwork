@@ -207,8 +207,8 @@ class PipelinePresetsViewModel @Inject constructor(
 
     /**
      * Renders [preset] as a JSON document suitable for sharing or for
-     * dropping into `assets/presets/pipelines/`. Pure synchronous call —
-     * the heavy lifting is the surrounding SAF flow on the screen.
+     * dropping into `assets/presets/pipelines/`. Pure synchronous call;
+     * [exportTo] writes it into the document the user picked.
      */
     fun exportPresetToJson(preset: PipelinePreset): String = PipelinePresetJsonSerializer.serialize(preset)
 

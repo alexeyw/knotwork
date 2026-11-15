@@ -59,7 +59,7 @@ sealed interface ChatExportEvent {
      *
      * @property fileName The left file's name.
      */
-    data class SaveFailedFileLeft(val fileName: String) : ChatExportEvent
+    data class FileLeft(val fileName: String) : ChatExportEvent
 
     /** The chat could not be read, so there is nothing to share or save. */
     data object RenderFailed : ChatExportEvent
@@ -82,7 +82,7 @@ sealed interface ChatExportEvent {
  * change while the picker is open keeps the ViewModel, so the document survives
  * it; a process death does not, and the save then removes the empty file the
  * picker created and reports [ChatExportEvent.SaveFailed] — or, when the file's
- * provider will not delete it, [ChatExportEvent.SaveFailedFileLeft] with its name.
+ * provider will not delete it, [ChatExportEvent.FileLeft] with its name.
  *
  * **No network anywhere on this path** — the chat is read from the local database
  * and handed to the system share sheet or a file the user picked, on an explicit
@@ -189,6 +189,6 @@ class ChatExportDelegate(
     private suspend fun unwritten(picked: PickedDocument): ChatExportEvent =
         when (val outcome = picked.discardUnwritten(ioDispatcher)) {
             UnwrittenDocument.Removed -> ChatExportEvent.SaveFailed
-            is UnwrittenDocument.Left -> ChatExportEvent.SaveFailedFileLeft(outcome.fileName)
+            is UnwrittenDocument.Left -> ChatExportEvent.FileLeft(outcome.fileName)
         }
 }
